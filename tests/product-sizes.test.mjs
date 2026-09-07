@@ -1141,12 +1141,12 @@ test("the sidebar goal names the period — D351", async () => {
   /* D938 · the Printify-only handoff means prepared drafts are now the progress
      Goldie can truthfully count. D351's rule is unchanged: progress only, no
      deficit, no cap, and identical wording on both sidebars. */
-  assert.match(app, /<b>\{goalDone\} of \{listingGoal\.target\} prepared<\/b>/,
+  assert.match(app, /goalDaysLoaded\?`\$\{goalDone\} of \$\{listingGoal\.target\} prepared`/,
     "progress only — still no deficit, and the count is not capped");
   assert.doesNotMatch(app, /\{listingGoal\.target - goalDone\}|Math\.min\(goalDone/,
     "no deficit and no cap");
   const shell = await read("app/factory-shell.tsx");
-  assert.match(shell, /\{goalDone\} of \{goal\.target\} prepared/,
+  assert.match(shell, /\$\{goalDone\} of \$\{goal\.target\} prepared/,
     "and the interior rail says it the same way");
 });
 

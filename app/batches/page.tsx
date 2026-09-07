@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { confirmAction } from "../confirm-dialog";
+import {readBatchHistory,removeHistoryRows} from "../batch-history-read";
 import FactoryShell from "../factory-shell";
 type RunChild = { batchId:string; productName:string; position:number; drafts:number; published:number; done:boolean };
 type Batch = { id:string; status:string; step:string; setup_name:string; product_title:string; design_count:number; created_at:string; updated_at:string; display_name:string; thumbnail_url:string; published_count:number;draft_count?:number;members?:RunChild[];bundle_total?:number;resume_batch_id?:string };
@@ -23,12 +24,14 @@ function savedLabel(updatedAt: string) {
 export default function BatchesPage() {
   const [batches,setBatches] = useState<Batch[]>([]);
   const [loading,setLoading] = useState(true);
+  const [error,setError] = useState("");
   /* D364 · Removing batches one at a time meant one confirm dialog each. A
      checkbox on every card and one Delete above them turns clearing a test run
      into a single decision. */
   const [selected,setSelected] = useState<string[]>([]);
   const [deleting,setDeleting] = useState(false);
-  useEffect(() => { fetch("/api/batches").then(response => response.json() as Promise<{batches?:Batch[]}>).then(data => setBatches(data.batches || [])).finally(() => setLoading(false)); }, []);
+  async function loadHistory(){setLoading(true);setError("");try{const data=await readBatchHistory<Batch>();setBatches(data.batches);setSelected(current=>current.filter(id=>data.batches.some(batch=>batch.id===id)))}catch(value){setError(value instanceof Error?value.message:"Saved history could not be loaded. Try again.")}finally{setLoading(false)}}
+  useEffect(() => {void loadHistory()}, []);
   function resume(batch:Batch) { window.location.href = `/listing-factory?batch=${encodeURIComponent(batch.id)}${batch.status==="complete"?"&open=results":""}`; }
   function toggleSelected(id:string){setSelected(current=>current.includes(id)?current.filter(item=>item!==id):[...current,id])}
 
@@ -39,11 +42,9 @@ export default function BatchesPage() {
        the single delete gives, said once. */
     if(!await confirmAction({title:`Permanently remove ${chosen.length} ${chosen.length===1?"batch":"batches"}?`,body:"This cannot be undone. Products already created in Printify are not deleted.",confirmLabel:"Remove from history",destructive:true}))return;//from Printify or listings from Etsy.`))return;
     setDeleting(true);
-    const removed:string[]=[];
-    for(const batch of chosen){
-      const response=await fetch(`/api/batches?id=${encodeURIComponent(batch.id)}`,{method:"DELETE"});
-      if(response.ok)removed.push(batch.id);
-    }
+    const result=await removeHistoryRows(chosen.map(batch=>batch.id));
+    const removed=result.confirmed;
+    if(result.uncertain)setError("Some removals could not be confirmed. Reload history before trying again.");
     /* Only drop what the server actually deleted, so a partial failure leaves
        the rest on screen rather than pretending they are gone. */
     setBatches(current=>current.filter(item=>!removed.includes(item.id)));
@@ -53,13 +54,15 @@ export default function BatchesPage() {
 
   async function remove(batch:Batch) {
     if (!await confirmAction({title:`Permanently remove “${batch.display_name || "Untitled batch"}”?`,body:"This cannot be undone. Products already created in Printify and listings already on Etsy are not deleted.",confirmLabel:"Remove from history",destructive:true})) return;
-    const response=await fetch(`/api/batches?id=${encodeURIComponent(batch.id)}`,{method:"DELETE"});
-    if(response.ok)setBatches(current=>current.filter(item=>item.id!==batch.id));
+    const result=await removeHistoryRows([batch.id]);
+    if(result.confirmed.length)setBatches(current=>current.filter(item=>item.id!==batch.id));
+    if(result.uncertain)setError("This removal could not be confirmed. Reload history before trying again.");
   }
   return <FactoryShell active="batches" title="Batch History"><div className="management-page interior-page">
     
     <header><p className="mini-label">BATCH HISTORY</p><h1>Continue where you left off.</h1><p>Your product, listing work, results, and errors are saved with each batch. Any Printify drafts you already created will still be there when you return.</p></header>
     <section className="batch-history">
+      {error&&<div className="batch-restore-notice" role="alert"><p>{error}</p>{/sign in/i.test(error)&&<a href="/account/sign-in?return_to=%2Fbatches" target="_blank" rel="noopener noreferrer">Sign in to Goldie ↗</a>}<button type="button" className="secondary-action" disabled={loading||deleting} onClick={()=>void loadHistory()}>Reload history</button></div>}
       {/* D364 · Always present, so selecting is never a mode you have to enter. */}
       {!loading&&batches.length>0&&<div className="batch-history-select">
         <label className="batch-select-all"><input type="checkbox"
@@ -70,7 +73,7 @@ export default function BatchesPage() {
         {selected.length>0&&<button type="button" className="batch-delete-selected" disabled={deleting} onClick={()=>void removeSelected()}>
           {deleting?"Deleting…":`Delete ${selected.length} ${selected.length===1?"batch":"batches"}`}</button>}
       </div>}
-      {loading ? <p>Loading saved batches…</p> : !batches.length ? <div className="empty-history"><h2>No saved batches yet</h2><p>Your first batch appears here as soon as you add designs.</p><a href="/listing-factory">Start a batch</a></div> : batches.map(batch => <article key={batch.id} className={selected.includes(batch.id)?"selected":""}><label className="batch-select"><input type="checkbox" checked={selected.includes(batch.id)} onChange={()=>toggleSelected(batch.id)} aria-label={`Select ${batch.display_name||"Untitled batch"}`}/></label>{batch.thumbnail_url?<img className="batch-history-thumbnail" src={batch.thumbnail_url} alt=""/>:<span className="batch-history-thumbnail empty" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg></span>}<div className="batch-history-summary"><span className={`batch-status ${batch.status}`}>{batch.published_count>0?`${batch.published_count} PUBLISHED TO ETSY`:`DRAFT`}</span><h2>{batch.display_name || "Untitled batch"}</h2><p>{batch.members?.length?batch.product_title:`${batch.product_title || "Custom product"} · ${batch.design_count} ${batch.design_count === 1 ? "design" : "designs"}`}</p>{/* D871 · A bundle run is one row, and its products are its progress - not
+      {loading ? <p>Loading saved batches…</p> : !batches.length ? error?null:<div className="empty-history"><h2>No saved batches yet</h2><p>Your first batch appears here as soon as you add designs.</p><a href="/listing-factory">Start a batch</a></div> : batches.map(batch => <article key={batch.id} className={selected.includes(batch.id)?"selected":""}><label className="batch-select"><input type="checkbox" checked={selected.includes(batch.id)} onChange={()=>toggleSelected(batch.id)} aria-label={`Select ${batch.display_name||"Untitled batch"}`}/></label>{batch.thumbnail_url?<img className="batch-history-thumbnail" src={batch.thumbnail_url} alt=""/>:<span className="batch-history-thumbnail empty" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg></span>}<div className="batch-history-summary"><span className={`batch-status ${batch.status}`}>{batch.published_count>0?`${batch.published_count} PUBLISHED TO ETSY`:`DRAFT`}</span><h2>{batch.display_name || "Untitled batch"}</h2><p>{batch.members?.length?batch.product_title:`${batch.product_title || "Custom product"} · ${batch.design_count} ${batch.design_count === 1 ? "design" : "designs"}`}</p>{/* D871 · A bundle run is one row, and its products are its progress - not
             separate jobs with their own name, badge and Resume button. */}
           {batch.members?.length?<ul className="batch-history-members">{batch.members.map(member=><li key={member.batchId} className={member.done?"done":""}><span className="member-mark" aria-hidden="true">{member.done?"✓":member.position}</span><b>{member.productName||`Product ${member.position}`}</b><small>{member.published>0?`${member.published} published`:member.drafts>0?`${member.drafts} ${member.drafts===1?"draft":"drafts"} ready`:"Not started yet"}</small></li>)}</ul>:null}</div><div className="batch-history-controls"><small>Last saved {savedLabel(batch.updated_at)}</small><span className="batch-row-actions"><button onClick={() => resume(batch)}>{batch.members?.length
               /* D871 · One action for the run, and it opens where the work

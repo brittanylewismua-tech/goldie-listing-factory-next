@@ -1242,7 +1242,8 @@ test("keeps batch history useful instead of accumulating unmanageable empty sess
   assert.match(page,/\(!files\.length&&!drafts\.length\)\)return/);
   assert.match(batches,/Permanently remove from history/);
   assert.match(batches,/Products already created in Printify and listings already on Etsy are not deleted/);
-  assert.match(batches,/method:"DELETE"/);
+  assert.match(batches,/removeHistoryRows/);
+  assert.match(await readFile(new URL("../app/batch-history-read.ts",import.meta.url),"utf8"),/method:'DELETE'/);
 });
 
 test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy listing", async()=>{
@@ -2544,7 +2545,8 @@ test("Batch History can select and delete several at once — D364", async () =>
   assert.match(page, /Products already created in Printify are not deleted/);
 
   /* A partial failure must not pretend the survivors are gone. */
-  assert.match(page, /if\(response\.ok\)removed\.push\(batch\.id\)/);
+  assert.match(page, /removed=result.confirmed/);
+  assert.match(await readFile(new URL("../app/batch-history-read.ts",import.meta.url),"utf8"),/if\(!response\.ok\)return\{confirmed,uncertain:true\};confirmed\.push\(id\)/);
   assert.match(page, /setBatches\(current=>current\.filter\(item=>!removed\.includes\(item\.id\)\)\)/);
 });
 

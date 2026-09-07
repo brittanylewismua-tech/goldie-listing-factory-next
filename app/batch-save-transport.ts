@@ -2,11 +2,12 @@ type Fetcher=(input:string,init?:RequestInit)=>Promise<Response>;
 type RevisionRow={id:string;revision:number};
 /** Revisions belong to the snapshot opened in this browser, never a history
  * refresh. An uncertain write closes the lane until a full page reload. */
-export function createBatchSaveTransport(fetcher:Fetcher,onConflict:(message:string)=>void,timeoutMs=30000){
+export function createBatchSaveTransport(fetcher:Fetcher,onConflict:(message:string)=>void,timeoutMs=30000,onAuthenticationRequired:(required:boolean)=>void=()=>{}){
  const revisions=new Map<string,number>(),pending=new Map<string,Promise<Response>>();
- let barrier:Promise<unknown>=Promise.resolve(),blocked=false;
+ let barrier:Promise<unknown>=Promise.resolve(),blocked=false,authenticationRequired=false;
  const message='Saving is paused because newer saved work or an interrupted save needs checking. Reload the saved batch before continuing. Your unsaved changes are still visible here.';
  function conflict(){blocked=true;onConflict(message);return Response.json({code:'BATCH_SAVE_CONFLICT',error:message},{status:409})}
+ function requireAuthentication(){authenticationRequired=true;onAuthenticationRequired(true);return Response.json({code:'SIGN_IN_REQUIRED',error:'Your Goldie session has expired. Sign in again, then retry saving here.'},{status:401})}
  async function read(input:string,init?:RequestInit){
   const response=await fetcher(input,{...init,signal:AbortSignal.any([AbortSignal.timeout(timeoutMs),...(init?.signal?[init.signal]:[])])});
   if(response.ok){
@@ -18,17 +19,19 @@ export function createBatchSaveTransport(fetcher:Fetcher,onConflict:(message:str
  }
  async function mutate(input:string,init:RequestInit,id:string,method:string){
   if(blocked)return conflict();
+  if(authenticationRequired)return requireAuthentication();
   const headers=new Headers(init.headers);
   if(method==='POST')headers.set('x-batch-revision',String(revisions.get(id)??0));
   try{
    const response=await fetcher(input,{...init,headers,signal:AbortSignal.any([AbortSignal.timeout(timeoutMs),...(init.signal?[init.signal]:[])])});
    const payload=await response.clone().json().catch(()=>null) as {id?:string;revision?:number;revisions?:RevisionRow[]}|null;
+   if(response.status===401)return requireAuthentication();
    if(response.status===409)return conflict();
    // A server failure can follow a committed write. Do not guess or retry it.
    if(response.status>=500)return conflict();
    if(response.ok&&method==='POST'){
     if(payload?.id!==id||!Number.isSafeInteger(payload.revision))return conflict();
-    revisions.set(id,payload.revision!);
+    revisions.set(id,payload.revision!);if(!authenticationRequired)onAuthenticationRequired(false);
    }
    if(response.ok&&method==='PATCH'){
     if(!Array.isArray(payload?.revisions))return conflict();
@@ -40,7 +43,7 @@ export function createBatchSaveTransport(fetcher:Fetcher,onConflict:(message:str
    return response;
   }catch{return conflict()}
  }
- return (input:string,init:RequestInit={}):Promise<Response>=>{
+ const transport=(input:string,init:RequestInit={}):Promise<Response>=>{
   const method=(init.method||'GET').toUpperCase();
   if(method==='GET')return read(input,init);
   let id='';try{id=JSON.parse(String(init.body||'{}')).id||new URL(input,'https://goldie.invalid').searchParams.get('id')||''}catch{/* validation stays on the server */}
@@ -52,4 +55,5 @@ export function createBatchSaveTransport(fetcher:Fetcher,onConflict:(message:str
   void task.finally(()=>{if(pending.get(id)===task)pending.delete(id)}).catch(()=>undefined);
   return task;
  };
+ return Object.assign(transport,{retryAuthentication:()=>{authenticationRequired=false}});
 }

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import {readBatchHistory,preparedDaysFromHistory} from "../batch-history-read";
 import Link from "next/link";
 import FactoryShell from "../factory-shell";
 import { periodHistoryFromDays, publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "../listing-goal";
@@ -14,17 +15,16 @@ export default function GoalsPage() {
      back eight weeks over a history list that is capped at twenty rows. */
   const [days, setDays] = useState<PublishedDay[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error,setError]=useState("");
 
-  useEffect(() => {
-    void (Promise.all([
-      fetch("/api/seller-preferences").then((r) => r.json()).catch(() => ({})),
-      fetch("/api/batches").then((r) => r.json()).catch(() => ({})),
-    ]) as Promise<[{ listingGoal?: ListingGoal }, { prepared?: PublishedDay[] }]>).then(([prefs, list]: [{ listingGoal?: ListingGoal }, { prepared?: PublishedDay[] }]) => {
-      setGoal(prefs.listingGoal || null);
-      setDays(list.prepared || []);
-      setLoaded(true);
-    });
-  }, []);
+  async function loadHistory(){setLoaded(false);setError("");try{
+    const [prefs,list]=await Promise.all([
+      fetch("/api/seller-preferences",{signal:AbortSignal.timeout(25000)}).then(response=>{if(!response.ok)throw Error("Your goal settings could not be loaded. Try again.");return response.json() as Promise<{listingGoal?:ListingGoal}>}),
+      readBatchHistory(),
+    ]);
+    setDays(preparedDaysFromHistory(list));setGoal(prefs.listingGoal||null);setLoaded(true);
+  }catch(value){setError(value instanceof Error?value.message:"Your listing history could not be loaded. Try again.")}}
+  useEffect(()=>{void loadHistory()},[]);
 
   const period = goal?.period || "week";
   const rows = periodHistoryFromDays(days, period);
@@ -40,7 +40,8 @@ export default function GoalsPage() {
         <p>Every listing you have prepared as a Printify draft, by {period}.</p>
       </header>
 
-      {!loaded && <p className="goals-empty">Loading your history…</p>}
+      {error&&<div className="batch-restore-notice" role="alert"><p>{error}</p><button type="button" className="secondary-action" onClick={()=>void loadHistory()}>Reload listing history</button></div>}
+      {!loaded && !error && <p className="goals-empty">Loading your history…</p>}
 
       {loaded && !goal?.enabled && (
         <section className="goals-off">

@@ -72,8 +72,8 @@ test("the goal is one switch, enabled by default — D1165", async () => {
   /* The sidebar and the receipt are the same feature seen twice — they cannot
      be enabled separately, so both read the one value. */
   assert.match(app, /if\(result\.listingGoal\?\.enabled\)setListingGoal\(result\.listingGoal\)/);
-  assert.match(app, /\{listingGoal&&goalDaysLoaded&&<a className="listing-goal-side"/);
-  assert.match(app, /goalLine=\{listingGoal\?/);
+  assert.match(app, /\{listingGoal&&<a className="listing-goal-side"/);
+  assert.match(app, /goalLine=\{listingGoal&&goalDaysLoaded\?/);
   assert.match(ui, /\{goalLine&&<p className="receipt-goal">/);
 });
 
@@ -96,7 +96,7 @@ test("nothing shows a deficit, and the bar may exceed the goal — D342", async 
   }
   /* Progress is capped for the BAR's width only — the count itself keeps going. */
   assert.match(app, /Math\.min\(100,Math\.round\(\(goalDone\/Math\.max\(1,listingGoal\.target\)\)\*100\)\)/);
-  assert.match(app, /\{goalDone\} of \{listingGoal\.target\}/, "the number is not capped");
+  assert.match(app, /\$\{goalDone\} of \$\{listingGoal\.target\}/, "the number is not capped");
 });
 
 

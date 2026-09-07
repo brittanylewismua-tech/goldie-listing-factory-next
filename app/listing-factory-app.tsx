@@ -1,4 +1,5 @@
 "use client";
+import {preparedDaysFromHistory} from "./batch-history-read";
 import {createBatchSaveTransport} from "./batch-save-transport";
 import WaitProgress from "./wait-progress";
 import { shouldOpenEtsyDetails } from "./etsy-details-disclosure";
@@ -1042,8 +1043,9 @@ export default function ListingFactoryApp() {
   const snapshotReady=useRef(false);
   const writeBatch=useRef(serializedBatchWrites());
   const [batchSaveConflict,setBatchSaveConflict]=useState("");
+  const [batchAuthenticationRequired,setBatchAuthenticationRequired]=useState(false);
   const batchTransport=useRef<ReturnType<typeof createBatchSaveTransport>|null>(null);
-  if(!batchTransport.current)batchTransport.current=createBatchSaveTransport((input,init)=>fetch(input,init),setBatchSaveConflict);
+  if(!batchTransport.current)batchTransport.current=createBatchSaveTransport((input,init)=>fetch(input,init),setBatchSaveConflict,30000,setBatchAuthenticationRequired);
   const batchFetch=batchTransport.current;
   const [batchSaveStatus,setBatchSaveStatus]=useState<"idle"|"saving"|"saved"|"failed">("idle");
   const batchEditRevision=useRef(0);
@@ -1369,6 +1371,7 @@ export default function ListingFactoryApp() {
      fell on its own. Counted from the publish records now. */
   const [goalDays,setGoalDays]=useState<PublishedDay[]>([]);
   const [goalDaysLoaded,setGoalDaysLoaded]=useState(false);
+  const [goalDaysError,setGoalDaysError]=useState(false);
   /* D721 · Account menu in the top bar. Sign out moves inside it; the link
      itself is unchanged so the sign-out route and return_to are preserved. */
   const [accountMenuOpen,setAccountMenuOpen]=useState(false);
@@ -1377,8 +1380,8 @@ export default function ListingFactoryApp() {
       if(result.listingGoal?.enabled)setListingGoal(result.listingGoal)}).catch(()=>undefined);
   },[signedIn]);
   useEffect(()=>{if(!listingGoal)return;
-    void (batchFetch("/api/batches").then(response=>response.json()) as Promise<{prepared?:PublishedDay[]}>).then((result:{prepared?:PublishedDay[]})=>{
-      setGoalDays(result.prepared||[]);setGoalDaysLoaded(true)}).catch(()=>undefined);
+    void (batchFetch("/api/batches").then(response=>{if(!response.ok)throw Error("Listing count unavailable");return response.json()}) as Promise<{prepared?:PublishedDay[];preparedAvailable?:boolean}>).then((result:{prepared?:PublishedDay[];preparedAvailable?:boolean})=>{
+      setGoalDays(preparedDaysFromHistory(result));setGoalDaysLoaded(true);setGoalDaysError(false)}).catch(()=>{setGoalDaysLoaded(false);setGoalDaysError(true)});
   },[listingGoal,batchReceipt]);
   const goalDone=listingGoal?publishedDaysThisPeriod(goalDays,listingGoal):0;
   const [preparedMockupCounts,setPreparedMockupCounts]=useState<Record<string,number>>({});
@@ -2183,6 +2186,7 @@ export default function ListingFactoryApp() {
     setBatchHeldByAnotherTab(false);
     batchChannel.current.postMessage({type:"ping",batchId:id,tabId:tabId.current});
   },[savedRevision,restoringBatch]);
+  function retryAuthenticatedSave(){batchFetch.retryAuthentication();void persistBatchNow(batchIdRef.current).catch(()=>undefined)}
   async function reloadConflictedBatch(){
     if(!await confirmAction({title:"Reload the saved batch?",body:"This replaces the unsaved changes visible here with the latest saved version. Copy any unsaved text you want to keep before reloading.",confirmLabel:"Reload saved batch",cancelLabel:"Keep viewing changes"}))return;
     batchChannel.current?.postMessage({type:"claim",batchId:batchIdRef.current,tabId:tabId.current});
@@ -2235,7 +2239,7 @@ export default function ListingFactoryApp() {
       }catch(error){if(batchIdRef.current===id)setBatchSaveStatus("failed");throw error;}
     });
   }
-  useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||batchSaveConflict||(!files.length&&!drafts.length))return;/* D1019 · Capture the child id with the render that produced this snapshot.
+  useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||batchSaveConflict||batchAuthenticationRequired||(!files.length&&!drafts.length))return;/* D1019 · Capture the child id with the render that produced this snapshot.
      A bundle transition changes batchIdRef before React cleans up the outgoing
      autosave. Reading the ref inside the timer let that old product overwrite
      the new child's record with its own drafts. */batchEditRevision.current+=1;setBatchSaveStatus("saving");const targetId=batchIdRef.current;const timer=window.setTimeout(()=>{void persistBatchNow(targetId).catch(()=>undefined);},700);return()=>window.clearTimeout(timer);
@@ -4922,7 +4926,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
           {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>:<a className="account-link" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
         </div>
-        <div className="approved-sidebar-footer"><a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{sidebarUsage?`${sidebarUsage.used.toLocaleString()} / ${sidebarUsage.limit.toLocaleString()} listings`:"Loading usage…"}</span><div className="approved-usage-track" aria-hidden="true"><i style={{width:sidebarUsage?`${Math.min(100,sidebarUsage.used/sidebarUsage.limit*100)}%`:"0%"}} /></div></a>{listingGoal&&goalDaysLoaded&&<a className="listing-goal-side" href="/goals"><span className="listing-goal-caption">This {listingGoal.period}&rsquo;s goal</span><b>{goalDone} of {listingGoal.target} prepared</b><span className="listing-goal-track" aria-hidden="true"><i style={{width:`${Math.min(100,Math.round((goalDone/Math.max(1,listingGoal.target))*100))}%`}}/></span></a>}{/* D357 · "Powered by Goldie AI" is the widest line in the sidebar, so it sets
+        <div className="approved-sidebar-footer"><a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{sidebarUsage?`${sidebarUsage.used.toLocaleString()} / ${sidebarUsage.limit.toLocaleString()} listings`:"Loading usage…"}</span><div className="approved-usage-track" aria-hidden="true"><i style={{width:sidebarUsage?`${Math.min(100,sidebarUsage.used/sidebarUsage.limit*100)}%`:"0%"}} /></div></a>{listingGoal&&<a className="listing-goal-side" href="/goals"><span className="listing-goal-caption">This {listingGoal.period}&rsquo;s goal</span><b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${listingGoal.target} prepared`:"Loading progress…"}</b>{goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{width:`${Math.min(100,Math.round((goalDone/Math.max(1,listingGoal.target))*100))}%`}}/></span>}</a>}{/* D357 · "Powered by Goldie AI" is the widest line in the sidebar, so it sets
             the column's visual edge. Sitting above the copyright and the Etsy notice
             it made those look indented; at the bottom the block reads as one
             left-aligned stack that widens as it descends. */}
@@ -4951,7 +4955,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         <header className="factory-top">
           <b className="factory-top-batch">{batchDisplayName?.trim()||"New listing batch"}</b>
           <div className="factory-top-right">
-            <span className="factory-top-save" role="status">{batchSaveConflict?<button type="button" onClick={()=>void reloadConflictedBatch()}>Saving paused · Reload saved batch</button>:batchSaveStatus==="failed"?<button type="button" onClick={()=>void persistBatchNow(batchIdRef.current).catch(()=>undefined)}>Changes not saved · Retry</button>:batchSaveStatus==="saving"?"Saving…":batchSaveStatus==="saved"?"Saved":""}</span>
+            <span className="factory-top-save" role="status">{batchAuthenticationRequired?<button type="button" onClick={retryAuthenticatedSave}>Sign in to save · Retry</button>:batchSaveConflict?<button type="button" onClick={()=>void reloadConflictedBatch()}>Saving paused · Reload saved batch</button>:batchSaveStatus==="failed"?<button type="button" onClick={()=>void persistBatchNow(batchIdRef.current).catch(()=>undefined)}>Changes not saved · Retry</button>:batchSaveStatus==="saving"?"Saving…":batchSaveStatus==="saved"?"Saved":""}</span>
             <div className="factory-account-wrap">
               <button type="button" className="factory-account" aria-haspopup="menu"
                 aria-expanded={accountMenuOpen} onClick={()=>setAccountMenuOpen(open=>!open)}>
@@ -5453,7 +5457,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 screen, and pushed the Publish panel further down for it. The card
                 reports photo readiness; nothing else needs to. The banner style
                 is still used by step 2, so only this instance goes. */}
-              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={nextUnfinishedBundleProduct()?.name} bundleComplete={Boolean(activeBundle&&bundleRecipes.length>0&&bundleRecipes.every((recipe,index)=>index===bundleIndex?Number(batchReceipt?.publishedCount)>0:Number(bundleBatchSummary[recipe.id]?.published)>0))} onNextBundleProduct={()=>{const pending=nextUnfinishedBundleProduct();if(pending)void openBundleProduct(bundleRecipes.findIndex(recipe=>recipe.id===pending.id))}} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p>{/* D660 · This said "ready for its final check" over a
+              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal&&goalDaysLoaded?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={nextUnfinishedBundleProduct()?.name} bundleComplete={Boolean(activeBundle&&bundleRecipes.length>0&&bundleRecipes.every((recipe,index)=>index===bundleIndex?Number(batchReceipt?.publishedCount)>0:Number(bundleBatchSummary[recipe.id]?.published)>0))} onNextBundleProduct={()=>{const pending=nextUnfinishedBundleProduct();if(pending)void openBundleProduct(bundleRecipes.findIndex(recipe=>recipe.id===pending.id))}} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<><div className="step-heading"><div><p className="mini-label">FINAL REVIEW</p>{/* D660 · This said "ready for its final check" over a
                    disabled Publish button and a product with no titles at all.
                    The heading has to agree with the gate directly beneath it. */}
                    <h2>{handoffBlockers().length?"Finish these items before continuing":activeBundle?"Your listings are ready for final review":"Your batch is ready for its final check"}</h2></div><span className="done-mark">✓ {drafts.filter(draft=>draft.status==="Created").length} {drafts.filter(draft=>draft.status==="Created").length===1?"draft":"drafts"}{activeBundle&&bundleRecipes.length>1?` on ${activeRecipe?.name||"this product"}`:""}</span></div>{/* D546 - the old lead-in pointed at a checklist that repeated
@@ -5561,7 +5565,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {(publishing||Boolean(publishRun))&&<p className="working-note" role="status">Publishing to Etsy can take a few minutes. Keep this page open — Each listing will appear here as it goes live.</p>}<button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}</>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
      publishing and that nothing would publish. It belongs to a choice that is
-     no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.name||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">The error was emailed to you and recorded. You can press publish again once it is fixed.</p></section>}</div></div></>}</div></article>{!batchReceipt&&<FactoryFooter status={handoffBlockers()[0]||"Creates drafts only. Nothing goes live."}><button type="button" className="workflow-next" disabled={creatingEtsyDrafts||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":"Create Etsy drafts"}</button></FactoryFooter>}</>)}
+     no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.name||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">The error was emailed to you and recorded. You can press publish again once it is fixed.</p></section>}</div></div></>}</div></article>{!batchReceipt&&<FactoryFooter status={handoffBlockers()[0]||"Creates drafts only. Nothing goes live."}><button type="button" className="workflow-next" disabled={creatingEtsyDrafts||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":"Save to Etsy Drafts"}</button></FactoryFooter>}</>)}
         </div>
 
         {/* D220 · Draft creation moves onto the Images page. Every photo in this app is
@@ -5621,6 +5625,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </aside>,false)}
 {/* D496 - a held tab has to say so where she is working, not silently stop
     saving. */}
+        {batchAuthenticationRequired&&<div className="batch-tab-conflict" role="alert"><b>Sign in again to save your changes.</b><span>Your unsaved edits are still here. Keep this page open, sign in to Goldie in another tab, then retry saving here.</span><a href="/account/sign-in?return_to=%2Flisting-factory" target="_blank" rel="noopener noreferrer">Sign in to Goldie ↗</a><button type="button" onClick={retryAuthenticatedSave}>Retry saving</button></div>}
         {batchSaveConflict&&<div className="notice error" role="alert"><strong>Saving paused</strong><p>{batchSaveConflict}</p><button type="button" onClick={()=>void reloadConflictedBatch()}>Reload saved batch</button></div>}
             {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another tab.</b><span>Saving is paused here so the other tab is not overwritten. Continue in the other tab, or reload the latest saved version here to take over.</span><button type="button" onClick={takeOverBatchHere}>Reload saved batch here</button></div>}
         {!(complete&&workflowStep==="designs")&&<div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D776 - the step's own footer (status + forward) lands here, so the bar the seller can see is the bar with the way forward in it. */}<span className="factory-footer-slot"/>{/* D386 - Saving a draft was only reachable from the Publish step, so

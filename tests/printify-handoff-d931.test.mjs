@@ -10,7 +10,7 @@ const operations=await readFile(new URL("../app/api/operations/route.ts",import.
 const buildCommit=await readFile(new URL("../build/build-commit.ts",import.meta.url),"utf8");
 
 test("D931: the final action creates Etsy drafts while live publishing stays disabled",()=>{
-  assert.match(app,/Create Etsy drafts/);
+  assert.match(app,/Save to Etsy Drafts/);
   assert.match(app,/photoDeliveryRef\.current\?\.prepare\(\)/);
   assert.match(app,/setCreatingEtsyDrafts\(true\)/);
   assert.match(app,/Publishing and renewal stay under your control in Etsy/);

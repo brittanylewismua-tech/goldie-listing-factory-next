@@ -22,6 +22,7 @@
  * rules and neither needs an override of the other.
  * ==========================================================================*/
 import { useEffect, useState } from "react";
+import {readBatchHistory,preparedDaysFromHistory} from "./batch-history-read";
 import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
@@ -42,6 +43,7 @@ export default function FactoryShell({ active, title, children }:
   const [goal, setGoal] = useState<ListingGoal | null>(null);
   const [goalDays, setGoalDays] = useState<PublishedDay[]>([]);
   const [goalDaysLoaded, setGoalDaysLoaded] = useState(false);
+  const [goalDaysError,setGoalDaysError]=useState(false);
   const [account, setAccount] = useState<{ name: string; initials: string; signedIn: boolean } | null>(null);
   /* D835 · Every Etsy shop this seller has connected. The active one is the shop
      the product bank is scoped to; switching is a menu choice, not an OAuth
@@ -58,10 +60,7 @@ export default function FactoryShell({ active, title, children }:
     void (fetch("/api/seller-preferences").then(response => response.json()) as Promise<{ listingGoal?: ListingGoal }>).then((result: { listingGoal?: ListingGoal }) => {
       if (result.listingGoal?.enabled) setGoal(result.listingGoal);
     }).catch(() => undefined);
-    void (fetch("/api/batches").then(response => response.json()) as Promise<{ prepared?: PublishedDay[] }>).then((result: { prepared?: PublishedDay[] }) => {
-      setGoalDays(result.prepared || []);
-      setGoalDaysLoaded(true);
-    }).catch(() => undefined);
+    void readBatchHistory().then(result=>{setGoalDays(preparedDaysFromHistory(result));setGoalDaysLoaded(true);setGoalDaysError(false)}).catch(()=>{setGoalDaysLoaded(false);setGoalDaysError(true)});
     void (fetch("/api/etsy").then(response => response.json()) as Promise<{ shops?: { shopId: number; shopName: string; active: boolean }[] }>).then((result: { shops?: { shopId: number; shopName: string; active: boolean }[] }) => {
       setShops(result.shops || []);
     }).catch(() => undefined);
@@ -99,10 +98,10 @@ export default function FactoryShell({ active, title, children }:
       <div className="approved-sidebar-footer">
         <a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{usageLine}</span>
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>
-        {goal && goalDaysLoaded && <a className="listing-goal-side" href="/goals">
+        {goal && <a className="listing-goal-side" href="/goals">
           <span className="listing-goal-caption">This {goal.period}&rsquo;s goal</span>
-          <b>{goalDone} of {goal.target} prepared</b>
-          <span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span></a>}
+          <b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${goal.target} prepared`:"Loading progress…"}</b>
+          {goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span>}</a>}
         <small>&copy; 2026 Be A Wolf Biz</small>
         <p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>
         <div className="approved-powered"><span>Powered by</span><b>Gold<span className="approved-footer-i">&#305;<i>&#10022;</i></span>e AI</b></div>

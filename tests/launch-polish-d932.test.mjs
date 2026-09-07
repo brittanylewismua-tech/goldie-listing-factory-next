@@ -15,7 +15,8 @@ test("D932: final-review language cannot imply Goldie performs the publish",()=>
 test("D932: goal progress is withheld until its authoritative history arrives",()=>{
   for(const source of [app,shell]){
     assert.match(source,/goalDaysLoaded/);
-    assert.match(source,/goalDaysLoaded\s*&&\s*<a className="listing-goal-side"/);
+    assert.match(source,/goalDaysError\?"Progress unavailable":goalDaysLoaded\?/);
+    assert.match(source,/goalDaysLoaded&&<span className="listing-goal-track"/);
   }
 });
 

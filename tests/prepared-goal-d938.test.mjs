@@ -12,13 +12,13 @@ const [route,shell,app,goals,usage]=await Promise.all([
 
 test("D938: the goal is counted from successful Printify drafts, not disabled Etsy publishing",()=>{
   assert.match(route,/FROM printify_draft_results WHERE user_id=\? AND status='succeeded'/);
-  assert.match(route,/prepared:preparedDays,published:publishedDays/);
-  for(const source of [shell,app,goals]) assert.match(source,/\.prepared/);
+  assert.match(route,/prepared:preparedDays,preparedAvailable,published:publishedDays/);
+  for(const source of [shell,app,goals]) assert.match(source,/preparedDaysFromHistory/);
 });
 
 test("D938: every visible goal describes prepared listings",()=>{
-  assert.match(shell,/of \{goal\.target\} prepared/);
-  assert.match(app,/of \{listingGoal\.target\} prepared/);
+  assert.match(shell,/of \$\{goal\.target\} prepared/);
+  assert.match(app,/of \$\{listingGoal\.target\} prepared/);
   assert.match(goals,/prepared as a Printify draft/);
   assert.match(usage,/target for listings prepared as Printify drafts/);
   for(const source of [shell,app,goals,usage]) assert.doesNotMatch(source,/goal[^\n]{0,180}publish receipt/i);

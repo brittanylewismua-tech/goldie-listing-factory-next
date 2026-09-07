@@ -247,14 +247,14 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
      publishes can never move. Count the successful draft records the seller
      actually creates in Goldie. The old `published` history remains in the
      response for truthful legacy receipts and Batch History attribution. */
-  let preparedDays:Array<{day:string;count:number}>=[];
+  let preparedDays:Array<{day:string;count:number}>=[];let preparedAvailable=true;
   try{
     const preparedDayRows=await database.prepare("SELECT substr(COALESCE(created_at,updated_at),1,10) day,COUNT(*) count FROM printify_draft_results WHERE user_id=? AND status='succeeded' GROUP BY substr(COALESCE(created_at,updated_at),1,10) ORDER BY day DESC").bind(user.userId).all<{day:string;count:number}>();
     preparedDays=(preparedDayRows.results||[]).map(row=>({day:String(row.day||""),count:Math.max(0,Number(row.count)||0)})).filter(row=>row.day);
   }catch(error){
-    console.error("batches: listing goal count failed, serving batches without it",error);
+    preparedAvailable=false;console.error("batches: listing goal count failed, serving batches without it",error);
   }
-  return NextResponse.json({batches:rows.results.map(row=>{const item=batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct);const children=childrenByParent.get(String(row.id))||[];return children.length?withRunProgress(item,row,children,publishedByBatch,publishedAtByProduct):item}),prepared:preparedDays,published:publishedDays})}
+  return NextResponse.json({batches:rows.results.map(row=>{const item=batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct);const children=childrenByParent.get(String(row.id))||[];return children.length?withRunProgress(item,row,children,publishedByBatch,publishedAtByProduct):item}),prepared:preparedDays,preparedAvailable,published:publishedDays})}
 
 export async function PATCH(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});

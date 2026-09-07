@@ -18,5 +18,5 @@ test("D921: selection intent is reported directly instead of relying on event ti
 
 test("D931: the retired paid publish press is not rendered",()=>{
   assert.match(factory,/\{false&&<>\s*<div className="publish-live-warning"/);
-  assert.match(factory,/Create Etsy drafts/);
+  assert.match(factory,/Save to Etsy Drafts/);
 });

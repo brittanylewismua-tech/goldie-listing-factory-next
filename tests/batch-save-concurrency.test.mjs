@@ -76,3 +76,21 @@ test('an interrupted batch read is bounded and does not poison later reads',asyn
  const client=createBatchSaveTransport(async(_input,{signal})=>{if(++calls===1)return new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(signal.reason)));return Response.json({batch:{id:'batch',revision:3}})},()=>assert.fail('read failures are not write conflicts'),10);
  try{await assert.rejects(open(client));assert.equal((await open(client)).status,200);assert.equal(calls,2)}finally{clearTimeout(keepAlive)}
 });
+test('expired sessions pause queued writes until explicit retry, preserving the unsaved snapshot',async()=>{
+ const f=fixture(),auth=[],a=createBatchSaveTransport(f.fetcher,()=>{});await save(a,20);
+ let expired=false,calls=0;
+ const client=createBatchSaveTransport(async(input,init)=>{calls++;return expired&&init?.method==='POST'?Response.json({error:'Sign in'},{status:401}):f.fetcher(input,init)},()=>assert.fail('authentication is recoverable without a forced reload'),30000,value=>auth.push(value));
+ await open(client);expired=true;
+ const first=await save(client,21.99);assert.equal(first.status,401);const before=calls;
+ assert.equal((await save(client,22.99)).status,401);assert.equal(calls,before);assert.equal(f.read().price,20);
+ expired=false;client.retryAuthentication();assert.equal((await save(client,22.99)).status,200);assert.equal(f.read().price,22.99);assert.equal(auth.at(-1),false);f.db.close();
+});
+test('retrying sign-in cannot bypass a genuine stale-snapshot conflict',async()=>{
+ const f=fixture(),a=createBatchSaveTransport(f.fetcher,()=>{}),b=createBatchSaveTransport(f.fetcher,()=>{});
+ await save(a,20);await open(b);await save(a,25);assert.equal((await save(b,19)).status,409);b.retryAuthentication();assert.equal((await save(b,19)).status,409);assert.equal(f.read().price,25);f.db.close();
+});
+test('a late successful sibling cannot hide an authentication pause',async()=>{
+ let release;const auth=[];
+ const client=createBatchSaveTransport(async(_input,init)=>{const id=JSON.parse(init.body).id;if(id==='late')return new Promise(resolve=>release=()=>resolve(Response.json({id,revision:1})));return Response.json({},{status:401})},()=>{},30000,value=>auth.push(value));
+ const late=save(client,20,'late');assert.equal((await save(client,20,'expired')).status,401);release();await late;assert.equal(auth.at(-1),true);
+});
