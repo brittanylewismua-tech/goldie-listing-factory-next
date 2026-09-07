@@ -2535,8 +2535,8 @@ test("Batch History can select and delete several at once — D364", async () =>
 
   assert.match(page, /className="batch-select"/, "every card carries a checkbox");
   assert.match(page, /className="batch-select-all"/);
-  assert.match(page, /node\.indeterminate=selected\.length>0&&selected\.length<batches\.length/,
-    "select-all shows a partial state rather than lying");
+  assert.match(page, /node\.indeterminate=visibleSelected\.length>0&&visibleSelected\.length<visibleBatches\.length/,
+    "select-all shows a partial state for the visible filtered results rather than lying");
 
   /* One confirmation for the whole set, carrying the same warning the single
      delete gives. */

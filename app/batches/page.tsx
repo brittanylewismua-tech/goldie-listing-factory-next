@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { confirmAction } from "../confirm-dialog";
 import {readBatchHistory,removeHistoryRows} from "../batch-history-read";
+import {filterBatchHistory} from "../batch-history-filter";
 import FactoryShell from "../factory-shell";
 type RunChild = { batchId:string; productName:string; position:number; drafts:number; published:number; done:boolean };
 type Batch = { id:string; status:string; step:string; setup_name:string; product_title:string; design_count:number; created_at:string; updated_at:string; display_name:string; thumbnail_url:string; published_count:number;draft_count?:number;members?:RunChild[];bundle_total?:number;resume_batch_id?:string };
@@ -25,6 +26,7 @@ export default function BatchesPage() {
   const [batches,setBatches] = useState<Batch[]>([]);
   const [loading,setLoading] = useState(true);
   const [error,setError] = useState("");
+  const [query,setQuery] = useState("");
   /* D364 · Removing batches one at a time meant one confirm dialog each. A
      checkbox on every card and one Delete above them turns clearing a test run
      into a single decision. */
@@ -58,22 +60,24 @@ export default function BatchesPage() {
     if(result.confirmed.length)setBatches(current=>current.filter(item=>item.id!==batch.id));
     if(result.uncertain)setError("This removal could not be confirmed. Reload history before trying again.");
   }
+  const visibleBatches=filterBatchHistory(batches,query),visibleIds=visibleBatches.map(batch=>batch.id),visibleSelected=visibleIds.filter(id=>selected.includes(id));
   return <FactoryShell active="batches" title="Batch History"><div className="management-page interior-page">
     
     <header><p className="mini-label">BATCH HISTORY</p><h1>Continue where you left off.</h1><p>Your product, listing work, results, and errors are saved with each batch. Any Printify drafts you already created will still be there when you return.</p></header>
     <section className="batch-history">
       {error&&<div className="batch-restore-notice" role="alert"><p>{error}</p>{/sign in/i.test(error)&&<a href="/account/sign-in?return_to=%2Fbatches" target="_blank" rel="noopener noreferrer">Sign in to Goldie ↗</a>}<button type="button" className="secondary-action" disabled={loading||deleting} onClick={()=>void loadHistory()}>Reload history</button></div>}
+      {!loading&&batches.length>0&&<label className="batch-history-search"><span>Find a saved batch</span><input type="search" value={query} placeholder="Search by batch or product" onChange={event=>{setQuery(event.target.value);setSelected([])}}/><small>{query.trim()?`${visibleBatches.length} ${visibleBatches.length===1?"match":"matches"}`:`${batches.length} saved`}</small></label>}
       {/* D364 · Always present, so selecting is never a mode you have to enter. */}
-      {!loading&&batches.length>0&&<div className="batch-history-select">
+      {!loading&&visibleBatches.length>0&&<div className="batch-history-select">
         <label className="batch-select-all"><input type="checkbox"
-          checked={selected.length===batches.length&&batches.length>0}
-          ref={node=>{if(node)node.indeterminate=selected.length>0&&selected.length<batches.length}}
-          onChange={()=>setSelected(selected.length===batches.length?[]:batches.map(batch=>batch.id))}/>
+          checked={visibleSelected.length===visibleBatches.length&&visibleBatches.length>0}
+          ref={node=>{if(node)node.indeterminate=visibleSelected.length>0&&visibleSelected.length<visibleBatches.length}}
+          onChange={()=>setSelected(visibleSelected.length===visibleBatches.length?selected.filter(id=>!visibleIds.includes(id)):[...new Set([...selected,...visibleIds])])}/>
         <span>{selected.length?`${selected.length} selected`:"Select all"}</span></label>
         {selected.length>0&&<button type="button" className="batch-delete-selected" disabled={deleting} onClick={()=>void removeSelected()}>
           {deleting?"Deleting…":`Delete ${selected.length} ${selected.length===1?"batch":"batches"}`}</button>}
       </div>}
-      {loading ? <p>Loading saved batches…</p> : !batches.length ? error?null:<div className="empty-history"><h2>No saved batches yet</h2><p>Your first batch appears here as soon as you add designs.</p><a href="/listing-factory">Start a batch</a></div> : batches.map(batch => <article key={batch.id} className={selected.includes(batch.id)?"selected":""}><label className="batch-select"><input type="checkbox" checked={selected.includes(batch.id)} onChange={()=>toggleSelected(batch.id)} aria-label={`Select ${batch.display_name||"Untitled batch"}`}/></label>{batch.thumbnail_url?<img className="batch-history-thumbnail" src={batch.thumbnail_url} alt=""/>:<span className="batch-history-thumbnail empty" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg></span>}<div className="batch-history-summary"><span className={`batch-status ${batch.status}`}>{batch.published_count>0?`${batch.published_count} PUBLISHED TO ETSY`:`DRAFT`}</span><h2>{batch.display_name || "Untitled batch"}</h2><p>{batch.members?.length?batch.product_title:`${batch.product_title || "Custom product"} · ${batch.design_count} ${batch.design_count === 1 ? "design" : "designs"}`}</p>{/* D871 · A bundle run is one row, and its products are its progress - not
+      {loading ? <p>Loading saved batches…</p> : !batches.length ? error?null:<div className="empty-history"><h2>No saved batches yet</h2><p>Your first batch appears here as soon as you add designs.</p><a href="/listing-factory">Start a batch</a></div> : !visibleBatches.length?<div className="empty-history batch-history-no-match"><h2>No matching batches</h2><p>Try a batch name or product name.</p></div>:visibleBatches.map(batch => <article key={batch.id} className={selected.includes(batch.id)?"selected":""}><label className="batch-select"><input type="checkbox" checked={selected.includes(batch.id)} onChange={()=>toggleSelected(batch.id)} aria-label={`Select ${batch.display_name||"Untitled batch"}`}/></label>{batch.thumbnail_url?<img className="batch-history-thumbnail" src={batch.thumbnail_url} alt=""/>:<span className="batch-history-thumbnail empty" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg></span>}<div className="batch-history-summary"><span className={`batch-status ${batch.status}`}>{batch.published_count>0?`${batch.published_count} PUBLISHED TO ETSY`:`DRAFT`}</span><h2>{batch.display_name || "Untitled batch"}</h2><p>{batch.members?.length?batch.product_title:`${batch.product_title || "Custom product"} · ${batch.design_count} ${batch.design_count === 1 ? "design" : "designs"}`}</p>{/* D871 · A bundle run is one row, and its products are its progress - not
             separate jobs with their own name, badge and Resume button. */}
           {batch.members?.length?<ul className="batch-history-members">{batch.members.map(member=><li key={member.batchId} className={member.done?"done":""}><span className="member-mark" aria-hidden="true">{member.done?"✓":member.position}</span><b>{member.productName||`Product ${member.position}`}</b><small>{member.published>0?`${member.published} published`:member.drafts>0?`${member.drafts} ${member.drafts===1?"draft":"drafts"} ready`:"Not started yet"}</small></li>)}</ul>:null}</div><div className="batch-history-controls"><small>Last saved {savedLabel(batch.updated_at)}</small><span className="batch-row-actions"><button onClick={() => resume(batch)}>{batch.members?.length
               /* D871 · One action for the run, and it opens where the work
