@@ -43,9 +43,9 @@ test('manual group and individual prices preserve cents while automatic whole-nu
  assert.match(app,/function toggleWholeNumberPricing[\s\S]{0,500}Math\.ceil\(current\/100\)\*100/);
 });
 test('external Printify navigation is not disabled by local publishing gates',()=>{
- const app=read('app/listing-factory-app.tsx'),start=app.indexOf('href="https://printify.com/app/store/products"'),link=app.slice(start-45,app.indexOf('</a>',start));
+ const app=read('app/listing-factory-app.tsx'),handoff=read('app/photo-delivery-handoff.tsx'),start=handoff.indexOf('href="https://printify.com/app/store/products"'),link=handoff.slice(start-45,handoff.indexOf('</a>',start));
  assert.ok(start>0);assert.doesNotMatch(link,/aria-disabled|handoffBlockers/);
- assert.match(link,/target="_blank"/);assert.match(link,/photoDeliveryRef/);
+ assert.match(link,/target="_blank"/);assert.match(app,/photoDeliveryRef/);
  assert.doesNotMatch(app,/Add your photo set|Replace previous mockup selection checked/);
  assert.match(app,/Save a copy for social media or your own use/);
 });

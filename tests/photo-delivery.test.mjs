@@ -41,9 +41,10 @@ test('unconfirmed deletion cannot repeat or prematurely report completion',async
  await assert.rejects(deliveryStep(f.io,7,123,photos,f.saved));await assert.rejects(deliveryStep(f.io,7,123,photos,f.saved),/prevent duplicate/);
  assert.equal(f.writes.filter(w=>w[0]==='delete').length,1);
 });
-test('photo delivery has separate bounded execution and cannot invoke publishing',()=>{
+test('legacy photos remain separate; only explicit automatic draft jobs can transfer hidden products',()=>{
  const service=read('app/api/listing-photos/delivery/service.ts'),worker=read('worker/photo-delivery-workflow.ts'),route=read('app/api/listing-photos/delivery/route.ts');
- assert.doesNotMatch(service,/finishEtsyListing|publish\.json|createDraftListing|method:'PATCH'|etsyFetch/);
+ assert.doesNotMatch(service,/finishEtsyListing|createDraftListing|method:'PATCH'/);
+ assert.match(service,/row\.draft_json&&row\.transfer_json&&published\.state==='unpublished'/);assert.match(service,/body:JSON\.stringify\(\{visible:false\}\)/);
  assert.match(service,/form\.set\('overwrite','true'\)/);assert.match(worker,/operation<240/);assert.match(service,/row\.expires_at/);
  assert.match(route,/status='waiting' AND state_json IS NULL/);assert.match(service,/if\(!claim\.meta\.changes\)return/);
  assert.match(route,/user_id=\? AND status='succeeded'/);assert.match(route,/previous delivery has an unconfirmed Etsy change/);

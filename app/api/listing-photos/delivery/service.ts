@@ -1,3 +1,6 @@
+import {transferDraft,DraftTransferReviewRequired,type TransferState,type TransferProduct} from './transfer-engine';
+import {verifyShopPairing} from '../../printify/shop-match';
+import {etsyFetch} from '../../etsy/client';
 import {DraftReviewRequired,DraftWriteRejected,type DraftSnapshot,type DraftState} from './draft-engine';
 import {finishDraftMetadata,draftWithSize,type PrintifyDraftProduct} from './draft-service';
 import {env} from 'cloudflare:workers';
@@ -6,7 +9,7 @@ import {decryptPrintifyToken} from '../../printify/token-crypto';
 import {readPrintifyPublishState} from '../../printify/publish-state';
 import {deliveryStep,DeliveryReviewRequired,type DeliveryImage,type DeliveryPhoto,type DeliveryState} from './engine';
 export type DeliveryEnv={DB:D1Database;ARTWORK:R2Bucket;PRINTIFY_TOKEN_KEY:string;IMAGES?:{input(stream:ReadableStream):{output(options:{format:'image/jpeg';background:string;quality:number}):Promise<{response():Response}>}};PHOTO_DELIVERY:Workflow<{id:string;owner:string}>};
-export type DeliveryRow={draft_json?:string|null;draft_state_json?:string|null;id:string;user_id:string;product_id:string;printify_shop_id:number;etsy_shop_id:number;fingerprint:string;status:string;photos_json:string;state_json:string|null;candidate_listing_id:number|null;candidate_seen_at:number|null;error:string|null;created_at:number;updated_at:number;expires_at:number};
+export type DeliveryRow={transfer_json?:string|null;draft_json?:string|null;draft_state_json?:string|null;id:string;user_id:string;product_id:string;printify_shop_id:number;etsy_shop_id:number;fingerprint:string;status:string;photos_json:string;state_json:string|null;candidate_listing_id:number|null;candidate_seen_at:number|null;error:string|null;created_at:number;updated_at:number;expires_at:number};
 export function deliveryMessage(value:string){return /Invalid redirect|UNIQUE constraint|SQLITE|TypeError|Cannot read|Unexpected token|binding/i.test(value)?'Photo delivery could not be prepared. Your original photos are saved. Please try again.':value.slice(0,500)}
 export const deliveryEnv=()=>env as unknown as DeliveryEnv;
 export const readDelivery=(id:string,owner:string)=>deliveryEnv().DB.prepare('SELECT * FROM photo_deliveries WHERE id=? AND user_id=?').bind(id,owner).first<DeliveryRow>();
@@ -45,8 +48,29 @@ export async function runDeliveryTick(id:string,owner:string){
     const published=await readPrintifyPublishState(async(url,init)=>{const response=await fetch(url,{...init,signal:AbortSignal.timeout(15000)});if(response.ok){const product=await response.clone().json() as PrintifyDraftProduct;printifyProduct=product;if(product.is_locked)return new Response(null,{status:423})}return response},token,row.printify_shop_id,row.product_id);
     if(published.state!=='published'){
       if(row.state_json)throw new DeliveryReviewRequired('Printify could no longer confirm the linked Etsy listing. Delivery paused.');
-      if(published.state==='unknown')await deliveryStatus(id,owner,'waiting',published.reason+' Automatic checking will retry.');
-      else await deliveryStatus(id,owner,'waiting');
+      if(row.draft_json&&row.transfer_json&&published.state==='unpublished'){
+        const shopsResponse=await fetch('https://api.printify.com/v1/shops.json',{headers:{Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory'},signal:AbortSignal.timeout(15000)});
+        if(!shopsResponse.ok)throw Error('Printify could not verify the connected store.');
+        const shops=await shopsResponse.json() as {id:number;sales_channel:string}[];
+        if(!shops.some(shop=>Number(shop.id)===row.printify_shop_id&&shop.sales_channel==='etsy'))throw new DraftTransferReviewRequired('The selected Printify store is not connected to Etsy.');
+        const transfer=JSON.parse(row.transfer_json) as TransferState;
+        if(transfer.phase==='ready'){
+          const pairing=await verifyShopPairing({printifyToken:token,printifyShopId:row.printify_shop_id,etsyShopId:row.etsy_shop_id,etsyToken:connection.token,etsyFetch});
+          if(pairing.result==='mismatched')throw new DraftTransferReviewRequired('This Printify store is connected to a different Etsy shop. No draft was sent.');
+        }
+        const url=`https://api.printify.com/v1/shops/${row.printify_shop_id}/products/${row.product_id}`,headers={Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory','Content-Type':'application/json'};
+        await transferDraft({
+          read:async()=>{const response=await fetch(`${url}.json`,{headers,signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('Printify could not verify the draft before transfer.');return response.json() as Promise<TransferProduct>},
+          hide:async()=>{const response=await fetch(`${url}.json`,{method:'PUT',headers,body:JSON.stringify({visible:false}),signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('Printify could not save the hidden draft setting. No transfer was sent.')},
+          backup:async product=>{await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/printify-before-transfer.json`,JSON.stringify(product))},
+          claim:async state=>{const claim=await runtime.DB.prepare("UPDATE photo_deliveries SET transfer_json=?,status='delivering',updated_at=? WHERE id=? AND user_id=? AND transfer_json=? AND status IN ('waiting','delivering')").bind(JSON.stringify(state),Date.now(),id,owner,row.transfer_json).run();return Boolean(claim.meta.changes)},
+          save:async state=>{await runtime.DB.prepare('UPDATE photo_deliveries SET transfer_json=?,updated_at=? WHERE id=? AND user_id=?').bind(JSON.stringify(state),Date.now(),id,owner).run()},
+          send:async()=>{const response=await fetch(`${url}/publish.json`,{method:'POST',headers,body:JSON.stringify({title:true,description:true,images:true,variants:true,tags:true,shipping_template:true}),signal:AbortSignal.timeout(25000)});return {ok:response.ok,status:response.status,detail:response.ok?undefined:(await response.text()).replace(/[<>]/g,'').slice(0,250)}},
+        },row.product_id,transfer);
+        return {done:false,progress:false,waitMs:10000};
+      }
+      if(published.state==='unknown')await deliveryStatus(id,owner,row.transfer_json?row.status:'waiting',published.reason+' Automatic checking will retry.');
+      else await deliveryStatus(id,owner,row.transfer_json?row.status:'waiting');
       return {done:false,progress:false};
     }
     if(!row.state_json&&(row.candidate_listing_id!==published.listingId||!row.candidate_seen_at)){
@@ -106,8 +130,8 @@ export async function runDeliveryTick(id:string,owner:string){
   }catch(error){
     const latest=await readDelivery(id,owner),uncertain=latest?.state_json&&(JSON.parse(latest.state_json) as DeliveryState).pending;
     const metadataPending=latest?.draft_state_json&&(JSON.parse(latest.draft_state_json) as DraftState).pending;
-    const terminal=error instanceof DeliveryReviewRequired||error instanceof DraftReviewRequired||Boolean(uncertain);
-    await deliveryStatus(id,owner,terminal?'needs_attention':latest?.state_json||metadataPending?'delivering':row.status,uncertain?'Etsy did not confirm the last photo change. Delivery paused to prevent duplicate uploads. Contact support with this batch.':error instanceof Error?error.message:'Photo delivery could not finish.');
+    const terminal=error instanceof DraftTransferReviewRequired||error instanceof DeliveryReviewRequired||error instanceof DraftReviewRequired||Boolean(uncertain);
+    await deliveryStatus(id,owner,terminal?'needs_attention':latest?.state_json||metadataPending||(latest?.transfer_json&&['submitted','accepted'].includes(JSON.parse(latest.transfer_json).phase))?'delivering':row.status,uncertain?'Etsy did not confirm the last photo change. Delivery paused to prevent duplicate uploads. Contact support with this batch.':error instanceof Error?error.message:'Photo delivery could not finish.');
     return {done:terminal,progress:false};
   }
 }

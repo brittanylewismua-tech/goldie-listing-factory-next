@@ -9,12 +9,12 @@ const worker=await readFile(new URL("../worker/index.ts",import.meta.url),"utf8"
 const operations=await readFile(new URL("../app/api/operations/route.ts",import.meta.url),"utf8");
 const buildCommit=await readFile(new URL("../build/build-commit.ts",import.meta.url),"utf8");
 
-test("D931: the final action hands the seller to Printify without publishing",()=>{
-  assert.match(app,/href="https:\/\/printify\.com\/app\/store\/products"/);
+test("D931: the final action creates Etsy drafts while live publishing stays disabled",()=>{
+  assert.match(app,/Create Etsy drafts/);
   assert.match(app,/photoDeliveryRef\.current\?\.prepare\(\)/);
-  assert.match(app,/Open My Products <span aria-hidden="true">↗<\/span>/);
+  assert.match(app,/setCreatingEtsyDrafts\(true\)/);
   assert.match(app,/Publishing and renewal stay under your control in Etsy/);
-  assert.match(app,/Keep Hide in store checked when transferring from Printify/);
+  assert.match(app,/Creates drafts only\. Nothing goes live/);
   assert.match(app,/<FactoryFooter status=\{handoffBlockers\(\)\[0\]/);
   assert.match(app,/<FinalListingReview handoffOnly/);
   assert.match(review,/handoffOnly\?"Review the drafts created for this batch"/);
