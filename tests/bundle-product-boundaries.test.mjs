@@ -7,7 +7,7 @@ const boundary=css.slice(css.indexOf('/* D1140:'));
 test('bundle products have a full-width chapter header and generous inter-product spacing',()=>{
   assert.match(boundary,/\.in-batch \+ \.step-product-card\.in-batch\{\s*margin-top:64px/);
   assert.match(boundary,/width:100%;box-sizing:border-box;margin:0 0 28px;padding:24px/);
-  assert.match(boundary,/background:var\(--lf-section\);border:2px solid #171717/);
+  assert.match(boundary,/border:2px solid var\(--lf-pink\);border-radius:16px/);
   assert.match(boundary,/\.batch-product-position\{[^}]*font-size:14px!important/s);
   assert.doesNotMatch(boundary,/\.is-(open|closed)\s*>\s*header/,'open and closed products must share the same boundary');
 });

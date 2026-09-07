@@ -1,4 +1,5 @@
 "use client";
+import { DRAFT_TASK_STAGES, draftTaskStage, visibleDraftStage } from "./draft-task-stages";
 import {preparedDaysFromHistory} from "./batch-history-read";
 import {createBatchSaveTransport} from "./batch-save-transport";
 import WaitProgress from "./wait-progress";
@@ -2987,6 +2988,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
      progress index - and they disagreed. */
   const etsyDetailsPrepared=files.length>0&&files.every(file=>Boolean(file.etsy));
   const [activeTask,setActiveTask]=useState<string>("");
+  const [draftStageByProduct,setDraftStageByProduct]=useState<Record<string,string>>({});
   const [taskFocusRequest,setTaskFocusRequest]=useState(0);
   const guidedTaskFocus=useRef(false);
   useEffect(()=>{
@@ -3560,7 +3562,20 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
             /* D723 · Each task row is a prototype panel: index chip, title, description,
        state chip, and its work in the body. The row's own handlers, guards and
        reachability rules are unchanged and are handed to the panel. */
-    return <div className="batch-product-rows">{rows.map((row,rowIndex)=>{const rowOpen=Boolean(!switchingProduct&&open&&row.task&&activeTask===row.task);
+    const grouped=workflowStep==="designs";
+    const stageId=visibleDraftStage(rows,open?activeTask:"",draftStageByProduct[recipe.id]);
+    const stages=DRAFT_TASK_STAGES.filter(stage=>rows.some(row=>draftTaskStage(row.task)===stage.id));
+    const stageRows=rows.filter(row=>draftTaskStage(row.task)===stageId);
+    return <div className="batch-product-rows">
+      {grouped&&<nav className="draft-stage-nav" aria-label="Product setup stages">{stages.map((stage,stageIndex)=>{
+        const tasks=rows.filter(row=>draftTaskStage(row.task)===stage.id),remaining=tasks.filter(row=>!row.done).length;
+        return <button type="button" key={stage.id} aria-current={stage.id===stageId?"step":undefined} disabled={Boolean(switchingProduct)||(!open&&!reachable)} onClick={()=>{
+          setDraftStageByProduct(current=>({...current,[recipe.id]:stage.id}));
+          const target=tasks.find(row=>!row.done)||tasks[0];if(target?.task)openGuidedDraftTask(target.task,index);
+        }}><span>{stageIndex+1}</span><b>{stage.label}</b><small>{remaining?`${remaining} to check`:"Ready to review"}</small></button>;
+      })}</nav>}
+      {grouped&&<p className="draft-stage-position">Stage {stages.findIndex(stage=>stage.id===stageId)+1} of {stages.length} · {stageRows.find(row=>row.task===activeTask)?.label||"Choose a section below"}</p>}
+      {rows.map((row,rowIndex)=>{if(grouped&&draftTaskStage(row.task)!==stageId)return null;const rowOpen=Boolean(!switchingProduct&&open&&row.task&&activeTask===row.task);
       const reachableRow=!(switchingProduct||(!open&&!reachable));
       /* D767 · A reporting row has nothing of its own to open (D541), which is a
          reason to have no Change control - not a reason to be a different
@@ -3569,13 +3584,13 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
          Same panel, no toggle. The Fragment branch below is unreachable now. */
       return <FactoryPanel
         key={row.label}
-        index={rowIndex+1}
+        index={grouped?stageRows.indexOf(row)+1:rowIndex+1}
         title={row.label}
         description={row.detail||row.advice||undefined}
         state={row.value}
         tone={row.done?"done":row.pending?"pending":row.optional?"optional":"attention"}
         open={rowOpen}
-        onToggle={row.report?undefined:()=>{openRow(row.target,row.task)}}
+        onToggle={row.report?undefined:()=>{if(grouped)setDraftStageByProduct(current=>({...current,[recipe.id]:draftTaskStage(row.task)||stageId}));openRow(row.target,row.task)}}
         footerActions={rowOpen&&workflowStep==="designs"&&rows[rowIndex+1]?.task?<button type="button" className="task-next-section" onClick={()=>openGuidedDraftTask(rows[rowIndex+1].task!,index)}>Next: {rows[rowIndex+1].label} <span aria-hidden="true">→</span></button>:undefined}
         toggleLabel={opening?"Opening…":rowOpen?"Close":"Change"}
         toggleDisabled={!reachableRow}
