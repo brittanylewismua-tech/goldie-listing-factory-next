@@ -6,6 +6,7 @@ export async function readBatchHistory<T>(fetcher:typeof fetch=fetch,timeoutMs=2
  const payload=await response.json() as HistoryData<T>&{error?:string};
  if(!response.ok)throw Error(response.status===401?'Sign in to Goldie, then reload your saved history.':payload.error||'Saved history could not be loaded. Try again.');
  if(!Array.isArray(payload.batches))throw Error('Saved history could not be read. Try again.');
+ if(typeof window!=='undefined'&&payload.preparedAvailable!==false&&Array.isArray(payload.prepared))window.dispatchEvent(new CustomEvent('goldie-history-loaded',{detail:payload.prepared}));
  return payload;
 }
 export function preparedDaysFromHistory(history:{prepared?:PublishedDay[];preparedAvailable?:boolean}){

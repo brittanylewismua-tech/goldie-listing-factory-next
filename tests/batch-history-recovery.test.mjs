@@ -15,3 +15,12 @@ test('partial removal keeps confirmed results, stops after uncertainty, and neve
  assert.deepEqual(result,{confirmed:['first'],uncertain:true});assert.equal(calls.length,2);
 });
 test('declined removal cannot be reported as confirmed',async()=>{assert.deepEqual(await removeHistoryRows(['first'],async()=>Response.json({error:'sign in'},{status:401})),{confirmed:[],uncertain:true})});
+
+test('successful history retry refreshes the sidebar count, but unavailable counts do not',async()=>{
+ const previous=globalThis.window,events=[];globalThis.window={dispatchEvent:event=>events.push(event.detail)};
+ try{
+  await readBatchHistory(async()=>Response.json({batches:[],prepared:[{day:'2026-09-06',count:147}],preparedAvailable:true}));
+  await readBatchHistory(async()=>Response.json({batches:[],prepared:[],preparedAvailable:false}));
+  assert.deepEqual(events,[[{day:'2026-09-06',count:147}]]);
+ }finally{if(previous===undefined)delete globalThis.window;else globalThis.window=previous}
+});

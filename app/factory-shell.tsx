@@ -69,6 +69,8 @@ export default function FactoryShell({ active, title, children }:
     }).catch(() => undefined);
   }, []);
 
+  useEffect(()=>{const loaded=(event:Event)=>{const days=(event as CustomEvent<PublishedDay[]>).detail;if(Array.isArray(days)){setGoalDays(days);setGoalDaysLoaded(true);setGoalDaysError(false)}};window.addEventListener("goldie-history-loaded",loaded);return()=>window.removeEventListener("goldie-history-loaded",loaded)},[]);
+
   const goalDone = goal ? publishedDaysThisPeriod(goalDays, goal) : 0;
 
   /* D818 · the preview writes the allowance as "62 / 10,000 listings". Production
