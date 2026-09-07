@@ -19,7 +19,8 @@ export async function transferDraft(io:{read():Promise<TransferProduct>;hide():P
   hidden=await io.read();
  }
  if(io.inspect)await io.inspect(hidden);
- const canonical=(value:unknown):unknown=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,canonical(item)])):value;
+ // Printify regenerates imageId=<stable artwork id>_<UUID> on each read. The stable id and every placement field still compare exactly.
+ const canonical=(value:unknown):unknown=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([key,item])=>{const id=(value as {id?:unknown}).id;return !(key==='imageId'&&typeof id==='string'&&typeof item==='string'&&item.startsWith(`${id}_`)&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.slice(id.length+1)))}).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,canonical(item)])):value;
  const fields=['id','title','description','tags','variants','print_areas'] as const;
  const changed=fields.filter(key=>JSON.stringify(canonical(before[key]))!==JSON.stringify(canonical(hidden[key])));
  if(hidden.visible!==false||hidden.is_locked||hidden.external?.id||changed.length)throw new DraftTransferReviewRequired(`Printify did not confirm a safe hidden draft (hidden: ${hidden.visible===false}, locked: ${Boolean(hidden.is_locked)}${changed.length?`, changed: ${changed.join(', ')}`:''}). Nothing was sent to Etsy.`);
