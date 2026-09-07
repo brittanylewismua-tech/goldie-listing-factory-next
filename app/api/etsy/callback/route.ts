@@ -1,3 +1,4 @@
+import { oauthReturnOrigin } from "../return-origin";
 import { forgetPairings } from "../../static-cache";
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
@@ -5,10 +6,10 @@ import { apiKey, encryptEtsy, etsyFetch, goldieSiteUrl } from "../client";
 
 export async function GET(request:Request){
   const url=new URL(request.url),state=url.searchParams.get("state")||"",code=url.searchParams.get("code")||"",denied=url.searchParams.get("error");
-  const returnOrigin=goldieSiteUrl();
-  const fail=(message:string)=>NextResponse.redirect(`${returnOrigin}/?etsy=${encodeURIComponent(message)}`);
-  if(denied)return fail("Etsy connection was canceled.");
-  const pending=await env.DB.prepare("SELECT user_id,code_verifier,redirect_uri FROM etsy_oauth_states WHERE state=? AND expires_at>unixepoch()").bind(state).first<{user_id:string;code_verifier:string;redirect_uri:string}>();
+  const pending=state?await env.DB.prepare("SELECT user_id,code_verifier,redirect_uri,return_origin FROM etsy_oauth_states WHERE state=? AND expires_at>unixepoch()").bind(state).first<{user_id:string;code_verifier:string;redirect_uri:string;return_origin?:string|null}>():null;
+  const returnOrigin=oauthReturnOrigin(pending?.return_origin||url.origin,goldieSiteUrl());
+  const fail=(message:string)=>NextResponse.redirect(`${returnOrigin}/listing-factory?step=connect&etsy=${encodeURIComponent(message)}`);
+  if(denied){if(pending)await env.DB.prepare("DELETE FROM etsy_oauth_states WHERE state=?").bind(state).run();return fail("Etsy connection was canceled.")}
   if(!pending||!code)return fail("Etsy connection expired. Try connecting again.");
   await env.DB.prepare("DELETE FROM etsy_oauth_states WHERE state=?").bind(state).run();
   try{
@@ -30,6 +31,6 @@ export async function GET(request:Request){
        stay valid, which is what makes switching instant rather than a
        re-verification of everything the seller owns. */
     await forgetPairings(pending.user_id,shop.shop_id);
-    return NextResponse.redirect(`${returnOrigin}/?etsy=connected`);
+    return NextResponse.redirect(`${returnOrigin}/listing-factory?etsy=connected`);
   }catch(error){return fail(error instanceof Error&&["TimeoutError","AbortError"].includes(error.name)?"Etsy took too long to finish connecting. Your saved connections are unchanged. Try connecting again.":error instanceof Error?error.message:"Etsy connection failed.")}
 }
