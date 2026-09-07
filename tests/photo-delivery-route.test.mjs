@@ -17,6 +17,7 @@ const runtime={DB,ARTWORK:bucket,PHOTO_DELIVERY:{async create(input){creations.p
 globalThis.__photoRoute={runtime,user:{userId:'owner'}};
 let source=read('app/api/listing-photos/delivery/route.ts')
  .replace("from './draft-engine'",`from '${draftEngine}'`)
+ .replace("from './reuse-photos'",`from '${url(read('app/api/listing-photos/delivery/reuse-photos.ts'))}'`)
  .replace(/import \{etsyConnection,etsyFetch\}[^;]+;/,"const etsyConnection=async()=>({shopId:200,token:'test'}),etsyFetch=async()=>({shipping_profile_id:8});")
  .replace(/import \{NextResponse\}[^;]+;/,"const NextResponse={json:(value,init)=>Response.json(value,init)};")
  .replace(/import \{getChatGPTUser\}[^;]+;/,"const getChatGPTUser=async()=>globalThis.__photoRoute.user;")
@@ -90,3 +91,12 @@ test('in-flight draft status detects later edits while keeping frozen delivery u
 });
 test('automatic creation is explicit, requires draft mode, and upgrades an existing waiting draft without duplicate jobs',async()=>{reset();saveDraft(savedDraft());await post('p1',[0],'draft');const request=mode=>new Request('https://goldie.test/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:'p1',printifyImageIndices:[0],shippingProfileId:8,mode,automaticDraft:true})});assert.equal((await api.POST(request())).status,400);assert.equal((await api.POST(request('draft'))).status,200);assert.equal(db.prepare('SELECT COUNT(*) n FROM photo_deliveries').get().n,1);assert.equal(JSON.parse(db.prepare('SELECT transfer_json FROM photo_deliveries').get().transfer_json).phase,'ready')});
 test('unconfirmed creation cannot be bypassed with a changed package',async()=>{reset();saveDraft(savedDraft());await post('p1',[0],'draft');db.prepare("UPDATE photo_deliveries SET status='needs_attention',transfer_json=?").run(JSON.stringify({phase:'submitted',submittedAt:Date.now()}));saveDraft({...savedDraft(),title:'Changed'});assert.equal((await post('p1',[0],'draft')).status,409);assert.equal(db.prepare('SELECT COUNT(*) n FROM photo_deliveries').get().n,1)});
+
+test('route carries verified photo receipts into a metadata-only update but not a changed photo set',async()=>{
+ reset();saveDraft(savedDraft());const first=await (await post('p1',[0],'draft')).json();
+ const receipt={listingId:123,expected:[{rank:1,listing_image_id:44}],uploaded:[44],startedAt:1};
+ db.prepare("UPDATE photo_deliveries SET status='completed',state_json=?,candidate_listing_id=123 WHERE id=?").run(JSON.stringify(receipt),first.delivery.id);
+ saveDraft({...savedDraft(),title:'Metadata change'});const second=await (await post('p1',[0],'draft')).json();assert.notEqual(second.delivery.id,first.delivery.id);assert.deepEqual(JSON.parse(db.prepare('SELECT state_json FROM photo_deliveries WHERE id=?').get(second.delivery.id).state_json),receipt);
+ db.prepare("UPDATE photo_deliveries SET status='completed' WHERE id=?").run(second.delivery.id);
+ saveDraft({...savedDraft(),title:'New photo'});stored.set('etsy-listing-images/owner/p1/upload/custom.png',new Uint8Array([9]));const third=await (await post('p1',[0],'draft')).json();assert.equal(db.prepare('SELECT state_json FROM photo_deliveries WHERE id=?').get(third.delivery.id).state_json,null);
+});

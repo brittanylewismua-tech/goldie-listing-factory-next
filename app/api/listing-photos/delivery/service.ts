@@ -84,6 +84,7 @@ export async function runDeliveryTick(id:string,owner:string){
       const waitMs=transferPollMs(row.transfer_json?JSON.parse(row.transfer_json) as TransferState:null,Date.now());
       return waitMs?{done:false,progress:false,waitMs}:{done:false,progress:false};
     }
+    if(row.state_json&&(JSON.parse(row.state_json) as DeliveryState).listingId!==published.listingId)throw new DeliveryReviewRequired('Printify now points to a different Etsy listing. Delivery stopped before any draft changes.');
     const automatic=Boolean(row.draft_json&&row.transfer_json);
     if(!row.state_json&&(row.candidate_listing_id!==published.listingId||!row.candidate_seen_at)){
       await runtime.DB.prepare('UPDATE photo_deliveries SET candidate_listing_id=?,candidate_seen_at=?,updated_at=?,error=NULL WHERE id=? AND user_id=?').bind(published.listingId,Date.now(),Date.now(),id,owner).run();

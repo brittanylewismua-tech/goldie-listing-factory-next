@@ -1,3 +1,4 @@
+import {photoDigest,reusablePhotoReceipt} from './reuse-photos';
 import {NextResponse} from 'next/server';
 import {getChatGPTUser} from '@/app/chatgpt-auth';
 import {unpackDraftMedia} from '@/app/draft-media-storage';
@@ -98,7 +99,7 @@ export async function POST(request:Request){
   id=crypto.randomUUID();const now=Date.now();
   await runtime.DB.prepare("INSERT INTO photo_deliveries(id,user_id,product_id,printify_shop_id,etsy_shop_id,fingerprint,status,created_at,updated_at,expires_at) VALUES(?,?,?,?,?,?,'preparing',?,?,?)").bind(id,user.userId,productId,draft.shopId,shop.shop_id,fingerprint,now,now,now+86400000).run();
   if(draftSnapshot)await runtime.DB.prepare('UPDATE photo_deliveries SET draft_json=?,transfer_json=? WHERE id=? AND user_id=?').bind(JSON.stringify(draftSnapshot),body.automaticDraft?JSON.stringify({phase:'ready'}):null,id,user.userId).run();
-  const snapshot:Array<{key:string;type:string}>=[];let total=0;
+  const snapshot:Array<{key:string;type:string;digest:string}>=[];let total=0;
   for(const [index,photo] of photos.entries()){
     let data:{bytes:Uint8Array;type:string};
     if(photo.src)data=await readSourceImage(photo.src);
@@ -106,7 +107,13 @@ export async function POST(request:Request){
     if(!['image/png','image/jpeg','image/webp'].includes(data.type))throw Error('Choose PNG, JPG or WEBP photos.');
     data=await prepareEtsyImage(data);
     total+=data.bytes.length;if(total>90*1024*1024)throw Error('This photo set is too large. Keep the total below 90 MB.');
-    const key=`photo-delivery/${user.userId}/${id}/selected/${index+1}`;await runtime.ARTWORK.put(key,data.bytes,{httpMetadata:{contentType:data.type}});snapshot.push({key,type:data.type});
+    const key=`photo-delivery/${user.userId}/${id}/selected/${index+1}`;await runtime.ARTWORK.put(key,data.bytes,{httpMetadata:{contentType:data.type}});snapshot.push({key,type:data.type,digest:await photoDigest(data.bytes)});
+  }
+  if(draftSnapshot&&latest?.draft_json&&latest.etsy_shop_id===shop.shop_id&&latest.printify_shop_id===draft.shopId){
+   const receipt=await reusablePhotoReceipt({status:latest.status,photos:JSON.parse(latest.photos_json),state:latest.state_json?JSON.parse(latest.state_json):null,prefix:`photo-delivery/${user.userId}/${latest.id}/selected/`},snapshot,async key=>{
+    try{const old=await runtime.ARTWORK.get(key);return old&&old.size<=20*1024*1024?photoDigest(new Uint8Array(await old.arrayBuffer())):null}catch{return null}
+   });
+   if(receipt)await runtime.DB.prepare('UPDATE photo_deliveries SET state_json=?,candidate_listing_id=? WHERE id=? AND user_id=?').bind(JSON.stringify(receipt),receipt.listingId,id,user.userId).run();
   }
   await runtime.DB.prepare("UPDATE photo_deliveries SET status='waiting',photos_json=?,updated_at=? WHERE id=? AND user_id=?").bind(JSON.stringify(snapshot),Date.now(),id,user.userId).run();
   try{await runtime.PHOTO_DELIVERY.create({id,params:{id,owner:user.userId}})}catch{throw Error('Automatic delivery could not start. Your photos are saved; try preparing delivery again.')}

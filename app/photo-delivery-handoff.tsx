@@ -1,4 +1,5 @@
 'use client';
+import {statusReadCoordinator} from './status-read-coordinator';
 import WaitProgress,{WaitCard} from './wait-progress';
 import {prepareDraftBatch} from './draft-batch-preparation';
 import {forwardRef,useEffect,useImperativeHandle,useRef,useState} from 'react';
@@ -9,23 +10,26 @@ const label=(status:string,draft=false)=>draft?({preparing:'Saving draft choices
 const PhotoDeliveryHandoff=forwardRef<PhotoDeliveryHandle,{targets:Target[];beforePrepare:()=>Promise<unknown>;onReview?:(id:string,photos:boolean)=>void}>(({targets,beforePrepare,onReview},ref)=>{
  const [deliveries,setDeliveries]=useState<Delivery[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[loading,setLoading]=useState(true),[prepared,setPrepared]=useState<number|null>(null),[preparationErrors,setPreparationErrors]=useState<Record<string,string>>({});
  const recoveryFocus=useRef<string|null>(null),polling=useRef(true),locked=useRef(false),queryKey=useRef(""),panel=useRef<HTMLElement>(null),targetKey=JSON.stringify(targets.map(t=>[t.id,t.indices,t.shippingProfileId]));
+ const statusReads=useRef(statusReadCoordinator<Delivery[]>());
  queryKey.current=targetKey;
  useEffect(()=>{if(busy||!recoveryFocus.current)return;const id=recoveryFocus.current;recoveryFocus.current=null;panel.current?.querySelector<HTMLButtonElement>(`[data-recovery-product="${CSS.escape(id)}"]`)?.focus()},[busy,preparationErrors]);
- async function refresh(){const expectedKey=targetKey;
-  const query=new URLSearchParams();for(const target of targets){query.append('productId',target.id);query.set(`images.${target.id}`,JSON.stringify(target.indices));query.set(`shipping.${target.id}`,String(target.shippingProfileId));}
-  const response=await fetch(`/api/listing-photos/delivery?${query}`,{cache:'no-store'}),payload=await response.json() as {error?:string;deliveries?:Delivery[]};
-  if(!response.ok)throw Error(payload.error||'Photo delivery status could not be loaded.');
-  if(queryKey.current===expectedKey){setDeliveries(payload.deliveries||[]);polling.current=(payload.deliveries||[]).some(d=>['preparing','waiting','delivering'].includes(d.status));setLoading(false);}
+ async function refresh(){if(locked.current)return;
+  const expectedKey=targetKey;
+  await statusReads.current.run(expectedKey,async signal=>{
+   const query=new URLSearchParams();for(const target of targets){query.append('productId',target.id);query.set(`images.${target.id}`,JSON.stringify(target.indices));query.set(`shipping.${target.id}`,String(target.shippingProfileId));}
+   const response=await fetch(`/api/listing-photos/delivery?${query}`,{cache:'no-store',signal:AbortSignal.any([signal,AbortSignal.timeout(20000)])}),payload=await response.json() as {error?:string;deliveries?:Delivery[]};
+   if(!response.ok)throw Error(payload.error||'Photo delivery status could not be loaded.');return payload.deliveries||[];
+  },next=>{if(queryKey.current===expectedKey){setDeliveries(next);polling.current=next.some(d=>['preparing','waiting','delivering'].includes(d.status));setLoading(false)}});
  }
  useEffect(()=>{let alive=true;setDeliveries([]);setLoading(true);setError('');setPreparationErrors({});
   const check=async()=>{if(!alive||document.hidden)return;try{await refresh()}catch(e){if(alive){setLoading(false);setError(e instanceof Error?e.message:'Photo delivery status could not be loaded.')}}};
   void check();const interval=setInterval(()=>{if(polling.current)void check()},15000);document.addEventListener('visibilitychange',check);
-  return()=>{alive=false;clearInterval(interval);document.removeEventListener('visibilitychange',check)};
+  return()=>{alive=false;statusReads.current.invalidate();clearInterval(interval);document.removeEventListener('visibilitychange',check)};
  // Membership and selections both determine whether the verified package is still current.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[targetKey]);
  useImperativeHandle(ref,()=>({prepare:async()=>{
-  if(locked.current)return false;locked.current=true;setBusy(true);setError('');setPrepared(null);setPreparationErrors({});
+  if(locked.current)return false;locked.current=true;statusReads.current.invalidate();setBusy(true);setError('');setPrepared(null);setPreparationErrors({});
   try{
    await beforePrepare();if(!targets.length)throw Error('No completed drafts are available yet.');
    setPrepared(0);
@@ -33,7 +37,7 @@ const PhotoDeliveryHandoff=forwardRef<PhotoDeliveryHandle,{targets:Target[];befo
     try{
     const response=await fetch('/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:target.id,printifyImageIndices:target.indices,shippingProfileId:target.shippingProfileId,mode:'draft',automaticDraft:true})});
     const payload=await response.json() as {error?:string;delivery?:Delivery};if(!response.ok||!payload.delivery)throw Error(payload.error||'Photo delivery could not be prepared.');
-    polling.current=true;setDeliveries(current=>[...current.filter(d=>d.productId!==target.id),payload.delivery!]);
+    polling.current=true;setLoading(false);setDeliveries(current=>[...current.filter(d=>d.productId!==target.id),payload.delivery!]);
     }catch(value){const message=value instanceof Error?value.message:'Draft preparation failed.';if(!recoveryFocus.current)recoveryFocus.current=target.id;setPreparationErrors(current=>({...current,[target.id]:message}));throw value}
    },finished=>setPrepared(finished));
    if(errors.length)throw Error(`${errors.length} ${errors.length===1?'listing needs':'listings need'} attention. Review the message beside each listing.`);
@@ -41,8 +45,8 @@ const PhotoDeliveryHandoff=forwardRef<PhotoDeliveryHandle,{targets:Target[];befo
   }catch(e){setError(e instanceof Error?e.message:'Photo delivery could not be prepared.');panel.current?.scrollIntoView({block:'center',behavior:'smooth'});return false}
   finally{locked.current=false;setBusy(false);setPrepared(null)}
  }}));
- async function prepareOne(target:Target,recheckId?:string){if(locked.current)return;setPreparationErrors(current=>{const next={...current};delete next[target.id];return next});locked.current=true;setBusy(true);setError('');try{await beforePrepare();const response=await fetch('/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:target.id,printifyImageIndices:target.indices,shippingProfileId:target.shippingProfileId,mode:'draft',automaticDraft:true,recheckId})});const payload=await response.json() as {error?:string;delivery?:Delivery};if(!response.ok||!payload.delivery)throw Error(payload.error||'Draft preparation failed.');await refresh()}catch(e){const message=e instanceof Error?e.message:'Draft preparation failed.';recoveryFocus.current=target.id;setPreparationErrors(current=>({...current,[target.id]:message}));setError('This listing needs attention. Review its message below.')}finally{locked.current=false;setBusy(false)}}
- async function cancel(id:string){try{const response=await fetch(`/api/listing-photos/delivery?id=${encodeURIComponent(id)}`,{method:'DELETE'});const payload=await response.json() as {error?:string;deliveries?:Delivery[]};if(!response.ok)throw Error(payload.error);await refresh()}catch(e){setError(e instanceof Error?e.message:'Delivery could not be canceled.')}}
+ async function prepareOne(target:Target,recheckId?:string){if(locked.current)return;setPreparationErrors(current=>{const next={...current};delete next[target.id];return next});locked.current=true;statusReads.current.invalidate();setBusy(true);setError('');try{await beforePrepare();const response=await fetch('/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:target.id,printifyImageIndices:target.indices,shippingProfileId:target.shippingProfileId,mode:'draft',automaticDraft:true,recheckId})});const payload=await response.json() as {error?:string;delivery?:Delivery};if(!response.ok||!payload.delivery)throw Error(payload.error||'Draft preparation failed.');polling.current=true;setLoading(false);setDeliveries(current=>[...current.filter(d=>d.productId!==target.id),payload.delivery!])}catch(e){const message=e instanceof Error?e.message:'Draft preparation failed.';recoveryFocus.current=target.id;setPreparationErrors(current=>({...current,[target.id]:message}));setError('This listing needs attention. Review its message below.')}finally{locked.current=false;setBusy(false)}}
+ async function cancel(id:string){statusReads.current.invalidate();try{const response=await fetch(`/api/listing-photos/delivery?id=${encodeURIComponent(id)}`,{method:'DELETE'});const payload=await response.json() as {error?:string;deliveries?:Delivery[]};if(!response.ok)throw Error(payload.error);statusReads.current.invalidate();await refresh()}catch(e){setError(e instanceof Error?e.message:'Delivery could not be canceled.')}}
  const activeDeliveries=deliveries.filter(d=>['waiting','delivering'].includes(d.status));
  const completed=deliveries.filter(d=>d.status==='completed'&&!d.choicesChanged).length;
  return <section className="photo-delivery-handoff" ref={panel} aria-label="Finish Etsy drafts" aria-busy={busy}>
