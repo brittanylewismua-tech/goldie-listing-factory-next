@@ -15,7 +15,7 @@ export const etsyQpdLimit=()=>Math.max(100,Number(runtime().ETSY_QPD_LIMIT)||500
 export async function waitForEtsyCapacity(){
  await paceEtsyRequest({now:Date.now,
   read:async()=>{const row=await runtime().DB.prepare('SELECT p.qps_limit,q.paused_until FROM etsy_request_pacing p LEFT JOIN etsy_queue_state q ON q.id=p.id WHERE p.id=1').first<{qps_limit:number;paused_until:number}>();if(!row)throw Error('Etsy request scheduling is unavailable. Your saved work is safe.');return {qps:row.qps_limit,pausedUntil:Number(row.paused_until||0)*1000}},
-  reserve:async(now,interval)=>{const row=await runtime().DB.prepare(RESERVE_ETSY_SLOT_SQL).bind(now,interval,now).first<{next_at_ms:number}>();if(!row)throw Error('Etsy request scheduling is unavailable. Your saved work is safe.');return row.next_at_ms},
+  reserve:async(now,interval)=>{const row=await runtime().DB.prepare(RESERVE_ETSY_SLOT_SQL).bind(now,interval,now).first<{next_at_ms:number}>();return row?.next_at_ms??null},
   wait:ms=>new Promise(resolve=>setTimeout(resolve,ms))});
 }
 export async function recordEtsyCall(response:Response){

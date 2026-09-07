@@ -22,9 +22,15 @@ export function draftWithSize(snapshot:DraftSnapshot,product:PrintifyDraftProduc
 export async function readDraft(request:Request,listingId:number,shopId:number,product:PrintifyDraftProduct):Promise<DraftView>{
  const listing=await (await request(`/listings/${listingId}`)).json() as {shop_id:number;state:string;title:string;description:string;tags:string[];taxonomy_id:number;shipping_profile_id:number};
  if(Number(listing.shop_id)!==shopId||listing.state!=='draft')throw new DraftReviewRequired('The linked listing must still be a draft in the original Etsy shop. Finishing stopped.');
- const inventory=await (await request(`/listings/${listingId}/inventory`)).json() as Parameters<typeof verifyInventory>[1];verifyInventory(product,inventory);
- const properties=await (await request(`/shops/${shopId}/listings/${listingId}/properties`)).json() as {results?:DraftSnapshot['properties']};
- const personal=await (await request(`/listings/${listingId}/personalization`)).json() as {personalization_questions?:Question[]};
+ // Ownership/state is checked first. Settle every read before any caller may mutate or retry.
+ const reads=await Promise.allSettled([
+  request(`/listings/${listingId}/inventory`).then(response=>response.json()),
+  request(`/shops/${shopId}/listings/${listingId}/properties`).then(response=>response.json()),
+  request(`/listings/${listingId}/personalization`).then(response=>response.json()),
+ ]);
+ const failed=reads.find(result=>result.status==='rejected');if(failed?.status==='rejected')throw failed.reason;
+ const [inventory,properties,personal]=reads.map(result=>(result as PromiseFulfilledResult<unknown>).value) as [Parameters<typeof verifyInventory>[1],{results?:DraftSnapshot['properties']},{personalization_questions?:Question[]}];
+ verifyInventory(product,inventory);
  if(!Array.isArray(properties.results)||!Array.isArray(personal.personalization_questions))throw new DraftReviewRequired('Etsy returned incomplete draft details. Nothing further was changed.');
  return {shopId:Number(listing.shop_id),state:listing.state,basic:{title:decodeEtsyText(listing.title),description:decodeEtsyText(listing.description),tags:listing.tags.map(decodeEtsyText),taxonomy_id:Number(listing.taxonomy_id),shipping_profile_id:Number(listing.shipping_profile_id)},properties:properties.results.map(p=>({property_id:p.property_id,value_ids:p.value_ids||[],values:(p.values||[]).map(decodeEtsyText)})),questions:personal.personalization_questions.map(q=>({...q,question_text:decodeEtsyText(q.question_text),instructions:decodeEtsyText(q.instructions||''),options:q.options?.map(o=>({label:decodeEtsyText(o.label)}))}))};
 }

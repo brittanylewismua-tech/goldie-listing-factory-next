@@ -12,14 +12,14 @@ test('twenty simultaneous reservations are spaced atomically and use observed ca
 });
 test('cooldown arriving while a request waits prevents its outbound call',async()=>{let now=1000,paused=0,calls=0;await assert.rejects(paceEtsyRequest({now:()=>now,read:async()=>({qps:5,pausedUntil:paused}),reserve:async()=>3000,wait:async ms=>{now+=ms;paused=now+10000}}).then(()=>calls++),EtsyRateLimited);assert.equal(calls,0)});
 test('overloaded reservation queues yield instead of holding a worker indefinitely',async()=>{await assert.rejects(paceEtsyRequest({now:()=>1000,read:async()=>({qps:5,pausedUntil:0}),reserve:async()=>100000,wait:async()=>assert.fail('must not sleep')}),/queued/)});
-test('twenty concurrent draft finishers recover definite quota refusals and preserve custom/guide order without duplicate writes',async()=>{
+for(const spec of [{jobs:20,photos:4,qps:10,initial:5,refusals:3},{jobs:30,photos:20,qps:150,initial:20,refusals:2},{jobs:600,photos:1,qps:150,initial:2,refusals:3}])test(`${spec.jobs} concurrent draft finishers with ${spec.photos} photos recover quota refusals without duplicates`,{timeout:20000},async()=>{
  const db=new DatabaseSync(':memory:');db.exec(read('drizzle/0025_etsy_request_pacing.sql'));
  let now=1000,paused=0,refused=0,finished=0,photoCount=0,metadataCount=0,nextImage=10000;const waits=[],outbound=[],errors=[];
  const wait=ms=>new Promise(resolve=>waits.push({at:now+ms,resolve}));
- const paced=async()=>{await paceEtsyRequest({now:()=>now,read:async()=>({qps:10,pausedUntil:paused}),reserve:async(n,interval)=>db.prepare(RESERVE_ETSY_SLOT_SQL).get(n,interval,n).next_at_ms,wait});outbound.push(now)};
- const jobs=Array.from({length:20},(_,index)=>({id:index+1,metadata:null,photos:null,images:[1,2,3,4,5].map(rank=>({rank,listing_image_id:(index+1)*100+rank})),view:{shopId:7,state:'draft',basic:{title:'Old',description:'Old',tags:[],taxonomy_id:1,shipping_profile_id:8},properties:[],questions:[]},writes:[]}));
+ const paced=async()=>{await paceEtsyRequest({now:()=>now,read:async()=>({qps:spec.qps,pausedUntil:paused}),reserve:async(n,interval)=>db.prepare(RESERVE_ETSY_SLOT_SQL).get(n,interval,n)?.next_at_ms??null,wait});outbound.push(now)};
+ const jobs=Array.from({length:spec.jobs},(_,index)=>({id:index+1,metadata:null,photos:null,images:Array.from({length:spec.initial},(_,i)=>i+1).map(rank=>({rank,listing_image_id:(index+1)*100+rank})),view:{shopId:7,state:'draft',basic:{title:'Old',description:'Old',tags:[],taxonomy_id:1,shipping_profile_id:8},properties:[],questions:[]},writes:[]}));
  const desired={title:'Saved',description:'Saved description',tags:['books'],taxonomy_id:2,shipping_profile_id:8,properties:[{property_id:10,value_ids:[11],values:['Cotton']}],questions:[{question_type:'text_input',question_text:'Name',required:true,max_allowed_characters:32}]};
- const photos=['custom','front','guide','back'].map(key=>({key,type:'image/jpeg'}));
+ const photos=Array.from({length:spec.photos},(_,i)=>['custom','front','guide','back'][i]||`photo-${i+1}`).map(key=>({key,type:'image/jpeg'}));
  const tasks=jobs.map(async j=>{
   try{for(let tick=0;tick<240;tick++){
    try{
@@ -32,12 +32,12 @@ test('twenty concurrent draft finishers recover definite quota refusals and pres
   }catch(error){errors.push(error)}
  });
  // Advance a deterministic provider clock; no network calls or wall-clock performance claim.
- for(let step=0;step<20000&&finished+errors.length<20;step++){
+ for(let step=0;step<200000&&finished+errors.length<spec.jobs;step++){
   await new Promise(resolve=>setImmediate(resolve));if(!waits.length)continue;
   const next=Math.min(...waits.map(w=>w.at));now=Math.max(now,next);const due=waits.filter(w=>w.at<=now);for(const w of due){waits.splice(waits.indexOf(w),1);w.resolve()}
  }
- await Promise.all(tasks);assert.deepEqual(errors,[]);assert.equal(finished,20);assert.equal(refused,3);assert.equal(photoCount,80);assert.equal(metadataCount,60);
- for(const j of jobs){assert.equal(j.metadata.verified,true);assert.equal(j.photos.pending,undefined);assert.deepEqual(j.writes,photos.map((p,i)=>[p.key,i+1]));assert.equal(j.images.length,4)}
+ await Promise.all(tasks);assert.deepEqual(errors,[]);assert.equal(finished,spec.jobs);assert.equal(refused,spec.refusals);assert.equal(photoCount,spec.jobs*spec.photos);assert.equal(metadataCount,spec.jobs*3);
+ for(const j of jobs){assert.equal(j.metadata.verified,true);assert.equal(j.photos.pending,undefined);assert.deepEqual(j.writes,photos.map((p,i)=>[p.key,i+1]));assert.equal(j.images.length,spec.photos)}
  // Reservations enforce spacing; overlapping waits may share an instant only if a cooldown intervenes.
  assert.ok(outbound.length>100);db.close();
 });
