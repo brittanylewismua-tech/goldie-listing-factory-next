@@ -5311,8 +5311,8 @@ test("the number on the button is the number that publishes — D561", async () 
      selection seeding effect and selectedPublishDrafts - because both were
      quietly shrinking the publish back down to the open product. */
   assert.ok(app.indexOf("function bundlePublishDrafts()") > 0);
-  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 9,
-    "declared once; the review, reports, publish targets, selections, seeding, cost approval, Printify handoff and photo delivery all read it");
+  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 10,
+    "declared once; the review, reports, publish targets, selections, seeding, cost approval, Printify handoff, photo delivery and recovery navigation all read it");
   assert.doesNotMatch(app, /function selectedPublishDrafts\(\)\{const selected=new Set\(selectedPublishIds\);return drafts\.filter/,
     "the button's count must not be taken from the open product alone");
 });
