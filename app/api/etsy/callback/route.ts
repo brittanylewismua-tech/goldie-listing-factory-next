@@ -12,11 +12,11 @@ export async function GET(request:Request){
   if(!pending||!code)return fail("Etsy connection expired. Try connecting again.");
   await env.DB.prepare("DELETE FROM etsy_oauth_states WHERE state=?").bind(state).run();
   try{
-    const tokenResponse=await fetch("https://api.etsy.com/v3/public/oauth/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"authorization_code",client_id:apiKey(),redirect_uri:pending.redirect_uri,code,code_verifier:pending.code_verifier})}),tokens=await tokenResponse.json() as {access_token?:string;refresh_token?:string;expires_in?:number;error_description?:string};
+    const tokenResponse=await fetch("https://api.etsy.com/v3/public/oauth/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"authorization_code",client_id:apiKey(),redirect_uri:pending.redirect_uri,code,code_verifier:pending.code_verifier}),signal:AbortSignal.timeout(25000)}),tokens=await tokenResponse.json() as {access_token?:string;refresh_token?:string;expires_in?:number;error_description?:string};
     if(!tokenResponse.ok||!tokens.access_token||!tokens.refresh_token)throw new Error(tokens.error_description||"Etsy did not complete the connection.");
     const etsyUserId=Number(tokens.access_token.split(".")[0]);if(!etsyUserId)throw new Error("Etsy did not return a valid account identifier.");
     const shop=await etsyFetch<{shop_id:number;shop_name:string}>(`/users/${etsyUserId}/shops`,tokens.access_token);
-    if(!shop)throw new Error("No Etsy shop was found on this account.");
+    if(!shop||!Number.isSafeInteger(Number(shop.shop_id))||Number(shop.shop_id)<=0||!shop.shop_name)throw new Error("No Etsy shop was found on this account. Connect an account with an existing Etsy shop.");
     /* D835 · A second shop is added, not swapped in. The one just authorised
        becomes active; the others stay connected and switchable. */
     await env.DB.batch([
@@ -31,5 +31,5 @@ export async function GET(request:Request){
        re-verification of everything the seller owns. */
     await forgetPairings(pending.user_id,shop.shop_id);
     return NextResponse.redirect(`${returnOrigin}/?etsy=connected`);
-  }catch(error){return fail(error instanceof Error?error.message:"Etsy connection failed.")}
+  }catch(error){return fail(error instanceof Error&&["TimeoutError","AbortError"].includes(error.name)?"Etsy took too long to finish connecting. Your saved connections are unchanged. Try connecting again.":error instanceof Error?error.message:"Etsy connection failed.")}
 }

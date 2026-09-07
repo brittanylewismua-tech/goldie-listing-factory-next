@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import ts from 'typescript';import {readFileSync} from 'node:fs';import {spawnSync} from 'node:child_process';
+const source=ts.transpile(readFileSync('app/mastermind-admin/diagnostic-time.ts','utf8'),{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022});
+function format(zone,value){const result=spawnSync(process.execPath,['-e',source+';console.log(exports.standardTime('+JSON.stringify(value)+'));'],{env:{...process.env,TZ:zone},encoding:'utf8'});assert.equal(result.status,0,result.stderr);return result.stdout.trim()}
+test('owner timestamps render identically in server UTC and customer browser timezones',()=>{const values=['2026-09-07 02:44:16','2026-09-07T02:44:16Z','2026-09-06T19:44:16-07:00'];const expected=format('UTC',values[0]);assert.match(expected,/UTC/);for(const zone of ['America/Los_Angeles','Asia/Tokyo'])for(const value of values)assert.equal(format(zone,value),expected)});
+test('invalid timestamps remain readable without crashing the dashboard',()=>assert.equal(format('UTC','unavailable'),'unavailable'));

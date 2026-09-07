@@ -1,17 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { standardTime } from "./diagnostic-time";
 import { isSellerFixable } from "@/app/error-classification";
 import Image from "next/image";
 
 export type Diagnostic = { reference: string; userEmail: string; fileName: string; stage: string; outcome: string; retryCount: number; errorCode: string | null; httpStatus: number | null; message: string | null; updatedAt: string };
 const stageLabel: Record<string,string> = { artwork_staging:"Receiving artwork", template_lookup:"Finding template", printify_upload:"Sending to Printify", image_registration:"Registering image", draft_creation:"Creating draft", request_validation:"Checking request" };
 
-function standardTime(value: string) {
-  const date = new Date(`${value.replace(" ", "T").replace(/Z$/i, "")}Z`);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, { year:"numeric", month:"short", day:"numeric", hour:"numeric", minute:"2-digit", second:"2-digit" }).format(date);
-}
 
 export type LoggedFailure = { id: string; createdAt: string; area: string; severity: string; userEmail: string | null; userName: string | null; message: string; errorCode: string | null; httpStatus: number | null; url: string | null; context: string | null; alerted?: number };
 
