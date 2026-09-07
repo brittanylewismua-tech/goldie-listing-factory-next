@@ -4,6 +4,7 @@ import {unpackDraftMedia} from '@/app/draft-media-storage';
 import {orderedPackagePhotos} from '@/app/listing-photo-package';
 import {deliveryEnv,deliveryStatus,readDelivery,readSourceImage,prepareEtsyImage,deliveryMessage,type DeliveryRow} from './service';
 import {decryptPrintifyToken} from '../../printify/token-crypto';
+import {etsyConnection,etsyFetch} from '../../etsy/client';
 import {freezeDraft,type SourceDraft} from './draft-engine';
 import {prepareEtsySkus} from '../../printify/etsy-sku-preflight';
 const publicRow=(row:DeliveryRow)=>({id:row.id,productId:row.product_id,status:row.status,error:row.error?deliveryMessage(row.error):null,photoCount:JSON.parse(row.photos_json).length,updatedAt:row.updated_at,expiresAt:row.expires_at,mode:row.draft_json?'draft':'photos',listingId:row.state_json?JSON.parse(row.state_json).listingId:null});
@@ -17,7 +18,7 @@ export async function POST(request:Request){
  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:'Sign in to prepare photo delivery.'},{status:401});
  const runtime=deliveryEnv();let id='';
  try{
-  const body=await request.json() as {productId?:string;printifyImageIndices?:number[];mode?:'draft'};
+  const body=await request.json() as {productId?:string;printifyImageIndices?:number[];mode?:'draft';shippingProfileId?:number;recheckId?:string};
   if(body.mode!==undefined&&body.mode!=='draft')return NextResponse.json({error:'Choose a supported delivery mode.'},{status:400});
   const productId=String(body.productId||'');if(!productId||!Array.isArray(body.printifyImageIndices))return NextResponse.json({error:'Choose a listing and its photos first.'},{status:400});
   const owned=await runtime.DB.prepare("SELECT response_json,request_key FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string;request_key:string}>();
@@ -31,7 +32,22 @@ export async function POST(request:Request){
     if(!connection)throw Error('Reconnect Printify before opening your listings.');
     await prepareEtsySkus(draft.shopId,productId,owned.request_key,await decryptPrintifyToken(connection.encrypted_token,runtime.PRINTIFY_TOKEN_KEY));
   };
-  const draftSnapshot=body.mode==='draft'?freezeDraft(draft as SourceDraft):null;
+  if(body.recheckId){
+    const previous=await readDelivery(body.recheckId,user.userId);
+    if(!previous||previous.product_id!==productId||!previous.draft_json||previous.status!=='needs_attention')throw Error('This draft check is no longer available. Refresh its status.');
+    if(previous.state_json&&JSON.parse(previous.state_json).pending)throw Error('The last photo change needs a receipt review before it can continue. No photo was repeated.');
+    const claim=await runtime.DB.prepare("UPDATE photo_deliveries SET status='delivering',error=NULL,updated_at=? WHERE id=? AND user_id=? AND status='needs_attention'").bind(Date.now(),previous.id,user.userId).run();
+    if(!claim.meta.changes)throw Error('This draft check already started.');
+    try{await runtime.PHOTO_DELIVERY.create({id:`${previous.id}-check-${Date.now()}`,params:{id:previous.id,owner:user.userId}})}catch{await deliveryStatus(previous.id,user.userId,'needs_attention','Checking could not start. Try again.');throw Error('Checking could not start. Try again.')}
+    return NextResponse.json({delivery:publicRow((await readDelivery(previous.id,user.userId))!)});
+  }
+  const draftSnapshot=body.mode==='draft'?freezeDraft({...draft as SourceDraft,etsyShippingProfileId:body.shippingProfileId}):null;
+  if(draftSnapshot){
+    const connection=await etsyConnection(user.userId);
+    if(Number(connection.shopId)!==Number(shop.shop_id))throw Error('Your Etsy shop changed. Refresh before preparing this draft.');
+    const profile=await etsyFetch<{shipping_profile_id:number;is_deleted?:boolean}>(`/shops/${connection.shopId}/shipping-profiles/${draftSnapshot.shipping_profile_id}`,connection.token);
+    if(Number(profile.shipping_profile_id)!==draftSnapshot.shipping_profile_id||profile.is_deleted)throw Error('The selected shipping profile is unavailable in this Etsy shop. Choose another profile.');
+  }
   const prefix=`etsy-listing-images/${user.userId}/${productId}/`,objects=await runtime.ARTWORK.list({prefix,limit:100});
   if(objects.truncated)throw Error('Too many stored photos. Remove unused photos before preparing delivery.');
   const order=await runtime.ARTWORK.get(`${prefix}order.json`);

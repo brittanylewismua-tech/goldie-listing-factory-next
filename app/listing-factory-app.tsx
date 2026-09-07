@@ -5441,7 +5441,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               the sentence promised a smaller press than the one it sat under. And
               it named the fee per listing without ever multiplying it, on the one
               screen where the total is the thing worth knowing. */}
-            <PhotoDeliveryHandoff ref={photoDeliveryRef} targets={bundlePublishDrafts().filter(draft=>draft.id&&draft.status==="Created").map(draft=>({id:draft.id!,title:draft.title||draft.name||"Listing",indices:bundlePublishSelections()[draft.id!]??printifyImageIndices}))} beforePrepare={async()=>{await persistBatchNow();await persistRunNow()}}/>
+            <PhotoDeliveryHandoff ref={photoDeliveryRef} targets={bundlePublishDrafts().filter(draft=>draft.id&&draft.status==="Created").map(draft=>({id:draft.id!,title:draft.title||draft.name||"Listing",indices:bundlePublishSelections()[draft.id!]??printifyImageIndices,shippingProfileId:drafts.some(own=>own.id===draft.id)?etsyShippingProfileId:Number(Object.values(bundleMembers).find(member=>member.drafts.some(own=>own.id===draft.id))?.shippingProfileId)||0}))} beforePrepare={async()=>{await persistBatchNow();await persistRunNow()}}/>
             </div><div className="factory-publish-box">{/* D785 - the prototype's box opens by
               naming the connected destination shop without implying Goldie publishes
               in 20px. Production had the shop only inside the press, at 10px,

@@ -16,6 +16,7 @@ const runtime={DB,ARTWORK:bucket,PHOTO_DELIVERY:{async create(input){creations.p
 globalThis.__photoRoute={runtime,user:{userId:'owner'}};
 let source=read('app/api/listing-photos/delivery/route.ts')
  .replace("from './draft-engine'",`from '${draftEngine}'`)
+ .replace(/import \{etsyConnection,etsyFetch\}[^;]+;/,"const etsyConnection=async()=>({shopId:200,token:'test'}),etsyFetch=async()=>({shipping_profile_id:8});")
  .replace(/import \{NextResponse\}[^;]+;/,"const NextResponse={json:(value,init)=>Response.json(value,init)};")
  .replace(/import \{getChatGPTUser\}[^;]+;/,"const getChatGPTUser=async()=>globalThis.__photoRoute.user;")
  .replace(/import \{decryptPrintifyToken\}[^;]+;/,"const decryptPrintifyToken=async()=>'token';")
@@ -29,7 +30,7 @@ let source=read('app/api/listing-photos/delivery/route.ts')
  const prepareEtsyImage=async data=>data;
  const readSourceImage=async()=>({bytes:new Uint8Array([1,2,3]),type:'image/png'});`);
 const api=await import(url(source));
-const post=(productId='p1',indices=[0],mode)=>api.POST(new Request('https://goldie.test/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId,printifyImageIndices:indices,mode})}));
+const post=(productId='p1',indices=[0],mode)=>api.POST(new Request('https://goldie.test/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId,printifyImageIndices:indices,mode,shippingProfileId:8})}));
 function reset(){db.exec('DELETE FROM photo_deliveries;DELETE FROM printify_draft_results;DELETE FROM etsy_connections;DELETE FROM printify_connections;');stored.clear();creations=[];failStart=false;globalThis.__photoRoute.user={userId:'owner'};db.prepare('INSERT INTO printify_draft_results VALUES(?,?,?,?)').run('owner','succeeded',JSON.stringify({id:'p1',shopId:100,printifyImages:['https://images.printify.com/front.jpg','https://images.printify.com/back.jpg']}),'a'.repeat(64));db.exec("INSERT INTO etsy_connections VALUES('owner',1,200);INSERT INTO printify_connections VALUES('owner','encrypted')")}
 test('route creates an immutable ordered snapshot and duplicate submissions reuse one job',async()=>{
  reset();stored.set('etsy-listing-images/owner/p1/upload/custom.png',new Uint8Array([9,9]));stored.set('etsy-listing-images/owner/p1/order.json',new TextEncoder().encode(JSON.stringify(['printify:0','stored:etsy-listing-images/owner/p1/upload/custom.png'])));
@@ -65,3 +66,4 @@ test('draft mode snapshots server-owned metadata, does not share legacy job iden
  original.description='Changed after preparation';db.prepare('UPDATE printify_draft_results SET response_json=?').run(JSON.stringify(original));assert.equal((await post('p1',[0],'draft')).status,409);assert.equal(JSON.parse(db.prepare('SELECT draft_json FROM photo_deliveries').get().draft_json).description,'Saved description');
 });
 test('missing saved metadata blocks draft mode before job or photo writes; legacy mode remains available',async()=>{reset();assert.equal((await post('p1',[0],'draft')).status,409);assert.equal(creations.length,0);assert.equal((await post()).status,200)});
+test('explicit draft recheck reuses the saved job and cannot bypass an uncertain photo write',async()=>{reset();await post();const row=db.prepare('SELECT * FROM photo_deliveries').get();db.prepare("UPDATE photo_deliveries SET status='needs_attention',draft_json='{}',draft_state_json=? WHERE id=?").run(JSON.stringify({listingId:123,index:0,pending:{key:'basic'}}),row.id);const request=()=>new Request('https://goldie.test/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:'p1',printifyImageIndices:[0],mode:'draft',recheckId:row.id})});const response=await api.POST(request());assert.equal(response.status,200);assert.equal((await response.json()).delivery.id,row.id);assert.equal(creations.at(-1).params.id,row.id);assert.equal(db.prepare('SELECT COUNT(*) n FROM photo_deliveries').get().n,1);assert.equal((await api.POST(request())).status,409);db.prepare("UPDATE photo_deliveries SET status='needs_attention',state_json=? WHERE id=?").run(JSON.stringify({pending:{rank:1}}),row.id);assert.equal((await api.POST(request())).status,409)});
