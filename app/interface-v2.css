@@ -23,6 +23,10 @@
   --lf-rail:#000;
   --lf-rail-ink:#fff;
   --lf-rail-dim:rgba(255,255,255,.62);
+  --lf-section:#334451;
+  --lf-section-hover:#394a57;
+  --lf-section-ink:#fff;
+  --lf-section-muted:#dce4ea;
   --lf-paper:#fff;
   --lf-card:#fff;
 }
@@ -3813,11 +3817,11 @@ html, body { background: var(--lf-paper); }
 .app-shell .step-product-cards > .step-product-card.in-batch > header{
   display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:center;
   gap:18px;width:100%;box-sizing:border-box;margin:0 0 28px;padding:24px;
-  background:#f5b8df;border:2px solid #171717;border-radius:16px;
-  box-shadow:4px 4px 0 #171717;color:#171717;scroll-margin-top:100px;
+  background:var(--lf-section);border:2px solid #171717;border-radius:16px;
+  box-shadow:4px 4px 0 #171717;color:var(--lf-section-ink);scroll-margin-top:100px;
 }
 .app-shell .step-product-cards > .step-product-card.in-batch > header.is-openable:hover{
-  background:#f8c9e7;color:#171717;
+  background:var(--lf-section-hover);color:var(--lf-section-ink);
 }
 .app-shell .step-product-cards > .step-product-card.in-batch > header:focus-visible{
   outline:3px solid #171717;outline-offset:6px;
@@ -3829,14 +3833,14 @@ html, body { background: var(--lf-paper); }
   display:grid;gap:6px;min-width:0;
 }
 .app-shell .step-product-cards > .step-product-card.in-batch > header .batch-product-position{
-  display:block;margin:0;color:#171717!important;font-size:14px!important;
+  display:block;margin:0;color:var(--lf-section-ink)!important;font-size:14px!important;
   font-weight:800;line-height:1.4;letter-spacing:.08em;font-style:normal;
 }
 .app-shell .step-product-cards > .step-product-card.in-batch > header .bundle-product-id b{
-  color:#171717!important;font-size:20px!important;line-height:1.3!important;overflow-wrap:anywhere;
+  color:var(--lf-pink)!important;font-size:20px!important;line-height:1.3!important;overflow-wrap:anywhere;
 }
 .app-shell .step-product-cards > .step-product-card.in-batch > header .bundle-product-id small{
-  color:#343034!important;font-size:14px!important;line-height:1.4!important;overflow-wrap:anywhere;
+  color:var(--lf-section-muted)!important;font-size:14px!important;line-height:1.4!important;overflow-wrap:anywhere;
 }
 @media(max-width:640px){
   .app-shell .step-product-cards > .step-product-card.in-batch + .step-product-card.in-batch{margin-top:48px}
@@ -3877,7 +3881,7 @@ html, body { background: var(--lf-paper); }
 
 /* D1166: keep the current product's work prominent and put navigation where
    the user finishes reading. These controls never approve or save a task. */
-.app-shell .inactive-product-summary{display:block;margin-top:8px;font-size:12px;font-weight:650;line-height:1.45;color:#483741}
+.app-shell .inactive-product-summary{display:block;margin-top:8px;font-size:12px;font-weight:650;line-height:1.45;color:var(--lf-section-muted)}
 .app-shell .inactive-product-summary>span{margin-left:6px}
 .app-shell .step-product-card.is-closed.in-batch>header{margin-bottom:0!important}
 .app-shell .task-next-section{display:flex;align-items:center;justify-content:center;gap:10px;min-height:44px;max-width:100%;margin:20px 0 8px;padding:11px 18px;border:2px solid #171717;border-radius:8px;background:#171717;color:#fff;font-family:inherit;font-size:13px;font-weight:700;line-height:1.4;white-space:normal;text-align:left;box-shadow:none}
