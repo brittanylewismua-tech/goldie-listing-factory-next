@@ -3483,6 +3483,10 @@ html, body { background: var(--lf-paper); }
 .app-shell .editable-draft-pricing{display:grid;gap:14px}
 .app-shell .editable-draft-pricing + .editable-draft-pricing{margin-top:40px;padding-top:32px;border-top:2px solid #111}
 .app-shell .draft-price-group-title{margin:0 0 8px;font-size:18px;line-height:1.4;color:#111}
+.app-shell .draft-price-group-nav{display:grid;grid-template-columns:minmax(88px,auto) 1fr minmax(88px,auto);align-items:center;gap:12px;margin:0 0 18px;padding:12px;border:1px solid #d9cfd5;border-radius:10px;background:rgba(25,25,28,.05);text-align:center}
+.app-shell .draft-price-group-nav button{min-height:42px;border:1px solid #171717;border-radius:8px;background:#fff;color:#171717;font-weight:800;cursor:pointer}
+.app-shell .draft-price-group-nav button:disabled{opacity:.42;cursor:not-allowed}
+@media(max-width:480px){.app-shell .draft-price-group-nav{grid-template-columns:1fr 1fr}.app-shell .draft-price-group-nav b{grid-column:1/-1;grid-row:1}.app-shell .draft-price-group-nav button{grid-row:2}}
 
 /* D1040 · Keep photo selection clear of Pinterest's upper-left save control,
    make every check visually centred, and make expanded photos reliably closable. */

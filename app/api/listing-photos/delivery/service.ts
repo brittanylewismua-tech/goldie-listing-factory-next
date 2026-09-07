@@ -29,7 +29,24 @@ export async function limitedImage(response:Response){
 function trustedImageUrl(value:string,host:'printify'|'etsy'){
   const url=new URL(value);if(url.protocol!=='https:'||!(host==='printify'?url.hostname==='images.printify.com':url.hostname==='i.etsystatic.com'))throw Error('The photo address could not be verified.');return url.toString();
 }
-export async function readSourceImage(src:string){return limitedImage(await fetch(trustedImageUrl(src,'printify'),{signal:AbortSignal.timeout(20000),redirect:'manual'}))}
+export async function readSourceImage(src:string,wait:(ms:number)=>Promise<unknown>=ms=>new Promise(resolve=>setTimeout(resolve,ms))){
+  const url=trustedImageUrl(src,'printify');
+  for(let attempt=0;attempt<3;attempt++){
+    let response:Response;
+    try{
+      response=await fetch(url,{signal:AbortSignal.timeout(20000),redirect:'manual'});
+    }catch(error){
+      if(attempt===2)throw Error('A listing photo could not be read.',{cause:error});
+      await wait(attempt===0?250:750);continue;
+    }
+    if(response.ok)return limitedImage(response);
+    const retryable=response.status===429||response.status>=500;
+    await response.body?.cancel().catch(()=>undefined);
+    if(!retryable||attempt===2)throw Error('A listing photo could not be read.');
+    await wait(attempt===0?250:750);
+  }
+  throw Error('A listing photo could not be read.');
+}
 /** Etsy does not accept WebP and renders transparent PNG areas black. Match the editor's white photo background. */
 export async function prepareEtsyImage(data:{bytes:Uint8Array;type:string}){
   if(data.type==='image/jpeg')return data;

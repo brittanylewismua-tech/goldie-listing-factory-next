@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {DRAFT_TASK_STAGES,draftTaskStage,visibleDraftStage} from '../app/draft-task-stages.ts';
+import {DRAFT_TASK_STAGES,draftStageLabel,draftTaskStage,visibleDraftStage} from '../app/draft-task-stages.ts';
 const rows=[{task:'placement',done:true},{task:'draft-colors',done:true},{task:'draft-sizes',done:true},{task:'draft-pricing',done:false},{task:'draft-shipping',done:true},{task:'photos',done:false}];
 test('each of the six setup tasks belongs to exactly one reachable stage',()=>{
  assert.deepEqual(DRAFT_TASK_STAGES.flatMap(stage=>stage.tasks),rows.map(row=>row.task));
@@ -18,4 +18,7 @@ test('product-aware stages support non-apparel rows and fully saved work',()=>{
  assert.equal(visibleDraftStage(mug,'draft-sizes'),'design');
  assert.equal(visibleDraftStage(rows.map(row=>({...row,done:true})),''),'design');
  assert.equal(draftTaskStage('unknown'),undefined);
+ assert.equal(draftStageLabel('design',['placement','draft-sizes']),'Artwork & sizes');
+ assert.equal(draftStageLabel('design',['placement']),'Artwork placement');
+ assert.equal(draftStageLabel('details',['draft-pricing']),'Pricing & shipping');
 });

@@ -1655,7 +1655,7 @@ body{min-width:0}
 .app-shell .shipping-combobox-trigger>em{font-style:normal;font-size:15px;color:#704b67}
 .app-shell .shipping-combobox-trigger[aria-expanded="true"]>em{transform:rotate(180deg)}
 .app-shell .shipping-combobox-panel{
-  position:absolute;z-index:40;top:calc(100% + 6px);left:0;right:0;
+  position:static;z-index:auto;
   display:grid;gap:8px;padding:10px;
   border:1px solid #ded5db;border-radius:14px;
   background:#fff;box-shadow:0 24px 48px -24px rgba(74,42,62,.55);

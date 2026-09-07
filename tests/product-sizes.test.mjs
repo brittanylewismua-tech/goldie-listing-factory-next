@@ -1110,6 +1110,8 @@ test("the shipping dropdown escapes its card and ranks matches — D348", async 
     "the card must let an open dropdown out");
   assert.match(css, /max-height:min\(320px,42vh\)!important/,
     "and the list is bounded by the viewport, not the card");
+  assert.match(css, /\.shipping-combobox-panel\{\s*position:static;z-index:auto;/,
+    "the open list must take up layout space so it cannot cover and activate the next workflow button");
 
   assert.match(app, /if\(title===normalizedProfileSearch\)return 0;/,
     "an exact name match comes first");

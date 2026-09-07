@@ -14,6 +14,16 @@ test('edge fetch uses manual redirect handling and never follows an untrusted de
  const original=globalThis.fetch;try{globalThis.fetch=async(input,init)=>{assert.equal(init.redirect,'manual');return new Response(null,{status:302,headers:{location:'https://untrusted.example/x'}})};await assert.rejects(readSourceImage('https://images.printify.com/mockup/test.jpg'),/could not be read/)}finally{globalThis.fetch=original}
 });
 test('photo source host is checked before making any request',async()=>{const original=globalThis.fetch;let called=false;try{globalThis.fetch=async()=>{called=true;throw Error('unexpected')};await assert.rejects(readSourceImage('https://images.printify.com.evil.example/photo.jpg'),/could not be verified/);assert.equal(called,false)}finally{globalThis.fetch=original}});
+test('temporary Printify photo failures retry a bounded number of times',async()=>{
+ const original=globalThis.fetch,calls=[],waits=[];try{
+  globalThis.fetch=async()=>{calls.push(1);return calls.length<3?new Response(null,{status:503}):new Response(new Uint8Array([1]),{headers:{'content-type':'image/jpeg'}})};
+  assert.equal((await readSourceImage('https://images.printify.com/mockup/test.jpg',async ms=>waits.push(ms))).bytes[0],1);
+  assert.equal(calls.length,3);assert.deepEqual(waits,[250,750]);
+  calls.length=0;waits.length=0;globalThis.fetch=async()=>new Response(null,{status:404});
+  await assert.rejects(readSourceImage('https://images.printify.com/mockup/missing.jpg',async ms=>waits.push(ms)),/could not be read/);
+  assert.equal(waits.length,0);
+ }finally{globalThis.fetch=original}
+});
 test('unsupported content and oversized streams fail before an Etsy write',async()=>{
  await assert.rejects(limitedImage(new Response('html',{headers:{'content-type':'text/html'}})),/unsupported/);
  await assert.rejects(limitedImage(new Response(new Uint8Array(20*1024*1024+1),{headers:{'content-type':'image/png'}})),/20 MB/);
