@@ -96,3 +96,13 @@
 .diagnostic-context summary{font-size:11px;font-weight:700;cursor:pointer;color:#7c3350}
 .diagnostic-context pre{white-space:pre-wrap;word-break:break-word;background:#faf6fb;border-radius:8px;padding:10px;font-size:11px;margin:8px 0 0;max-height:260px;overflow:auto}
 .diagnostics-empty{font-size:12px;color:#7a6a76;margin:10px 0 0}
+
+/* Long waits use real completed counts or an indeterminate bar, never estimated percentages. */
+.goldie-wait-dialog{padding:0;border:2px solid #111;border-radius:16px;background:#fffaf5;color:#171717;box-shadow:7px 7px 0 #111;width:min(520px,calc(100vw - 40px));max-height:calc(100dvh - 48px);overflow:auto}
+.goldie-wait-dialog::backdrop{background:rgb(0 0 0 / .38)}
+.goldie-wait-card{padding:24px;border:2px solid #111;border-radius:14px;background:#fffaf5;color:#171717;box-shadow:4px 4px 0 #111;margin:16px 0 24px}
+.goldie-wait-dialog .goldie-wait-card{border:0;box-shadow:none;margin:0}
+.goldie-wait-card h2{font-size:23px;line-height:1.2;margin:0 0 12px}.goldie-wait-card p{font-size:15px;line-height:1.5;margin:12px 0}
+.goldie-wait-card progress{display:block;width:100%;height:14px;accent-color:#111;margin:20px 0 12px}
+.goldie-wait-count{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:14px}.goldie-wait-long{border-top:1px solid #bbb;padding-top:12px}
+@media(prefers-reduced-motion:reduce){.goldie-wait-card progress{animation:none}}

@@ -1,8 +1,9 @@
 'use client';
+import WaitProgress,{WaitCard} from './wait-progress';
 import {prepareDraftBatch} from './draft-batch-preparation';
 import {forwardRef,useEffect,useImperativeHandle,useRef,useState} from 'react';
 type Target={id:string;title:string;indices:number[];shippingProfileId:number};
-type Delivery={id:string;productId:string;status:string;error:string|null;photoCount:number;listingId:number|null;mode?:'draft'|'photos';choicesChanged?:boolean;choiceCheckUnavailable?:boolean};
+type Delivery={id:string;productId:string;status:string;error:string|null;photoCount:number;createdAt?:number;updatedAt?:number;listingId:number|null;mode?:'draft'|'photos';choicesChanged?:boolean;choiceCheckUnavailable?:boolean};
 export type PhotoDeliveryHandle={prepare():Promise<boolean>};
 const label=(status:string,draft=false)=>draft?({preparing:'Saving draft choices',waiting:'Preparing your Etsy draft',delivering:'Creating and checking your Etsy draft',completed:'Etsy draft verified',canceled:'Finishing canceled',expired:'Checking ended — prepare again',failed:'Preparation needs another try',needs_attention:'Draft needs attention'}[status]||'Not prepared'):({preparing:'Saving photo set',waiting:'Waiting for publication',delivering:'Updating Etsy photos',completed:'Photos verified on Etsy',canceled:'Delivery canceled',expired:'Checking ended — prepare again',failed:'Preparation needs another try',needs_attention:'Delivery needs attention'}[status]||'Not prepared');
 const PhotoDeliveryHandoff=forwardRef<PhotoDeliveryHandle,{targets:Target[];beforePrepare:()=>Promise<unknown>;onReview?:(id:string,photos:boolean)=>void}>(({targets,beforePrepare,onReview},ref)=>{
@@ -42,8 +43,11 @@ const PhotoDeliveryHandoff=forwardRef<PhotoDeliveryHandle,{targets:Target[];befo
  }}));
  async function prepareOne(target:Target,recheckId?:string){if(locked.current)return;setPreparationErrors(current=>{const next={...current};delete next[target.id];return next});locked.current=true;setBusy(true);setError('');try{await beforePrepare();const response=await fetch('/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId:target.id,printifyImageIndices:target.indices,shippingProfileId:target.shippingProfileId,mode:'draft',automaticDraft:true,recheckId})});const payload=await response.json() as {error?:string;delivery?:Delivery};if(!response.ok||!payload.delivery)throw Error(payload.error||'Draft preparation failed.');await refresh()}catch(e){const message=e instanceof Error?e.message:'Draft preparation failed.';recoveryFocus.current=target.id;setPreparationErrors(current=>({...current,[target.id]:message}));setError('This listing needs attention. Review its message below.')}finally{locked.current=false;setBusy(false)}}
  async function cancel(id:string){try{const response=await fetch(`/api/listing-photos/delivery?id=${encodeURIComponent(id)}`,{method:'DELETE'});const payload=await response.json() as {error?:string;deliveries?:Delivery[]};if(!response.ok)throw Error(payload.error);await refresh()}catch(e){setError(e instanceof Error?e.message:'Delivery could not be canceled.')}}
+ const activeDeliveries=deliveries.filter(d=>['waiting','delivering'].includes(d.status));
  const completed=deliveries.filter(d=>d.status==='completed'&&!d.choicesChanged).length;
  return <section className="photo-delivery-handoff" ref={panel} aria-label="Finish Etsy drafts" aria-busy={busy}>
+  <WaitProgress operation={busy?{title:'Preparing your Etsy drafts',detail:prepared===null?'Saving your selected photos and listing details.':`${prepared} of ${targets.length} prepared. Submitted drafts are already finishing in the background.`}:null}/>
+  {activeDeliveries.length>0&&!busy&&<WaitCard title="Finishing your Etsy drafts" detail="Printify is transferring the listings; Goldie checks details and photos before marking each draft complete. Allow several minutes." started={Math.min(...activeDeliveries.map(d=>d.createdAt||d.updatedAt||Date.now()))} lastConfirmed={Math.max(...activeDeliveries.map(d=>d.updatedAt||0))||undefined} done={completed} total={targets.length} background/>}
   <div className="photo-delivery-heading"><h3>Ready in Etsy. Live only when you choose.</h3>{completed>0&&<b>{completed} of {targets.length} complete</b>}</div>
   <ol className="draft-handoff-steps">
    <li><strong>Create your Etsy drafts</strong><p>Use the button below to send this batch directly to Etsy Drafts.</p></li>
