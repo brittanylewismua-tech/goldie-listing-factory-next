@@ -3818,7 +3818,7 @@ html, body { background: var(--lf-paper); }
   display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:center;
   gap:18px;width:100%;box-sizing:border-box;margin:0 0 28px;padding:24px;
   background:var(--lf-section);border:2px solid #171717;border-radius:16px;
-  box-shadow:4px 4px 0 #171717;color:var(--lf-section-ink);scroll-margin-top:100px;
+  box-shadow:4px 4px 0 var(--lf-pink);color:var(--lf-section-ink);scroll-margin-top:100px;
 }
 .app-shell .step-product-cards > .step-product-card.in-batch > header.is-openable:hover{
   background:var(--lf-section-hover);color:var(--lf-section-ink);
