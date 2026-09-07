@@ -1211,6 +1211,7 @@ export default function ListingFactoryApp() {
   const [variantPrices,setVariantPrices]=useState<Record<string,number>>({});
   const [selectedColorIds,setSelectedColorIds]=useState<number[]>([]);
   const [savingDraftVariants,setSavingDraftVariants]=useState(false);
+  const [savingDraftArtwork,setSavingDraftArtwork]=useState(false);
   const [draftVariantError,setDraftVariantError]=useState("");
   const [rememberingColors,setRememberingColors]=useState(false);
   const [colorsRemembered,setColorsRemembered]=useState(false);
@@ -4519,7 +4520,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     if(!side){setDraftVariantError("This Printify product does not expose a primary print area.");return}
     const colorIds=[...new Set([color.id,...(color.ids||[])])];
     const variantIds=color.variantIds?.length?[...new Set(color.variantIds.map(Number))]:[...printifyVariantIdsForColor(templateDetails.variants,colorIds)];
-    setSavingDraftVariants(true);setDraftVariantError("");
+    setSavingDraftVariants(true);setSavingDraftArtwork(true);setDraftVariantError("");
     try{
       let artworkUpdate:Record<string,unknown>={position:side,variantIds,colorId:color.id,colorTitle:color.title,reset};
       if(!reset){
@@ -4535,7 +4536,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:member.drafts.map(item=>item.id===draft.id?payload.draft!:item)}])));
       setPricingApproved(false);
     }catch(error){setDraftVariantError(error instanceof Error?error.message:"Printify could not update that artwork.")}
-    finally{setSavingDraftVariants(false)}
+    finally{setSavingDraftArtwork(false);setSavingDraftVariants(false)}
   }
   async function syncListingFields(design:DesignFile,details?:EtsyDetails){const draft=drafts.find(item=>item.clientId===design.id);if(!draft?.id)throw new Error("The matching Printify draft could not be found.");const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,title:design.title,tags:design.tags,description:finalDescription(design,details),etsyDetails:details})});const payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Printify could not save the completed listing.")}
   async function refreshDraftPhotos(productId:string,requireFresh=false){try{const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId,refreshImages:true})});const payload=await response.json() as {draft?:DraftResult};if(!response.ok||!payload.draft)throw new Error("Printify preview refresh failed");setDrafts(current=>current.map(item=>item.id===productId?payload.draft!:item))}catch(error){if(requireFresh)throw error;/* Background gallery refresh retains the already loaded photos. */}}
@@ -4958,7 +4959,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           savingEtsyDetails?{title:"Saving listing details",detail:"Saving and checking the selected details for every listing in this batch."}:
           preparingEtsy?{title:"Preparing listing details",detail:"Preparing titles, descriptions and product details for this batch."}:
           titleBuilding||applyingBankToBundle?{title:"Building your listing titles",detail:titleBuildMessage||"Working through the selected designs. Large batches can take several minutes."}:
-          savingDraftVariants?{title:"Saving colors, sizes and prices",detail:"Waiting for Printify to confirm your variant changes."}:
+          savingDraftArtwork?{title:"Updating color artwork",detail:"Uploading the artwork and waiting for Printify to confirm the change."}:
           restoringBatch||switchingProduct||loadingTemplate?{title:"Loading your saved product and artwork",detail:"Reading saved choices and product previews."}:
           savingDraftBatch||restartingBatch||savingProductDefault?{title:"Saving your work",detail:"Waiting for the saved batch or product settings to be confirmed."}:
           publishing?{title:"Finishing your handoff",detail:publishMessage||"Waiting for the requested handoff to be confirmed."}:null}/>
