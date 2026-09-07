@@ -8,7 +8,7 @@ import {planFor} from "@/app/plan-limits";
 import {unpackDraftMedia} from "@/app/draft-media-storage";
 import {runBounded} from "@/app/bounded-work";
 import {draftCreationKey} from "../draft-identity";
-import {CLAIM_DRAFT_JOB_SQL,CLAIM_DRAFT_GROUP_SQL,pendingDraftJob,writeJobObject,jobObjectPrefix,type PendingDraftJob} from "../draft-job-store";
+import {claimDraftJobSql,claimDraftGroupSql,pendingDraftJob,writeJobObject,jobObjectPrefix,type PendingDraftJob} from "../draft-job-store";
 import type {DraftJobBindings,DraftJobInput,DraftRequestBody} from "./execute-job";
 
 type WorkflowBinding={create(options:{id:string;params:{key:string;owner:string}}):Promise<unknown>;createBatch(options:Array<{id:string;params:{key:string;owner:string}}>):Promise<unknown>;get(id:string):Promise<{status():Promise<unknown>}>};
@@ -76,7 +76,7 @@ async function handlePOST(request:Request){
     const job:PendingDraftJob={version:1,inputKey,workflowId,phase:"queued"};
     const planRow=await runtime.DB.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(user.userId).first<{plan_key:string}>();
     const plan=planFor(planRow?.plan_key,isOwner(user));
-    const admitted=await runtime.DB.prepare(CLAIM_DRAFT_JOB_SQL).bind(key,user.userId,body.batchId,body.clientId,plan.drafts,JSON.stringify(job)).first();
+    const admitted=await runtime.DB.prepare(claimDraftJobSql(plan.key)).bind(key,user.userId,body.batchId,body.clientId,plan.drafts,JSON.stringify(job)).first();
     if(!admitted){
       await Promise.all([...copies,inputKey].map(id=>runtime.ARTWORK.delete(id)));
       const winner=await lookup(key,user.userId);
@@ -140,7 +140,7 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
       // Four durable creation lanes per submission. Later members are already
       // admitted, but wait server-side for the preceding job in their lane.
       prepared.forEach((item,index)=>{if(index>=4)item.job.dependencyKey=prepared[index-4].key;});
-      await runtime.DB.prepare(CLAIM_DRAFT_GROUP_SQL).bind(JSON.stringify(prepared.map(({key,batchId,clientId,job})=>({key,batchId,clientId,job}))),owner,plan.drafts).all();
+      await runtime.DB.prepare(claimDraftGroupSql(plan.key)).bind(JSON.stringify(prepared.map(({key,batchId,clientId,job})=>({key,batchId,clientId,job}))),owner,plan.drafts).all();
       // Adopt winners from overlapping submissions, never dispatch our losing
       // copies or replace a running request's immutable identity.
       for(const item of prepared){

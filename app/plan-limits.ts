@@ -7,7 +7,7 @@ export const PLANS = {
 } as const;
 
 export const TRIAL_PLAN = { key: "trial", name: "Free Trial", price: 0, drafts: 10, dailyListings: 10, aiMockups: 6, mockupSets: 2, mockupsPerSet: 10 } as const;
-export const MASTERMIND_BETA_PLAN = { key: "mastermind_beta", name: "Mastermind beta", price: 0, drafts: 20, dailyListings: 20, aiMockups: 20, mockupSets: 10, mockupsPerSet: 50 } as const;
+export const MASTERMIND_BETA_PLAN = { key: "mastermind_beta", name: "Mastermind beta", price: 0, drafts: 10, dailyListings: 10, aiMockups: 0, mockupSets: 10, mockupsPerSet: 50 } as const;
 export const OWNER_TEST_PLAN = { key: "owner_test", name: "Owner testing", price: 0, drafts: 10000, dailyListings: 1000, aiMockups: 10000, mockupSets: 1000, mockupsPerSet: 50 } as const;
 
 export type PlanKey = keyof typeof PLANS;

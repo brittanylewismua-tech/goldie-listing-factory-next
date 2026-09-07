@@ -873,9 +873,9 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.doesNotMatch(access, /GOLDIE-WOLF/);
   assert.match(page, /getChatGPTUser\(\)/);
   assert.match(page, /accountSignInPath\("\/mastermind\?stage=code"\)/);
-  assert.match(page, /20 listings while you test/);
-  assert.match(page, /photos per listing/);
-  assert.match(page, /BetaCountdown/);
+  assert.match(page, /10 listings during the private mastermind beta/);
+  assert.doesNotMatch(page, /lifestyle mockups/);
+  assert.doesNotMatch(page, /BetaCountdown/);
   assert.match(page, /params\?\.stage !== "code"/);
   assert.match(page, /<ListingFactory \/>/);
   assert.match(redeem, /INSERT INTO mastermind_access/);
@@ -1517,20 +1517,20 @@ test("does not invent high-risk Etsy context fields", async () => {
   assert.match(intelligence, /supportedOptional\(raw\.optional,contextualText\)/);
 });
 
-test("keeps mastermind enrollment owner-controlled while enforcing each 48-hour beta", async () => {
+test("keeps mastermind access owner-controlled without a timed expiry", async () => {
   const [access, countdown, redeem, plans] = await Promise.all([
     readFile(new URL("../app/mastermind/access.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/mastermind/beta-countdown.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/mastermind/redeem/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/plan-limits.ts", import.meta.url), "utf8"),
   ]);
-  assert.match(access, /datetime\(redeemed_at, '\+48 hours'\)/);
+  assert.doesNotMatch(access, /\+48 hours/);
   assert.match(access, /accessEnabled=setting\?\.active===1/);
   assert.doesNotMatch(access, /MASTERMIND_BETA_REDEEM_UNTIL/);
-  assert.match(access, /redeemed&&!notExpired/);
-  assert.match(countdown, /window\.setInterval\(update,1000\)/);
+  assert.match(access, /redeemed:accessEnabled&&redeemed/);
+  assert.doesNotMatch(redeem, /hours:48|aiMockups:20/);
   assert.match(redeem, /plan_key='mastermind_beta'/);
-  assert.match(plans, /drafts: 20, dailyListings: 20, aiMockups: 20/);
+  assert.match(plans, /drafts: 10, dailyListings: 10, aiMockups: 0/);
 });
 
 test("blocks the factory workflow on mobile while preserving saved work", async () => {

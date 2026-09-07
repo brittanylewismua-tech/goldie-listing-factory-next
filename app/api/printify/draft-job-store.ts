@@ -32,6 +32,9 @@ WHERE (SELECT COUNT(*) FROM printify_draft_results WHERE user_id=?2
 ON CONFLICT(request_key) DO UPDATE SET status='running',response_json=excluded.response_json,updated_at=CURRENT_TIMESTAMP
 WHERE printify_draft_results.user_id=excluded.user_id AND printify_draft_results.status='failed'
 RETURNING request_key`;
+/** Beta credits cover the entire test, while paid plans keep monthly renewal. */
+export const claimDraftJobSql=(planKey:string)=>planKey==='mastermind_beta'?CLAIM_DRAFT_JOB_SQL.replace("COALESCE(created_at,updated_at)>=datetime('now','start of month')",'1=1'):CLAIM_DRAFT_JOB_SQL;
+export const claimDraftGroupSql=(planKey:string)=>planKey==='mastermind_beta'?CLAIM_DRAFT_GROUP_SQL.replace("COALESCE(created_at,updated_at)>=datetime('now','start of month')",'1=1'):CLAIM_DRAFT_GROUP_SQL;
 export function pendingDraftJob(value:string|null):PendingDraftJob|null{
   if(!value)return null;
   try{const data=JSON.parse(value);return data?.version===1&&typeof data.inputKey==='string'&&typeof data.workflowId==='string'&&['queued','uploaded','creating','created'].includes(data.phase)?data:null;}catch{return null;}

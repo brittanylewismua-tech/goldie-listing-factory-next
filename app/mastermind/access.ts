@@ -14,11 +14,11 @@ export async function mastermindState(user: ChatGPTUser) {
   if (!db) return { active: false, redeemed: false, expired:false, owner: false, expiresAt: null };
   const [setting, access] = await Promise.all([
     db.prepare("SELECT active FROM mastermind_settings WHERE id = 1").first<{ active: number }>(),
-    db.prepare("SELECT redeemed_at redeemedAt, datetime(redeemed_at, '+48 hours') expiresAt FROM mastermind_access WHERE user_id = ?").bind(user.userId).first<{ redeemedAt:string;expiresAt:string }>(),
+    db.prepare("SELECT redeemed_at redeemedAt FROM mastermind_access WHERE user_id = ?").bind(user.userId).first<{ redeemedAt:string }>(),
   ]);
   const accessEnabled=setting?.active===1;
-  const redeemed=Boolean(access?.redeemedAt),notExpired=Boolean(access?.expiresAt&&new Date(`${access.expiresAt.replace(" ","T")}Z`).getTime()>Date.now());
-  return { active:accessEnabled, enrollmentOpen:accessEnabled, redeemed:accessEnabled&&redeemed&&notExpired, expired:redeemed&&!notExpired, owner:false, expiresAt:access?.expiresAt||null };
+  const redeemed=Boolean(access?.redeemedAt);
+  return { active:accessEnabled, enrollmentOpen:accessEnabled, redeemed:accessEnabled&&redeemed, expired:false, owner:false, expiresAt:null };
 }
 
 export async function codeMatches(value: string) {
