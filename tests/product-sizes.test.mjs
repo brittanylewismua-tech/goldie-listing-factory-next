@@ -1281,7 +1281,7 @@ test("D378: any product card can be opened, not only the next one", async () => 
 test("D379: opening a product card does not reload the page", async () => {
   const app = await read("app/listing-factory-app.tsx");
 
-  assert.doesNotMatch(app.replace("window.location.assign(destination)",""), /window\.location\.assign\(/,
+  assert.doesNotMatch(app.replace("window.location.assign(destination)","").replace("window.location.assign(batchRestoreRetryUrl.current||window.location.href)",""), /window\.location\.assign\(/,
     "a card that reloads the page is not the same card step 1 has");
 
   assert.match(app, /async function restoreBatchById\(id:string,requestedStep:string\|null,requestedPhase:string\|null,push=false\)/);

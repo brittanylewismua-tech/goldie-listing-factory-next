@@ -2017,8 +2017,11 @@ export default function ListingFactoryApp() {
      explanation, looking exactly like your work had been lost. Say so, and clear
      the dead id so a refresh does not repeat it. */
   const [restoreNotice,setRestoreNotice]=useState("");
+  const [batchRestoreError,setBatchRestoreError]=useState("");
+  const batchRestoreFailed=useRef(false),batchRestoreRetryUrl=useRef("");
   async function restoreBatchById(id:string,requestedStep:string|null,requestedPhase:string|null,push=false):Promise<boolean>{
-    try{const url=new URL(window.location.href);if(!id)return false;const response=await batchFetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return false;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>};children?:Array<{id:string;productId:string;productName:string;drafts:number;published:number}>};if(!payload.batch?.state)return false;
+    batchRestoreFailed.current=false;setBatchRestoreError("");if(!batchRestoreRetryUrl.current)batchRestoreRetryUrl.current=window.location.href;
+    try{const url=new URL(window.location.href);if(!id)return false;const response=await batchFetch(`/api/batches?id=${encodeURIComponent(id)}`);if(response.status===404)return false;if(!response.ok)throw new Error("Saved batch unavailable");const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>};children?:Array<{id:string;productId:string;productName:string;drafts:number;published:number}>};if(!payload.batch?.state)throw new Error("Saved batch unavailable");
     /* D871 · The URL carries the run. A run holds no product work of its own, so
        opening one means opening one of its products: the one she left open, or
        the first that has not published yet. D697's near-miss was a Resume that
@@ -2065,7 +2068,7 @@ export default function ListingFactoryApp() {
     cannot recover the complete bundle after refresh. *//* D1023 · Parented runs
     rebuild the product map from the actual children returned by /api/batches.
     A child snapshot can be stale and must never manufacture a sibling from a
-    different execution. */if(runIdRef.current)setBundleBatchIds({});url.searchParams.set("batch",runIdRef.current||id);url.searchParams.set("step",step);url.searchParams.delete("phase");if(push)window.history.pushState({},"",url);else window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&!state.complete&&state.template)void refreshRestoredTemplate(state.template,Number(state.etsyShippingProfileId)||0);return true}finally{snapshotReady.current=true;setRestoringBatch(false)}
+    different execution. */if(runIdRef.current)setBundleBatchIds({});url.searchParams.set("batch",runIdRef.current||id);url.searchParams.set("step",step);url.searchParams.delete("phase");if(push)window.history.pushState({},"",url);else window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&!state.complete&&state.template)void refreshRestoredTemplate(state.template,Number(state.etsyShippingProfileId)||0);return true}catch{batchRestoreFailed.current=true;setBatchRestoreError("Your saved batch could not be loaded. The connection may be interrupted. Try opening it again; your saved work has not been cleared.");return false}finally{snapshotReady.current=true;setRestoringBatch(false)}
   }
   useEffect(()=>{if(activeRecipe||template||files.length||drafts.length)setRestoreNotice("")},[activeRecipe,template,files.length,drafts.length]);
   /* D1028 · A completed Printify draft is not the same thing as an approved
@@ -2112,7 +2115,7 @@ export default function ListingFactoryApp() {
         finally{snapshotReady.current=true;setRestoringBatch(false)}
       })();
       return;
-    }void restoreBatchById(id,url.searchParams.get("step"),url.searchParams.get("phase")).then(restored=>{if(restored)return;setRestoreNotice("That batch could not be opened - it may have been deleted. Nothing else was lost; you can pick up from Batch History or start a new batch.");const clean=new URL(window.location.href);clean.searchParams.delete("batch");clean.searchParams.delete("step");clean.searchParams.delete("phase");window.history.replaceState({},"",clean.toString());})},[]);
+    }void restoreBatchById(id,url.searchParams.get("step"),url.searchParams.get("phase")).then(restored=>{if(restored||batchRestoreFailed.current)return;setRestoreNotice("That batch could not be opened - it may have been deleted. Nothing else was lost; you can pick up from Batch History or start a new batch.");const clean=new URL(window.location.href);clean.searchParams.delete("batch");clean.searchParams.delete("step");clean.searchParams.delete("phase");window.history.replaceState({},"",clean.toString());})},[]);
   /* D659 · The store was recorded on the server the moment a product loaded,
      but the card that shows it lives in factory-tools and only re-reads the
      recipe list on its own schedule - so the label appeared on the NEXT page
@@ -5007,6 +5010,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           summary={heroSummary}
         >
           {restoreNotice&&<p className="batch-restore-notice" role="status">{restoreNotice}</p>}
+          {batchRestoreError&&<div className="batch-restore-notice" role="alert"><p>{batchRestoreError}</p><button type="button" className="secondary-action" onClick={()=>window.location.assign(batchRestoreRetryUrl.current||window.location.href)}>Try opening saved batch again</button></div>}
           {/* D659 · More than one batch is open, so Goldie asks instead of
               picking one and instead of pretending there is nothing to resume. */}
           {resumeChoices.length>1&&<section className="batch-resume-choice" aria-label="Choose which batch to resume"><b>Which batch do you want to continue?</b><span>You have {resumeChoices.length} batches open. Choose one to continue.</span><ul>{resumeChoices.map(choice=><li key={choice.id}><button type="button" onClick={()=>{setResumeChoices([]);setRestoringBatch(true);const target=new URL(window.location.href);target.searchParams.set("batch",choice.id);window.history.replaceState({},"",target);void restoreBatchById(choice.id,target.searchParams.get("step"),target.searchParams.get("phase"))}}><b>{choice.name}</b><small>{choice.drafts?`${choice.drafts} ${choice.drafts===1?"draft":"drafts"}`:"No drafts yet"}</small></button></li>)}</ul><button type="button" className="secondary-action" onClick={()=>setResumeChoices([])}>Start something new instead</button></section>}
