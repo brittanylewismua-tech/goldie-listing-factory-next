@@ -1,3 +1,4 @@
+import {prerequisitesModule} from './delivery-prerequisites-module.mjs';
 import {pacingModule} from './etsy-pacing-module.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,10 +16,11 @@ const stored=new Map();const bucket={async delete(key){stored.delete(key)},async
 let creations=[],failStart=false;
 const runtime={DB,ARTWORK:bucket,PHOTO_DELIVERY:{async create(input){creations.push(input);if(failStart)throw Error('start failed')}}};
 globalThis.__photoRoute={runtime,user:{userId:'owner'}};
-let source=read('app/api/listing-photos/delivery/route.ts')
+let source=read('app/api/listing-photos/delivery/route.ts').replace("from './prerequisites'",`from '${prerequisitesModule}'`)
+ .replace(/import \{cachedJson[^;]+;/,"const TAXONOMY_TTL_SECONDS=3600,cachedJson=async(a,b,c,load)=>load();")
  .replace("from './draft-engine'",`from '${draftEngine}'`)
  .replace("from './reuse-photos'",`from '${url(read('app/api/listing-photos/delivery/reuse-photos.ts'))}'`)
- .replace(/import \{etsyConnection,etsyFetch\}[^;]+;/,"const etsyConnection=async()=>({shopId:200,token:'test'}),etsyFetch=async()=>({shipping_profile_id:8});")
+ .replace(/import \{etsyConnection,etsyFetch\}[^;]+;/,"const etsyConnection=async()=>({shopId:200,token:'test'}),etsyFetch=async path=>path.includes('seller-taxonomy')?({results:[]}):({shipping_profile_id:8});")
  .replace(/import \{NextResponse\}[^;]+;/,"const NextResponse={json:(value,init)=>Response.json(value,init)};")
  .replace(/import \{getChatGPTUser\}[^;]+;/,"const getChatGPTUser=async()=>globalThis.__photoRoute.user;")
  .replace(/import \{decryptPrintifyToken\}[^;]+;/,"const decryptPrintifyToken=async()=>'token';")

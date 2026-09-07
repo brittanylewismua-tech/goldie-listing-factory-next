@@ -1,4 +1,5 @@
 import {DraftReviewRequired,draftStep,verifyDraft,type DraftSnapshot,type DraftState,type DraftView,type DraftOperation,type Question} from './draft-engine';
+import {inventoryPrerequisite} from './prerequisites';
 /** Etsy escapes text in API reads. Decode exactly one layer, preserving literal seller entities. */
 export function decodeEtsyText(value:string){return String(value??'').replace(/&(#x[0-9a-f]+|#\d+|amp|quot|apos|lt|gt|nbsp);/gi,(match,key:string)=>{
  const names:Record<string,string>={amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',nbsp:'\u00a0'};
@@ -8,10 +9,11 @@ export function decodeEtsyText(value:string){return String(value??'').replace(/&
 export type PrintifyDraftProduct={is_locked?:boolean;external?:{id?:string|number};variants?:{id:number;sku:string;price:number;is_enabled:boolean;options?:number[]}[];options?:{name:string;type?:string;values:{id:number;title:string}[]}[]};
 type Request=(path:string,init?:RequestInit)=>Promise<Response>;
 /** Verify the existing fulfillment identifiers; never rewrite inventory or SKUs in Etsy. */
-export function verifyInventory(product:PrintifyDraftProduct,inventory:{products?:{sku:string;offerings:{price:{amount:number;divisor:number};is_enabled:boolean}[]}[]}){
+export function verifyInventory(product:PrintifyDraftProduct,inventory:{products?:{sku:string;offerings:{price:{amount:number;divisor:number};is_enabled:boolean;quantity?:number;readiness_state_id?:number|null}[]}[]}){
  const expected=product.variants?.filter(v=>v.is_enabled),actual=inventory.products?.filter(p=>p.offerings?.some(o=>o.is_enabled));
  if(!expected?.length||!actual?.length||expected.length!==actual.length||new Set(expected.map(v=>v.sku)).size!==expected.length||new Set(actual.map(v=>v.sku)).size!==actual.length)throw new DraftReviewRequired('The Etsy draft variants do not match Printify. Review colors and sizes before finishing.');
  for(const v of expected){const row=actual.find(p=>p.sku===v.sku),offers=row?.offerings.filter(o=>o.is_enabled);if(!offers?.length||offers.some(o=>!o.price?.divisor||Math.round(o.price.amount/o.price.divisor*100)!==v.price))throw new DraftReviewRequired('An Etsy draft SKU or price differs from Printify. Review the variants before finishing.');}
+ const prerequisite=inventoryPrerequisite(actual.flatMap(p=>p.offerings));if(prerequisite)throw new DraftReviewRequired(prerequisite);
 }
 export function draftWithSize(snapshot:DraftSnapshot,product:PrintifyDraftProduct):DraftSnapshot{
  const size=product.options?.find(o=>o.type==='size'||/^sizes?$/i.test(o.name)),selected=new Set(product.variants?.filter(v=>v.is_enabled).flatMap(v=>v.options||[]));

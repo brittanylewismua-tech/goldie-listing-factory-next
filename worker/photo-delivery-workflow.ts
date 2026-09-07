@@ -8,7 +8,9 @@ export class PhotoDeliveryWorkflow extends WorkflowEntrypoint<DeliveryEnv,{id:st
   const {id,owner}=event.payload;let checks=0;
   try{
   for(let operation=0;operation<240;operation++){
-   const result=await step.do(`photos-${operation}`,{retries:{limit:2,delay:'10 seconds',backoff:'constant'},timeout:'10 minutes'},()=>runDeliveryTick(id,owner));
+   // Metadata and photo work use separate ticks; backups copy at most four images.
+   // Bounded network chains fit within five minutes, including request pacing.
+   const result=await step.do(`photos-${operation}`,{retries:{limit:2,delay:'10 seconds',backoff:'constant'},timeout:'5 minutes'},async()=>{const started=Date.now();console.info('goldie.delivery.tick.start',{id,operation});try{const value=await runDeliveryTick(id,owner);console.info('goldie.delivery.tick.end',{id,operation,elapsedMs:Date.now()-started,...value});return value}catch(error){console.error('goldie.delivery.tick.interrupted',{id,operation,elapsedMs:Date.now()-started});throw error}});
    if(result.done)return;
    if(!result.progress)checks++;
    await step.sleep(`wait-${operation}`,'waitMs' in result?result.waitMs!:result.progress?'1 second':checks<=20?'30 seconds':checks<=45?'2 minutes':'10 minutes');

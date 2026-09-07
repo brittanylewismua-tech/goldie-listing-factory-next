@@ -1,8 +1,9 @@
+import {prerequisitesModule} from './delivery-prerequisites-module.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {DatabaseSync} from 'node:sqlite';import ts from 'typescript';import {pacingModule} from './etsy-pacing-module.mjs';
 const {RESERVE_ETSY_SLOT_SQL,etsyRequestInterval,paceEtsyRequest,EtsyRateLimited}=await import(pacingModule);
 const read=p=>readFileSync(p,'utf8');const url=s=>'data:text/javascript;base64,'+Buffer.from(ts.transpile(s,{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022})).toString('base64');
 const engine=url(read('app/api/listing-photos/delivery/draft-engine.ts').replace("from '../../etsy/request-pacing'",`from '${pacingModule}'`));
-const {readDraft}=await import(url(read('app/api/listing-photos/delivery/draft-service.ts').replace("from './draft-engine'",`from '${engine}'`)));
+const {readDraft}=await import(url(read('app/api/listing-photos/delivery/draft-service.ts').replace("from './prerequisites'",`from '${prerequisitesModule}'`).replace("from './draft-engine'",`from '${engine}'`)));
 test('600 arrivals at low/default/observed capacity cannot extend the queue with rejected reservations',()=>{
  for(const qps of [1,5,150]){const db=new DatabaseSync(':memory:');try{db.exec(read('drizzle/0025_etsy_request_pacing.sql'));let now=1000,accepted=0;const interval=etsyRequestInterval(qps),slots=new Set();
  for(let wave=0;wave<30&&accepted<600;wave++){for(let n=accepted;n<600;n++){const row=db.prepare(RESERVE_ETSY_SLOT_SQL).get(now,interval,now);if(row){assert.ok(row.next_at_ms-interval-now<=30000);assert.ok(!slots.has(row.next_at_ms));slots.add(row.next_at_ms);accepted++}}

@@ -3958,3 +3958,7 @@ html, body { background: var(--lf-paper); }
 .photo-delivery-handoff .draft-handoff-results .draft-prepare{background:#111;color:#fff}
 
 .photo-delivery-handoff .draft-handoff-steps{list-style:decimal}
+
+/* Verified drafts lead with the actual next action. */
+.photo-delivery-handoff .draft-handoff-results .draft-open{background:#111;color:#fff;text-decoration:none;text-align:center}
+.photo-delivery-handoff .draft-handoff-results .draft-open:hover{background:#333;color:#fff}

@@ -1,4 +1,6 @@
 import {photoDigest,reusablePhotoReceipt} from './reuse-photos';
+import {checkCategoryRequirements,type CategoryProperty} from './prerequisites';
+import {cachedJson,TAXONOMY_TTL_SECONDS} from '../../static-cache';
 import {NextResponse} from 'next/server';
 import {getChatGPTUser} from '@/app/chatgpt-auth';
 import {unpackDraftMedia} from '@/app/draft-media-storage';
@@ -79,6 +81,9 @@ export async function POST(request:Request){
     if(Number(connection.shopId)!==Number(shop.shop_id))throw Error('Your Etsy shop changed. Refresh before preparing this draft.');
     const profile=await etsyFetch<{shipping_profile_id:number;is_deleted?:boolean}>(`/shops/${connection.shopId}/shipping-profiles/${draftSnapshot.shipping_profile_id}`,connection.token);
     if(Number(profile.shipping_profile_id)!==draftSnapshot.shipping_profile_id||profile.is_deleted)throw Error('The selected shipping profile is unavailable in this Etsy shop. Choose another profile.');
+    const category=await cachedJson('etsy-taxonomy',`/nodes/${draftSnapshot.taxonomy_id}/properties`,TAXONOMY_TTL_SECONDS,()=>etsyFetch<{results?:CategoryProperty[]}>(`/seller-taxonomy/nodes/${draftSnapshot.taxonomy_id}/properties`,connection.token));
+    if(!Array.isArray(category.results))throw Error('Etsy category requirements could not be checked. Try again before sending this draft.');
+    checkCategoryRequirements(draftSnapshot,category.results);
   }
   const {photos,fingerprint}=await selectionPlan(runtime,user.userId,productId,draft,body.printifyImageIndices,shop.shop_id,draftSnapshot);
   await runtime.DB.prepare("UPDATE photo_deliveries SET status='failed',error='Photo preparation was interrupted. Prepare delivery again.',updated_at=? WHERE user_id=? AND product_id=? AND status='preparing' AND created_at<?").bind(Date.now(),user.userId,productId,Date.now()-600000).run();

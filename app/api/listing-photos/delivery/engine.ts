@@ -5,7 +5,7 @@ export type DeliveryState={listingId:number;expected:DeliveryImage[];uploaded:nu
 export type DeliveryPhoto={key:string;type:string};
 export type DeliveryIO={
   read():Promise<{shopId:number;state:string;images:DeliveryImage[]}>;
-  backup(images:DeliveryImage[]):Promise<void>;
+  backup(images:DeliveryImage[]):Promise<void|boolean>;
   save(state:DeliveryState):Promise<void>;
   upload(photo:DeliveryPhoto,rank:number):Promise<number>;
   remove(imageId:number):Promise<void>;
@@ -24,7 +24,7 @@ export async function deliveryStep(io:DeliveryIO,shopId:number,listingId:number,
   if(state&&state.listingId!==listingId)throw new DeliveryReviewRequired('Printify now points to a different Etsy listing. Delivery stopped.');
   if(state?.pending)throw new DeliveryReviewRequired('Etsy did not confirm the last photo change. Delivery paused to prevent duplicate uploads. Contact support to check the saved delivery receipt.');
   if(!state){
-    await io.backup(current.images);
+    if(await io.backup(current.images)===false)return {done:false,state:null};
     state={listingId,expected:current.images,uploaded:[],startedAt:Date.now()};
     await io.save(state);
   }

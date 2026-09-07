@@ -1,4 +1,5 @@
 import {EtsyRateLimited} from '../../etsy/request-pacing';
+import {backupPhotoChunk,type BackupReceipt} from './backup';
 import {candidateWaitMs,transferPollMs} from './timing';
 import {transferDraft,DraftTransferReviewRequired,type TransferState,type TransferProduct} from './transfer-engine';
 import {verifyShopPairing} from '../../printify/shop-match';
@@ -112,7 +113,7 @@ export async function runDeliveryTick(id:string,owner:string){
       save:async(state:DraftState)=>{await runtime.DB.prepare('UPDATE photo_deliveries SET draft_state_json=?,updated_at=? WHERE id=? AND user_id=?').bind(JSON.stringify(state),Date.now(),id,owner).run()},
       backup:async(view:unknown)=>{await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/draft-backup.json`,JSON.stringify(view),{httpMetadata:{contentType:'application/json'}})}
     }:null;
-    if(metadataArgs&&!metadataArgs.saved?.verified){const metadata=await finishDraftMetadata(metadataArgs);if(!metadata.done)return {done:false,progress:true};}
+    if(metadataArgs&&!metadataArgs.saved?.verified){await finishDraftMetadata(metadataArgs);return {done:false,progress:true};}
     const result=await deliveryStep({
       read:async()=>{
         const listing=await (await request(`/listings/${listingId}`)).json() as {shop_id:number;state:string};
@@ -123,12 +124,17 @@ export async function runDeliveryTick(id:string,owner:string){
         return {shopId:Number(listing.shop_id),state:listing.state,images:images.results};
       },
       backup:async images=>{
-        for(const image of images){
+        const prefix=`photo-delivery/${owner}/${id}/`;
+        return backupPhotoChunk(images,{
+        load:async()=>{const object=await runtime.ARTWORK.get(prefix+'backup-progress.json');return object?object.json<BackupReceipt>():null},
+        save:async receipt=>{await runtime.ARTWORK.put(prefix+'backup-progress.json',JSON.stringify(receipt),{httpMetadata:{contentType:'application/json'}})},
+        copy:async image=>{
           if(!image.url_fullxfull)throw Error('An existing Etsy photo could not be backed up. No photos were changed.');
           const data=await limitedImage(await fetch(trustedImageUrl(image.url_fullxfull,'etsy'),{signal:AbortSignal.timeout(20000),redirect:'manual'}));
           await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/backup/${image.listing_image_id}`,data.bytes,{httpMetadata:{contentType:data.type}});
-        }
-        await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/backup.json`,JSON.stringify(images),{httpMetadata:{contentType:'application/json'}});
+        },
+        finish:async()=>{await runtime.ARTWORK.put(prefix+'backup.json',JSON.stringify(images),{httpMetadata:{contentType:'application/json'}})}
+        });
       },
       save:async state=>{await runtime.DB.prepare("UPDATE photo_deliveries SET state_json=?,status='delivering',error=NULL,updated_at=? WHERE id=? AND user_id=?").bind(JSON.stringify(state),Date.now(),id,owner).run()},
       upload:async(photo,rank)=>{
