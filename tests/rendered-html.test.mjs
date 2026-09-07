@@ -2063,7 +2063,7 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
   assert.doesNotMatch(review,/design\.title\.trim\(\)\.length<100/);
   assert.match(review,/needed:missingTags/);
   assert.match(review,/design\.tags\.length<13/);
-  assert.match(review,/review before publishing in Printify/);
+  assert.match(review,/review before publishing in Etsy/);
   assert.match(review,/review\.needed\?"content-review":"ready"/);
   /* D255 · This used to be "One or more titles need review" — vaguer than the
      rows immediately below it, which name every listing individually. The
