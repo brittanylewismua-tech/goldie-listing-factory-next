@@ -4,8 +4,9 @@ import {unpackDraftMedia} from '@/app/draft-media-storage';
 import {orderedPackagePhotos} from '@/app/listing-photo-package';
 import {deliveryEnv,deliveryStatus,readDelivery,readSourceImage,prepareEtsyImage,deliveryMessage,type DeliveryRow} from './service';
 import {decryptPrintifyToken} from '../../printify/token-crypto';
+import {freezeDraft,type SourceDraft} from './draft-engine';
 import {prepareEtsySkus} from '../../printify/etsy-sku-preflight';
-const publicRow=(row:DeliveryRow)=>({id:row.id,productId:row.product_id,status:row.status,error:row.error?deliveryMessage(row.error):null,photoCount:JSON.parse(row.photos_json).length,updatedAt:row.updated_at,expiresAt:row.expires_at,listingId:row.state_json?JSON.parse(row.state_json).listingId:null});
+const publicRow=(row:DeliveryRow)=>({id:row.id,productId:row.product_id,status:row.status,error:row.error?deliveryMessage(row.error):null,photoCount:JSON.parse(row.photos_json).length,updatedAt:row.updated_at,expiresAt:row.expires_at,mode:row.draft_json?'draft':'photos',listingId:row.state_json?JSON.parse(row.state_json).listingId:null});
 export async function GET(request:Request){
  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:'Sign in to view photo delivery.'},{status:401});
  const ids=[...new Set(new URL(request.url).searchParams.getAll('productId'))];if(!ids.length||ids.length>100)return NextResponse.json({deliveries:[]});
@@ -16,7 +17,8 @@ export async function POST(request:Request){
  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:'Sign in to prepare photo delivery.'},{status:401});
  const runtime=deliveryEnv();let id='';
  try{
-  const body=await request.json() as {productId?:string;printifyImageIndices?:number[]};
+  const body=await request.json() as {productId?:string;printifyImageIndices?:number[];mode?:'draft'};
+  if(body.mode!==undefined&&body.mode!=='draft')return NextResponse.json({error:'Choose a supported delivery mode.'},{status:400});
   const productId=String(body.productId||'');if(!productId||!Array.isArray(body.printifyImageIndices))return NextResponse.json({error:'Choose a listing and its photos first.'},{status:400});
   const owned=await runtime.DB.prepare("SELECT response_json,request_key FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(user.userId,productId).first<{response_json:string;request_key:string}>();
   if(!owned)return NextResponse.json({error:'This listing does not belong to your account.'},{status:403});
@@ -29,6 +31,7 @@ export async function POST(request:Request){
     if(!connection)throw Error('Reconnect Printify before opening your listings.');
     await prepareEtsySkus(draft.shopId,productId,owned.request_key,await decryptPrintifyToken(connection.encrypted_token,runtime.PRINTIFY_TOKEN_KEY));
   };
+  const draftSnapshot=body.mode==='draft'?freezeDraft(draft as SourceDraft):null;
   const prefix=`etsy-listing-images/${user.userId}/${productId}/`,objects=await runtime.ARTWORK.list({prefix,limit:100});
   if(objects.truncated)throw Error('Too many stored photos. Remove unused photos before preparing delivery.');
   const order=await runtime.ARTWORK.get(`${prefix}order.json`);
@@ -36,7 +39,7 @@ export async function POST(request:Request){
   if(body.printifyImageIndices.some(i=>!Number.isInteger(i)||i<0||!images[i]))throw Error('A selected photo is no longer available. Refresh this listing.');
   const photos=orderedPackagePhotos(images,body.printifyImageIndices,objects.objects,prefix,order?JSON.parse(await order.text()):[]);
   if(!photos.length||photos.length>20)return NextResponse.json({error:'Choose between 1 and 20 photos per listing.'},{status:409});
-  const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({shop:shop.shop_id,photos:photos.map(p=>({...p,etag:objects.objects.find(o=>o.key===p.key)?.etag}))}))))).map(b=>b.toString(16).padStart(2,'0')).join('');
+  const fingerprint=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify({shop:shop.shop_id,...(draftSnapshot?{draft:draftSnapshot}:{}),photos:photos.map(p=>({...p,etag:objects.objects.find(o=>o.key===p.key)?.etag}))}))))).map(b=>b.toString(16).padStart(2,'0')).join('');
   await runtime.DB.prepare("UPDATE photo_deliveries SET status='failed',error='Photo preparation was interrupted. Prepare delivery again.',updated_at=? WHERE user_id=? AND product_id=? AND status='preparing' AND created_at<?").bind(Date.now(),user.userId,productId,Date.now()-600000).run();
   const latest=await runtime.DB.prepare('SELECT * FROM photo_deliveries WHERE user_id=? AND product_id=? ORDER BY created_at DESC LIMIT 1').bind(user.userId,productId).first<DeliveryRow>();
   if(latest){
@@ -46,11 +49,13 @@ export async function POST(request:Request){
       if(latest.status==='waiting'){try{await runtime.PHOTO_DELIVERY.create({id:latest.id,params:{id:latest.id,owner:user.userId}})}catch{/* A durable instance with this identity may already exist. GET status remains authoritative. */}}
       return NextResponse.json({delivery:publicRow(latest)});
     }
+    if(latest.draft_state_json&&JSON.parse(latest.draft_state_json).pending)throw Error('The previous draft change needs verification before another delivery can begin.');
     if(['preparing','waiting','delivering'].includes(latest.status))return NextResponse.json({error:'A photo set is already scheduled. Cancel the waiting delivery before changing that set.',delivery:publicRow(latest)},{status:409});
   }
   await checkSkus();
   id=crypto.randomUUID();const now=Date.now();
   await runtime.DB.prepare("INSERT INTO photo_deliveries(id,user_id,product_id,printify_shop_id,etsy_shop_id,fingerprint,status,created_at,updated_at,expires_at) VALUES(?,?,?,?,?,?,'preparing',?,?,?)").bind(id,user.userId,productId,draft.shopId,shop.shop_id,fingerprint,now,now,now+86400000).run();
+  if(draftSnapshot)await runtime.DB.prepare('UPDATE photo_deliveries SET draft_json=? WHERE id=? AND user_id=?').bind(JSON.stringify(draftSnapshot),id,user.userId).run();
   const snapshot:Array<{key:string;type:string}>=[];let total=0;
   for(const [index,photo] of photos.entries()){
     let data:{bytes:Uint8Array;type:string};

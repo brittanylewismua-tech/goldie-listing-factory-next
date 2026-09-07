@@ -5,8 +5,9 @@ import {DatabaseSync} from 'node:sqlite';
 import ts from 'typescript';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const url=source=>'data:text/javascript;base64,'+Buffer.from(ts.transpile(source,{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022})).toString('base64');
+const draftEngine=url(read('app/api/listing-photos/delivery/draft-engine.ts'));
 const packageUrl=url(read('app/listing-photo-package.ts'));
-const db=new DatabaseSync(':memory:');db.exec(read('drizzle/0022_photo_deliveries.sql'));
+const db=new DatabaseSync(':memory:');db.exec(read('drizzle/0022_photo_deliveries.sql'));db.exec(read('drizzle/0023_etsy_draft_finishing.sql'));
 db.exec("CREATE TABLE printify_draft_results(user_id TEXT,status TEXT,response_json TEXT,request_key TEXT);CREATE TABLE printify_connections(user_id TEXT,encrypted_token TEXT);CREATE TABLE etsy_connections(user_id TEXT,is_active INTEGER,shop_id INTEGER);");
 const DB={prepare(sql){let args=[];return {bind(...values){args=values;return this},async first(){return db.prepare(sql).get(...args)||null},async all(){return {results:db.prepare(sql).all(...args)}},async run(){const r=db.prepare(sql).run(...args);return {meta:{changes:Number(r.changes)}}}}}};
 const stored=new Map();const bucket={async delete(key){stored.delete(key)},async list({prefix}){return {truncated:false,objects:[...stored].filter(([k])=>k.startsWith(prefix)).map(([key])=>({key,etag:key}))}},async get(key){const value=stored.get(key);return value?{size:value.length,httpMetadata:{contentType:'image/png'},async text(){return new TextDecoder().decode(value)},async arrayBuffer(){return new Uint8Array(value).buffer}}:null},async put(key,value){stored.set(key,typeof value==='string'?new TextEncoder().encode(value):new Uint8Array(value))}};
@@ -14,6 +15,7 @@ let creations=[],failStart=false;
 const runtime={DB,ARTWORK:bucket,PHOTO_DELIVERY:{async create(input){creations.push(input);if(failStart)throw Error('start failed')}}};
 globalThis.__photoRoute={runtime,user:{userId:'owner'}};
 let source=read('app/api/listing-photos/delivery/route.ts')
+ .replace("from './draft-engine'",`from '${draftEngine}'`)
  .replace(/import \{NextResponse\}[^;]+;/,"const NextResponse={json:(value,init)=>Response.json(value,init)};")
  .replace(/import \{getChatGPTUser\}[^;]+;/,"const getChatGPTUser=async()=>globalThis.__photoRoute.user;")
  .replace(/import \{decryptPrintifyToken\}[^;]+;/,"const decryptPrintifyToken=async()=>'token';")
@@ -27,7 +29,7 @@ let source=read('app/api/listing-photos/delivery/route.ts')
  const prepareEtsyImage=async data=>data;
  const readSourceImage=async()=>({bytes:new Uint8Array([1,2,3]),type:'image/png'});`);
 const api=await import(url(source));
-const post=(productId='p1',indices=[0])=>api.POST(new Request('https://goldie.test/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId,printifyImageIndices:indices})}));
+const post=(productId='p1',indices=[0],mode)=>api.POST(new Request('https://goldie.test/api/listing-photos/delivery',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productId,printifyImageIndices:indices,mode})}));
 function reset(){db.exec('DELETE FROM photo_deliveries;DELETE FROM printify_draft_results;DELETE FROM etsy_connections;DELETE FROM printify_connections;');stored.clear();creations=[];failStart=false;globalThis.__photoRoute.user={userId:'owner'};db.prepare('INSERT INTO printify_draft_results VALUES(?,?,?,?)').run('owner','succeeded',JSON.stringify({id:'p1',shopId:100,printifyImages:['https://images.printify.com/front.jpg','https://images.printify.com/back.jpg']}),'a'.repeat(64));db.exec("INSERT INTO etsy_connections VALUES('owner',1,200);INSERT INTO printify_connections VALUES('owner','encrypted')")}
 test('route creates an immutable ordered snapshot and duplicate submissions reuse one job',async()=>{
  reset();stored.set('etsy-listing-images/owner/p1/upload/custom.png',new Uint8Array([9,9]));stored.set('etsy-listing-images/owner/p1/order.json',new TextEncoder().encode(JSON.stringify(['printify:0','stored:etsy-listing-images/owner/p1/upload/custom.png'])));
@@ -56,3 +58,10 @@ test('failed workflow startup is reported honestly and preparation can be retrie
 test('owner-scoped status cannot expose another sellers delivery',async()=>{
  reset();await post();globalThis.__photoRoute.user={userId:'other'};const response=await api.GET(new Request('https://goldie.test/api/listing-photos/delivery?productId=p1'));assert.deepEqual((await response.json()).deliveries,[]);
 });
+
+test('draft mode snapshots server-owned metadata, does not share legacy job identity, and includes metadata in duplicate protection',async()=>{
+ reset();const original=JSON.parse(db.prepare('SELECT response_json FROM printify_draft_results').get().response_json);Object.assign(original,{title:'QA',description:'Saved description',tags:['books'],etsyShippingProfileId:8,etsyDetails:{taxonomyId:9,properties:[],personalization:{enabled:false,questions:[]}}});db.prepare('UPDATE printify_draft_results SET response_json=?').run(JSON.stringify(original));
+ const response=await post('p1',[0],'draft');assert.equal(response.status,200);const payload=await response.json();assert.equal(payload.delivery.mode,'draft');const row=db.prepare('SELECT * FROM photo_deliveries').get();assert.equal(JSON.parse(row.draft_json).description,'Saved description');assert.equal((await post('p1',[0],'draft')).status,200);
+ original.description='Changed after preparation';db.prepare('UPDATE printify_draft_results SET response_json=?').run(JSON.stringify(original));assert.equal((await post('p1',[0],'draft')).status,409);assert.equal(JSON.parse(db.prepare('SELECT draft_json FROM photo_deliveries').get().draft_json).description,'Saved description');
+});
+test('missing saved metadata blocks draft mode before job or photo writes; legacy mode remains available',async()=>{reset();assert.equal((await post('p1',[0],'draft')).status,409);assert.equal(creations.length,0);assert.equal((await post()).status,200)});

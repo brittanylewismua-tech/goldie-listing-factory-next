@@ -3950,3 +3950,7 @@ html, body { background: var(--lf-paper); }
 
 /* D1178: pink shadows identify the bottom next action, not review cards. */
 .app-shell .factory-publish-box{box-shadow:7px 7px 0 #111!important}
+
+/* Draft-first handoff: one sequence, clear per-listing boundaries. */
+.draft-handoff-steps{display:grid;gap:20px;padding-left:24px;margin:20px 0}.draft-handoff-steps li{padding-left:8px}.draft-handoff-steps p{margin:6px 0 0;line-height:1.55}.draft-handoff-results{list-style:none;padding:0;display:grid;gap:16px;margin:20px 0}.draft-handoff-results li{display:grid;gap:10px;border:1px solid #111;background:#fff;padding:16px;border-radius:8px;box-shadow:3px 3px 0 #111;overflow-wrap:anywhere}.draft-handoff-results li>strong{line-height:1.4}.draft-handoff-results button,.draft-handoff-results a{min-height:44px;padding:10px 14px;width:fit-content;max-width:100%;border:1px solid #111;border-radius:6px;background:#fff;color:#111;font:inherit;cursor:pointer}.draft-handoff-results button:disabled{opacity:.5;cursor:wait}.draft-handoff-results small{color:#8c2727}.draft-handoff-results a:focus-visible,.draft-handoff-results button:focus-visible{outline:3px solid #111;outline-offset:3px}
+.photo-delivery-handoff .draft-handoff-steps li{display:list-item;border:0;padding:0 0 0 8px}.photo-delivery-handoff .draft-handoff-results{margin:20px 0}.photo-delivery-handoff .draft-handoff-results li{padding:16px;display:grid}

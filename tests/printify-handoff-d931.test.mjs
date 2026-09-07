@@ -13,8 +13,8 @@ test("D931: the final action hands the seller to Printify without publishing",()
   assert.match(app,/href="https:\/\/printify\.com\/app\/store\/products"/);
   assert.match(app,/photoDeliveryRef\.current\?\.prepare\(\)/);
   assert.match(app,/Open My Products <span aria-hidden="true">↗<\/span>/);
-  assert.match(app,/Publishing and renewal stay under your control in Printify/);
-  assert.match(app,/Nothing publishes until you choose it in Printify/);
+  assert.match(app,/Publishing and renewal stay under your control in Etsy/);
+  assert.match(app,/Keep Hide in store checked when transferring from Printify/);
   assert.match(app,/<FactoryFooter status=\{handoffBlockers\(\)\[0\]/);
   assert.match(app,/<FinalListingReview handoffOnly/);
   assert.match(review,/handoffOnly\?"Review the drafts created for this batch"/);

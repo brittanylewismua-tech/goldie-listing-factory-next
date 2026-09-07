@@ -1,10 +1,12 @@
+import {DraftReviewRequired,type DraftSnapshot,type DraftState} from './draft-engine';
+import {finishDraftMetadata,draftWithSize,type PrintifyDraftProduct} from './draft-service';
 import {env} from 'cloudflare:workers';
 import {etsyConnection,etsyApiCredential,etsyBudget,recordEtsyCall} from '../../etsy/client';
 import {decryptPrintifyToken} from '../../printify/token-crypto';
 import {readPrintifyPublishState} from '../../printify/publish-state';
 import {deliveryStep,DeliveryReviewRequired,type DeliveryImage,type DeliveryPhoto,type DeliveryState} from './engine';
 export type DeliveryEnv={DB:D1Database;ARTWORK:R2Bucket;PRINTIFY_TOKEN_KEY:string;IMAGES?:{input(stream:ReadableStream):{output(options:{format:'image/jpeg';background:string;quality:number}):Promise<{response():Response}>}};PHOTO_DELIVERY:Workflow<{id:string;owner:string}>};
-export type DeliveryRow={id:string;user_id:string;product_id:string;printify_shop_id:number;etsy_shop_id:number;fingerprint:string;status:string;photos_json:string;state_json:string|null;candidate_listing_id:number|null;candidate_seen_at:number|null;error:string|null;created_at:number;updated_at:number;expires_at:number};
+export type DeliveryRow={draft_json?:string|null;draft_state_json?:string|null;id:string;user_id:string;product_id:string;printify_shop_id:number;etsy_shop_id:number;fingerprint:string;status:string;photos_json:string;state_json:string|null;candidate_listing_id:number|null;candidate_seen_at:number|null;error:string|null;created_at:number;updated_at:number;expires_at:number};
 export function deliveryMessage(value:string){return /Invalid redirect|UNIQUE constraint|SQLITE|TypeError|Cannot read|Unexpected token|binding/i.test(value)?'Photo delivery could not be prepared. Your original photos are saved. Please try again.':value.slice(0,500)}
 export const deliveryEnv=()=>env as unknown as DeliveryEnv;
 export const readDelivery=(id:string,owner:string)=>deliveryEnv().DB.prepare('SELECT * FROM photo_deliveries WHERE id=? AND user_id=?').bind(id,owner).first<DeliveryRow>();
@@ -39,7 +41,8 @@ export async function runDeliveryTick(id:string,owner:string){
     const tokenRow=await runtime.DB.prepare('SELECT encrypted_token FROM printify_connections WHERE user_id=?').bind(owner).first<{encrypted_token:string}>();
     if(!tokenRow)throw new DeliveryReviewRequired('Reconnect Printify to deliver the photos.');
     const token=await decryptPrintifyToken(tokenRow.encrypted_token,runtime.PRINTIFY_TOKEN_KEY);
-    const published=await readPrintifyPublishState(async(url,init)=>{const response=await fetch(url,{...init,signal:AbortSignal.timeout(15000)});if(response.ok){const product=await response.clone().json() as {is_locked?:boolean};if(product.is_locked)return new Response(null,{status:423})}return response},token,row.printify_shop_id,row.product_id);
+    let printifyProduct:PrintifyDraftProduct|undefined;
+    const published=await readPrintifyPublishState(async(url,init)=>{const response=await fetch(url,{...init,signal:AbortSignal.timeout(15000)});if(response.ok){const product=await response.clone().json() as PrintifyDraftProduct;printifyProduct=product;if(product.is_locked)return new Response(null,{status:423})}return response},token,row.printify_shop_id,row.product_id);
     if(published.state!=='published'){
       if(row.state_json)throw new DeliveryReviewRequired('Printify could no longer confirm the linked Etsy listing. Delivery paused.');
       if(published.state==='unknown')await deliveryStatus(id,owner,'waiting',published.reason+' Automatic checking will retry.');
@@ -51,11 +54,11 @@ export async function runDeliveryTick(id:string,owner:string){
       return {done:false,progress:false,waitMs:30000};
     }
     if(!row.state_json&&Date.now()-Number(row.candidate_seen_at)<30000)return {done:false,progress:false,waitMs:30000};
-    if((await etsyBudget()).remaining<6){await deliveryStatus(id,owner,row.status,'Waiting for Etsy API capacity. Your photo set is saved.');return {done:false,progress:false}}
+    if((await etsyBudget()).remaining<(row.draft_json?15:6)){await deliveryStatus(id,owner,row.status,'Waiting for Etsy API capacity. Your photo set is saved.');return {done:false,progress:false}}
     const request=async(path:string,init?:RequestInit)=>{
-      const response=await fetch(`https://api.etsy.com/v3/application${path}`,{...init,headers:{'x-api-key':etsyApiCredential(),Authorization:`Bearer ${connection.token}`},signal:AbortSignal.timeout(25000)});
+      const response=await fetch(`https://api.etsy.com/v3/application${path}`,{...init,headers:{...Object.fromEntries(new Headers(init?.headers)), 'x-api-key':etsyApiCredential(),Authorization:`Bearer ${connection.token}`},signal:AbortSignal.timeout(25000)});
       await recordEtsyCall(response);
-      if(!response.ok)throw Error(`Etsy returned ${response.status}.`);
+      if(!response.ok){const detail=(await response.text()).replace(/[<>]/g,'').slice(0,250);throw Error(`Etsy returned ${response.status}: ${detail}`);}
       return response;
     };
     const listingId=published.listingId,photos=JSON.parse(row.photos_json) as DeliveryPhoto[];
@@ -64,6 +67,12 @@ export async function runDeliveryTick(id:string,owner:string){
       const claim=await runtime.DB.prepare("UPDATE photo_deliveries SET status='delivering',updated_at=? WHERE id=? AND user_id=? AND status='waiting'").bind(Date.now(),id,owner).run();
       if(!claim.meta.changes)return {done:true,progress:false};
     }
+    const draftSnapshot=row.draft_json?draftWithSize(JSON.parse(row.draft_json) as DraftSnapshot,printifyProduct!):null;
+    const metadataArgs=draftSnapshot?{request,listingId,shopId:row.etsy_shop_id,product:printifyProduct!,snapshot:draftSnapshot,saved:row.draft_state_json?JSON.parse(row.draft_state_json) as DraftState:null,
+      save:async(state:DraftState)=>{await runtime.DB.prepare('UPDATE photo_deliveries SET draft_state_json=?,updated_at=? WHERE id=? AND user_id=?').bind(JSON.stringify(state),Date.now(),id,owner).run()},
+      backup:async(view:unknown)=>{await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/draft-backup.json`,JSON.stringify(view),{httpMetadata:{contentType:'application/json'}})}
+    }:null;
+    if(metadataArgs){const metadata=await finishDraftMetadata(metadataArgs);if(!metadata.done)return {done:false,progress:true};}
     const result=await deliveryStep({
       read:async()=>{
         const listing=await (await request(`/listings/${listingId}`)).json() as {shop_id:number;state:string};
@@ -90,13 +99,15 @@ export async function runDeliveryTick(id:string,owner:string){
         const image=await response.json() as {listing_image_id:number};return Number(image.listing_image_id);
       },
       remove:async imageId=>{await request(`/shops/${row.etsy_shop_id}/listings/${listingId}/images/${imageId}`,{method:'DELETE'})},
-    },row.etsy_shop_id,listingId,photos,row.state_json?JSON.parse(row.state_json) as DeliveryState:null);
+    },row.etsy_shop_id,listingId,photos,row.state_json?JSON.parse(row.state_json) as DeliveryState:null,row.draft_json?'draft':'active');
+    if(result.done&&metadataArgs)await finishDraftMetadata({...metadataArgs,verifyOnly:true});
     if(result.done)await deliveryStatus(id,owner,'completed');
     return {done:result.done,progress:true};
   }catch(error){
     const latest=await readDelivery(id,owner),uncertain=latest?.state_json&&(JSON.parse(latest.state_json) as DeliveryState).pending;
-    const terminal=error instanceof DeliveryReviewRequired||Boolean(uncertain);
-    await deliveryStatus(id,owner,terminal?'needs_attention':latest?.state_json?'delivering':row.status,uncertain?'Etsy did not confirm the last photo change. Delivery paused to prevent duplicate uploads. Contact support with this batch.':error instanceof Error?error.message:'Photo delivery could not finish.');
+    const metadataPending=latest?.draft_state_json&&(JSON.parse(latest.draft_state_json) as DraftState).pending;
+    const terminal=error instanceof DeliveryReviewRequired||error instanceof DraftReviewRequired||Boolean(uncertain);
+    await deliveryStatus(id,owner,terminal?'needs_attention':latest?.state_json||metadataPending?'delivering':row.status,uncertain?'Etsy did not confirm the last photo change. Delivery paused to prevent duplicate uploads. Contact support with this batch.':error instanceof Error?error.message:'Photo delivery could not finish.');
     return {done:terminal,progress:false};
   }
 }

@@ -1,0 +1,47 @@
+import {DraftReviewRequired,draftStep,verifyDraft,type DraftSnapshot,type DraftState,type DraftView,type DraftOperation,type Question} from './draft-engine';
+export type PrintifyDraftProduct={is_locked?:boolean;external?:{id?:string|number};variants?:{id:number;sku:string;price:number;is_enabled:boolean;options?:number[]}[];options?:{name:string;type?:string;values:{id:number;title:string}[]}[]};
+type Request=(path:string,init?:RequestInit)=>Promise<Response>;
+/** Verify the existing fulfillment identifiers; never rewrite inventory or SKUs in Etsy. */
+export function verifyInventory(product:PrintifyDraftProduct,inventory:{products?:{sku:string;offerings:{price:{amount:number;divisor:number};is_enabled:boolean}[]}[]}){
+ const expected=product.variants?.filter(v=>v.is_enabled),actual=inventory.products?.filter(p=>p.offerings?.some(o=>o.is_enabled));
+ if(!expected?.length||!actual?.length||expected.length!==actual.length||new Set(expected.map(v=>v.sku)).size!==expected.length||new Set(actual.map(v=>v.sku)).size!==actual.length)throw new DraftReviewRequired('The Etsy draft variants do not match Printify. Review colors and sizes before finishing.');
+ for(const v of expected){const row=actual.find(p=>p.sku===v.sku),offers=row?.offerings.filter(o=>o.is_enabled);if(!offers?.length||offers.some(o=>!o.price?.divisor||Math.round(o.price.amount/o.price.divisor*100)!==v.price))throw new DraftReviewRequired('An Etsy draft SKU or price differs from Printify. Review the variants before finishing.');}
+}
+export function draftWithSize(snapshot:DraftSnapshot,product:PrintifyDraftProduct):DraftSnapshot{
+ const size=product.options?.find(o=>o.type==='size'||/^sizes?$/i.test(o.name)),selected=new Set(product.variants?.filter(v=>v.is_enabled).flatMap(v=>v.options||[]));
+ const sizes=size?.values.filter(v=>selected.has(v.id));
+ if(sizes?.length===1&&!snapshot.description.toLowerCase().includes(sizes[0].title.toLowerCase()))return {...snapshot,description:`${snapshot.description}\n\nAvailable size: ${sizes[0].title}.`};
+ return snapshot;
+}
+export async function readDraft(request:Request,listingId:number,shopId:number,product:PrintifyDraftProduct):Promise<DraftView>{
+ const listing=await (await request(`/listings/${listingId}`)).json() as {shop_id:number;state:string;title:string;description:string;tags:string[];taxonomy_id:number;shipping_profile_id:number};
+ if(Number(listing.shop_id)!==shopId||listing.state!=='draft')throw new DraftReviewRequired('The linked listing must still be a draft in the original Etsy shop. Finishing stopped.');
+ const inventory=await (await request(`/listings/${listingId}/inventory`)).json() as Parameters<typeof verifyInventory>[1];verifyInventory(product,inventory);
+ const properties=await (await request(`/shops/${shopId}/listings/${listingId}/properties`)).json() as {results?:DraftSnapshot['properties']};
+ const personal=await (await request(`/listings/${listingId}/personalization`)).json() as {personalization_questions?:Question[]};
+ if(!Array.isArray(properties.results)||!Array.isArray(personal.personalization_questions))throw new DraftReviewRequired('Etsy returned incomplete draft details. Nothing further was changed.');
+ return {shopId:Number(listing.shop_id),state:listing.state,basic:{title:listing.title,description:listing.description,tags:listing.tags,taxonomy_id:Number(listing.taxonomy_id),shipping_profile_id:Number(listing.shipping_profile_id)},properties:properties.results.map(p=>({property_id:p.property_id,value_ids:p.value_ids||[],values:p.values||[]})),questions:personal.personalization_questions};
+}
+export async function finishDraftMetadata(args:{request:Request;listingId:number;shopId:number;product:PrintifyDraftProduct;snapshot:DraftSnapshot;saved:DraftState|null;save:(s:DraftState)=>Promise<void>;backup:(v:DraftView)=>Promise<void>;verifyOnly?:boolean}){
+ const {request,listingId,shopId,product,snapshot,saved,save,backup}=args;
+ const read=()=>readDraft(request,listingId,shopId,product);
+ if(args.verifyOnly){verifyDraft(await read(),shopId,snapshot);return {done:true}}
+ const write=async(op:DraftOperation)=>{
+  const check=await (await request(`/listings/${listingId}`)).json() as {shop_id:number;state:string};
+  if(Number(check.shop_id)!==shopId||check.state!=='draft')throw new DraftReviewRequired('The Etsy listing changed shop or is no longer a draft. Finishing stopped.');
+  const base=`/shops/${shopId}/listings/${listingId}`;
+  if(op.key==='basic'){
+   const value=op.value as DraftView['basic'];const body=new URLSearchParams({title:value.title,description:value.description,taxonomy_id:String(value.taxonomy_id),shipping_profile_id:String(value.shipping_profile_id)});
+   body.set('tags',value.tags.join(','));
+   await request(base,{method:'PATCH',body});
+  }else if(op.key==='questions'){
+   const questions=op.value as Question[];
+   await request(`${base}/personalization?supports_multiple_personalization_questions=true`,questions.length?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({personalization_questions:questions})}:{method:'DELETE'});
+  }else{
+   const p=op.value as DraftSnapshot['properties'][number];
+   const body=new URLSearchParams({value_ids:p.value_ids.join(','),values:p.values.join(',')});
+   await request(`${base}/properties/${p.property_id}`,{method:'PUT',body});
+  }
+ };
+ return draftStep({read,save,backup,write},shopId,listingId,snapshot,saved);
+}

@@ -11,14 +11,14 @@ export type DeliveryIO={
 };
 export class DeliveryReviewRequired extends Error{}
 const signature=(images:DeliveryImage[])=>JSON.stringify([...images].sort((a,b)=>a.rank-b.rank).map(i=>[i.rank,i.listing_image_id]));
-export function checkDeliveryListing(actual:{shopId:number;state:string},shopId:number){
+export function checkDeliveryListing(actual:{shopId:number;state:string},shopId:number,targetState:'active'|'draft'='active'){
   if(actual.shopId!==shopId)throw new DeliveryReviewRequired('The Etsy listing belongs to a different shop. No photos were changed.');
-  if(actual.state!=='active')throw new DeliveryReviewRequired('This Etsy listing is not active. Publish it yourself in Printify before delivering its photos.');
+  if(actual.state!==targetState)throw new DeliveryReviewRequired(targetState==='draft'?'This listing is no longer an Etsy draft. Draft photo delivery stopped.':'This Etsy listing is not active. Publish it yourself in Printify before delivering its photos.');
 }
 /** One durable operation per call. A pending write is never blindly repeated. */
-export async function deliveryStep(io:DeliveryIO,shopId:number,listingId:number,photos:DeliveryPhoto[],saved:DeliveryState|null){
+export async function deliveryStep(io:DeliveryIO,shopId:number,listingId:number,photos:DeliveryPhoto[],saved:DeliveryState|null,targetState:'active'|'draft'='active'){
   if(!Number.isSafeInteger(listingId)||listingId<=0||photos.length<1||photos.length>20)throw new DeliveryReviewRequired('Choose between 1 and 20 photos for this listing.');
-  const current=await io.read();checkDeliveryListing(current,shopId);
+  const current=await io.read();checkDeliveryListing(current,shopId,targetState);
   let state=saved;
   if(state&&state.listingId!==listingId)throw new DeliveryReviewRequired('Printify now points to a different Etsy listing. Delivery stopped.');
   if(state?.pending)throw new DeliveryReviewRequired('Etsy did not confirm the last photo change. Delivery paused to prevent duplicate uploads. Contact support to check the saved delivery receipt.');

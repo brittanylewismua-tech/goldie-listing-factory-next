@@ -10,7 +10,7 @@ test("external Printify navigation is not gated by unfinished pricing", () => {
   assert.doesNotMatch(link,/handoffBlockers|aria-disabled/);
   assert.match(link,/photoDeliveryRef/);
   const photos=readFile(new URL("../app/photo-delivery-handoff.tsx",import.meta.url),"utf8");
-  return photos.then(source=>assert.match(source,/open Printify without preparing another photo delivery/));
+  return photos.then(source=>assert.match(source,/Open Printify without preparing these drafts/));
 });
 
 test("starting fresh clears both the child batch and parent bundle-run identities", () => {
