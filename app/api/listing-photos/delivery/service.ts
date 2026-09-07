@@ -1,4 +1,4 @@
-import {DraftReviewRequired,type DraftSnapshot,type DraftState} from './draft-engine';
+import {DraftReviewRequired,DraftWriteRejected,type DraftSnapshot,type DraftState} from './draft-engine';
 import {finishDraftMetadata,draftWithSize,type PrintifyDraftProduct} from './draft-service';
 import {env} from 'cloudflare:workers';
 import {etsyConnection,etsyApiCredential,etsyBudget,recordEtsyCall} from '../../etsy/client';
@@ -58,7 +58,7 @@ export async function runDeliveryTick(id:string,owner:string){
     const request=async(path:string,init?:RequestInit)=>{
       const response=await fetch(`https://api.etsy.com/v3/application${path}`,{...init,headers:{...Object.fromEntries(new Headers(init?.headers)), 'x-api-key':etsyApiCredential(),Authorization:`Bearer ${connection.token}`},signal:AbortSignal.timeout(25000)});
       await recordEtsyCall(response);
-      if(!response.ok){const detail=(await response.text()).replace(/[<>]/g,'').slice(0,250);throw Error(`Etsy returned ${response.status}: ${detail}`);}
+      if(!response.ok){const detail=(await response.text()).replace(/[<>]/g,'').slice(0,250);const message=`Etsy returned ${response.status}: ${detail}`;if(row.draft_json&&[400,401,403,404,409,422].includes(response.status))throw new DraftWriteRejected(message);throw Error(message);}
       return response;
     };
     const listingId=published.listingId,photos=JSON.parse(row.photos_json) as DeliveryPhoto[];

@@ -1,5 +1,6 @@
 /** A draft finisher never creates a listing or changes its publication state. */
 export class DraftReviewRequired extends Error {}
+export class DraftWriteRejected extends DraftReviewRequired {}
 export type Question={question_type:string;question_text:string;required:boolean;instructions?:string;max_allowed_characters?:number;max_allowed_files?:number;options?:{label:string}[]};
 export type DraftSnapshot={title:string;description:string;tags:string[];taxonomy_id:number;shipping_profile_id:number;properties:{property_id:number;value_ids:number[];values:string[]}[];questions:Question[]};
 export type SourceDraft={title?:string;description?:string;tags?:string[];etsyShippingProfileId?:number;etsyDetails?:{taxonomyId?:number;properties?:{propertyId:number;valueId?:number|null;value:string;required?:boolean;label?:string}[];attributes?:Record<string,string>;optional?:Record<string,string>;personalization?:{enabled:boolean;questions:{type:string;question:string;required:boolean;instructions?:string;maxCharacters?:number;maxFiles?:number;options?:string[]}[]}}};
@@ -44,7 +45,7 @@ export function freezeDraft(source:SourceDraft):DraftSnapshot{
 }
 export type DraftView={shopId:number;state:string;basic:Omit<DraftSnapshot,'properties'|'questions'>;properties:DraftSnapshot['properties'];questions:Question[]};
 export type DraftOperation={key:string;value:unknown};
-export type DraftState={listingId:number;index:number;pending?:DraftOperation;verified?:boolean};
+export type DraftState={listingId:number;index:number;pending?:DraftOperation;verified?:boolean;lastError?:string};
 export type DraftIO={read():Promise<DraftView>;save(state:DraftState):Promise<void>;backup(view:DraftView):Promise<void>;write(operation:DraftOperation):Promise<void>};
 export function canonicalQuestions(questions:Question[]){return questions.map(q=>{
  const base={question_type:q.question_type,question_text:q.question_text,required:Boolean(q.required)};
@@ -75,12 +76,13 @@ export async function draftStep(io:DraftIO,shopId:number,listingId:number,snapsh
  let state=saved||{listingId,index:0};const ops=operations(snapshot);
  if(!saved){await io.backup(view);await io.save(state)}
  if(state.pending){
-  if(!same(currentValue(view,state.pending.key,state.pending),desiredValue(state.pending)))fail('Etsy did not confirm the last draft change. Finishing paused to prevent duplicate or conflicting changes.');
+  if(!same(currentValue(view,state.pending.key,state.pending),desiredValue(state.pending)))fail('Etsy did not confirm the last draft change. Finishing paused to prevent duplicate or conflicting changes.'+(state.lastError?' '+state.lastError:''));
   state={listingId,index:state.index+1};await io.save(state);
  }
  while(state.index<ops.length&&same(currentValue(view,ops[state.index].key,ops[state.index]),desiredValue(ops[state.index]))){state={listingId,index:state.index+1};await io.save(state)}
  if(state.index>=ops.length){verifyDraft(view,shopId,snapshot);state={...state,verified:true};await io.save(state);return {done:true}}
  // Final full readback also catches changes to earlier fields while finishing.
- const op=ops[state.index];await io.save({...state,pending:op});await io.write(op);
+ const op=ops[state.index];await io.save({...state,pending:op});
+ try{await io.write(op)}catch(error){await io.save({...state,...(error instanceof DraftWriteRejected?{}:{pending:op}),lastError:error instanceof Error?error.message:'Etsy did not confirm the change.'});throw error}
  return {done:false};
 }

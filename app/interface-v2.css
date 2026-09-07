@@ -3956,3 +3956,5 @@ html, body { background: var(--lf-paper); }
 .photo-delivery-handoff .draft-handoff-steps li{display:list-item;border:0;padding:0 0 0 8px}.photo-delivery-handoff .draft-handoff-results{margin:20px 0}.photo-delivery-handoff .draft-handoff-results li{padding:16px;display:grid}
 
 .photo-delivery-handoff .draft-handoff-results .draft-prepare{background:#111;color:#fff}
+
+.photo-delivery-handoff .draft-handoff-steps{list-style:decimal}

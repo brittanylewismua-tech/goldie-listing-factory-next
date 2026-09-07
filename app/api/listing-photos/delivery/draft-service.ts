@@ -1,4 +1,10 @@
 import {DraftReviewRequired,draftStep,verifyDraft,type DraftSnapshot,type DraftState,type DraftView,type DraftOperation,type Question} from './draft-engine';
+/** Etsy escapes text in API reads. Decode exactly one layer, preserving literal seller entities. */
+export function decodeEtsyText(value:string){return String(value??'').replace(/&(#x[0-9a-f]+|#\d+|amp|quot|apos|lt|gt|nbsp);/gi,(match,key:string)=>{
+ const names:Record<string,string>={amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',nbsp:'\u00a0'};
+ if(key[0]!=='#')return names[key.toLowerCase()]||match;
+ const code=key[1].toLowerCase()==='x'?parseInt(key.slice(2),16):parseInt(key.slice(1),10);return code>0&&code<=0x10ffff?String.fromCodePoint(code):match;
+})}
 export type PrintifyDraftProduct={is_locked?:boolean;external?:{id?:string|number};variants?:{id:number;sku:string;price:number;is_enabled:boolean;options?:number[]}[];options?:{name:string;type?:string;values:{id:number;title:string}[]}[]};
 type Request=(path:string,init?:RequestInit)=>Promise<Response>;
 /** Verify the existing fulfillment identifiers; never rewrite inventory or SKUs in Etsy. */
@@ -20,7 +26,7 @@ export async function readDraft(request:Request,listingId:number,shopId:number,p
  const properties=await (await request(`/shops/${shopId}/listings/${listingId}/properties`)).json() as {results?:DraftSnapshot['properties']};
  const personal=await (await request(`/listings/${listingId}/personalization`)).json() as {personalization_questions?:Question[]};
  if(!Array.isArray(properties.results)||!Array.isArray(personal.personalization_questions))throw new DraftReviewRequired('Etsy returned incomplete draft details. Nothing further was changed.');
- return {shopId:Number(listing.shop_id),state:listing.state,basic:{title:listing.title,description:listing.description,tags:listing.tags,taxonomy_id:Number(listing.taxonomy_id),shipping_profile_id:Number(listing.shipping_profile_id)},properties:properties.results.map(p=>({property_id:p.property_id,value_ids:p.value_ids||[],values:p.values||[]})),questions:personal.personalization_questions};
+ return {shopId:Number(listing.shop_id),state:listing.state,basic:{title:decodeEtsyText(listing.title),description:decodeEtsyText(listing.description),tags:listing.tags.map(decodeEtsyText),taxonomy_id:Number(listing.taxonomy_id),shipping_profile_id:Number(listing.shipping_profile_id)},properties:properties.results.map(p=>({property_id:p.property_id,value_ids:p.value_ids||[],values:(p.values||[]).map(decodeEtsyText)})),questions:personal.personalization_questions.map(q=>({...q,question_text:decodeEtsyText(q.question_text),instructions:decodeEtsyText(q.instructions||''),options:q.options?.map(o=>({label:decodeEtsyText(o.label)}))}))};
 }
 export async function finishDraftMetadata(args:{request:Request;listingId:number;shopId:number;product:PrintifyDraftProduct;snapshot:DraftSnapshot;saved:DraftState|null;save:(s:DraftState)=>Promise<void>;backup:(v:DraftView)=>Promise<void>;verifyOnly?:boolean}){
  const {request,listingId,shopId,product,snapshot,saved,save,backup}=args;
