@@ -70,3 +70,9 @@ test('legacy clients without a revision cannot change an existing migrated snaps
  const rows=f.db.prepare(sql).all('batch','owner','draft','review','','',1,'{"price":1}',null,-1);
  assert.equal(rows.length,0);assert.equal(f.read().price,20);f.db.close();
 });
+
+test('an interrupted batch read is bounded and does not poison later reads',async()=>{
+ let calls=0;const keepAlive=setTimeout(()=>{},1000);
+ const client=createBatchSaveTransport(async(_input,{signal})=>{if(++calls===1)return new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(signal.reason)));return Response.json({batch:{id:'batch',revision:3}})},()=>assert.fail('read failures are not write conflicts'),10);
+ try{await assert.rejects(open(client));assert.equal((await open(client)).status,200);assert.equal(calls,2)}finally{clearTimeout(keepAlive)}
+});

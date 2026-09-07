@@ -8,7 +8,7 @@ export function createBatchSaveTransport(fetcher:Fetcher,onConflict:(message:str
  const message='Saving is paused because newer saved work or an interrupted save needs checking. Reload the saved batch before continuing. Your unsaved changes are still visible here.';
  function conflict(){blocked=true;onConflict(message);return Response.json({code:'BATCH_SAVE_CONFLICT',error:message},{status:409})}
  async function read(input:string,init?:RequestInit){
-  const response=await fetcher(input,init);
+  const response=await fetcher(input,{...init,signal:AbortSignal.any([AbortSignal.timeout(timeoutMs),...(init?.signal?[init.signal]:[])])});
   if(response.ok){
    const payload=await response.clone().json().catch(()=>null) as {batch?:RevisionRow}|null;
    const row=payload?.batch;

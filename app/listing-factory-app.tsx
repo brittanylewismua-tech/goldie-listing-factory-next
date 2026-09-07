@@ -2199,7 +2199,7 @@ export default function ListingFactoryApp() {
   async function persistRunNow(receipt:BatchReceipt|null=batchReceipt){
     const runId=runIdRef.current;
     if(!runId||!activeBundle||bundleRecipes.length<2)return;
-    await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
       id:runId,
       status:receipt?.publishedCount?"complete":running?"processing":"draft",
       step:workflowStep,
@@ -2207,7 +2207,8 @@ export default function ListingFactoryApp() {
       productTitle:`${bundleRecipes.length} products`,
       designCount:files.length,
       state:{run:{bundleId:activeBundle.id,bundleName:activeBundle.name,productOrder:bundleRecipes.map(recipe=>recipe.id),activeProductId:activeRecipe?.id||"",startedAt:runStartedRef.current},batchReceipt:receipt||null},
-    })}).catch(()=>undefined);
+    })});
+    if(!response.ok)throw new Error("The batch summary could not be saved. Reload the saved batch before continuing.");
   }
 
   async function persistBatchNow(existingId?:string,stateOverrides:Record<string,unknown>={}){
@@ -2220,7 +2221,7 @@ export default function ListingFactoryApp() {
     rememberBundleBatch(activeRecipe?.id,id);
     if(isCurrent)window.localStorage.setItem("goldie-active-batch",id);
     /* The child names its run, and the run row is kept alongside it. */
-    if(isCurrent)void persistRunNow();
+    if(isCurrent)void persistRunNow().catch(()=>undefined);
     const payload=JSON.stringify({id,parentBatchId:runIdRef.current&&runIdRef.current!==id?runIdRef.current:undefined,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot(stateOverrides)});
     return writeBatch.current(id,async()=>{
       if(batchIdRef.current===id)setBatchSaveStatus("saving");
