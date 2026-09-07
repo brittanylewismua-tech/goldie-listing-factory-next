@@ -35,7 +35,7 @@ test('submission preparation is bounded and settles copies before reporting an e
   const route=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');
   assert.match(route,/await runBounded\(requests,4,async body=>\{try\{/);
   assert.match(route,/catch\(error\)\{preparationError \|\|= error;\}\}\);/);
-  assert.ok(route.indexOf('if(preparationError)throw preparationError')<route.indexOf('DB.prepare(CLAIM_DRAFT_GROUP_SQL)'));
+  assert.ok(route.indexOf('if(preparationError)throw preparationError')<route.indexOf('DB.prepare(claimDraftGroupSql(plan.key))'));
   let active=0,peak=0,error,finished=0;
   await runBounded(Array.from({length:9},(_,i)=>i),4,async i=>{try{
     active++;peak=Math.max(peak,active);
@@ -110,6 +110,6 @@ test('the fresh submission path stages and saves every member before one bulk ad
   assert.match(queue,/bundleQualityDecisions:memberPlan.decisions/);
   assert.match(queue,/recoverDraft\(queuedDesignSessions.current.get\(design.id\)/);
   const route=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');
-  assert.match(route,/CLAIM_DRAFT_GROUP_SQL/);assert.match(route,/DRAFT_CREATION.createBatch/);
+  assert.match(route,/claimDraftGroupSql\(plan.key\)/);assert.match(route,/DRAFT_CREATION.createBatch/);
   assert.match(route,/source.customMetadata\?\.owner!==owner/);
 });

@@ -13,7 +13,7 @@ function BetaShell({ children }: { children: React.ReactNode }) {
 }
 
 function WelcomeScreen() {
-  return <BetaShell><p className="beta-eyebrow">PRIVATE MASTERMIND BETA</p><h1>Your Listing Factory beta is ready.</h1><p className="beta-intro">Create up to 10 listings during the private mastermind beta. Access stays open until Brittany closes testing.</p><p className="beta-intro">10 listings total · No automatic expiration</p><a className="beta-primary" href={accountSignInPath("/mastermind?stage=code")}>Sign in to start</a><p className="beta-fine-print">You will enter your mastermind beta code after signing in. No card required.</p></BetaShell>;
+  return <BetaShell><p className="beta-eyebrow">PRIVATE MASTERMIND BETA</p><h1>Your Listing Factory beta is ready.</h1><p className="beta-intro">Create up to 10 listings during the private mastermind beta. Access stays open until Brittany closes testing.</p><a className="beta-primary" href={accountSignInPath("/mastermind?stage=code")}>Sign in to start</a><p className="beta-fine-print">You will enter your mastermind beta code after signing in. No card required.</p></BetaShell>;
 }
 
 export default async function MastermindPage({ searchParams }: { searchParams?:Promise<{preview?:string;stage?:string}> }) {
