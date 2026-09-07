@@ -45,7 +45,7 @@ const batchFactory=compile('  async function buildBatchTitle(){','\n  /* D546','
 function batch(){
   const files=[original,{...original,id:'second'}],guard=titleResultGuard();guard.update('tee',files);
   const gates=[deferred(),deferred()],updates=[],messages=[];let calls=0;
-  const env={files,autoTitleBank:{keywords:['original']},batchHeldByAnotherTab:false,batchTitleBuilding:{current:false},batchTitleGuard:{current:guard},batchTitleScope:'tee',titleJoiner:', ',templateDetails:{id:'tee'},setTitleBuilding(){},setTitleBuildMessage:m=>messages.push(m),runBounded,autoTitleForDesign:()=>gates[calls++].promise,updateDesign:(id,value)=>updates.push({id,value}),pulseTitle(){},styledTitle:v=>v};
+  const env={files,autoTitleBank:{keywords:['original']},batchHeldByAnotherTab:false,batchSaveConflict:"",batchTitleBuilding:{current:false},batchTitleGuard:{current:guard},batchTitleScope:'tee',titleJoiner:', ',templateDetails:{id:'tee'},setTitleBuilding(){},setTitleBuildMessage:m=>messages.push(m),runBounded,autoTitleForDesign:()=>gates[calls++].promise,updateDesign:(id,value)=>updates.push({id,value}),pulseTitle(){},styledTitle:v=>v};
   return {files,guard,gates,updates,messages,env,build:batchFactory(env),calls:()=>calls};
 }
 test('actual batch generator protects one edited listing while applying its untouched sibling',async()=>{

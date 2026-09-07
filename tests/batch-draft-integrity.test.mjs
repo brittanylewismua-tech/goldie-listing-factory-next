@@ -88,8 +88,8 @@ test('database atomically refuses to replace a batch with another product, while
   const source=readFileSync(new URL('../app/api/batches/route.ts',import.meta.url),'utf8');
   const sql=source.match(/const saved=await database\.prepare\("([^"]+)"\)/)[1];
   const db=new DatabaseSync(':memory:');
-  db.exec('CREATE TABLE listing_batches(id TEXT PRIMARY KEY,user_id TEXT,status TEXT,step TEXT,setup_name TEXT,product_title TEXT,design_count INTEGER,state_json TEXT,parent_batch_id TEXT,updated_at TEXT)');
-  const save=(product,owner='owner')=>db.prepare(sql).run('batch',owner,'draft','designs','','',1,JSON.stringify({activeRecipe:{id:product}}),null);
+  db.exec('CREATE TABLE listing_batches(id TEXT PRIMARY KEY,user_id TEXT,status TEXT,step TEXT,setup_name TEXT,product_title TEXT,design_count INTEGER,state_json TEXT,parent_batch_id TEXT,updated_at TEXT,revision INTEGER NOT NULL DEFAULT 0)');
+  const save=(product,owner='owner')=>db.prepare(sql).run('batch',owner,'draft','designs','','',1,JSON.stringify({activeRecipe:{id:product}}),null,db.prepare('SELECT revision FROM listing_batches WHERE id=?').get('batch')?.revision??0);
   assert.equal(save('hoodie').changes,1);
   assert.equal(save('tee').changes,0);
   assert.equal(save('hoodie','another-user').changes,0);

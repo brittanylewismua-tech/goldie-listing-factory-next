@@ -1,4 +1,5 @@
 "use client";
+import {createBatchSaveTransport} from "./batch-save-transport";
 import WaitProgress from "./wait-progress";
 import { shouldOpenEtsyDetails } from "./etsy-details-disclosure";
 import { shippingMenuKeyboard } from "./shipping-menu-keyboard";
@@ -1040,6 +1041,10 @@ export default function ListingFactoryApp() {
   const runStartedRef=useRef("");
   const snapshotReady=useRef(false);
   const writeBatch=useRef(serializedBatchWrites());
+  const [batchSaveConflict,setBatchSaveConflict]=useState("");
+  const batchTransport=useRef<ReturnType<typeof createBatchSaveTransport>|null>(null);
+  if(!batchTransport.current)batchTransport.current=createBatchSaveTransport((input,init)=>fetch(input,init),setBatchSaveConflict);
+  const batchFetch=batchTransport.current;
   const [batchSaveStatus,setBatchSaveStatus]=useState<"idle"|"saving"|"saved"|"failed">("idle");
   const batchEditRevision=useRef(0);
   const resumeAttempted=useRef(false);
@@ -1313,7 +1318,7 @@ export default function ListingFactoryApp() {
   useEffect(()=>{
     if(restoringBatch||!batchIdRef.current)return;
     let alive=true;
-    void (fetch(`/api/batches?id=${encodeURIComponent(batchIdRef.current)}`)
+    void (batchFetch(`/api/batches?id=${encodeURIComponent(batchIdRef.current)}`)
       .then(response=>response.ok?response.json():null) as Promise<{authoritativeReceipt?:BatchReceipt|null}|null>)
       .then((payload:{authoritativeReceipt?:BatchReceipt|null}|null)=>{
         if(alive&&payload?.authoritativeReceipt?.publishedCount)setBatchReceipt(payload.authoritativeReceipt);
@@ -1372,7 +1377,7 @@ export default function ListingFactoryApp() {
       if(result.listingGoal?.enabled)setListingGoal(result.listingGoal)}).catch(()=>undefined);
   },[signedIn]);
   useEffect(()=>{if(!listingGoal)return;
-    void (fetch("/api/batches").then(response=>response.json()) as Promise<{prepared?:PublishedDay[]}>).then((result:{prepared?:PublishedDay[]})=>{
+    void (batchFetch("/api/batches").then(response=>response.json()) as Promise<{prepared?:PublishedDay[]}>).then((result:{prepared?:PublishedDay[]})=>{
       setGoalDays(result.prepared||[]);setGoalDaysLoaded(true)}).catch(()=>undefined);
   },[listingGoal,batchReceipt]);
   const goalDone=listingGoal?publishedDaysThisPeriod(goalDays,listingGoal):0;
@@ -1524,7 +1529,7 @@ export default function ListingFactoryApp() {
     setApplyingBankToBundle(true);
     try{
       await persistBatchNow(batchIdRef.current);
-      const response=await fetch("/api/batches",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:runIdRef.current||batchIdRef.current,keywordBankId:autoTitleBankId})});
+      const response=await batchFetch("/api/batches",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:runIdRef.current||batchIdRef.current,keywordBankId:autoTitleBankId})});
       if(!response.ok)throw new Error("The keyword bank could not be applied. Your existing selections are unchanged.");
       setBundleKeywordChoices(Object.fromEntries(bundleRecipes.map(recipe=>[recipe.id,autoTitleBankId])));
       setBundleRecipes(current=>current.map(recipe=>({...recipe,keywordListId:autoTitleBankId})));
@@ -1682,14 +1687,14 @@ export default function ListingFactoryApp() {
     bundleSiblingsScanned.current=key;
     void (async()=>{
       try{
-        const list=await fetch("/api/batches").then(response=>response.ok?response.json():null) as {batches?:Array<{id:string}>}|null;
+        const list=await batchFetch("/api/batches").then(response=>response.ok?response.json():null) as {batches?:Array<{id:string}>}|null;
         /* Newest first, so a product run more than once resolves to its latest
            batch - the same one the run itself would have carried forward. */
         const candidates=(list?.batches||[]).map(batch=>batch.id).filter(id=>id&&id!==batchIdRef.current).slice(0,24);
         const found:Record<string,string>={};
         for(const id of candidates){
           if(Object.keys(found).length>=missing.length)break;
-          const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null) as {batch?:{state?:{activeBundle?:{id?:string};activeRecipe?:{id?:string};drafts?:unknown[]}}}|null;
+          const payload=await batchFetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null) as {batch?:{state?:{activeBundle?:{id?:string};activeRecipe?:{id?:string};drafts?:unknown[]}}}|null;
           const state=payload?.batch?.state;
           if(state?.activeBundle?.id!==activeBundle.id)continue;
           const recipeId=state?.activeRecipe?.id;
@@ -1725,7 +1730,7 @@ export default function ListingFactoryApp() {
     return {...draft,colorPreviewImageDetails:compactPreviews,costReview:review};
   }
   function batchStateSnapshot(overrides:Record<string,unknown>={}){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,artworkPreviewUrl:ignoredArtworkPreview,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file:ignoredArtworkFile,previewUrl:ignoredArtworkVersionPreview,...artwork})=>artwork)}));return {queuedDesignSessions:Object.fromEntries(files.filter(file=>queuedDesignSessions.current.has(file.id)).map(file=>[file.id,queuedDesignSessions.current.get(file.id)])),template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,bundleQualityDecisions,designs,drafts:drafts.map(snapshotDraft),complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt,batchDisplayName,...overrides}}
-  async function saveDraftBatch(){const name=batchDisplayName.trim();if(!name)return;setSavingDraftBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:complete}})});if(!response.ok)throw new Error("This batch could not be saved.");await saveBatchName(id,name)}setKeptAsDrafts(true);setDraftSaveOpen(false);setDraftSavedOpen(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingDraftBatch(false)}}
+  async function saveDraftBatch(){const name=batchDisplayName.trim();if(!name)return;setSavingDraftBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:complete}})});if(!response.ok)throw new Error("This batch could not be saved.");await saveBatchName(id,name)}setKeptAsDrafts(true);setDraftSaveOpen(false);setDraftSavedOpen(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingDraftBatch(false)}}
   function jumpToMissingPhotoListing(clientId:string){setMissingPhotoDraftIds([]);window.setTimeout(()=>{
     /* D532 - a listing collapses now, and you cannot scroll to something inside a
        closed <details>. This is the jump that answers "which listing has no
@@ -2013,7 +2018,7 @@ export default function ListingFactoryApp() {
      the dead id so a refresh does not repeat it. */
   const [restoreNotice,setRestoreNotice]=useState("");
   async function restoreBatchById(id:string,requestedStep:string|null,requestedPhase:string|null,push=false):Promise<boolean>{
-    try{const url=new URL(window.location.href);if(!id)return false;const response=await fetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return false;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>};children?:Array<{id:string;productId:string;productName:string;drafts:number;published:number}>};if(!payload.batch?.state)return false;
+    try{const url=new URL(window.location.href);if(!id)return false;const response=await batchFetch(`/api/batches?id=${encodeURIComponent(id)}`);if(!response.ok)return false;const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>};children?:Array<{id:string;productId:string;productName:string;drafts:number;published:number}>};if(!payload.batch?.state)return false;
     /* D871 · The URL carries the run. A run holds no product work of its own, so
        opening one means opening one of its products: the one she left open, or
        the first that has not published yet. D697's near-miss was a Resume that
@@ -2099,7 +2104,7 @@ export default function ListingFactoryApp() {
       if(!wanted||wanted==="connect"||wanted==="setup"||signedIn!==true){snapshotReady.current=true;setRestoringBatch(false);return}
       void (async()=>{
         try{
-          const payload=await fetch("/api/batches").then(response=>response.ok?response.json():null) as {batches?:Array<{id:string;name?:string;step?:string;status?:string;draftCount?:number}>}|null;
+          const payload=await batchFetch("/api/batches").then(response=>response.ok?response.json():null) as {batches?:Array<{id:string;name?:string;step?:string;status?:string;draftCount?:number}>}|null;
           const open=(payload?.batches||[]).filter(batch=>batch.status!=="published"&&batch.status!=="archived");
           if(open.length===1){await restoreBatchById(open[0].id,url.searchParams.get("step"),url.searchParams.get("phase"));return}
           if(open.length>1)setResumeChoices(open.slice(0,6).map(batch=>({id:batch.id,name:batch.name||"Untitled batch",step:String(batch.step||""),drafts:Number(batch.draftCount||0)})));
@@ -2139,7 +2144,7 @@ export default function ListingFactoryApp() {
   if(typeof window!=="undefined"&&!tabId.current)tabId.current=crypto.randomUUID();
   const [batchHeldByAnotherTab,setBatchHeldByAnotherTab]=useState(false);
   const batchTitleGuard=useRef(titleResultGuard()),batchTitleBuilding=useRef(false);
-  const batchTitleScope=JSON.stringify([preparationScope,autoTitleBankId,autoTitleBank?.keywords,titleJoiner,titleCaps,batchHeldByAnotherTab]);
+  const batchTitleScope=JSON.stringify([preparationScope,autoTitleBankId,autoTitleBank?.keywords,titleJoiner,titleCaps,batchHeldByAnotherTab,batchSaveConflict]);
   batchTitleGuard.current.update(batchTitleScope,files);
   useEffect(()=>()=>batchTitleGuard.current.clear(),[]);
   const batchChannel=useRef<BroadcastChannel|null>(null);
@@ -2175,22 +2180,26 @@ export default function ListingFactoryApp() {
     setBatchHeldByAnotherTab(false);
     batchChannel.current.postMessage({type:"ping",batchId:id,tabId:tabId.current});
   },[savedRevision,restoringBatch]);
-  function takeOverBatchHere(){
-    setBatchHeldByAnotherTab(false);
+  async function reloadConflictedBatch(){
+    if(!await confirmAction({title:"Reload the saved batch?",body:"This replaces the unsaved changes visible here with the latest saved version. Copy any unsaved text you want to keep before reloading.",confirmLabel:"Reload saved batch",cancelLabel:"Keep viewing changes"}))return;
     batchChannel.current?.postMessage({type:"claim",batchId:batchIdRef.current,tabId:tabId.current});
+    window.location.reload();
+  }
+  function takeOverBatchHere(){
+    void reloadConflictedBatch();
   }
 
   /* D871 · The parent row for this run. It holds no product work - only what
      the seller sees: which bundle is running, in what order, and which product
      is open. Written whenever a child is, so the run row is never behind. */
   async function saveBatchName(id:string,name:string){
-    const response=await fetch("/api/batches",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,displayName:name})});
+    const response=await batchFetch("/api/batches",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,displayName:name})});
     if(!response.ok)throw new Error("This batch name could not be saved.");
   }
   async function persistRunNow(receipt:BatchReceipt|null=batchReceipt){
     const runId=runIdRef.current;
     if(!runId||!activeBundle||bundleRecipes.length<2)return;
-    await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+    await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
       id:runId,
       status:receipt?.publishedCount?"complete":running?"processing":"draft",
       step:workflowStep,
@@ -2216,13 +2225,13 @@ export default function ListingFactoryApp() {
     return writeBatch.current(id,async()=>{
       if(batchIdRef.current===id)setBatchSaveStatus("saving");
       try{
-        const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:payload});
-        if(!response.ok)throw new Error("Your latest changes could not be saved.");
+        const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:payload});
+        if(!response.ok){const problem=await response.json().catch(()=>null) as {error?:string}|null;throw new Error(problem?.error||"Your latest changes could not be saved.");}
         if(batchIdRef.current===id&&batchEditRevision.current===editRevision)setBatchSaveStatus("saved");
       }catch(error){if(batchIdRef.current===id)setBatchSaveStatus("failed");throw error;}
     });
   }
-  useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||(!files.length&&!drafts.length))return;/* D1019 · Capture the child id with the render that produced this snapshot.
+  useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||batchSaveConflict||(!files.length&&!drafts.length))return;/* D1019 · Capture the child id with the render that produced this snapshot.
      A bundle transition changes batchIdRef before React cleans up the outgoing
      autosave. Reading the ref inside the timer let that old product overwrite
      the new child's record with its own drafts. */batchEditRevision.current+=1;setBatchSaveStatus("saving");const targetId=batchIdRef.current;const timer=window.setTimeout(()=>{void persistBatchNow(targetId).catch(()=>undefined);},700);return()=>window.clearTimeout(timer);
@@ -2409,7 +2418,7 @@ export default function ListingFactoryApp() {
        the only record she has that they exist. Even the discard path she chose
        by name does not get to delete that. */
     const publishedThisBatch=Number(batchReceipt?.publishedCount)||0;
-    if(priorBatch&&!preserveSavedBatch&&!publishedThisBatch){void clearBatchFiles(priorBatch);void fetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
+    if(priorBatch&&!preserveSavedBatch&&!publishedThisBatch){void clearBatchFiles(priorBatch);void batchFetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
     if(!preserveSavedBatch&&!publishedThisBatch)drafts.forEach(draft=>{if(draft.id)void fetch(`/api/etsy/images?productId=${encodeURIComponent(draft.id)}`,{method:"DELETE"})});
     batchIdRef.current="";runIdRef.current="";runStartedRef.current="";setBundleRun(null);window.localStorage.removeItem("goldie-active-batch");
     const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
@@ -2787,10 +2796,10 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     let alive=true;
     const memberScratch:Record<string,{recipeId:string;productName:string;pricingApproved?:boolean;drafts:DraftResult[];designs:Array<Omit<DesignFile,"file"|"previewUrl">>;selections:Record<string,number[]>;indices:number[];shippingProfileId:number;sizeGuideName:string;preparedMockupCounts:Record<string,number>}>={};
     void (async()=>{
-    const listing=await (fetch("/api/batches").then(response=>response.ok?response.json():null) as Promise<{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null>).then((payload:{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null)=>payload?.batches||[]).catch(()=>[] as Array<{id?:string;status?:string;published_count?:number}>);
+    const listing=await (batchFetch("/api/batches").then(response=>response.ok?response.json():null) as Promise<{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null>).then((payload:{batches?:Array<{id?:string;status?:string;published_count?:number}>}|null)=>payload?.batches||[]).catch(()=>[] as Array<{id?:string;status?:string;published_count?:number}>);
     await Promise.all(wanted.map(async recipe=>{
       const id=bundleBatchIds[recipe.id];
-      const payload=await fetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null).catch(()=>null) as {batch?:{state?:Record<string,unknown>}}|null;
+      const payload=await batchFetch(`/api/batches?id=${encodeURIComponent(id)}`).then(response=>response.ok?response.json():null).catch(()=>null) as {batch?:{state?:Record<string,unknown>}}|null;
       const state=payload?.batch?.state as {designs?:Array<{id?:string;title?:string;tags?:string[];sizeGuideName?:string}>;drafts?:unknown[];pricingApproved?:boolean;description?:string;complete?:boolean;printifyImageSelections?:Record<string,number[]>;printifyImageIndices?:number[];preparedMockupCounts?:Record<string,number>;etsyShippingProfileId?:number;sizeGuideName?:string}|undefined;
       /* D627 · This returned null, so no summary was ever written for a member
          whose batch could not be read - and bundleProductsStillReading() reports
@@ -3746,7 +3755,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
   function changeTitleCaps(enabled:boolean){setTitleCaps(enabled);setFiles(current=>current.map(file=>({...file,title:(enabled?file.title.replace(/\b[\p{L}\p{N}]/gu,character=>character.toLocaleUpperCase()):file.title).slice(0,140),etsyError:""})))}
   async function buildBatchTitle(){
     if(!autoTitleBank)return setTitleBuildMessage("Choose a keyword bank first.");
-    if(batchTitleBuilding.current||batchHeldByAnotherTab)return;
+    if(batchTitleBuilding.current||batchHeldByAnotherTab||batchSaveConflict)return;
     batchTitleBuilding.current=true;setTitleBuilding(true);setTitleBuildMessage(`Creating 0 of ${files.length} titles…`);
     const sourceScope=batchTitleScope,requests=files.map(design=>({design,ticket:batchTitleGuard.current.begin(design.id)}));
     let completed=0,failed=0,skipped=0;
@@ -4375,6 +4384,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
      spent twice and duplicate drafts that then publish as duplicate listings. */
   const draftRunInFlight=useRef(false);
   async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
+    if(batchSaveConflict)return void stopWith("Reload the saved batch first.",[batchSaveConflict]);
     if(draftRunInFlight.current)return;
     draftRunInFlight.current=true;
     try{
@@ -4606,6 +4616,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   async function retryOneEtsyListing(design:DesignFile){if(preparingListingId)return;setPreparingListingId(design.id);try{await prepareOne(design)}finally{setPreparingListingId("")}}
   async function changeEtsyCategory(design:DesignFile,taxonomyId:number){if(!design.etsy||taxonomyId===design.etsy.taxonomyId)return;try{const resolved=await resolveEtsyOptions(design.etsy,taxonomyId),merged=preserveCompatibleEtsyProperties(design.etsy.properties||[],resolved.properties||[]),details=applyProductFacts({...resolved,properties:merged.properties},productEtsyDefaults(templateDetails,activeRecipe?.etsyDefaults));if(merged.clearedCount){setPendingCategoryChange({designId:design.id,details,clearedCount:merged.clearedCount});return}updateDesign(design.id,{etsy:details,etsyError:""})}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy options could not be loaded."})}}
   async function continueToEtsyDetails(){
+    if(batchSaveConflict)return void stopWith("Reload the saved batch first.",[batchSaveConflict]);
     if(etsyPreparationActive.current)return;
     const missing:string[]=[];
     if(files.some(file=>!file.title.trim()))missing.push("Every listing needs a title.");
@@ -4639,7 +4650,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       etsyPreparationActive.current=false;
     }
   }
-  async function saveAllEtsyDetails(){if(etsySaveActive.current)return;const unfinished=files.filter(file=>!etsyRequiredComplete(file.etsy));if(unfinished.length)return void stopWith("Finish every Etsy listing first.",unfinished.map(file=>`${file.name} still needs Etsy details.`));const invalid=files.map(file=>({file,problem:personalizationProblem(file.etsy)})).filter(item=>item.problem);if(invalid.length)return void stopWith("Finish the personalization options first.",invalid.map(item=>`${item.file.name}: ${item.problem}`));etsySaveActive.current=true;++etsyPreparationVersion.current;setPreparingEtsy(false);setSavingEtsyDetails(true);try{let failed=0;if(!localPreview)await runBounded(files,2,async design=>{try{await syncListingFields(design,design.etsy!);return true}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be saved."});return false}},saved=>{if(!saved)failed+=1});if(failed)return void stopWith("Some Etsy details were not saved.",[`${failed} ${failed===1?"listing needs":"listings need"} another attempt.`]);if(activeRecipe){const physical=Object.fromEntries((files[0]?.etsy?.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));if(Object.keys(physical).length){const updated={...activeRecipe,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}})});if(response.ok)setActiveRecipe(updated)}}/* D221 · Photos moved to the Images page, so completing Etsy details moves on to
+  async function saveAllEtsyDetails(){
+    if(batchSaveConflict)return void stopWith("Reload the saved batch first.",[batchSaveConflict]);if(etsySaveActive.current)return;const unfinished=files.filter(file=>!etsyRequiredComplete(file.etsy));if(unfinished.length)return void stopWith("Finish every Etsy listing first.",unfinished.map(file=>`${file.name} still needs Etsy details.`));const invalid=files.map(file=>({file,problem:personalizationProblem(file.etsy)})).filter(item=>item.problem);if(invalid.length)return void stopWith("Finish the personalization options first.",invalid.map(item=>`${item.file.name}: ${item.problem}`));etsySaveActive.current=true;++etsyPreparationVersion.current;setPreparingEtsy(false);setSavingEtsyDetails(true);try{let failed=0;if(!localPreview)await runBounded(files,2,async design=>{try{await syncListingFields(design,design.etsy!);return true}catch(error){updateDesign(design.id,{etsyError:error instanceof Error?error.message:"Etsy details could not be saved."});return false}},saved=>{if(!saved)failed+=1});if(failed)return void stopWith("Some Etsy details were not saved.",[`${failed} ${failed===1?"listing needs":"listings need"} another attempt.`]);if(activeRecipe){const physical=Object.fromEntries((files[0]?.etsy?.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));if(Object.keys(physical).length){const updated={...activeRecipe,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}})});if(response.ok)setActiveRecipe(updated)}}/* D221 · Photos moved to the Images page, so completing Etsy details moves on to
        the Publish page rather than to a phase that no longer renders. */
       setFinishPhase("final");const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","final");window.history.replaceState({},"",url);window.scrollTo(0,0)}finally{etsySaveActive.current=false;setSavingEtsyDetails(false)}}
   /* D485 - a bundle made her press "Create Printify drafts" once per product,
@@ -4706,6 +4718,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   /** Stage every member before admitting any new job. Once accepted, all
    * product/design pairs belong to the server, not to browser navigation. */
   async function queueDraftSubmission(){
+    if(batchSaveConflict)return void stopWith("Reload the saved batch first.",[batchSaveConflict]);
     if(draftRunInFlight.current||!activeRecipe||!templateDetails)return;
     draftRunInFlight.current=true;draftRunActive.current=true;runInProgress.current=true;
     setPreflightOpen(false);setRunning(true);setProcessed(0);setRunTotal(requestedListingCount);
@@ -4744,7 +4757,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       if(requests.length>100)throw Error("This submission exceeds 100 listings. Use a smaller bundle.");
       const saveMember=async(member:typeof members[number],finished=false)=>{
         const allCreated=member.results.length===member.designs.length&&member.results.every(draft=>draft.status==="Created"&&draft.id);
-        const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:member.id,parentBatchId:activeBundle?runIdRef.current:undefined,status:finished?allCreated?"complete":"needs_attention":"processing",step:"designs",setupName:batchDisplayName||activeBundle?.name||member.recipe.name,productTitle:(member.state.templateDetails as TemplateDetails).blueprintTitle,designCount:member.designs.length,state:{...member.state,drafts:member.results.map(snapshotDraft),complete:allCreated}})});
+        const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:member.id,parentBatchId:activeBundle?runIdRef.current:undefined,status:finished?allCreated?"complete":"needs_attention":"processing",step:"designs",setupName:batchDisplayName||activeBundle?.name||member.recipe.name,productTitle:(member.state.templateDetails as TemplateDetails).blueprintTitle,designCount:member.designs.length,state:{...member.state,drafts:member.results.map(snapshotDraft),complete:allCreated}})});
         if(!response.ok)throw Error("The batch could not be saved before background processing.");
       };
       await persistRunNow();
@@ -4796,7 +4809,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   }
 
   function finishRestart(preserveSavedBatch=false){clearCurrentBatch(true,preserveSavedBatch);/* D488 - the one path that is allowed to discard, because she chose it by name. */setRestartBatchOpen(false);setRestartBatchName("");goToStep(connected?"setup":"connect",true,true)}
-  async function saveAndRestart(){const name=restartBatchName.trim();if(!name)return;setRestartingBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await fetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),batchDisplayName:name,keptAsDrafts:true}})});if(!response.ok)throw new Error("This batch could not be saved.");await saveBatchName(id,name)}finishRestart(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setRestartingBatch(false)}}
+  async function saveAndRestart(){const name=restartBatchName.trim();if(!name)return;setRestartingBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),batchDisplayName:name,keptAsDrafts:true}})});if(!response.ok)throw new Error("This batch could not be saved.");await saveBatchName(id,name)}finishRestart(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setRestartingBatch(false)}}
 
   function openDraft(draft: DraftResult) {
     if (!draft.id || !draft.editorUrl) return;
@@ -4934,7 +4947,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         <header className="factory-top">
           <b className="factory-top-batch">{batchDisplayName?.trim()||"New listing batch"}</b>
           <div className="factory-top-right">
-            <span className="factory-top-save" role="status">{batchSaveStatus==="failed"?<button type="button" onClick={()=>void persistBatchNow(batchIdRef.current).catch(()=>undefined)}>Changes not saved · Retry</button>:batchSaveStatus==="saving"?"Saving…":batchSaveStatus==="saved"?"Saved":""}</span>
+            <span className="factory-top-save" role="status">{batchSaveConflict?<button type="button" onClick={()=>void reloadConflictedBatch()}>Saving paused · Reload saved batch</button>:batchSaveStatus==="failed"?<button type="button" onClick={()=>void persistBatchNow(batchIdRef.current).catch(()=>undefined)}>Changes not saved · Retry</button>:batchSaveStatus==="saving"?"Saving…":batchSaveStatus==="saved"?"Saved":""}</span>
             <div className="factory-account-wrap">
               <button type="button" className="factory-account" aria-haspopup="menu"
                 aria-expanded={accountMenuOpen} onClick={()=>setAccountMenuOpen(open=>!open)}>
@@ -5603,7 +5616,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </aside>,false)}
 {/* D496 - a held tab has to say so where she is working, not silently stop
     saving. */}
-        {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another tab.</b><span>Saving is paused here so the other tab is not overwritten. Continue in the other tab, or take over here and it will pause there instead.</span><button type="button" onClick={takeOverBatchHere}>Take over editing here</button></div>}
+        {batchSaveConflict&&<div className="notice error" role="alert"><strong>Saving paused</strong><p>{batchSaveConflict}</p><button type="button" onClick={()=>void reloadConflictedBatch()}>Reload saved batch</button></div>}
+            {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another tab.</b><span>Saving is paused here so the other tab is not overwritten. Continue in the other tab, or reload the latest saved version here to take over.</span><button type="button" onClick={takeOverBatchHere}>Reload saved batch here</button></div>}
         {!(complete&&workflowStep==="designs")&&<div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D776 - the step's own footer (status + forward) lands here, so the bar the seller can see is the bar with the way forward in it. */}<span className="factory-footer-slot"/>{/* D386 - Saving a draft was only reachable from the Publish step, so
                 stopping halfway meant trusting the autosave and remembering the
                 batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Save as draft</button>}</div>}

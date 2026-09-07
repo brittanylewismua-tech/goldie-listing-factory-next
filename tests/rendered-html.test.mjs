@@ -4084,7 +4084,8 @@ test("two tabs cannot silently overwrite the same batch — D496", async () => {
 
   // And it says so where she is working, instead of silently going quiet.
   assert.match(app, /This batch is open in another tab\./);
-  assert.match(app, /Take over editing here/);
+  assert.match(app, /Reload saved batch here/);
+  assert.match(app, /function takeOverBatchHere\(\)\{\s*void reloadConflictedBatch\(\)/);
   assert.match(css, /\.batch-tab-conflict\{/);
 
   // Never crash where BroadcastChannel is unavailable.
@@ -5805,7 +5806,7 @@ test("deleting a batch clears the bundles that pointed at it — D631", async ()
   assert.match(route, /if\(!map\|\|typeof map!=="object"\)continue;/);
 
   // The write stays scoped to the owner.
-  assert.match(route, /UPDATE listing_batches SET state_json=\?,updated_at=CURRENT_TIMESTAMP WHERE id=\? AND user_id=\?/);
+  assert.match(route, /UPDATE listing_batches SET state_json=\?,revision=revision\+1,updated_at=CURRENT_TIMESTAMP WHERE id=\? AND user_id=\?/);
 });
 
 /* D631 · The D612 probe was a one-off diagnostic built during the outage that

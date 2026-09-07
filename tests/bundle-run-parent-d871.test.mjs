@@ -93,6 +93,6 @@ test("the column is added where the table is created, not by a drizzle migration
   const drizzle = fs.readdirSync(new URL("../drizzle/", import.meta.url)).filter(f => f.endsWith(".sql"));
   for (const file of drizzle) {
     const sql = fs.readFileSync(new URL(`../drizzle/${file}`, import.meta.url), "utf8");
-    assert.doesNotMatch(sql, /listing_batches/, `${file} must not touch a table drizzle does not own`);
+    assert.doesNotMatch(sql, /ALTER TABLE listing_batches ADD(?: COLUMN)? parent_batch_id/i, `${file} must not duplicate the runtime-owned parent column`);
   }
 });

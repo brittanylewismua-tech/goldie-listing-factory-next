@@ -29,9 +29,10 @@ function freshDb() {
     setup_name TEXT NOT NULL DEFAULT '', product_title TEXT NOT NULL DEFAULT '', design_count INTEGER NOT NULL DEFAULT 0,
     state_json TEXT NOT NULL DEFAULT '{}', created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP)`);
   db.exec("ALTER TABLE listing_batches ADD parent_batch_id TEXT");
+  db.exec("ALTER TABLE listing_batches ADD revision INTEGER NOT NULL DEFAULT 0");
   const save = (id, parent, state, name = "") =>
     db.prepare(UPSERT.replace(",CURRENT_TIMESTAMP)", ")").replace(",updated_at)", ")"))
-      .run(id, "u", "draft", "designs", name, "", 2, JSON.stringify(state), parent);
+      .run(id, "u", "draft", "designs", name, "", 2, JSON.stringify(state), parent, db.prepare("SELECT revision FROM listing_batches WHERE id=?").get(id)?.revision??0);
   const topLevel = () => db.prepare(LIST).all("u").map(r => r.id);
   const childrenOf = id => db.prepare("SELECT id FROM listing_batches WHERE parent_batch_id=? ORDER BY id").all(id).map(r => r.id);
   return { db, save, topLevel, childrenOf };

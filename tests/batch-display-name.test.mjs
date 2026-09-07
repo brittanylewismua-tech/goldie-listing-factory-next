@@ -5,8 +5,8 @@ import {readFileSync} from 'node:fs';
 import {RENAME_BATCH} from '../app/batch-display-name.ts';
 test('saving a bundle name updates the parent and every owned child, not another batch or owner',()=>{
   const db=new DatabaseSync(':memory:');
-  db.exec('CREATE TABLE listing_batches(id TEXT,user_id TEXT,parent_batch_id TEXT,state_json TEXT,updated_at TEXT)');
-  for(const [id,owner,parent] of [['run','me',null],['tee','me','run'],['hoodie','me','run'],['foreign','them','run'],['other','me',null]])db.prepare('INSERT INTO listing_batches VALUES (?,?,?,?,NULL)').run(id,owner,parent,JSON.stringify({drafts:[{id:'keep'}],batchDisplayName:'old'}));
+  db.exec('CREATE TABLE listing_batches(id TEXT,user_id TEXT,parent_batch_id TEXT,state_json TEXT,updated_at TEXT,revision INTEGER NOT NULL DEFAULT 0)');
+  for(const [id,owner,parent] of [['run','me',null],['tee','me','run'],['hoodie','me','run'],['foreign','them','run'],['other','me',null]])db.prepare('INSERT INTO listing_batches VALUES (?,?,?,?,NULL,0)').run(id,owner,parent,JSON.stringify({drafts:[{id:'keep'}],batchDisplayName:'old'}));
   assert.deepEqual(db.prepare(RENAME_BATCH).all('Summer designs','me','tee').map(x=>x.id).sort(),['hoodie','run','tee']);
   for(const id of ['run','tee','hoodie'])assert.deepEqual(JSON.parse(db.prepare('SELECT state_json FROM listing_batches WHERE id=?').get(id).state_json),{drafts:[{id:'keep'}],batchDisplayName:'Summer designs'});
   for(const id of ['foreign','other'])assert.equal(JSON.parse(db.prepare('SELECT state_json FROM listing_batches WHERE id=?').get(id).state_json).batchDisplayName,'old');
