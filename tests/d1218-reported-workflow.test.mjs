@@ -14,8 +14,9 @@ test('D1218 draft creation only says the tab may close after background admissio
   assert.match(wait,/submitted drafts continue in the background/);
 });
 
-test('D1218 product entry begins with artwork and listing entry resets to product one',()=>{
-  assert.match(app,/setActiveTask\(requestedTask\|\|"placement"\)/);
+test('new draft creation begins with artwork while ready product switches stay compact and Listing resets to product one',()=>{
+  assert.match(app,/setActiveTask\("placement"\)/);
+  assert.match(app,/setActiveTask\(requestedTask\|\|""\)/);
   assert.match(app,/async function enterListingDetails\(\)/);
   assert.match(app,/bundleIndex!==0\)await openBundleProduct\(0\)/);
   assert.match(app,/setActiveDesign\(files\[0\]\?\.id\|\|""\)/);
