@@ -3752,7 +3752,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           setRestoringBatch(true);
           snapshotReady.current=false;
           await restoreBatchById(existing,workflowStep,finishPhase,true);
-          setActiveTask(requestedTask||"placement");
+          setActiveTask(requestedTask||"");
           setTitleBuildMessage("");
           setBundleBatchIds(current=>({...current,...knownBatchIds}));
           window.scrollTo(0,0);
@@ -3761,7 +3761,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       return;
     }
     void continueBundle(index);
-    setActiveTask(requestedTask||"placement");
+    setActiveTask(requestedTask||"");
   }
 
   async function continueBundle(targetIndex=bundleIndex+1){

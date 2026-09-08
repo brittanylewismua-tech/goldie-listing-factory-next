@@ -17,6 +17,7 @@ test('D1229: only the focused or first unfinished section renders as a work surf
  assert.match(app,/if\(grouped&&row\.task!==effectiveTask\)return null/);
  assert.match(app,/className="draft-section-nav"/);
  assert.match(app,/Continue to \{rows\[rowIndex\+1\]\.label\.toLowerCase\(\)\}/);
+ assert.doesNotMatch(app,/setActiveTask\(requestedTask\|\|"placement"\)/);
  assert.match(css,/\.draft-product-guidance\.is-ready/);
  assert.match(css,/\.draft-section-nav button\[aria-current=step\]/);
 });
