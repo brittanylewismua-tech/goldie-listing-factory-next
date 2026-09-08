@@ -5210,9 +5210,11 @@ test("the publish review names the listing, not the upload — D558", async () =
      05_32_41 PM (2).png' as the heading over their own listing." Seen again on
      her publish screen, with "Bride Hoodie, Seashells And Wedding Bells
      Bachelorette, Camp Bach" sitting directly underneath it. */
-  /* D561 - it walks the group for any title and only falls back to the upload
-     name when no listing in it has one. */
-  assert.match(review, /const named=design\?\.title\?\.trim\(\)\|\|draft\.title\?\.trim\(\);/);
+  /* D1238 - it walks the group for a real title and uses a neutral listing
+     label while one is missing. A provider draft title may still be the raw
+     upload filename and must never become the prominent customer label. */
+  assert.match(review, /const named=design\?\.title\?\.trim\(\);/);
+  assert.doesNotMatch(review, /const named=design\?\.title\?\.trim\(\)\|\|draft\.title\?\.trim\(\);/);
   assert.match(review, /if\(named\)return named;/);
   assert.match(review, /return "Untitled listing"/);
   assert.doesNotMatch(review, /readableDesignName/);
