@@ -52,8 +52,8 @@ test('saved product defaults and draft existence cannot silently approve edited 
 });
 test('rail and footer both require saving edited final prices before Listing',()=>{
   const state={connected:true,etsyConnected:true,productSelected:true,templateReady:true,shippingReady:true,variantsReady:true,bundleProductsReady:true,colorsReady:true,pricesReady:true,designCount:1,designsReady:true,etsyShippingProfileReady:true,draftsComplete:true,createdDraftCount:1,pricingApproved:false,imagesReady:true};
-  assert.deepEqual(navigationIssues(5,state),['Save the item prices on the Drafts step.']);
-  assert.deepEqual(leavingImagesIssues(state),['Save the item prices on the Drafts step.']);
+  assert.deepEqual(navigationIssues(5,state),['Review the item prices.']);
+  assert.deepEqual(leavingImagesIssues(state),['Review the item prices.']);
   assert.deepEqual(navigationIssues(5,{...state,pricingApproved:true}),[]);
 });
 test('pricing badges and sibling approvals use the saved batch decision, not merely an older approved product response',()=>{
@@ -61,7 +61,7 @@ test('pricing badges and sibling approvals use the saved batch decision, not mer
   assert.match(source,/const priceApproved=\(isActive\?pricingApproved:Boolean\(bundleApproved\[recipe.id\]\)\)&&productDrafts.length>0/);
   assert.match(source,/productName:recipe.name,pricingApproved:Boolean\(state.pricingApproved\)/);
   assert.match(source,/Boolean\(member.pricingApproved\)&&created.length>0/);
-  assert.match(source,/if\(!gateState\(\).pricingApproved\)issues.push\("Save the item prices on the Drafts step."\)/);
+  assert.match(source,/if\(!gateState\(\).pricingApproved\)issues.push\("Review the item prices."\)/);
   assert.doesNotMatch(source,/titles · all 13 tags/);
   assert.match(source,/if\(approved\|\|preserveEdits\|\|!selectedProfile\|\|!variants.length\)return;const stillUsingTemplatePrices/);
 });

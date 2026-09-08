@@ -1666,7 +1666,7 @@ export default function ListingFactoryApp() {
   function handoffBlockers(){
     const issues=publishBlockers().filter(issue=>issue!=="Select at least one successful listing");
     if(!bundlePublishDrafts().some(draft=>draft.status==="Created"))issues.push("Create at least one Printify draft before saving to Etsy.");
-    if(!gateState().pricingApproved)issues.push("Save the item prices on the Drafts step.");
+    if(!gateState().pricingApproved)issues.push("Review the item prices.");
     /* D1031 · The Printify handoff covers every finished draft, not the retired
        Etsy-publish checkbox selection. A hidden subset must never make an
        unfinished bundle claim it is ready. */
@@ -5586,7 +5586,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               the sentence promised a smaller press than the one it sat under. And
               it named the fee per listing without ever multiplying it, on the one
               screen where the total is the thing worth knowing. */}
-            <PhotoDeliveryHandoff ref={photoDeliveryRef} onStatusReady={setPhotoDeliveryStatusReady} onReview={(id,photos)=>{const draft=bundlePublishDrafts().find(item=>item.id===id);if(draft)editReviewedListing(photos?"mockups":"details",draft)}} targets={bundlePublishDrafts().filter(draft=>draft.id&&draft.status==="Created").map(draft=>({id:draft.id!,title:draft.title||draft.name||"Listing",indices:bundlePublishSelections()[draft.id!]??printifyImageIndices,shippingProfileId:drafts.some(own=>own.id===draft.id)?etsyShippingProfileId:Number(Object.values(bundleMembers).find(member=>member.drafts.some(own=>own.id===draft.id))?.shippingProfileId)||0}))} beforePrepare={async()=>{await persistBatchNow();await persistRunNow()}}/>
+            <PhotoDeliveryHandoff ref={photoDeliveryRef} onStatusReady={setPhotoDeliveryStatusReady} onReview={(id,photos)=>{const draft=bundlePublishDrafts().find(item=>item.id===id);if(draft)editReviewedListing(photos?"mockups":"details",draft)}} targets={bundlePublishDrafts().filter(draft=>draft.id&&draft.status==="Created").map((draft,index)=>{const design=bundlePublishFiles().find(file=>file.id===draft.clientId)||bundlePublishFiles().find(file=>file.name===draft.name);return{id:draft.id!,title:design?.title||`Listing ${index+1}`,indices:bundlePublishSelections()[draft.id!]??printifyImageIndices,shippingProfileId:drafts.some(own=>own.id===draft.id)?etsyShippingProfileId:Number(Object.values(bundleMembers).find(member=>member.drafts.some(own=>own.id===draft.id))?.shippingProfileId)||0}})} beforePrepare={async()=>{await persistBatchNow();await persistRunNow()}}/>
             </div><div className="factory-publish-box">{/* D785 - the prototype's box opens by
               naming the connected destination shop without implying Goldie publishes
               in 20px. Production had the shop only inside the press, at 10px,

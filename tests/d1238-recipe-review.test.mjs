@@ -34,6 +34,8 @@ test('D1238: listing cards expose exact readiness, price, and direct corrections
   assert.match(review,/Review pricing/);
   assert.match(review,/Choose photos/);
   assert.match(review,/Finish title and tags/);
+  assert.match(review,/design\?\.title\|\|`Untitled listing/);
+  assert.doesNotMatch(review,/design\?\.title\|\|draft\.title\|\|"Untitled listing"/);
   assert.match(review,/new Map<string,Draft\[\]>\(\)/);
 });
 
