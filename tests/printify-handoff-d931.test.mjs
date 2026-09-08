@@ -27,7 +27,7 @@ test("D931: every server-side route fails closed and no worker drains the queue"
   const getBody=route.slice(route.indexOf("export async function GET"));
   assert.doesNotMatch(getBody,/drainGlobalPublishQueue\(/);
   assert.doesNotMatch(worker,/kickGlobalPublishQueueIfDue|drainGlobalPublishQueue/);
-  assert.match(operations,/\["resume","retry_failed","run_now"\][\s\S]*?status:410/);
+  assert.match(operations,/\["pause","resume","retry_failed","run_now"\][\s\S]*?status:410/);
 });
 
 test("D931: a stale CI variable cannot overwrite the commit actually being built",()=>{

@@ -1627,7 +1627,7 @@ test("the retired Etsy queue cannot run in the background or from owner controls
   assert.match(worker,/async scheduled/);assert.doesNotMatch(worker,/drainGlobalPublishQueue|kickGlobalPublishQueueIfDue/);assert.match(vite,/crons: \["\* \* \* \* \*"\]/);
   assert.match(queue,/MAX_CONCURRENT_LISTINGS=4/);assert.match(queue,/AVG\(api_calls\)/);assert.match(queue,/Math\.ceil\(Number\(average\?\.average/);assert.match(queue,/paused_until/);assert.match(queue,/DELETE FROM etsy_api_usage_buckets/);assert.match(queue,/DELETE FROM etsy_worker_runs/);
   assert.match(client,/retry-after/);assert.match(client,/Etsy asked Goldie to slow down/);assert.match(finish,/meter\.calls/);assert.match(finish,/apiCalls:meter\.calls/);
-  assert.match(operations,/Etsy operations/);assert.match(operations,/Shared Etsy quota/);assert.match(operations,/Measured API cost/);assert.match(operations,/Failed listings/);assert.match(api,/\["resume","retry_failed","run_now"\][\s\S]*status:410/);assert.match(api,/isOwner/);
+  assert.match(operations,/Etsy draft transfer history/);assert.match(operations,/Shared Etsy quota/);assert.match(operations,/Historical API cost/);assert.match(operations,/Legacy failures/);assert.match(operations,/old scheduled publisher is intentionally off/);assert.doesNotMatch(operations,/Worker heartbeat needs attention|<OperationsControl/);assert.match(api,/\["pause","resume","retry_failed","run_now"\][\s\S]*status:410/);assert.match(api,/isOwner/);
   assert.match(schema,/etsyQueueState/);assert.match(schema,/etsyWorkerRuns/);assert.match(migration,/etsy_queue_state/);assert.match(migration,/etsy_worker_runs/);
 });
 
@@ -6382,7 +6382,7 @@ test("seller-fixable failures are recorded and never emailed — D645", async ()
   assert.match(control, /const \[errorFilter, setErrorFilter\] = useState<"all"\|"platform"\|"seller">\("all"\)/);
   assert.match(control, /errorFilter === "all" \|\| \(errorFilter === "seller"\) === isSellerFixable\(item\.message\)/);
   assert.match(control, /Seller can fix/);
-  assert.match(control, /Needs Goldie/);
+  assert.match(control, /Needs owner/);
   // The old copy promised an email for every area; it must not still say that.
   assert.doesNotMatch(control, /Brittany is emailed the first error in each area/);
 });

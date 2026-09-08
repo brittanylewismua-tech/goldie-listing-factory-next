@@ -50,9 +50,9 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
       {/* D645 - the old copy promised an email for every area. Seller-fixable
           failures are recorded and never emailed now, so the page says what is
           actually true and becomes the place to look. */}
-      <p className="diagnostics-intro">Every browser crash and failed request across Listing Factory, newest first, with who it happened to. <b>Needs Goldie</b> means something only you can fix. <b>Seller can fix</b> means the seller has already been told on their own screen. Nothing is emailed — this page is where failures are read.</p>
+      <p className="diagnostics-intro">Every browser crash and failed request across Listing Factory, newest first, with who it happened to. <b>Needs owner</b> means something only you can fix. <b>Seller can fix</b> means the seller has already been told on their own screen. Nothing is emailed — this page is where failures are read.</p>
       <div className="diagnostics-filters" role="group" aria-label="Filter errors">
-        {([["all","All"],["platform","Needs Goldie"],["seller","Seller can fix"]] as const).map(([key,label])=>(
+        {([["all","All"],["platform","Needs owner"],["seller","Seller can fix"]] as const).map(([key,label])=>(
           <button key={key} type="button" className={errorFilter===key?"diagnostics-filter is-on":"diagnostics-filter"} aria-pressed={errorFilter===key} onClick={()=>setErrorFilter(key)}>
             {label} <span>{key==="all"?initialErrors.length:initialErrors.filter((item)=>(key==="seller")===isSellerFixable(item.message)).length}</span>
           </button>
@@ -65,7 +65,7 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
         .filter((item) => `${item.area} ${item.userEmail ?? ""} ${item.userName ?? ""} ${item.message} ${item.errorCode ?? ""}`.toLowerCase().includes(errorSearch.trim().toLowerCase()))
         .map((item) => (
         <article key={item.id} className={`diagnostic-item${item.severity === "warning" ? "" : " diagnostic-row-error"}`}>
-          <div><b>{item.area}</b><span className={isSellerFixable(item.message) ? "diagnostic-tag is-seller" : "diagnostic-tag is-platform"}>{isSellerFixable(item.message) ? "Seller can fix" : "Needs Goldie"}</span><span>{item.alerted ? "Emailed · " : ""}{standardTime(item.createdAt)}</span></div>
+          <div><b>{item.area}</b><span className={isSellerFixable(item.message) ? "diagnostic-tag is-seller" : "diagnostic-tag is-platform"}>{isSellerFixable(item.message) ? "Seller can fix" : "Needs owner"}</span><span>{item.alerted ? "Emailed · " : ""}{standardTime(item.createdAt)}</span></div>
           <dl>
             <div><dt>MEMBER</dt><dd>{item.userEmail || "Not signed in"}{item.userName ? ` · ${item.userName}` : ""}</dd></div>
             <div><dt>WHERE</dt><dd>{item.url || "—"}</dd></div>
