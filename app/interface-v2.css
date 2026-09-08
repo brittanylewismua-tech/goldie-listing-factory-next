@@ -4053,6 +4053,7 @@ html, body { background: var(--lf-paper); }
    card boundary; nested section and cost-group cards made one decision look
    like three separate forms. Keep the hierarchy with spacing and rules. */
 .app-shell .post-draft-pricing-panel .editable-draft-pricing{gap:12px}
+.app-shell .post-draft-pricing-panel .editable-draft-pricing>.variant-pricing{margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
 .app-shell .post-draft-pricing-panel .item-pricing-section{margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
 .app-shell .post-draft-pricing-panel .item-pricing-section:focus-within{border-color:transparent!important;background:transparent!important;box-shadow:none!important}
 .app-shell .post-draft-pricing-panel .pricing-section-heading{margin:0 0 4px;padding:0 0 16px;border-bottom:1px solid #ded6dc}

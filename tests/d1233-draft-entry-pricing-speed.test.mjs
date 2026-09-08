@@ -14,6 +14,7 @@ test('D1233: Drafts starts with stage one and has no competing status command',(
 });
 
 test('D1233: item pricing is one outer card with line-separated groups',()=>{
+  assert.match(css,/\.post-draft-pricing-panel \.editable-draft-pricing>\.variant-pricing\{[^}]*border:0!important[^}]*background:transparent!important[^}]*box-shadow:none!important/);
   assert.match(css,/\.post-draft-pricing-panel \.item-pricing-section\{[^}]*border:0!important[^}]*background:transparent!important[^}]*box-shadow:none!important/);
   assert.match(css,/\.post-draft-pricing-panel \.price-group\{[^}]*border:0[^}]*background:transparent/);
   assert.match(css,/\.post-draft-pricing-panel \.price-group\+\.price-group\{[^}]*border-top:1px solid/);
