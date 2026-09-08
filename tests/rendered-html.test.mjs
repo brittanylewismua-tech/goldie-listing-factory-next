@@ -2624,7 +2624,7 @@ test("D416: Connect does not pretend to be step one", async () => {
     "and the batch header beside the rail");
   assert.match(app, /workflowStep==="connect"\?"ACCOUNT SETUP":"YOUR BATCH"/);
 
-  assert.match(app, /\{workflowStep!=="connect"&&\(files\.length>0\|\|drafts\.length>0\|\|Boolean\(templateDetails\)\)&&<button className="save-draft-link"/,
+  assert.match(app, /\{workflowStep!=="connect"&&!\(workflowStep==="finish"&&finishPhase==="final"\)&&\(files\.length>0\|\|drafts\.length>0\|\|Boolean\(templateDetails\)\)&&<button className="save-draft-link"/,
     "nothing to save before a batch exists");
 });
 
@@ -4167,11 +4167,12 @@ test("no product on any step falls back to a bare header — D500", async () => 
   assert.match(fn, /if\(finishPhase==="final"\)return \[\];/, "step 4 is the other");
   assert.match(app, /listingGridScreen\(\),false,/,
     "step 3 passes the listing grid as its body, so the card is never a bare header");
-  /* And step 4's five reporting lines are not lost with the rows - they move
-     into the publish box, which is where the preview puts what is about to
-     happen. */
-  assert.match(app, /function publishReports\(\)/, "step 4's five reports still exist");
-  assert.match(app, /publishReports\(\)\.map/, "and they are rendered");
+  /* Review owns the content after the generic product rows stop. Listing cards
+     show the exact result and the destination box owns the one next action. */
+  assert.match(app, /<FinalListingReview handoffOnly drafts=\{bundlePublishDrafts\(\)\}/,
+    "step 4 renders the listing review instead of a bare product header");
+  assert.match(app, /className=\{`publish-box-ready/,
+    "the destination box renders the batch outcome beside the review");
   assert.match(fn, /const counts=mine\|\|\{designs:0,titled:0,tagged:0,drafts:0,described:false,complete:false,published:0,status:"",photos:0,mockups:0\}/);
   assert.match(fn, /const started=Boolean\(mine\)/);
 
@@ -4931,8 +4932,9 @@ test("step 4 tells the truth about a bundle it is not ready to publish — D546"
   assert.match(app, /* D636 - product count from the selected targets. */ /Publish \$\{total\} \$\{total===1\?"listing":"listings"\} live on Etsy · \$\{products\} \$\{products===1\?"product":"products"\}/);
   assert.doesNotMatch(app, /Publish all \$\{bundleRecipes\.length\} products live on Etsy/);
 
-  // The counts that do only cover the open product say which product that is.
-  assert.match(app, /\$\{activeRecipe\?\.name\|\|"this product"\}`:""\}<\/span>/);
+  // The final screen no longer renders a second open-product draft count above
+  // the all-product review.
+  assert.doesNotMatch(app, /drafts\.filter\(draft=>draft\.status==="Created"\)\.length===1\?"draft":"drafts"/);
 
   /* The checklist is gone - it repeated the cards line for line - and nothing may
      rebuild it. */
@@ -5322,8 +5324,8 @@ test("the number on the button is the number that publishes — D561", async () 
      selection seeding effect and selectedPublishDrafts - because both were
      quietly shrinking the publish back down to the open product. */
   assert.ok(app.indexOf("function bundlePublishDrafts()") > 0);
-  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 13,
-    "declared once; the review, reports, publish targets, selections, seeding, cost approval, Printify handoff, empty-state guard, destination copy, photo delivery and recovery navigation all read it");
+  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 14,
+    "declared once; the review, publish targets, selections, seeding, cost approval, destination status, primary Etsy action, photo delivery and recovery navigation all read it");
   assert.doesNotMatch(app, /function selectedPublishDrafts\(\)\{const selected=new Set\(selectedPublishIds\);return drafts\.filter/,
     "the button's count must not be taken from the open product alone");
 });
@@ -5923,7 +5925,7 @@ test("one list decides whether the press can happen, scoped to the selection —
      the one list - that is what this count protects. */
   assert.ok((app.match(/publishBlockers\(\)/g) || []).length >= 5,
     "every final handoff surface reads the same blocker list");
-  assert.match(app, /<h2>\{handoffBlockers\(\)\.length\?"Finish these items before continuing"/,
+  assert.match(app, /copy: handoffBlockers\(\)\.length\?"Fix the cards marked Needs you\. Everything else is ready\.":"Everything is ready\. Save the batch to Etsy Drafts\."/,
     "the handoff heading reads the same list as the handoff action");
   assert.match(app, /publishBlockersRef\.current=publishBlockers;/,
     "and by the guard through a ref refreshed every render - D644");
@@ -6470,7 +6472,8 @@ test("the walkthrough's smaller faults are fixed — D648", async () => {
   // A one-design batch counted itself in the plural in four more places.
   assert.match(app, /\$\{summary\.drafts\} \$\{summary\.drafts===1\?"draft":"drafts"\}/);
   assert.match(app, /\$\{createdDraftCount\} \$\{createdDraftCount===1\?"draft":"drafts"\} created/);
-  assert.match(app, /length===1\?"draft":"drafts"\}\{activeBundle/);
+  assert.doesNotMatch(app, /drafts\.filter\(draft=>draft\.status==="Created"\)\.length===1\?"draft":"drafts"/,
+    "the final screen does not repeat an open-product draft badge above the batch review");
 
   /* And the step 3 badge called itself ready above a crimson row on the same
      card - D624's fault again, one row further down. */
@@ -6967,7 +6970,7 @@ test("the final review reads honestly — D660", async () => {
   assert.match(css, /\.app-shell \.row-value\{min-width:0;overflow-wrap:anywhere\}/);
 
   // The heading must agree with the button underneath it.
-  assert.match(app, /handoffBlockers\(\)\.length\?"Finish these items before continuing":activeBundle\?"Your listings are ready for final review":"Your batch is ready for its final check"/);
+  assert.match(app, /title: "Review your listings", copy: handoffBlockers\(\)\.length\?"Fix the cards marked Needs you\. Everything else is ready\.":"Everything is ready\. Save the batch to Etsy Drafts\."/);
 
   /* The heading and the draft chip overlapped once the chip carried a product
      name: "✓ 2 drafts on Gildan Hoodie" printed through the heading. */

@@ -13,11 +13,10 @@ test("D931: the final action creates Etsy drafts while live publishing stays dis
   assert.match(app,/Save to Etsy Drafts/);
   assert.match(app,/photoDeliveryRef\.current\?\.prepare\(\)/);
   assert.match(app,/setCreatingEtsyDrafts\(true\)/);
-  assert.match(app,/Publishing and renewal stay under your control in Etsy/);
-  assert.match(app,/Creates drafts only\. Nothing goes live/);
-  assert.match(app,/<FactoryFooter status=\{handoffBlockers\(\)\[0\]/);
+  assert.match(app,/Creates unpublished Etsy drafts\. Nothing goes live/);
+  assert.match(app,/className="review-etsy-draft-button" disabled=\{creatingEtsyDrafts/);
   assert.match(app,/<FinalListingReview handoffOnly/);
-  assert.match(review,/handoffOnly\?"Review the drafts created for this batch"/);
+  assert.match(review,/className="final-listing-review handoff-only recipe-listing-review"/);
   assert.match(review,/!handoffOnly&&<label className="final-select-all"/);
 });
 

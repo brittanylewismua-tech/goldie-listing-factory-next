@@ -32,20 +32,20 @@ test("D1219 uses a compact scalable product overview on Step 4", () => {
   assert.match(css, /recipe-review-settings/);
 });
 
-test("D1219 separates Batch History from Printify and Etsy destinations", () => {
+test("D1240 keeps one primary Etsy-draft decision on Review", () => {
   assert.doesNotMatch(app, />Save as draft<\/button>/);
   assert.match(app, />Save to Batch History<\/button>/);
-  assert.match(app, /Choose where to keep these listings/);
-  assert.match(app, />Keep in Printify</);
-  assert.match(app, />Send to Etsy Drafts</);
-  assert.match(app, /className="workflow-next"[^]*?"Save to Etsy Drafts"/);
+  assert.doesNotMatch(app, /Choose where to keep these listings/);
+  assert.doesNotMatch(app, />Keep in Printify</);
+  assert.match(app, /<summary>Other options<\/summary>/);
+  assert.match(app, /className="review-etsy-draft-button"[^]*?"Save to Etsy Drafts"/);
 });
 
 test("D1219 removes the confusing handoff essay and product nickname", () => {
   assert.doesNotMatch(handoff, /Goldie sends and checks everything/);
   assert.doesNotMatch(handoff, /What Goldie checks/);
   assert.doesNotMatch(handoff, /Checking lasts up to 24 hours/);
-  assert.match(handoff, /The Listing Factory never publishes or renews a listing/);
+  assert.doesNotMatch(handoff, /No download or second upload/);
   assert.doesNotMatch(app, /Goldie sends finished listings|sign in to Goldie/i);
   assert.doesNotMatch(usage, /Goldie (successfully|never)|Goldie AI calculates/);
   assert.match(usage, /The Listing Factory never publishes to Etsy/);

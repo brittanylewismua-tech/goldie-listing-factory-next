@@ -5,7 +5,7 @@ test('a missing or malformed receipt collection cannot mean no existing drafts',
  assert.deepEqual(await readDeliveryStatus(Response.json({deliveries:[]})),[]);
 });
 test('a denied status read explains sign-in even when the response is not JSON',async()=>{
- await assert.rejects(readDeliveryStatus(new Response('Unauthorized',{status:401})),/Sign in to Goldie.*Check saved progress/);
+ await assert.rejects(readDeliveryStatus(new Response('Unauthorized',{status:401})),/Sign in to the Listing Factory.*Check saved progress/);
 });
 test('a status outage never becomes a successful empty delivery collection',async()=>{
  await assert.rejects(readDeliveryStatus(Response.json({error:'Temporarily unavailable',deliveries:[]},{status:503})),/Temporarily unavailable/);

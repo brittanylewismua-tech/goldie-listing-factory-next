@@ -17,8 +17,8 @@ test("D1008: an Etsy database row is not reported as a verified connection", () 
 test("D1008: failed shipping cannot coexist with a ready handoff", () => {
   assert.match(app, /shippingProfilesError\?"Reconnect Etsy":"Needs review"/);
   assert.match(app, /done:isActive\?bundlePricingReady&&etsyShippingSelectionReady\(\):started/);
-  assert.match(app, /handoffBlockers\(\)\.length\?"Finish the indicated items before preparing your Etsy drafts\.":"Etsy drafts stay unpublished\."/);
-  assert.match(app, /<FactoryFooter status=\{handoffBlockers\(\)\[0\]/,
+  assert.match(app, /handoffBlockers\(\)\.length\?"Finish the flagged listings"/);
+  assert.match(app, /handoffBlockers\(\)\[0\]\|\|"Creates unpublished Etsy drafts\. Nothing goes live\."/,
     "unfinished work stays visible while external navigation remains available");
   const handoff=app.slice(app.indexOf("function handoffBlockers()"),app.indexOf("function suggestedBatchName()"));
   assert.match(handoff, /issue!=="Select at least one successful listing"/);

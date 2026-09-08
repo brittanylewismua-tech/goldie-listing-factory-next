@@ -15,7 +15,7 @@ test("D1227: saved connections never flash a false disconnected state while veri
 
 test("D1227: an empty or deleted provider batch cannot look ready for Etsy",()=>{
   assert.match(app,/if\(!bundlePublishDrafts\(\)\.some\(draft=>draft\.status==="Created"\)\)issues\.push\("Create at least one Printify draft before saving to Etsy\."\)/);
-  assert.match(app,/No usable Printify drafts remain in this saved batch\./);
+  assert.match(app,/handoffBlockers\(\)\[0\]\|\|"Creates unpublished Etsy drafts\. Nothing goes live\."/);
   assert.match(app,/label:`\$\{createdDraftCount\} \$\{createdDraftCount===1\?"draft":"drafts"\}`/);
   assert.doesNotMatch(app,/complete\?\{label:`\$\{drafts\.length\} \$\{drafts\.length===1\?"draft":"drafts"\}`/);
 });

@@ -8,8 +8,7 @@ const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta
 test("automatic Etsy draft creation respects unfinished pricing while the recovery link remains available", async () => {
   assert.match(app,/disabled=\{creatingEtsyDrafts\|\|!photoDeliveryStatusReady\|\|Boolean\(handoffBlockers\(\)\.length\)\}/);
   assert.match(app,/photoDeliveryRef\.current\?\.prepare\(\)/);
-  const photos=await readFile(new URL("../app/photo-delivery-handoff.tsx",import.meta.url),"utf8");
-  assert.match(photos,/Open Printify without preparing these drafts/);
+  assert.match(app,/<summary>Other options<\/summary><a href="https:\/\/printify\.com\/app\/store\/products"/);
 });
 
 test("starting fresh clears both the child batch and parent bundle-run identities", () => {

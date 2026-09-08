@@ -133,18 +133,15 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
   }
   if(handoffOnly){
     const productGroups=[...drafts.reduce((map,draft)=>{const key=draft.productName||productName||"Saved product";map.set(key,[...(map.get(key)||[]),draft]);return map},new Map<string,Draft[]>()).entries()];
-    const needsYou=drafts.filter(draft=>Boolean(exactIssue(draft))).length;
     return <section className="final-listing-review handoff-only recipe-listing-review">
-      <div className="final-listing-review-heading"><div><p className="mini-label">EVERY LISTING IN THIS BATCH</p><h3>Review your listings</h3></div><span>{needsYou?`${needsYou} ${needsYou===1?"needs":"need"} you`:`${drafts.length} ready`}</span></div>
       <div className="recipe-product-groups">{productGroups.map(([name,items],productIndex)=>{
-        const productIssues=items.filter(draft=>Boolean(exactIssue(draft))).length;
         return <section className="recipe-product-group" key={name}>
-          <header><div><small>{productGroups.length>1?`Product ${productIndex+1} of ${productGroups.length}`:"Saved product"}</small><h4>{name}</h4></div><span className={productIssues?"needs-attention":"ready"}>{productIssues?`${productIssues} ${productIssues===1?"needs":"need"} you`:"✓ Ready"}</span></header>
-          <div className="recipe-listing-grid">{items.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,photoCount=selectedCount+mockupCount+(design?.sizeGuideName??batchSizeGuide?1:0),issue=exactIssue(draft),correction=correctionFor(draft),preview=covers[draft.id||""]||draft.previewUrl||design?.previewUrl;return <article className={`recipe-listing-card ${issue?"needs-work":"is-ready"}`} key={`${name}:${draft.clientId}`}>
+          <header><div><small>{productGroups.length>1?`Product ${productIndex+1} of ${productGroups.length}`:"Saved product"}</small><h4>{name}</h4></div></header>
+          <div className="recipe-listing-grid">{items.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,photoCount=selectedCount+mockupCount+(design?.sizeGuideName??batchSizeGuide?1:0),issue=exactIssue(draft),correction=correctionFor(draft),preview=covers[draft.id||""]||draft.previewUrl||design?.previewUrl;return <button type="button" aria-label={`${draft.status!=="Created"?"Retry listing":issue?correction.label:"Edit listing"}: ${design?.title||`Untitled listing ${items.indexOf(draft)+1}`}`} className={`recipe-listing-card ${issue?"needs-work":"is-ready"}`} key={`${name}:${draft.clientId}`} onClick={()=>{if(draft.status!=="Created"){if(onRetry)onRetry(draft.clientId);else window.dispatchEvent(new CustomEvent("goldie-retry-draft",{detail:{clientId:draft.clientId}}));return}onEdit(issue?correction.phase:"details",draft)}}>
             <div className="recipe-listing-image">{preview?<img src={preview} alt="Product preview" decoding="async"/>:<span>No preview</span>}</div>
             <div className="recipe-listing-copy"><small>Listing {items.indexOf(draft)+1} of {items.length}</small><h5>{design?.title||`Untitled listing ${items.indexOf(draft)+1}`}</h5><p>{priceLabel(draft)} · {design?.tags?.length||0}/13 tags · {photoCount} {photoCount===1?"photo":"photos"}</p><strong className={issue?"needs-attention":"ready"}>{issue?`Needs you · ${issue}`:"✓ Ready"}</strong></div>
-            <div className="recipe-listing-actions">{draft.status!=="Created"?<button type="button" onClick={()=>onRetry?.(draft.clientId)||window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry listing</button>:issue?<button type="button" onClick={()=>onEdit(correction.phase,draft)}>{correction.label}</button>:<button type="button" onClick={()=>onEdit("details",draft)}>Edit listing</button>}{draft.editorUrl&&<a href={draft.editorUrl} target="_blank" rel="noopener noreferrer">View in Printify ↗</a>}</div>
-          </article>})}</div>
+            {draft.status!=="Created"&&<span className="recipe-listing-action-label">Retry listing</span>}
+          </button>})}</div>
         </section>})}</div>
     </section>;
   }

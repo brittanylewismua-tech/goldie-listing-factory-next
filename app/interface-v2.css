@@ -1265,10 +1265,6 @@ html, body { background: var(--lf-paper); }
   transform:translate(-1px,-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),6px 6px 0 var(--lf-action-shadow)}
 .app-shell .factory-publish-box .publish-all-button:disabled{opacity:1!important;background:rgba(255,255,255,.12);color:rgba(255,244,250,.76);box-shadow:none;transform:none;filter:none!important}
 .app-shell .factory-publish-box .publish-all-button:disabled .publish-all-shop{opacity:1;color:rgba(255,244,250,.6)}
-.app-shell .factory-publish-box .printify-handoff{display:grid;gap:7px;padding:4px 0;color:#fff}
-.app-shell .factory-publish-box .printify-handoff b{font-size:14px}
-.app-shell .factory-publish-box .printify-handoff span{font-size:12px;line-height:1.5;color:rgba(255,255,255,.86)}
-.app-shell .factory-publish-box .printify-handoff small{font-size:11px;line-height:1.5;color:rgba(255,255,255,.68)}
 .app-shell .factory-publish-box .keep-drafts-button{margin-top:10px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:transparent;color:#fff;padding:11px 14px;font:750 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
 .app-shell .final-design-group summary em.advice{background:#f2edf0;color:#675762;border-color:#ddd2d8}
 
@@ -1549,26 +1545,6 @@ html, body { background: var(--lf-paper); }
   font:700 13px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#fff}
 .app-shell .factory-publish-box .publish-live-warning span{
   color:#c8b9c4;font:400 11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif}
-
-/* D787 · Step 4's five reports, inside the publish box.
-
-   They were a stack of five numbered panels standing between the seller and the
-   review list. The preview has no such stack - its step 4 is the review beside
-   the box - and none of these five open anything: they report. So they report
-   here, under the shop being published to, in the box the preview already gives
-   to "what is about to happen". */
-.app-shell .factory-publish-box .publish-box-reports{
-  display:grid;gap:7px;margin:14px 0 16px;padding:14px 0 0;
-  border-top:1px solid rgba(255,255,255,.14)}
-.app-shell .factory-publish-box .publish-box-reports > div{
-  display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
-.app-shell .factory-publish-box .publish-box-reports dt{
-  color:#c8b9c4;font:400 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .factory-publish-box .publish-box-reports dd{
-  margin:0;color:#fff;font:750 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;text-align:right}
-.app-shell .factory-publish-box .publish-box-reports .needs-work dd{color:#f0b8c8}
-.app-shell .factory-publish-box .publish-box-reports .publish-report-detail{
-  flex:1 0 100%;color:#c7b8c3;font:400 10px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;text-align:left}
 
 /* ==========================================================================
    D787 · Step 3 is the preview's listing grid, not a panel stack
@@ -3923,7 +3899,7 @@ html, body { background: var(--lf-paper); }
 @media(max-width:760px){.app-shell .listing-photo-workspace>.individual-size-guide{display:grid!important;gap:14px}.app-shell .size-guide-actions{flex-wrap:wrap}.app-shell .size-guide-actions button{min-height:44px;white-space:normal}}
 
 .photo-delivery-handoff{margin:24px 0;padding:22px;border:2px solid #151515;border-radius:12px;box-shadow:4px 4px 0 #151515;background:#fff8fb;color:#171717}
-.photo-delivery-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.photo-delivery-heading h3{margin:0;font-size:20px}.photo-delivery-heading b{font-size:13px}.photo-delivery-handoff p{margin:12px 0;line-height:1.5}.photo-delivery-note,.photo-delivery-handoff>small{font-size:13px;line-height:1.5}.photo-delivery-handoff>small{display:block;margin-top:14px}.photo-delivery-handoff [role=status]{font-weight:700;margin:14px 0}.photo-delivery-handoff summary{padding:12px 0;cursor:pointer;font-weight:700}.photo-delivery-handoff ul{list-style:none;padding:0;margin:0}.photo-delivery-handoff li{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 0;border-top:1px solid #bcaeb5}.photo-delivery-handoff li strong{flex:1 1 220px;overflow-wrap:anywhere}.photo-delivery-handoff li small{flex-basis:100%}.photo-delivery-handoff button{min-height:44px;border:1px solid #171717;border-radius:7px;background:white;color:#171717;padding:8px 12px;cursor:pointer}.photo-delivery-error{padding:12px;border:2px solid var(--goldie-attention);border-radius:8px;background:#fff;margin-top:14px}.photo-delivery-handoff a{color:#171717;text-decoration:underline;text-underline-offset:3px}
+.photo-delivery-handoff p{margin:12px 0;line-height:1.5}.photo-delivery-handoff>small{display:block;margin-top:14px;font-size:13px;line-height:1.5}.photo-delivery-handoff [role=status]{font-weight:700;margin:14px 0}.photo-delivery-handoff summary{padding:12px 0;cursor:pointer;font-weight:700}.photo-delivery-handoff ul{list-style:none;padding:0;margin:0}.photo-delivery-handoff li{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 0;border-top:1px solid #bcaeb5}.photo-delivery-handoff li strong{flex:1 1 220px;overflow-wrap:anywhere}.photo-delivery-handoff li small{flex-basis:100%}.photo-delivery-handoff button{min-height:44px;border:1px solid #171717;border-radius:7px;background:white;color:#171717;padding:8px 12px;cursor:pointer}.photo-delivery-error{padding:12px;border:2px solid var(--goldie-attention);border-radius:8px;background:#fff;margin-top:14px}.photo-delivery-handoff a{color:#171717;text-decoration:underline;text-underline-offset:3px}
 
 /* D1172: the disclosure is a full-width row, not a cell in the legacy eight-photo grid. */
 .app-shell.app-shell .printify-image-picker>.mockup-other-views{display:block!important;grid-template-columns:none!important}
@@ -4018,9 +3994,6 @@ html, body { background: var(--lf-paper); }
 .app-shell .listing-review-gate{display:grid;gap:8px;margin:20px 0;padding:16px 18px;border:2px solid #171717;border-radius:10px;background:#fff;box-shadow:3px 3px 0 #171717}
 .app-shell .listing-review-gate.is-blocked{border-color:#8c2727;box-shadow:3px 3px 0 #8c2727}.app-shell .listing-review-gate b{font-size:16px}.app-shell .listing-review-gate :is(p,ul){margin:0}.app-shell .listing-review-gate ul{display:grid;gap:5px;padding-left:20px}.app-shell .listing-review-gate li,.app-shell .listing-review-gate p{font-size:13px;line-height:1.5}
 
-.app-shell .draft-destination-choice{display:grid;gap:10px;margin:18px 0;padding-top:16px;border-top:1px solid rgba(255,255,255,.22)}
-.app-shell .draft-destination-choice h4{margin:0;color:#fff;font-size:15px;line-height:1.35}.app-shell .draft-destination-choice article{display:grid;gap:8px;padding:12px;border:1px solid rgba(255,255,255,.24);border-radius:8px;background:rgba(255,255,255,.07)}
-.app-shell .draft-destination-choice article>div{display:grid;gap:3px}.app-shell .draft-destination-choice article span{color:rgba(255,255,255,.74);font-size:11px;line-height:1.45}.app-shell .draft-destination-choice :is(a,button){display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 12px;border:1px solid rgba(255,255,255,.46);border-radius:7px;background:transparent;color:#fff;text-decoration:none;font:750 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}.app-shell .draft-destination-choice :is(a,button):hover:not(:disabled){background:#fff;color:#171717}.app-shell .draft-destination-choice button:not(:disabled){background:var(--lf-pink);border-color:var(--lf-pink);color:#171717}.app-shell .draft-destination-choice button:disabled{cursor:not-allowed;opacity:.7}.app-shell .draft-destination-choice small{color:rgba(255,255,255,.72)}
 @media(max-width:640px){.app-shell .final-product-overview{padding:16px}.app-shell .final-product-grid{grid-template-columns:minmax(0,1fr)}}
 
 /* Three persistent stages keep orientation beside long product forms. */

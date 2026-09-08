@@ -4,8 +4,8 @@ import test from "node:test";
 
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
-test("automatic draft creation is the persistent footer action, not clipped inside the review box",()=>{
-  assert.match(app,/<FactoryFooter status=\{handoffBlockers\(\)\[0\]\|\|\(!photoDeliveryStatusReady\?"Check saved progress above before continuing\.":"Creates drafts only\. Nothing goes live\."\)\}>/);
-  assert.match(app,/className="workflow-next" disabled=\{creatingEtsyDrafts/);
+test("automatic draft creation is the persistent action in the sticky review box",()=>{
+  assert.match(app,/className="review-etsy-draft-button" disabled=\{creatingEtsyDrafts/);
+  assert.doesNotMatch(app,/FactoryFooter status=\{handoffBlockers/);
   assert.doesNotMatch(app,/publish-all-button printify-handoff-button/);
 });

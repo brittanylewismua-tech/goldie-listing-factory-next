@@ -21,6 +21,6 @@ test("D964: workflow copy states outcomes without narrating the tool", () => {
 test("D964: brand chrome remains while redundant workflow narration is gone", () => {
   assert.match(source, /<GoldieWordmark className="approved-brand"/);
   assert.doesNotMatch(source, /<GoldieInsight>/);
-  assert.match(source, /Creates drafts only\. Nothing goes live\./);
+  assert.match(source, /Creates unpublished Etsy drafts\. Nothing goes live\./);
   assert.match(source, /Keep this page open\./);
 });
