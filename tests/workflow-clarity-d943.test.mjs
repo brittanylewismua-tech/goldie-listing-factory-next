@@ -19,7 +19,7 @@ test("D943: moving from Product cannot claim it creates drafts",()=>{
 });
 
 test("D949: Step 2 names the immediate task without another review layer",()=>{
-  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*Complete three stages for each product/);
+  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*Your saved choices are applied/);
   assert.match(app,/title: "Add your designs", copy: ""/);
 });
 

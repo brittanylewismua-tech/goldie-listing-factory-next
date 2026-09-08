@@ -4129,7 +4129,8 @@ test("active products keep their rows and inactive draft products show saved-wor
   assert.match(app, /if\(many&&!open&&workflowStep==="designs"\)return null;const rows=productRows\(recipe,index===bundleIndex\)/,
     "D501 - a single-product batch gets its rows too, as step 1 gives them");
   assert.match(app, /<div className=\{`batch-product-rows \$\{grouped\?"has-draft-stages":""\}`\}>[\s\S]*\{rows\.map/);
-  assert.match(app, /grouped&&draftTaskStage\(row.task\)!==stageId/);
+  assert.match(app, /grouped&&row\.task!==effectiveTask/,
+    "D1229 - one selected or required section renders instead of a stack");
   assert.match(app, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"\}<\/span>/,
     "the same row markup step 1 uses");
 
@@ -4661,7 +4662,7 @@ test("a task row owns its panel inside the product card — D539", async () => {
   assert.match(app, /function taskPanel\(task:string\)/);
   assert.match(app, /\{rowOpen&&<div className="task-panel open-task-column" onClick=/,
     "the panel renders under the row that asked for it, and only that one");
-  assert.match(app, /setActiveTask\(current=>current===task\?"":task\)/);
+  assert.match(app, /setActiveTask\(current=>current===task\?"__closed":task\)/);
 
   // Switching product keeps the task, so the tee opens where the hoodie was.
   assert.match(app, /if\(!open\)\{if\(reachable\)\{setActiveTask\(task\);openBundleProduct\(index\)\}return\}/);
@@ -5400,7 +5401,7 @@ test("step 1 shows one panel at a time, like every other step — D564", async (
 
   /* The same rule on every step, so "every step works the exact same" holds:
      steps 2-4 swap the active task, step 1 swaps the open facet. */
-  assert.match(app, /setActiveTask\(current=>current===task\?"":task\)/);
+  assert.match(app, /setActiveTask\(current=>current===task\?"__closed":task\)/);
 });
 
 test("a narrow laptop reflows instead of shrinking or scrolling sideways — D862 supersedes D565", async () => {

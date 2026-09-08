@@ -23,7 +23,7 @@ import SupportChat from "./support-chat";
 import { workflowScreen } from "./step-videos";
 import FactoryPanel from "./factory-panel";
 import { mockupViewGroups } from "./mockup-view-groups";
-import { unfinishedDraftTask, draftTaskSummary } from "./draft-workflow-guidance";
+import { unfinishedDraftTask, draftTaskSummary, focusedDraftTask } from "./draft-workflow-guidance";
 import ArtworkGrid from "./artwork-grid";
 import { runBounded } from "./bounded-work";
 import { bundleMemberDesigns } from "./bundle-member-designs";
@@ -3603,24 +3603,39 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
             const openRow=(_target?:string,task?:string)=>{
               if(!task){if(!open&&reachable)openBundleProduct(index);return}
               if(!open){if(reachable){setActiveTask(task);openBundleProduct(index)}return}
-              setActiveTask(current=>current===task?"":task);
+              setActiveTask(current=>current===task?"__closed":task);
             };
             /* D723 · Each task row is a prototype panel: index chip, title, description,
        state chip, and its work in the body. The row's own handlers, guards and
        reachability rules are unchanged and are handed to the panel. */
     const grouped=workflowStep==="designs";
-    const stageId=visibleDraftStage(rows,open?activeTask:"",draftStageByProduct[recipe.id]);
+    const requiredRows=rows.filter(row=>row.task&&!row.report&&!row.optional);
+    const nextRequiredRow=requiredRows.find(row=>!row.done&&!row.pending);
+    const allRequiredReady=requiredRows.length>0&&requiredRows.every(row=>row.done);
+    /* D1229 · A ready product used to show three stage buttons plus three more
+       collapsed section cards and called every one "Ready to review". That made
+       six optional inspections look mandatory. Keep the three-stage map, but
+       render one work surface only when the seller chooses it or when a real
+       requirement is missing. */
+    const effectiveTask=open?(activeTask==="__closed"?"":focusedDraftTask(rows,activeTask)):"";
+    const showingNextRequired=Boolean(nextRequiredRow?.task&&effectiveTask===nextRequiredRow.task);
+    const stageId=visibleDraftStage(rows,effectiveTask,draftStageByProduct[recipe.id]);
     const stages=DRAFT_TASK_STAGES.filter(stage=>rows.some(row=>draftTaskStage(row.task)===stage.id));
     const stageRows=rows.filter(row=>draftTaskStage(row.task)===stageId);
     return <div className={`batch-product-rows ${grouped?"has-draft-stages":""}`}>
+      {grouped&&<section className={`draft-product-guidance ${allRequiredReady?"is-ready":nextRequiredRow?"needs-action":"is-checking"}`} role="status">
+        <span aria-hidden="true">{allRequiredReady?"✓":nextRequiredRow?"→":"…"}</span>
+        <div><b>{allRequiredReady?"Ready to continue":nextRequiredRow?`${showingNextRequired?"Next":"Still needed"}: ${nextRequiredRow.label}`:"Checking saved setup…"}</b>
+        <p>{allRequiredReady?"Everything required is already set. Continue to Listing, or open a stage only if you want to review or change it.":nextRequiredRow?(showingNextRequired?"The exact section you need is open below. Your other saved choices stay out of the way.":"You can review this section now. The unfinished section is still clearly marked."):"The Listing Factory is checking this product before showing a next action."}</p></div>
+      </section>}
       {grouped&&<div className="draft-stage-rail"><nav className="draft-stage-nav" aria-label="Product setup stages">{stages.map((stage,stageIndex)=>{
         const tasks=rows.filter(row=>draftTaskStage(row.task)===stage.id),remaining=tasks.filter(row=>!row.done).length;
         return <button type="button" key={stage.id} aria-current={stage.id===stageId?"step":undefined} disabled={Boolean(switchingProduct)||(!open&&!reachable)} onClick={()=>{
           setDraftStageByProduct(current=>({...current,[recipe.id]:stage.id}));
           const target=tasks.find(row=>!row.done)||tasks[0];if(target?.task)openGuidedDraftTask(target.task,index);
-        }}><span>{stageIndex+1}</span><b>{draftStageLabel(stage.id,tasks.map(row=>row.task||""))}</b><small>{remaining?`${remaining} to check`:"Ready to review"}</small></button>;
-      })}</nav><p className="draft-stage-position">Stage {stages.findIndex(stage=>stage.id===stageId)+1} of {stages.length} · {stageRows.find(row=>row.task===activeTask)?.label||"Choose a section below"}</p></div>}
-      {rows.map((row,rowIndex)=>{if(grouped&&draftTaskStage(row.task)!==stageId)return null;const rowOpen=Boolean(!switchingProduct&&open&&row.task&&activeTask===row.task);
+        }}><span>{remaining?stageIndex+1:"✓"}</span><b>{draftStageLabel(stage.id,tasks.map(row=>row.task||""))}</b><small>{remaining?`${remaining} to finish`:"Ready"}</small></button>;
+      })}</nav>{effectiveTask&&<><p className="draft-stage-position">Stage {stages.findIndex(stage=>stage.id===stageId)+1} of {stages.length} · {stageRows.find(row=>row.task===effectiveTask)?.label}</p>{stageRows.length>1&&<nav className="draft-section-nav" aria-label={`${draftStageLabel(stageId,stageRows.map(row=>row.task||""))} sections`}>{stageRows.map((row,rowIndex)=><button type="button" key={row.task||row.label} aria-current={row.task===effectiveTask?"step":undefined} onClick={()=>row.task&&openGuidedDraftTask(row.task,index)}><span aria-hidden="true">{row.done?"✓":rowIndex+1}</span>{row.label}</button>)}</nav>}</>}</div>}
+      {rows.map((row,rowIndex)=>{if(grouped&&row.task!==effectiveTask)return null;const rowOpen=Boolean(!switchingProduct&&open&&row.task&&(grouped?row.task===effectiveTask:activeTask===row.task));
       const reachableRow=!(switchingProduct||(!open&&!reachable));
       /* D767 · A reporting row has nothing of its own to open (D541), which is a
          reason to have no Change control - not a reason to be a different
@@ -3636,7 +3651,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         tone={row.done?"done":row.pending?"pending":row.optional?"optional":"attention"}
         open={rowOpen}
         onToggle={row.report?undefined:()=>{if(grouped)setDraftStageByProduct(current=>({...current,[recipe.id]:draftTaskStage(row.task)||stageId}));openRow(row.target,row.task)}}
-        footerActions={rowOpen&&workflowStep==="designs"&&rows[rowIndex+1]?.task?<button type="button" className="task-next-section" onClick={()=>openGuidedDraftTask(rows[rowIndex+1].task!,index)}>Next: {rows[rowIndex+1].label} <span aria-hidden="true">→</span></button>:undefined}
+        footerActions={rowOpen&&workflowStep==="designs"&&rows[rowIndex+1]?.task?<button type="button" className="task-next-section" onClick={()=>openGuidedDraftTask(rows[rowIndex+1].task!,index)}>Continue to {rows[rowIndex+1].label.toLowerCase()} <span aria-hidden="true">→</span></button>:undefined}
         toggleLabel={opening?"Opening…":rowOpen?"Close":"Change"}
         toggleDisabled={!reachableRow}
         toggleTitle={!reachableRow?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
@@ -4944,7 +4959,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       ? { eyebrow: "STEP 1 OF 4", title: "Add your designs", copy: "" }
       : { eyebrow: "STEP 1 OF 4", title: "Choose a product or bundle", copy: "Select one to start your batch." },
     designs: complete
-      ? { eyebrow: "STEP 2 OF 4", title: "Finish your Printify drafts", copy: activeBundle&&bundleRecipes.length>1?"Complete three stages for each product.":"Complete the three stages below." }
+      ? { eyebrow: "STEP 2 OF 4", title: "Finish your Printify drafts", copy: "Your saved choices are applied. Fix anything flagged, then continue." }
       : { eyebrow: "STEP 2 OF 4", title: "Add your designs", copy: "" },
     review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
     finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Finish each listing’s title, tags, and description." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Finish the Etsy details." } : { eyebrow: "STEP 4 OF 4 · FINISH", title: handoffBlockers().length?"Final review":"Finish your Etsy drafts", copy: "Send your listings directly to Etsy Drafts." },

@@ -34,7 +34,7 @@ test("D910: footer controls remain visible and aligned",()=>{
 });
 
 test("D910: bundle language and one-column listing states tell the truth",()=>{
-  assert.match(app,/activeBundle&&bundleRecipes\.length>1\?"Complete three stages for each product\.":"Complete the three stages below\."/);
+  assert.match(app,/Your saved choices are applied\. Fix anything flagged, then continue\./);
   assert.match(css,/factory-listing-grid:has\(>\.factory-form-card:only-child\)/);
 });
 

@@ -16,5 +16,12 @@ export function draftTaskSummary(rows: DraftTask[]) {
   if (!tasks.length) return "Open product";
   if (tasks.some(row => row.pending)) return "Checking saved work…";
   const remaining = tasks.filter(row => !row.done).length;
-  return remaining ? `${remaining} ${remaining === 1 ? "section" : "sections"} to finish` : "Sections ready to review";
+  return remaining ? `${remaining} ${remaining === 1 ? "section" : "sections"} to finish` : "Ready to continue";
+}
+
+/** Keep one work surface visible: the seller's explicit choice wins, otherwise
+ * open only the first real requirement. Fully ready products stay compact. */
+export function focusedDraftTask(rows: DraftTask[], activeTask = "") {
+  if (activeTask && rows.some(row => row.task === activeTask)) return activeTask;
+  return rows.find(row => row.task && !row.done && !row.pending && !row.optional && !row.report)?.task || "";
 }
