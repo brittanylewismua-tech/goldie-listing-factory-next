@@ -3625,8 +3625,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     return <div className={`batch-product-rows ${grouped?"has-draft-stages":""}`}>
       {grouped&&<section className={`draft-product-guidance ${allRequiredReady?"is-ready":nextRequiredRow?"needs-action":"is-checking"}`} role="status">
         <span aria-hidden="true">{allRequiredReady?"✓":nextRequiredRow?"→":"…"}</span>
-        <div><b>{allRequiredReady?"Ready to continue":nextRequiredRow?`${showingNextRequired?"Next":"Still needed"}: ${nextRequiredRow.label}`:"Checking saved setup…"}</b>
-        <p>{allRequiredReady?"Everything required is already set. Continue to Listing, or open a stage only if you want to review or change it.":nextRequiredRow?(showingNextRequired?"The exact section you need is open below. Your other saved choices stay out of the way.":"You can review this section now. The unfinished section is still clearly marked."):"The Listing Factory is checking this product before showing a next action."}</p></div>
+        <div><b>{allRequiredReady?"Ready to continue":nextRequiredRow?`${showingNextRequired?"Next":"Still needed"}: ${nextRequiredRow.label}`:"Checking saved setup…"}</b></div>
       </section>}
       {grouped&&<div className="draft-stage-rail"><nav className="draft-stage-nav" aria-label="Product setup stages">{stages.map((stage,stageIndex)=>{
         const tasks=rows.filter(row=>draftTaskStage(row.task)===stage.id),remaining=tasks.filter(row=>!row.done).length;
