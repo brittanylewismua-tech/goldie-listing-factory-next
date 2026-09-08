@@ -108,7 +108,7 @@ test("the connect step swaps its copy on state and hides the timing note once co
     "the card must not restate the page title");
   // C2: "usually takes about 2 minutes" used to render underneath two already-
   // connected accounts. It must only appear when something is still unconnected.
-  assert.match(page, /\{\(!connected\|\|!etsyConnected\)&&<p className="connect-timing">/);
+  assert.match(page, /\{!checkingConnections&&\(!connected\|\|!etsyConnected\)&&<p className="connect-timing">/);
   // C1: a returning seller sees a confirmation, not setup instructions.
   assert.match(page, /connected&&etsyConnected\?"Both connections are verified\./);
   /* D735 · The note still sits under the copy and still disappears once both

@@ -1650,6 +1650,7 @@ export default function ListingFactoryApp() {
      decide whether it works. Review every created draft in the batch instead. */
   function handoffBlockers(){
     const issues=publishBlockers().filter(issue=>issue!=="Select at least one successful listing");
+    if(!bundlePublishDrafts().some(draft=>draft.status==="Created"))issues.push("Create at least one Printify draft before saving to Etsy.");
     if(!gateState().pricingApproved)issues.push("Save the item prices on the Drafts step.");
     /* D1031 · The Printify handoff covers every finished draft, not the retired
        Etsy-publish checkbox selection. A hidden subset must never make an
@@ -2622,7 +2623,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
   function bundleCardStatus(step:"images"|"listing"|"publish"){
     return (recipe:Recipe,index:number):{label:string;tone:"ready"|"attention"|"advice"|"waiting"}=>{
       if(index===bundleIndex){
-        if(step==="images")return complete?{label:`${drafts.length} ${drafts.length===1?"draft":"drafts"}`,tone:"ready"}:{label:`${files.length} ${files.length===1?"design":"designs"}`,tone:"attention"};
+        if(step==="images")return complete?{label:`${createdDraftCount} ${createdDraftCount===1?"draft":"drafts"}`,tone:createdDraftCount?"ready":"attention"}:{label:`${files.length} ${files.length===1?"design":"designs"}`,tone:"attention"};
         if(step==="listing"){
           /* D624 · This card said "Titles ready" in green while the row directly
              beneath it said "2 of 2 titles · 0 of 2 with all 13 tags" in crimson
@@ -4914,7 +4915,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   const photoDeliveryRef=useRef<PhotoDeliveryHandle>(null);
   const [photoDeliveryStatusReady,setPhotoDeliveryStatusReady]=useState(false);
   const [creatingEtsyDrafts,setCreatingEtsyDrafts]=useState(false);
-  const connectStatus = connected&&etsyConnected?"Both accounts connected":connected?"Printify connected":etsyConnected?"Etsy connected":"Not connected yet";
+  const checkingConnections=checkingConnection||checkingEtsyConnection;
+  const connectStatus = checkingConnections?"Checking saved connections":connected&&etsyConnected?"Both accounts connected":connected?"Printify connected":etsyConnected?"Etsy connected":"Not connected yet";
   /* D760 · On Connect the status belongs on the card it describes, not in the
      page head's far corner. Her words: "they're not connected yet should be on
      the card and not way off in the far right". */
@@ -5198,9 +5200,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             <div className="step-content">
               <p className="connect-status">{connectStatus}</p>
               {/* D284 · The page title already reads "Connect your accounts"; this card repeated it word for word directly beneath. */}
-              <p className="step-copy">{connected&&etsyConnected?"Both connections are verified.":"Connect the Printify account that creates your products and the Etsy shop that receives them."}</p>
-              {(!connected||!etsyConnected)&&<p className="connect-timing">◷ First-time connection usually takes about 2 minutes.</p>}
-              {checkingConnection ? (
+              <p className="step-copy">{checkingConnections?"Verifying the accounts you already connected…":connected&&etsyConnected?"Both connections are verified.":"Connect the Printify account that creates your products and the Etsy shop that receives them."}</p>
+              {!checkingConnections&&(!connected||!etsyConnected)&&<p className="connect-timing">◷ First-time connection usually takes about 2 minutes.</p>}
+              {checkingConnections ? (
                 <div className="connection-row"><span className="connection-icon">P</span><div><b>Secure connection check…</b><small>This takes just a moment</small></div></div>
               ) : !connected ? (
                 <div className="connection-stack connection-setup">
@@ -5570,7 +5572,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 </div>))}</dl>
               <section className="draft-destination-choice" aria-labelledby="draft-destination-title">
                 <h4 id="draft-destination-title">Choose where to keep these listings</h4>
-                <article><div><b>Keep in Printify</b><span>Already saved as unpublished Printify drafts.</span></div><a href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open Printify drafts ↗</a></article>
+                <article><div><b>Keep in Printify</b><span>{bundlePublishDrafts().some(draft=>draft.status==="Created")?"Already saved as unpublished Printify drafts.":"No usable Printify drafts remain in this saved batch."}</span></div>{bundlePublishDrafts().some(draft=>draft.status==="Created")&&<a href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open Printify drafts ↗</a>}</article>
                 <article><div><b>Send to Etsy Drafts</b><span>Copies the finished listings to Etsy without making them live.</span></div><span className="destination-action-note">Use Save to Etsy Drafts below.</span>{handoffBlockers()[0]?<small role="alert">Before you can continue: {handoffBlockers()[0]}</small>:!photoDeliveryStatusReady?<small role="status">Checking saved progress…</small>:null}</article>
               </section>
               <div className="printify-handoff" role="status">
