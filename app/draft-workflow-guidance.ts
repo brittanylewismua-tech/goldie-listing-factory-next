@@ -19,9 +19,10 @@ export function draftTaskSummary(rows: DraftTask[]) {
   return remaining ? `${remaining} ${remaining === 1 ? "section" : "sections"} to finish` : "Ready to continue";
 }
 
-/** Keep one work surface visible: the seller's explicit choice wins, otherwise
- * open only the first real requirement. Fully ready products stay compact. */
+/** Keep one work surface visible. A seller's explicit choice wins. Entering a
+ * product starts at its first setup section even when saved defaults already
+ * satisfy it, so review always begins in the same predictable place. */
 export function focusedDraftTask(rows: DraftTask[], activeTask = "") {
   if (activeTask && rows.some(row => row.task === activeTask)) return activeTask;
-  return rows.find(row => row.task && !row.done && !row.pending && !row.optional && !row.report)?.task || "";
+  return rows.find(row => row.task && !row.pending && !row.optional && !row.report)?.task || "";
 }

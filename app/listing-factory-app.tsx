@@ -3609,24 +3609,16 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
        state chip, and its work in the body. The row's own handlers, guards and
        reachability rules are unchanged and are handed to the panel. */
     const grouped=workflowStep==="designs";
-    const requiredRows=rows.filter(row=>row.task&&!row.report&&!row.optional);
-    const nextRequiredRow=requiredRows.find(row=>!row.done&&!row.pending);
-    const allRequiredReady=requiredRows.length>0&&requiredRows.every(row=>row.done);
     /* D1229 · A ready product used to show three stage buttons plus three more
        collapsed section cards and called every one "Ready to review". That made
        six optional inspections look mandatory. Keep the three-stage map, but
        render one work surface only when the seller chooses it or when a real
        requirement is missing. */
     const effectiveTask=open?(activeTask==="__closed"?"":focusedDraftTask(rows,activeTask)):"";
-    const showingNextRequired=Boolean(nextRequiredRow?.task&&effectiveTask===nextRequiredRow.task);
     const stageId=visibleDraftStage(rows,effectiveTask,draftStageByProduct[recipe.id]);
     const stages=DRAFT_TASK_STAGES.filter(stage=>rows.some(row=>draftTaskStage(row.task)===stage.id));
     const stageRows=rows.filter(row=>draftTaskStage(row.task)===stageId);
     return <div className={`batch-product-rows ${grouped?"has-draft-stages":""}`}>
-      {grouped&&<section className={`draft-product-guidance ${allRequiredReady?"is-ready":nextRequiredRow?"needs-action":"is-checking"}`} role="status">
-        <span aria-hidden="true">{allRequiredReady?"✓":nextRequiredRow?"→":"…"}</span>
-        <div><b>{allRequiredReady?"Ready to continue":nextRequiredRow?`${showingNextRequired?"Next":"Still needed"}: ${nextRequiredRow.label}`:"Checking saved setup…"}</b></div>
-      </section>}
       {grouped&&<div className="draft-stage-rail"><nav className="draft-stage-nav" aria-label="Product setup stages">{stages.map((stage,stageIndex)=>{
         const tasks=rows.filter(row=>draftTaskStage(row.task)===stage.id),remaining=tasks.filter(row=>!row.done).length;
         return <button type="button" key={stage.id} aria-current={stage.id===stageId?"step":undefined} disabled={Boolean(switchingProduct)||(!open&&!reachable)} onClick={()=>{
@@ -4338,8 +4330,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     // The server owns the durable job. Poll quickly for normal completion,
     // then back off without turning a slow provider response into a new POST.
     for (let attempt=0;attempt<180;attempt++) {
-      const delay=attempt<10?1000:5000;
-      await new Promise((resolve) => window.setTimeout(resolve, delay));
+      const delay=attempt===0?0:attempt<14?750:5000;
+      if(delay)await new Promise((resolve) => window.setTimeout(resolve, delay));
       let response:Response;
       try{response=await fetchWithDeadline(`/api/printify/drafts?batchId=${encodeURIComponent(batchId)}&clientId=${encodeURIComponent(clientId)}`, {}, 15000);}catch{continue;}
       if(response.status>=500)continue;
@@ -4816,6 +4808,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     const ids={...bundleBatchIds,[sourceRecipe.id]:sourceId};
     for(const recipe of recipes)ids[recipe.id] ||= crypto.randomUUID();
     const requests:Record<string,unknown>[]=[];
+    const cacheWrites:Promise<unknown>[]=[];
     const members:Array<{id:string;recipe:Recipe;designs:DesignFile[];state:Record<string,unknown>;results:DraftResult[]}>=[];
     const base=batchStateSnapshot();
     try{
@@ -4838,8 +4831,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         for(const design of designs)queuedDesignSessions.current.set(design.id,details.batchId);
         const snapshotDesigns=designs.map(({file,previewUrl,artworkPreviewUrl,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file,previewUrl,...artwork})=>artwork)}));
         const state={...base,template:recipe.templateUrl,templateDetails:details,activeRecipe:recipe,bundleIndex:index,bundleBatchIds:ids,designs:snapshotDesigns,drafts:[],complete:false,pricing:memberPricing,variantPrices:prices,selectedColorIds:colors,selectedSizeIds:sizes,etsyShippingProfileId:shippingProfileId,description:isActive?description:normalizeProductDescription(details.description),pricingApproved:false,autoTitleBankId:recipe.keywordListId||"",manualKeywordBankId:"",printifyImageIndices:recipe.printifyImageIndices||[],printifyImageSelections:{},preparedMockupCounts:{},sizeGuideName:"",batchReceipt:null,queuedDesignSessions:Object.fromEntries(designs.map(design=>[design.id,details.batchId]))};
-        await saveBatchFiles(ids[recipe.id],designs.map(design=>design.file));
-        await saveBatchArtworkAssets(ids[recipe.id],Object.fromEntries(designs.flatMap(design=>(design.artworkVersions||[]).filter(artwork=>artwork.file?.size).map(artwork=>[`${design.id}:${artwork.id}`,artwork.file]))));
+        /* These browser-resume copies do not feed Printify; the already staged
+           R2 objects do. Start the local writes now and overlap them with cloud
+           admission and provider work instead of delaying every draft. Keep
+           files and secondary artwork sequential so one IndexedDB write cannot
+           overwrite the other after both read the same prior entry. */
+        cacheWrites.push(saveBatchFiles(ids[recipe.id],designs.map(design=>design.file)).then(()=>saveBatchArtworkAssets(ids[recipe.id],Object.fromEntries(designs.flatMap(design=>(design.artworkVersions||[]).filter(artwork=>artwork.file?.size).map(artwork=>[`${design.id}:${artwork.id}`,artwork.file]))))));
         members.push({id:ids[recipe.id],recipe,designs,state:{...state,bundleQualityDecisions:memberPlan.decisions},results:[]});
       }
       if(requests.length>100)throw Error("This submission exceeds 100 listings. Use a smaller bundle.");
@@ -4848,8 +4845,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:member.id,parentBatchId:activeBundle?runIdRef.current:undefined,status:finished?allCreated?"complete":"needs_attention":"processing",step:"designs",setupName:batchDisplayName||activeBundle?.name||member.recipe.name,productTitle:(member.state.templateDetails as TemplateDetails).blueprintTitle,designCount:member.designs.length,state:{...member.state,drafts:member.results.map(snapshotDraft),complete:allCreated}})});
         if(!response.ok)throw Error("The batch could not be saved before background processing.");
       };
-      await persistRunNow();
-      await runBounded(members,4,member=>saveMember(member));
+      await Promise.all([persistRunNow(),runBounded(members,4,member=>saveMember(member))]);
       setBundleBatchIds(ids);setRunTotal(requests.length);
       const response=await fetchWithDeadline("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})},120000);
       const result=await response.json() as {accepted?:number;error?:string};
@@ -4861,7 +4857,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       setBundleQualityDecisions(activeMember.state.bundleQualityDecisions as Record<string,"include"|"exclude">);
       setPreparationMessage("Creating drafts in the background. You can close this tab.");
       let finishedCount=0;
-      await runBounded(members.flatMap(member=>member.designs.map(design=>({member,design}))),MAX_CONCURRENT_DESIGNS,async({member,design})=>{
+      const providerCompletion=runBounded(members.flatMap(member=>member.designs.map(design=>({member,design}))),MAX_CONCURRENT_DESIGNS,async({member,design})=>{
         let draft:DraftResult;
         try{const recovered=await recoverDraft(queuedDesignSessions.current.get(design.id)!,design.id);if(!recovered)throw Error("A queued draft could not be found. Resume this batch to check again.");draft=recovered;}
         catch(error){draft={clientId:design.id,name:design.name,status:"NeedsRetry",error:error instanceof Error?error.message:"Resume this batch to check its background job."};}
@@ -4870,6 +4866,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         if(member.recipe.id===sourceRecipe.id)setDrafts([...member.results]);
         return draft;
       });
+      await Promise.all([providerCompletion,Promise.all(cacheWrites)]);
       await runBounded(members,4,member=>saveMember(member,true));
       // Background completion changes sibling batches without changing the
       // selected product. Refresh once, not on every ordinary autosave.

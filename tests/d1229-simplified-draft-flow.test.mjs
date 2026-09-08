@@ -18,12 +18,12 @@ test('D1229: only the focused or first unfinished section renders as a work surf
  assert.match(app,/className="draft-section-nav"/);
  assert.match(app,/Continue to \{rows\[rowIndex\+1\]\.label\.toLowerCase\(\)\}/);
  assert.doesNotMatch(app,/setActiveTask\(requestedTask\|\|"placement"\)/);
- assert.match(css,/\.draft-product-guidance\.is-ready/);
+ assert.doesNotMatch(app,/className=\{`draft-product-guidance/);
+ assert.doesNotMatch(app,/\$\{showingNextRequired\?"Next":"Still needed"\}/);
  assert.match(css,/\.draft-section-nav button\[aria-current=step\]/);
 });
 
 test('D1229: existing safety gates still own progression',()=>{
  assert.match(app,/disabled=\{imagesStepIssues\(\)\.length>0\}/);
- assert.match(app,/const nextRequiredRow=requiredRows\.find\(row=>!row\.done&&!row\.pending\)/);
  assert.match(app,/row\.optional/);
 });

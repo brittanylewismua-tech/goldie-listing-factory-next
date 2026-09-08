@@ -4035,11 +4035,6 @@ html, body { background: var(--lf-paper); }
 .app-shell .draft-stage-nav button:disabled{opacity:.55;cursor:wait}
 .app-shell .draft-stage-position{margin:7px 4px 0;font-size:12px;font-weight:700;line-height:1.4;color:#514650}
 .app-shell .batch-product-rows.has-draft-stages>.factory-panel.is-open{border-color:var(--lf-pink)!important}
-.app-shell .draft-product-guidance{grid-column:1;display:grid;grid-template-columns:38px minmax(0,1fr);align-items:start;gap:12px;margin:0 0 16px;padding:15px 16px;border:1px solid #cfc7cc;border-radius:10px;background:#f7f7f8;color:#171717}
-.app-shell .draft-product-guidance>span{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#171717;color:#fff;font-size:16px;font-weight:850}
-.app-shell .draft-product-guidance>div{display:grid;gap:4px;min-width:0}.app-shell .draft-product-guidance b{font-size:16px;line-height:1.35}.app-shell .draft-product-guidance p{margin:0;font-size:13px;line-height:1.5;color:#5e525a}
-.app-shell .draft-product-guidance.is-ready{border-color:#7e9b86;background:#f5f8f6}.app-shell .draft-product-guidance.is-ready>span{background:#2f6842}
-.app-shell .draft-product-guidance.needs-action{border:2px solid #171717;background:#fff;box-shadow:3px 3px 0 var(--lf-pink)}
 .app-shell .draft-section-nav{display:flex;flex-wrap:wrap;gap:6px;margin:8px 2px 1px}
 .app-shell .draft-section-nav button{display:inline-flex!important;grid-template-columns:none!important;align-items:center!important;gap:6px!important;min-height:36px!important;padding:7px 9px!important;border:1px solid #bdb4ba!important;border-radius:8px!important;background:#fff!important;color:#171717!important;font-size:11px!important;font-weight:750!important;box-shadow:none!important}
 .app-shell .draft-section-nav button>span{display:grid!important;grid-row:auto!important;place-items:center!important;width:18px!important;height:18px!important;border:1px solid currentColor!important;border-radius:50%!important;font-size:9px!important;color:inherit!important}
@@ -4051,9 +4046,23 @@ html, body { background: var(--lf-paper); }
  .app-shell .batch-product-rows.has-draft-stages>.factory-panel{grid-column:1}
  .app-shell .draft-stage-nav{grid-template-columns:minmax(0,1fr);gap:8px}
  .app-shell .draft-stage-nav button{min-height:68px;padding:12px}
- .app-shell .draft-product-guidance{grid-row:1}
- .app-shell .batch-product-rows.has-draft-stages>.factory-panel{grid-row:2}
+ .app-shell .batch-product-rows.has-draft-stages>.factory-panel{grid-row:1}
 }
+
+/* D1233 · Pricing is one work surface. The FactoryPanel already provides the
+   card boundary; nested section and cost-group cards made one decision look
+   like three separate forms. Keep the hierarchy with spacing and rules. */
+.app-shell .post-draft-pricing-panel .editable-draft-pricing{gap:12px}
+.app-shell .post-draft-pricing-panel .item-pricing-section{margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.app-shell .post-draft-pricing-panel .item-pricing-section:focus-within{border-color:transparent!important;background:transparent!important;box-shadow:none!important}
+.app-shell .post-draft-pricing-panel .pricing-section-heading{margin:0 0 4px;padding:0 0 16px;border-bottom:1px solid #ded6dc}
+.app-shell .post-draft-pricing-panel .price-group-list{gap:0}
+.app-shell .post-draft-pricing-panel .price-group{overflow:visible;border:0;border-radius:0;background:transparent}
+.app-shell .post-draft-pricing-panel .price-group+.price-group{margin-top:4px;border-top:1px solid #ded6dc}
+.app-shell .post-draft-pricing-panel .price-group-row{padding:18px 0}
+.app-shell .post-draft-pricing-panel .price-group-details{border-top:1px solid #eee8ec}
+.app-shell .post-draft-pricing-panel .price-group-details>summary{padding:12px 0}
+.app-shell .post-draft-pricing-panel .individual-variant-list{padding:0 0 16px}
 @media(max-width:1279px){
  .app-shell .step-product-card .factory-panel-head{scroll-margin-top:200px}
 }

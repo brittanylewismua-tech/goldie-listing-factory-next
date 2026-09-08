@@ -24,12 +24,12 @@ test('compact product summary distinguishes reading, unfinished, and ready work'
  assert.equal(draftTaskSummary([task('photos',true),task('extra',false,{optional:true})]),'Ready to continue');
  assert.equal(draftTaskSummary([]),'Open product');
 });
-test('one focused work surface follows the seller or the next actual requirement',()=>{
+test('one focused work surface starts at the first setup section and follows the seller',()=>{
  const rows=[task('artwork',true),task('colors',true),task('prices'),task('photos')];
- assert.equal(focusedDraftTask(rows),'prices');
+ assert.equal(focusedDraftTask(rows),'artwork');
  assert.equal(focusedDraftTask(rows,'artwork'),'artwork');
- assert.equal(focusedDraftTask(rows,'missing'),'prices');
- assert.equal(focusedDraftTask(rows.map(row=>({...row,done:true}))),'');
+ assert.equal(focusedDraftTask(rows,'missing'),'artwork');
+ assert.equal(focusedDraftTask(rows.map(row=>({...row,done:true}))),'artwork');
  assert.equal(focusedDraftTask([task('checking',false,{pending:true}),task('extra',false,{optional:true})]),'');
 });
 test('guidance preserves continuation gate and focuses only after saved product restoration',()=>{
