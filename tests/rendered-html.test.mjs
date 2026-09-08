@@ -5191,7 +5191,8 @@ test("a stage ahead of her is never ticked — D620 supersedes D557", async () =
   assert.match(app, /:Number\(batchReceipt\?\.publishedCount\|\|0\)>0;/);
   assert.match(app, /const reached=stagePosition<0\|\|position<=stagePosition;/,
     "a stage ahead of the current one cannot be done");
-  assert.match(app, /const done=reached&&\(/);
+  assert.match(app, /const stageStillExists=stage\.label!=="Drafts"\|\|!complete\|\|createdDraftCount>0;/);
+  assert.match(app, /const done=stageStillExists&&reached&&\(/);
   assert.match(app, /<span>\{!active&&done\?"✓":String\(position\+1\)\}<\/span>/,
     "and the stage she is standing on shows its number, never a tick");
 
