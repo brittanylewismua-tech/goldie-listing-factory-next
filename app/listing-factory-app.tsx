@@ -1930,6 +1930,14 @@ export default function ListingFactoryApp() {
        any legacy index pointing at them resolves there. Deep links and saved batch
        state still use the 0-8 numbering. */
     const index=rawIndex===3||rawIndex===4||rawIndex===7?2:rawIndex;if(localPreview){if(index===0)return goToStep("connect",false,true);if(index===1)return goToStep("setup",false,true);if(index===2)return goToStep("designs",false,true);if(index>=3&&!templateDetails)await loadPreviewDemo();if(index===3){setPreflightOpen(false);return goToStep("review",false,true)}if(index===4){goToStep("review",false,true);setPreflightOpen(true);return}setPreflightOpen(false);setFinishPhase(index===8?"final":"details");return goToStep("finish",false,true)}
+    /* D1239 · Review is one top-level stage with several focused editors inside
+       it. When a listing card sent the seller to titles, prices, or photos,
+       clicking the active Review step was treated like advancing to the final
+       action and ran every completion gate. That trapped the seller in the
+       editor behind a "Finish all sections first" modal. The checklist itself
+       is where unfinished work is meant to be visible, so the active Review
+       control always returns there. Only the final transfer action is gated. */
+    if(index===8&&workflowStep==="finish")return openFinishedReview(false);
     const targetStage=RAIL_STAGES.findIndex(stage=>stage.covers.includes(index));
     const movingBackward=targetStage>=0&&targetStage<stagePosition;
     if(!movingBackward){const issues=requiredForProgress(index);if(issues.length)return stopWith("Finish all sections first.",issues)}
