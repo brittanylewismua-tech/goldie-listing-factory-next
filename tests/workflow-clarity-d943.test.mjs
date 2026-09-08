@@ -4,11 +4,10 @@ import fs from "node:fs";
 
 const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
-test("D943: the four-step rail names the job each stage performs",()=>{
+test("D1238: the three-step rail names the job each stage performs",()=>{
   assert.match(app,/\{label:"Product",index:1,title:"Choose product"/);
-  assert.match(app,/\{label:"Drafts",index:2,title:"Create and finish drafts"/);
-  assert.match(app,/\{label:"Listing",index:5,title:"Titles \+ Etsy details"/);
-  assert.match(app,/\{label:"Finish",index:8,title:"Review \+ finish"/);
+  assert.match(app,/\{label:"Designs",index:2,title:"Add designs and create drafts"/);
+  assert.match(app,/\{label:"Review",index:8,title:"Review and finish listings"/);
 });
 
 test("D943: moving from Product cannot claim it creates drafts",()=>{
@@ -19,7 +18,7 @@ test("D943: moving from Product cannot claim it creates drafts",()=>{
 });
 
 test("D949: Step 2 names the immediate task without another review layer",()=>{
-  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*Your saved choices are applied/);
+  assert.match(app,/designs: complete[\s\S]*title: "Review your listings"[\s\S]*Everything your saved product already answers has been applied/);
   assert.match(app,/title: "Add your designs", copy: ""/);
 });
 

@@ -210,3 +210,33 @@ html,body{background:#e9e7e4}
 .mockupFactory{background:#e9e7e4}.mockupHero{background:#e1dddf!important}.plan-banner{background:#56394f}.usage-track i{background:#8e6683}
 .preview-mode-note{margin:10px 10px 4px;padding:8px 10px;border:1px solid #eee8ec;border-radius:6px;background:rgba(255,255,255,.06);color:#e1c9dc;font-size:10px;text-align:center}
 .preview-mode-note a{display:block;margin-top:6px;color:#fff;font-weight:700;text-decoration:none}.preview-mode-note a:hover{text-decoration:underline}
+
+/* D1238 · A configured product is a recipe. The default destination after
+   creation is one compact review surface; product-wide settings stay available
+   behind one deliberate disclosure instead of six required-looking stages. */
+.recipe-review-settings{overflow:hidden;margin:0 0 18px;border:1px solid var(--g-pink)!important;border-radius:16px;background:rgba(18,15,20,.96)!important;color:#fff;box-shadow:none!important}
+.recipe-review-settings>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px;padding:14px 18px;cursor:pointer;list-style:none}
+.recipe-review-settings>summary::-webkit-details-marker{display:none}
+.recipe-review-settings>summary span{display:grid;gap:3px}
+.recipe-review-settings>summary b{font-size:15px}
+.recipe-review-settings>summary small{color:#cfc7cc;font-size:12px}
+.recipe-review-settings>summary em{color:var(--g-pink);font-size:12px;font-style:normal;font-weight:850}
+.recipe-review-settings .final-product-grid{padding:0 14px 14px}
+.recipe-review-settings .final-product-item{grid-template-columns:52px minmax(0,1fr) auto;background:#fff;color:var(--ink)}
+.recipe-review-settings .final-product-item>button{min-height:40px;border:1px solid #d9cfd5;border-radius:10px;background:#fff;color:var(--ink);padding:9px 12px;font-weight:850;cursor:pointer}
+.final-design-group>summary{grid-template-columns:54px minmax(0,1fr) auto auto!important}
+.final-design-group>summary .final-group-issue{grid-column:2/-1;color:#a9344c;font-size:11px;font-weight:800;white-space:normal}
+.final-listing-card .needs-attention{color:#a9344c!important}
+.recipe-listing-review{display:grid;gap:16px}
+.recipe-product-groups{display:grid;gap:18px}
+.recipe-product-group{overflow:hidden;border:1px solid #d8ced5;border-radius:14px;background:#fff;box-shadow:5px 5px 0 #151217}
+.recipe-product-group>header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 18px;border-bottom:2px solid var(--g-pink);background:rgba(18,15,20,.96);color:#fff}
+.recipe-product-group>header div{display:grid;gap:2px}.recipe-product-group>header small{color:#cfc7cc;font-size:10px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}.recipe-product-group>header h4{margin:0;color:var(--g-pink)!important;font-size:18px}.recipe-product-group>header .ready{color:#cfe8dc!important}.recipe-product-group>header .needs-attention{color:#ff9bd8!important}
+.recipe-listing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px}
+.recipe-listing-card{display:grid;grid-template-columns:88px minmax(0,1fr);gap:12px;min-width:0;padding:12px;border:1px solid #e1d9de;border-radius:12px;background:#fffafc}.recipe-listing-card.needs-work{border-color:#d8a6bf;background:#fff7fb}
+.recipe-listing-image{grid-row:1/3;display:grid;place-items:center;overflow:hidden;width:88px;height:104px;border:1px solid #e2d9df;border-radius:8px;background:#f4f0f2;color:#776b73;font-size:12px}.recipe-listing-image img{width:100%;height:100%;object-fit:cover}
+.recipe-listing-copy{display:grid;align-content:start;gap:5px;min-width:0}.recipe-listing-copy>small{color:#766b73;font-size:12px;font-weight:800;text-transform:uppercase}.recipe-listing-copy h5{display:-webkit-box;overflow:hidden;margin:0;color:#261e24;font-size:14px;line-height:1.3;-webkit-box-orient:vertical;-webkit-line-clamp:2}.recipe-listing-copy p{margin:0;color:#655b63;font-size:12px;line-height:1.45}.recipe-listing-copy strong{font-size:12px}.recipe-listing-copy strong.needs-attention{color:#a9344c}.recipe-listing-copy strong.ready{color:#2f7157}
+.recipe-listing-actions{grid-column:2;display:flex;align-items:center;flex-wrap:wrap;gap:8px}.recipe-listing-actions button,.recipe-listing-actions a{min-height:36px;padding:8px 10px;border:1px solid #cfc4cb;border-radius:8px;background:#fff;color:#2d252b;font-size:12px;font-weight:800;text-decoration:none;cursor:pointer}.recipe-listing-actions button:hover,.recipe-listing-actions a:hover{border-color:#7e6878;background:#f3edf1}
+@media(max-width:700px){.recipe-review-settings>summary{align-items:flex-start}.recipe-review-settings .final-product-item{grid-template-columns:46px minmax(0,1fr)}.recipe-review-settings .final-product-item>button{grid-column:1/-1}.final-design-group>summary{grid-template-columns:46px minmax(0,1fr) auto!important}.final-design-group>summary .final-group-issue{grid-column:2/-1}}
+@media(max-width:900px){.recipe-listing-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.recipe-product-group>header{align-items:flex-start}.recipe-listing-grid{padding:10px}.recipe-listing-card{grid-template-columns:72px minmax(0,1fr)}.recipe-listing-image{width:72px;height:88px}.recipe-listing-actions{grid-column:1/-1}.recipe-listing-actions button,.recipe-listing-actions a{flex:1;text-align:center}}

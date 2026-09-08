@@ -667,13 +667,13 @@ test("D222: a product cannot join a bundle until it has been set up", async () =
   const source = body.slice(0, body.indexOf("\n}") + 2).replace("export function recipeIsSetUp(recipe: Recipe)", "function recipeIsSetUp(recipe)");
   const recipeIsSetUp = new Function(`${source}; return recipeIsSetUp;`)();
 
-  assert.equal(recipeIsSetUp({ defaultColorIds: [1], defaultSizeIds: [2] }), true);
+  assert.equal(recipeIsSetUp({ defaultColorIds: [1], defaultSizeIds: [2], defaultProfitTarget: 10, etsyShippingProfileId: 1, printifyImageIndices: [0], description: "Saved description", keywordListId: "bank" }), true);
   assert.equal(recipeIsSetUp({ defaultColorIds: [1] }), false, "colours alone is not set up");
   assert.equal(recipeIsSetUp({ defaultSizeIds: [2] }), false, "sizes alone is not set up");
   assert.equal(recipeIsSetUp({}), false);
   assert.equal(recipeIsSetUp({ defaultColorIds: [], defaultSizeIds: [] }), false);
-  assert.equal(recipeIsSetUp({ requiresColorSelection: false, defaultSizeIds: [2] }), true, "a mug without a colour axis only needs its real size axis");
-  assert.equal(recipeIsSetUp({ requiresColorSelection: false, requiresSizeSelection: false }), true, "a product with neither choice axis is already configured by its Printify template");
+  assert.equal(recipeIsSetUp({ defaultColorIds: [1], defaultSizeIds: [2], defaultProfitTarget: 10, etsyShippingProfileId: 1, printifyImageIndices: [0], description: "Saved description", keywordListId: "bank", requiresColorSelection: false }), true, "a mug without a colour axis still needs the rest of its saved recipe");
+  assert.equal(recipeIsSetUp({ requiresColorSelection: false, requiresSizeSelection: false }), false, "a product without choice axes still needs its pricing, shipping, photos, description, and keyword recipe");
 });
 
 test("D222: the Images page continues to Listing, not past it to Publish", async () => {

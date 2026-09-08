@@ -34,7 +34,7 @@ test("D910: footer controls remain visible and aligned",()=>{
 });
 
 test("D910: bundle language and one-column listing states tell the truth",()=>{
-  assert.match(app,/Your saved choices are applied\. Fix anything flagged, then continue\./);
+  assert.match(app,/Everything your saved product already answers has been applied\./);
   assert.match(css,/factory-listing-grid:has\(>\.factory-form-card:only-child\)/);
 });
 

@@ -5,7 +5,7 @@ import { completedGeneratedTags } from "../app/listing-title-tags.ts";
 
 const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 const handoff = await readFile(new URL("../app/photo-delivery-handoff.tsx", import.meta.url), "utf8");
-const css = await readFile(new URL("../app/interface-v2.css", import.meta.url), "utf8");
+const css = (await Promise.all(["interface-v2.css","lilac-theme.css"].map(name=>readFile(new URL(`../app/${name}`, import.meta.url), "utf8")))).join("\n");
 const usage = await readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8");
 
 test("D1219 fills partial generated tag sets from valid keyword fallbacks", () => {
@@ -26,10 +26,10 @@ test("D1219 makes Review batch delays and blockers explicit", () => {
 });
 
 test("D1219 uses a compact scalable product overview on Step 4", () => {
-  assert.match(app, /className="final-product-overview"/);
+  assert.match(app, /className="final-product-overview recipe-review-settings"/);
   assert.match(app, /className="final-product-grid"/);
   assert.match(app, /bundleProductsStillReading\(\)\.length\?<section[^]*?:stepProductCards\(bundleCardStatus\("publish"\)[^]*?false,finalProductOverview\(\)\)\)\}/);
-  assert.match(css, /grid-template-columns:repeat\(auto-fit,minmax\(220px,1fr\)\)/);
+  assert.match(css, /recipe-review-settings/);
 });
 
 test("D1219 separates Batch History from Printify and Etsy destinations", () => {

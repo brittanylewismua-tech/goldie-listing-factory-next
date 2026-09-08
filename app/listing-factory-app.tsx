@@ -168,7 +168,7 @@ export function requestedFinishPhase(requested:string|null):FinishPhase|null{
 function restoredWorkflowStep(saved:WorkflowStep,requested:string|null,complete:boolean):WorkflowStep{
   const order:WorkflowStep[]=["connect","setup","designs","review","finish"];
   const target=canonicalStep(requested);
-  if(!target)return saved;
+  if(!target)return complete?"finish":saved;
   return complete||order.indexOf(target)<=order.indexOf(saved)?target:saved;
 }
 
@@ -197,7 +197,7 @@ export function drawableFinishPhase(phase:FinishPhase,complete:boolean):FinishPh
 function restoredFinishPhase(saved:FinishPhase,requested:string|null,complete:boolean):FinishPhase{
   const order:FinishPhase[]=["details","etsy","mockups","final"];
   const safeSaved=drawableFinishPhase(saved,complete);
-  if(!requested||!order.includes(requested as FinishPhase))return safeSaved;
+  if(!requested||!order.includes(requested as FinishPhase))return complete?"final":safeSaved;
   const target=drawableFinishPhase(requested as FinishPhase,complete);
   return complete||order.indexOf(target)<=order.indexOf(safeSaved)?target:safeSaved;
 }
@@ -352,9 +352,8 @@ const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Revie
    every gate, status and deep link still resolves. */
 const RAIL_STAGES: Array<{label:string;title:string;index:number;covers:number[]}> = [
   {label:"Product",index:1,title:"Choose product",covers:[1]},
-  {label:"Drafts",index:2,title:"Create and finish drafts",covers:[2,3,4,7]},
-  {label:"Listing",index:5,title:"Titles + Etsy details",covers:[5,6]},
-  {label:"Finish",index:8,title:"Review + finish",covers:[8]},
+  {label:"Designs",index:2,title:"Add designs and create drafts",covers:[2,3,4]},
+  {label:"Review",index:8,title:"Review and finish listings",covers:[5,6,7,8]},
 ];
 /* D222 · RAIL_TOP, RAIL_PRICING, RAIL_DRAFTS, RAIL_FINISH, RAIL_FINISH_FIRST and
    FINISH_RAIL_LABELS described the old five-bubble rail with its nested Finish
@@ -1132,7 +1131,7 @@ export default function ListingFactoryApp() {
   const [activeDesign, setActiveDesign] = useState<string>("");
   const [photoFocusId,setPhotoFocusId]=useState("");
   const [draftPriceGroupKey,setDraftPriceGroupKey]=useState("");
-  const [reviewEdit,setReviewEdit]=useState<{phase:"details"|"mockups";id:string;clientId:string}|null>(null);
+  const [reviewEdit,setReviewEdit]=useState<{phase:"details"|"mockups"|"pricing";id:string;clientId:string}|null>(null);
   /* D787 · The batch-wide tools open on their own, above the listing grid. */
   const [batchToolsOpen, setBatchToolsOpen] = useState<boolean|null>(null);
   const [activeRecipe,setActiveRecipe]=useState<Recipe|null>(null);
@@ -1354,6 +1353,17 @@ export default function ListingFactoryApp() {
   const [autoTitleBank,setAutoTitleBank]=useState<KeywordList|null>(null);
   const [autoTitleBankId,setAutoTitleBankId]=useState("");
   const [manualKeywordBankId,setManualKeywordBankId]=useState("");
+  useEffect(()=>{
+    const id=activeRecipe?.keywordListId||"";
+    if(!id){setAutoTitleBank(null);return}
+    let alive=true;
+    void (fetch("/api/keyword-lists").then(response=>response.ok?response.json():{lists:[]}) as Promise<{lists?:KeywordList[]}>).then(payload=>{
+      if(!alive)return;
+      const bank=(payload.lists||[]).find(item=>item.id===id)||null;
+      setAutoTitleBank(bank);setAutoTitleBankId(bank?.id||"");
+    }).catch(()=>{if(alive)setAutoTitleBank(null)});
+    return()=>{alive=false};
+  },[activeRecipe?.keywordListId]);
 
   const [blockingModal,setBlockingModal]=useState<{title:string;issues:string[];copy?:string}|null>(null);
   /* D519 - the guard below runs before either run state is declared, so the fact
@@ -1775,6 +1785,15 @@ export default function ListingFactoryApp() {
     await goToStep("finish",false,true);
     window.scrollTo(0,0);
   }
+  function openFinishedReview(replace=true){
+    setFinishPhase("final");
+    setWorkflowStep("finish");
+    const url=new URL(window.location.href);
+    url.searchParams.set("step","finish");
+    url.searchParams.set("phase","final");
+    window.history[replace?"replaceState":"pushState"]({},"",url);
+    scrollFactoryToTop();
+  }
   /* D220 · Which of the four stages the current legacy index belongs to. The
      "Finish · Images + mockups (3 of 4)" phrasing went with the subrail; there
      are only stages now. */
@@ -1862,7 +1881,8 @@ export default function ListingFactoryApp() {
     const etsy:EtsyDetails={category:previewCategory.path,taxonomyId:previewCategory.id,properties:[],attributes:{},optional:{},blurb:'',confidence:'high'};
     const previewFiles:DesignFile[]=[{name:file.name,size:file.size,id:'preview-design-1',file,previewUrl:URL.createObjectURL(file),title:'western wall art, cowgirl poster, pink western decor',tags:['western wall art','cowgirl poster','pink western decor'],width:6000,height:9000,paddingStatus:'full',etsy},{name:secondFile.name,size:secondFile.size,id:'preview-design-2',file:secondFile,previewUrl:URL.createObjectURL(secondFile),title:'retro cowgirl print, western poster, dorm wall art',tags:['retro cowgirl print','western poster','dorm wall art'],width:6000,height:9000,paddingStatus:'full',etsy}];
     const profile:EtsyShippingProfile={id:9001,title:'Poster shipping · $4 US',originCountry:'United States',currency:'USD',domesticPrimary:4,domesticAdditional:2.5,international:[{key:'CA',label:'Canada',primary:13.92,additional:8.5},{key:'EU',label:'European Union',primary:17.42,additional:10.25}]};
-    setTemplate('https://printify.com/app/products/preview');setTemplateDetails(details);setDescription(details.description);setFiles(previewFiles);setDrafts(previewFiles.map((design,index)=>({id:`preview-draft-${index+1}`,clientId:design.id,name:design.name,title:design.title,tags:design.tags,previewUrl:'/mockups/pink-dorm-01-leaning-frame.png',printifyImages:['/mockups/pink-dorm-01-leaning-frame.png','/mockups/pink-dorm-02-hanging-poster.png','/mockups/pink-dorm-03-maximalist-bed.png'],editorUrl:'https://printify.com/app/products',status:'Created'})));setEtsyCategories([previewCategory]);setEtsyShippingProfiles([profile]);setEtsyShippingProfileId(profile.id);setVariantPrices({'101':1600,'104':1600,'102':2400,'105':2400,'103':3800});setPricingApproved(false);setComplete(true);setFinishPhase('details');setWorkflowStep('designs');const url=new URL(window.location.href);url.searchParams.set('step','review');window.history.replaceState({},'',url);window.scrollTo({top:0,behavior:'smooth'});
+    const previewRecipe:Recipe={id:'preview-recipe',name:'Matte Vertical Poster',templateUrl:'https://printify.com/app/products/preview',description:details.description,defaultTitle:'',setupComplete:true,defaultProfitTarget:10,wholeNumberPricing:true,keywordListId:'preview-keywords',printifyImageIndices:[0,1,2],etsyShippingProfileId:profile.id,requiresColorSelection:false,requiresSizeSelection:false};
+    setActiveRecipe(previewRecipe);setTemplate(previewRecipe.templateUrl);setTemplateDetails(details);setDescription(details.description);setFiles(previewFiles);setDrafts(previewFiles.map((design,index)=>({id:`preview-draft-${index+1}`,clientId:design.id,name:design.name,title:design.title,tags:design.tags,productName:previewRecipe.name,previewUrl:'/mockups/pink-dorm-01-leaning-frame.png',printifyImages:['/mockups/pink-dorm-01-leaning-frame.png','/mockups/pink-dorm-02-hanging-poster.png','/mockups/pink-dorm-03-maximalist-bed.png'],editorUrl:'https://printify.com/app/products',status:'Created',costReview:{required:false,verified:true,approved:true,variants:details.variants.map(variant=>({id:variant.id,title:variant.title,cost:variant.cost,price:variant.templatePrice,isEnabled:true}))}})));setPrintifyImageIndices(previewRecipe.printifyImageIndices||[]);setEtsyCategories([previewCategory]);setEtsyShippingProfiles([profile]);setEtsyShippingProfileId(profile.id);setVariantPrices({'101':1600,'104':1600,'102':2400,'105':2400,'103':3800});setPricingApproved(true);setComplete(true);setFinishPhase('details');setWorkflowStep('designs');const url=new URL(window.location.href);url.searchParams.set('step','review');window.history.replaceState({},'',url);window.scrollTo({top:0,behavior:'smooth'});
   }
 
   async function confirmUploadInterruption(){return !running||await confirmAction({title:"Leave this step while uploads are running?",body:"Design uploads still in progress may stop before their Printify drafts are finished.",confirmLabel:"Leave anyway",cancelLabel:"Stay here",destructive:true})}
@@ -2263,7 +2283,7 @@ export default function ListingFactoryApp() {
       }catch(error){if(batchIdRef.current===id)setBatchSaveStatus("failed");throw error;}
     });
   }
-  useEffect(()=>{if(!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||batchSaveConflict||batchAuthenticationRequired||(!files.length&&!drafts.length))return;/* D1019 · Capture the child id with the render that produced this snapshot.
+  useEffect(()=>{if(localPreview||!snapshotReady.current||restoringBatch||batchHeldByAnotherTab||batchSaveConflict||batchAuthenticationRequired||(!files.length&&!drafts.length))return;/* D1019 · Capture the child id with the render that produced this snapshot.
      A bundle transition changes batchIdRef before React cleans up the outgoing
      autosave. Reading the ref inside the timer let that old product overwrite
      the new child's record with its own drafts. */batchEditRevision.current+=1;setBatchSaveStatus("saving");const targetId=batchIdRef.current;const timer=window.setTimeout(()=>{void persistBatchNow(targetId).catch(()=>undefined);},700);return()=>window.clearTimeout(timer);
@@ -3048,7 +3068,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       setFinishPhase("details");setActiveTask("photos");goToStep("designs",true,true);
     }
   },[restoringBatch,complete,workflowStep,finishPhase]);
-  function editReviewedListing(phase:"details"|"mockups",target:{id?:string;clientId:string}){
+  function editReviewedListing(phase:"details"|"mockups"|"pricing",target:{id?:string;clientId:string}){
     if(!target.id)return;
     setReviewEdit({phase,id:target.id,clientId:target.clientId});
     const index=bundleRecipes.findIndex(recipe=>bundleMembers[recipe.id]?.drafts.some(draft=>draft.id===target.id));
@@ -3059,10 +3079,11 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     const target=reviewEdit;setReviewEdit(null);setActiveDesign(target.clientId);
     setFinishPhase("details");
     if(target.phase==="mockups"){setPhotoFocusId(target.clientId);setActiveTask("photos");goToStep("designs",false,true)}
+    else if(target.phase==="pricing"){setActiveTask("prices");goToStep("designs",false,true)}
     else goToStep("finish",false,true);
     // Wait for the normal page-top reset, then focus this specific editor.
     window.setTimeout(()=>{
-      const selector=target.phase==="mockups"?`[data-listing-row="${CSS.escape(target.clientId)}"]`:".factory-listing-grid";
+      const selector=target.phase==="mockups"?`[data-listing-row="${CSS.escape(target.clientId)}"]`:target.phase==="pricing"?".pricing-controls":".factory-listing-grid";
       document.querySelector(selector)?.scrollIntoView({block:"start"});
     },300);
   },[reviewEdit,switchingProduct,restoringBatch,drafts]);
@@ -3510,17 +3531,17 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       ?drafts.filter(draft=>draft.status==="Created").length
       :(bundleMembers[recipe.id]?.drafts||[]).filter(draft=>draft.status==="Created").length;
     const totalListings=list.reduce((total,recipe,index)=>total+listingCount(recipe,index),0);
-    return <section className="final-product-overview" aria-labelledby="final-product-overview-title">
-      <div className="final-product-overview-heading"><div><p className="mini-label">BATCH PRODUCTS</p><h2 id="final-product-overview-title">{list.length} {list.length===1?"product":"products"} in this batch</h2></div><span>{totalListings} {totalListings===1?"listing":"listings"}</span></div>
+    return <details className="final-product-overview recipe-review-settings">
+      <summary><span><b>Batch settings</b><small>{list.length} {list.length===1?"product":"products"} · {totalListings} {totalListings===1?"listing":"listings"}</small></span><em>Review or change</em></summary>
       <div className="final-product-grid">{list.map((recipe,index)=>{
         const product=index===bundleIndex?templateDetails:bundleColorProducts[recipe.id];
         const photo=product?pickProductPhoto(product):"";
         const summary=listingCount(recipe,index);
         return <article key={recipe.id} className="final-product-item">
-          {photo?<img src={photo} alt="" decoding="async"/>:<ProductGlyph title={product?.blueprintTitle||recipe.name}/>}<div><small>Product {index+1}</small><b>{recipe.name}</b><span>{summary} {summary===1?"listing":"listings"} ready</span></div>
+          {photo?<img src={photo} alt="" decoding="async"/>:<ProductGlyph title={product?.blueprintTitle||recipe.name}/>}<div><small>{list.length>1?`Product ${index+1} of ${list.length}`:"Saved product"}</small><b>{recipe.name}</b><span>${Number(recipe.defaultProfitTarget||10).toFixed(0)} profit target · {summary} {summary===1?"listing":"listings"}</span></div><button type="button" onClick={()=>{openGuidedDraftTask("placement",index);goToStep("designs",false,true)}}>Review settings</button>
         </article>;
       })}</div>
-    </section>;
+    </details>;
   }
 
   function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"advice"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null,showCards=true,header:ReactNode=null){
@@ -4513,8 +4534,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
            listing-photo tools appear on THIS page the moment the drafts exist, so
            this stays put and scrolls to them. Leaving Images is the Next step
            button's job, and that button refuses until every listing has a photo. */
-        setFinishPhase("details");
-        window.setTimeout(()=>document.querySelector(".draft-card")?.scrollIntoView({block:"start"}),0);
+        openFinishedReview();
       }else{
         setComplete(false);
         stopWith(
@@ -4878,7 +4898,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       // Background completion changes sibling batches without changing the
       // selected product. Refresh once, not on every ordinary autosave.
       setBundleCompletionRevision(current=>current+1);
-      setComplete(Boolean(members.find(member=>member.recipe.id===sourceRecipe.id)?.results.some(draft=>draft.status==="Created"&&draft.id)));setUsageRevision(current=>current+1);setFinishPhase("details");
+      setComplete(Boolean(members.find(member=>member.recipe.id===sourceRecipe.id)?.results.some(draft=>draft.status==="Created"&&draft.id)));setUsageRevision(current=>current+1);openFinishedReview();
       setSavedRevision(current=>current+1);
       window.setTimeout(()=>document.querySelector(".draft-card")?.scrollIntoView({block:"start"}),0);
     }catch(error){stopWith("Check this batch’s saved progress.",[error instanceof Error?error.message:"Resume this batch to check its drafts."],"Existing drafts will not be created twice.");}
@@ -4959,13 +4979,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          and eyebrow both still read PRODUCT. The rail's own stage title is
          "Choose product", so that is the name three places already agree on. The
          title stays put; the copy carries the state. */
-      ? { eyebrow: "STEP 1 OF 4", title: "Add your designs", copy: "" }
-      : { eyebrow: "STEP 1 OF 4", title: "Choose a product or bundle", copy: "Select one to start your batch." },
+      ? { eyebrow: "STEP 1 OF 3", title: "Add your designs", copy: "" }
+      : { eyebrow: "STEP 1 OF 3", title: "Choose a product or bundle", copy: "Select one to start your batch." },
     designs: complete
-      ? { eyebrow: "STEP 2 OF 4", title: "Finish your Printify drafts", copy: "Your saved choices are applied. Fix anything flagged, then continue." }
-      : { eyebrow: "STEP 2 OF 4", title: "Add your designs", copy: "" },
-    review: { eyebrow: "STEP 3 OF 4", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
-    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Finish each listing’s title, tags, and description." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 4 · LISTING", title: "Listing details", copy: "Finish the Etsy details." } : { eyebrow: "STEP 4 OF 4 · FINISH", title: handoffBlockers().length?"Final review":"Finish your Etsy drafts", copy: "Send your listings directly to Etsy Drafts." },
+      ? { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: "Everything your saved product already answers has been applied." }
+      : { eyebrow: "STEP 2 OF 3", title: "Add your designs", copy: "" },
+    review: { eyebrow: "STEP 2 OF 3", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
+    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Make the one change this listing needs, then return to review." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Make the one change this listing needs, then return to review." } : { eyebrow: "STEP 3 OF 3", title: handoffBlockers().length?"Review your listings":"Finish your Etsy drafts", copy: "Only listings that need you are flagged." },
   }[workflowStep];
   const workflowHelp=workflowStep==="designs"
     ?complete

@@ -38,11 +38,10 @@ test("D954: optional artwork actions are centered and intentionally spaced",()=>
 
 test("D950: every workflow hero states only the immediate task",()=>{
   for(const copy of [
-    "Your saved choices are applied. Fix anything flagged, then continue.",
+    "Everything your saved product already answers has been applied.",
     "Review the plan, then create the private drafts.",
-    "Finish each listing’s title, tags, and description.",
-    "Finish the Etsy details.",
-    "Send your listings directly to Etsy Drafts.",
+    "Make the one change this listing needs, then return to review.",
+    "Only listings that need you are flagged.",
   ]) assert.ok(app.includes(copy),`missing concise workflow copy: ${copy}`);
   assert.doesNotMatch(app,/Confirm colors, sizes, placement, pricing, shipping, and listing photos/);
 });

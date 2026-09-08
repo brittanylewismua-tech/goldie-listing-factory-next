@@ -4,9 +4,9 @@ import { printSideLabel } from "./print-sides";
 import { listingCoverUrl } from "./listing-cover";
 import { runBounded } from "./bounded-work";
 
-type Draft = { clientId:string; id?:string; name:string; title?:string; status:string; previewUrl?:string; printifyImages?:string[]; editorUrl?:string; error?:string; productName?:string;artworkSummary?:Record<string,Array<{name:string;colors:string[]}>> };
+type Draft = { clientId:string; id?:string; name:string; title?:string; status:string; previewUrl?:string; printifyImages?:string[]; editorUrl?:string; error?:string; productName?:string;artworkSummary?:Record<string,Array<{name:string;colors:string[]}>>;costReview?:{required:boolean;approved:boolean;variants:Array<{price:number;isEnabled:boolean}>} };
 type Design = { id:string; name:string; title:string; tags:string[]; previewUrl:string; sizeGuideName?:string };
-type Props = { drafts:Draft[]; files:Design[]; selections:Record<string,number[]>; defaultIndices:number[]; preparedMockupCounts:Record<string,number>; batchSizeGuide:string; productName?:string; onRetry?:(clientId:string)=>void; onEdit:(phase:"details"|"mockups",draft:Draft)=>void; onSelectionChange?:(ids:string[])=>void; onSelectionTouched?:()=>void; handoffOnly?:boolean };
+type Props = { drafts:Draft[]; files:Design[]; selections:Record<string,number[]>; defaultIndices:number[]; preparedMockupCounts:Record<string,number>; batchSizeGuide:string; productName?:string; onRetry?:(clientId:string)=>void; onEdit:(phase:"details"|"mockups"|"pricing",draft:Draft)=>void; onSelectionChange?:(ids:string[])=>void; onSelectionTouched?:()=>void; handoffOnly?:boolean };
 
 /* D253 · The Publish page grouped listings under the raw upload filename, so a
    seller reviewing a batch read "ChatGPT Image Aug 21, 2026, 05_32_41 PM (2).png"
@@ -105,7 +105,48 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
        not make the listing "not ready". */
     const shortTitle=!design||design.title.trim().length<60;
     const missingTags=!design||design.tags.length<13;
-    return {shortTitle,missingTags,needed:missingTags};
+    const missingTitle=!design||!design.title.trim();
+    return {shortTitle,missingTitle,missingTags,needed:missingTitle||missingTags};
+  }
+  function exactIssue(draft:Draft){
+    const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name);
+    if(draft.status!=="Created"||!draft.id)return draft.error||"Printify draft needs attention.";
+    if(!design?.title.trim())return "No title yet.";
+    if(!design.tags.length)return "No Etsy tags yet.";
+    if(draft.costReview?.required&&!draft.costReview.approved)return "Finished cost needs price approval.";
+    const photoCount=(selections[draft.id]??defaultIndices).length+(preparedMockupCounts[draft.id]||0)+(design.sizeGuideName??batchSizeGuide?1:0);
+    if(!photoCount)return "No listing photo selected.";
+    return "";
+  }
+  function priceLabel(draft:Draft){
+    const prices=(draft.costReview?.variants||[]).filter(variant=>variant.isEnabled&&variant.price>0).map(variant=>variant.price);
+    if(!prices.length)return "Price saved with product";
+    const low=Math.min(...prices),high=Math.max(...prices),money=(cents:number)=>`$${(cents/100).toFixed(2)}`;
+    return low===high?money(low):`${money(low)}–${money(high)}`;
+  }
+  function correctionFor(draft:Draft):{label:string;phase:"details"|"mockups"|"pricing"}{
+    const issue=exactIssue(draft);
+    if(issue.includes("price"))return {label:"Review pricing",phase:"pricing"};
+    if(issue.includes("photo"))return {label:"Choose photos",phase:"mockups"};
+    if(issue.includes("title")||issue.includes("tags"))return {label:"Finish title and tags",phase:"details"};
+    return {label:"Edit listing details",phase:"details"};
+  }
+  if(handoffOnly){
+    const productGroups=[...drafts.reduce((map,draft)=>{const key=draft.productName||productName||"Saved product";map.set(key,[...(map.get(key)||[]),draft]);return map},new Map<string,Draft[]>()).entries()];
+    const needsYou=drafts.filter(draft=>Boolean(exactIssue(draft))).length;
+    return <section className="final-listing-review handoff-only recipe-listing-review">
+      <div className="final-listing-review-heading"><div><p className="mini-label">EVERY LISTING IN THIS BATCH</p><h3>Review your listings</h3></div><span>{needsYou?`${needsYou} ${needsYou===1?"needs":"need"} you`:`${drafts.length} ready`}</span></div>
+      <div className="recipe-product-groups">{productGroups.map(([name,items],productIndex)=>{
+        const productIssues=items.filter(draft=>Boolean(exactIssue(draft))).length;
+        return <section className="recipe-product-group" key={name}>
+          <header><div><small>{productGroups.length>1?`Product ${productIndex+1} of ${productGroups.length}`:"Saved product"}</small><h4>{name}</h4></div><span className={productIssues?"needs-attention":"ready"}>{productIssues?`${productIssues} ${productIssues===1?"needs":"need"} you`:"✓ Ready"}</span></header>
+          <div className="recipe-listing-grid">{items.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,photoCount=selectedCount+mockupCount+(design?.sizeGuideName??batchSizeGuide?1:0),issue=exactIssue(draft),correction=correctionFor(draft),preview=covers[draft.id||""]||draft.previewUrl||design?.previewUrl;return <article className={`recipe-listing-card ${issue?"needs-work":"is-ready"}`} key={`${name}:${draft.clientId}`}>
+            <div className="recipe-listing-image">{preview?<img src={preview} alt="Product preview" decoding="async"/>:<span>No preview</span>}</div>
+            <div className="recipe-listing-copy"><small>Listing {items.indexOf(draft)+1} of {items.length}</small><h5>{design?.title||draft.title||"Untitled listing"}</h5><p>{priceLabel(draft)} · {design?.tags?.length||0}/13 tags · {photoCount} {photoCount===1?"photo":"photos"}</p><strong className={issue?"needs-attention":"ready"}>{issue?`Needs you · ${issue}`:"✓ Ready"}</strong></div>
+            <div className="recipe-listing-actions">{draft.status!=="Created"?<button type="button" onClick={()=>onRetry?.(draft.clientId)||window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry listing</button>:issue?<button type="button" onClick={()=>onEdit(correction.phase,draft)}>{correction.label}</button>:<button type="button" onClick={()=>onEdit("details",draft)}>Edit listing</button>}{draft.editorUrl&&<a href={draft.editorUrl} target="_blank" rel="noopener noreferrer">View in Printify ↗</a>}</div>
+          </article>})}</div>
+        </section>})}</div>
+    </section>;
   }
   return <section className={`final-listing-review${handoffOnly?" handoff-only":""}`}>
     <div className="final-listing-review-heading"><div>{/* D548 - "EVERY LISTING IN THIS BATCH" over a list holding one product's
@@ -113,7 +154,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
         listings of the product that is open; it says so. */}
       <p className="mini-label">{productName?`LISTINGS ON ${productName.toUpperCase()}`:"EVERY LISTING IN THIS BATCH"}</p><h3>{handoffOnly?"Review the drafts created for this batch":"Choose exactly which listings to publish"}</h3></div><span>{handoffOnly?`${selectable.length} ${selectable.length===1?"Printify draft":"Printify drafts"}`:`${selectedIds.length} of ${selectable.length} selected`}</span></div>
     {!handoffOnly&&<label className="final-select-all"><input type="checkbox" checked={allSelected} onChange={()=>changeSelection(allSelected?[]:selectable.filter(draft=>!reviewNeeded(draft)).map(draft=>draft.id!))}/><span>Select every listing that is ready</span></label>}
-    <div className="final-design-groups">{groups.map(([designName,group],designIndex)=>{const attention=group.filter(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name);return draft.status!=="Created"||!draft.id||(selections[draft.id]??defaultIndices).length+(preparedMockupCounts[draft.id]||0)===0||contentReview(design).needed}).length;/* D562 - her words: "the checkbox panel on that last final step should be
+    <div className="final-design-groups">{groups.map(([designName,group],designIndex)=>{const attention=group.filter(draft=>Boolean(exactIssue(draft))).length;/* D562 - her words: "the checkbox panel on that last final step should be
       something that's collapsed. And when you open it, it shows the actual design
       large at the top... and then underneath that is every product with that
       design on it and the checkboxes... as it stands now, if they're doing a huge
@@ -131,6 +172,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
     const groupSelectable=group.filter(draft=>draft.id&&!reviewNeeded(draft));
     const groupIds=groupSelectable.map(draft=>draft.id!);
     const groupAllSelected=groupIds.length>0&&groupIds.every(id=>selected.has(id));
+    const groupIssue=group.map(exactIssue).find(Boolean)||"";
     return <details className="final-design-group" key={designName}><summary>{productPreview?<img className="final-group-thumb" src={productPreview} alt="" decoding="async"/>:null}{/* D558 - D253 already set this rule: "a seller reviewing a batch read
         'ChatGPT Image Aug 21, 2026, 05_32_41 PM (2).png' as the heading over their
         own listing. Prefer the design's own title; otherwise tidy the filename."
@@ -153,7 +195,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
           const named=design?.title?.trim()||draft.title?.trim();
           if(named)return named;
         }
-        return "Untitled listing"})()}</span><b>{group.length} {group.length===1?"listing":"listings"}</b><em className={attention?(handoffOnly?"advice":"needs-attention"):"ready"}>{attention?(handoffOnly?`${attention} optional ${attention===1?"improvement":"improvements"}`:`${attention} ${attention===1?"needs":"need"} a look`):"✓ Ready"}</em>{/* D795 · The preview's review row carries its own thumbnail and its own
+        return "Untitled listing"})()}</span><b>{group.length} {group.length===1?"listing":"listings"}</b><em className={attention?(handoffOnly?"advice":"needs-attention"):"ready"}>{attention?(handoffOnly?"Needs you":`${attention} ${attention===1?"needs":"need"} a look`):"✓ Ready"}</em>{/* D795 · The preview's review row carries its own thumbnail and its own
         checkbox. Production had neither: the artwork only appeared once the row
         was open, and the only visible control was "Select every listing that is
         ready" - under a heading that says "Choose exactly which listings to
@@ -163,11 +205,11 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
         same set the row is a group of. It stops the click from reaching the
         summary, so ticking a row does not also open it. Nothing about what
         counts as selectable, or what reviewNeeded refuses to select, changes. */}
-      {!handoffOnly&&groupSelectable.length>0&&<label className="final-group-select" onClick={event=>{event.preventDefault();event.stopPropagation();changeSelection(groupAllSelected?selectedIds.filter(id=>!groupIds.includes(id)):[...new Set([...selectedIds,...groupSelectable.map(draft=>draft.id!)])])}}>
+      {handoffOnly&&groupIssue&&<small className="final-group-issue">{groupIssue}</small>}{!handoffOnly&&groupSelectable.length>0&&<label className="final-group-select" onClick={event=>{event.preventDefault();event.stopPropagation();changeSelection(groupAllSelected?selectedIds.filter(id=>!groupIds.includes(id)):[...new Set([...selectedIds,...groupSelectable.map(draft=>draft.id!)])])}}>
         <input type="checkbox" readOnly checked={groupAllSelected} aria-label={`Publish ${group.length===1?"this listing":"these listings"}`}/>
-      </label>}</summary>{productPreview&&group.length===1?<div className="final-product-preview"><img src={productPreview} alt="Product with this design" decoding="async"/></div>:null}<div className="final-listing-grid">{group.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,hasPhoto=selectedCount+mockupCount>0,publishable=draft.status==="Created"&&hasPhoto,review=contentReview(design),reviewMessage=review.shortTitle&&review.missingTags?"Title and tags need review":review.shortTitle?"Title needs review":"Tags need review";return <article className={`final-listing-card ${handoffOnly&&group.length===1?"single-preview":""} ${publishable?(review.needed?"review-needed":""):"failed"}`} key={`${draft.productName||"product"}:${draft.clientId}`}>
+      </label>}</summary>{productPreview&&group.length===1?<div className="final-product-preview"><img src={productPreview} alt="Product with this design" decoding="async"/></div>:null}<div className="final-listing-grid">{group.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,hasPhoto=selectedCount+mockupCount>0,publishable=draft.status==="Created"&&hasPhoto,review=contentReview(design);return <article className={`final-listing-card ${handoffOnly&&group.length===1?"single-preview":""} ${publishable?(review.needed?"review-needed":""):"failed"}`} key={`${draft.productName||"product"}:${draft.clientId}`}>
       {!handoffOnly&&(draft.id&&draft.status==="Created"?<label className="final-listing-select" aria-label="Select listing for publishing"><input type="checkbox" checked={selected.has(draft.id)} onChange={()=>toggle(draft.id!)}/></label>:<span className="final-listing-select-placeholder"/>)}{!(handoffOnly&&group.length===1)&&((covers[draft.id||""]||draft.previewUrl)?<img src={covers[draft.id||""]||draft.previewUrl} alt="Product preview" decoding="async"/>:design?<img src={design.previewUrl} alt="Design preview" decoding="async"/>:<span className="final-listing-no-image">No preview</span>)}
-      <div>{mixedProducts&&<small className="final-product-name">{draft.productName||"Saved product"}</small>}<b>{design?.title||draft.title||"Untitled listing"}</b><small>{(design?.title||draft.title||"").length}/140 characters · {design?.tags?.length||0}/13 tags · {selectedCount+mockupCount+(design?.sizeGuideName??batchSizeGuide?1:0)} {selectedCount+mockupCount+(design?.sizeGuideName??batchSizeGuide?1:0)===1?"photo":"photos"}{design?.sizeGuideName??batchSizeGuide?" · size guide ready":""}</small>{draft.artworkSummary&&<div className="final-artwork-summary" aria-label="Artwork and print locations">{Object.entries(draft.artworkSummary).flatMap(([side,items])=>items.map((item,index)=><span key={`${side}:${index}`}><b>{printSideLabel(side)} artwork</b><small>{item.colors.length?item.colors.join(", "):"All remaining colors"}</small></span>))}</div>}<span className={!publishable?"needs-attention":review.needed?"content-review":"ready"}>{!publishable?(draft.status!=="Created"?`! ${draft.error||"Draft needs attention"}`:"! Add at least one listing photo"):review.needed?`! ${reviewMessage} · review before publishing in Etsy`:handoffOnly?"✓ Draft saved · photo set ready":"✓ Ready for final publish"}</span></div>
+      <div>{mixedProducts&&<small className="final-product-name">{draft.productName||"Saved product"}</small>}<b>{design?.title||draft.title||"Untitled listing"}</b><small>{priceLabel(draft)} · {(design?.title||draft.title||"").length}/140 characters · {design?.tags?.length||0}/13 tags · {selectedCount+mockupCount+(design?.sizeGuideName??batchSizeGuide?1:0)} {selectedCount+mockupCount+(design?.sizeGuideName??batchSizeGuide?1:0)===1?"photo":"photos"}{design?.sizeGuideName??batchSizeGuide?" · size guide ready":""}</small>{draft.artworkSummary&&<div className="final-artwork-summary" aria-label="Artwork and print locations">{Object.entries(draft.artworkSummary).flatMap(([side,items])=>items.map((item,index)=><span key={`${side}:${index}`}><b>{printSideLabel(side)} artwork</b><small>{item.colors.length?item.colors.join(", "):"All remaining colors"}</small></span>))}</div>}{(()=>{const issue=exactIssue(draft);return <span className={issue?(review.needed?"content-review":"needs-attention"):"ready"}>{issue?`! Needs you · ${issue}`:handoffOnly?"✓ Ready":"✓ Ready for final publish"}</span>})()}</div>
       <div className="final-listing-links">{draft.status!=="Created"?<button onClick={()=>onRetry?.(draft.clientId)||window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button>:<><button onClick={()=>onEdit("details",draft)}>Edit listing details</button><button onClick={()=>onEdit("mockups",draft)}>{handoffOnly?"Photos & download":"Edit images"}</button></>}{draft.editorUrl&&<a href={draft.editorUrl} target="_blank" rel="noopener noreferrer">View in Printify ↗</a>}</div>
     </article>})}</div></details>})}</div>
   </section>

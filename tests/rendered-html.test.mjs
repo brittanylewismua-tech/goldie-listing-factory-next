@@ -1110,7 +1110,7 @@ test("restores batch colors and blocks publishing until every selected listing h
   assert.match(page,/selectedPublishDrafts\(\)/);
   assert.match(page,/Add a photo to every selected listing before publishing/);
   assert.match(review,/Choose exactly which listings to publish/);
-  assert.match(review,/Add at least one listing photo/);
+  assert.match(review,/No listing photo selected/);
 });
 
 test("draft progress cannot exceed the selected batch", async () => {
@@ -1379,9 +1379,8 @@ test("labels every progress bubble with a short workflow name", async () => {
   /* D222 · RAIL_STAGES carries the labels now, one per page, so the parallel
      nine-entry short-label array is gone. */
   assert.match(page, /\{label:"Product",index:1,title:"Choose product"/);
-  assert.match(page, /\{label:"Drafts",index:2,title:"Create and finish drafts"/);
-  assert.match(page, /\{label:"Listing",index:5,title:"Titles \+ Etsy details"/);
-  assert.match(page, /\{label:"Finish",index:8,title:"Review \+ finish"/);
+  assert.match(page, /\{label:"Designs",index:2,title:"Add designs and create drafts"/);
+  assert.match(page, /\{label:"Review",index:8,title:"Review and finish listings"/);
   assert.match(page, /<em className="progress-bubble-label">\{stage\.label\}<\/em>/);
   assert.match(page, /className="progress-bubble-label"/);
   assert.match(styles, /\.app-shell \.progress-bubble-label\{/);
@@ -1904,7 +1903,7 @@ test("makes Batch History visual, identifiable, reversible, and truthful",async(
   assert.match(styles,/\.batch-history-thumbnail/);assert.match(styles,/\.batch-history-controls/);
 });
 
-test("D220: the rail is four stages, and every legacy phase has a home",async()=>{
+test("D1238: the rail is three stages, and every legacy phase has a home",async()=>{
   const page=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
   /* This test used to pin the Finish subrail: four phases nested under a fifth
@@ -1913,11 +1912,10 @@ test("D220: the rail is four stages, and every legacy phase has a home",async()=
      What matters is that no legacy index was orphaned by the merge. */
   const stages=page.slice(page.indexOf("const RAIL_STAGES"),page.indexOf("const RAIL_TOP"));
   assert.match(stages,/\{label:"Product",index:1,.*covers:\[1\]\}/);
-  assert.match(stages,/\{label:"Drafts",index:2,.*covers:\[2,3,4,7\]\}/,
-    "designs, draft creation and mockups share the Images page");
-  assert.match(stages,/\{label:"Listing",index:5,.*covers:\[5,6\]\}/,
-    "titles and Etsy details share the Listing page");
-  assert.match(stages,/\{label:"Finish",index:8,.*covers:\[8\]\}/);
+  assert.match(stages,/\{label:"Designs",index:2,.*covers:\[2,3,4\]\}/,
+    "design upload and draft creation share one screen");
+  assert.match(stages,/\{label:"Review",index:8,.*covers:\[5,6,7,8\]\}/,
+    "every listing correction and final handoff share Review");
 
   const covered=[...stages.matchAll(/covers:\[([0-9,]+)\]/g)].flatMap(m=>m[1].split(",").map(Number));
   for(const index of [1,2,3,4,5,6,7,8]){
@@ -2065,10 +2063,10 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
      publishing. Tags stay, because 13 is Etsy's cap and using fewer is a real,
      actionable difference. */
   assert.doesNotMatch(review,/design\.title\.trim\(\)\.length<100/);
-  assert.match(review,/needed:missingTags/);
+  assert.match(review,/needed:missingTitle\|\|missingTags/);
   assert.match(review,/design\.tags\.length<13/);
-  assert.match(review,/review before publishing in Etsy/);
-  assert.match(review,/review\.needed\?"content-review":"ready"/);
+  assert.match(review,/! Needs you/);
+  assert.match(review,/review\.needed\?"content-review":"needs-attention"/);
   /* D255 · This used to be "One or more titles need review" — vaguer than the
      rows immediately below it, which name every listing individually. The
      checklist now counts them, so the summary is at least as specific as the
@@ -2181,7 +2179,7 @@ test("D994: upload starts with the choices and primary workflow cards have a cri
 
 test("D903: the Images page describes only work performed on that page",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*title: "Add your designs"/);
+  assert.match(app,/designs: complete[\s\S]*title: "Review your listings"[\s\S]*title: "Add your designs"/);
   assert.doesNotMatch(app,/choose and arrange the listing photos/);
 });
 
@@ -2950,8 +2948,8 @@ test("creating drafts stays on Images, and the final check says what is wrong �
   const afterCreate = app.slice(app.indexOf("const createdNow="), app.indexOf("const createdNow=") + 900);
   assert.doesNotMatch(afterCreate, /goToStep\("finish"/,
     "creating drafts must not leave the Images page");
-  assert.match(afterCreate, /document\.querySelector\("\.draft-card"\)\?\.scrollIntoView/,
-    "it scrolls to the listings whose photos are now available");
+  assert.match(afterCreate, /openFinishedReview\(\)/,
+    "it opens the finished-listing review once drafts are ready");
 
   /* D438 · A short title is a warning, not a failure. It used to build the title,
      throw it away and return a paragraph explaining why the field was empty. */
@@ -4081,7 +4079,7 @@ test("two tabs cannot silently overwrite the same batch — D496", async () => {
   assert.match(app, /const \[batchHeldByAnotherTab,setBatchHeldByAnotherTab\]=useState\(false\)/);
 
   // The held tab stops writing rather than racing.
-  assert.match(app, /if\(!snapshotReady\.current\|\|restoringBatch\|\|batchHeldByAnotherTab\|\|/,
+  assert.match(app, /if\(localPreview\|\|!snapshotReady\.current\|\|restoringBatch\|\|batchHeldByAnotherTab\|\|/,
     "autosave is held in the tab that does not hold the batch");
 
   // A tab only answers a ping while it still holds the batch, so the claim moves.

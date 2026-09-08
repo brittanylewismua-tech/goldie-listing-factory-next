@@ -339,7 +339,7 @@ test("a link written with the names on screen opens the right step — D428", as
   assert.match(source, /function canonicalStep\(requested:string\|null\):WorkflowStep\|null\{/);
   // Both entry points - first load and browser back/forward - use the same map.
   assert.match(source, /const canonical=canonicalStep\(value\);if\(canonical\)setWorkflowStep\(normalizeStep\(canonical\)\)/);
-  assert.match(source, /const target=canonicalStep\(requested\);\n  if\(!target\)return saved;/);
+  assert.match(source, /const target=canonicalStep\(requested\);\n  if\(!target\)return complete\?"finish":saved;/);
   // Emitted links are unchanged, so saved and shared URLs keep working.
   assert.match(source, /url\.searchParams\.set\("step",step\)/);
 });
