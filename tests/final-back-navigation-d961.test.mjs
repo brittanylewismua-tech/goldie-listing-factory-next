@@ -8,7 +8,7 @@ test("D961: Back from Final review returns to the rendered Listing screen", () =
   const start = app.indexOf("async function goBackOneStep()");
   const end = app.indexOf("function canOpenStep", start);
   const back = app.slice(start, end);
-  assert.match(back, /setFinishPhase\("details"\);\s*goToStep\("finish",false,true\)/);
+  assert.match(back, /await enterListingDetails\(\)/);
   assert.doesNotMatch(back, /setFinishPhase\([^\n]*"mockups"/);
   assert.doesNotMatch(back, /setFinishPhase\([^\n]*"etsy"/);
 });

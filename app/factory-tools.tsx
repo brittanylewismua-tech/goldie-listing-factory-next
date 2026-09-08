@@ -367,7 +367,12 @@ function loadKeywordLists(){if(keywordListsCache)return Promise.resolve(keywordL
 export function KeywordBank({ onAdd=()=>undefined,onSelect,title="Choose a keyword bank",copy="Only phrases from this validated bank will be used.",compact=false,selectionOnly=false,initialId="" }: { onAdd?: (keyword: string) => void;onSelect?:(list:KeywordList|null)=>void;title?:string;copy?:string;compact?:boolean;selectionOnly?:boolean;initialId?:string }) {
   const [lists, setLists] = useState<KeywordList[]>([]), [active, setActive] = useState("");
   useEffect(() => { void loadKeywordLists().then(setLists); }, []);
-  useEffect(()=>{if(!initialId||!lists.some(list=>list.id===initialId)||active)return;setActive(initialId);onSelect?.(lists.find(list=>list.id===initialId)||null)},[lists,initialId,active,onSelect]);
+  useEffect(()=>{
+    const current=lists.find(list=>list.id===active);
+    if(active&&!current){setActive("");onSelect?.(null);return}
+    const initial=lists.find(list=>list.id===initialId);
+    if(initial&&!active){setActive(initial.id);onSelect?.(initial)}
+  },[lists,initialId,active,onSelect]);
   const chosen = lists.find((list) => list.id === active);
   return <section className={`keyword-bank keyword-workspace ${compact?"compact-keywords":""}`}><div className="keyword-workspace-heading"><div><b>{title}</b><span>{copy}</span></div>{!compact&&<a href="/keywords" target="_blank" rel="noopener noreferrer">Upload or manage keyword banks ↗</a>}</div><div className="keyword-list-picker"><select aria-label={title} value={active} onChange={(e) => {const id=e.target.value;setActive(id);onSelect?.(lists.find(list=>list.id===id)||null)}}><option value="">Choose a keyword bank</option>{lists.map((list) => <option value={list.id} key={list.id}>{list.name}</option>)}</select></div>{chosen ? selectionOnly?(()=>{
       /* D554 - D551 fixed this claim on the Keyword Banks page and missed it here,

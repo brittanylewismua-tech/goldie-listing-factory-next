@@ -3147,7 +3147,7 @@ test("staged listing photos keep their names — D449", async () => {
   assert.match(route, /name:object\.customMetadata\?\.name\|\|object\.key\.split\("\/"\)\.pop\(\)/);
 });
 
-test("a keyword bank rejects what cannot be a keyword — D450", async () => {
+test("a keyword bank keeps title phrases while separating Etsy tag limits — D450", async () => {
   const { phrasesFromErank } = await import("../app/seo-utils.ts");
 
   /* Both found by pasting one realistic, messy list into the real form. */
@@ -3162,8 +3162,8 @@ test("a keyword bank rejects what cannot be a keyword — D450", async () => {
   ].join("\n");
 
   assert.deepEqual(phrasesFromErank(pasted),
-    ["sailboat shirt", "Nautical Shirt", "coastal christian tee", "SAILBOAT SHIRT"],
-    "the exact repeat and the over-long line go; the case variant is hers to keep");
+    ["sailboat shirt", "Nautical Shirt", "coastal christian tee", "SAILBOAT SHIRT", "a phrase that is far too long to be a sensible etsy tag because it just keeps going well past any reasonable limit"],
+    "the exact repeat goes; a title-length phrase and the case variant are hers to keep");
 
   /* D453 · Duplicates are exact matches only. A plural is not a duplicate of its
      singular and a deliberate misspelling is not a duplicate of the correct
@@ -3174,10 +3174,10 @@ test("a keyword bank rejects what cannot be a keyword — D450", async () => {
   assert.deepEqual(phrasesFromErank("Sailboat Shirt\nsailboat shirt"), ["Sailboat Shirt", "sailboat shirt"],
     "case is hers to keep; the Etsy collision is handled where tags are sent");
 
-  // A phrase longer than a title can hold is not a keyword; a real one is kept.
+  // A phrase may be longer than an Etsy tag. Only text that cannot fit in a title is omitted.
   assert.deepEqual(phrasesFromErank("bikinis and martinis bachelorette"), ["bikinis and martinis bachelorette"]);
-  assert.deepEqual(phrasesFromErank("x".repeat(61)), []);
-  assert.deepEqual(phrasesFromErank("x".repeat(60)), ["x".repeat(60)]);
+  assert.deepEqual(phrasesFromErank("x".repeat(141)), []);
+  assert.deepEqual(phrasesFromErank("x".repeat(140)), ["x".repeat(140)]);
 
   // Still strips trailing separators and blank lines, as before.
   assert.deepEqual(phrasesFromErank("one,\n\n  two  \n"), ["one", "two"]);
@@ -6998,7 +6998,7 @@ test("a bundle member with no keyword bank says so on step 1 — D660", async ()
   assert.match(app, /Use this keyword bank for every product in this bundle \(\$\{bundleRecipes\.length\}\)/);
   assert.match(app, /async function applyBankToBundle\(\)\{/);
   // Only offered when it would actually change something.
-  assert.match(app, /bundleRecipes\.some\(recipe=>recipe\.id!==activeRecipe\?\.id&&recipe\.keywordListId!==autoTitleBankId\)/);
+  assert.match(app, /autoTitleBank&&bundleRecipes\.some\(recipe=>recipe\.id!==activeRecipe\?\.id&&recipe\.keywordListId!==autoTitleBank\.id\)/);
   // And it is a button, not an effect.
   assert.doesNotMatch(app, /useEffect\([^)]{0,200}applyBankToBundle/);
 });

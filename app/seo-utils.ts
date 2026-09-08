@@ -33,11 +33,10 @@ export function phrasesFromErank(raw: string) {
    * Two tags differing only by case would be refused by Etsy, so that collision
    * is resolved where tags are chosen for a listing, not by editing her bank.
    *
-   * And a phrase longer than a title can hold is not a keyword. An Etsy title is
-   * 140 characters; her longest real phrase is 33. A 113-character line pasted by
-   * accident used to be stored and could be selected, taking most of the title on
-   * its own. */
-  const MAX_PHRASE = 60;
+   * A keyword phrase is research input, not automatically an Etsy tag. Keep any
+   * phrase that can fit in an Etsy title; the separate tag builder already keeps
+   * phrases over 20 characters out of Etsy's tag fields. */
+  const MAX_PHRASE = 140;
   const seen = new Set<string>();
   const phrases: string[] = [];
   for (const value of values) {
