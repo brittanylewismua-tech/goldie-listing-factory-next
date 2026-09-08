@@ -2302,10 +2302,11 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
      draft in its snapshot and all 17 claimed drafts were ready. The label now
      counts them, and says so plainly when there are none. */
   assert.match(api,/draft_count:\(state\.drafts\|\|\[\]\)\.length/);
-  /* D386 · Batch History says what the seller asked for: a batch is a DRAFT
-     until it is published, then it says how many went live to Etsy. */
-  assert.match(page,/batch\.published_count>0\?`\$\{batch\.published_count\} PUBLISHED TO ETSY`:`DRAFT`/);
-  /* D386 · "SAVED · NOT YET DRAFTED" is now just "DRAFT" - see above. */
+  /* D1237 · Batch History distinguishes saved work, active creation, completed
+     Printify drafts and Etsy publication from the server's current status. */
+  assert.match(page,/batch\.published_count>0\?`\$\{batch\.published_count\} PUBLISHED TO ETSY`:batch\.status==="processing"/);
+  assert.match(page,/DRAFTS CREATED/);
+  assert.match(page,/DRAFTS?"\} READY/);
   assert.doesNotMatch(page,/SAVED · NOT YET DRAFTED/);
   assert.doesNotMatch(page,/status\.replace\("_"," "\)/);
   assert.match(app,/keptAsDrafts,batchReceipt,batchDisplayName,\.\.\.overrides\}/);
@@ -2538,7 +2539,7 @@ test("Batch History can select and delete several at once — D364", async () =>
 
   assert.match(page, /className="batch-select"/, "every card carries a checkbox");
   assert.match(page, /className="batch-select-all"/);
-  assert.match(page, /node\.indeterminate=visibleSelected\.length>0&&visibleSelected\.length<visibleBatches\.length/,
+  assert.match(page, /node\.indeterminate=visibleSelected\.length>0&&visibleSelected\.length<visibleIds\.length/,
     "select-all shows a partial state for the visible filtered results rather than lying");
 
   /* One confirmation for the whole set, carrying the same warning the single

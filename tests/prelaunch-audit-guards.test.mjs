@@ -6,7 +6,7 @@ const panel=readFileSync(new URL('../app/factory-panel.tsx',import.meta.url),'ut
 test('pending edits are reported before debounce and old saves cannot acknowledge newer edits',()=>{
   assert.match(app,/batchEditRevision\.current\+=1;setBatchSaveStatus\("saving"\);const targetId=batchIdRef\.current;const timer=/);
   assert.match(app,/batchIdRef\.current===id&&batchEditRevision\.current===editRevision/);
-  assert.match(app,/if \(!running && batchSaveStatus!=="saving" && batchSaveStatus!=="failed"\) return/);
+  assert.match(app,/if \(!\(running&&!draftsAdmitted\) && batchSaveStatus!=="saving" && batchSaveStatus!=="failed"\) return/);
 });
 test('panel keyboard activation excludes nested controls and empty labels have action fallback',()=>{
   assert.match(panel,/toggleLabel\?\.trim\(\) \|\| \(open \? "Close" : "Open"\)/);

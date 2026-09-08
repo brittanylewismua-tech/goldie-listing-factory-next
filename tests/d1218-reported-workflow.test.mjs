@@ -8,10 +8,12 @@ const css=await readFile(new URL('../app/interface-v2.css',import.meta.url),'utf
 
 test('D1218 draft creation only says the tab may close after background admission',()=>{
   assert.match(app,/Preparing every listing for background creation\. Keep this page open\./);
-  assert.match(app,/Creating drafts in the background\. You can close this tab\./);
-  assert.match(app,/background:preparationMessage\.includes\("in the background"\)/);
+  assert.match(app,/result\.accepted!==requests\.length[\s\S]*setDraftsAdmitted\(true\)/);
+  assert.match(app,/Printify is creating the drafts\. You can leave this page and check Batch History anytime\./);
+  assert.match(app,/background:draftsAdmitted/);
   assert.match(wait,/background\?:boolean/);
   assert.match(wait,/submitted drafts continue in the background/);
+  assert.match(wait,/if\(!active\|\|active\.background\|\|helpOpen/);
 });
 
 test('new draft creation begins with artwork while ready product switches stay compact and Listing resets to product one',()=>{

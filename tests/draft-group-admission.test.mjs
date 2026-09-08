@@ -26,7 +26,7 @@ test('creation prevents upload or product mutations and price changes paint in s
 test('whole-submission completion refreshes sibling counts only after durable final saves',()=>{
   const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
   const queue=source.slice(source.indexOf('async function queueDraftSubmission()'),source.indexOf('function retryFailed()'));
-  assert.ok(queue.indexOf('setBundleCompletionRevision(current=>current+1)')>queue.indexOf('for(const member of members)await saveMember(member,true)'));
+  assert.ok(queue.indexOf('setBundleCompletionRevision(current=>current+1)')>queue.indexOf('await runBounded(members,4,member=>saveMember(member,true))'));
   assert.match(source,/\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,bundleCompletionRevision\]/);
   assert.doesNotMatch(source,/\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,[^\]]*savedRevision/);
 });
@@ -115,7 +115,7 @@ test('the fresh submission path stages and saves every member before one bulk ad
   assert.match(queue,/recipes=activeBundle&&bundleRecipes.length>1\?bundleRecipes/);
   assert.ok(queue.indexOf('await runBounded(members,4,member=>saveMember(member))')<queue.indexOf('JSON.stringify({requests})'));
   assert.match(queue,/await runBounded\(members,4,member=>saveMember\(member,true\)\)/);
-  assert.ok(queue.indexOf('result.accepted!==requests.length')<queue.indexOf('You can close this tab'));
+  assert.ok(queue.indexOf('result.accepted!==requests.length')<queue.indexOf('setDraftsAdmitted(true)'));
   assert.match(queue,/bundleMemberDesigns\(files,recipe.id,bundleQualityDecisions/);
   assert.ok(queue.indexOf('setFiles(activeMember.designs)')>queue.indexOf('result.accepted!==requests.length'));
   assert.match(queue,/bundleQualityDecisions:memberPlan.decisions/);

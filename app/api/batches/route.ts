@@ -124,10 +124,13 @@ function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknow
   const designs=Math.max(0,...children.map(child=>Number(child.design_count)||0));
   const listings=designs*Math.max(1,total);
   const publishedTotal=members.reduce((sum,member)=>sum+member.published,0);
+  const childrenComplete=children.length>0&&children.every(child=>String(child.status)==="complete");
+  const aggregateStatus=children.some(child=>String(child.status)==="needs_attention")?"needs_attention":childrenComplete?"complete":children.some(child=>String(child.status)==="processing")?"processing":String(item.status||"draft");
   /* Where the work stopped, not where it started. D697's near-miss was a Resume
      button over listings that were already live. */
   const resumeInto=members.find(member=>!member.done)?.batchId||members[members.length-1]?.batchId||String(parent.id);
   return {...item,
+    status:aggregateStatus,
     display_name:String(parentState.batchDisplayName?.trim()||children.map(read).map(state=>state.batchDisplayName?.trim()).find(Boolean)||parentState.run?.bundleName||item.display_name||"Bundle run"),
     product_title:`${total} products · ${listings} ${listings===1?"listing":"listings"} · ${designs} ${designs===1?"design":"designs"}`,
     design_count:designs,

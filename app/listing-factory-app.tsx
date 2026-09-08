@@ -1120,6 +1120,10 @@ export default function ListingFactoryApp() {
   const [localPreview,setLocalPreview]=useState(false);
   const [preparationMessage, setPreparationMessage] = useState("");
   const [runTotal, setRunTotal] = useState(0);
+  /* Once every draft job is accepted by the server, Printify owns the work.
+     Protect the batch only during upload/admission; after this boundary the
+     seller can safely leave while Batch History reads the same job results. */
+  const [draftsAdmitted,setDraftsAdmitted]=useState(false);
   const [pricing, setPricing] = useState<Pricing>(DEFAULT_PRICING);
   const [mockupTheme, setMockupTheme] = useState("");
   const [savingProductDefault,setSavingProductDefault]=useState("");
@@ -2152,7 +2156,7 @@ export default function ListingFactoryApp() {
   useEffect(()=>{if(signedIn!==true||publishing)return;const jobId=window.localStorage.getItem("goldie-active-publish-job");if(jobId)void monitorPublishJob(jobId,true);
   },[signedIn]);
 
-  useEffect(()=>{if(!resumeProcessing||resumeAttempted.current||!connected||!templateLoaded||!files.length)return;resumeAttempted.current=true;setResumeProcessing(false);const succeeded=new Set(drafts.filter(draft=>draft.status==="Created").map(draft=>draft.clientId));const remaining=files.filter(file=>!succeeded.has(file.id));if(remaining.length)void runDrafts(remaining,true)},[resumeProcessing,connected,templateLoaded,files,drafts]);
+  useEffect(()=>{if(!resumeProcessing||resumeAttempted.current||!connected||!templateLoaded||!files.length)return;resumeAttempted.current=true;setResumeProcessing(false);const succeeded=new Set(drafts.filter(draft=>draft.status==="Created").map(draft=>draft.clientId));const remaining=files.filter(file=>!succeeded.has(file.id));if(remaining.length)void runDrafts(remaining,true,true)},[resumeProcessing,connected,templateLoaded,files,drafts]);
 
   /* D379 - The debounced autosave and an in-place product switch have to write
      the same snapshot to the same place; the switch just cannot wait 700ms for
@@ -2296,11 +2300,11 @@ export default function ListingFactoryApp() {
   useEffect(()=>{if(!etsyShippingProfiles.length)return;setEtsyShippingProfileId(current=>current&&!etsyShippingProfiles.some(profile=>profile.id===current)?0:current)},[etsyShippingProfiles]);
 
   useEffect(() => {
-    if (!running && batchSaveStatus!=="saving" && batchSaveStatus!=="failed") return;
+    if (!(running&&!draftsAdmitted) && batchSaveStatus!=="saving" && batchSaveStatus!=="failed") return;
     const protectBatch = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", protectBatch);
     return () => window.removeEventListener("beforeunload", protectBatch);
-  }, [running,batchSaveStatus]);
+  }, [running,draftsAdmitted,batchSaveStatus]);
 
   /* D644 · The click guard is a document listener registered by an effect, so it
      closes over whatever state existed when that effect last ran - and
@@ -4461,10 +4465,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
      state, so a double click ran the whole draft creation twice - Printify quota
      spent twice and duplicate drafts that then publish as duplicate listings. */
   const draftRunInFlight=useRef(false);
-  async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false) {
+  async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false, alreadyAdmitted = false) {
     if(batchSaveConflict)return void stopWith("Reload the saved batch first.",[batchSaveConflict]);
     if(draftRunInFlight.current)return;
     draftRunInFlight.current=true;
+    setDraftsAdmitted(alreadyAdmitted);
     try{
     if (!ready || !targetFiles.length || draftRunActive.current) return;
     draftRunActive.current=true;
@@ -4801,7 +4806,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   async function queueDraftSubmission(){
     if(batchSaveConflict)return void stopWith("Reload the saved batch first.",[batchSaveConflict]);
     if(draftRunInFlight.current||!activeRecipe||!templateDetails)return;
-    draftRunInFlight.current=true;draftRunActive.current=true;runInProgress.current=true;
+    draftRunInFlight.current=true;draftRunActive.current=true;runInProgress.current=true;setDraftsAdmitted(false);
     setPreflightOpen(false);setRunning(true);setProcessed(0);setRunTotal(requestedListingCount);
     const sourceRecipe=activeRecipe,sourceId=batchIdRef.current||crypto.randomUUID();
     batchIdRef.current=sourceId;
@@ -4851,12 +4856,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const response=await fetchWithDeadline("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})},120000);
       const result=await response.json() as {accepted?:number;error?:string};
       if(!response.ok||result.accepted!==requests.length)throw Error(result.error||"The full submission has not been confirmed. Resume this batch to check its saved jobs.");
+      setDraftsAdmitted(true);
       // Match the visible member to the exact admitted snapshot. Otherwise a
       // later autosave restores excluded files with no corresponding job.
       const activeMember=members.find(member=>member.recipe.id===sourceRecipe.id)!;
       setFiles(activeMember.designs);
       setBundleQualityDecisions(activeMember.state.bundleQualityDecisions as Record<string,"include"|"exclude">);
-      setPreparationMessage("Creating drafts in the background. You can close this tab.");
+      setPreparationMessage("Printify is creating the drafts. You can leave this page and check Batch History anytime.");
       let finishedCount=0;
       const providerCompletion=runBounded(members.flatMap(member=>member.designs.map(design=>({member,design}))),MAX_CONCURRENT_DESIGNS,async({member,design})=>{
         let draft:DraftResult;
@@ -4876,7 +4882,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       setSavedRevision(current=>current+1);
       window.setTimeout(()=>document.querySelector(".draft-card")?.scrollIntoView({block:"start"}),0);
     }catch(error){stopWith("Check this batch’s saved progress.",[error instanceof Error?error.message:"Resume this batch to check its drafts."],"Existing drafts will not be created twice.");}
-    finally{setRunning(false);setPreparationMessage("");setRunTotal(0);draftRunActive.current=false;draftRunInFlight.current=false;runInProgress.current=false;}
+    finally{setRunning(false);setDraftsAdmitted(false);setPreparationMessage("");setRunTotal(0);draftRunActive.current=false;draftRunInFlight.current=false;runInProgress.current=false;}
   }
   function confirmDrafts() {
     const fresh=!drafts.length&&(!activeBundle||Object.keys(bundleBatchIds).length<=1);
@@ -4903,7 +4909,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     setOpenedDrafts((current) => current.includes(draft.id!) ? current : [...current, draft.id!]);
   }
 
-  function guardNavigation(event:{preventDefault:()=>void},href:string){if(!running)return;event.preventDefault();setLeaveTarget(href);setUploadNoticeOpen(true)}
+  function guardNavigation(event:{preventDefault:()=>void},href:string){if(!running||draftsAdmitted)return;event.preventDefault();setLeaveTarget(href);setUploadNoticeOpen(true)}
 
   function openAllDrafts() {
     requestDraftTabs(drafts.filter((draft) => draft.id && draft.editorUrl));
@@ -5019,7 +5025,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           padding-left reservation the old shell used. */}
       <div className="factory-main">
         <WaitProgress observeTools operation={creatingEtsyDrafts?null:
-          running||bundleRun?{title:"Creating your Printify drafts",detail:preparationMessage||"Uploading artwork and waiting for Printify to create the previews.",done:processed,total:runTotal,background:preparationMessage.includes("in the background")}:
+          running||bundleRun?{title:processed===runTotal&&runTotal>0?"Saving your finished batch":"Creating your Printify drafts",detail:processed===runTotal&&runTotal>0?`All ${runTotal} Printify drafts are created. Saving the finished batch to Batch History.`:preparationMessage||"Uploading artwork and waiting for Printify to create the previews.",done:processed,total:runTotal,background:draftsAdmitted}:
           titleBuilding||applyingBankToBundle?{title:"Building your listing titles",detail:titleBuildMessage||"Working through the selected designs. Large batches can take several minutes."}:
           savingDraftArtwork?{title:"Updating color artwork",detail:"Uploading the artwork and waiting for Printify to confirm the change."}:
           publishing?{title:"Finishing your handoff",detail:publishMessage||"Waiting for the requested handoff to be confirmed."}:null}/>
@@ -5074,7 +5080,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             margin 0 66, padding 34/38 — read from the source, not invented. */}
         <div className="factory-work">
 
-      {running&&uploadNoticeOpen&&<div className="upload-notice-backdrop" role="presentation"><section className="upload-notice" role="alertdialog" aria-modal="true" aria-labelledby="upload-notice-title" aria-describedby="upload-notice-copy"><span className="upload-notice-icon">!</span><p className="mini-label">UPLOADS IN PROGRESS</p><h2 id="upload-notice-title">Wait. Your files are still uploading.</h2><p id="upload-notice-copy">Are you sure you want to leave? Leaving now may stop the unfinished uploads.</p><div className="upload-notice-progress"><span className="upload-guard-pulse"/><b>{processed} of {runTotal} finished</b></div><div className="upload-notice-actions"><button autoFocus onClick={()=>{setUploadNoticeOpen(false);setLeaveTarget("")}}>Stay on this page</button><button className="danger" onClick={()=>{if(leaveTarget)window.location.href=leaveTarget}}>Leave and stop uploads</button></div></section></div>}
+      {running&&!draftsAdmitted&&uploadNoticeOpen&&<div className="upload-notice-backdrop" role="presentation"><section className="upload-notice" role="alertdialog" aria-modal="true" aria-labelledby="upload-notice-title" aria-describedby="upload-notice-copy"><span className="upload-notice-icon">!</span><p className="mini-label">UPLOADS IN PROGRESS</p><h2 id="upload-notice-title">Wait. Your files are still uploading.</h2><p id="upload-notice-copy">Are you sure you want to leave? Leaving now may stop the unfinished uploads.</p><div className="upload-notice-progress"><span className="upload-guard-pulse"/><b>{processed} of {runTotal} finished</b></div><div className="upload-notice-actions"><button autoFocus onClick={()=>{setUploadNoticeOpen(false);setLeaveTarget("")}}>Stay on this page</button><button className="danger" onClick={()=>{if(leaveTarget)window.location.href=leaveTarget}}>Leave and stop uploads</button></div></section></div>}
 
       {!returningHome&&<section className="hero workflow-hero">
         {/* D726 · prototype .goldie-page-head. The eyebrow ("STEP 1 OF 4") and
@@ -5665,8 +5671,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           <div className={`step-number launch-step-icon create-drafts-icon`} aria-hidden="true"/>
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
-            {(running||workflowStep!=="review")&&<h2>{running ? `Creating drafts · ${processed} of ${runTotal} finished` : complete ? "Drafts created" : "Create your Printify drafts"}</h2>}
-            <p>{running ? "Uploading designs and creating Printify drafts." : workflowStep==="review" ? "One unpublished Printify draft is created for every design in this batch." : complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : ""}</p>
+            {(running||workflowStep!=="review")&&<h2>{running ? processed===runTotal&&runTotal>0?"Saving your finished batch":`Creating drafts · ${processed} of ${runTotal} finished` : complete ? "Drafts created" : "Create your Printify drafts"}</h2>}
+            <p>{running ? processed===runTotal&&runTotal>0?"All drafts are created. Saving the finished batch to Batch History.":draftsAdmitted?"Printify is creating the drafts. You can leave this page.":"Uploading designs and safely starting each draft." : workflowStep==="review" ? "One unpublished Printify draft is created for every design in this batch." : complete ? `${drafts.filter((draft) => draft.status === "Created").length} of ${files.length} drafts were created in Printify.` : ""}</p>
           </div>
 
           
@@ -5682,7 +5688,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           {running && (
             <div className="batch-progress" role="status" aria-live="polite">
               <div className="progress-ring" aria-hidden="true"><span>{processed}/{runTotal}</span></div>
-              <div className="progress-copy"><b>Creating your Printify drafts</b><span>{preparationMessage || "Checking saved draft progress…"}</span></div>
+              <div className="progress-copy"><b>{processed===runTotal&&runTotal>0?"Saving your finished batch":"Creating your Printify drafts"}</b><span>{processed===runTotal&&runTotal>0?`All ${runTotal} drafts are created. Saving them to Batch History.`:preparationMessage || "Checking saved draft progress…"}</span></div>
               <div className="progress-track"><span style={{ width: `${runTotal ? (processed / runTotal) * 100 : 0}%` }} /></div>
             </div>
           )}
@@ -5693,7 +5699,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {/* D485 - one press covers the whole bundle, so the button says so
                   rather than naming a single product, and reports which product
                   Goldie is on while it works its way through them. */}
-              <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? (bundleRun&&activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: creating drafts · ${processed} of ${runTotal} finished…`:`Creating drafts · ${processed} of ${runTotal} finished…`) : bundleQualityGroups.length?"Review resolution warnings above":!ready ? missingRequirement : activeBundle&&bundleRecipes.length>1?`Create drafts for all ${bundleRecipes.length} products`:"Create Printify drafts"}<span>→</span>
+              <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? processed===runTotal&&runTotal>0?"Saving finished batch…":(bundleRun&&activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: creating drafts · ${processed} of ${runTotal} finished…`:`Creating drafts · ${processed} of ${runTotal} finished…`) : bundleQualityGroups.length?"Review resolution warnings above":!ready ? missingRequirement : activeBundle&&bundleRecipes.length>1?`Create drafts for all ${bundleRecipes.length} products`:"Create Printify drafts"}<span>→</span>
             </button></FactoryFooter>}
               {/* D708 · The label already changes while Goldie works, but a changing
                   label does not tell you HOW LONG. Draft creation and Etsy publishing

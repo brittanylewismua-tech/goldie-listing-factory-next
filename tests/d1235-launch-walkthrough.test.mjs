@@ -12,7 +12,7 @@ test("D1235: routine restores and Etsy-detail preparation stay inline", async ()
   assert.doesNotMatch(wait, /restoringBatch\|\|switchingProduct\|\|loadingTemplate/,
     "saved-product reads already have inline states and must not interrupt the seller with a modal");
   assert.match(wait, /running\|\|bundleRun/,
-    "real provider draft creation keeps its explicit progress dialog");
+    "real provider draft creation keeps an explicit progress surface");
   assert.match(wait, /titleBuilding\|\|applyingBankToBundle/,
     "potentially long batch title generation keeps explicit progress");
 });

@@ -14,6 +14,6 @@ test('saved batches filter by batch, product, or bundle-member name',()=>{
 test('history search clears hidden selection and select-all is scoped to visible results',()=>{
  const page=readFileSync(new URL('../app/batches/page.tsx',import.meta.url),'utf8');
  assert.match(page,/onChange=\{event=>\{setQuery\(event\.target\.value\);setSelected\(\[\]\)\}\}/);
- assert.match(page,/visibleSelected\.length===visibleBatches\.length/);
+ assert.match(page,/visibleSelected\.length===visibleIds\.length/);
  assert.match(page,/No matching batches/);
 });
