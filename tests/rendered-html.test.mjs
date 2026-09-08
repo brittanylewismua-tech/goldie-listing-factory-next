@@ -302,7 +302,7 @@ test("provides thorough contextual help throughout all nine Listing Factory step
   assert.match(page, /Create titles, tags, and descriptions/);
   assert.match(page, /Review Etsy details/);
   assert.match(page, /Choose and arrange listing images/);
-  assert.match(page, /Complete the final review/);
+  assert.match(page, /Finish your Etsy drafts/);
   assert.match(page, /Explain item pricing/);
   assert.match(page, /Explain shipping profiles/);
   assert.match(help, /aria-haspopup="dialog"/);

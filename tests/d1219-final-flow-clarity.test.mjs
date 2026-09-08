@@ -28,7 +28,7 @@ test("D1219 makes Review batch delays and blockers explicit", () => {
 test("D1219 uses a compact scalable product overview on Step 4", () => {
   assert.match(app, /className="final-product-overview"/);
   assert.match(app, /className="final-product-grid"/);
-  assert.match(app, /false,finalProductOverview\(\)\)\}/);
+  assert.match(app, /bundleProductsStillReading\(\)\.length\?<section[^]*?:stepProductCards\(bundleCardStatus\("publish"\)[^]*?false,finalProductOverview\(\)\)\)\}/);
   assert.match(css, /grid-template-columns:repeat\(auto-fit,minmax\(220px,1fr\)\)/);
 });
 

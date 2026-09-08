@@ -104,7 +104,7 @@ export function navigationIssues(index:number,state:NavigationGateState){
   if(index>=2&&!state.colorsReady)issues.push("Choose at least one available product color.");
   if(index>=3&&!state.pricesReady)issues.push("The selected colors need available prices.");
   if(index>=3&&!state.designCount)issues.push("Add at least one finished design.");
-  if(index>=3&&!state.designsReady)issues.push("Wait for every design check to finish.");
+  if(index>=3&&!state.draftsComplete&&!state.designsReady)issues.push("Wait for every design check to finish.");
   /* D854 · Both of these live on the Product step, and both were being read on
      the Images step - where the footer said "Choose the Etsy shipping profile."
      under four cards that were all ticked complete, with nothing on the page to

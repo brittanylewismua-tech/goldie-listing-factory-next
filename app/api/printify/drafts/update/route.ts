@@ -8,6 +8,7 @@ import { signedArtworkUrl } from "../../staged-url";
 import { mergePreviewDetails,type PreviewDetail } from "@/app/printify-preview-details";
 import { unpackDraftMedia,saveDraftChanges,type MediaBucket } from "@/app/draft-media-storage";
 import {printifyVariantLimitMessage} from "@/app/printify-variant-limit";
+import {printifyDraftChangeError} from "@/app/printify-draft-error";
 
 type ArtworkUpdate={stagedId?:string;fileName?:string;position:string;variantIds:number[];colorId:number;colorTitle:string;reset?:boolean;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number};
 
@@ -26,7 +27,7 @@ export async function PATCH(request:Request){
   let currentProduct:{variants?:Array<{id:number;cost?:number;price?:number;is_enabled?:boolean;is_default?:boolean;options?:number[]}>;images?:Array<{src?:string;is_default?:boolean;variant_ids?:number[];position?:string}>;print_areas?:Array<{variant_ids:number[];background?:string;placeholders?:Array<{position:string;images?:Array<{id?:string;x?:number;y?:number;scale?:number;angle?:number}>}>}>}|undefined;
   if(body.placement||body.variantPrices||body.artworkUpdate||body.refreshImages){
     const currentResponse=await fetch(url,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}});
-    if(!currentResponse.ok)return NextResponse.json({error:`Printify could not load this draft (${currentResponse.status}).`},{status:currentResponse.status});
+    if(!currentResponse.ok)return NextResponse.json({error:printifyDraftChangeError(currentResponse.status)},{status:currentResponse.status});
     const current=await currentResponse.json() as NonNullable<typeof currentProduct>;
     currentProduct=current;
     /* D882 · This block is entered for a placement change OR a price approval,
@@ -51,7 +52,7 @@ export async function PATCH(request:Request){
   }
   if(body.selectedVariantIds&&!currentProduct){
     const currentResponse=await fetch(url,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"}});
-    if(!currentResponse.ok)return NextResponse.json({error:`Printify could not load this draft (${currentResponse.status}).`},{status:currentResponse.status});
+    if(!currentResponse.ok)return NextResponse.json({error:printifyDraftChangeError(currentResponse.status)},{status:currentResponse.status});
     currentProduct=await currentResponse.json() as typeof currentProduct;
   }
   const updateBody:Record<string,unknown>={};
@@ -100,8 +101,8 @@ export async function PATCH(request:Request){
   }
   const response=Object.keys(updateBody).length?await fetch(url,{method:"PUT",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","User-Agent":"Goldie-Listing-Factory"},body:JSON.stringify(updateBody)}):null;
   if(response&&!response.ok){
-    const detail=(await response.text().catch(()=>"")).replace(/[<>]/g,"").trim().slice(0,300);
-    return NextResponse.json({error:`Printify could not update this draft (${response.status})${detail?`: ${detail}`:"."}`},{status:response.status});
+    const detail=await response.text().catch(()=>"");
+    return NextResponse.json({error:printifyDraftChangeError(response.status,detail)},{status:response.status});
   }
   const updated=response?await response.json().catch(()=>({})) as {images?:Array<{src?:string;is_default?:boolean;variant_ids?:number[];position?:string}>}:currentProduct||{};
   /* Enabling a colour asks Printify to generate mockups it did not need for the
