@@ -128,9 +128,18 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
       for(let index=0;index<artworks.length;index++){
         const artwork=artworks[index],source=await runtime.ARTWORK.get(artwork.stagedId);
         if(!source?.body||source.customMetadata?.owner!==owner||Number(source.customMetadata?.expires||0)<=Date.now())throw Error("Upload this design again; its protected file is no longer available.");
-        const stagedId=jobObjectPrefix(owner,workflowId)+`artwork-${index}.bin`;
-        copies.push(stagedId);
-        await runtime.ARTWORK.put(stagedId,source.body,{customMetadata:{owner,workflowId,expires:String(Date.now()+24*60*60*1000)},httpMetadata:{contentType:artwork.fileName.toLowerCase().endsWith(".png")?"image/png":"image/jpeg"}});
+        /* Fresh staging objects already survive for 24 hours. Copying every
+           multi-draft upload into a second R2 object delayed admission by the
+           full artwork transfer (45s in the measured two-draft run) before any
+           Printify workflow could start. Reuse the owner-checked durable object
+           while it has an eight-hour runway; only refresh an older object that
+           may expire behind a long creation queue. */
+        let stagedId=artwork.stagedId;
+        if(Number(source.customMetadata.expires)<=Date.now()+8*60*60*1000){
+          stagedId=jobObjectPrefix(owner,workflowId)+`artwork-${index}.bin`;
+          copies.push(stagedId);
+          await runtime.ARTWORK.put(stagedId,source.body,{customMetadata:{owner,workflowId,expires:String(Date.now()+24*60*60*1000)},httpMetadata:{contentType:artwork.fileName.toLowerCase().endsWith(".png")?"image/png":"image/jpeg"}});
+        }else await source.body.cancel();
         protectedArtworks.push({...artwork,stagedId});
       }
       const protectedBody=body.artworks?.length?{...body,artworks:protectedArtworks}:{...body,stagedId:protectedArtworks[0].stagedId};
@@ -148,11 +157,12 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
       await runtime.DB.prepare(claimDraftGroupSql(plan.key)).bind(JSON.stringify(prepared.map(({key,batchId,clientId,job})=>({key,batchId,clientId,job}))),owner,plan.drafts).all();
       // Adopt winners from overlapping submissions, never dispatch our losing
       // copies or replace a running request's immutable identity.
-      for(const item of prepared){
+      await runBounded(prepared,4,async item=>{
         const row=await lookup(item.key,owner);
         if(!row||row.status==="failed")throw Error(`Your ${plan.name} plan does not have room for this whole submission.`);
         const job=pendingDraftJob(row.response_json);if(job)existing.push({key:item.key,job});
-      }
+        return item;
+      });
     }
     if(existing.length)await runtime.DRAFT_CREATION.createBatch(existing.map(({key,job})=>({id:job.workflowId,params:{key,owner}})));
     await cleanup();

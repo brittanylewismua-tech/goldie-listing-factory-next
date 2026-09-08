@@ -45,6 +45,15 @@ test('submission preparation is bounded and settles copies before reporting an e
   assert.equal(peak,4);assert.equal(active,0);assert.equal(finished,9);assert.equal(error.message,'copy failed');
 });
 
+test('fresh staged artwork is reused instead of copied before group admission',()=>{
+  const route=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');
+  const group=route.slice(route.indexOf('async function handleGroupPOST'),route.indexOf('export const GET'));
+  assert.match(group,/if\(Number\(source\.customMetadata\.expires\)<=Date\.now\(\)\+8\*60\*60\*1000\)/);
+  assert.match(group,/else await source\.body\.cancel\(\)/);
+  assert.match(group,/protectedArtworks\.push\(\{\.\.\.artwork,stagedId\}\)/);
+  assert.match(group,/await runBounded\(prepared,4,async item=>/);
+});
+
 test('background progress and saving a not-yet-created batch make no contradictory promises',()=>{
   const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
   assert.doesNotMatch(source,/\(running\|\|preparingEtsy\|\|Boolean\(bundleRun\)\).*Keep this page open/);
