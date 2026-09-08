@@ -2045,18 +2045,18 @@ export default function ListingFactoryApp() {
   async function restoreBatchById(id:string,requestedStep:string|null,requestedPhase:string|null,push=false):Promise<boolean>{
     batchRestoreFailed.current=false;setBatchRestoreError("");if(!batchRestoreRetryUrl.current)batchRestoreRetryUrl.current=window.location.href;
     try{const url=new URL(window.location.href);if(!id)return false;const response=await batchFetch(`/api/batches?id=${encodeURIComponent(id)}`);if(response.status===404)return false;if(!response.ok)throw new Error("Saved batch unavailable");const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>};children?:Array<{id:string;productId:string;productName:string;drafts:number;published:number}>};if(!payload.batch?.state)throw new Error("Saved batch unavailable");
-    /* D871 · The URL carries the run. A run holds no product work of its own, so
-       opening one means opening one of its products: the one she left open, or
-       the first that has not published yet. D697's near-miss was a Resume that
-       landed on a product whose listings were already live - resuming into a
-       finished product is the thing that must not happen. */
+    /* D1235 · A run always opens its first unfinished product. Remembering the
+       last open product made a reload begin on product two while product one was
+       collapsed, so the same saved batch had a different starting point each
+       time. The seller can still switch products in place; reload and Batch
+       History now have one predictable entry point and still skip products that
+       have already reached Etsy. */
     const runState=payload.batch.state as {run?:{activeProductId?:string;productOrder?:string[]}};
     if(runState.run&&(payload.children||[]).length){
       const children=payload.children||[];
       const order=runState.run.productOrder||[];
       const byOrder=[...children].sort((a,b)=>order.indexOf(a.productId)-order.indexOf(b.productId));
-      const open=byOrder.find(child=>child.id!==id&&child.productId===runState.run?.activeProductId&&child.published===0)
-        ||byOrder.find(child=>child.published===0)
+      const open=byOrder.find(child=>child.published===0)
         ||byOrder[byOrder.length-1];
       runIdRef.current=id;
       if(open&&open.id!==id){const restored=await restoreBatchById(open.id,requestedStep,requestedPhase,push);if(restored){const childMap=Object.fromEntries(children.filter(child=>child.productId&&child.id).map(child=>[child.productId,child.id]));setBundleBatchIds(current=>({...childMap,...current}))}return restored}
@@ -3322,6 +3322,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
         {listings.filter(({draft})=>draft.status!=="Created").map(({draft,design})=>
           <div className="task-listing failed" key={draft.clientId}>
             <div className="task-listing-ident"><span className="task-listing-index">Listing {listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
+            <p className="failed-listing-reason" role="alert">{draft.error||"This private Printify draft is no longer available. Retry to create it again."}</p>
             <div className="failed-listing-actions"><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button>
             <button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></div>
           </div>)}
@@ -5019,10 +5020,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       <div className="factory-main">
         <WaitProgress observeTools operation={creatingEtsyDrafts?null:
           running||bundleRun?{title:"Creating your Printify drafts",detail:preparationMessage||"Uploading artwork and waiting for Printify to create the previews.",done:processed,total:runTotal,background:preparationMessage.includes("in the background")}:
-          savingEtsyDetails?{title:"Saving listing details",detail:"Saving and checking the selected details for every listing in this batch."}:
           titleBuilding||applyingBankToBundle?{title:"Building your listing titles",detail:titleBuildMessage||"Working through the selected designs. Large batches can take several minutes."}:
           savingDraftArtwork?{title:"Updating color artwork",detail:"Uploading the artwork and waiting for Printify to confirm the change."}:
-          restoringBatch||switchingProduct||loadingTemplate?{title:"Loading your saved product and artwork",detail:"Reading saved choices and product previews."}:
           publishing?{title:"Finishing your handoff",detail:publishMessage||"Waiting for the requested handoff to be confirmed."}:null}/>
 
         {/* D721 · Top bar from the approved preview: the batch being worked on,

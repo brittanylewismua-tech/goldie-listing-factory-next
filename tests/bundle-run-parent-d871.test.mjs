@@ -57,10 +57,12 @@ test("one run, one delete", () => {
     "children go before the parent, so a failure cannot strand them");
 });
 
-test("resume opens the product the work stopped on, never a finished one", () => {
+test("resume opens the first unfinished product, never a finished one", () => {
   const restore = app.slice(app.indexOf("const runState=payload.batch.state as"));
   const body = restore.slice(0, 1400);
   assert.match(body, /byOrder\.find\(child=>child\.published===0\)/);
+  assert.doesNotMatch(body, /child\.productId===runState\.run\?\.activeProductId/,
+    "reload and Batch History must not begin on whichever later product happened to be open");
   assert.match(body, /runIdRef\.current=id;/, "the run stays the run when a child is opened");
   assert.match(body, /restoreBatchById\(open\.id,requestedStep,requestedPhase,push\)/);
   /* The children come with the run, so resume is one decision and one trip. */

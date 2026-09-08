@@ -3520,6 +3520,10 @@ html, body { background: var(--lf-paper); }
   min-width:0;min-height:0!important;padding:18px!important;display:grid!important;gap:16px!important;
   align-content:start;border:1px solid #ded1d8;border-radius:10px;background:#fff;
 }
+.app-shell .failed-listing-reason{
+  margin:0;padding:11px 13px;border-left:3px solid var(--hot-pink);border-radius:6px;
+  background:#fbf4f7;color:#562c43;font:700 13px/1.5 "Manrope",system-ui,sans-serif;
+}
 .app-shell .failed-listing-actions{display:flex;flex-wrap:wrap;gap:10px}
 .app-shell .failed-listing-actions .error-help-link{
   min-height:36px;margin:0!important;padding:9px 12px!important;border:1px solid #111!important;
