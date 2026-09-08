@@ -102,7 +102,7 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
   const prepared:Array<{key:string;batchId:string;clientId:string;job:PendingDraftJob;copies:string[]}>=[];
   const existing:Array<{key:string;job:PendingDraftJob}>=[];
   const seen=new Set<string>();
-  const cleanup=async()=>{for(const item of prepared){const current=await lookup(item.key,owner);if(pendingDraftJob(current?.response_json||null)?.workflowId!==item.job.workflowId)await Promise.all([...item.copies,item.job.inputKey].map(key=>runtime.ARTWORK.delete(key).catch(()=>undefined)));}};
+  const cleanup=async()=>{await runBounded(prepared,4,async item=>{const current=await lookup(item.key,owner);if(pendingDraftJob(current?.response_json||null)?.workflowId!==item.job.workflowId)await Promise.all([...item.copies,item.job.inputKey].map(key=>runtime.ARTWORK.delete(key).catch(()=>undefined)));return item;});};
   try{
     let preparationError:unknown;
     await runBounded(requests,4,async body=>{try{

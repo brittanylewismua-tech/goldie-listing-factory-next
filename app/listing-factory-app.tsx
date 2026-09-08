@@ -4850,7 +4850,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         if(!response.ok)throw Error("The batch could not be saved before background processing.");
       };
       await persistRunNow();
-      for(const member of members)await saveMember(member);
+      await runBounded(members,4,member=>saveMember(member));
       setBundleBatchIds(ids);setRunTotal(requests.length);
       const response=await fetchWithDeadline("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})},120000);
       const result=await response.json() as {accepted?:number;error?:string};
@@ -4871,7 +4871,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         if(member.recipe.id===sourceRecipe.id)setDrafts([...member.results]);
         return draft;
       });
-      for(const member of members)await saveMember(member,true);
+      await runBounded(members,4,member=>saveMember(member,true));
       // Background completion changes sibling batches without changing the
       // selected product. Refresh once, not on every ordinary autosave.
       setBundleCompletionRevision(current=>current+1);
