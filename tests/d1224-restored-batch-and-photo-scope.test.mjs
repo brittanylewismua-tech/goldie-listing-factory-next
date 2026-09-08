@@ -35,6 +35,8 @@ test("D1224: one-listing photo choices stay on that listing until Apply All is u
 test("D1224: restored Etsy details use one provider sync path",()=>{
   assert.match(app,/if\(file\.etsy\)return false/);
   assert.match(app,/syncPreparedListing\(file,file\.etsy!\);syncedListingSignatures\.current\.set/);
+  assert.match(app,/function recordListingSyncError[^]*?status:"Failed",error:message/);
+  assert.equal((app.match(/recordListingSyncError\(file\.id/g)||[]).length,2);
 });
 
 test("D1224: final bundle review waits for every product and explains the real Etsy Drafts action",()=>{
