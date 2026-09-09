@@ -1709,6 +1709,31 @@ export default function ListingFactoryApp() {
     return issues;
   }
   function handoffReadyCount(){return bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id&&!handoffListingProblems(draft).length).length}
+  function handoffBlockerSummary(){
+    const blockers=handoffBlockers();
+    if(!blockers.length)return "Creates unpublished Etsy drafts. Nothing goes live.";
+    const created=bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id);
+    const count=(predicate:(draft:DraftResult)=>boolean)=>created.filter(predicate).length;
+    const line=(amount:number,problem:string)=>`${amount} ${amount===1?"listing":"listings"} ${amount===1?"needs":"need"} ${problem}.`;
+    const unpriced=count(draft=>!reviewedPricingAndShippingReady(draft));
+    if(unpriced)return line(unpriced,"pricing and shipping approval");
+    const missingVariants=count(draft=>!Number(draft.selectedVariantIds?.length||draft.costReview?.variants.filter(variant=>variant.isEnabled).length||0));
+    if(missingVariants)return line(missingVariants,"colors and sizes");
+    const missingPhotos=count(draft=>createdListingsMissingImages([draft]).length>0);
+    if(missingPhotos)return line(missingPhotos,"at least one listing photo");
+    const designFor=(draft:DraftResult)=>bundlePublishFiles().find(file=>file.id===draft.clientId)||bundlePublishFiles().find(file=>file.name===draft.name);
+    const missingTitles=count(draft=>!designFor(draft)?.title.trim());
+    if(missingTitles)return line(missingTitles,"a title");
+    const missingTags=count(draft=>!designFor(draft)?.tags.length);
+    if(missingTags)return line(missingTags,"Etsy tags");
+    const missingDescriptions=count(draft=>!String(designFor(draft)?.descriptionOverride??draft.description??"").trim());
+    if(missingDescriptions)return line(missingDescriptions,"a description");
+    const missingEtsy=count(draft=>!etsyRequiredComplete(designFor(draft)?.etsy));
+    if(missingEtsy)return line(missingEtsy,"an Etsy category or required detail");
+    const missingPersonalization=count(draft=>Boolean(personalizationProblem(designFor(draft)?.etsy)));
+    if(missingPersonalization)return line(missingPersonalization,"completed personalization settings");
+    return blockers[0];
+  }
   function suggestedBatchName(){const product=activeRecipe?.name||templateDetails?.blueprintTitle||"Listing batch",niche=files[0]?.tags?.[0]||files[0]?.title?.split(",")[0]?.trim()||"New designs",date=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(new Date());return `${product} · ${niche} · ${date}`.slice(0,160)}
   /* D378 - Keep the product -> batch map current. continueBundle mints a new
      batch per member, and a batch can also be created lazily on the first save,
@@ -5287,7 +5312,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                ever true of a step ahead. Going back is how you fix what the gate
                is complaining about. */
             const ahead=stagePosition>=0&&position>stagePosition;
-            return <button key={stage.label} className={`${active?"active":""} ${done?"done":""}`} disabled={!active&&ahead&&Boolean(issues.length)} aria-current={active?"step":undefined} title={issues[0]||undefined} onClick={()=>openProgressStep(stage.index)}><em className="progress-bubble-label">{stage.label}</em>{/* D352 · Zero-padding four steps ("01 of 04") is a template tic — it implies
+            return <button key={stage.label} className={`${active?"active":""} ${done?"done":""}`} disabled={!active&&ahead&&Boolean(issues.length)} aria-current={active?"step":undefined} title={active||ahead?issues[0]||undefined:undefined} onClick={()=>openProgressStep(stage.index)}><em className="progress-bubble-label">{stage.label}</em>{/* D352 · Zero-padding four steps ("01 of 04") is a template tic — it implies
                 a longer sequence than exists and adds a character that carries no
                 information. */}
                 {/* D619 - the step you are STANDING on shows its number, never a
@@ -5686,7 +5711,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   Listings ready, titles and tags, listing photos, pricing and
                   shipping, published - every one of them, with the same value
                   and the same wording productRows gave them. */}
-              <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?`${handoffReadyCount()} of ${bundlePublishDrafts().length} listings ready`:`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockers()[0]||"Creates unpublished Etsy drafts. Nothing goes live."}</span></div>
+              <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?`${handoffReadyCount()} of ${bundlePublishDrafts().length} listings ready`:`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockerSummary()}</span></div>
               <button type="button" className="review-etsy-draft-button" disabled={creatingEtsyDrafts||!photoDeliveryStatusReady||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":"Save to Etsy Drafts"}</button>
               {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<a className="review-printify-link" href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open drafts in Printify ↗</a>}
               {false&&<><div className="publish-live-warning">{(()=>{
