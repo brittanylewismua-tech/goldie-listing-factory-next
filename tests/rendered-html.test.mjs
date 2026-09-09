@@ -4171,7 +4171,7 @@ test("no product on any step falls back to a bare header — D500", async () => 
     "step 3 passes the listing grid as its body, so the card is never a bare header");
   /* Review owns the content after the generic product rows stop. Listing cards
      show the exact result and the destination box owns the one next action. */
-  assert.match(app, /<FinalListingReview handoffOnly drafts=\{bundlePublishDrafts\(\)\}/,
+  assert.match(app, /<FinalListingReview handoffOnly [\s\S]*?drafts=\{bundlePublishDrafts\(\)\}/,
     "step 4 renders the listing review instead of a bare product header");
   assert.match(app, /className=\{`publish-box-ready/,
     "the destination box renders the batch outcome beside the review");
@@ -5258,7 +5258,7 @@ test("the publish screen shows every listing the press will create — D559", as
   assert.match(app, /const \[bundleMembers,setBundleMembers\]/);
   assert.match(app, /memberScratch\[recipe\.id\]=\{recipeId:recipe\.id,productName:recipe\.name,/);
   assert.match(app, /function bundlePublishDrafts\(\)/);
-  assert.match(app, /<FinalListingReview handoffOnly drafts=\{bundlePublishDrafts\(\)\}/);
+  assert.match(app, /<FinalListingReview handoffOnly [\s\S]*?drafts=\{bundlePublishDrafts\(\)\}/);
 
   // And the selection governs every listing, not the open product's.
   assert.match(app, /const chosen=new Set\(selectedPublishIds\);/);

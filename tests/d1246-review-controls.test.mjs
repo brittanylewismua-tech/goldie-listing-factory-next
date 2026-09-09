@@ -49,3 +49,8 @@ test("D1248: provider refreshes cannot erase the saved product identity",()=>{
   assert.match(app,/productName:update\.productName\|\|draft\.productName/);
   assert.match(app,/refreshImages:true[\s\S]*?setBundleMembers/);
 });
+
+test("D1249: an older blank provider name cannot split one product into fake groups",()=>{
+  assert.match(review,/const key=productName\|\|draft\.productName\|\|"Saved product"/);
+  assert.match(app,/productName=\{activeBundle&&bundleRecipes\.length>1\?"":activeRecipe\?\.name\|\|templateDetails\?\.blueprintTitle\|\|""\}/);
+});

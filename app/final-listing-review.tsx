@@ -132,7 +132,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
     return {label:"Edit listing details",phase:"details"};
   }
   if(handoffOnly){
-    const productGroups=[...drafts.reduce((map,draft)=>{const key=draft.productName||productName||"Saved product";map.set(key,[...(map.get(key)||[]),draft]);return map},new Map<string,Draft[]>()).entries()];
+    const productGroups=[...drafts.reduce((map,draft)=>{const key=productName||draft.productName||"Saved product";map.set(key,[...(map.get(key)||[]),draft]);return map},new Map<string,Draft[]>()).entries()];
     return <section className="final-listing-review handoff-only recipe-listing-review">
       <div className="recipe-product-groups">{productGroups.map(([name,items],productIndex)=>{
         return <section className="recipe-product-group" key={name}>
