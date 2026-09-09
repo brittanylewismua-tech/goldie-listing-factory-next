@@ -2,7 +2,7 @@ export const MAX_DIRECT_PRINTIFY_BYTES = 40 * 1024 * 1024;
 
 function jpegBlob(canvas: HTMLCanvasElement, quality: number) {
   return new Promise<Blob>((resolve, reject) => canvas.toBlob(
-    (blob) => blob ? resolve(blob) : reject(new Error("Goldie could not optimize this artwork.")),
+    (blob) => blob ? resolve(blob) : reject(new Error("The Listing Factory could not optimize this artwork.")),
     "image/jpeg",
     quality,
   ));
@@ -17,7 +17,7 @@ export async function prepareArtworkFile(file: File, hasTransparency: boolean, a
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
   const context = canvas.getContext("2d");
-  if (!context) { bitmap.close(); throw new Error("Goldie could not optimize this artwork."); }
+  if (!context) { bitmap.close(); throw new Error("The Listing Factory could not optimize this artwork."); }
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(bitmap, 0, 0);

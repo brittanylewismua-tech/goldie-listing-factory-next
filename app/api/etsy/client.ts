@@ -23,7 +23,7 @@ export async function recordEtsyCall(response:Response){
   const statements=[runtime().DB.prepare("INSERT INTO etsy_api_usage_buckets (bucket,calls,rate_limited,qpd_limit,updated_at) VALUES (?,1,?,?,CURRENT_TIMESTAMP) ON CONFLICT(bucket) DO UPDATE SET calls=calls+1,rate_limited=rate_limited+excluded.rate_limited,qpd_limit=CASE WHEN excluded.qpd_limit>0 THEN excluded.qpd_limit ELSE qpd_limit END,updated_at=CURRENT_TIMESTAMP").bind(bucket,response.status===429?1:0,observedLimit)];
   const qps=Number(response.headers.get("x-limit-per-second"));
   if(Number.isSafeInteger(qps)&&qps>0)statements.push(runtime().DB.prepare('UPDATE etsy_request_pacing SET qps_limit=?,updated_at=? WHERE id=1').bind(qps,Date.now()));
-  if(response.status===429){const retryAfter=Math.max(60,Math.min(1800,Number(response.headers.get("retry-after"))||300));statements.push(runtime().DB.prepare("INSERT INTO etsy_queue_state (id,paused_until,last_worker_status,last_error,updated_at) VALUES (1,?,'rate_limited','Etsy asked Goldie to slow down.',CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET paused_until=MAX(paused_until,excluded.paused_until),last_worker_status=excluded.last_worker_status,last_error=excluded.last_error,updated_at=CURRENT_TIMESTAMP").bind(Math.floor(Date.now()/1000)+retryAfter))}
+  if(response.status===429){const retryAfter=Math.max(60,Math.min(1800,Number(response.headers.get("retry-after"))||300));statements.push(runtime().DB.prepare("INSERT INTO etsy_queue_state (id,paused_until,last_worker_status,last_error,updated_at) VALUES (1,?,'rate_limited','Etsy asked The Listing Factory to slow down.',CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET paused_until=MAX(paused_until,excluded.paused_until),last_worker_status=excluded.last_worker_status,last_error=excluded.last_error,updated_at=CURRENT_TIMESTAMP").bind(Math.floor(Date.now()/1000)+retryAfter))}
   await runtime().DB.batch(statements);
 }
 export async function etsyBudget(){
@@ -59,7 +59,7 @@ export async function etsyFetch<T>(path:string,token:string,init?:RequestInit,me
     const response=await fetch(`${API}${path}`,{...init,signal:init?.signal??AbortSignal.timeout(30000),headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`,...(init?.body instanceof URLSearchParams?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});
     if(meter)meter.calls+=1;
     await recordEtsyCall(response);
-    if(response.status===429)throw new EtsyRateLimited('Etsy asked Goldie to slow down. Your saved work will continue automatically.');
+    if(response.status===429)throw new EtsyRateLimited('Etsy asked The Listing Factory to slow down. Your saved work will continue automatically.');
     const text=await response.text();let payload:unknown={};try{payload=text?JSON.parse(text):{}}catch{payload={error:text}}
     if(response.ok)return payload as T;
     if((response.status===429||response.status>=500)&&attempt<4){

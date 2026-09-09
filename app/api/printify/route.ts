@@ -81,7 +81,7 @@ async function printify<T>(path: string, token: string): Promise<T> {
 /* D655 · Four of the calls on this path read Printify's CATALOGUE: blueprint
    metadata, print providers, variants and shipping rates. None of it is the
    seller's data - the Comfort Colors 1566 catalogue is the same bytes for every
-   Goldie user and changes on Printify's release schedule, not theirs. Fetching
+   The Listing Factory user and changes on Printify's release schedule, not theirs. Fetching
    it fresh on every product load spent four sequential round trips re-reading
    values that had not moved.
 
@@ -102,7 +102,7 @@ function printifyCatalog<T>(path: string, token: string, seen?: { fetched: numbe
    a 429 or a 5xx five times, backing off as far as eight seconds each, so each
    of those "optional" lookups could cost forty seconds of a seller's wait to
    arrive at the fallback it was going to take anyway. Bound them: an answer
-   Goldie cannot get quickly is an answer it does not have. */
+   The Listing Factory cannot get quickly is an answer it does not have. */
 const ETSY_LOOKUP_MS=4000;
 
 /* D661 · The caches.default memo that used to live here never stored anything
@@ -184,7 +184,7 @@ export async function POST(request: Request) {
     if (!body.productUrl) { await saveToken(user.userId, token); /* D661 · A new token can be a different Printify account, so every proof it backed is void. */ await forgetPairings(user.userId); return NextResponse.json({ connected: true }); }
 
     const productId = productIdFromUrl(body.productUrl.trim());
-    if (!productId) return NextResponse.json({ error: "Goldie could not find a product in that link.", issues:["Open the product in Printify and copy the address bar. Either the design-editor page or the product page works.","The My Products list, the catalogue and the orders page do not identify a single product, so their links cannot be used."] }, { status: 400 });
+    if (!productId) return NextResponse.json({ error: "The Listing Factory could not find a product in that link.", issues:["Open the product in Printify and copy the address bar. Either the design-editor page or the product page works.","The My Products list, the catalogue and the orders page do not identify a single product, so their links cannot be used."] }, { status: 400 });
     /* D654 - this asked each shop in turn. With four stores that is four round
        trips before the product is even identified, on the one request a seller
        waits on. They do not depend on each other, so ask them together. */
@@ -203,11 +203,11 @@ export async function POST(request: Request) {
          connected to Goldie", which sent a seller to check their connection
          when the usual cause is a mistyped link or a product they deleted. */
       const unreachable = attempts.some(attempt => attempt && "unavailable" in attempt);
-      return NextResponse.json({ error: "Goldie could not open that Printify product.", issues: unreachable
+      return NextResponse.json({ error: "The Listing Factory could not open that Printify product.", issues: unreachable
         ? ["Printify did not answer for one of your stores just now. Wait a moment and submit the same link again."]
-        : [`Goldie looked in ${shops.length===1?"your Printify store":`all ${shops.length} of your Printify stores`} and no product with that id is in any of them.`,"Check the link you pasted, or open the product in Printify and copy the address bar again.","If you deleted this product in Printify, choose a different one."] }, { status: 404 });
+        : [`The Listing Factory looked in ${shops.length===1?"your Printify store":`all ${shops.length} of your Printify stores`} and no product with that id is in any of them.`,"Check the link you pasted, or open the product in Printify and copy the address bar again.","If you deleted this product in Printify, choose a different one."] }, { status: 404 });
     }
-    /* D639 - the earliest point at which Goldie knows both shops. Refusing here
+    /* D639 - the earliest point at which The Listing Factory knows both shops. Refusing here
        stops a whole batch being built against a storefront its Etsy connection
        cannot publish to. */
     /* D641 - proven, not guessed. Only a denial from Etsy blocks. */
@@ -238,7 +238,7 @@ export async function POST(request: Request) {
         if(Number(listing.shipping_profile_id)>0)shippingTemplateId=String(listing.shipping_profile_id);
       }catch{/* The normal validation message below remains accurate if Etsy is disconnected. */}
     }
-    // A saved product remembers the Etsy profile Goldie already verified. Etsy
+    // A saved product remembers the Etsy profile The Listing Factory already verified. Etsy
     // can temporarily stop returning the linked listing after deactivation, so
     // validate the remembered profile against this connected shop instead of
     // incorrectly invalidating the Printify template.
@@ -276,9 +276,9 @@ export async function POST(request: Request) {
     const configuredPlacements = found.product.print_areas?.flatMap((area) => area.placeholders ?? []).filter((placeholder) => placeholder.images?.[0]) ?? [];
     const shippingProfileNeedsSelection=!shippingTemplateId&&externalListingId>0;
     const issues:string[]=[];
-    if(!shippingTemplateId&&!shippingProfileNeedsSelection)issues.push("Publish this product to Etsy once with the shipping profile you want Goldie to copy.");
+    if(!shippingTemplateId&&!shippingProfileNeedsSelection)issues.push("Publish this product to Etsy once with the shipping profile you want The Listing Factory to copy.");
     if(enabledVariants.length===0)issues.push("Enable at least one size or color and save the product.");
-    if(configuredPlacements.length===0)issues.push("Place one design in every print area Goldie should copy, then save the product.");
+    if(configuredPlacements.length===0)issues.push("Place one design in every print area The Listing Factory should copy, then save the product.");
     if(issues.length)return NextResponse.json({error:"This Printify product cannot be used yet.",issues},{status:400});
     let provider = `Provider ${found.product.print_provider_id}`;
     let blueprint:Blueprint={id:found.product.blueprint_id};
@@ -350,7 +350,7 @@ export async function POST(request: Request) {
     const printPositions=[...new Set(configuredPlacements.map((placeholder)=>String(placeholder.position||"").trim()).filter((position)=>position&&!/neck|label|collar|inner|tag/i.test(position)))];
     const placementScale = Math.max(...configuredPlacements.map((placeholder) => Number(placeholder.images?.[0]?.scale || 1)));
     // The dominant print area defines the placement the lifestyle mockup has to
-    // mirror: the same x, y, scale and angle Goldie sends back to Printify.
+    // mirror: the same x, y, scale and angle The Listing Factory sends back to Printify.
     const dominantPlacement = configuredPlacements
       .map((placeholder) => placeholder.images?.[0])
       .reduce<{x?:number;y?:number;scale?:number;angle?:number}|undefined>((best, image) => (Number(image?.scale ?? 0) > Number(best?.scale ?? 0) ? image : best), undefined);
@@ -376,7 +376,7 @@ export async function POST(request: Request) {
        close-up and could make a back-print product look blank. */
     const productMockups=(found.product.images||[]).slice().sort((a,b)=>Number(Boolean(b.is_default))-Number(Boolean(a.is_default))).map(image=>String(image.src||"")).filter(Boolean).slice(0,12);
     /* Printify can expose the same seller-facing colour more than once under
-       different internal option ids (Ash is a real example). Goldie must show
+       different internal option ids (Ash is a real example). The Listing Factory must show
        one choice without throwing away either set of variants, so the visible
        option carries every underlying id and the picker toggles them together. */
     const groupedColorOptions=groupProductColors(colorOption?.values||[],availableColorIds,templateColorIds);

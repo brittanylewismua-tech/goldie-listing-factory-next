@@ -87,7 +87,7 @@ export default function FactoryShell({ active, title, children }:
     <header className="topbar">
       <div className="brand-lockup"><GoldieWordmark className="approved-brand" /></div>
       <div className="top-actions">
-        <nav className="top-nav" aria-label="Goldie navigation">
+        <nav className="top-nav" aria-label="Listing Factory navigation">
           {NAV.map(item => <a key={item.key} className={item.key === active ? "active" : undefined}
             href={item.href} aria-current={item.key === active ? "page" : undefined}>{item.label}</a>)}
         </nav>

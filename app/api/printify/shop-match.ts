@@ -1,12 +1,12 @@
 /* D641 · D639 compared the Printify store's title with the connected Etsy shop
    name. Brittany's own account broke it within the hour: her Printify store is
    still called HOWDYANGEL, the Etsy shop it publishes to was renamed to
-   godisagirlapparel, and they are the SAME shop. So Goldie refused a setup that
+   godisagirlapparel, and they are the SAME shop. So The Listing Factory refused a setup that
    was entirely correct - a check that blocks good sellers is worse than no
    check, and a rename is a completely ordinary thing to do.
 
    Names are not identity. The only authoritative question is whether the Etsy
-   listings this Printify store creates land in the Etsy shop Goldie holds a
+   listings this Printify store creates land in the Etsy shop The Listing Factory holds a
    token for, and that can be asked directly: take a product this store has
    already published, which carries the Etsy listing id in external.id, and ask
    Etsy for that listing WITHIN the connected shop. Etsy answers 200 only if the
@@ -17,11 +17,11 @@
      mismatched - Etsy denies the listing belongs to the connected shop
      unknown    - nothing published yet, or the check could not complete
 
-   Only `mismatched` blocks. `unknown` is not evidence, and Goldie does not stop
+   Only `mismatched` blocks. `unknown` is not evidence, and The Listing Factory does not stop
    a seller on the strength of something it could not establish. */
 export type ShopPairing="matched"|"mismatched"|"unknown";
 
-/* D654 - a verdict Goldie could not reach in this long is a verdict it does not
+/* D654 - a verdict The Listing Factory could not reach in this long is a verdict it does not
    have. Both numbers are budgets, not timeouts on a seller's own action. */
 export const PAIRING_BUDGET_MS=9000;
 export const PAIRING_STEP_MS=4000;
@@ -50,7 +50,7 @@ export async function verifyShopPairing(options:{
      setup started refusing itself:
 
        Printify store: GODISAGIRLAPPAREL
-       Goldie's Etsy shop: godisagirlapparel
+       The Listing Factory's Etsy shop: godisagirlapparel
 
      the same shop, refused, because the one listing it happened to sample was
      gone. Twice now this check has blocked a seller who had done nothing wrong,
@@ -65,7 +65,7 @@ export async function verifyShopPairing(options:{
      off as far as eight seconds each; five candidate listings therefore cost up
      to about 200 seconds. The browser gives up at 90. Loading a saved product
      stopped completing at all - measured live at over two minutes for a product
-     Goldie could not verify.
+     The Listing Factory could not verify.
 
      Every one of those retries was wasted work: the loop below catches a failed
      fetch and moves on, so a retried failure and an immediate one produce the
@@ -97,11 +97,11 @@ export async function verifyShopPairing(options:{
 export function shopMismatch(printifyShopTitle:string,etsyShopName:string){
   return {
     title:"These two shops are not the same.",
-    error:`This Printify store publishes to a different Etsy shop than the one Goldie is connected to.`,
+    error:`This Printify store publishes to a different Etsy shop than the one The Listing Factory is connected to.`,
     issues:[
       `Printify store: ${printifyShopTitle}`,
-      `Goldie's Etsy shop: ${etsyShopName}`,
-      `Goldie read a listing this Printify store published and Etsy says it belongs to a different shop, so these are two storefronts - not one storefront with two names. Connect both to the same shop: reconnect Etsy from Connections in the sidebar, or choose a product from the Printify store that publishes to ${etsyShopName}.`,
+      `The Listing Factory's Etsy shop: ${etsyShopName}`,
+      `The Listing Factory read a listing this Printify store published and Etsy says it belongs to a different shop, so these are two storefronts - not one storefront with two names. Connect both to the same shop: reconnect Etsy from Connections in the sidebar, or choose a product from the Printify store that publishes to ${etsyShopName}.`,
     ],
   };
 }

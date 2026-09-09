@@ -2,9 +2,9 @@ import type {PublishedDay} from './listing-goal';
 export type HistoryData<T>={batches:T[];prepared?:PublishedDay[];preparedAvailable?:boolean};
 export async function readBatchHistory<T>(fetcher:typeof fetch=fetch,timeoutMs=25000):Promise<HistoryData<T>>{
  const response=await fetcher('/api/batches',{signal:AbortSignal.timeout(timeoutMs)});
- if(response.status===401)throw Error('Sign in to Goldie, then reload your saved history.');
+ if(response.status===401)throw Error('Sign in to The Listing Factory, then reload your saved history.');
  const payload=await response.json() as HistoryData<T>&{error?:string};
- if(!response.ok)throw Error(response.status===401?'Sign in to Goldie, then reload your saved history.':payload.error||'Saved history could not be loaded. Try again.');
+ if(!response.ok)throw Error(response.status===401?'Sign in to The Listing Factory, then reload your saved history.':payload.error||'Saved history could not be loaded. Try again.');
  if(!Array.isArray(payload.batches))throw Error('Saved history could not be read. Try again.');
  if(typeof window!=='undefined'&&payload.preparedAvailable!==false&&Array.isArray(payload.prepared))window.dispatchEvent(new CustomEvent('goldie-history-loaded',{detail:payload.prepared}));
  return payload;

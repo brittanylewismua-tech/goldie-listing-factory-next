@@ -76,7 +76,7 @@ export async function createProductWithImageRetries<T>(options: {
     if (isImageNotReady(response.status, detail)) imageErrors += 1;
     /* A repeated image error after the re-upload is a payload fault, not a race. */
     if (imageErrors >= IMAGE_ERROR_LIMIT) {
-      throw new RejectedProductCreation("Printify rejected the images in this draft twice, including after Goldie re-uploaded the artwork. The request itself is wrong, so Goldie stopped instead of retrying. Nothing was created.");
+      throw new RejectedProductCreation("Printify rejected the images in this draft twice, including after The Listing Factory re-uploaded the artwork. The request itself is wrong, so The Listing Factory stopped instead of retrying. Nothing was created.");
     }
     const retryable = isImageNotReady(response.status, detail) || response.status === 429;
     if (retryable && attempt < waits.length) {
@@ -87,7 +87,7 @@ export async function createProductWithImageRetries<T>(options: {
     }
     if (isImageNotReady(response.status, detail)) throw new RejectedProductCreation("Printify did not finish registering this image within one minute. Retry this design when the batch finishes.");
     if (response.status === 429) throw new RejectedProductCreation("Printify is taking longer than expected. Retry this design when the batch finishes.");
-    if (response.status >= 500) throw new RejectedProductCreation("Printify remained temporarily unavailable after Goldie retried automatically.");
+    if (response.status >= 500) throw new RejectedProductCreation("Printify remained temporarily unavailable after The Listing Factory retried automatically.");
     if (response.status === 401 || response.status === 403) throw new RejectedProductCreation(`Printify rejected the saved connection (HTTP ${response.status}). Reconnect with a new token that has all scopes enabled.`);
     throw new RejectedProductCreation(`Printify returned ${response.status}${detail ? `: ${detail.slice(0, 180)}` : ""}`);
   }

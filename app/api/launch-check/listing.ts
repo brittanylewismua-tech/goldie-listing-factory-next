@@ -6,7 +6,7 @@ import {etsyConnection,etsyApiCredential,etsyBudget,recordEtsyCall} from '../ets
 export async function inspectLaunchListing(owner:string,productId:string){
  const runtime=env as unknown as {DB:D1Database;ARTWORK:R2Bucket;PRINTIFY_TOKEN_KEY:string};
  const owned=await runtime.DB.prepare("SELECT response_json FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(owner,productId).first<{response_json:string}>();
- if(!owned)throw Error('That Goldie draft does not belong to this account.');
+ if(!owned)throw Error('That The Listing Factory draft does not belong to this account.');
  const draft=await unpackDraftMedia(owned.response_json,owner,runtime.ARTWORK) as {shopId:number};
  const connection=await runtime.DB.prepare('SELECT encrypted_token FROM printify_connections WHERE user_id=?').bind(owner).first<{encrypted_token:string}>();
  if(!connection)throw Error('Printify is not connected.');

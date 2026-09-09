@@ -146,7 +146,7 @@ export function withErrorLog<R extends Request, T extends unknown[]>(
       });
       // Unchanged from before: the customer still gets a clean failure.
       const { NextResponse } = await import("next/server");
-      return NextResponse.json({ error: "Something went wrong. Goldie has recorded it." }, { status: 500 });
+      return NextResponse.json({ error: "Something went wrong. The Listing Factory recorded it." }, { status: 500 });
     }
   };
 }

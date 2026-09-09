@@ -7,7 +7,7 @@ export function createBatchSaveTransport(fetcher:Fetcher,onConflict:(message:str
  let barrier:Promise<unknown>=Promise.resolve(),blocked=false,authenticationRequired=false;
  const message='Saving is paused because newer saved work or an interrupted save needs checking. Reload the saved batch before continuing. Your unsaved changes are still visible here.';
  function conflict(){blocked=true;onConflict(message);return Response.json({code:'BATCH_SAVE_CONFLICT',error:message},{status:409})}
- function requireAuthentication(){authenticationRequired=true;onAuthenticationRequired(true);return Response.json({code:'SIGN_IN_REQUIRED',error:'Your Goldie session has expired. Sign in again, then retry saving here.'},{status:401})}
+ function requireAuthentication(){authenticationRequired=true;onAuthenticationRequired(true);return Response.json({code:'SIGN_IN_REQUIRED',error:'Your Listing Factory session has expired. Sign in again, then retry saving here.'},{status:401})}
  async function read(input:string,init?:RequestInit){
   const response=await fetcher(input,{...init,signal:AbortSignal.any([AbortSignal.timeout(timeoutMs),...(init?.signal?[init.signal]:[])])});
   if(response.ok){

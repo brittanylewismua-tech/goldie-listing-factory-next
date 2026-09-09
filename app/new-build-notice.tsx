@@ -37,7 +37,7 @@ export default function NewBuildNotice(){
   if(!waiting)return null;
   return <div className="new-build-notice" role="status">
     <div>
-      <b>A newer version of Goldie is live.</b>
+      <b>A newer version of The Listing Factory is live.</b>
       <small>This tab is still running {BUILD_MARKER}; {waiting} is deployed. Reload to see the changes — your batch is saved.</small>
     </div>
     <button type="button" onClick={()=>window.location.reload()}>Reload</button>

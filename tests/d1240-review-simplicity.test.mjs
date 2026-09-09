@@ -12,7 +12,8 @@ test('D1240: Review has one instruction and one primary outcome',()=>{
   assert.match(app,/title: "Review your listings", copy: handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/);
   assert.doesNotMatch(app,/Choose where to keep these listings/);
   assert.doesNotMatch(app,/<dl className="publish-box-reports">/);
-  assert.match(app,/<summary>Other options<\/summary>/);
+  assert.match(app,/>Open drafts in Printify ↗<\/a>/);
+  assert.doesNotMatch(app,/<summary>Other options<\/summary>/);
   assert.match(app,/className="review-etsy-draft-button"/);
   assert.doesNotMatch(app,/FactoryFooter status=\{handoffBlockers/);
   assert.match(app,/workflowStep!=="connect"&&!\(workflowStep==="finish"&&finishPhase==="final"\)/);

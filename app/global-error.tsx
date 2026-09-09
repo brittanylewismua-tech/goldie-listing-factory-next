@@ -10,7 +10,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
       keepalive: true,
       body: JSON.stringify({
         kind: "global-boundary",
-        message: error.message || "Goldie failed during startup",
+        message: error.message || "The Listing Factory failed during startup",
         source: error.stack || "",
         digest: error.digest || "",
         url: typeof location === "undefined" ? "" : location.pathname + location.search,
@@ -24,7 +24,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
       <body>
         <main className="factory-startup-error" role="alert">
           <div>
-            <p>Goldie kept your saved work safe.</p>
+            <p>The Listing Factory kept your saved work safe.</p>
             <h1>The page hit a startup problem.</h1>
             <p>The error has been recorded. Reloading will not delete your saved Listing Factory batch.</p>
             <button type="button" onClick={() => window.location.reload()}>Try again</button>

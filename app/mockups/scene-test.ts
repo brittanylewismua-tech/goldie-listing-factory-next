@@ -41,7 +41,7 @@ type Scene = {
 
 export async function renderSceneTest(scene: Scene): Promise<string> {
   const adjustment = placementAdjustment(SAMPLE, "t-shirt", scene.quadMeans || "garment");
-  if (!adjustment) throw new Error(`"${scene.name}" has not had its print area confirmed yet, so Goldie cannot place a design on it exactly. Use "Mark where the design can print" first.`);
+  if (!adjustment) throw new Error(`"${scene.name}" has not had its print area confirmed yet, so The Listing Factory cannot place a design on it exactly. Use "Mark where the design can print" first.`);
   const [photo, art] = await Promise.all([load(scene.src), swatch()]);
   const canvas = document.createElement("canvas");
   canvas.width = photo.naturalWidth; canvas.height = photo.naturalHeight;

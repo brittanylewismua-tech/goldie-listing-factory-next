@@ -66,7 +66,7 @@ function currentValue(view:DraftView,key:string,requested?:DraftOperation){
 function desiredValue(op:DraftOperation){if(op.key==='basic'){const v=op.value as DraftView['basic'];return {...v,tags:[...v.tags].sort()}}if(op.key.startsWith('property:')){const p=op.value as DraftSnapshot['properties'][number];return {...p,value_ids:[...p.value_ids].sort((a,b)=>a-b),values:[...p.values].sort()}}return op.value}
 export function verifyDraft(view:DraftView,shopId:number,snapshot:DraftSnapshot){
  if(view.shopId!==shopId)fail('This Etsy draft belongs to another shop. Nothing further was changed.');
- if(view.state!=='draft')fail('This listing is no longer an Etsy draft. Finishing stopped; Goldie will not edit a live listing in draft mode.');
+ if(view.state!=='draft')fail('This listing is no longer an Etsy draft. Finishing stopped; The Listing Factory will not edit a live listing in draft mode.');
  const mismatch=operations(snapshot).find(op=>!same(currentValue(view,op.key,op),desiredValue(op)));
  if(mismatch)fail(`Etsy did not match the saved ${mismatch.key==='basic'?'listing details':mismatch.key==='questions'?'personalization':'attribute '+mismatch.key.split(':')[1]}. Review this draft before publishing.`);
 }

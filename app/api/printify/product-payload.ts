@@ -36,7 +36,7 @@ export type ArtworkAssignment = {
    D613 then tried to re-upload that artwork to get a valid ID, which invented a
    further requirement and broke the flow a different way.
 
-   The rule is simply: Goldie prints on the print side the seller chose. Internal
+   The rule is simply: The Listing Factory prints on the print side the seller chose. Internal
    label, neck, collar, inner and tag placeholders are left out of the payload
    entirely - not copied, not re-uploaded, and never given the design. */
 const LABEL_POSITION = /neck|label|collar|inner|tag/i;
@@ -64,7 +64,7 @@ export function templateHasLabelArtwork(areas: TemplateArea[] | undefined) {
    seller never asked for. The listing's own artwork summary said "back: none"
    the whole time, so nothing on screen disagreed with the invoice.
 
-   Goldie prints where the seller put artwork. One design means the front. A
+   The Listing Factory prints where the seller put artwork. One design means the front. A
    back print is added deliberately, in the artwork step, and shows up in the
    cost review before it is approved. The only exception is a product with no
    front-ish side at all, where the back IS the print side and skipping it
@@ -103,10 +103,10 @@ export function printAreasWithOnlyCurrentArtwork(areas: TemplateArea[], currentI
      label ID escaped. There is nothing to exempt now: labels are gone. */
   const outgoing = result.flatMap((area) => area.placeholders.flatMap((placeholder) => placeholder.images.map((image) => image.id)));
   if (outgoing.some((id) => id !== currentImageId)) {
-    throw new Error("Goldie blocked a draft containing an inherited template image ID.");
+    throw new Error("The Listing Factory blocked a draft containing an inherited template image ID.");
   }
   if (result.some((area) => area.placeholders.some((placeholder) => isLabelPlaceholder(placeholder.position)))) {
-    throw new Error("Goldie blocked a draft that would write to an inside-label placeholder.");
+    throw new Error("The Listing Factory blocked a draft that would write to an inside-label placeholder.");
   }
   return result;
 }
@@ -135,7 +135,7 @@ export function printAreasForArtworkAssignments(
       throw new Error(`Artwork for ${assignment.position || "a print area"} was not uploaded.`);
     }
     if (isLabelPlaceholder(assignment.position)) {
-      throw new Error("Goldie blocked artwork assigned to an inside-label placeholder.");
+      throw new Error("The Listing Factory blocked artwork assigned to an inside-label placeholder.");
     }
     for (const variantId of assignment.variantIds) {
       const key = `${canonicalPosition(assignment.position)}:${variantId}`;
@@ -174,7 +174,7 @@ export function printAreasForArtworkAssignments(
   const allowedIds = new Set(Object.values(uploadedImageIds));
   const outgoingIds = result.flatMap((area) => area.placeholders.flatMap((placeholder) => placeholder.images.map((image) => image.id)));
   if (outgoingIds.some((id) => !allowedIds.has(id))) {
-    throw new Error("Goldie blocked a draft containing an inherited template image ID.");
+    throw new Error("The Listing Factory blocked a draft containing an inherited template image ID.");
   }
   return result;
 }

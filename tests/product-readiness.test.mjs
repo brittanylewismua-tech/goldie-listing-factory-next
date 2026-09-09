@@ -176,7 +176,7 @@ test("profit and Etsy attributes never block a batch", () => {
   const result = productReadiness(tee);
   const profit = profitFacet(tee);
   assert.equal(profit.state, "auto");
-  assert.equal(profit.label, "$10 profit per item · Goldie's default");
+  assert.equal(profit.label, "$10 profit per item · Default");
   assert.ok(!result.questions.includes("profit"));
   /* Etsy attributes moved to the Listing page; they still never block. */
   const etsy = etsyFacet(tee);

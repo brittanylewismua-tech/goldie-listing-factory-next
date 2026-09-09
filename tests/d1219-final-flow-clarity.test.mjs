@@ -37,7 +37,8 @@ test("D1240 keeps one primary Etsy-draft decision on Review", () => {
   assert.match(app, />Save to Batch History<\/button>/);
   assert.doesNotMatch(app, /Choose where to keep these listings/);
   assert.doesNotMatch(app, />Keep in Printify</);
-  assert.match(app, /<summary>Other options<\/summary>/);
+  assert.match(app, />Open drafts in Printify ↗<\/a>/);
+  assert.doesNotMatch(app, /<summary>Other options<\/summary>/);
   assert.match(app, /className="review-etsy-draft-button"[^]*?"Save to Etsy Drafts"/);
 });
 

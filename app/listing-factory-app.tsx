@@ -1012,13 +1012,16 @@ export function sameIdSet(a:number[]|undefined,b:number[]|undefined):boolean{
    between her and step 4 was a single required Etsy field with no value. She had
    to open the row, then the details editor, then read down a list of properties
    to find which one. A row should say what is actually left. */
-export function etsyMissingRequired(etsy:{properties?:Array<{required?:boolean;value?:string;label?:string}>}|null|undefined):string[]{
+export function etsyMissingRequired(etsy:{category?:string;properties?:Array<{required?:boolean;value?:string;label?:string}>}|null|undefined):string[]{
   if(!etsy)return[];
-  return (etsy.properties||[]).filter(property=>property.required&&!(property.value||"").trim()).map(property=>property.label||"a required field");
+  return [
+    ...(!etsy.category?.trim()?["Etsy category"]:[]),
+    ...(etsy.properties||[]).filter(property=>property.required&&!(property.value||"").trim()).map(property=>property.label||"a required field"),
+  ];
 }
 
-export function etsyRequiredComplete(etsy:{properties?:Array<{required?:boolean;value?:string}>}|null|undefined):boolean{
-  if(!etsy)return false;
+export function etsyRequiredComplete(etsy:{category?:string;properties?:Array<{required?:boolean;value?:string}>}|null|undefined):boolean{
+  if(!etsy?.category?.trim())return false;
   const required=(etsy.properties||[]).filter(property=>property.required);
   return required.every(property=>Boolean((property.value||"").trim()));
 }
@@ -3153,7 +3156,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       {key:"photos",label:"Listing photos"},
       {key:"title",label:"Title & tags"},
       {key:"description",label:"Description"},
-      {key:"etsy",label:"Etsy details"},
+      {key:"etsy",label:"Etsy details & personalization"},
     ] as const;
     return <aside className="review-listing-editor-nav" aria-label={`Edit listing ${files.findIndex(file=>file.id===design.id)+1}`}><div><small>Editing listing {files.findIndex(file=>file.id===design.id)+1} of {files.length}</small><b>{design.title.trim()||"Untitled listing"}</b></div><nav>{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} onClick={()=>open(entry.key)}>{entry.label}</button>)}</nav><button type="button" className="review-listing-done" onClick={()=>{setReviewEditing(null);setFinishPhase("final");goToStep("finish",false,true)}}>Back to Review</button></aside>;
   }
@@ -3276,7 +3279,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     if(!design.etsy)return [{tone:"attention",label:design.title.trim()?"Not created yet":"Waiting for a title"}];
     if(etsyRequiredComplete(design.etsy))return [];
     const missing=etsyMissingRequired(design.etsy);
-    if(!missing.length)return [{tone:"attention",label:"Needs review"}];
+    if(!missing.length)return [{tone:"attention",label:"Review Etsy details"}];
     /* Name them. "2 required fields missing" still leaves her opening the row to
        find out which. */
     return [{tone:"attention",label:`Missing ${missing.slice(0,2).join(", ")}${missing.length>2?` +${missing.length-2}`:""}`}];
@@ -3731,7 +3734,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         tone={row.done?"done":row.pending?"pending":row.optional?"optional":"attention"}
         open={rowOpen}
         onToggle={row.report?undefined:()=>{if(grouped)setDraftStageByProduct(current=>({...current,[recipe.id]:draftTaskStage(row.task)||stageId}));openRow(row.target,row.task)}}
-        footerActions={rowOpen&&workflowStep==="designs"&&rows[rowIndex+1]?.task?<button type="button" className="task-next-section" onClick={()=>openGuidedDraftTask(rows[rowIndex+1].task!,index)}>Continue to {rows[rowIndex+1].label.toLowerCase()} <span aria-hidden="true">→</span></button>:undefined}
+        footerActions={rowOpen&&workflowStep==="designs"&&rows[rowIndex+1]?.task?<button type="button" className="task-next-section" onClick={()=>openGuidedDraftTask(rows[rowIndex+1].task!,index)}>Continue to {rows[rowIndex+1].label.startsWith("Etsy ")?rows[rowIndex+1].label:rows[rowIndex+1].label.toLowerCase()} <span aria-hidden="true">→</span></button>:undefined}
         toggleLabel={opening?"Opening…":rowOpen?"Close":"Change"}
         toggleDisabled={!reachableRow}
         toggleTitle={!reachableRow?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
@@ -5045,7 +5048,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          bundle what it has settled is the bundle. */
       ? undefined
       : workflowStep==="designs"
-        ? `${files.length} ${files.length===1?"design":"designs"}${bundleRunDrafts?` · ${bundleRunDrafts} Printify ${bundleRunDrafts===1?"draft":"drafts"}`:""}`
+        ? reviewEditing?`Listing ${Math.max(1,files.findIndex(file=>file.id===reviewEditing.clientId)+1)} of ${files.length}`:`${files.length} ${files.length===1?"design":"designs"}${bundleRunDrafts?` · ${bundleRunDrafts} Printify ${bundleRunDrafts===1?"draft":"drafts"}`:""}`
         : workflowStep==="review"
           ? `${bundleRunDrafts} of ${Math.max(bundleRunListings,files.length)} drafts created`
           : runCountLabel;
@@ -5061,7 +5064,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       ? { eyebrow: "STEP 1 OF 3", title: "Add your designs", copy: "" }
       : { eyebrow: "STEP 1 OF 3", title: "Choose a product or bundle", copy: "Select one to start your batch." },
     designs: complete
-      ? { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: "Everything your saved product already answers has been applied." }
+      ? reviewEditing
+        ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review." }
+        : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: "Everything your saved product already answers has been applied." }
       : { eyebrow: "STEP 2 OF 3", title: "Add your designs", copy: "" },
     review: { eyebrow: "STEP 2 OF 3", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
     finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Finish this listing, then return to Review." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Finish this listing, then return to Review." } : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: handoffBlockers().length?"Fix the missing items shown on the listing cards.":"Everything is ready. Save the batch to Etsy Drafts." },
@@ -5095,7 +5100,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           <GoldieWordmark className="approved-brand" />
         </div>
         <div className="top-actions">
-          <nav className="top-nav" aria-label="Goldie navigation">
+          <nav className="top-nav" aria-label="Listing Factory navigation">
             <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}>Listing Factory</a>
             <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}>Batch History</a>
             <a href="/keywords" target="_blank" rel="noopener noreferrer">Keyword Banks</a>
@@ -5654,7 +5659,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 place while the list scrolls. Every gate, warning, confirmation
                 and failure path below is the same code in the same order. */}
             <div className="factory-review"><div className="factory-review-list">
-            <FinalListingReview handoffOnly productName={activeBundle&&bundleRecipes.length>1?"":activeRecipe?.name||templateDetails?.blueprintTitle||""} drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={editReviewedListing} onEditProduct={editReviewedProduct} pricingAndShippingReady={reviewedPricingAndShippingReady} onSelectionChange={setSelectedPublishIds} onSelectionTouched={()=>{sellerChosePublish.current=true}}/>{/* D548 - read as someone about to spend money, this said two untrue things.
+            <FinalListingReview handoffOnly productName={activeBundle&&bundleRecipes.length>1?"":activeRecipe?.name||templateDetails?.blueprintTitle||""} drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={editReviewedListing} onEditProduct={editReviewedProduct} pricingAndShippingReady={reviewedPricingAndShippingReady} etsyDetailsIssue={draft=>{const design=bundlePublishFiles().find(file=>file.id===draft.clientId)||bundlePublishFiles().find(file=>file.name===draft.name);if(!etsyRequiredComplete(design?.etsy))return "Choose a category or required details";return personalizationProblem(design?.etsy)}} onSelectionChange={setSelectedPublishIds} onSelectionTouched={()=>{sellerChosePublish.current=true}}/>{/* D548 - read as someone about to spend money, this said two untrue things.
               "Only the listings selected above" - the selection covers the product
               that is open, and on a bundle the button publishes every product, so
               the sentence promised a smaller press than the one it sat under. And
@@ -5677,7 +5682,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   and the same wording productRows gave them. */}
               <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?`${handoffReadyCount()} of ${bundlePublishDrafts().length} listings ready`:`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockers()[0]||"Creates unpublished Etsy drafts. Nothing goes live."}</span></div>
               <button type="button" className="review-etsy-draft-button" disabled={creatingEtsyDrafts||!photoDeliveryStatusReady||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":"Save to Etsy Drafts"}</button>
-              {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<details className="review-other-options"><summary>Other options</summary><a href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open Printify drafts ↗</a></details>}
+              {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<a className="review-printify-link" href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open drafts in Printify ↗</a>}
               {false&&<><div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
               const total=publishTargets().length||bundleListingsToPublish();
@@ -5835,7 +5840,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             sits in, so the step states its own gate in one place. The button
             below is unchanged: same gate check, same handler. */}
         <FactoryFooter status={imagesStepIssues().length?(()=>{const next=unfinishedDraftGuidance();return <span className="draft-next-guidance"><span>{imagesStepIssues()[0]}</span>{next&&!savingDraftVariants&&!switchingProduct&&!restoringBatch&&<button type="button" className="draft-fix-link" onClick={()=>openGuidedDraftTask(next.task,next.index)}>Open {next.label.toLowerCase()}{activeBundle&&bundleRecipes.length>1?` · ${next.name}`:""} <span aria-hidden="true">↑</span></button>}</span>})():"Every listing has at least one photo"}>
-        <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void enterListingDetails()}}>Continue to listing <span aria-hidden="true">→</span></button>
+        <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void enterListingDetails()}}>Continue to listing details <span aria-hidden="true">→</span></button>
         </FactoryFooter>
         </>
         ,true,

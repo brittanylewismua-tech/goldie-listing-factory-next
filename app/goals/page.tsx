@@ -45,7 +45,7 @@ export default function GoalsPage() {
       {loaded && !goal?.enabled && (
         <section className="goals-off">
           <h2>Your listing goal is hidden</h2>
-          <p>Turn one on in Usage + Plan and Goldie will show your progress here and in the sidebar.</p>
+          <p>Turn one on in Usage + Plan and The Listing Factory will show your progress here and in the sidebar.</p>
           <a className="goals-cta" href="/usage#listing-goal">Show my listing goal</a>
         </section>
       )}

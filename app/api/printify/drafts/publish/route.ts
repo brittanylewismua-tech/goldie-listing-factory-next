@@ -11,7 +11,7 @@ import { etsyConnection, etsyFetch } from "@/app/api/etsy/client";
 const GOLDIE_ETSY_PUBLISHING_ENABLED=false;
 
 export async function POST(request:Request){
-  if(!GOLDIE_ETSY_PUBLISHING_ENABLED)return NextResponse.json({error:"Goldie no longer publishes listings to Etsy. Open My Products in Printify to choose and publish your drafts."},{status:410});
+  if(!GOLDIE_ETSY_PUBLISHING_ENABLED)return NextResponse.json({error:"The Listing Factory no longer publishes listings to Etsy. Open My Products in Printify to choose and publish your drafts."},{status:410});
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to publish these listings."},{status:401});
   const body=await request.json() as {productIds?:string[];runBatchId?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;etsyShippingProfileId?:number;byProduct?:Record<string,{indices?:number[];selections?:number[];shippingProfileId?:number}>},ids=[...new Set((body.productIds||[]).map(String).filter(Boolean))],etsyShippingProfileId=Number(body.etsyShippingProfileId);
   if(!ids.length)return NextResponse.json({error:"Choose at least one completed listing."},{status:400});
@@ -45,10 +45,10 @@ export async function POST(request:Request){
   const existing=await env.DB.prepare(`SELECT job_id FROM etsy_publish_items WHERE user_id=? AND product_id IN (${ids.map(()=>"?").join(",")}) AND status IN ('queued','running') LIMIT 1`).bind(user.userId,...ids).first<{job_id:string}>();if(existing)return NextResponse.json({ok:true,resumed:true,job:await publishJobPayload(user.userId,existing.job_id)});
   const completed=await env.DB.prepare(`SELECT job_id,COUNT(*) count FROM etsy_publish_items WHERE user_id=? AND product_id IN (${ids.map(()=>"?").join(",")}) AND status='completed' GROUP BY job_id ORDER BY count DESC LIMIT 1`).bind(user.userId,...ids).first<{job_id:string;count:number}>();if(Number(completed?.count||0)===ids.length)return NextResponse.json({ok:true,resumed:true,job:await publishJobPayload(user.userId,completed!.job_id)});
   const [etsy,printify,planRow,monthUsed,dayUsed,pending]=await Promise.all([env.DB.prepare("SELECT shop_id FROM etsy_connections WHERE user_id=? AND is_active=1").bind(user.userId).first(),env.DB.prepare("SELECT 1 ready FROM printify_connections WHERE user_id=?").bind(user.userId).first(),env.DB.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(user.userId).first<{plan_key:string}>(),env.DB.prepare("SELECT COUNT(*) count FROM etsy_listing_usage WHERE user_id=? AND substr(published_at,1,7)=?").bind(user.userId,monthKey()).first<{count:number}>(),env.DB.prepare("SELECT COUNT(*) count FROM etsy_listing_usage WHERE user_id=? AND published_at>=datetime('now','-24 hours')").bind(user.userId).first<{count:number}>(),env.DB.prepare("SELECT COUNT(*) count FROM etsy_publish_items WHERE user_id=? AND status IN ('queued','running')").bind(user.userId).first<{count:number}>()]);
-  if(!etsy)return NextResponse.json({error:"Connect Etsy before publishing. Goldie will not publish listings it cannot finish safely."},{status:400});if(!printify)return NextResponse.json({error:"Reconnect Printify before publishing."},{status:401});
+  if(!etsy)return NextResponse.json({error:"Connect Etsy before publishing. The Listing Factory will not publish listings it cannot finish safely."},{status:400});if(!printify)return NextResponse.json({error:"Reconnect Printify before publishing."},{status:401});
   /* D639 - the backstop. A batch built before the step-1 check existed, or one
      whose Etsy connection changed after the drafts were made, would otherwise
-     publish into a shop Goldie cannot finish listings in. That is exactly what
+     publish into a shop The Listing Factory cannot finish listings in. That is exactly what
      job 050552ce did: Printify accepted the publish for HOWDYANGEL and the
      listings were never going to appear in shesawolfclothing. Money is spent on
      the far side of this call, so it is worth one extra request. */
@@ -73,7 +73,7 @@ export async function POST(request:Request){
     }
   }
   const plan=planFor(planRow?.plan_key,isOwner(user)),reserved=Number(pending?.count||0),monthlyRemaining=plan.drafts-Number(monthUsed?.count||0)-reserved,dailyRemaining=plan.dailyListings-Number(dayUsed?.count||0)-reserved;
-  if(ids.length>monthlyRemaining)return NextResponse.json({error:`This batch would exceed your ${plan.drafts}-listing monthly allowance. You can queue ${Math.max(0,monthlyRemaining)} more ${monthlyRemaining===1?"listing":"listings"} this month.`},{status:429});if(ids.length>dailyRemaining)return NextResponse.json({error:`Goldie can publish ${Math.max(0,dailyRemaining)} more ${dailyRemaining===1?"listing":"listings"} for this account within the current 24-hour window. Your monthly listings remain available.`},{status:429});
+  if(ids.length>monthlyRemaining)return NextResponse.json({error:`This batch would exceed your ${plan.drafts}-listing monthly allowance. You can queue ${Math.max(0,monthlyRemaining)} more ${monthlyRemaining===1?"listing":"listings"} this month.`},{status:429});if(ids.length>dailyRemaining)return NextResponse.json({error:`The Listing Factory can publish ${Math.max(0,dailyRemaining)} more ${dailyRemaining===1?"listing":"listings"} for this account within the current 24-hour window. Your monthly listings remain available.`},{status:429});
   const proposedJobId=crypto.randomUUID(),drafts=rows.results.map(row=>JSON.parse(row.response_json) as {id:string;batchId?:string}),/* D872 · The JOB is the seller's one authorisation, so it keys on the run she
      authorised - not on whichever product happened to be drafted first. A bundle
      run publishes every product in one call (D559) and etsy_publish_jobs is
@@ -95,4 +95,4 @@ export async function POST(request:Request){
   return NextResponse.json({ok:true,job:await publishJobPayload(user.userId,jobId)},{status:202});
 }
 
-export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to view this publish job."},{status:401});const jobId=new URL(request.url).searchParams.get("jobId")||"";if(!jobId)return NextResponse.json({error:"A publish job is required."},{status:400});const current=await publishJobPayload(user.userId,jobId);if(!current)return NextResponse.json({error:"This publish job was not found."},{status:404});/* Historical jobs remain readable, but Goldie never advances them. */return NextResponse.json({ok:true,job:current})}
+export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to view this publish job."},{status:401});const jobId=new URL(request.url).searchParams.get("jobId")||"";if(!jobId)return NextResponse.json({error:"A publish job is required."},{status:400});const current=await publishJobPayload(user.userId,jobId);if(!current)return NextResponse.json({error:"This publish job was not found."},{status:404});/* Historical jobs remain readable, but The Listing Factory never advances them. */return NextResponse.json({ok:true,job:current})}

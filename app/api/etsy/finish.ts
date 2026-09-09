@@ -30,7 +30,7 @@ function chooseTaxonomy(nodes:TaxonomyNode[],details:EtsyDetails){const target=w
    value_ids returns "Missing input parameter: [values]", which is what D473
    fixed; sending only values returns "Missing input parameter: [value_ids]",
    which is what D473 turned every failure into. Her next two publishes died on
-   it. A property Goldie cannot match to a real Etsy value id cannot be sent at
+   it. A property The Listing Factory cannot match to a real Etsy value id cannot be sent at
    all, so it is skipped rather than sent broken. And no optional attribute is
    worth losing a whole listing over: a property that will not apply is recorded
    and stepped over instead of thrown, so the listing still goes live. */
@@ -42,7 +42,7 @@ async function applyProperty(token:string,shopId:number,listingId:number,propert
 }
 async function applyEtsyDetails(token:string,shopId:number,listingId:number,details:EtsyDetails,shippingProfileId:number,description:string,meter:{calls:number}){
   const tree=await taxonomyNodes(token,meter),match=chooseTaxonomy(tree,details);
-  const taxonomyId=Number(details.taxonomyId)||match?.node.id;if(!taxonomyId||!match&& !details.taxonomyId)throw new Error(`Goldie could not safely match the Etsy category “${details.category||"unknown"}”. Review this listing before publishing.`);
+  const taxonomyId=Number(details.taxonomyId)||match?.node.id;if(!taxonomyId||!match&& !details.taxonomyId)throw new Error(`The Listing Factory could not safely match the Etsy category “${details.category||"unknown"}”. Review this listing before publishing.`);
   const listingBody=new URLSearchParams({taxonomy_id:String(taxonomyId),shipping_profile_id:String(shippingProfileId),description});
   await etsyFetch(`/shops/${shopId}/listings/${listingId}`,token,{method:"PATCH",body:listingBody},meter);
   const skipped:string[]=[];
@@ -80,7 +80,7 @@ async function applyListingImages(userId:string,token:string,shopId:number,listi
 export async function finishEtsyListing(userId:string,draft:DraftData,listingId:number,printifyImageIndices:number[]){
   const connection=await etsyConnection(userId),meter={calls:0};
   const listing=await etsyFetch<Listing>(`/listings/${listingId}`,connection.token,undefined,meter);
-  if(Number(listing.shop_id)!==Number(connection.shopId))throw new Error("Etsy returned a listing from a different shop. Goldie stopped without editing it.");
+  if(Number(listing.shop_id)!==Number(connection.shopId))throw new Error("Etsy returned a listing from a different shop. The Listing Factory stopped without editing it.");
   if(!draft.etsyDetails?.category)throw new Error("Etsy category details are missing for this listing.");
   if(!draft.etsyShippingProfileId)throw new Error("Choose an Etsy shipping profile before publishing.");
   await applyEtsyDetails(connection.token,connection.shopId,listingId,draft.etsyDetails,draft.etsyShippingProfileId,String(draft.description||""),meter);

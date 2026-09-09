@@ -5,5 +5,5 @@ export function isPermanentUploadError(message:string){
 }
 
 export function oversizedFileMessage(name:string,size:number){
-  return `${name} is ${(size/1024/1024).toFixed(1)} MB. Goldie can safely optimize large opaque artwork up to 100 MB. Export this file as an optimized PNG or JPG under 100 MB without reducing the pixel dimensions needed for 300 DPI.`;
+  return `${name} is ${(size/1024/1024).toFixed(1)} MB. The Listing Factory can safely optimize large opaque artwork up to 100 MB. Export this file as an optimized PNG or JPG under 100 MB without reducing the pixel dimensions needed for 300 DPI.`;
 }

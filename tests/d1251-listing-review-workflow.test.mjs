@@ -8,7 +8,9 @@ const theme=readFileSync(new URL("../app/lilac-theme.css",import.meta.url),"utf8
 const interfaceCss=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
 
 test("D1251: Review reports readiness from saved listing data",()=>{
-  assert.match(review,/etsyReady=Boolean\(design\?\.etsy\?\.category\?\.trim\(\)\)/);
+  assert.match(review,/etsyIssue=etsyDetailsIssue\?\.\(draft\)\?\?/);
+  assert.match(review,/Boolean\(design\?\.etsy\?\.category\?\.trim\(\)\)/);
+  assert.match(review,/etsyReady=!etsyIssue/);
   assert.match(review,/descriptionReady=Boolean\(String\(design\?\.descriptionOverride\?\?draft\.description/);
   assert.match(review,/variants=Number\(draft\.selectedVariantIds\?\.length\|\|draft\.costReview\?\.variants\.filter/);
   assert.match(review,/section\.ready\?"✓":"Required"/);
@@ -27,7 +29,7 @@ test("D1251: all Review rows route directly into the matching editor",()=>{
 });
 
 test("D1251: the listing editor keeps every section and Review return visible",()=>{
-  for(const label of ["Artwork placement","Colors & sizes","Pricing & shipping","Listing photos","Title & tags","Description","Etsy details"]){
+  for(const label of ["Artwork placement","Colors & sizes","Pricing & shipping","Listing photos","Title & tags","Description","Etsy details & personalization"]){
     assert.ok(app.includes(`label:"${label}"`));
   }
   assert.match(app,/className="review-listing-editor-nav"/);
@@ -73,6 +75,34 @@ test("post-draft size editing names its listing scope truthfully",()=>{
 test("Review uses singular variant grammar for one-option products",()=>{
   const review=readFileSync(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8");
   assert.match(review,/variants===1\?"variant":"variants"/);
+});
+
+test("Review editing identifies the current listing instead of repeating the overview",()=>{
+  assert.match(app,/reviewEditing\?`Listing \$\{Math\.max\(1,files\.findIndex/);
+  assert.match(app,/reviewEditing\s*\? \{ eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review\." \}/);
+  assert.match(app,/>Continue to listing details <span/);
+});
+
+test("Etsy and personalization rows cannot show ready while personalization blocks handoff",()=>{
+  const review=readFileSync(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8");
+  assert.match(review,/etsyDetailsIssue\?:\(draft:Draft\)=>string/);
+  assert.match(review,/etsyIssue=etsyDetailsIssue\?\.\(draft\)/);
+  assert.match(review,/detail:etsyReady\?"Etsy details ready":etsyIssue/);
+  assert.match(app,/etsyDetailsIssue=\{draft=>/);
+  assert.match(app,/return personalizationProblem\(design\?\.etsy\)/);
+});
+
+test("Etsy readiness requires a category as well as required property values",()=>{
+  assert.match(app,/if\(!etsy\?\.category\?\.trim\(\)\)return false/);
+  assert.match(app,/!etsy\.category\?\.trim\(\)\?\["Etsy category"\]/);
+  assert.match(app,/if\(!etsyRequiredComplete\(design\?\.etsy\)\)issues\.push\(`/);
+});
+
+test("Review uses exact section names and exposes Printify drafts without a vague disclosure",()=>{
+  assert.match(app,/\{key:"etsy",label:"Etsy details & personalization"\}/);
+  assert.match(app,/>Open drafts in Printify ↗<\/a>/);
+  assert.doesNotMatch(app,/<summary>Other options<\/summary>/);
+  assert.match(app,/label\.startsWith\("Etsy "\)\?rows\[rowIndex\+1\]\.label/);
 });
 
 test("D1251: the completion map and sticky editor navigation remain usable on narrow screens",()=>{

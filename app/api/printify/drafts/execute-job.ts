@@ -124,7 +124,7 @@ export async function executeDraftJob(input:DraftJobInput,idempotencyKey:string,
     const requestOrigin = new URL(request.url).origin;
     if(!savedUploads)for (const artwork of requestedArtworks) {
       const stagedArtwork = await runtimeEnv().ARTWORK?.get(artwork.stagedId);
-      if (!stagedArtwork) throw new Error(`Goldie could not retrieve ${artwork.fileName}.`);
+      if (!stagedArtwork) throw new Error(`The Listing Factory could not retrieve ${artwork.fileName}.`);
       if (stagedArtwork.customMetadata?.owner !== user.userId) throw new Error("This staged artwork does not belong to the signed-in account.");
       if (Number(stagedArtwork.customMetadata?.expires ?? 0) <= Date.now()) throw new Error(`${artwork.fileName} expired before Printify could retrieve it.`);
       artworkSources.set(artwork.key, {

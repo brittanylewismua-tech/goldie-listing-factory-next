@@ -5,7 +5,7 @@ import { supportResponse, SupportTurn } from "./support-engine";
 import { loomEmbedUrl, stepVideoId, STEP_VIDEO_TITLES, type WorkflowScreen } from "./step-videos";
 
 const SUGGESTIONS = ["A design failed", "Printify won’t connect", "My template won’t load", "My image won’t upload"];
-const WELCOME: SupportTurn = { role:"support", text:"Hi 👋 I’m here to help with the Goldie Listing Factory. Tell me what happened or paste the error message you’re seeing, and we’ll work through it together." };
+const WELCOME: SupportTurn = { role:"support", text:"Hi 👋 I’m here to help with The Listing Factory. Tell me what happened or paste the error message you’re seeing, and we’ll work through it together." };
 
 function initialMessages() {
   if (typeof window === "undefined") return [WELCOME];
@@ -126,7 +126,7 @@ export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
       form.append("email", email);
       form.append("message", issue.trim());
       form.append("page", window.location.href);
-      form.append("conversation", messages.map((message) => `${message.role === "user" ? "Member" : "Goldie Support"}: ${message.text}`).join("\n\n"));
+      form.append("conversation", messages.map((message) => `${message.role === "user" ? "Member" : "Listing Factory Support"}: ${message.text}`).join("\n\n"));
       if (screenshot) form.append("attachment", screenshot, screenshot.name);
       const response = await fetch("/api/support", { method:"POST", body:form });
       const result = await response.json() as { sent?:boolean; error?:string };
@@ -165,8 +165,8 @@ export default function SupportChat({ screen }: { screen?: WorkflowScreen }) {
       aria-haspopup="dialog"
       aria-label={`Watch: ${screen ? STEP_VIDEO_TITLES[screen] : "this step"}`}
     ><span aria-hidden="true">▶</span></button> : null}
-    <button className="support-launcher" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="support-panel" aria-label="Open Goldie support"><span>G</span></button>
-    {open && <section className="support-panel" id="support-panel" aria-label="Goldie support assistant">
+    <button className="support-launcher" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="support-panel" aria-label="Open Listing Factory support"><span>G</span></button>
+    {open && <section className="support-panel" id="support-panel" aria-label="Listing Factory support assistant">
       <header><nav><button className={view === "chat" ? "active" : ""} onClick={() => setView("chat")}>Chat</button><button className={view === "contact" ? "active" : ""} onClick={() => setView("contact")}>Contact Support</button></nav><button className="support-close" onClick={() => setOpen(false)} aria-label="Close support">×</button></header>
       {view === "chat" ? <>
         <div className="support-messages" aria-live="polite">{messages.map((message, index) => <div className={`support-message ${message.role}`} key={index}><SupportText text={message.text}/></div>)}{suggestions.length > 0 && <div className="support-suggestions">{suggestions.map((suggestion) => <button key={suggestion} onClick={() => answer(suggestion)}>{suggestion}</button>)}</div>}<div ref={endRef}/></div>

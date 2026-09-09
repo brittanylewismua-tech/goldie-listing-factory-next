@@ -1285,7 +1285,7 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
   assert.doesNotMatch(`${publish}\n${queue}`,/sort_on|newest|listing.*title.*match|match.*listing.*title/i);
   assert.doesNotMatch(`${publish}\n${queue}`,/findListingByTitle|searchListings/i);
   assert.match(finish,/listing\.shop_id/);
-  assert.match(finish,/Goldie stopped without editing it/);
+  assert.match(finish,/The Listing Factory stopped without editing it/);
   assert.match(finish,/applyEtsyDetails/);
   assert.match(finish,/applyListingImages/);
   assert.doesNotMatch(finish,/body\.set\("title"/);
@@ -1625,7 +1625,7 @@ test("the retired Etsy queue cannot run in the background or from owner controls
   ]);
   assert.match(worker,/async scheduled/);assert.doesNotMatch(worker,/drainGlobalPublishQueue|kickGlobalPublishQueueIfDue/);assert.match(vite,/crons: \["\* \* \* \* \*"\]/);
   assert.match(queue,/MAX_CONCURRENT_LISTINGS=4/);assert.match(queue,/AVG\(api_calls\)/);assert.match(queue,/Math\.ceil\(Number\(average\?\.average/);assert.match(queue,/paused_until/);assert.match(queue,/DELETE FROM etsy_api_usage_buckets/);assert.match(queue,/DELETE FROM etsy_worker_runs/);
-  assert.match(client,/retry-after/);assert.match(client,/Etsy asked Goldie to slow down/);assert.match(finish,/meter\.calls/);assert.match(finish,/apiCalls:meter\.calls/);
+  assert.match(client,/retry-after/);assert.match(client,/Etsy asked The Listing Factory to slow down/);assert.match(finish,/meter\.calls/);assert.match(finish,/apiCalls:meter\.calls/);
   assert.match(operations,/Etsy draft transfer history/);assert.match(operations,/Shared Etsy quota/);assert.match(operations,/Historical API cost/);assert.match(operations,/Legacy failures/);assert.match(operations,/old scheduled publisher is intentionally off/);assert.doesNotMatch(operations,/Worker heartbeat needs attention|<OperationsControl/);assert.match(api,/\["pause","resume","retry_failed","run_now"\][\s\S]*status:410/);assert.match(api,/isOwner/);
   assert.match(schema,/etsyQueueState/);assert.match(schema,/etsyWorkerRuns/);assert.match(migration,/etsy_queue_state/);assert.match(migration,/etsy_worker_runs/);
 });
@@ -2348,7 +2348,7 @@ test("warns on the exact listing when its bank misses the design text (fixes D76
      not match the ARTWORK, but a title has already been built from that bank —
      so the old text printed "No phrase in this bank matches this design"
      directly beneath a finished title made from nine of its phrases. */
-  assert.match(route,/Goldie could not read any text in this design, so it could not check the bank\./);
+  assert.match(route,/The Listing Factory could not read any text in this design, so it could not check the bank\./);
   assert.match(app,/className="title-match-warning" role="status"/);
   assert.match(app,/titleWarning:item\.result\.titleWarning/);
 });
@@ -2525,7 +2525,7 @@ test("D230: a warning never contradicts the title sitting above it", async () =>
    * 120-character title built from nine phrases of that bank. The warning is
    * about the ARTWORK, not the phrases, and it read as a flat contradiction. */
   assert.doesNotMatch(api, /No phrase in this bank matches this design/);
-  assert.match(api, /Goldie could not read any text in this design, so it could not check the bank\./);
+  assert.match(api, /The Listing Factory could not read any text in this design, so it could not check the bank\./);
 
   /* And the count message must agree with itself: "1 titles created" was live. */
   assert.match(app, /\$\{files\.length-failed===1\?"title":"titles"\} created/);
@@ -3067,7 +3067,7 @@ test("a failed scene names itself, and the rest are not silently lost — D446",
      that "every selected scene" had not finished. The way out was to guess which
      scene and deselect it. */
   assert.match(integrated, /const lost=measured\.filter\(\(_,index\)=>!completed\.has\(index\)\)\.map\(template=>template\.name\)/);
-  assert.match(integrated, /Goldie could not finish \$\{lost\.length===1\?"this scene":"these scenes"\}/);
+  assert.match(integrated, /The Listing Factory could not finish \$\{lost\.length===1\?"this scene":"these scenes"\}/);
   assert.doesNotMatch(integrated, /could not finish every selected scene/);
 
   // Staging still only happens when the whole set succeeded.
@@ -4993,7 +4993,7 @@ test("steps 1 to 3 say what their numbers mean — D550", async () => {
      price - and on a hoodie a $10 price would be below cost. The one row that is
      entirely about money was the most misreadable thing on the page. */
   assert.match(readiness, /\$\$\{saved\.toFixed\(0\)\} profit per item/);
-  assert.match(readiness, /\$10 profit per item · Goldie's default/);
+  assert.match(readiness, /\$10 profit per item · Default/);
   assert.doesNotMatch(readiness, /\$\{saved\.toFixed\(0\)\} per item`/);
 
   // And a shipping profile's name is labelled as a profile, not left as a value.
@@ -6073,7 +6073,7 @@ test("Goldie remembers publishing even when Printify has not answered — D638",
   assert.match(queue, /if\(!listingId&&!alreadyPublished\)\{/);
 
   // The bounded failure says plainly that nothing was published twice.
-  assert.match(queue, /Goldie published once and did not repeat it/);
+  assert.match(queue, /The Listing Factory published once and did not repeat it/);
 
   /* And the payload now shows why an item is waiting. Counts alone made a
      patient wait look identical to a dead stall - which is what cost eleven
@@ -6146,7 +6146,7 @@ test("shop pairing is proven against Etsy, never guessed from names — D641", a
   }
 
   // And the refusal explains that this was checked, not assumed.
-  assert.match(match, /Goldie read a listing this Printify store published and Etsy says it belongs to a different shop/);
+  assert.match(match, /The Listing Factory read a listing this Printify store published and Etsy says it belongs to a different shop/);
 });
 
 /* D639 · Brittany, reading the refusal: "there's no navigation to go back to the

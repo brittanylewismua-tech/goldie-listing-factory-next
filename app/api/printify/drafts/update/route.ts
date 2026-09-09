@@ -65,7 +65,7 @@ export async function PATCH(request:Request){
     const change=body.artworkUpdate,areas=(currentProduct?.print_areas||[]) as DraftPrintArea[];
     if(!change.position||!change.variantIds?.length)return NextResponse.json({error:"Choose a product color before changing its artwork."},{status:400});
     primaryArtworkId=draft.primaryArtworkImageIds?.[change.position]||primaryImageForSide(areas,change.position);
-    if(!primaryArtworkId)return NextResponse.json({error:`Goldie could not identify the main ${change.position} artwork in this draft.`},{status:409});
+    if(!primaryArtworkId)return NextResponse.json({error:`The Listing Factory could not identify the main ${change.position} artwork in this draft.`},{status:409});
     let imageId=primaryArtworkId;
     if(!change.reset){
       const runtime=env as unknown as {ARTWORK?:{get(key:string):Promise<{body?:ReadableStream;customMetadata?:Record<string,string>}|null>}};
@@ -83,7 +83,7 @@ export async function PATCH(request:Request){
   }
   if(body.variantPrices){
     const variants=currentProduct?.variants||[];
-    if(!variants.length)return NextResponse.json({error:"Printify did not return the actual variant costs, so Goldie will not approve these prices."},{status:409});
+    if(!variants.length)return NextResponse.json({error:"Printify did not return the actual variant costs, so The Listing Factory will not approve these prices."},{status:409});
     const invalid=variants.find(variant=>{const price=Number(body.variantPrices?.[String(variant.id)]??variant.price),cost=Number(variant.cost);return !Number.isFinite(cost)||!Number.isInteger(price)||price<cost||price>1000000});
     if(invalid)return NextResponse.json({error:`The price for variant ${invalid.id} must be at least its current Printify cost.`},{status:400});
     const proposed=variants.map(variant=>({id:variant.id,price:Number(body.variantPrices?.[String(variant.id)]??variant.price),is_enabled:variant.is_enabled!==false}));

@@ -29,7 +29,7 @@ async function handlePOST(request:NextRequest){
     await ensureMockupStorage();
     const body=await request.json() as {kind?:RequestedProductKind;scene?:string;design?:string;reference?:string};
     if(!body.kind||!requestedKinds.has(body.kind)||!valid(body.scene)||!valid(body.design)||body.reference&&!valid(body.reference))return NextResponse.json({error:"The mockup files could not be read safely."},{status:400});
-    if(!body.reference)return NextResponse.json({error:"Add one placement reference for this product so Goldie can match the print size and position."},{status:400});
+    if(!body.reference)return NextResponse.json({error:"Add one placement reference for this product so The Listing Factory can match the print size and position."},{status:400});
     const day=monthKey(),userDay=`${user.userId}:${day}`,db=getDb();
     const planRow=await db.all<{plan_key:string}>(sql`SELECT plan_key FROM account_plans WHERE user_id=${user.userId} LIMIT 1`),plan=planFor(planRow[0]?.plan_key,isOwner(user));
     await db.insert(mockupRenderUsage).values({userDay,userId:user.userId,day,count:1}).onConflictDoUpdate({target:mockupRenderUsage.userDay,set:{count:sql`${mockupRenderUsage.count}+1`,updatedAt:new Date().toISOString()}});reservedKey=userDay;
@@ -37,10 +37,10 @@ async function handlePOST(request:NextRequest){
     if(Number(usage?.count||0)>plan.aiMockups){await db.update(mockupRenderUsage).set({count:sql`MAX(0,${mockupRenderUsage.count}-1)`}).where(eq(mockupRenderUsage.userDay,userDay));reservedKey="";return NextResponse.json({error:`You have used all ${plan.aiMockups} AI-rendered mockups in your ${plan.name} plan. Your allowance resets next month.`},{status:429})}
     const key=process.env.FAL_KEY;if(!key)throw new Error("Product rendering is temporarily unavailable.");
     const kind=rendererKind(body.kind),model=rendererFor(kind),queued=await fetch(`https://queue.fal.run/${model}`,{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify(rendererInput(kind,[body.scene,body.design,body.reference]))});
-    const payload=await queued.json() as {request_id?:string;detail?:string;error?:string};if(!queued.ok||!payload.request_id)throw new Error(payload.detail||payload.error||"Goldie could not start this mockup render.");
+    const payload=await queued.json() as {request_id?:string;detail?:string;error?:string};if(!queued.ok||!payload.request_id)throw new Error(payload.detail||payload.error||"The Listing Factory could not start this mockup render.");
     const id=crypto.randomUUID();await env.DB.prepare("INSERT INTO mockup_render_jobs (id,user_id,request_id,model,status,usage_key) VALUES (?,?,?,?,'queued',?)").bind(id,user.userId,payload.request_id,model,userDay).run();reservedKey="";
     return NextResponse.json({jobId:id,status:"queued"},{status:202});
-  }catch(error){if(reservedKey)await getDb().update(mockupRenderUsage).set({count:sql`MAX(0,${mockupRenderUsage.count}-1)`}).where(eq(mockupRenderUsage.userDay,reservedKey)).catch(()=>undefined);return NextResponse.json({error:error instanceof Error?error.message:"Goldie could not start this mockup."},{status:500})}
+  }catch(error){if(reservedKey)await getDb().update(mockupRenderUsage).set({count:sql`MAX(0,${mockupRenderUsage.count}-1)`}).where(eq(mockupRenderUsage.userDay,reservedKey)).catch(()=>undefined);return NextResponse.json({error:error instanceof Error?error.message:"The Listing Factory could not start this mockup."},{status:500})}
 }
 
 export async function GET(request:NextRequest){
@@ -52,10 +52,10 @@ export async function GET(request:NextRequest){
     if(job.status==="completed"&&job.object_key){const stored=await env.ARTWORK.get(job.object_key);if(!stored)return NextResponse.json({status:"processing"},{status:202});return NextResponse.json({status:"completed",image:await imageData(await stored.arrayBuffer(),job.content_type||"image/png")})}
     const key=process.env.FAL_KEY;if(!key)throw new Error("Product rendering is temporarily unavailable.");
     const statusResponse=await fetch(`https://queue.fal.run/${job.model}/requests/${job.request_id}/status`,{headers:{Authorization:`Key ${key}`}}),statusPayload=await statusResponse.json() as {status?:string;detail?:string;error?:string};
-    if(!statusResponse.ok){const message=statusPayload.detail||statusPayload.error||"Goldie could not check this mockup yet.";if(statusResponse.status>=500)return NextResponse.json({status:"processing"},{status:202});await releaseUsage(job,message);return NextResponse.json({status:"failed",error:message},{status:409})}
+    if(!statusResponse.ok){const message=statusPayload.detail||statusPayload.error||"The Listing Factory could not check this mockup yet.";if(statusResponse.status>=500)return NextResponse.json({status:"processing"},{status:202});await releaseUsage(job,message);return NextResponse.json({status:"failed",error:message},{status:409})}
     if(statusPayload.status!=="COMPLETED")return NextResponse.json({status:statusPayload.status==="IN_QUEUE"?"queued":"processing"},{status:202});
     const resultResponse=await fetch(`https://queue.fal.run/${job.model}/requests/${job.request_id}`,{headers:{Authorization:`Key ${key}`}}),result=await resultResponse.json() as {images?:Array<{url?:string}>;detail?:string;error?:string},imageUrl=result.images?.find(image=>image.url)?.url;
-    if(!resultResponse.ok||!imageUrl){const message=result.detail||result.error||"Goldie could not retrieve the finished mockup.";await releaseUsage(job,message);return NextResponse.json({status:"failed",error:message},{status:409})}
+    if(!resultResponse.ok||!imageUrl){const message=result.detail||result.error||"The Listing Factory could not retrieve the finished mockup.";await releaseUsage(job,message);return NextResponse.json({status:"failed",error:message},{status:409})}
     const rendered=await fetch(imageUrl);if(!rendered.ok)return NextResponse.json({status:"processing"},{status:202});const bytes=await rendered.arrayBuffer(),contentType=rendered.headers.get("content-type")||"image/png",objectKey=`mockup-renders/${user.userId}/${job.id}`;
     await env.ARTWORK.put(objectKey,bytes,{httpMetadata:{contentType}});await env.DB.prepare("UPDATE mockup_render_jobs SET status='completed',object_key=?,content_type=?,last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(objectKey,contentType,job.id).run();
     return NextResponse.json({status:"completed",image:await imageData(bytes,contentType)});

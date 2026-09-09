@@ -68,7 +68,7 @@ export function blockedReasons(step: WorkflowStep, s: GateState): string[] {
   if (!s.connected) reasons.push("Connect your Printify account.");
   if (!s.etsyConnected) reasons.push("Connect the Etsy shop that will receive these listings.");
   if (step !== "connect" && step !== "setup" && !s.productSelected) reasons.push("Choose a saved product.");
-  if (step === "designs" && !s.templateLoaded) reasons.push("Goldie is still loading this product from Printify.");
+  if (step === "designs" && !s.templateLoaded) reasons.push("The Listing Factory is still loading this product from Printify.");
   if (step === "review" && !s.ready) reasons.push("Add at least one design.");
   if (step === "finish" && !s.complete) reasons.push("Create your Printify drafts first.");
   return reasons.length ? reasons : ["This step is not ready yet."];

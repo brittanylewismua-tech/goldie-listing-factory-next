@@ -80,7 +80,7 @@ export async function PATCH(request:NextRequest){
      hides it from phone-case products and barrel-wraps the artwork. Deleting and
      re-uploading fifty photographs to correct a dropdown is not a fix. */
   const surfaceKind=String(body.surfaceKind||"").trim();
-  if(surfaceKind&&!kinds.has(surfaceKind))return NextResponse.json({error:"That product surface is not one Goldie recognises."},{status:400});
+  if(surfaceKind&&!kinds.has(surfaceKind))return NextResponse.json({error:"That product surface is not one The Listing Factory recognises."},{status:400});
   if(!oldTheme||!newTheme)return NextResponse.json({error:"Enter a name for this mockup set."},{status:400});
   if(sourceTheme){await env.DB.prepare(`INSERT INTO mockup_set_preferences (user_id,source_theme,display_name,hidden,updated_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_id,source_theme) DO UPDATE SET display_name=excluded.display_name,hidden=0,updated_at=CURRENT_TIMESTAMP`).bind(user.userId,sourceTheme,newTheme,0).run();return NextResponse.json({ok:true});}
   const conflict=await getDb().select({id:mockupTemplates.id}).from(mockupTemplates).where(and(eq(mockupTemplates.userId,user.userId),eq(mockupTemplates.theme,newTheme)));

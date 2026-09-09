@@ -72,7 +72,7 @@ export async function runDeliveryTick(id:string,owner:string){
   try{
     const capacity=await runtime.DB.prepare('SELECT paused_until FROM etsy_queue_state WHERE id=1').first<{paused_until:number}>();
     if(capacity&&capacity.paused_until*1000>Date.now()){
-      await deliveryStatus(id,owner,row.status,'Etsy asked Goldie to slow down. Your saved draft will continue automatically.');
+      await deliveryStatus(id,owner,row.status,'Etsy asked The Listing Factory to slow down. Your saved draft will continue automatically.');
       return {done:false,progress:false,waitMs:Math.max(1000,capacity.paused_until*1000-Date.now())};
     }
     const connection=await etsyConnection(owner);
@@ -125,7 +125,7 @@ export async function runDeliveryTick(id:string,owner:string){
       await waitForEtsyCapacity();
       const response=await fetch(`https://api.etsy.com/v3/application${path}`,{...init,headers:{...Object.fromEntries(new Headers(init?.headers)), 'x-api-key':etsyApiCredential(),Authorization:`Bearer ${connection.token}`},signal:AbortSignal.timeout(25000)});
       await recordEtsyCall(response);
-      if(response.status===429)throw new EtsyRateLimited('Etsy asked Goldie to slow down. Your saved draft will continue automatically.');
+      if(response.status===429)throw new EtsyRateLimited('Etsy asked The Listing Factory to slow down. Your saved draft will continue automatically.');
       if(!response.ok){const detail=(await response.text()).replace(/[<>]/g,'').slice(0,250);const message=`Etsy returned ${response.status}: ${detail}`;if(row.draft_json&&[400,401,403,404,409,422].includes(response.status))throw new DraftWriteRejected(message);throw Error(message);}
       return response;
     };

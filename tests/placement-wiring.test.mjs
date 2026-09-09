@@ -12,7 +12,7 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
 test("save calls the real placement API and refuses to lie about it", async () => {
   const grid = await read("app/integrated-mockups.tsx");
   assert.match(grid, /await fetch\("\/api\/mockups\/placement",\{method:"PUT"/);
-  assert.match(grid, /if\(!written\.ok\)throw new Error\("Goldie could not save this placement\."\)/,
+  assert.match(grid, /if\(!written\.ok\)throw new Error\("The Listing Factory could not save this placement\."\)/,
     "a failed write must throw rather than fall through to Adjusted");
   // Adjusted state is only set after the write.
   const writeAt = grid.indexOf("if(!written.ok)throw");

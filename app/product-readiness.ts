@@ -206,7 +206,7 @@ export function profitFacet(input: ReadinessInput): Facet {
   if (Number.isFinite(saved) && saved > 0) return { name: "profit", state: "ready", label: `$${saved.toFixed(0)} profit per item` };
   /* A profit goal always has a workable default, so it is never a blocker. */
   /* And a default she never chose is not the same as a decision she made. */
-  return { name: "profit", state: "auto", label: "$10 profit per item · Goldie's default", resolved: { profitTarget: 10 } };
+  return { name: "profit", state: "auto", label: "$10 profit per item · Default", resolved: { profitTarget: 10 } };
 }
 
 export function etsyFacet(input: ReadinessInput): Facet {
