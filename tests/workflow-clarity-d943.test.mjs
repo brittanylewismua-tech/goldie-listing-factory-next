@@ -5,7 +5,7 @@ import fs from "node:fs";
 const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
 test("D1238: the three-step rail names the job each stage performs",()=>{
-  assert.match(app,/\{label:"Product",index:1,title:"Choose product"/);
+  assert.match(app,/\{label:"Setup",index:1,title:"Choose a product and add designs"/);
   assert.match(app,/\{label:"Designs",index:2,title:"Add designs and create drafts"/);
   assert.match(app,/\{label:"Review",index:8,title:"Review and finish listings"/);
 });

@@ -7,9 +7,9 @@ const review=fs.readFileSync(new URL('../app/final-listing-review.tsx',import.me
 const tools=fs.readFileSync(new URL('../app/factory-tools.tsx',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../app/lilac-theme.css',import.meta.url),'utf8');
 
-test('D1238: the customer workflow is Product, Designs, Review',()=>{
+test('D1268: the customer workflow is Setup, Designs, Review',()=>{
   const rail=app.slice(app.indexOf('const RAIL_STAGES'),app.indexOf('const WORKFLOW_HELP'));
-  assert.match(rail,/label:"Product"/);
+  assert.match(rail,/label:"Setup"/);
   assert.match(rail,/label:"Designs"/);
   assert.match(rail,/label:"Review"/);
   assert.doesNotMatch(rail,/label:"Listing"|label:"Finish"|label:"Drafts"/);

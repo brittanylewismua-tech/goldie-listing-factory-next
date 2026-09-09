@@ -1378,7 +1378,7 @@ test("labels every progress bubble with a short workflow name", async () => {
   ]);
   /* D222 · RAIL_STAGES carries the labels now, one per page, so the parallel
      nine-entry short-label array is gone. */
-  assert.match(page, /\{label:"Product",index:1,title:"Choose product"/);
+  assert.match(page, /\{label:"Setup",index:1,title:"Choose a product and add designs"/);
   assert.match(page, /\{label:"Designs",index:2,title:"Add designs and create drafts"/);
   assert.match(page, /\{label:"Review",index:8,title:"Review and finish listings"/);
   assert.match(page, /<em className="progress-bubble-label">\{stage\.label\}<\/em>/);
@@ -1912,7 +1912,7 @@ test("D1238: the rail is three stages, and every legacy phase has a home",async(
      so the subrail is gone and its phases were merged onto those pages.
      What matters is that no legacy index was orphaned by the merge. */
   const stages=page.slice(page.indexOf("const RAIL_STAGES"),page.indexOf("const RAIL_TOP"));
-  assert.match(stages,/\{label:"Product",index:1,.*covers:\[1\]\}/);
+  assert.match(stages,/\{label:"Setup",index:1,.*covers:\[1\]\}/);
   assert.match(stages,/\{label:"Designs",index:2,.*covers:\[2,3,4\]\}/,
     "design upload and draft creation share one screen");
   assert.match(stages,/\{label:"Review",index:8,.*covers:\[5,6,7,8\]\}/,

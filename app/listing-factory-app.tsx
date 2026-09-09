@@ -351,7 +351,7 @@ const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Revie
    indices no longer get bubbles of their own. The 0-8 indices are untouched, so
    every gate, status and deep link still resolves. */
 const RAIL_STAGES: Array<{label:string;title:string;index:number;covers:number[]}> = [
-  {label:"Product",index:1,title:"Choose product",covers:[1]},
+  {label:"Setup",index:1,title:"Choose a product and add designs",covers:[1]},
   {label:"Designs",index:2,title:"Add designs and create drafts",covers:[2,3,4]},
   {label:"Review",index:8,title:"Review and finish listings",covers:[5,6,7,8]},
 ];
