@@ -4131,7 +4131,7 @@ test("active products keep their rows and inactive draft products show saved-wor
   assert.match(app, /if\(many&&!open&&workflowStep==="designs"\)return null;const rows=productRows\(recipe,index===bundleIndex\)/,
     "D501 - a single-product batch gets its rows too, as step 1 gives them");
   assert.match(app, /<div className=\{`batch-product-rows \$\{grouped\?"has-draft-stages":""\}`\}>[\s\S]*\{rows\.map/);
-  assert.match(app, /\(grouped\|\|Boolean\(reviewEditing\)\)&&row\.task!==effectiveTask/,
+  assert.match(app, /if\(grouped&&row\.task!==effectiveTask\)return null;if\(reviewTasks&&\(!row\.task\|\|!reviewTasks\.has\(row\.task\)\)\)return null/,
     "D1229 - one selected or required section renders instead of a stack");
   assert.match(app, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"\}<\/span>/,
     "the same row markup step 1 uses");

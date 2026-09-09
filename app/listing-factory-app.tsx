@@ -3715,6 +3715,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const stageId=visibleDraftStage(rows,effectiveTask,draftStageByProduct[recipe.id]);
     const stages=DRAFT_TASK_STAGES.filter(stage=>rows.some(row=>draftTaskStage(row.task)===stage.id));
     const stageRows=rows.filter(row=>draftTaskStage(row.task)===stageId);
+    const reviewTasks=reviewEditing?new Set(reviewEditing.section==="variants"?["draft-colors","draft-sizes"]:reviewEditing.section==="pricing"?["draft-pricing","draft-shipping"]:reviewEditing.section==="artwork"?["placement"]:reviewEditing.section==="photos"?["photos"]:[]):null;
     return <div className={`batch-product-rows ${grouped?"has-draft-stages":""}`}>
       {grouped&&<div className="draft-stage-rail"><nav className="draft-stage-nav" aria-label="Product setup stages">{stages.map((stage,stageIndex)=>{
         const tasks=rows.filter(row=>draftTaskStage(row.task)===stage.id),remaining=tasks.filter(row=>!row.done).length;
@@ -3723,7 +3724,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           const target=tasks.find(row=>!row.done)||tasks[0];if(target?.task)openGuidedDraftTask(target.task,index);
         }}><span>{remaining?stageIndex+1:"✓"}</span><b>{draftStageLabel(stage.id,tasks.map(row=>row.task||""))}</b><small>{remaining?`${remaining} to finish`:"Ready"}</small></button>;
       })}</nav>{effectiveTask&&<><p className="draft-stage-position">Stage {stages.findIndex(stage=>stage.id===stageId)+1} of {stages.length} · {stageRows.find(row=>row.task===effectiveTask)?.label}</p>{stageRows.length>1&&<nav className="draft-section-nav" aria-label={`${draftStageLabel(stageId,stageRows.map(row=>row.task||""))} sections`}>{stageRows.map((row,rowIndex)=><button type="button" key={row.task||row.label} aria-current={row.task===effectiveTask?"step":undefined} onClick={()=>row.task&&openGuidedDraftTask(row.task,index)}><span aria-hidden="true">{row.done?"✓":rowIndex+1}</span>{row.label}</button>)}</nav>}</>}</div>}
-      {rows.map((row,rowIndex)=>{if((grouped||Boolean(reviewEditing))&&row.task!==effectiveTask)return null;const rowOpen=Boolean(!switchingProduct&&open&&row.task&&(grouped?row.task===effectiveTask:activeTask===row.task));
+      {rows.map((row,rowIndex)=>{if(grouped&&row.task!==effectiveTask)return null;if(reviewTasks&&(!row.task||!reviewTasks.has(row.task)))return null;const rowOpen=Boolean(!switchingProduct&&open&&row.task&&(reviewTasks?reviewTasks.has(row.task):grouped?row.task===effectiveTask:activeTask===row.task));
       const reachableRow=!(switchingProduct||(!open&&!reachable));
       /* D767 · A reporting row has nothing of its own to open (D541), which is a
          reason to have no Change control - not a reason to be a different

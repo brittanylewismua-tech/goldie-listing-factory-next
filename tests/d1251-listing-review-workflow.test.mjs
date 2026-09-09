@@ -90,7 +90,10 @@ test("Review editing identifies the current listing instead of repeating the ove
 test("Review editors expose one unambiguous return and truthful save state",()=>{
   assert.equal((app.match(/>Back to Review<\/button>/g)||[]).length,1);
   assert.match(app,/const grouped=workflowStep==="designs"&&!reviewEditing/);
-  assert.match(app,/if\(\(grouped\|\|Boolean\(reviewEditing\)\)&&row\.task!==effectiveTask\)return null/);
+  assert.match(app,/reviewEditing\.section==="variants"\?\["draft-colors","draft-sizes"\]/);
+  assert.match(app,/reviewEditing\.section==="pricing"\?\["draft-pricing","draft-shipping"\]/);
+  assert.match(app,/if\(reviewTasks&&\(!row\.task\|\|!reviewTasks\.has\(row\.task\)\)\)return null/);
+  assert.match(app,/reviewTasks\?reviewTasks\.has\(row\.task\):grouped\?row\.task===effectiveTask/);
   assert.match(app,/footerActions=\{rowOpen&&workflowStep==="designs"&&!reviewEditing/);
   assert.match(app,/onToggle=\{row\.report\|\|reviewEditing\?undefined:/);
   assert.match(app,/\{!reviewEditing&&<FactoryFooter status=\{imagesStepIssues\(\)\.length/);
