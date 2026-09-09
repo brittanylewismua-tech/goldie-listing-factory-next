@@ -23,7 +23,7 @@ test('D1242: member incident output summarizes jobs without returning private ch
 
 test('D1245: owner diagnostics compare Louisa’s live Etsy and Printify variants without exposing SKUs',()=>{
   assert.match(route,/includeVariantAudit/);
-  assert.match(route,/FROM photo_deliveries WHERE user_id=\?/);
+  assert.match(route,/FROM photo_deliveries p WHERE p\.user_id=\?/);
   assert.match(route,/missingInEtsy/);
   assert.match(route,/extraInEtsy/);
   assert.match(route,/priceMismatches/);

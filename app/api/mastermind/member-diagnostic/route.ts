@@ -72,21 +72,24 @@ function deliverySummary(row:DeliveryDiagnostic){
 }
 
 async function auditDeliveryVariants(rows:DeliveryDiagnostic[],printifyToken:string,etsyToken:string){
- return Promise.all(rows.filter(row=>row.status==='needs_attention').slice(0,12).map(async row=>{
-  const summary=deliverySummary(row);if(!summary.listingId)return {...summary,diagnosis:'The saved Etsy listing ID is missing.'};
+ const results=[];for(const row of rows.filter(row=>row.status==='needs_attention').slice(0,12)){
+  const summary=deliverySummary(row);if(!summary.listingId){results.push({...summary,diagnosis:'The saved Etsy listing ID is missing.'});continue}
   try{
    const [productCheck,inventory]=await Promise.all([
     status(`/shops/${row.printifyShopId}/products/${encodeURIComponent(row.productId)}.json`,printifyToken),
     etsyFetch<{products?:{sku:string;offerings:{price:{amount:number;divisor:number};is_enabled:boolean}[]}[]}>(`/listings/${summary.listingId}/inventory`,etsyToken),
    ]);
    if(!productCheck.response.ok)return {...summary,printifyHttpStatus:productCheck.status,diagnosis:'The Printify product could not be read.'};
-   const product=await productCheck.response.json() as {variants?:{id:number;sku:string;price:number;is_enabled:boolean}[]};
+   const product=await productCheck.response.json() as {variants?:{id:number;sku:string;price:number;is_enabled:boolean;options?:number[]}[];options?:{name:string;values:{id:number;title:string}[]}[]};
    const expected=(product.variants||[]).filter(variant=>variant.is_enabled),actual=(inventory.products||[]).filter(item=>item.offerings?.some(offer=>offer.is_enabled));
    const expectedSkus=new Set(expected.map(item=>item.sku)),actualSkus=new Set(actual.map(item=>item.sku));
+   const optionTitles=new Map((product.options||[]).flatMap(option=>option.values.map(value=>[value.id,`${option.name}: ${value.title}`] as const)));
+   const missing=expected.filter(item=>!actualSkus.has(item.sku));
    const priceMismatches=expected.filter(variant=>{const item=actual.find(row=>row.sku===variant.sku);return !item?.offerings?.some(offer=>offer.is_enabled&&offer.price?.divisor&&Math.round(offer.price.amount/offer.price.divisor*100)===variant.price)}).length;
-   return {...summary,printifyEnabled:expected.length,etsyEnabled:actual.length,printifyUniqueSkus:expectedSkus.size,etsyUniqueSkus:actualSkus.size,missingInEtsy:[...expectedSkus].filter(sku=>!actualSkus.has(sku)).length,extraInEtsy:[...actualSkus].filter(sku=>!expectedSkus.has(sku)).length,blankPrintifySkus:expected.filter(item=>!item.sku).length,blankEtsySkus:actual.filter(item=>!item.sku).length,priceMismatches,diagnosis:expected.length===actual.length&&expectedSkus.size===expected.length&&actualSkus.size===actual.length&&priceMismatches===0?'Variants match now; retrying the saved check is safe.':'Printify and Etsy currently differ.'};
-  }catch(error){return {...summary,diagnosis:error instanceof Error?error.message:'The variant audit could not finish.'}}
- }));
+   results.push({...summary,printifyEnabled:expected.length,etsyEnabled:actual.length,printifyUniqueSkus:expectedSkus.size,etsyUniqueSkus:actualSkus.size,missingInEtsy:missing.length,missingVariants:missing.map(item=>(item.options||[]).map(id=>optionTitles.get(id)||String(id)).join(' · ')),extraInEtsy:[...actualSkus].filter(sku=>!expectedSkus.has(sku)).length,blankPrintifySkus:expected.filter(item=>!item.sku).length,blankEtsySkus:actual.filter(item=>!item.sku).length,priceMismatches,diagnosis:expected.length===actual.length&&expectedSkus.size===expected.length&&actualSkus.size===actual.length&&priceMismatches===0?'Variants match now; retrying the saved check is safe.':'Printify and Etsy currently differ.'});
+  }catch(error){results.push({...summary,diagnosis:error instanceof Error?error.message:'The variant audit could not finish.'})}
+ }
+ return results;
 }
 
 export async function resolveMastermindMember(query: string) {
@@ -115,7 +118,7 @@ export async function auditMemberPrintify(email: string,includeVariantAudit=fals
     db.prepare("SELECT reference, file_name AS fileName, stage, outcome, retry_count AS retryCount, error_code AS errorCode, http_status AS httpStatus, message, updated_at AS updatedAt FROM printify_diagnostics WHERE user_id=? ORDER BY updated_at DESC LIMIT 12").bind(access.userId).all(),
     db.prepare("SELECT request_key AS requestKey, batch_id AS batchId, client_id AS clientId, status, response_json AS responseJson, created_at AS createdAt, updated_at AS updatedAt FROM printify_draft_results WHERE user_id=? ORDER BY updated_at DESC LIMIT 20").bind(access.userId).all(),
     db.prepare("SELECT id,status,step,setup_name AS setupName,design_count AS designCount,state_json AS stateJson,updated_at AS updatedAt FROM listing_batches WHERE user_id=? ORDER BY updated_at DESC LIMIT 8").bind(access.userId).all(),
-    db.prepare("SELECT id,product_id AS productId,printify_shop_id AS printifyShopId,etsy_shop_id AS etsyShopId,status,error,state_json AS stateJson,candidate_listing_id AS candidateListingId,updated_at AS updatedAt FROM photo_deliveries WHERE user_id=? ORDER BY updated_at DESC LIMIT 20").bind(access.userId).all<DeliveryDiagnostic>(),
+    db.prepare("SELECT p.id,p.product_id AS productId,p.printify_shop_id AS printifyShopId,p.etsy_shop_id AS etsyShopId,p.status,p.error,p.state_json AS stateJson,p.candidate_listing_id AS candidateListingId,p.updated_at AS updatedAt FROM photo_deliveries p WHERE p.user_id=? AND p.updated_at=(SELECT MAX(q.updated_at) FROM photo_deliveries q WHERE q.user_id=p.user_id AND q.product_id=p.product_id) ORDER BY p.updated_at DESC LIMIT 20").bind(access.userId).all<DeliveryDiagnostic>(),
   ]);
   const deliveryRows=recentDeliveries.results??[];
   const activity = {
