@@ -4583,7 +4583,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       });
       if(revision!==variantSaveRevision.current)return;
       const byId=new Map(updated.map(draft=>[draft.id,draft]));
-      setDrafts(current=>current.map(draft=>byId.get(draft.id)||draft));
+      setDrafts(current=>current.map(draft=>{const update=byId.get(draft.id);return update?{...draft,...update,productName:update.productName||draft.productName}:draft}));
       setPricingApproved(false);
       if(activeRecipe)void establish(activeRecipe,{defaultColorIds:nextColors,defaultSizeIds:nextSizes});
     }catch(error){if(revision===variantSaveRevision.current)setDraftVariantError(error instanceof Error?error.message:"Printify could not save these product choices.")}
@@ -4608,14 +4608,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,artworkUpdate})});
       const payload=await response.json().catch(()=>({})) as {draft?:DraftResult;error?:string};
       if(!response.ok||!payload.draft)throw new Error(payload.error||`Printify could not update the artwork for ${color.title}.`);
-      setDrafts(current=>current.map(item=>item.id===draft.id?payload.draft!:item));
-      setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:member.drafts.map(item=>item.id===draft.id?payload.draft!:item)}])));
+      setDrafts(current=>current.map(item=>item.id===draft.id?{...item,...payload.draft!,productName:payload.draft!.productName||item.productName}:item));
+      setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:member.drafts.map(item=>item.id===draft.id?{...item,...payload.draft!,productName:payload.draft!.productName||item.productName}:item)}])));
       setPricingApproved(false);
     }catch(error){setDraftVariantError(error instanceof Error?error.message:"Printify could not update that artwork.")}
     finally{setSavingDraftArtwork(false);setSavingDraftVariants(false)}
   }
   async function syncListingFields(design:DesignFile,details?:EtsyDetails){const draft=drafts.find(item=>item.clientId===design.id);if(!draft?.id)throw new Error("The matching Printify draft could not be found.");const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,title:design.title,tags:design.tags,description:finalDescription(design,details),etsyDetails:details})});const payload=await response.json() as {error?:string};if(!response.ok)throw new Error(payload.error||"Printify could not save the completed listing.")}
-  async function refreshDraftPhotos(productId:string,requireFresh=false){try{const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId,refreshImages:true})});const payload=await response.json() as {draft?:DraftResult};if(!response.ok||!payload.draft)throw new Error("Printify preview refresh failed");setDrafts(current=>current.map(item=>item.id===productId?payload.draft!:item))}catch(error){if(requireFresh)throw error;/* Background gallery refresh retains the already loaded photos. */}}
+  async function refreshDraftPhotos(productId:string,requireFresh=false){try{const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId,refreshImages:true})});const payload=await response.json() as {draft?:DraftResult};if(!response.ok||!payload.draft)throw new Error("Printify preview refresh failed");setDrafts(current=>current.map(item=>item.id===productId?{...item,...payload.draft!,productName:payload.draft!.productName||item.productName}:item));setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:member.drafts.map(item=>item.id===productId?{...item,...payload.draft!,productName:payload.draft!.productName||item.productName}:item)}])))}catch(error){if(requireFresh)throw error;/* Background gallery refresh retains the already loaded photos. */}}
   async function saveActualDraftPricing(draft:DraftResult,editedPrices?:Record<string,number>){
     if(!draft.id||!draft.costReview?.verified)throw new Error("Printify's finished costs are not available for this listing yet.");
     const calculated=pricesFromActualCosts({...draft.costReview,required:true},pricingForDraft(draft));

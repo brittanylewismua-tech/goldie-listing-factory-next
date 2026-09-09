@@ -42,3 +42,10 @@ test("D1247: product edit controls have an unambiguous group label",()=>{
   assert.match(review,/Product settings/);
   assert.doesNotMatch(review,/Change product/);
 });
+
+test("D1248: provider refreshes cannot erase the saved product identity",()=>{
+  const preservation=/productName:payload\.draft!\.productName\|\|item\.productName/g;
+  assert.equal([...app.matchAll(preservation)].length,4);
+  assert.match(app,/productName:update\.productName\|\|draft\.productName/);
+  assert.match(app,/refreshImages:true[\s\S]*?setBundleMembers/);
+});
