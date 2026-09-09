@@ -38,7 +38,7 @@ import { createPortal } from "react-dom";
    No slot (server render, or a step that has no bar) means it renders in place,
    exactly as it did before. */
 
-export default function FactoryFooter({ status, children }: { status?: ReactNode; children: ReactNode }) {
+export default function FactoryFooter({ status, children }: { status?: ReactNode; children?: ReactNode }) {
   const [slot, setSlot] = useState<Element | null>(null);
   /* D778 · There is more than one bar. Once the Printify drafts exist, step 2
      swaps its bar for .post-draft-footer and leaves the ordinary one in the
@@ -79,7 +79,7 @@ export default function FactoryFooter({ status, children }: { status?: ReactNode
   const body = (
     <>
       <small>{status}</small>
-      {forward}
+      {children == null ? null : forward}
     </>
   );
 

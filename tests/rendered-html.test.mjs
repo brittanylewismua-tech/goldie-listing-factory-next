@@ -1641,7 +1641,8 @@ test("acknowledges slow workflow actions immediately and blocks repeat clicks",a
   assert.match(workflow,/Loading product details…/);
   assert.match(workflow,/className="goldie-spinner"[\s\S]{0,120}Preparing \{included\.length\} products/);
   assert.match(workflow,/actionLock\.current/);
-  assert.match(page,/aria-busy=\{preparingEtsy\}/);
+  assert.match(page,/Preparing Etsy details automatically…/);
+  assert.doesNotMatch(page,/className="secondary-action prepare-etsy"/);
   assert.match(page,/aria-busy=\{running\|\|preparingEtsy\|\|Boolean\(bundleRun\)\}/);
   assert.match(page,/aria-busy=\{publishing\}/);
   assert.match(mockups,/aria-busy=\{busy\}/);
@@ -2065,7 +2066,7 @@ test("shows underfilled titles and tags as a non-blocking review state (fixes D6
   assert.doesNotMatch(review,/design\.title\.trim\(\)\.length<100/);
   assert.match(review,/needed:missingTitle\|\|missingTags/);
   assert.match(review,/design\.tags\.length<13/);
-  assert.match(review,/! Needs you/);
+  assert.doesNotMatch(review,/Needs you/);
   assert.match(review,/review\.needed\?"content-review":"needs-attention"/);
   /* D255 · This used to be "One or more titles need review" — vaguer than the
      rows immediately below it, which name every listing individually. The
@@ -2246,7 +2247,8 @@ test("traverses every workflow phase with one shared gate and never enables an i
   assert.match(app,/issues\[0\]\|\|`\$\{progressStatus/);
   /* D545 - and a batch whose saving is paused because another tab holds it must
      not run work that costs credits and is then thrown away. */
-  assert.match(app,/disabled=\{preparingEtsy\|\|progressGateIssues\(6\)\.length>0\|\|batchHeldByAnotherTab\}/);
+  assert.match(app,/\{!etsyDetailsPrepared\?<FactoryFooter status=\{preparingEtsy\?"Preparing Etsy details automatically…"/);
+  assert.doesNotMatch(app,/className="secondary-action prepare-etsy"/);
   assert.match(app,/function markShippingEdit\(\)\{onApprovalChange\(false\)/);
   assert.doesNotMatch(app,/if\(!selectedProfile\|\|customDirty\)onApprovalChange/);
 });
@@ -4875,8 +4877,9 @@ test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", as
      to be in. Keying it on finishPhase==="details" meant the button never swapped
      for Next step, because D221 had already made that phase permanent - so step 3
      had no way forward at all. */
-  assert.match(app, /\{!etsyDetailsPrepared\?<FactoryFooter status=[\s\S]*?><button className="secondary-action prepare-etsy"/,
-    "preparing Etsy details covers the batch, so it sits under the cards");
+  assert.match(app, /\{!etsyDetailsPrepared\?<FactoryFooter status=\{preparingEtsy\?"Preparing Etsy details automatically…"/,
+    "automatic Etsy preparation reports progress under the cards");
+  assert.doesNotMatch(app, /className="secondary-action prepare-etsy"/);
   assert.match(app, /const etsyDetailsPrepared=files\.length>0&&files\.every\(file=>Boolean\(file\.etsy\)\)/);
   assert.doesNotMatch(app, /url\.searchParams\.set\("phase","etsy"\)/,
     "and the URL never claims a phase the app is not in");
@@ -5925,7 +5928,7 @@ test("one list decides whether the press can happen, scoped to the selection —
      the one list - that is what this count protects. */
   assert.ok((app.match(/publishBlockers\(\)/g) || []).length >= 5,
     "every final handoff surface reads the same blocker list");
-  assert.match(app, /copy: handoffBlockers\(\)\.length\?"Fix the cards marked Needs you\. Everything else is ready\.":"Everything is ready\. Save the batch to Etsy Drafts\."/,
+  assert.match(app, /copy: handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/,
     "the handoff heading reads the same list as the handoff action");
   assert.match(app, /publishBlockersRef\.current=publishBlockers;/,
     "and by the guard through a ref refreshed every render - D644");
@@ -6970,7 +6973,7 @@ test("the final review reads honestly — D660", async () => {
   assert.match(css, /\.app-shell \.row-value\{min-width:0;overflow-wrap:anywhere\}/);
 
   // The heading must agree with the button underneath it.
-  assert.match(app, /title: "Review your listings", copy: handoffBlockers\(\)\.length\?"Fix the cards marked Needs you\. Everything else is ready\.":"Everything is ready\. Save the batch to Etsy Drafts\."/);
+  assert.match(app, /title: "Review your listings", copy: handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/);
 
   /* The heading and the draft chip overlapped once the chip carried a product
      name: "✓ 2 drafts on Gildan Hoodie" printed through the heading. */

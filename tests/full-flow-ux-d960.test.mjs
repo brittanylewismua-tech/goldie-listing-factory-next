@@ -28,7 +28,7 @@ test("D960: hoodie and sweatshirt products cannot be described as short sleeve",
 
 test("D960: final Printify handoff has one save action and honest non-blocking advice", () => {
   assert.doesNotMatch(app, />Save this batch for later<\/button>/);
-  assert.match(review, /handoffOnly\?"Needs you"/);
+  assert.doesNotMatch(review, /Needs you/);
   assert.match(review, /exactIssue\(draft\)/);
   assert.match(review, /handoffOnly\?"advice":"needs-attention"/);
   assert.match(css, /final-design-group summary em\.advice\{/);

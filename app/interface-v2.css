@@ -3976,20 +3976,10 @@ html, body { background: var(--lf-paper); }
 .photo-delivery-handoff .draft-handoff-results .draft-open{background:#111;color:#fff;text-decoration:none;text-align:center}
 .photo-delivery-handoff .draft-handoff-results .draft-open:hover{background:#333;color:#fff}
 
-/* D1219: Step 4 is a batch overview, not another stack of large editable
-   product chapters. Ten products stay scannable without ten empty hero cards. */
-.app-shell .final-product-overview{margin:0 0 28px;padding:20px;border:2px solid #171717;border-radius:12px;background:#fff;box-shadow:4px 4px 0 #171717}
-.app-shell .final-product-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-.app-shell .final-product-item{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px;min-width:0;padding:12px;border:1px solid #d7cbd2;border-radius:9px;background:#faf7f9}
-.app-shell .final-product-item>img,.app-shell .final-product-item>.bundle-product-photo{width:52px;height:52px;box-sizing:border-box;border:1px solid #d7cbd2;border-radius:7px;background:#fff;object-fit:cover}
-.app-shell .final-product-item>div{display:grid;gap:3px;min-width:0}.app-shell .final-product-item small{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#725e6b}.app-shell .final-product-item b{font-size:14px;line-height:1.3;overflow-wrap:anywhere}.app-shell .final-product-item span{font-size:12px;color:#665762}
-
 .app-shell .listing-review-gate{display:grid;gap:8px;margin:20px 0;padding:16px 18px;border:2px solid #171717;border-radius:10px;background:#fff;box-shadow:3px 3px 0 #171717}
 .app-shell .listing-review-gate.is-blocked{border-color:#8c2727;box-shadow:3px 3px 0 #8c2727}.app-shell .listing-review-gate b{font-size:16px}.app-shell .listing-review-gate :is(p,ul){margin:0}.app-shell .listing-review-gate ul{display:grid;gap:5px;padding-left:20px}.app-shell .listing-review-gate li,.app-shell .listing-review-gate p{font-size:13px;line-height:1.5}
 .app-shell .review-gate-action{justify-self:start;min-height:44px;margin-top:4px;padding:9px 15px;border:2px solid #171717;border-radius:9px;background:#171717;color:#fff;font:800 13px/1.2 inherit;cursor:pointer;box-shadow:3px 3px 0 var(--pink)}
 .app-shell .review-gate-action:hover,.app-shell .review-gate-action:focus-visible{background:#fff;color:#171717;outline:3px solid rgba(255,66,181,.28);outline-offset:2px}
-
-@media(max-width:640px){.app-shell .final-product-overview{padding:16px}.app-shell .final-product-grid{grid-template-columns:minmax(0,1fr)}}
 
 /* Three persistent stages keep orientation beside long product forms. */
 .app-shell .batch-product-rows.has-draft-stages{display:grid;grid-template-columns:minmax(0,1fr);align-items:start}

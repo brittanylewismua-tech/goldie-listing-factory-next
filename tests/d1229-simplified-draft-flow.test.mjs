@@ -7,7 +7,7 @@ const css=read('app/interface-v2.css');
 
 test('D1229: ready defaults are presented as complete rather than six mandatory reviews',()=>{
  assert.match(app,/Everything your saved product already answers has been applied\./);
- assert.match(app,/Fix the cards marked Needs you\. Everything else is ready\./);
+ assert.match(app,/Fix the missing items shown on the listing cards\./);
  assert.doesNotMatch(app,/The exact section you need|Your other saved choices|Everything required is already set|unfinished section is still clearly marked/);
  assert.match(app,/remaining\?`\$\{remaining\} to finish`:"Ready"/);
  assert.doesNotMatch(app,/>Ready to review</);

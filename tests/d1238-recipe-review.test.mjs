@@ -25,7 +25,8 @@ test('D1238: completed creation and completed restore open the review surface',(
 });
 
 test('D1238: listing cards expose exact readiness, price, and direct corrections',()=>{
-  for(const text of ['No title yet.','No Etsy tags yet.','Finished cost needs price approval.','No listing photo selected.','! Needs you'])assert.match(review,new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  for(const text of ['No title yet.','No Etsy tags yet.','Finished cost needs price approval.','No listing photo selected.'])assert.match(review,new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  assert.doesNotMatch(review,/Needs you/);
   assert.match(review,/priceLabel\(draft\)/);
   assert.match(review,/Edit listing details/);
   assert.match(review,/Photos & download/);
@@ -37,11 +38,12 @@ test('D1238: listing cards expose exact readiness, price, and direct corrections
   assert.match(review,/design\?\.title\|\|`Untitled listing/);
   assert.doesNotMatch(review,/design\?\.title\|\|draft\.title\|\|"Untitled listing"/);
   assert.match(review,/new Map<string,Draft\[\]>\(\)/);
+  for(const label of ['Artwork, colors &amp; sizes','Pricing &amp; shipping','Listing photos'])assert.match(review,new RegExp(label));
 });
 
 test('D1238: product cards identify incomplete recipes and expose Edit product',()=>{
   for(const field of ['defaultProfitTarget','etsyShippingProfileId','printifyImageIndices','description','keywordListId'])assert.match(tools,new RegExp(`recipe\\.${field}`));
   assert.match(tools,/>Finish setup</);
   assert.match(tools,/>Edit product</);
-  assert.match(css,/recipe-review-settings/);
+  assert.match(css,/recipe-product-settings/);
 });

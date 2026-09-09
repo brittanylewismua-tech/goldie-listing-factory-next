@@ -2093,20 +2093,6 @@ body{min-width:0}
 .app-shell .shipping-combobox-trigger{white-space:normal;text-align:left}
 /* D502 - step-product-waiting is gone; the disabled Change button carries it. */
 
-/* D397 · Step 3 had two forward buttons: one mid-card and one at the end, with
-   content between them. The mid-card one never navigated - it prepares the Etsy
-   fields - so it now says so and reads as a secondary action. The step keeps one
-   forward control, at the bottom, called Next step like every other step. */
-.app-shell .prepare-etsy{
-  display:block;width:fit-content;margin:20px auto 4px;
-  min-height:0;padding:9px 16px;
-  border:1px solid #ded5db;border-radius:16px;
-  background:rgba(255,255,255,.72);color:#5b304f;
-  font:inherit;font-size:12px;font-weight:700;cursor:pointer;
-}
-.app-shell .prepare-etsy:hover:not(:disabled){background:#fff}
-.app-shell .prepare-etsy:disabled{opacity:.5;cursor:not-allowed}
-
 /* D401 · The listing preview was 152px when this workspace was built (2ac5d64).
    Two later commits overrode it to 56px with !important - at that size the
    design is unreadable, so you cannot tell which listing you are editing.

@@ -3088,6 +3088,11 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     const index=bundleRecipes.findIndex(recipe=>bundleMembers[recipe.id]?.drafts.some(draft=>draft.id===target.id));
     if(index>=0&&index!==bundleIndex)openBundleProduct(index);
   }
+  function editReviewedProduct(stage:"design"|"pricing"|"photos",target:{id?:string}){
+    const index=target.id?bundleRecipes.findIndex(recipe=>bundleMembers[recipe.id]?.drafts.some(draft=>draft.id===target.id)):bundleIndex;
+    openGuidedDraftTask(stage==="design"?"placement":stage==="pricing"?"draft-pricing":"photos",index>=0?index:bundleIndex);
+    goToStep("designs",false,true);
+  }
   useEffect(()=>{
     if(!reviewEdit||switchingProduct||restoringBatch||!drafts.some(draft=>draft.id===reviewEdit.id))return;
     const target=reviewEdit;setReviewEdit(null);setActiveDesign(target.clientId);
@@ -3530,26 +3535,6 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       </div>
       {files.length>1&&<nav className="factory-listing-next" aria-label="Move between listings"><button type="button" disabled={index===0} onClick={event=>showListing(files[index-1].id,event.currentTarget)}>← Previous listing</button><span>Listing {index+1} of {files.length}</span><button type="button" disabled={index===files.length-1} onClick={event=>showListing(files[index+1].id,event.currentTarget)}>Next listing →</button></nav>}
     </div>;
-  }
-
-  function finalProductOverview(){
-    const list=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
-    if(!list.length)return null;
-    const listingCount=(recipe:Recipe,index:number)=>index===bundleIndex
-      ?drafts.filter(draft=>draft.status==="Created").length
-      :(bundleMembers[recipe.id]?.drafts||[]).filter(draft=>draft.status==="Created").length;
-    const totalListings=list.reduce((total,recipe,index)=>total+listingCount(recipe,index),0);
-    return <details className="final-product-overview recipe-review-settings">
-      <summary><span><b>Batch settings</b><small>{list.length} {list.length===1?"product":"products"} · {totalListings} {totalListings===1?"listing":"listings"}</small></span><em>Review or change</em></summary>
-      <div className="final-product-grid">{list.map((recipe,index)=>{
-        const product=index===bundleIndex?templateDetails:bundleColorProducts[recipe.id];
-        const photo=product?pickProductPhoto(product):"";
-        const summary=listingCount(recipe,index);
-        return <article key={recipe.id} className="final-product-item">
-          {photo?<img src={photo} alt="" decoding="async"/>:<ProductGlyph title={product?.blueprintTitle||recipe.name}/>}<div><small>{list.length>1?`Product ${index+1} of ${list.length}`:"Saved product"}</small><b>{recipe.name}</b><span>${Number(recipe.defaultProfitTarget||10).toFixed(0)} profit target · {summary} {summary===1?"listing":"listings"}</span></div><button type="button" onClick={()=>{openGuidedDraftTask("placement",index);goToStep("designs",false,true)}}>Review settings</button>
-        </article>;
-      })}</div>
-    </details>;
   }
 
   function stepProductCards(statusFor:(recipe:Recipe,index:number)=>{label:string;tone:"ready"|"attention"|"advice"|"waiting"},body:ReactNode,hidden=false,footer:ReactNode=null,showCards=true,header:ReactNode=null){
@@ -5001,7 +4986,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       ? { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: "Everything your saved product already answers has been applied." }
       : { eyebrow: "STEP 2 OF 3", title: "Add your designs", copy: "" },
     review: { eyebrow: "STEP 2 OF 3", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
-    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Finish this listing, then return to Review." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Finish this listing, then return to Review." } : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: handoffBlockers().length?"Fix the cards marked Needs you. Everything else is ready.":"Everything is ready. Save the batch to Etsy Drafts." },
+    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Finish this listing, then return to Review." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Finish this listing, then return to Review." } : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: handoffBlockers().length?"Fix the missing items shown on the listing cards.":"Everything is ready. Save the batch to Etsy Drafts." },
   }[workflowStep];
   const workflowHelp=workflowStep==="designs"
     ?complete
@@ -5558,7 +5543,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   after the footer row and the bar. It uses the same row every
                   other step uses: the reason on the left, the action on the
                   right. Same button, same gate, same handler. */}
-              {!etsyDetailsPrepared?<FactoryFooter status={preparingEtsy?"Preparing each listing in the background. You can keep reviewing this page.":progressGateIssues(6)[0]||"Every listing has a title and tags"}><button className="secondary-action prepare-etsy" data-inline-progress="true" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another tab, so nothing prepared here would be kept.":progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button></FactoryFooter>:(()=>{const issues=progressGateIssues(7),priceTarget=costReviewDrafts().find(draft=>draft.status==="Created"&&!draft.costReview?.approved),canOpenPricing=Boolean(priceTarget)||(!gateState().pricingApproved&&costReviewGroups().length>0);const openPricing=()=>{if(priceTarget)editReviewedListing("pricing",priceTarget);else{setActiveTask("draft-pricing");goToStep("designs",false,true)}};return <>{(savingEtsyDetails||issues.length>0)&&<section className={`listing-review-gate ${issues.length?"is-blocked":"is-saving"}`} role={issues.length?"alert":"status"} aria-live="polite"><b>{issues.length?"Finish this before Review":"Opening final review…"}</b>{issues.length?<ul>{issues.map(issue=><li key={issue}>{issue}</li>)}</ul>:<p>Saving your latest listing changes. This can take about 15 seconds.</p>}{issues.length>0&&canOpenPricing&&<button type="button" className="review-gate-action" onClick={openPricing}>Review item prices →</button>}</section>}<FactoryFooter status={savingEtsyDetails?"Saving your latest listing changes before review…":issues[0]||"Every listing is ready for review"}><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||Boolean(issues.length&&!canOpenPricing)} title={issues[0]} onClick={canOpenPricing?openPricing:()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Opening final review…":canOpenPricing?"Review item prices":"Review batch"} <span>→</span></button></FactoryFooter></>})()}
+              {!etsyDetailsPrepared?<FactoryFooter status={preparingEtsy?"Preparing Etsy details automatically…":progressGateIssues(6)[0]||"Etsy details are preparing automatically."}/>:(()=>{const issues=progressGateIssues(7),priceTarget=costReviewDrafts().find(draft=>draft.status==="Created"&&!draft.costReview?.approved),canOpenPricing=Boolean(priceTarget)||(!gateState().pricingApproved&&costReviewGroups().length>0);const openPricing=()=>{if(priceTarget)editReviewedListing("pricing",priceTarget);else{setActiveTask("draft-pricing");goToStep("designs",false,true)}};return <>{(savingEtsyDetails||issues.length>0)&&<section className={`listing-review-gate ${issues.length?"is-blocked":"is-saving"}`} role={issues.length?"alert":"status"} aria-live="polite"><b>{issues.length?"Finish this before Review":"Opening final review…"}</b>{issues.length?<ul>{issues.map(issue=><li key={issue}>{issue}</li>)}</ul>:<p>Saving your latest listing changes. This can take about 15 seconds.</p>}{issues.length>0&&canOpenPricing&&<button type="button" className="review-gate-action" onClick={openPricing}>Review item prices →</button>}</section>}<FactoryFooter status={savingEtsyDetails?"Saving your latest listing changes before review…":issues[0]||"Every listing is ready for review"}><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||Boolean(issues.length&&!canOpenPricing)} title={issues[0]} onClick={canOpenPricing?openPricing:()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Opening final review…":canOpenPricing?"Review item prices":"Review batch"} <span>→</span></button></FactoryFooter></>})()}
             </>)}
           {workflowStep==="finish"&&finishPhase==="final"&&(bundleProductsStillReading().length?<section className="listing-review-gate is-saving bundle-final-loading" role="status" aria-live="polite"><b>Loading every product in this batch…</b><p>Checking the saved listings, prices, photos, and Etsy details before showing the final review.</p></section>:stepProductCards(bundleCardStatus("publish"),null,false,<>{/* D497 - publish covered one product until D495, so these cards kept their
     own open controls. Now one press publishes the whole bundle, and a card
@@ -5591,7 +5576,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 place while the list scrolls. Every gate, warning, confirmation
                 and failure path below is the same code in the same order. */}
             <div className="factory-review"><div className="factory-review-list">
-            <FinalListingReview handoffOnly drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={editReviewedListing} onSelectionChange={setSelectedPublishIds} onSelectionTouched={()=>{sellerChosePublish.current=true}}/>{/* D548 - read as someone about to spend money, this said two untrue things.
+            <FinalListingReview handoffOnly drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={editReviewedListing} onEditProduct={editReviewedProduct} onSelectionChange={setSelectedPublishIds} onSelectionTouched={()=>{sellerChosePublish.current=true}}/>{/* D548 - read as someone about to spend money, this said two untrue things.
               "Only the listings selected above" - the selection covers the product
               that is open, and on a bundle the button publishes every product, so
               the sentence promised a smaller press than the one it sat under. And
@@ -5672,7 +5657,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {(publishing||Boolean(publishRun))&&<p className="working-note" role="status">Publishing to Etsy can take a few minutes. Keep this page open — Each listing will appear here as it goes live.</p>}<button className="keep-drafts-button" type="button" disabled={publishing} onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Keep as Printify drafts for now</button>{!publishing&&<small className="keep-drafts-note">Nothing will publish to Etsy. Return to this exact batch from Batch History.</small>}</>}{/* D474 - this describes the Keep as drafts button, but sat there while the
      button above it said Publishing, so the page said both that it was
      publishing and that nothing would publish. It belongs to a choice that is
-     no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.name||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">The error was emailed to you and recorded. You can press publish again once it is fixed.</p></section>}</div></div></>}</div></article></>,false,finalProductOverview()))}
+     no longer available once publishing has started. */}{publishMessage&&<p className="publish-message" role="status">{publishMessage}</p>}{publishFailures.length>0&&<section className="publish-failure-panel" role="alert"><p className="mini-label">NOTHING WAS PUBLISHED</p><h3>{publishFailures.length===1?"1 listing could not be published":`${publishFailures.length} listings could not be published`}</h3><p className="publish-failure-lede">Etsy did not create {publishFailures.length===1?"this listing":"these listings"}, so you have not been charged a listing fee for {publishFailures.length===1?"it":"them"}. Here is exactly what Etsy said:</p><ul className="publish-failure-list">{publishFailures.map(failure=>{const draft=drafts.find(item=>item.id===failure.productId);return <li key={failure.productId}><strong>{draft?.title?.slice(0,60)||draft?.name||"Listing"}</strong><span>{failure.error}</span></li>})}</ul><p className="publish-failure-lede">The error was emailed to you and recorded. You can press publish again once it is fixed.</p></section>}</div></div></>}</div></article></>,false,null))}
         </div>
 
         {/* D220 · Draft creation moves onto the Images page. Every photo in this app is

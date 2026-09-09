@@ -171,7 +171,8 @@ test("step-level controls sit below the cards, product-level inside them", async
   for (const gone of ["listing-editor", "design-table-section", "batch-title-builder"]) {
     assert.ok(!listing.body.includes(gone), `${gone} must not be a body block any more`);
   }
-  assert.ok(listing.footer.includes("prepare-etsy"), "preparing Etsy details covers the whole batch");
+  assert.ok(listing.footer.includes("Preparing Etsy details automatically"), "automatic Etsy preparation is reported for the whole batch");
+  assert.ok(!listing.footer.includes("prepare-etsy"), "automatic Etsy preparation is not presented as a button");
 
   // Step 4 has no per-product body at all: reviewing and publishing cover the batch.
   assert.match(app, /stepProductCards\(bundleCardStatus\("publish"\),null,false,</);
@@ -244,7 +245,6 @@ test("a batch held by another tab cannot spend credits on work it will discard",
 
   for (const control of [
     'className="ai-title-button"',
-    'className="secondary-action prepare-etsy"',
     'className="publish-all-button"',
   ]) {
     const at = app.indexOf(control);
