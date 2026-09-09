@@ -30,7 +30,12 @@ test("D1251: every reviewed listing exposes all seven edit destinations",()=>{
   }
   for(const stage of ["artwork","variants","pricing","photos"])assert.ok(review.includes(`onEditProduct?.("${stage}",draft)`));
   for(const phase of ["title","description","etsy"])assert.ok(review.includes(`onEdit("${phase}",draft)`));
-  assert.match(app,/stage==="artwork"\?"placement":stage==="variants"\?"draft-colors":stage==="pricing"\?"draft-pricing":"photos"/);
+  for(const route of [
+    'target.phase==="mockups"||target.phase==="photos"',
+    'target.phase==="pricing"',
+    'target.phase==="variants"',
+    'target.phase==="artwork"',
+  ])assert.ok(app.includes(route));
   assert.match(app,/onEditProduct=\{editReviewedProduct\}/);
   assert.doesNotMatch(app,/function finalProductOverview\(/);
   assert.match(css,/\.recipe-listing-sections/);
