@@ -52,7 +52,7 @@ const FEATURES = [
   ["seller photos can be uploaded", /<UploadedListingPhotos/],
   ["all listing photos can be reordered", /<ListingPhotoOrder/],
   ["a size guide can be added to every listing", /<IndividualSizeGuide/],
-  ["AI titles for the whole batch", /Create titles for the whole batch/],
+  ["AI titles for the whole batch", /Create all titles and tags/],
   ["manual title building from a bank", /Build this title yourself from a keyword bank/],
   /* D541 - the override moved out of a nested disclosure inside step 3's table
      and into the Description task panel, where each listing is one row. */
@@ -61,7 +61,7 @@ const FEATURES = [
      the shared editor survived, the way to keep the wording for future batches
      did not. A capability can be lost while its neighbour still renders. */
   ["a shared description for the whole batch", /Description for every listing/],
-  ["saving that description as the product default", /Save this description as the default/],
+  ["saving that description as the product default", /Save as the product default/],
   ["Etsy category selection", /Choose an Etsy category/],
   ["personalization questions", /<PersonalizationEditor/],
   /* D232 renamed this heading: "— what buyers pay" stated the obvious. */

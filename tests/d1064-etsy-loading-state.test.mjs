@@ -17,7 +17,7 @@ test("D1064 clears stale Etsy failures whenever titles or tags change",()=>{
   // fields instead of buying another analysis and replacing personalization.
   assert.match(app,/\{title,etsyError:""\}/);
   assert.match(app,/\.slice\(0,13\),etsyError:""\}\)\} placeholder="Exact title phrases/);
-  const manual=app.slice(app.indexOf("const derived=tagsFromTitle(design.title)"),app.indexOf("function descriptionLead()"));
+  const manual=app.slice(app.indexOf("const derived=tagsFromTitle(design.title)"),app.indexOf("function descriptionLead("));
   assert.doesNotMatch(manual,/etsy:undefined/);
 });
 

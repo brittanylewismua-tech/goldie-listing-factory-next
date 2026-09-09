@@ -44,7 +44,7 @@ test('D1218 one product-wide title action creates validated fallback tags',()=>{
   assert.match(app,/function fallbackTagsFromKeywords/);
   assert.match(app,/completedGeneratedTags\(payload\.tags\|\|\[\],payload\.keywords\|\|\[\],keywords\)/);
   assert.doesNotMatch(app,/function titlesRows[\s\S]{0,5000}<IndividualAutoTitle design=\{design\}/);
-  assert.match(app,/Auto-create titles for this product/);
+  assert.match(app,/Create titles and tags for this product/);
 });
 
 test('D1218 listing hierarchy and preparation stay clear and inline',()=>{

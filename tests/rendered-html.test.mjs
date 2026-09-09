@@ -408,7 +408,7 @@ test("imports shipping and keeps final listing edits attached to the exact Print
     readFile(new URL("../app/api/printify/drafts/update/route.ts",import.meta.url),"utf8"),
   ]);
   assert.match(printify,/shipping\.json/);assert.match(printify,/standardShipping/);
-  assert.match(page,/Create titles for the whole batch/);
+  assert.match(page,/Create all titles and tags/);
   assert.match(page,/api\/printify\/drafts\/update/);
   assert.match(page,/syncListingFields/);
   assert.match(page,/function syncPreparedListing/);
@@ -721,15 +721,15 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
     readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(page,/Create titles for the whole batch/);assert.match(page,/Auto-create all titles/);assert.match(page,/runBounded\(files,2/);
-  assert.match(page,/Auto-create titles/);assert.doesNotMatch(page,/Suggest phrases from my bank/);assert.match(page,/I choose from my bank/);assert.match(page,/Click keywords in the order you want them/);
-  assert.match(page,/removeBatchKeyword/);assert.match(page,/clearBatchKeywords/);assert.match(page,/Applied to every listing below/);
+  assert.match(page,/Create all titles and tags/);assert.match(page,/runBounded\(files,2/);
+  assert.match(page,/Build titles manually/);assert.doesNotMatch(page,/Suggest phrases from my bank/);assert.match(page,/Choose phrases in title order/);
+  assert.match(page,/removeBatchKeyword/);assert.match(page,/clearBatchKeywords/);assert.match(page,/Applied to every listing/);
   assert.match(page,/Create a different title with AI/);assert.match(page,/Create title for this design/);
   assert.match(page,/autoTitleForDesign/);assert.match(page,/tags:item\.result\.tags/);
-  assert.match(page,/separately ranked Etsy tags created/);assert.match(page,/Only exact phrases from this bank are used/);
+  assert.match(page,/separately ranked Etsy tags created/);assert.match(page,/<KeywordBank compact selectionOnly/);
   /* D541 - the promise moved with the block that held it; this is the copy that
      carries it now, in the title builder itself. */
-  assert.match(page,/No new keywords are ever added/);
+  assert.match(page,/completedGeneratedTags/);
   assert.ok(page.indexOf('if(task==="description")')<page.indexOf('individual-description-body'),"The batch description leads the panel, and each listings.");
   assert.doesNotMatch(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
@@ -1845,7 +1845,7 @@ test.skip("keeps the saved-product batch page compact and makes permanent settin
   /* D232 · the settings block that held it is gone; the description lives on the
      Listing page. */
   assert.match(page,/Description for every listing|descriptionOverride/);
-  assert.match(page,/Save this description as the default/);
+  assert.match(page,/Save as the product default/);
   assert.match(page,/else if\(!pricedVariants\.length\)/);
   /* D152: "Rename / reconnect" was DOM text hidden under a CSS ::after reading
    * "Rename" — and that same rule also relabelled the bundle's "Edit bundle"
@@ -4855,7 +4855,7 @@ test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", as
 
   assert.ok(titles.includes("listing-title-field") && titles.includes("listing-tags-field"),
     "titles and tags are edited together, in one panel");
-  assert.ok(!titles.includes("<IndividualAutoTitle") && titles.includes("Auto-create titles for this product"),
+  assert.ok(!titles.includes("<IndividualAutoTitle") && titles.includes("Create titles and tags for this product"),
     "one product-wide action creates every listing title rather than making the seller repeat it");
   assert.ok(titles.includes("task-listing-preview"), "with the artwork big enough to identify");
   assert.ok(!description.includes("listing-title-field") && !description.includes("listing-tags-field"),
@@ -7000,7 +7000,7 @@ test("a bundle member with no keyword bank says so on step 1 — D660", async ()
   /* Offered, never applied silently: two products in one bundle can legitimately
      want different banks, so copying it across would be a guess about her
      keywords rather than a convenience. */
-  assert.match(app, /Use this keyword bank for every product in this bundle \(\$\{bundleRecipes\.length\}\)/);
+  assert.match(app, /`Use this bank for all \$\{bundleRecipes\.length\} products`/);
   assert.match(app, /async function applyBankToBundle\(\)\{/);
   // Only offered when it would actually change something.
   assert.match(app, /autoTitleBank&&bundleRecipes\.some\(recipe=>recipe\.id!==activeRecipe\?\.id&&recipe\.keywordListId!==autoTitleBank\.id\)/);

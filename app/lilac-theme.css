@@ -247,3 +247,25 @@ html,body{background:#e9e7e4}
 .review-etsy-draft-button:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--g-pink)}
 .review-etsy-draft-button:focus-visible{outline:3px solid var(--g-pink);outline-offset:3px}
 .review-etsy-draft-button:disabled{border-color:rgba(255,255,255,.35);color:rgba(255,255,255,.55);box-shadow:none;cursor:not-allowed}
+
+/* D1241: listing details opens on one required action. Formatting, manual
+   assembly, and the reusable description remain available without competing
+   with the title/tag task. */
+.app-shell .factory-listing-screen .compact-title-tools{gap:12px;padding:16px 18px 18px}
+.app-shell .title-tools-heading{display:flex;align-items:baseline;justify-content:space-between;gap:14px}
+.app-shell .title-tools-heading h3{margin:0!important;color:#241c21!important;font-size:18px!important}
+.app-shell .title-tools-heading>span{color:#6b6067;font-size:12px;font-weight:800;white-space:nowrap}
+.app-shell .compact-title-tools .title-builder-pane{display:grid;gap:12px;margin:0}
+.app-shell .compact-title-tools .keyword-workspace.compact-keywords{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,1fr) auto;align-items:center;gap:12px;margin:0;padding:12px 14px;border:1px solid #ded4da;border-radius:9px;background:#fff}
+.app-shell .compact-title-tools .compact-keywords .keyword-workspace-heading{display:block}.app-shell .compact-title-tools .compact-keywords .keyword-workspace-heading b{font-size:12px}
+.app-shell .compact-title-tools .compact-keywords .keyword-list-picker{margin:0}.app-shell .compact-title-tools .compact-keywords>p{margin:0;color:#6e626a;font-size:11px;line-height:1.4}
+.app-shell .compact-title-tools .ai-title-button{min-height:48px;margin:0;border:0;border-radius:8px;background:#111;color:#fff;font-size:14px;font-weight:850;cursor:pointer;box-shadow:4px 4px 0 var(--g-pink)}
+.app-shell .compact-title-tools .ai-title-button:disabled{background:#d8d2d6;color:#756b72;box-shadow:none;cursor:not-allowed}
+.app-shell .title-builder-options,.app-shell .shared-description-settings{border-top:1px solid #ded4da}
+.app-shell .title-builder-options>summary,.app-shell .shared-description-settings>summary{display:flex;align-items:center;min-height:44px;padding:0;list-style:none;color:#5e525a;font-size:12px;font-weight:800;cursor:pointer}
+.app-shell .title-builder-options>summary::-webkit-details-marker,.app-shell .shared-description-settings>summary::-webkit-details-marker{display:none}
+.app-shell .title-builder-options>summary::after,.app-shell .shared-description-settings>summary::after{content:"⌄";margin-left:auto;color:#8c7784;font-size:16px}.app-shell .title-builder-options[open]>summary::after,.app-shell .shared-description-settings[open]>summary::after{transform:rotate(180deg)}
+.app-shell .title-builder-options .title-style-toggle{margin:0 0 12px}.app-shell .title-mode-switch{min-height:40px;margin:0 10px 10px 0;padding:8px 11px;border:1px solid #cfc3ca;border-radius:8px;background:#fff;color:#4f3546;font-size:12px;font-weight:800;cursor:pointer}
+.app-shell .manual-title-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.app-shell .manual-title-heading>b{font-size:14px}.app-shell .manual-title-heading .title-mode-switch{margin:0}
+.app-shell .shared-description-settings{margin-top:2px}.app-shell .shared-description-settings .batch-description-body{padding:0 0 8px}.app-shell .shared-description-settings .description-product-heading{font-size:13px}
+@media(max-width:760px){.app-shell .compact-title-tools .keyword-workspace.compact-keywords{grid-template-columns:1fr}.app-shell .title-tools-heading{align-items:flex-start;flex-direction:column;gap:4px}}

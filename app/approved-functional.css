@@ -283,9 +283,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 }
 
 /* Step 6: titles, tags, and descriptions workspace. */
-.app-shell .title-builder-choice button{border-color:#ded6dc;border-radius:12px;background:rgba(255,255,255,.58);color:#4b283e}
-.app-shell .title-builder-choice button span{color:rgba(74,42,62,.62)}
-.app-shell .title-builder-choice button.active{border-color:#b777b0;background:linear-gradient(145deg,rgba(231,194,231,.6),rgba(244,215,232,.65));box-shadow:0 0 0 2px rgba(183,119,176,.12)}
 .app-shell .selected-batch-keywords{border-color:#ded6dc!important;background:rgba(255,255,255,.56)!important}
 .app-shell .selected-batch-keywords>div:first-child button{color:#6b365a}
 .app-shell .selected-keyword-chips button{border-color:#e4cedb;background:rgba(247,229,244,.72);color:#5b304f}
@@ -305,19 +302,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(max-width:900px){}
 
 /* Keep the titles workspace clear, reviewable, and deliberately separated. */
-.app-shell .ai-title-disclaimer{
-  display:grid;
-  gap:4px;
-  margin:14px 0;
-  padding:13px 15px;
-  border:1px solid #ded5db;
-  border-radius:12px;
-  background:linear-gradient(145deg,rgba(249,232,247,.72),rgba(232,214,226,.58));
-  color:rgba(74,42,62,.76);
-  font-size:11px;
-  line-height:1.55;
-}
-.app-shell .ai-title-disclaimer b{color:#4b283e;font-size:12px}
 .app-shell .batch-description{
   margin:22px 0 6px!important;
   border:1px solid #dfc8d5!important;
