@@ -28,5 +28,6 @@ test('D1245: owner diagnostics compare Louisa’s live Etsy and Printify variant
   assert.match(route,/extraInEtsy/);
   assert.match(route,/priceMismatches/);
   assert.match(route,/url\.searchParams\.get\("include"\)===\"variants\"/);
+  assert.match(page,/auditMemberPrintify\(email,params\.include===\"variants\"\)/);
   assert.doesNotMatch(route,/missingSkus|extraSkus/);
 });
