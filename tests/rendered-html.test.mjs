@@ -519,7 +519,7 @@ test("makes draft retries idempotent so a lost response cannot duplicate a listi
   assert.match(drafts, /SHA-256/);
   assert.match(drafts, /if\(prior&&prior.status!=="failed"\)return jobResponse/);
   assert.match(drafts, /status = 'succeeded'/);
-  assert.match(drafts, /await startJob\(row.request_key,owner,job\)/);
+  assert.match(drafts, /shouldRestartDraftWorkflow\(row.status,row.updated_at\)/);
   assert.match(drafts, /async function handleGET\(request:Request\)/);
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(page, /async function recoverDraft/);

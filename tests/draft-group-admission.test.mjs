@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import {CLAIM_DRAFT_GROUP_SQL,draftCreationSlotReleased} from '../app/api/printify/draft-job-store.ts';
+import {CLAIM_DRAFT_GROUP_SQL,draftCreationSlotReleased,shouldRestartDraftWorkflow} from '../app/api/printify/draft-job-store.ts';
 import {restoreBatchDrafts} from '../app/batch-draft-integrity.ts';
 import {runBounded} from '../app/bounded-work.ts';
 
@@ -87,6 +87,13 @@ test('creation lanes wait for active writes; read-only reconciliation retains qu
   assert.ok(workflow.indexOf('submission-lane-wait-')<workflow.indexOf('executeDraftJob(input'));
   assert.match(workflow,/bind\(dependency,owner\)/);
 });
+test('normal status polling is read-only while stale and uncertain jobs recover',()=>{
+  const now=Date.parse('2026-09-09T22:00:00Z');
+  assert.equal(shouldRestartDraftWorkflow('running','2026-09-09 21:59:55',now),false);
+  assert.equal(shouldRestartDraftWorkflow('running','2026-09-09 21:59:40',now),true);
+  assert.equal(shouldRestartDraftWorkflow('uncertain','2026-09-09 21:59:59',now),true);
+  assert.equal(shouldRestartDraftWorkflow('succeeded','2020-01-01 00:00:00',now),false);
+});
 test('overlapping submissions reuse existing identities without reserving twice',()=>{
   const {db,claim}=fixture();
   claim(['a','b'],3);
@@ -124,5 +131,7 @@ test('the fresh submission path stages and saves every member before one bulk ad
   assert.match(queue,/recoverDraft\(queuedDesignSessions.current.get\(design.id\)/);
   const route=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');
   assert.match(route,/claimDraftGroupSql\(plan.key\)/);assert.match(route,/DRAFT_CREATION.createBatch/);
+  assert.match(route,/const won=new Set\(claimed.results.map/);
+  assert.match(route,/if\(won.has\(item.key\)\)\{existing.push/);
   assert.match(route,/source.customMetadata\?\.owner!==owner/);
 });

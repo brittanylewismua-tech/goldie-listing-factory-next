@@ -1,9 +1,18 @@
 /** The SQL row is the durable admission record. Keep pending job data private in
  * R2; never put credentials or artwork bytes in Workflow parameters. */
-export type PendingDraftJob={version:1;inputKey:string;workflowId:string;phase:'queued'|'uploaded'|'creating'|'created';uploadKey?:string;productKey?:string;error?:string;dependencyKey?:string};
+export type PendingDraftJob={version:1;inputKey:string;workflowId:string;phase:'queued'|'uploaded'|'creating'|'created';uploadKey?:string;productKey?:string;error?:string;dependencyKey?:string;submittedAt?:number};
 /** A reconciliation-only job no longer occupies a creation slot, but keeps its
  * quota reservation. Never confuse this with permission to retry its POST. */
 export function draftCreationSlotReleased(status:string){return ['succeeded','failed','uncertain'].includes(status);}
+/** A normal status poll must stay read-only. Re-register the durable workflow
+ * only when admission may have lost its dispatch or reconciliation is needed;
+ * calling createBatch on every 750 ms poll added provider-independent wait. */
+export function shouldRestartDraftWorkflow(status:string,updatedAt:string,now=Date.now(),staleAfterMs=12_000){
+  if(status==='uncertain')return true;
+  if(status!=='running')return false;
+  const stamp=Date.parse(updatedAt.includes('T')?updatedAt:`${updatedAt.replace(' ','T')}Z`);
+  return !Number.isFinite(stamp)||now-stamp>=staleAfterMs;
+}
 export const CLAIM_DRAFT_JOB_SQL=`INSERT INTO printify_draft_results
   (request_key,user_id,batch_id,client_id,status,response_json,updated_at)
   SELECT ?1,?2,?3,?4,'running',?6,CURRENT_TIMESTAMP
@@ -31,7 +40,7 @@ WHERE (SELECT COUNT(*) FROM printify_draft_results WHERE user_id=?2
   +(SELECT COUNT(*) FROM needed)<=?3
 ON CONFLICT(request_key) DO UPDATE SET status='running',response_json=excluded.response_json,updated_at=CURRENT_TIMESTAMP
 WHERE printify_draft_results.user_id=excluded.user_id AND printify_draft_results.status='failed'
-RETURNING request_key`;
+RETURNING request_key,response_json`;
 /** Beta credits cover the entire test, while paid plans keep monthly renewal. */
 export const claimDraftJobSql=(planKey:string)=>planKey==='mastermind_beta'?CLAIM_DRAFT_JOB_SQL.replace("COALESCE(created_at,updated_at)>=datetime('now','start of month')",'1=1'):CLAIM_DRAFT_JOB_SQL;
 export const claimDraftGroupSql=(planKey:string)=>planKey==='mastermind_beta'?CLAIM_DRAFT_GROUP_SQL.replace("COALESCE(created_at,updated_at)>=datetime('now','start of month')",'1=1'):CLAIM_DRAFT_GROUP_SQL;

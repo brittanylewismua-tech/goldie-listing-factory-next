@@ -8,7 +8,7 @@ import {planFor} from "@/app/plan-limits";
 import {unpackDraftMedia} from "@/app/draft-media-storage";
 import {runBounded} from "@/app/bounded-work";
 import {draftCreationKey} from "../draft-identity";
-import {claimDraftJobSql,claimDraftGroupSql,pendingDraftJob,writeJobObject,jobObjectPrefix,type PendingDraftJob} from "../draft-job-store";
+import {claimDraftJobSql,claimDraftGroupSql,pendingDraftJob,shouldRestartDraftWorkflow,writeJobObject,jobObjectPrefix,type PendingDraftJob} from "../draft-job-store";
 import type {DraftJobBindings,DraftJobInput,DraftRequestBody} from "./execute-job";
 import {printifyVariantLimitMessage} from "@/app/printify-variant-limit";
 
@@ -27,7 +27,7 @@ async function startJob(key:string,owner:string,job:PendingDraftJob){
 async function jobResponse(row:Row,owner:string){
   if(row.status==="succeeded"&&row.response_json)return NextResponse.json({status:"succeeded",draft:await unpackDraftMedia(row.response_json,owner,bindings().ARTWORK)});
   const job=pendingDraftJob(row.response_json);
-  if(job&&row.status!=="failed")await startJob(row.request_key,owner,job);
+  if(job&&shouldRestartDraftWorkflow(row.status,row.updated_at))await startJob(row.request_key,owner,job);
   // Older interrupted jobs have no durable identity. Do not silently call them
   // failed or allow a second product just because ninety seconds elapsed.
   return NextResponse.json({status:row.status,error:row.status==="failed"?job?.error:undefined,updatedAt:row.updated_at},{status:row.status==="failed"?200:202});
@@ -76,7 +76,7 @@ async function handlePOST(request:Request){
     }
     const protectedBody:DraftRequestBody=body.artworks?.length?{...body,artworks}:{...body,stagedId:artworks[0].stagedId};
     const inputKey=await writeJobObject(runtime.ARTWORK,user.userId,workflowId,"input.json",{userId:user.userId,requestUrl:request.url,body:protectedBody,session} satisfies DraftJobInput);
-    const job:PendingDraftJob={version:1,inputKey,workflowId,phase:"queued"};
+    const job:PendingDraftJob={version:1,inputKey,workflowId,phase:"queued",submittedAt:Date.now()};
     const planRow=await runtime.DB.prepare("SELECT plan_key FROM account_plans WHERE user_id=?").bind(user.userId).first<{plan_key:string}>();
     const plan=planFor(planRow?.plan_key,isOwner(user));
     const admitted=await runtime.DB.prepare(claimDraftJobSql(plan.key)).bind(key,user.userId,body.batchId,body.clientId,plan.drafts,JSON.stringify(job)).first();
@@ -122,7 +122,7 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
       const artworks=body.artworks?.length?body.artworks:body.fileName&&body.stagedId?[{key:"primary",fileName:body.fileName,stagedId:body.stagedId,bounds:body.visibleBounds,maxPlacementScale:body.maxPlacementScale}]:[];
       if(!artworks.length||artworks.length>40||new Set(artworks.map(a=>a.key)).size!==artworks.length)throw Error("Each design needs a prepared artwork file.");
       const workflowId=crypto.randomUUID(),copies:string[]=[];
-      const job:PendingDraftJob={version:1,workflowId,inputKey:jobObjectPrefix(owner,workflowId)+"input.json",phase:"queued"};
+      const job:PendingDraftJob={version:1,workflowId,inputKey:jobObjectPrefix(owner,workflowId)+"input.json",phase:"queued",submittedAt:Date.now()};
       prepared.push({key,batchId:body.batchId,clientId:body.clientId,job,copies});
       const protectedArtworks=[];
       for(let index=0;index<artworks.length;index++){
@@ -154,10 +154,13 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
       // Four durable creation lanes per submission. Later members are already
       // admitted, but wait server-side for the preceding job in their lane.
       prepared.forEach((item,index)=>{if(index>=4)item.job.dependencyKey=prepared[index-4].key;});
-      await runtime.DB.prepare(claimDraftGroupSql(plan.key)).bind(JSON.stringify(prepared.map(({key,batchId,clientId,job})=>({key,batchId,clientId,job}))),owner,plan.drafts).all();
+      const claimed=await runtime.DB.prepare(claimDraftGroupSql(plan.key)).bind(JSON.stringify(prepared.map(({key,batchId,clientId,job})=>({key,batchId,clientId,job}))),owner,plan.drafts).all<{request_key:string}>();
+      const won=new Set(claimed.results.map(row=>row.request_key));
       // Adopt winners from overlapping submissions, never dispatch our losing
-      // copies or replace a running request's immutable identity.
+      // copies or replace a running request's immutable identity. Fresh normal
+      // submissions already own the RETURNING rows and need no second lookup.
       await runBounded(prepared,4,async item=>{
+        if(won.has(item.key)){existing.push({key:item.key,job:item.job});return item;}
         const row=await lookup(item.key,owner);
         if(!row||row.status==="failed")throw Error(`Your ${plan.name} plan does not have room for this whole submission.`);
         const job=pendingDraftJob(row.response_json);if(job)existing.push({key:item.key,job});

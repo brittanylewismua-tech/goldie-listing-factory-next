@@ -109,7 +109,7 @@ export async function executeDraftJob(input:DraftJobInput,idempotencyKey:string,
     await db.prepare("UPDATE printify_batch_sessions SET expires_at = unixepoch() + 21600 WHERE id = ? AND user_id = ?").bind(body.batchId, user.userId).run();
 
     diagnosticStage = "template_lookup";
-    await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", templateProductId: productId });
+    await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "started", message:checkpoint.submittedAt?`queue_ms=${Math.max(0,Date.now()-checkpoint.submittedAt)}`:undefined, templateProductId: productId });
     await recordDiagnostic(runtimeEnv().DB, supportReference, { stage: diagnosticStage, event: "succeeded", templateProductId: productId, shopId: shop.id });
 
     const templateImageCount = template.print_areas

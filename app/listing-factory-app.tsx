@@ -4405,7 +4405,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     // The server owns the durable job. Poll quickly for normal completion,
     // then back off without turning a slow provider response into a new POST.
     for (let attempt=0;attempt<180;attempt++) {
-      const delay=attempt===0?0:attempt<14?750:5000;
+      const delay=attempt===0?0:attempt<20?500:5000;
       if(delay)await new Promise((resolve) => window.setTimeout(resolve, delay));
       let response:Response;
       try{response=await fetchWithDeadline(`/api/printify/drafts?batchId=${encodeURIComponent(batchId)}&clientId=${encodeURIComponent(clientId)}`, {}, 15000);}catch{continue;}
