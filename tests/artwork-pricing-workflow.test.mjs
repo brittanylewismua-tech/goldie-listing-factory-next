@@ -54,7 +54,7 @@ test("draft creation, resume, final review, and publishing share the same safegu
     readFile(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8"),
   ]);
   assert.match(create,/resolvedProduct\.variants/);
-  assert.match(create,/actualCostReview\(costVariants\)/);
+  assert.match(create,/actualCostReview\(costVariants,body\.variantCosts,body\.variantPrices\)/);
   assert.match(update,/price<cost/);
   assert.match(update,/approved:true/);
   assert.match(app,/costReviewDrafts\(\)\.filter\(draft=>!draft\.costReview\?\.approved\)/);

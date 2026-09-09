@@ -17,7 +17,7 @@ test("D1219 fills partial generated tag sets from valid keyword fallbacks", () =
 });
 
 test("D1219 makes Review batch delays and blockers explicit", () => {
-  assert.match(app, /Before you can review this batch/);
+  assert.match(app, /Finish this before Review/);
   assert.match(app, /Opening final review…/);
   assert.match(app, /Saving your latest listing changes\. This can take about 15 seconds\./);
   assert.match(app, /This is optional and does not block Review batch\./);

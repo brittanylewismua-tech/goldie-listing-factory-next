@@ -2239,6 +2239,12 @@ export default function ListingFactoryApp() {
     batchChannel.current.postMessage({type:"ping",batchId:id,tabId:tabId.current});
   },[savedRevision,restoringBatch]);
   function retryAuthenticatedSave(){batchFetch.retryAuthentication();void persistBatchNow(batchIdRef.current).catch(()=>undefined)}
+  useEffect(()=>{
+    if(!batchAuthenticationRequired)return;
+    const retry=()=>{if(document.visibilityState==="visible")retryAuthenticatedSave()};
+    window.addEventListener("focus",retry);
+    return()=>window.removeEventListener("focus",retry);
+  },[batchAuthenticationRequired]);
   async function reloadConflictedBatch(){
     if(!await confirmAction({title:"Reload the saved batch?",body:"This replaces the unsaved changes visible here with the latest saved version. Copy any unsaved text you want to keep before reloading.",confirmLabel:"Reload saved batch",cancelLabel:"Keep viewing changes"}))return;
     batchChannel.current?.postMessage({type:"claim",batchId:batchIdRef.current,tabId:tabId.current});
@@ -3087,7 +3093,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     const target=reviewEdit;setReviewEdit(null);setActiveDesign(target.clientId);
     setFinishPhase("details");
     if(target.phase==="mockups"){setPhotoFocusId(target.clientId);setActiveTask("photos");goToStep("designs",false,true)}
-    else if(target.phase==="pricing"){setActiveTask("prices");goToStep("designs",false,true)}
+    else if(target.phase==="pricing"){setActiveTask("draft-pricing");goToStep("designs",false,true)}
     else goToStep("finish",false,true);
     // Wait for the normal page-top reset, then focus this specific editor.
     window.setTimeout(()=>{
@@ -4438,7 +4444,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               batchId: requestDetails?.batchId,
               fileName:design.name,
               title: design.title || undefined,
-              tags:design.tags,pricing:preparation?.pricing||pricing,etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===(preparation?.shippingProfileId??etsyShippingProfileId))?.domesticPrimary||0,shippingTemplateId:preparation?.shippingProfileId??etsyShippingProfileId,variantPrices:preparation?.variantPrices||variantPrices,selectedVariantIds:requestPricedVariants.map(variant=>variant.id),mockupVariantIds:mockupVariants.map(variant=>variant.id),mockupVariantSources,description:fullDescription,
+              tags:design.tags,pricing:preparation?.pricing||pricing,etsyBuyerShipping:etsyShippingProfiles.find(profile=>profile.id===(preparation?.shippingProfileId??etsyShippingProfileId))?.domesticPrimary||0,shippingTemplateId:preparation?.shippingProfileId??etsyShippingProfileId,variantPrices:preparation?.variantPrices||variantPrices,variantCosts:Object.fromEntries(requestPricedVariants.map(variant=>[String(variant.id),variant.cost])),selectedVariantIds:requestPricedVariants.map(variant=>variant.id),mockupVariantIds:mockupVariants.map(variant=>variant.id),mockupVariantSources,description:fullDescription,
               supportReference: staged.reference,
               clientId:design.id,
             };
@@ -4870,7 +4876,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       if(requests.length>100)throw Error("This submission exceeds 100 listings. Use a smaller bundle.");
       const saveMember=async(member:typeof members[number],finished=false)=>{
         const allCreated=member.results.length===member.designs.length&&member.results.every(draft=>draft.status==="Created"&&draft.id);
-        const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:member.id,parentBatchId:activeBundle?runIdRef.current:undefined,status:finished?allCreated?"complete":"needs_attention":"processing",step:"designs",setupName:batchDisplayName||activeBundle?.name||member.recipe.name,productTitle:(member.state.templateDetails as TemplateDetails).blueprintTitle,designCount:member.designs.length,state:{...member.state,drafts:member.results.map(snapshotDraft),complete:allCreated}})});
+        const finalPricingApproved=allCreated&&member.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved));
+        const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:member.id,parentBatchId:activeBundle?runIdRef.current:undefined,status:finished?allCreated?"complete":"needs_attention":"processing",step:"designs",setupName:batchDisplayName||activeBundle?.name||member.recipe.name,productTitle:(member.state.templateDetails as TemplateDetails).blueprintTitle,designCount:member.designs.length,state:{...member.state,drafts:member.results.map(snapshotDraft),complete:allCreated,pricingApproved:finished?finalPricingApproved:false}})});
         if(!response.ok)throw Error("The batch could not be saved before background processing.");
       };
       await Promise.all([persistRunNow(),runBounded(members,4,member=>saveMember(member))]);
@@ -4895,12 +4902,19 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         if(member.recipe.id===sourceRecipe.id)setDrafts([...member.results]);
         return draft;
       });
-      await Promise.all([providerCompletion,Promise.all(cacheWrites)]);
+      /* The server already owns every admitted artwork file. Browser resume
+         copies can finish in the background; waiting for large IndexedDB writes
+         after Printify is done added about 25 seconds to a measured two-draft
+         run even though both provider jobs finished in about nine seconds. */
+      void Promise.allSettled(cacheWrites);
+      await providerCompletion;
       await runBounded(members,4,member=>saveMember(member,true));
       // Background completion changes sibling batches without changing the
       // selected product. Refresh once, not on every ordinary autosave.
       setBundleCompletionRevision(current=>current+1);
-      setComplete(Boolean(members.find(member=>member.recipe.id===sourceRecipe.id)?.results.some(draft=>draft.status==="Created"&&draft.id)));setUsageRevision(current=>current+1);openFinishedReview();
+      const sourceMember=members.find(member=>member.recipe.id===sourceRecipe.id);
+      const sourcePricingApproved=Boolean(sourceMember?.results.length)&&sourceMember!.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved));
+      setPricingApproved(sourcePricingApproved);setBundleApproved(Object.fromEntries(members.map(member=>[member.recipe.id,member.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved))])));setComplete(Boolean(sourceMember?.results.some(draft=>draft.status==="Created"&&draft.id)));setUsageRevision(current=>current+1);openFinishedReview();
       setSavedRevision(current=>current+1);
       window.setTimeout(()=>document.querySelector(".draft-card")?.scrollIntoView({block:"start"}),0);
     }catch(error){stopWith("Check this batch’s saved progress.",[error instanceof Error?error.message:"Resume this batch to check its drafts."],"Existing drafts will not be created twice.");}
@@ -4987,7 +5001,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       ? { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: "Everything your saved product already answers has been applied." }
       : { eyebrow: "STEP 2 OF 3", title: "Add your designs", copy: "" },
     review: { eyebrow: "STEP 2 OF 3", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
-    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Make the one change this listing needs, then return to review." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Make the one change this listing needs, then return to review." } : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: handoffBlockers().length?"Fix the cards marked Needs you. Everything else is ready.":"Everything is ready. Save the batch to Etsy Drafts." },
+    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Finish this listing, then return to Review." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Finish this listing, then return to Review." } : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: handoffBlockers().length?"Fix the cards marked Needs you. Everything else is ready.":"Everything is ready. Save the batch to Etsy Drafts." },
   }[workflowStep];
   const workflowHelp=workflowStep==="designs"
     ?complete
@@ -5544,7 +5558,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   after the footer row and the bar. It uses the same row every
                   other step uses: the reason on the left, the action on the
                   right. Same button, same gate, same handler. */}
-              {!etsyDetailsPrepared?<FactoryFooter status={preparingEtsy?"Preparing each listing in the background. You can keep reviewing this page.":progressGateIssues(6)[0]||"Every listing has a title and tags"}><button className="secondary-action prepare-etsy" data-inline-progress="true" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another tab, so nothing prepared here would be kept.":progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button></FactoryFooter>:<>{(()=>{const issues=progressGateIssues(7);if(!savingEtsyDetails&&!issues.length)return null;return <section className={`listing-review-gate ${issues.length?"is-blocked":"is-saving"}`} role={issues.length?"alert":"status"} aria-live="polite"><b>{issues.length?"Before you can review this batch":"Opening final review…"}</b>{issues.length?<ul>{issues.map(issue=><li key={issue}>{issue}</li>)}</ul>:<p>Saving your latest listing changes. This can take about 15 seconds.</p>}</section>})()}<FactoryFooter status={savingEtsyDetails?"Saving your latest listing changes before review…":progressGateIssues(7)[0]||"Every listing is ready for review"}><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||progressGateIssues(7).length>0} title={progressGateIssues(7)[0]} onClick={()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Opening final review…":"Review batch"} <span>→</span></button></FactoryFooter></>}
+              {!etsyDetailsPrepared?<FactoryFooter status={preparingEtsy?"Preparing each listing in the background. You can keep reviewing this page.":progressGateIssues(6)[0]||"Every listing has a title and tags"}><button className="secondary-action prepare-etsy" data-inline-progress="true" aria-busy={preparingEtsy} disabled={preparingEtsy||progressGateIssues(6).length>0||batchHeldByAnotherTab} title={batchHeldByAnotherTab?"This batch is open in another tab, so nothing prepared here would be kept.":progressGateIssues(6)[0]} onClick={()=>void continueToEtsyDetails()}>{preparingEtsy?"Preparing Etsy details…":"Prepare Etsy details"}</button></FactoryFooter>:(()=>{const issues=progressGateIssues(7),priceTarget=costReviewDrafts().find(draft=>draft.status==="Created"&&!draft.costReview?.approved),canOpenPricing=Boolean(priceTarget)||(!gateState().pricingApproved&&costReviewGroups().length>0);const openPricing=()=>{if(priceTarget)editReviewedListing("pricing",priceTarget);else{setActiveTask("draft-pricing");goToStep("designs",false,true)}};return <>{(savingEtsyDetails||issues.length>0)&&<section className={`listing-review-gate ${issues.length?"is-blocked":"is-saving"}`} role={issues.length?"alert":"status"} aria-live="polite"><b>{issues.length?"Finish this before Review":"Opening final review…"}</b>{issues.length?<ul>{issues.map(issue=><li key={issue}>{issue}</li>)}</ul>:<p>Saving your latest listing changes. This can take about 15 seconds.</p>}{issues.length>0&&canOpenPricing&&<button type="button" className="review-gate-action" onClick={openPricing}>Review item prices →</button>}</section>}<FactoryFooter status={savingEtsyDetails?"Saving your latest listing changes before review…":issues[0]||"Every listing is ready for review"}><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||Boolean(issues.length&&!canOpenPricing)} title={issues[0]} onClick={canOpenPricing?openPricing:()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Opening final review…":canOpenPricing?"Review item prices":"Review batch"} <span>→</span></button></FactoryFooter></>})()}
             </>)}
           {workflowStep==="finish"&&finishPhase==="final"&&(bundleProductsStillReading().length?<section className="listing-review-gate is-saving bundle-final-loading" role="status" aria-live="polite"><b>Loading every product in this batch…</b><p>Checking the saved listings, prices, photos, and Etsy details before showing the final review.</p></section>:stepProductCards(bundleCardStatus("publish"),null,false,<>{/* D497 - publish covered one product until D495, so these cards kept their
     own open controls. Now one press publishes the whole bundle, and a card
@@ -5718,7 +5732,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </aside>,false)}
 {/* D496 - a held tab has to say so where she is working, not silently stop
     saving. */}
-        {batchAuthenticationRequired&&<div className="batch-tab-conflict" role="alert"><b>Sign in again to save your changes.</b><span>Your unsaved edits are still here. Keep this page open, sign in to The Listing Factory in another tab, then retry saving here.</span><a href="/account/sign-in?return_to=%2Flisting-factory" target="_blank" rel="noopener noreferrer">Sign in to The Listing Factory ↗</a><button type="button" onClick={retryAuthenticatedSave}>Retry saving</button></div>}
+        {batchAuthenticationRequired&&<div className="batch-tab-conflict" role="alert"><b>Sign in again to save your changes.</b><span>Your changes are still here. Sign in, then return to this tab. Saving will retry automatically.</span><a href="/account/sign-in?return_to=%2Flisting-factory" target="_blank" rel="noopener noreferrer">Sign in to The Listing Factory ↗</a><button type="button" onClick={retryAuthenticatedSave}>Retry now</button></div>}
         {batchSaveConflict&&<div className="notice error" role="alert"><strong>Saving paused</strong><p>{batchSaveConflict}</p><button type="button" onClick={()=>void reloadConflictedBatch()}>Reload saved batch</button></div>}
             {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another tab.</b><span>Saving is paused here so the other tab is not overwritten. Continue in the other tab, or reload the latest saved version here to take over.</span><button type="button" onClick={takeOverBatchHere}>Reload saved batch here</button></div>}
         {!(complete&&workflowStep==="designs")&&<div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D776 - the step's own footer (status + forward) lands here, so the bar the seller can see is the bar with the way forward in it. */}<span className="factory-footer-slot"/>{/* D386 - Saving a draft was only reachable from the Publish step, so

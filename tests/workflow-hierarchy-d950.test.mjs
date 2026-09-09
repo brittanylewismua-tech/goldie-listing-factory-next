@@ -40,7 +40,7 @@ test("D950: every workflow hero states only the immediate task",()=>{
   for(const copy of [
     "Everything your saved product already answers has been applied.",
     "Review the plan, then create the private drafts.",
-    "Make the one change this listing needs, then return to review.",
+    "Finish this listing, then return to Review.",
     "Fix the cards marked Needs you. Everything else is ready.",
     "Everything is ready. Save the batch to Etsy Drafts.",
   ]) assert.ok(app.includes(copy),`missing concise workflow copy: ${copy}`);

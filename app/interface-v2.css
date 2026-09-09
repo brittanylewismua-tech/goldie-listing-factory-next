@@ -3986,6 +3986,8 @@ html, body { background: var(--lf-paper); }
 
 .app-shell .listing-review-gate{display:grid;gap:8px;margin:20px 0;padding:16px 18px;border:2px solid #171717;border-radius:10px;background:#fff;box-shadow:3px 3px 0 #171717}
 .app-shell .listing-review-gate.is-blocked{border-color:#8c2727;box-shadow:3px 3px 0 #8c2727}.app-shell .listing-review-gate b{font-size:16px}.app-shell .listing-review-gate :is(p,ul){margin:0}.app-shell .listing-review-gate ul{display:grid;gap:5px;padding-left:20px}.app-shell .listing-review-gate li,.app-shell .listing-review-gate p{font-size:13px;line-height:1.5}
+.app-shell .review-gate-action{justify-self:start;min-height:44px;margin-top:4px;padding:9px 15px;border:2px solid #171717;border-radius:9px;background:#171717;color:#fff;font:800 13px/1.2 inherit;cursor:pointer;box-shadow:3px 3px 0 var(--pink)}
+.app-shell .review-gate-action:hover,.app-shell .review-gate-action:focus-visible{background:#fff;color:#171717;outline:3px solid rgba(255,66,181,.28);outline-offset:2px}
 
 @media(max-width:640px){.app-shell .final-product-overview{padding:16px}.app-shell .final-product-grid{grid-template-columns:minmax(0,1fr)}}
 
