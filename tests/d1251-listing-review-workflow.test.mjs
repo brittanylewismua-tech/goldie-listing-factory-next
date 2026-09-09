@@ -46,3 +46,12 @@ test("D1251: the completion map and sticky editor navigation remain usable on na
   assert.match(interfaceCss,/\.review-listing-editor-nav\{position:sticky/);
   assert.match(interfaceCss,/@media\(max-width:620px\)[\s\S]*?\.review-listing-editor-nav nav/);
 });
+
+test("D1252: Review color and size edits target the selected listing",()=>{
+  assert.match(app,/function syncDraftVariantChoices\(nextColors:number\[\],nextSizes:number\[\],targetDraft\?:DraftResult\)/);
+  assert.match(app,/const created=targetDraft\?\.id\?\[targetDraft\]:drafts\.filter/);
+  assert.match(app,/shown=focused\?\[focused\]:drafts\.filter/);
+  assert.match(app,/onChange=\{\(draft,ids\)=>void syncDraftVariantChoices\(ids,draftVariantAxes\(draft\)\.sizes,draft\)\}/);
+  assert.match(app,/onChange=\{ids=>void syncDraftVariantChoices\(axes\.colors,ids,focused\)\}/);
+  assert.doesNotMatch(app,/A choice applies to every design draft/);
+});

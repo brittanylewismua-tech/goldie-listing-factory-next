@@ -3,8 +3,8 @@ import {EtsyRateLimited} from '../../etsy/request-pacing';
 export class DraftReviewRequired extends Error {}
 export class DraftWriteRejected extends DraftReviewRequired {}
 export type Question={question_type:string;question_text:string;required:boolean;instructions?:string;max_allowed_characters?:number;max_allowed_files?:number;options?:{label:string}[]};
-export type DraftSnapshot={title:string;description:string;tags:string[];taxonomy_id:number;shipping_profile_id:number;properties:{property_id:number;value_ids:number[];values:string[]}[];questions:Question[]};
-export type SourceDraft={title?:string;description?:string;tags?:string[];etsyShippingProfileId?:number;etsyDetails?:{taxonomyId?:number;properties?:{propertyId:number;valueId?:number|null;value:string;required?:boolean;label?:string}[];attributes?:Record<string,string>;optional?:Record<string,string>;personalization?:{enabled:boolean;questions:{type:string;question:string;required:boolean;instructions?:string;maxCharacters?:number;maxFiles?:number;options?:string[]}[]}}};
+export type DraftSnapshot={title:string;description:string;tags:string[];taxonomy_id:number;shipping_profile_id:number;selected_variant_ids?:number[];properties:{property_id:number;value_ids:number[];values:string[]}[];questions:Question[]};
+export type SourceDraft={title?:string;description?:string;tags?:string[];selectedVariantIds?:number[];etsyShippingProfileId?:number;etsyDetails?:{taxonomyId?:number;properties?:{propertyId:number;valueId?:number|null;value:string;required?:boolean;label?:string}[];attributes?:Record<string,string>;optional?:Record<string,string>;personalization?:{enabled:boolean;questions:{type:string;question:string;required:boolean;instructions?:string;maxCharacters?:number;maxFiles?:number;options?:string[]}[]}}};
 const fail=(message:string):never=>{throw new DraftReviewRequired(message)};
 const positive=(value:unknown)=>Number.isSafeInteger(value)&&Number(value)>0;
 export function freezeDraft(source:SourceDraft):DraftSnapshot{
@@ -42,7 +42,8 @@ export function freezeDraft(source:SourceDraft):DraftSnapshot{
   }
   return fail('This personalization question type is not supported.');
  });
- return {title,description,tags,taxonomy_id:d!.taxonomyId!,shipping_profile_id:source.etsyShippingProfileId!,properties,questions};
+ const selected_variant_ids=source.selectedVariantIds?.filter(positive).map(Number).filter((id,index,list)=>list.indexOf(id)===index).sort((a,b)=>a-b);
+ return {title,description,tags,taxonomy_id:d!.taxonomyId!,shipping_profile_id:source.etsyShippingProfileId!,...(selected_variant_ids?.length?{selected_variant_ids}:{}),properties,questions};
 }
 export type DraftView={shopId:number;state:string;basic:Omit<DraftSnapshot,'properties'|'questions'>;properties:DraftSnapshot['properties'];questions:Question[]};
 export type DraftOperation={key:string;value:unknown};
@@ -56,7 +57,7 @@ export function canonicalQuestions(questions:Question[]){return questions.map(q=
  return q; // Unknown types must compare unequal, never silently disappear.
 })}
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
-function operations(s:DraftSnapshot):DraftOperation[]{const {properties,questions,...basic}=s;return [{key:'basic',value:basic},...properties.map(p=>({key:`property:${p.property_id}`,value:p})),{key:'questions',value:canonicalQuestions(questions)}]}
+function operations(s:DraftSnapshot):DraftOperation[]{const {properties,questions}=s,basic={title:s.title,description:s.description,tags:s.tags,taxonomy_id:s.taxonomy_id,shipping_profile_id:s.shipping_profile_id};return [{key:'basic',value:basic},...properties.map(p=>({key:`property:${p.property_id}`,value:p})),{key:'questions',value:canonicalQuestions(questions)}]}
 function currentValue(view:DraftView,key:string,requested?:DraftOperation){
  if(key==='basic')return {...view.basic,tags:[...view.basic.tags].sort()};
  if(key==='questions')return canonicalQuestions(view.questions);

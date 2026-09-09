@@ -7,6 +7,9 @@ export function decodeEtsyText(value:string){return String(value??'').replace(/&
  const code=key[1].toLowerCase()==='x'?parseInt(key.slice(2),16):parseInt(key.slice(1),10);return code>0&&code<=0x10ffff?String.fromCodePoint(code):match;
 })}
 export type PrintifyDraftProduct={is_locked?:boolean;external?:{id?:string|number};variants?:{id:number;sku:string;price:number;is_enabled:boolean;options?:number[]}[];options?:{name:string;type?:string;values:{id:number;title:string}[]}[]};
+type EtsyPropertyValue={property_id:number;property_name:string;scale_id?:number|null;value_ids?:number[];values?:string[];[key:string]:unknown};
+type EtsyOffering={price:{amount:number;divisor:number};is_enabled:boolean;quantity?:number;readiness_state_id?:number|null;[key:string]:unknown};
+export type EtsyInventory={products?:{sku:string;property_values?:EtsyPropertyValue[];offerings:EtsyOffering[];[key:string]:unknown}[];price_on_property?:number[];quantity_on_property?:number[];sku_on_property?:number[];readiness_state_on_property?:number[];[key:string]:unknown};
 type Request=(path:string,init?:RequestInit)=>Promise<Response>;
 function visibleVariantKey(product:PrintifyDraftProduct,variant:NonNullable<PrintifyDraftProduct['variants']>[number]){
  const ids=new Set(variant.options||[]),parts=[];
@@ -14,7 +17,7 @@ function visibleVariantKey(product:PrintifyDraftProduct,variant:NonNullable<Prin
  return parts.length?parts.sort().join('\u0000'):null;
 }
 /** Verify the existing fulfillment identifiers; never rewrite inventory or SKUs in Etsy. */
-export function verifyInventory(product:PrintifyDraftProduct,inventory:{products?:{sku:string;offerings:{price:{amount:number;divisor:number};is_enabled:boolean;quantity?:number;readiness_state_id?:number|null}[]}[]}){
+export function verifyInventory(product:PrintifyDraftProduct,inventory:EtsyInventory){
  const expected=product.variants?.filter(v=>v.is_enabled),actual=inventory.products?.filter(p=>p.offerings?.some(o=>o.is_enabled));
  if(!expected?.length||!actual?.length||new Set(expected.map(v=>v.sku)).size!==expected.length||new Set(actual.map(v=>v.sku)).size!==actual.length)throw new DraftReviewRequired('The Etsy draft variants do not match Printify. Review colors and sizes before finishing.');
  const expectedBySku=new Map(expected.map(variant=>[variant.sku,variant])),keys=expected.map(variant=>visibleVariantKey(product,variant)),canCompareVisible=keys.every((key):key is string=>Boolean(key));
@@ -23,6 +26,42 @@ export function verifyInventory(product:PrintifyDraftProduct,inventory:{products
  if(actualVariants.some(variant=>!variant)||conflictingVisiblePrice||actual.length!==(expectedVisible?.size??expected.length)||expectedVisible&&new Set(actualVariants.map(variant=>visibleVariantKey(product,variant!))).size!==expectedVisible.size)throw new DraftReviewRequired('The Etsy draft variants do not match Printify. Review colors and sizes before finishing.');
  for(const [index,row] of actual.entries()){const variant=actualVariants[index]!,offers=row.offerings.filter(o=>o.is_enabled);if(!offers.length||offers.some(o=>!o.price?.divisor||Math.round(o.price.amount/o.price.divisor*100)!==variant.price))throw new DraftReviewRequired('An Etsy draft SKU or price differs from Printify. Review the variants before finishing.');}
  const prerequisite=inventoryPrerequisite(actual.flatMap(p=>p.offerings));if(prerequisite)throw new DraftReviewRequired(prerequisite);
+}
+/** Remove buyer-visible choices that the seller removed from this exact Printify
+ * draft. This deliberately handles narrowing only: adding a missing combination
+ * without Etsy's original property row would require inventing inventory. */
+export function narrowedInventory(product:PrintifyDraftProduct,inventory:EtsyInventory){
+ const allBySku=new Map((product.variants||[]).map(variant=>[variant.sku,variant])),expected=(product.variants||[]).filter(variant=>variant.is_enabled),rows=(inventory.products||[]).filter(row=>row.offerings?.some(offer=>offer.is_enabled));
+ const expectedKeys=new Set(expected.map(variant=>visibleVariantKey(product,variant)).filter((key):key is string=>Boolean(key))),actual=rows.map(row=>({row,variant:allBySku.get(row.sku)}));
+ if(!expectedKeys.size||actual.some(item=>!item.variant))return null;
+ const actualKeys=actual.map(item=>visibleVariantKey(product,item.variant!));
+ if(actualKeys.some(key=>!key)||expectedKeys.size>=new Set(actualKeys).size||[...expectedKeys].some(key=>!actualKeys.includes(key)))return null;
+ const kept=new Map<string,(typeof rows)[number]>();
+ for(const item of actual){const key=visibleVariantKey(product,item.variant!)!;if(expectedKeys.has(key)&&!kept.has(key))kept.set(key,item.row)}
+ const products=[...kept.values()];
+ if(products.length!==expectedKeys.size||products.some(row=>row.offerings.some(offer=>offer.is_enabled&&!Number.isSafeInteger(offer.quantity))))return null;
+ const candidate={...inventory,products};
+ try{verifyInventory(product,candidate);return candidate}catch{return null}
+}
+export function inventoryUpdateBody(inventory:EtsyInventory){return {
+ products:(inventory.products||[]).map(product=>({sku:product.sku,property_values:(product.property_values||[]).map(value=>({property_id:value.property_id,property_name:value.property_name,scale_id:value.scale_id??null,value_ids:value.value_ids||[],values:value.values||[]})),offerings:product.offerings.map(offer=>({price:offer.price.amount/offer.price.divisor,quantity:offer.quantity!,is_enabled:offer.is_enabled,...(offer.readiness_state_id!=null?{readiness_state_id:offer.readiness_state_id}:{})}))})),
+ price_on_property:inventory.price_on_property||[],quantity_on_property:inventory.quantity_on_property||[],sku_on_property:inventory.sku_on_property||[],...(inventory.readiness_state_on_property?{readiness_state_on_property:inventory.readiness_state_on_property}:{})
+}}
+export async function synchronizeNarrowedInventory(request:Request,listingId:number,shopId:number,product:PrintifyDraftProduct,snapshot:DraftSnapshot,backup:(inventory:EtsyInventory)=>Promise<void>){
+ if(!snapshot.selected_variant_ids?.length)return false;
+ const liveIds=(product.variants||[]).filter(variant=>variant.is_enabled).map(variant=>variant.id).sort((a,b)=>a-b);
+ if(JSON.stringify(liveIds)!==JSON.stringify(snapshot.selected_variant_ids))throw new DraftReviewRequired('The saved colors or sizes changed after this Etsy draft was prepared. Return to Review and save the current choices again.');
+ const listing=await (await request(`/listings/${listingId}`)).json() as {shop_id:number;state:string};
+ if(Number(listing.shop_id)!==shopId||listing.state!=='draft')throw new DraftReviewRequired('The linked listing must still be a draft in the original Etsy shop. Inventory was not changed.');
+ const inventory=await (await request(`/listings/${listingId}/inventory`)).json() as EtsyInventory;
+ try{verifyInventory(product,inventory);return false}catch(error){
+  const narrowed=narrowedInventory(product,inventory);
+  if(!narrowed)throw error;
+  await backup(inventory);
+  await request(`/listings/${listingId}/inventory`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(inventoryUpdateBody(narrowed))});
+  const confirmed=await (await request(`/listings/${listingId}/inventory`)).json() as EtsyInventory;
+  verifyInventory(product,confirmed);return true;
+ }
 }
 export function draftWithSize(snapshot:DraftSnapshot,product:PrintifyDraftProduct):DraftSnapshot{
  const size=product.options?.find(o=>o.type==='size'||/^sizes?$/i.test(o.name)),selected=new Set(product.variants?.filter(v=>v.is_enabled).flatMap(v=>v.options||[]));

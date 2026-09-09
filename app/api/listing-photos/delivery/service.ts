@@ -5,7 +5,7 @@ import {transferDraft,DraftTransferReviewRequired,type TransferState,type Transf
 import {verifyShopPairing} from '../../printify/shop-match';
 import {etsyFetch} from '../../etsy/client';
 import {DraftReviewRequired,DraftWriteRejected,type DraftSnapshot,type DraftState} from './draft-engine';
-import {finishDraftMetadata,draftWithSize,type PrintifyDraftProduct} from './draft-service';
+import {finishDraftMetadata,draftWithSize,synchronizeNarrowedInventory,type PrintifyDraftProduct} from './draft-service';
 import {env} from 'cloudflare:workers';
 import {etsyConnection,etsyApiCredential,etsyBudget,recordEtsyCall,waitForEtsyCapacity} from '../../etsy/client';
 import {decryptPrintifyToken} from '../../printify/token-crypto';
@@ -136,6 +136,7 @@ export async function runDeliveryTick(id:string,owner:string){
       if(!claim.meta.changes)return {done:true,progress:false};
     }
     const draftSnapshot=row.draft_json?draftWithSize(JSON.parse(row.draft_json) as DraftSnapshot,printifyProduct!):null;
+    if(draftSnapshot?.selected_variant_ids?.length)await synchronizeNarrowedInventory(request,listingId,row.etsy_shop_id,printifyProduct!,draftSnapshot,async inventory=>{await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/inventory-backup.json`,JSON.stringify(inventory),{httpMetadata:{contentType:'application/json'}})});
     const metadataArgs=draftSnapshot?{request,listingId,shopId:row.etsy_shop_id,product:printifyProduct!,snapshot:draftSnapshot,saved:row.draft_state_json?JSON.parse(row.draft_state_json) as DraftState:null,
       save:async(state:DraftState)=>{await runtime.DB.prepare('UPDATE photo_deliveries SET draft_state_json=?,updated_at=? WHERE id=? AND user_id=?').bind(JSON.stringify(state),Date.now(),id,owner).run()},
       backup:async(view:unknown)=>{await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/draft-backup.json`,JSON.stringify(view),{httpMetadata:{contentType:'application/json'}})}

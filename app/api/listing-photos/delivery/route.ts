@@ -38,7 +38,8 @@ export async function GET(request:Request){
     const draft=await unpackDraftMedia(owned.response_json,user.userId,runtime.ARTWORK) as SourceDraft&{printifyImages?:string[]};
     const indices=JSON.parse(params.get(`images.${row.product_id}`)||'null');
     if(!Array.isArray(indices)||indices.length>20)throw Error('Selection unavailable');
-    const snapshot=freezeDraft({...draft,etsyShippingProfileId:Number(params.get(`shipping.${row.product_id}`))});
+    const prepared=JSON.parse(row.draft_json) as {selected_variant_ids?:number[]};
+    const snapshot=freezeDraft({...draft,...(!prepared.selected_variant_ids?{selectedVariantIds:undefined}:{}),etsyShippingProfileId:Number(params.get(`shipping.${row.product_id}`))});
     const plan=await selectionPlan(runtime,user.userId,row.product_id,draft,indices,row.etsy_shop_id,snapshot);
     choicesChanged=plan.fingerprint!==row.fingerprint;
    }catch{choicesChanged=true;choiceCheckUnavailable=true;}

@@ -20,7 +20,7 @@ test("D906: actual color changes stay on the post-draft control with real previe
   assert.match(app,/function DraftColorSelector/);
   assert.match(app,/Choose product colors/);
   assert.match(app,/task==="draft-colors"/);
-  assert.match(app,/syncDraftVariantChoices\(ids,selectedSizeIds\)/);
+  assert.match(app,/syncDraftVariantChoices\(ids,draftVariantAxes\(draft\)\.sizes,draft\)/);
   assert.match(app,/updateDraftColorArtwork/);
 });
 

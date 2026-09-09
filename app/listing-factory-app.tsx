@@ -545,13 +545,13 @@ function ProductColorSelector({product,selected,onChange,onRemember,remembering,
                   which is why it looked like it was lying. A status, not a button. */}{remembered?"✓ Saved as this product’s default":"Saving…"}</span>:<button type="button" className={remembered?"remembered":""} disabled={!selected.length||remembering||remembered} onClick={onRemember}>{remembering?"Saving…":remembered?"✓ Saved for this product":"Save these as this product’s default colors"}</button>}</div></>}{!selected.length&&<p className="color-required" role="alert">Choose at least one available color before continuing.</p>}</section>
 }
 
-function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onChange,onArtworkChange,onPreviewRequest}:{product:TemplateDetails;drafts:DraftResult[];selected:number[];saving:boolean;artworkByDraft:Record<string,string>;onChange:(ids:number[])=>void;onArtworkChange:(draft:DraftResult,color:ProductColor,list:FileList|null,reset?:boolean)=>void;onPreviewRequest:(productId:string)=>Promise<void>}){
+function DraftColorSelector({product,drafts,selected,selectedByDraft,saving,artworkByDraft,onChange,onArtworkChange,onPreviewRequest}:{product:TemplateDetails;drafts:DraftResult[];selected:number[];selectedByDraft?:Record<string,number[]>;saving:boolean;artworkByDraft:Record<string,string>;onChange:(draft:DraftResult,ids:number[])=>void;onArtworkChange:(draft:DraftResult,color:ProductColor,list:FileList|null,reset?:boolean)=>void;onPreviewRequest:(productId:string)=>Promise<void>}){
   const colors=[...(product.colorOptions||[]).filter(color=>color.available).reduce((groups,color)=>{
     const key=color.title.trim().toLowerCase(),existing=groups.get(key);
     if(existing)existing.ids=[...new Set([existing.id,...(existing.ids||[]),color.id,...(color.ids||[])])];
     else groups.set(key,{...color,ids:[...new Set([color.id,...(color.ids||[])])]});
     return groups;
-  },new Map<string,ProductColor>()).values()],selectedSet=new Set(selected);
+  },new Map<string,ProductColor>()).values()];
   const [activeDraft,setActiveDraft]=useState("");
   const [activeColor,setActiveColor]=useState<number|null>(selected[0]??colors[0]?.id??null);
   const [showRealPreview,setShowRealPreview]=useState(false);
@@ -575,6 +575,7 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
   useEffect(()=>{if(draft?.id&&!activeDraft)setActiveDraft(draft.id)},[draft?.id,activeDraft]);
   useEffect(()=>{setShowRealPreview(false)},[draft?.id,JSON.stringify(draft?.artworkOverrides)]);
   if(!colors.length||!draft)return null;
+  const selectedSet=new Set(draft.id&&selectedByDraft?.[draft.id]||selected);
   const idsFor=(color:ProductColor)=>[...new Set([color.id,...(color.ids||[])])];
   const variantIdsFor=(color:ProductColor)=>color.variantIds?.length?new Set(color.variantIds):printifyVariantIdsForColor(product.variants,idsFor(color));
   const imageFor=(color:ProductColor)=>{
@@ -594,9 +595,9 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
   const activeDraftIndex=Math.max(0,createdDrafts.findIndex(item=>item.id===draft.id));
   function showDraft(id:string){previewRequestRevision.current++;setPreviewLoading(false);setShowRealPreview(false);setActiveDraft(id);window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>selectorRef.current?.scrollIntoView({block:"start"})))}
   function focusColor(id:number){if(artworkUploadColor.current||id===activeColor)return;previewRequestRevision.current++;setPreviewLoading(false);setPreviewError("");setActiveColor(id);setShowRealPreview(false)}
-  function toggle(color:ProductColor){artworkUploadColor.current=null;explicitlyChosenColor.current=color;const next=new Set(selectedSet);if(idsFor(color).some(id=>next.has(id))){for(const id of idsFor(color))next.delete(id)}else next.add(color.id);focusColor(color.id);onChange([...next])}
-  const selectAll=()=>onChange(colors.map(color=>color.id));
-  const matchTemplate=()=>onChange(colors.filter(color=>color.templateEnabled).map(color=>color.id));
+  function toggle(color:ProductColor){artworkUploadColor.current=null;explicitlyChosenColor.current=color;const next=new Set(selectedSet);if(idsFor(color).some(id=>next.has(id))){for(const id of idsFor(color))next.delete(id)}else next.add(color.id);focusColor(color.id);onChange(draft!,[...next])}
+  const selectAll=()=>onChange(draft!,colors.map(color=>color.id));
+  const matchTemplate=()=>onChange(draft!,colors.filter(color=>color.templateEnabled).map(color=>color.id));
   async function openPreview(){
     if(showRealPreview){setShowRealPreview(false);return}
     if(!draft?.id)return;
@@ -608,7 +609,7 @@ function DraftColorSelector({product,drafts,selected,saving,artworkByDraft,onCha
   }
   return <section ref={selectorRef} className="draft-color-selector" aria-label="Preview and choose product colors" onClickCapture={event=>{if((event.target as HTMLElement).closest(".draft-color-artwork-action"))artworkUploadColor.current=focused}}>
     <div className="draft-color-heading"><div><h3>Choose product colors</h3><p>{createdDrafts.length>1?`Listing ${activeDraftIndex+1} of ${createdDrafts.length}. `:""}Choose colors instantly. Open Preview only when you want to see the finished Printify mockup.</p></div></div>
-    <div className="draft-color-bulk-actions" role="group" aria-label="Color selection actions"><button type="button" onClick={selectAll}>Select all available</button><button type="button" onClick={matchTemplate}>Match Printify template</button><button type="button" onClick={()=>onChange([])}>Clear all</button>{saving?<span role="status">Saving choices…</span>:null}</div>
+    <div className="draft-color-bulk-actions" role="group" aria-label="Color selection actions"><button type="button" onClick={selectAll}>Select all available</button><button type="button" onClick={matchTemplate}>Match Printify template</button><button type="button" onClick={()=>onChange(draft!,[])}>Clear all</button>{saving?<span role="status">Saving choices…</span>:null}</div>
     <div className="draft-color-workspace"><div className="draft-color-main">{showRealPreview&&realPreview?<img src={realPreview} alt={`${focused.title} finished Printify preview`}/>:<ProductColorRendering color={focused.swatch} artworkUrl={mainArtwork} productRenderingUrl={productRendering} placement={draft.placement} side={renderingSide} printWidth={product.maxPrintWidth} printHeight={product.maxPrintHeight}/>}<b>{focused.title}</b><span>{override?"Using alternate artwork":"Using the main design"}</span><button type="button" className="draft-color-preview" aria-busy={previewLoading} disabled={previewLoading} onClick={()=>void openPreview()}>{showRealPreview?"Back to edit view":previewLoading?"Loading preview…":"Preview"}</button>{previewError?<p className="field-error" role="alert">{previewError}</p>:null}<div className="draft-color-artwork-action"><label role="button" tabIndex={0} aria-disabled={saving} onKeyDown={event=>{if(saving)return;if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}}>{override?`Change artwork for ${focused.title}`:`Use different artwork for ${focused.title}`}<input className="hidden-picker" ref={artworkPickerRef} type="file" accept=".png,.jpg,.jpeg" disabled={saving} onChange={event=>{const locked=artworkUploadColor.current||focused;onArtworkChange(draft,locked,event.target.files);artworkUploadColor.current=null;event.target.value=""}}/></label>{override?<button type="button" disabled={saving} onClick={()=>{onArtworkChange(draft,focused,null,true);artworkUploadColor.current=null}}>Use main design</button>:null}</div></div><div className="draft-color-grid">{colors.map(color=>{const included=idsFor(color).some(id=>selectedSet.has(id));return <button type="button" key={color.id} aria-pressed={included} className={included?"selected":""} onMouseMove={event=>{if(event.movementX||event.movementY)focusColor(color.id)}} onFocus={()=>focusColor(color.id)} onClick={()=>toggle(color)}><i className="draft-color-swatch" style={{background:color.swatch||"#ddd"}} aria-hidden="true"/><span>{color.title}</span><em>{included?"✓ Included":"Add"}</em></button>})}</div></div>
     {override&&draft.editorUrl?<div className="draft-color-adjust"><a href={draft.editorUrl} target="_blank" rel="noreferrer">Adjust this artwork in Printify ↗</a><span>Resize or reposition this color’s artwork if needed.</span></div>:null}
     {createdDrafts.length>1?<nav className="factory-listing-next draft-color-next" aria-label="Move between product-color listings"><button type="button" disabled={activeDraftIndex===0} onClick={()=>showDraft(createdDrafts[activeDraftIndex-1].id!)}>← Previous listing</button><span>Listing {activeDraftIndex+1} of {createdDrafts.length}</span><button type="button" disabled={activeDraftIndex===createdDrafts.length-1} onClick={()=>showDraft(createdDrafts[activeDraftIndex+1].id!)}>Next listing →</button></nav>:null}
@@ -1488,6 +1489,17 @@ export default function ListingFactoryApp() {
     if(!chosen.size)return byColor;
     const bySize=byColor.filter(variant=>variant.sizeId==null||chosen.has(variant.sizeId));
     return bySize.length?bySize:byColor;
+  }
+  function draftVariantAxes(draft:DraftResult|undefined){
+    if(!templateDetails||!draft)return {colors:selectedColorIds,sizes:selectedSizeIds};
+    const chosenIds=new Set(draft.selectedVariantIds?.length?draft.selectedVariantIds:(draft.costReview?.variants||[]).filter(variant=>variant.isEnabled).map(variant=>variant.id));
+    if(!chosenIds.size)return {colors:selectedColorIds,sizes:selectedSizeIds};
+    const chosen=templateDetails.variants.filter(variant=>chosenIds.has(variant.id));
+    const colorIds=new Set(chosen.map(variant=>variant.colorId).filter((id):id is number=>id!=null));
+    const colors=(templateDetails.colorOptions||[]).filter(color=>[color.id,...(color.ids||[])].some(id=>colorIds.has(id))).map(color=>color.id);
+    const sizeIds=new Set(chosen.map(variant=>variant.sizeId).filter((id):id is number=>id!=null));
+    const sizes=(templateDetails.sizeOptions||[]).filter(size=>sizeIds.has(size.id)).map(size=>size.id);
+    return {colors:colors.length?colors:selectedColorIds,sizes:sizes.length?sizes:selectedSizeIds};
   }
   const pricedVariants=useMemo(()=>variantsFor(templateDetails,selectedColorIds,selectedSizeIds),[templateDetails,selectedColorIds,selectedSizeIds]);
   const draftVariantLimitError=printifyVariantLimitMessage(pricedVariants.length);
@@ -3315,8 +3327,8 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
         return `${required.filter(property=>(property.value||"").trim()).length}/${required.length} fields`;
       },design=><div className="etsy-detail-body">{design.etsy?<EtsyDetailsEditor design={design} categories={etsyCategories} onChange={etsy=>updateDesign(design.id,{etsy,etsyError:""})} onCategory={taxonomyId=>changeEtsyCategory(design,taxonomyId)} checklist={!only}/>:!design.title.trim()?<div className="etsy-detail-pending"><b>Waiting for this listing’s title.</b><span>Create the title above to prepare the Etsy category and product fields.</span></div>:!design.etsyError?<div className="etsy-detail-loading" role="status"><span className="goldie-spinner" aria-hidden="true"/><b>Loading Etsy details…</b></div>:<div className="etsy-detail-error"><b>Etsy details could not be loaded.</b><span>{design.etsyError}</span><button aria-busy={preparingListingId===design.id} disabled={Boolean(preparingListingId)} onClick={()=>void retryOneEtsyListing(design)}>{preparingListingId===design.id?"Loading Etsy details…":"Try this listing again"}</button></div>}</div>,etsyFlags,only);}
   function taskPanel(task:string){
-    if(task==="draft-colors"&&templateDetails)return <><DraftColorSelector product={templateDetails} drafts={drafts.filter(draft=>draft.status==="Created")} selected={selectedColorIds} saving={savingDraftVariants} artworkByDraft={Object.fromEntries(drafts.map(draft=>{const local=files.find(file=>file.id===draft.clientId)?.artworkPreviewUrl;return [draft.clientId,local||draft.artworkPreviewUrls?.primary||Object.values(draft.artworkPreviewUrls||{})[0]||""]}))} onChange={ids=>void syncDraftVariantChoices(ids,selectedSizeIds)} onArtworkChange={(draft,color,list,reset)=>void updateDraftColorArtwork(draft,color,list,reset)} onPreviewRequest={id=>refreshDraftPhotos(id,true)}/>{(draftVariantLimitError||draftVariantError)&&<p className="field-error" role="alert">{draftVariantLimitError||draftVariantError}</p>}</>;
-    if(task==="draft-sizes"&&templateDetails)return <><ProductSizeSelector product={templateDetails} selected={selectedSizeIds} onChange={ids=>void syncDraftVariantChoices(selectedColorIds,ids)} onRemember={()=>undefined} remembering={savingDraftVariants} remembered inCard/>{(draftVariantLimitError||draftVariantError)&&<p className="field-error" role="alert">{draftVariantLimitError||draftVariantError}</p>}</>;
+    if(task==="draft-colors"&&templateDetails){const focused=reviewEditing?drafts.find(draft=>draft.id===reviewEditing.id):undefined,shown=focused?[focused]:drafts.filter(draft=>draft.status==="Created"),selectedByDraft=Object.fromEntries(shown.filter(draft=>draft.id).map(draft=>[draft.id!,draftVariantAxes(draft).colors]));return <><DraftColorSelector product={templateDetails} drafts={shown} selected={selectedColorIds} selectedByDraft={selectedByDraft} saving={savingDraftVariants} artworkByDraft={Object.fromEntries(drafts.map(draft=>{const local=files.find(file=>file.id===draft.clientId)?.artworkPreviewUrl;return [draft.clientId,local||draft.artworkPreviewUrls?.primary||Object.values(draft.artworkPreviewUrls||{})[0]||""]}))} onChange={(draft,ids)=>void syncDraftVariantChoices(ids,draftVariantAxes(draft).sizes,draft)} onArtworkChange={(draft,color,list,reset)=>void updateDraftColorArtwork(draft,color,list,reset)} onPreviewRequest={id=>refreshDraftPhotos(id,true)}/>{(draftVariantLimitError||draftVariantError)&&<p className="field-error" role="alert">{draftVariantLimitError||draftVariantError}</p>}</>}
+    if(task==="draft-sizes"&&templateDetails){const focused=reviewEditing?drafts.find(draft=>draft.id===reviewEditing.id):undefined,axes=draftVariantAxes(focused);return <><ProductSizeSelector product={templateDetails} selected={axes.sizes} onChange={ids=>void syncDraftVariantChoices(axes.colors,ids,focused)} onRemember={()=>undefined} remembering={savingDraftVariants} remembered inCard/>{(draftVariantLimitError||draftVariantError)&&<p className="field-error" role="alert">{draftVariantLimitError||draftVariantError}</p>}</>}
     /* D541 - titles-resolving drives the pulse on each title field as the batch
        run fills them in. It rode on the listing-editor wrapper, so it went out
        with the block; it belongs on whatever holds the title fields. */
@@ -4588,28 +4600,27 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   }
 
   function finalDescription(design:DesignFile,details?:EtsyDetails){return design.descriptionOverride??[design.blurb??details?.blurb??"",description].filter(value=>value.trim()).join("\n\n")}
-  function syncDraftVariantChoices(nextColors:number[],nextSizes:number[]){
+  function syncDraftVariantChoices(nextColors:number[],nextSizes:number[],targetDraft?:DraftResult){
     if(!templateDetails)return;
     const selectedVariants=variantsFor(templateDetails,nextColors,nextSizes).map(variant=>variant.id);
     const limitError=printifyVariantLimitMessage(selectedVariants.length);
     if(limitError){setSavingDraftVariants(false);setDraftVariantError(limitError);return}
-    setSelectedColorIds(nextColors);setSelectedSizeIds(nextSizes);
+    if(!targetDraft){setSelectedColorIds(nextColors);setSelectedSizeIds(nextSizes)}
     const revision=++variantSaveRevision.current;
     window.clearTimeout(variantSaveTimer.current);
     if(!selectedVariants.length){setSavingDraftVariants(false);setDraftVariantError("Choose a color and size combination Printify offers.");return}
-    const created=drafts.filter(draft=>draft.status==="Created"&&draft.id);
+    const created=targetDraft?.id?[targetDraft]:drafts.filter(draft=>draft.status==="Created"&&draft.id);
     setDraftVariantError("");
     setSavingDraftVariants(true);
     variantSaveTimer.current=window.setTimeout(()=>{variantSaveQueue.current=variantSaveQueue.current.then(async()=>{
     if(revision!==variantSaveRevision.current)return;
     setSavingDraftVariants(true);
     try{
-      /* D1070 · A choice applies to every design draft, but those are distinct
-         Printify products and do not need to wait on one another. The save queue
-         above still serializes successive UI choices for the same set of drafts;
-         within one choice, update every draft concurrently and retry only the
-         individual transient failures. This keeps a 20-design batch from taking
-         roughly twenty times as long as a single draft. */
+      /* Product setup supplies a batch default. Review can target one listing,
+         so a seller may keep different color and size sets within the batch.
+         The products are distinct Printify drafts and do not need to wait on
+         one another when a batch-wide choice is changed. The save queue still
+         serializes successive UI choices for the same target set. */
       const updated=await runBounded(created,4,async draft=>{
         let saved:DraftResult|undefined,lastError="";
         for(let attempt=0;attempt<3&&!saved;attempt++){
@@ -4626,8 +4637,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       if(revision!==variantSaveRevision.current)return;
       const byId=new Map(updated.map(draft=>[draft.id,draft]));
       setDrafts(current=>current.map(draft=>{const update=byId.get(draft.id);return update?{...draft,...update,productName:update.productName||draft.productName}:draft}));
+      setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:member.drafts.map(draft=>{const update=byId.get(draft.id);return update?{...draft,...update,productName:update.productName||draft.productName}:draft})}])));
       setPricingApproved(false);
-      if(activeRecipe)void establish(activeRecipe,{defaultColorIds:nextColors,defaultSizeIds:nextSizes});
+      if(!targetDraft&&activeRecipe)void establish(activeRecipe,{defaultColorIds:nextColors,defaultSizeIds:nextSizes});
     }catch(error){if(revision===variantSaveRevision.current)setDraftVariantError(error instanceof Error?error.message:"Printify could not save these product choices.")}
     finally{if(revision===variantSaveRevision.current)setSavingDraftVariants(false)}
     })},450)

@@ -11,6 +11,6 @@ test("D934: products without a Printify color axis do not render an empty color 
 });
 
 test("D934: products with colors retain the post-draft color editor",()=>{
-  assert.match(source,/if\(task==="draft-colors"&&templateDetails\)return/);
+  assert.match(source,/if\(task==="draft-colors"&&templateDetails\)\{/);
   assert.match(source,/<DraftColorSelector product=\{templateDetails\}/);
 });
