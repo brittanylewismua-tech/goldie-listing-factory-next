@@ -280,8 +280,9 @@ export async function POST(request:Request){const user=await getChatGPTUser();if
   /* D1243 · React can save the last product response and the previous render's
      complete=false in one snapshot. The server has every exact design/product
      identity in that same request, so normalize the stale flag before it can
-     strand a finished batch. Explicit Save for later remains a draft. */
-  if(batchHasEveryCreatedDraft(incoming)){incoming={...incoming,complete:true};if(!incoming.keptAsDrafts)status="complete";}
+     strand a finished batch. Save for later describes unfinished work; after
+     every product exists it must not keep Batch History stuck on Draft. */
+  if(batchHasEveryCreatedDraft(incoming)){incoming={...incoming,complete:true,keptAsDrafts:false};status="complete";}
   const designIds=Array.isArray(incoming.drafts)?incoming.drafts.map(d=>(d as {clientId?:string}).clientId).filter((id):id is string=>Boolean(id)):[];
   const owned=designIds.length?await database.prepare(`SELECT json_extract(response_json,'$.id') AS id,client_id AS clientId FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND client_id IN (${designIds.map(()=>'?').join(',')})`).bind(user.userId,...designIds).all<{id:string;clientId:string}>():{results:[]};
   // If object storage is unavailable, save the original complete snapshot.

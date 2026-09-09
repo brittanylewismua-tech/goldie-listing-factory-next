@@ -2281,7 +2281,7 @@ export default function ListingFactoryApp() {
     if(isCurrent)window.localStorage.setItem("goldie-active-batch",id);
     /* The child names its run, and the run row is kept alongside it. */
     if(isCurrent)void persistRunNow().catch(()=>undefined);
-    const payload=JSON.stringify({id,parentBatchId:runIdRef.current&&runIdRef.current!==id?runIdRef.current:undefined,status:running?"processing":keptAsDrafts?"draft":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot(stateOverrides)});
+    const payload=JSON.stringify({id,parentBatchId:runIdRef.current&&runIdRef.current!==id?runIdRef.current:undefined,status:running?"processing":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":keptAsDrafts?"draft":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot(stateOverrides)});
     return writeBatch.current(id,async()=>{
       if(batchIdRef.current===id)setBatchSaveStatus("saving");
       try{

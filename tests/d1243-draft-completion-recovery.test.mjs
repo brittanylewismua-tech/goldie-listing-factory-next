@@ -14,7 +14,9 @@ test('D1243: exact finished products prove completion without a browser flag',()
 test('D1243: server normalizes stale completion and support repair is owner scoped',()=>{
   const batches=readFileSync(new URL('../app/api/batches/route.ts',import.meta.url),'utf8');
   const support=readFileSync(new URL('../app/api/mastermind/member-diagnostic/route.ts',import.meta.url),'utf8');
-  assert.match(batches,/if\(batchHasEveryCreatedDraft\(incoming\)\)\{incoming=\{\.\.\.incoming,complete:true\};if\(!incoming\.keptAsDrafts\)status="complete";\}/);
+  assert.match(batches,/if\(batchHasEveryCreatedDraft\(incoming\)\)\{incoming=\{\.\.\.incoming,complete:true,keptAsDrafts:false\};status="complete";\}/);
+  const app=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
+  assert.match(app,/status:running\?"processing":complete\?drafts\.some\(draft=>draft\.status!=="Created"\)\?"needs_attention":"complete":keptAsDrafts\?"draft":"draft"/);
   assert.match(support,/if \(!owner \|\| !isOwner\(owner\)\)/);
   assert.match(support,/WHERE id=\? AND user_id=\?/);
   assert.match(support,/batchHasEveryCreatedDraft\(state\)/);

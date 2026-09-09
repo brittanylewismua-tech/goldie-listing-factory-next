@@ -166,7 +166,7 @@ export async function POST(request: Request) {
   if (!row) return NextResponse.json({ error: "That member batch was not found." }, { status: 404 });
   const state = safeJson(row.stateJson);
   if (!batchHasEveryCreatedDraft(state)) return NextResponse.json({ error: "This batch does not have one finished Printify product for every saved design." }, { status: 409 });
-  const status = state.keptAsDrafts === true ? row.status : "complete";
-  await db.prepare("UPDATE listing_batches SET status=?,state_json=json_set(state_json,'$.complete',json('true')),revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(status,batchId,member.userId).run();
+  const status = "complete";
+  await db.prepare("UPDATE listing_batches SET status=?,state_json=json_set(json_set(state_json,'$.complete',json('true')),'$.keptAsDrafts',json('false')),revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(status,batchId,member.userId).run();
   return NextResponse.json({ repaired: true, batchId, status, complete: true });
 }
