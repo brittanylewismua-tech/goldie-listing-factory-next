@@ -2796,12 +2796,13 @@ test("every step's footer is the same three things — D430/D432", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
   /* Checked on the live site across all four steps: the forward control belongs
-     to the section it completes, and the footer is always Back / Saved
-     automatically / Save as draft. Images drifted from this twice in one day -
+     to the section it completes, and the footer is always Back / truthful save
+     status / Save to Batch History. A focused Review editor hides the footer's
+     Back because its persistent listing navigation owns Back to Review. Images drifted from this twice in one day -
      first carrying a second forward button, then carrying the only one and
      losing Save as draft - so the shape is asserted rather than remembered. */
   const footers = [...app.matchAll(/workflow-footer-actions[^"]*"/g)].map(match => {
-    const segment = app.slice(match.index, match.index + 900);
+    const segment = app.slice(match.index, match.index + 1800);
     const end = segment.indexOf("</div>}");
     return end > 0 ? segment.slice(0, end) : segment;
   });
@@ -4130,7 +4131,7 @@ test("active products keep their rows and inactive draft products show saved-wor
   assert.match(app, /if\(many&&!open&&workflowStep==="designs"\)return null;const rows=productRows\(recipe,index===bundleIndex\)/,
     "D501 - a single-product batch gets its rows too, as step 1 gives them");
   assert.match(app, /<div className=\{`batch-product-rows \$\{grouped\?"has-draft-stages":""\}`\}>[\s\S]*\{rows\.map/);
-  assert.match(app, /grouped&&row\.task!==effectiveTask/,
+  assert.match(app, /\(grouped\|\|Boolean\(reviewEditing\)\)&&row\.task!==effectiveTask/,
     "D1229 - one selected or required section renders instead of a stack");
   assert.match(app, /<span className="row-mark" aria-hidden="true">\{row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"\}<\/span>/,
     "the same row markup step 1 uses");

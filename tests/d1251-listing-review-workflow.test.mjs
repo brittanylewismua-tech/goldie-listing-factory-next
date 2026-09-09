@@ -80,9 +80,20 @@ test("Review uses singular variant grammar for one-option products",()=>{
 test("Review editing identifies the current listing instead of repeating the overview",()=>{
   assert.match(app,/reviewEditing\?`Listing \$\{Math\.max\(1,files\.findIndex/);
   assert.match(app,/reviewEditing\s*\? \{ eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review\." \}/);
+  assert.match(app,/finish: finishPhase==="details" \? \{ eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review\." \}/);
   assert.match(app,/>Continue to listing details <span/);
-  assert.equal((app.match(/\{reviewEditing\?"Back to Review":"Back"\}/g)||[]).length,2);
+  assert.equal((app.match(/progressIndex>0&&!reviewEditing&&<button className="workflow-back"/g)||[]).length,1);
+  assert.equal((app.match(/complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer">\{!reviewEditing&&<button/g)||[]).length,1);
   assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
+});
+
+test("Review editors expose one unambiguous return and truthful save state",()=>{
+  assert.equal((app.match(/>Back to Review<\/button>/g)||[]).length,1);
+  assert.match(app,/const grouped=workflowStep==="designs"&&!reviewEditing/);
+  assert.match(app,/if\(\(grouped\|\|Boolean\(reviewEditing\)\)&&row\.task!==effectiveTask\)return null/);
+  assert.match(app,/footerActions=\{rowOpen&&workflowStep==="designs"&&!reviewEditing/);
+  assert.match(app,/\{!reviewEditing&&<FactoryFooter status=\{imagesStepIssues\(\)\.length/);
+  assert.match(app,/batchAuthenticationRequired\?"Sign in to save":batchSaveConflict\?"Saving paused":batchHeldByAnotherTab\?"Saving paused in this tab":"Saved automatically"/);
 });
 
 test("Etsy and personalization rows cannot show ready while personalization blocks handoff",()=>{

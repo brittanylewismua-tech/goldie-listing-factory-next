@@ -15,7 +15,7 @@ test('D1229: ready defaults are presented as complete rather than six mandatory 
 
 test('D1229: only the focused or first unfinished section renders as a work surface',()=>{
  assert.match(app,/const effectiveTask=open\?\(activeTask==="__closed"\?"":focusedDraftTask\(rows,activeTask\)\):""/);
- assert.match(app,/if\(grouped&&row\.task!==effectiveTask\)return null/);
+ assert.match(app,/if\(\(grouped\|\|Boolean\(reviewEditing\)\)&&row\.task!==effectiveTask\)return null/);
  assert.match(app,/className="draft-section-nav"/);
  assert.match(app,/Continue to \{rows\[rowIndex\+1\]\.label\.startsWith\("Etsy "\)\?rows\[rowIndex\+1\]\.label:rows\[rowIndex\+1\]\.label\.toLowerCase\(\)\}/);
  assert.doesNotMatch(app,/setActiveTask\(requestedTask\|\|"placement"\)/);

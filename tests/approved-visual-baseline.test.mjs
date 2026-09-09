@@ -219,7 +219,7 @@ test("centers autosave feedback beneath each workflow panel", async () => {
     readFile(listingFactoryPage, "utf8"),
     Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n")),
   ]);
-  assert.match(page, /<i aria-hidden="true">✓<\/i> Saved automatically/);
+  assert.match(page, /batchAuthenticationRequired\?"Sign in to save":batchSaveConflict\?"Saving paused":batchHeldByAnotherTab\?"Saving paused in this tab":"Saved automatically"/);
   assert.match(css, /\.workflow-footer-actions\{position:relative;[^}]*justify-content:flex-start/);
   assert.match(css, /\.autosave-note\{position:absolute;left:50%;[^}]*transform:translateX\(-50%\)/);
 });

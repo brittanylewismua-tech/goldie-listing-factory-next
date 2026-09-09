@@ -44,6 +44,6 @@ test('guidance preserves continuation gate and focuses only after saved product 
 test('only inactive draft sections are folded; section navigation retains the close control',()=>{
  const app=read('app/listing-factory-app.tsx'),panel=read('app/factory-panel.tsx');
  assert.match(app,/if\(many&&!open&&workflowStep==="designs"\)return null;const rows=productRows/);
- assert.match(app,/footerActions=\{rowOpen&&workflowStep==="designs"&&rows\[rowIndex\+1\]\?\.task/);
+ assert.match(app,/footerActions=\{rowOpen&&workflowStep==="designs"&&!reviewEditing&&rows\[rowIndex\+1\]\?\.task/);
  assert.match(panel,/\{footerActions\}[\s\S]*className="panel-collapse-foot"/);
 });

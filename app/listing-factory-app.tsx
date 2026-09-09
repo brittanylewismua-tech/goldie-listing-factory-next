@@ -3700,7 +3700,12 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
             /* D723 · Each task row is a prototype panel: index chip, title, description,
        state chip, and its work in the body. The row's own handlers, guards and
        reachability rules are unchanged and are handed to the panel. */
-    const grouped=workflowStep==="designs";
+    /* A focused Review edit already has the persistent seven-section listing
+       navigator above the card. Showing the three-stage product rail and the
+       section-to-section footer at the same time creates three competing ways
+       to move through one listing. Keep those controls for the normal product
+       walkthrough; a Review edit renders only the section the seller chose. */
+    const grouped=workflowStep==="designs"&&!reviewEditing;
     /* D1229 · A ready product used to show three stage buttons plus three more
        collapsed section cards and called every one "Ready to review". That made
        six optional inspections look mandatory. Keep the three-stage map, but
@@ -3718,7 +3723,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           const target=tasks.find(row=>!row.done)||tasks[0];if(target?.task)openGuidedDraftTask(target.task,index);
         }}><span>{remaining?stageIndex+1:"✓"}</span><b>{draftStageLabel(stage.id,tasks.map(row=>row.task||""))}</b><small>{remaining?`${remaining} to finish`:"Ready"}</small></button>;
       })}</nav>{effectiveTask&&<><p className="draft-stage-position">Stage {stages.findIndex(stage=>stage.id===stageId)+1} of {stages.length} · {stageRows.find(row=>row.task===effectiveTask)?.label}</p>{stageRows.length>1&&<nav className="draft-section-nav" aria-label={`${draftStageLabel(stageId,stageRows.map(row=>row.task||""))} sections`}>{stageRows.map((row,rowIndex)=><button type="button" key={row.task||row.label} aria-current={row.task===effectiveTask?"step":undefined} onClick={()=>row.task&&openGuidedDraftTask(row.task,index)}><span aria-hidden="true">{row.done?"✓":rowIndex+1}</span>{row.label}</button>)}</nav>}</>}</div>}
-      {rows.map((row,rowIndex)=>{if(grouped&&row.task!==effectiveTask)return null;const rowOpen=Boolean(!switchingProduct&&open&&row.task&&(grouped?row.task===effectiveTask:activeTask===row.task));
+      {rows.map((row,rowIndex)=>{if((grouped||Boolean(reviewEditing))&&row.task!==effectiveTask)return null;const rowOpen=Boolean(!switchingProduct&&open&&row.task&&(grouped?row.task===effectiveTask:activeTask===row.task));
       const reachableRow=!(switchingProduct||(!open&&!reachable));
       /* D767 · A reporting row has nothing of its own to open (D541), which is a
          reason to have no Change control - not a reason to be a different
@@ -3734,7 +3739,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         tone={row.done?"done":row.pending?"pending":row.optional?"optional":"attention"}
         open={rowOpen}
         onToggle={row.report?undefined:()=>{if(grouped)setDraftStageByProduct(current=>({...current,[recipe.id]:draftTaskStage(row.task)||stageId}));openRow(row.target,row.task)}}
-        footerActions={rowOpen&&workflowStep==="designs"&&rows[rowIndex+1]?.task?<button type="button" className="task-next-section" onClick={()=>openGuidedDraftTask(rows[rowIndex+1].task!,index)}>Continue to {rows[rowIndex+1].label.startsWith("Etsy ")?rows[rowIndex+1].label:rows[rowIndex+1].label.toLowerCase()} <span aria-hidden="true">→</span></button>:undefined}
+        footerActions={rowOpen&&workflowStep==="designs"&&!reviewEditing&&rows[rowIndex+1]?.task?<button type="button" className="task-next-section" onClick={()=>openGuidedDraftTask(rows[rowIndex+1].task!,index)}>Continue to {rows[rowIndex+1].label.startsWith("Etsy ")?rows[rowIndex+1].label:rows[rowIndex+1].label.toLowerCase()} <span aria-hidden="true">→</span></button>:undefined}
         toggleLabel={opening?"Opening…":rowOpen?"Close":"Change"}
         toggleDisabled={!reachableRow}
         toggleTitle={!reachableRow?`Finish ${list[index-1]?.name||"the product above"} first`:undefined}
@@ -5069,7 +5074,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: "Everything your saved product already answers has been applied." }
       : { eyebrow: "STEP 2 OF 3", title: "Add your designs", copy: "" },
     review: { eyebrow: "STEP 2 OF 3", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
-    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Finish this listing, then return to Review." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit listing details", copy: "Finish this listing, then return to Review." } : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: handoffBlockers().length?"Fix the missing items shown on the listing cards.":"Everything is ready. Save the batch to Etsy Drafts." },
+    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review." } : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: handoffBlockers().length?"Fix the missing items shown on the listing cards.":"Everything is ready. Save the batch to Etsy Drafts." },
   }[workflowStep];
   const workflowHelp=workflowStep==="designs"
     ?complete
@@ -5803,7 +5808,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         {batchAuthenticationRequired&&<div className="batch-tab-conflict" role="alert"><b>Sign in again to save your changes.</b><span>Your changes are still here. Sign in, then return to this tab. Saving will retry automatically.</span><a href="/account/sign-in?return_to=%2Flisting-factory" target="_blank" rel="noopener noreferrer">Sign in to The Listing Factory ↗</a><button type="button" onClick={retryAuthenticatedSave}>Retry now</button></div>}
         {batchSaveConflict&&<div className="notice error" role="alert"><strong>Saving paused</strong><p>{batchSaveConflict}</p><button type="button" onClick={()=>void reloadConflictedBatch()}>Reload saved batch</button></div>}
             {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another tab.</b><span>Saving is paused here so the other tab is not overwritten. Continue in the other tab, or reload the latest saved version here to take over.</span><button type="button" onClick={takeOverBatchHere}>Reload saved batch here</button></div>}
-        {!(complete&&workflowStep==="designs")&&<div className="workflow-footer-actions">{progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> {reviewEditing?"Back to Review":"Back"}</button>}<span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D776 - the step's own footer (status + forward) lands here, so the bar the seller can see is the bar with the way forward in it. */}<span className="factory-footer-slot"/>{/* D386 - Saving a draft was only reachable from the Publish step, so
+        {!(complete&&workflowStep==="designs")&&<div className="workflow-footer-actions">{progressIndex>0&&!reviewEditing&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">{batchAuthenticationRequired||batchSaveConflict||batchHeldByAnotherTab?"!":"✓"}</i> {batchAuthenticationRequired?"Sign in to save":batchSaveConflict?"Saving paused":batchHeldByAnotherTab?"Saving paused in this tab":"Saved automatically"}</span>{/* D776 - the step's own footer (status + forward) lands here, so the bar the seller can see is the bar with the way forward in it. */}<span className="factory-footer-slot"/>{/* D386 - Saving a draft was only reachable from the Publish step, so
                 stopping halfway meant trusting the autosave and remembering the
                 batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&!(workflowStep==="finish"&&finishPhase==="final")&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Save to Batch History</button>}</div>}
         </div>
@@ -5839,9 +5844,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             from a paragraph under the button to the left of the bar the button
             sits in, so the step states its own gate in one place. The button
             below is unchanged: same gate check, same handler. */}
-        <FactoryFooter status={imagesStepIssues().length?(()=>{const next=unfinishedDraftGuidance();return <span className="draft-next-guidance"><span>{imagesStepIssues()[0]}</span>{next&&!savingDraftVariants&&!switchingProduct&&!restoringBatch&&<button type="button" className="draft-fix-link" onClick={()=>openGuidedDraftTask(next.task,next.index)}>Open {next.label.toLowerCase()}{activeBundle&&bundleRecipes.length>1?` · ${next.name}`:""} <span aria-hidden="true">↑</span></button>}</span>})():"Every listing has at least one photo"}>
+        {!reviewEditing&&<FactoryFooter status={imagesStepIssues().length?(()=>{const next=unfinishedDraftGuidance();return <span className="draft-next-guidance"><span>{imagesStepIssues()[0]}</span>{next&&!savingDraftVariants&&!switchingProduct&&!restoringBatch&&<button type="button" className="draft-fix-link" onClick={()=>openGuidedDraftTask(next.task,next.index)}>Open {next.label.toLowerCase()}{activeBundle&&bundleRecipes.length>1?` · ${next.name}`:""} <span aria-hidden="true">↑</span></button>}</span>})():"Every listing has at least one photo"}>
         <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void enterListingDetails()}}>Continue to listing details <span aria-hidden="true">→</span></button>
-        </FactoryFooter>
+        </FactoryFooter>}
         </>
         ,true,
         /* D683 - the batch-wide "open every listing in Printify" link. It renders
@@ -5853,7 +5858,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </>
       )}
 
-      {complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer"><button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> {reviewEditing?"Back to Review":"Back"}</button><span className="autosave-note"><i aria-hidden="true">✓</i> Saved automatically</span>{/* D778 - this bar replaces the normal one once the drafts exist, and it had no slot, so on step 2 the step's own footer portalled into the hidden bar and the visible one showed no way forward at all. */}<span className="factory-footer-slot"/><button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Save to Batch History</button></div>}
+      {complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer">{!reviewEditing&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">{batchAuthenticationRequired||batchSaveConflict||batchHeldByAnotherTab?"!":"✓"}</i> {batchAuthenticationRequired?"Sign in to save":batchSaveConflict?"Saving paused":batchHeldByAnotherTab?"Saving paused in this tab":"Saved automatically"}</span>{/* D778 - this bar replaces the normal one once the drafts exist, and it had no slot, so on step 2 the step's own footer portalled into the hidden bar and the visible one showed no way forward at all. */}<span className="factory-footer-slot"/><button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Save to Batch History</button></div>}
 
       {preflightOpen && <div className="preflight-backdrop" role="presentation" onMouseDown={(e)=>{if(e.target===e.currentTarget)setPreflightOpen(false)}}><section className="preflight" role="dialog" aria-modal="true" aria-labelledby="preflight-title"><p className="mini-label">CREATE PRINTIFY DRAFTS</p>{/* D492 - the button says "Create Printify drafts for all 3 products" and this
     dialog, the last thing before it runs, said "Create 2 product drafts?" and
