@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
+import { batchHasEveryCreatedDraft } from "@/app/batch-draft-integrity";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Runtime = { DB?: D1Database; PRINTIFY_TOKEN_KEY?: string };
@@ -51,6 +52,9 @@ function batchSummary(row: { id: string; status: string; step: string; setupName
     setupName: row.setupName,
     designCount: row.designCount,
     updatedAt: row.updatedAt,
+    complete: state.complete === true,
+    keptAsDrafts: state.keptAsDrafts === true,
+    completionReady: batchHasEveryCreatedDraft(state),
     drafts: drafts.map((draft) => ({
       clientId: typeof draft.clientId === "string" ? draft.clientId : null,
       productId: typeof draft.id === "string" ? draft.id : null,
@@ -123,7 +127,7 @@ export async function auditMemberPrintify(email: string) {
     inheritedMediaStatuses: mediaChecks,
   };
   result.accountDiagnosis = mediaChecks.some((code) => code !== 200)
-    ? "The template contains media references that no longer exist in this Printify account. Goldie will remove them before creating drafts."
+    ? "The template contains media references that no longer exist in this Printify account. The Listing Factory removes them before creating drafts."
     : (product.variants?.filter((variant) => variant.is_enabled).length ?? 0) === 0
       ? "The template has no enabled product variants."
       : placeholders.length === 0
@@ -145,4 +149,24 @@ export async function GET(request: Request) {
   }
   const result = await auditMemberPrintify(email);
   return NextResponse.json(result, { status: "error" in result ? 400 : 200 });
+}
+
+export async function POST(request: Request) {
+  const owner = await getChatGPTUser();
+  if (!owner || !isOwner(owner)) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const body = await request.json().catch(() => null) as { email?: unknown; batchId?: unknown } | null;
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const batchId = typeof body?.batchId === "string" ? body.batchId.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 80) : "";
+  if (!email || !batchId) return NextResponse.json({ error: "Choose a member and batch." }, { status: 400 });
+  const db = runtime().DB;
+  if (!db) return NextResponse.json({ error: "Member diagnostics are unavailable." }, { status: 503 });
+  const member = await db.prepare("SELECT user_id AS userId FROM mastermind_access WHERE lower(email)=?").bind(email).first<{userId:string}>();
+  if (!member) return NextResponse.json({ error: "That member has not redeemed access." }, { status: 404 });
+  const row = await db.prepare("SELECT status,state_json AS stateJson FROM listing_batches WHERE id=? AND user_id=?").bind(batchId, member.userId).first<{status:string;stateJson:string}>();
+  if (!row) return NextResponse.json({ error: "That member batch was not found." }, { status: 404 });
+  const state = safeJson(row.stateJson);
+  if (!batchHasEveryCreatedDraft(state)) return NextResponse.json({ error: "This batch does not have one finished Printify product for every saved design." }, { status: 409 });
+  const status = state.keptAsDrafts === true ? row.status : "complete";
+  await db.prepare("UPDATE listing_batches SET status=?,state_json=json_set(state_json,'$.complete',json('true')),revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(status,batchId,member.userId).run();
+  return NextResponse.json({ repaired: true, batchId, status, complete: true });
 }

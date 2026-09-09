@@ -1,6 +1,24 @@
 type DraftIdentity = { id?:string; clientId?:string; batchId?:string; sourceTemplateId?:string; status?:string; priceEdits?:Record<string,number>; costReview?:{required?:boolean;verified?:boolean;approved?:boolean;variants?:Array<{id:number;price:number;isEnabled?:boolean}>} };
 type BatchIdentity = { designs?:Array<{id?:string}>; drafts?:DraftIdentity[]; templateDetails?:{id?:string;batchId?:string}; complete?:boolean;pricingApproved?:boolean;variantPrices?:Record<string,number> };
 
+/** Completion is a server-verifiable fact: every saved design has one finished
+ * Printify product. A stale browser boolean must never keep a finished batch in
+ * progress, and a partial result must never manufacture completion. */
+export function batchHasEveryCreatedDraft(state:BatchIdentity):boolean{
+  if(!Array.isArray(state.designs)||!state.designs.length||!Array.isArray(state.drafts))return false;
+  const drafts=state.drafts;
+  const products=new Set<string>();
+  return state.designs.every(design=>{
+    if(!design?.id)return false;
+    const matches=drafts.filter(draft=>draft?.clientId===design.id&&draft.id&&draft.status==='Created');
+    if(matches.length!==1)return false;
+    const product=String(matches[0].id);
+    if(products.has(product))return false;
+    products.add(product);
+    return true;
+  });
+}
+
 export function pricesMatchSavedDrafts(drafts:DraftIdentity[],prices:Record<string,number>={}){
   return drafts.every(draft=>{
     // Batch variantPrices are pre-creation estimates. Explicit per-listing edits
@@ -41,7 +59,7 @@ export function restoreBatchDrafts<T extends BatchIdentity>(state:T, authoritati
     }else if(existing)restored.push(existing);
   }
   const approval=restored.filter(draft=>draft.status==='Created'&&draft.costReview?.required);
-  const allCreated=state.designs.every(design=>restored.some(draft=>draft.clientId===design.id&&draft.id&&draft.status==='Created'));
+  const allCreated=batchHasEveryCreatedDraft({...state,drafts:restored});
   return {...state,drafts:restored,complete:allCreated||state.complete,pricingApproved:approval.length?approval.every(draft=>draft.costReview?.approved)&&pricesMatchSavedDrafts(approval,state.variantPrices):state.pricingApproved};
 }
 

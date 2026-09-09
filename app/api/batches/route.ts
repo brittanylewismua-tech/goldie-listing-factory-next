@@ -4,7 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { bundleHistoryIdentity } from "@/app/batch-history-identity";
 import { APPLY_BUNDLE_KEYWORD_BANK } from "@/app/bundle-keyword-bank";
 import { RENAME_BATCH } from "@/app/batch-display-name";
-import { restoreBatchDrafts, batchDraftIdentityProblem } from "@/app/batch-draft-integrity";
+import { restoreBatchDrafts, batchDraftIdentityProblem, batchHasEveryCreatedDraft } from "@/app/batch-draft-integrity";
 import { unpackDraftMedia,type MediaBucket } from "@/app/draft-media-storage";
 import { packBatchSnapshot,unpackBatchSnapshot } from "@/app/batch-snapshot-storage";
 
@@ -276,7 +276,12 @@ export async function PATCH(request:Request){
   return NextResponse.json({saved:true,updated:result.results.length,revisions:result.results});
 }
 
-export async function POST(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const body=await request.json() as {id?:string;status?:string;step?:string;setupName?:string;productTitle?:string;designCount?:number;state?:unknown;parentBatchId?:string};const id=String(body.id||crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const allowedStatus=new Set(["draft","processing","needs_attention","complete"]),allowedStep=new Set(["connect","setup","designs","review","finish"]);const status=allowedStatus.has(String(body.status))?String(body.status):"draft",step=allowedStep.has(String(body.step))?String(body.step):"connect";if(batchDraftIdentityProblem((body.state||{}) as Parameters<typeof batchDraftIdentityProblem>[0]))return NextResponse.json({error:"The draft results do not belong to this product’s designs. Reload the saved batch before continuing."},{status:409});const revisionHeader=request.headers.get("x-batch-revision");const expectedRevision=revisionHeader!==null&&/^\d+$/.test(revisionHeader)&&Number.isSafeInteger(Number(revisionHeader))?Number(revisionHeader):-1;const incoming=(body.state??{}) as Record<string,unknown>;
+export async function POST(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const body=await request.json() as {id?:string;status?:string;step?:string;setupName?:string;productTitle?:string;designCount?:number;state?:unknown;parentBatchId?:string};const id=String(body.id||crypto.randomUUID()).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const allowedStatus=new Set(["draft","processing","needs_attention","complete"]),allowedStep=new Set(["connect","setup","designs","review","finish"]);let status=allowedStatus.has(String(body.status))?String(body.status):"draft",step=allowedStep.has(String(body.step))?String(body.step):"connect";if(batchDraftIdentityProblem((body.state||{}) as Parameters<typeof batchDraftIdentityProblem>[0]))return NextResponse.json({error:"The draft results do not belong to this product’s designs. Reload the saved batch before continuing."},{status:409});const revisionHeader=request.headers.get("x-batch-revision");const expectedRevision=revisionHeader!==null&&/^\d+$/.test(revisionHeader)&&Number.isSafeInteger(Number(revisionHeader))?Number(revisionHeader):-1;let incoming=(body.state??{}) as Record<string,unknown>;
+  /* D1243 · React can save the last product response and the previous render's
+     complete=false in one snapshot. The server has every exact design/product
+     identity in that same request, so normalize the stale flag before it can
+     strand a finished batch. Explicit Save for later remains a draft. */
+  if(batchHasEveryCreatedDraft(incoming)){incoming={...incoming,complete:true};if(!incoming.keptAsDrafts)status="complete";}
   const designIds=Array.isArray(incoming.drafts)?incoming.drafts.map(d=>(d as {clientId?:string}).clientId).filter((id):id is string=>Boolean(id)):[];
   const owned=designIds.length?await database.prepare(`SELECT json_extract(response_json,'$.id') AS id,client_id AS clientId FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND client_id IN (${designIds.map(()=>'?').join(',')})`).bind(user.userId,...designIds).all<{id:string;clientId:string}>():{results:[]};
   // If object storage is unavailable, save the original complete snapshot.
