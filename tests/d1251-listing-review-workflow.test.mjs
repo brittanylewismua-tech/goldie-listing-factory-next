@@ -92,6 +92,7 @@ test("Review editors expose one unambiguous return and truthful save state",()=>
   assert.match(app,/const grouped=workflowStep==="designs"&&!reviewEditing/);
   assert.match(app,/if\(\(grouped\|\|Boolean\(reviewEditing\)\)&&row\.task!==effectiveTask\)return null/);
   assert.match(app,/footerActions=\{rowOpen&&workflowStep==="designs"&&!reviewEditing/);
+  assert.match(app,/onToggle=\{row\.report\|\|reviewEditing\?undefined:/);
   assert.match(app,/\{!reviewEditing&&<FactoryFooter status=\{imagesStepIssues\(\)\.length/);
   assert.match(app,/batchAuthenticationRequired\?"Sign in to save":batchSaveConflict\?"Saving paused":batchHeldByAnotherTab\?"Saving paused in this tab":"Saved automatically"/);
 });

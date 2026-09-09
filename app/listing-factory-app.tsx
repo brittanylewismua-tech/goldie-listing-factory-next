@@ -3738,7 +3738,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         state={row.value}
         tone={row.done?"done":row.pending?"pending":row.optional?"optional":"attention"}
         open={rowOpen}
-        onToggle={row.report?undefined:()=>{if(grouped)setDraftStageByProduct(current=>({...current,[recipe.id]:draftTaskStage(row.task)||stageId}));openRow(row.target,row.task)}}
+        onToggle={row.report||reviewEditing?undefined:()=>{if(grouped)setDraftStageByProduct(current=>({...current,[recipe.id]:draftTaskStage(row.task)||stageId}));openRow(row.target,row.task)}}
         footerActions={rowOpen&&workflowStep==="designs"&&!reviewEditing&&rows[rowIndex+1]?.task?<button type="button" className="task-next-section" onClick={()=>openGuidedDraftTask(rows[rowIndex+1].task!,index)}>Continue to {rows[rowIndex+1].label.startsWith("Etsy ")?rows[rowIndex+1].label:rows[rowIndex+1].label.toLowerCase()} <span aria-hidden="true">→</span></button>:undefined}
         toggleLabel={opening?"Opening…":rowOpen?"Close":"Change"}
         toggleDisabled={!reachableRow}
