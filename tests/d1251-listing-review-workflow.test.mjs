@@ -81,6 +81,8 @@ test("Review editing identifies the current listing instead of repeating the ove
   assert.match(app,/reviewEditing\?`Listing \$\{Math\.max\(1,files\.findIndex/);
   assert.match(app,/reviewEditing\s*\? \{ eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review\." \}/);
   assert.match(app,/>Continue to listing details <span/);
+  assert.equal((app.match(/\{reviewEditing\?"Back to Review":"Back"\}/g)||[]).length,2);
+  assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
 });
 
 test("Etsy and personalization rows cannot show ready while personalization blocks handoff",()=>{
