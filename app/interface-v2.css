@@ -1466,6 +1466,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-work .keyword-list-picker select{border-color:#d8cfd5;color:#3b2b36}
 .app-shell .factory-work .title-build-message{color:#7d6d78}
 .app-shell .factory-work .listing-card-head{background:#fffafc}
+.app-shell .listing-rows.is-compact .listing-card-head,.app-shell .listing-rows.is-compact .listing-card.is-open .listing-card-head{grid-template-columns:132px minmax(0,1fr) auto auto;cursor:default}
+@media(max-width:700px){.app-shell .listing-rows.is-compact .listing-card-head,.app-shell .listing-rows.is-compact .listing-card.is-open .listing-card-head{grid-template-columns:96px minmax(0,1fr)}}
 .app-shell .factory-work .task-listing-preview span{color:#6b365a}
 .app-shell .factory-work .tag-row > span{
   background:#f1ebef;color:#5a4152;border-color:transparent;border-radius:6px}

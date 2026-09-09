@@ -111,7 +111,7 @@ export default function ListingRows({
        needs its width. The indent that aligns a text field with the summary
        column above it costs 179px, which squeezed the picker to two tiles a row.
        Text panels keep the alignment; work surfaces get the width. */
-    <div className={`listing-rows${defaultOpen ? " is-worksurface" : ""}`}>
+    <div className={`listing-rows${defaultOpen ? " is-worksurface" : ""}${compactNavigation ? " is-compact" : ""}`}>
       {compactNavigation&&rows.length>1&&<label className="photo-listing-switch">Working on<select aria-label="Choose listing to edit photos" value={rows.find(row=>open.has(row.key))?.key||rows[0].key} onChange={event=>openListing(rows.findIndex(row=>row.key===event.target.value))}>{rows.map((row,index)=><option key={row.key} value={row.key}>Listing {index+1} of {rows.length} · {row.summary} · {row.meta}</option>)}</select></label>}
       {!compactNavigation&&rows.length>1&&<div className="listing-rows-bar">
         <div className="listing-rows-summary">
@@ -166,18 +166,18 @@ export default function ListingRows({
             <div
               className="listing-card-head"
               data-listing-row={row.key}
-              role="button"
-              tabIndex={0}
-              aria-expanded={isOpen}
-              onClick={() => toggle(row.key)}
-              onKeyDown={event => {
+              role={compactNavigation ? undefined : "button"}
+              tabIndex={compactNavigation ? undefined : 0}
+              aria-expanded={compactNavigation ? undefined : isOpen}
+              onClick={compactNavigation ? undefined : () => toggle(row.key)}
+              onKeyDown={compactNavigation ? undefined : event => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   toggle(row.key);
                 }
               }}
             >
-              <span className="listing-card-caret" aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
+              {!compactNavigation&&<span className="listing-card-caret" aria-hidden="true">{isOpen ? "▾" : "▸"}</span>}
               {row.thumb
                 ? <img className="listing-card-thumb" src={row.thumb} alt="" decoding="async"/>
                 : <span className="listing-card-thumb"/>}

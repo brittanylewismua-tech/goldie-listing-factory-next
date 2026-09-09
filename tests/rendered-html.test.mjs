@@ -7288,7 +7288,7 @@ test("panels that open by default get their width back — D690", async () => {
     readFile(new URL("../app/listing-rows.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
-  assert.match(rows, /className=\{`listing-rows\$\{defaultOpen \? " is-worksurface" : ""\}`\}/);
+  assert.match(rows, /className=\{`listing-rows\$\{defaultOpen \? " is-worksurface" : ""\}\$\{compactNavigation \? " is-compact" : ""\}`\}/);
   assert.match(clarity, /\.app-shell \.listing-rows\.is-worksurface \.listing-card-detail[^{]*\{padding-left:18px\}/);
   // Text panels keep the alignment - that is what made the detail read as nested.
   assert.match(clarity, /\.app-shell \.listing-card-detail\{padding:18px 18px 18px 99px/);

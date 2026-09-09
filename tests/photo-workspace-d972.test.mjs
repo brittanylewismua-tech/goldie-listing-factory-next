@@ -13,6 +13,11 @@ test("D972: the photo workspace shows one listing at a time with navigation at i
   assert.match(rows,/singleOpen \? rows\.slice\(0, 1\)/);
   assert.match(rows,/← Previous listing/);
   assert.match(rows,/Next listing →/);
+  assert.match(rows,/role=\{compactNavigation \? undefined : "button"\}/);
+  assert.match(rows,/aria-expanded=\{compactNavigation \? undefined : isOpen\}/);
+  assert.match(rows,/\{!compactNavigation&&<span className="listing-card-caret"/);
+  assert.match(rows,/compactNavigation \? " is-compact" : ""/);
+  assert.match(css,/\.listing-rows\.is-compact \.listing-card-head[^}]*grid-template-columns:132px minmax\(0,1fr\) auto auto/);
 });
 
 test("D972: size guide and photo ordering are explicit, consistent controls",()=>{
