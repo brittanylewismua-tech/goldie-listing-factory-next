@@ -27,7 +27,19 @@ test('D1245: owner diagnostics compare Louisa’s live Etsy and Printify variant
   assert.match(route,/missingInEtsy/);
   assert.match(route,/extraInEtsy/);
   assert.match(route,/priceMismatches/);
+  assert.match(route,/verifyInventory\(product,inventory\)/);
+  assert.match(route,/canonicalVerification/);
   assert.match(route,/url\.searchParams\.get\("include"\)===\"variants\"/);
   assert.match(page,/auditMemberPrintify\(email,params\.include===\"variants\"\)/);
   assert.doesNotMatch(route,/missingSkus|extraSkus/);
+});
+
+test('D1245: owner repair resumes only exact existing checks after live inventory verification',()=>{
+  assert.match(route,/action==="retry_verified_deliveries"/);
+  assert.match(route,/WHERE user_id=\? AND id IN/);
+  assert.match(route,/row\.status!=="needs_attention"\|\|!row\.draftJson/);
+  assert.match(route,/safeJson\(row\.stateJson\)\.pending\|\|safeJson\(row\.draftStateJson\)\.pending/);
+  assert.ok(route.indexOf('verifyInventory(await productCheck.response.json(),inventory)')<route.indexOf("UPDATE photo_deliveries SET status='delivering'"));
+  assert.match(route,/PHOTO_DELIVERY/);
+  assert.doesNotMatch(route,/INSERT INTO photo_deliveries/);
 });

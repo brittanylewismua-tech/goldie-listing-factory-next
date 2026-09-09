@@ -24,6 +24,16 @@ const {verifyInventory,draftWithSize,finishDraftMetadata,decodeEtsyText}=await l
 const product=()=>({variants:[{id:1,sku:'LF-one',price:4104,is_enabled:true,options:[8,9]}],options:[{name:'Sizes',type:'size',values:[{id:9,title:'4XL'}]}]});
 const inventory=()=>({products:[{sku:'LF-one',offerings:[{price:{amount:4104,divisor:100},is_enabled:true}]}]});
 test('inventory compares enabled fulfillment SKUs and exact cents without changing inventory',()=>{verifyInventory(product(),inventory());for(const mutate of [i=>i.products[0].sku='other',i=>i.products[0].offerings[0].price.amount=4100,i=>i.products[0].offerings[0].is_enabled=false,i=>i.products.push(i.products[0])]){const i=inventory();mutate(i);assert.throws(()=>verifyInventory(product(),i))}});
+test('Etsy may collapse duplicate Printify option labels without losing a buyer-visible choice',()=>{
+ const duplicate={options:[{name:'Color',values:[{id:1,title:'Ash'},{id:2,title:'Ash'}]},{name:'Size',values:[{id:3,title:'S'}]}],variants:[{id:11,sku:'ash-one',price:2400,is_enabled:true,options:[1,3]},{id:12,sku:'ash-two',price:2400,is_enabled:true,options:[2,3]}]};
+ const collapsed={products:[{sku:'ash-one',offerings:[{price:{amount:2400,divisor:100},is_enabled:true}]}]};
+ verifyInventory(duplicate,collapsed);
+ duplicate.variants[1].price=2500;
+ assert.throws(()=>verifyInventory(duplicate,collapsed),/do not match/);
+ duplicate.variants[1].price=2400;
+ duplicate.options[0].values[1].title='White';
+ assert.throws(()=>verifyInventory(duplicate,collapsed),/do not match/);
+});
 test('single size is explicit in description, does not duplicate an existing label, and never guesses from color names',()=>{const s=freezeDraft(source()),p=product();assert.match(draftWithSize(s,p).description,/Available size: 4XL\./);assert.equal(draftWithSize({...s,description:'Offered in 4XL'},p).description,'Offered in 4XL');p.options=[];assert.equal(draftWithSize(s,p).description,s.description)});
 test('adapter refuses draft writes if the listing goes live after initial reads',async()=>{const s=freezeDraft(source());let listingReads=0,writes=0,state=null;const request=async(path,init)=>{if(init?.method){writes++;return Response.json({})}if(path.endsWith('/inventory'))return Response.json(inventory());if(path.endsWith('/properties'))return Response.json({results:[]});if(path.endsWith('/personalization'))return Response.json({personalization_questions:[]});listingReads++;return Response.json({shop_id:7,state:listingReads>1?'active':'draft',title:'Old',description:'Old',tags:[],taxonomy_id:9,shipping_profile_id:8})};await assert.rejects(finishDraftMetadata({request,listingId:123,shopId:7,product:product(),snapshot:s,saved:null,save:async v=>{state=v},backup:async()=>{}}),/no longer a draft/);assert.equal(writes,0);assert.ok(state.pending)});
 

@@ -5,9 +5,10 @@ import { isOwner } from "@/app/mastermind/access";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { batchHasEveryCreatedDraft } from "@/app/batch-draft-integrity";
 import { decryptEtsy, etsyFetch } from "@/app/api/etsy/client";
+import { verifyInventory } from "@/app/api/listing-photos/delivery/draft-service";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
-type Runtime = { DB?: D1Database; PRINTIFY_TOKEN_KEY?: string };
+type Runtime = { DB?: D1Database; PRINTIFY_TOKEN_KEY?: string; PHOTO_DELIVERY?: Workflow<{id:string;owner:string}> };
 type Product = { variants?: Array<{ is_enabled?: boolean }>; print_areas?: Array<{ placeholders?: Array<{ position?: string; images?: Array<{ id?: string }> }> }> };
 type Member = { userId: string; email: string; displayName: string | null };
 
@@ -89,9 +90,11 @@ async function auditDeliveryVariants(rows:DeliveryDiagnostic[],printifyToken:str
    const propertyMap=new Map<string,{propertyId:number;propertyName:string;scaleId:number|null;values:string[];valueIds:number[]}>();
    for(const item of actual)for(const property of item.property_values||[]){const key=String(property.property_id),saved=propertyMap.get(key)||{propertyId:property.property_id,propertyName:property.property_name,scaleId:property.scale_id??null,values:[],valueIds:[]};for(const value of property.values||[])if(!saved.values.includes(value))saved.values.push(value);for(const value of property.value_ids||[])if(!saved.valueIds.includes(value))saved.valueIds.push(value);propertyMap.set(key,saved)}
    const priceMismatches=expected.filter(variant=>{const item=actual.find(row=>row.sku===variant.sku);return !item?.offerings?.some(offer=>offer.is_enabled&&offer.price?.divisor&&Math.round(offer.price.amount/offer.price.divisor*100)===variant.price)}).length;
+   let canonicalVerification='passed';
+   try{verifyInventory(product,inventory)}catch(error){canonicalVerification=error instanceof Error?error.message:'failed'}
    const enabledOptionIds=new Set(expected.flatMap(item=>item.options||[]));
    const mappingMismatches=actual.map(item=>({etsy:(item.property_values||[]).map(property=>`${property.property_name}: ${(property.values||[]).join('/')}`),printify:expectedBySku.get(item.sku)||[],quantity:item.offerings?.find(offer=>offer.is_enabled)?.quantity??null,readinessStateId:item.offerings?.find(offer=>offer.is_enabled)?.readiness_state_id??null})).filter(item=>item.etsy.slice().sort().join('|')!==item.printify.slice().sort().join('|'));
-   results.push({...summary,printifyEnabled:expected.length,etsyEnabled:actual.length,printifyUniqueSkus:expectedSkus.size,etsyUniqueSkus:actualSkus.size,printifyOptions:(product.options||[]).map(option=>({name:option.name,values:option.values.filter(value=>enabledOptionIds.has(value.id)).map(value=>value.title)})),missingInEtsy:missing.length,missingVariants:missing.map(item=>(item.options||[]).map(id=>optionTitles.get(id)||String(id)).join(' · ')),mappingMismatches,etsyVariationProperties:[...propertyMap.values()],priceOnProperty:inventory.price_on_property||[],quantityOnProperty:inventory.quantity_on_property||[],skuOnProperty:inventory.sku_on_property||[],extraInEtsy:[...actualSkus].filter(sku=>!expectedSkus.has(sku)).length,blankPrintifySkus:expected.filter(item=>!item.sku).length,blankEtsySkus:actual.filter(item=>!item.sku).length,priceMismatches,diagnosis:expected.length===actual.length&&expectedSkus.size===expected.length&&actualSkus.size===actual.length&&priceMismatches===0?'Variants match now; retrying the saved check is safe.':'Printify and Etsy currently differ.'});
+   results.push({...summary,printifyEnabled:expected.length,etsyEnabled:actual.length,printifyUniqueSkus:expectedSkus.size,etsyUniqueSkus:actualSkus.size,printifyOptions:(product.options||[]).map(option=>({name:option.name,values:option.values.filter(value=>enabledOptionIds.has(value.id)).map(value=>value.title)})),missingInEtsy:missing.length,missingVariants:missing.map(item=>(item.options||[]).map(id=>optionTitles.get(id)||String(id)).join(' · ')),mappingMismatches,etsyVariationProperties:[...propertyMap.values()],priceOnProperty:inventory.price_on_property||[],quantityOnProperty:inventory.quantity_on_property||[],skuOnProperty:inventory.sku_on_property||[],extraInEtsy:[...actualSkus].filter(sku=>!expectedSkus.has(sku)).length,blankPrintifySkus:expected.filter(item=>!item.sku).length,blankEtsySkus:actual.filter(item=>!item.sku).length,priceMismatches,canonicalVerification,diagnosis:canonicalVerification==='passed'?'The visible Etsy choices match Printify; retrying the saved check is safe.':'Printify and Etsy currently differ.'});
   }catch(error){results.push({...summary,diagnosis:error instanceof Error?error.message:'The variant audit could not finish.'})}
  }
  return results;
@@ -192,19 +195,50 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const owner = await getChatGPTUser();
   if (!owner || !isOwner(owner)) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
-  const body = await request.json().catch(() => null) as { email?: unknown; batchId?: unknown } | null;
+  const body = await request.json().catch(() => null) as { email?: unknown; batchId?: unknown; action?: unknown; deliveryIds?: unknown } | null;
   const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   const batchId = typeof body?.batchId === "string" ? body.batchId.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 80) : "";
-  if (!email || !batchId) return NextResponse.json({ error: "Choose a member and batch." }, { status: 400 });
+  if (!email) return NextResponse.json({ error: "Choose a member." }, { status: 400 });
   const db = runtime().DB;
   if (!db) return NextResponse.json({ error: "Member diagnostics are unavailable." }, { status: 503 });
   const member = await db.prepare("SELECT user_id AS userId FROM mastermind_access WHERE lower(email)=?").bind(email).first<{userId:string}>();
   if (!member) return NextResponse.json({ error: "That member has not redeemed access." }, { status: 404 });
+  if(body?.action==="retry_verified_deliveries"){
+    const ids=Array.isArray(body.deliveryIds)?[...new Set(body.deliveryIds.filter((value):value is string=>typeof value==="string"&&/^[a-zA-Z0-9-]{1,80}$/.test(value)))]:[];
+    if(!ids.length||ids.length>12)return NextResponse.json({error:"Choose between 1 and 12 saved draft checks."},{status:400});
+    const [printifyConnection,etsyConnection]=await Promise.all([
+      db.prepare("SELECT encrypted_token AS encryptedToken FROM printify_connections WHERE user_id=?").bind(member.userId).first<{encryptedToken:string}>(),
+      db.prepare("SELECT encrypted_access_token AS encryptedAccessToken,expires_at AS expiresAt,shop_id AS shopId FROM etsy_connections WHERE user_id=? AND is_active=1").bind(member.userId).first<{encryptedAccessToken:string;expiresAt:number;shopId:number}>(),
+    ]);
+    if(!printifyConnection||!etsyConnection||etsyConnection.expiresAt<=Math.floor(Date.now()/1000))return NextResponse.json({error:"The member must reconnect the expired shop before its saved checks can resume."},{status:409});
+    const placeholders=ids.map(()=>"?").join(",");
+    const rows=await db.prepare(`SELECT id,user_id AS userId,product_id AS productId,printify_shop_id AS printifyShopId,etsy_shop_id AS etsyShopId,status,draft_json AS draftJson,draft_state_json AS draftStateJson,state_json AS stateJson,candidate_listing_id AS candidateListingId FROM photo_deliveries WHERE user_id=? AND id IN (${placeholders})`).bind(member.userId,...ids).all<{id:string;userId:string;productId:string;printifyShopId:number;etsyShopId:number;status:string;draftJson:string|null;draftStateJson:string|null;stateJson:string|null;candidateListingId:number|null}>();
+    if(rows.results.length!==ids.length)return NextResponse.json({error:"One of the saved draft checks was not found in this member account."},{status:404});
+    const printifyToken=await decryptToken(printifyConnection.encryptedToken),etsyToken=await decryptEtsy(etsyConnection.encryptedAccessToken);
+    for(const row of rows.results){
+      const listingId=Number(safeJson(row.stateJson).listingId||row.candidateListingId)||0;
+      if(row.status!=="needs_attention"||!row.draftJson||!listingId||row.etsyShopId!==etsyConnection.shopId||safeJson(row.stateJson).pending||safeJson(row.draftStateJson).pending)return NextResponse.json({error:"A saved draft changed after the audit. Refresh the member audit before resuming it."},{status:409});
+      const [productCheck,inventory]=await Promise.all([status(`/shops/${row.printifyShopId}/products/${encodeURIComponent(row.productId)}.json`,printifyToken),etsyFetch<Parameters<typeof verifyInventory>[1]>(`/listings/${listingId}/inventory`,etsyToken)]);
+      if(!productCheck.response.ok)return NextResponse.json({error:"Printify could not verify one of the saved drafts. Nothing was restarted."},{status:409});
+      try{verifyInventory(await productCheck.response.json(),inventory)}catch{return NextResponse.json({error:"A saved draft still differs from Printify. Nothing was restarted."},{status:409})}
+    }
+    const workflow=runtime().PHOTO_DELIVERY;if(!workflow)return NextResponse.json({error:"Automatic draft checking is unavailable."},{status:503});
+    const now=Date.now();
+    const claims=await db.batch(rows.results.map(row=>db.prepare("UPDATE photo_deliveries SET status='delivering',error=NULL,updated_at=? WHERE id=? AND user_id=? AND status='needs_attention'").bind(now,row.id,member.userId)));
+    if(claims.some(result=>!result.meta.changes)){
+      await db.batch(rows.results.map(row=>db.prepare("UPDATE photo_deliveries SET status='needs_attention',error='Checking paused before it started.',updated_at=? WHERE id=? AND user_id=? AND status='delivering' AND updated_at=?").bind(Date.now(),row.id,member.userId,now)));
+      return NextResponse.json({error:"A saved draft check changed while the repair was starting. Refresh its status."},{status:409});
+    }
+    let started=0;
+    for(const row of rows.results){try{await workflow.create({id:`${row.id}-owner-check-${now}`,params:{id:row.id,owner:member.userId}});started++}catch{await db.prepare("UPDATE photo_deliveries SET status='needs_attention',error='Checking could not start. Try again.',updated_at=? WHERE id=? AND user_id=?").bind(Date.now(),row.id,member.userId).run()}}
+    return NextResponse.json({repaired:started===rows.results.length,started,total:rows.results.length,deliveryIds:rows.results.map(row=>row.id)});
+  }
+  if(!batchId)return NextResponse.json({ error: "Choose a member and batch." }, { status: 400 });
   const row = await db.prepare("SELECT status,state_json AS stateJson FROM listing_batches WHERE id=? AND user_id=?").bind(batchId, member.userId).first<{status:string;stateJson:string}>();
   if (!row) return NextResponse.json({ error: "That member batch was not found." }, { status: 404 });
   const state = safeJson(row.stateJson);
   if (!batchHasEveryCreatedDraft(state)) return NextResponse.json({ error: "This batch does not have one finished Printify product for every saved design." }, { status: 409 });
-  const status = "complete";
-  await db.prepare("UPDATE listing_batches SET status=?,state_json=json_set(json_set(state_json,'$.complete',json('true')),'$.keptAsDrafts',json('false')),revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(status,batchId,member.userId).run();
-  return NextResponse.json({ repaired: true, batchId, status, complete: true });
+  const completionStatus = "complete";
+  await db.prepare("UPDATE listing_batches SET status=?,state_json=json_set(json_set(state_json,'$.complete',json('true')),'$.keptAsDrafts',json('false')),revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?").bind(completionStatus,batchId,member.userId).run();
+  return NextResponse.json({ repaired: true, batchId, status:completionStatus, complete: true });
 }

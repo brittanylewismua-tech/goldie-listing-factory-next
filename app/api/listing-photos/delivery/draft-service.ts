@@ -8,11 +8,20 @@ export function decodeEtsyText(value:string){return String(value??'').replace(/&
 })}
 export type PrintifyDraftProduct={is_locked?:boolean;external?:{id?:string|number};variants?:{id:number;sku:string;price:number;is_enabled:boolean;options?:number[]}[];options?:{name:string;type?:string;values:{id:number;title:string}[]}[]};
 type Request=(path:string,init?:RequestInit)=>Promise<Response>;
+function visibleVariantKey(product:PrintifyDraftProduct,variant:NonNullable<PrintifyDraftProduct['variants']>[number]){
+ const ids=new Set(variant.options||[]),parts=[];
+ for(const option of product.options||[]){const matches=option.values.filter(value=>ids.has(value.id));if(matches.length!==1)return null;parts.push(`${option.name.trim().toLowerCase()}:${matches[0].title.trim().toLowerCase()}`)}
+ return parts.length?parts.sort().join('\u0000'):null;
+}
 /** Verify the existing fulfillment identifiers; never rewrite inventory or SKUs in Etsy. */
 export function verifyInventory(product:PrintifyDraftProduct,inventory:{products?:{sku:string;offerings:{price:{amount:number;divisor:number};is_enabled:boolean;quantity?:number;readiness_state_id?:number|null}[]}[]}){
  const expected=product.variants?.filter(v=>v.is_enabled),actual=inventory.products?.filter(p=>p.offerings?.some(o=>o.is_enabled));
- if(!expected?.length||!actual?.length||expected.length!==actual.length||new Set(expected.map(v=>v.sku)).size!==expected.length||new Set(actual.map(v=>v.sku)).size!==actual.length)throw new DraftReviewRequired('The Etsy draft variants do not match Printify. Review colors and sizes before finishing.');
- for(const v of expected){const row=actual.find(p=>p.sku===v.sku),offers=row?.offerings.filter(o=>o.is_enabled);if(!offers?.length||offers.some(o=>!o.price?.divisor||Math.round(o.price.amount/o.price.divisor*100)!==v.price))throw new DraftReviewRequired('An Etsy draft SKU or price differs from Printify. Review the variants before finishing.');}
+ if(!expected?.length||!actual?.length||new Set(expected.map(v=>v.sku)).size!==expected.length||new Set(actual.map(v=>v.sku)).size!==actual.length)throw new DraftReviewRequired('The Etsy draft variants do not match Printify. Review colors and sizes before finishing.');
+ const expectedBySku=new Map(expected.map(variant=>[variant.sku,variant])),keys=expected.map(variant=>visibleVariantKey(product,variant)),canCompareVisible=keys.every((key):key is string=>Boolean(key));
+ const expectedVisible=canCompareVisible?new Set(keys):null,actualVariants=actual.map(row=>expectedBySku.get(row.sku)),visiblePrices=new Map<string,number>();
+ const conflictingVisiblePrice=canCompareVisible&&expected.some((variant,index)=>{const key=keys[index]!,price=visiblePrices.get(key);visiblePrices.set(key,variant.price);return price!==undefined&&price!==variant.price});
+ if(actualVariants.some(variant=>!variant)||conflictingVisiblePrice||actual.length!==(expectedVisible?.size??expected.length)||expectedVisible&&new Set(actualVariants.map(variant=>visibleVariantKey(product,variant!))).size!==expectedVisible.size)throw new DraftReviewRequired('The Etsy draft variants do not match Printify. Review colors and sizes before finishing.');
+ for(const [index,row] of actual.entries()){const variant=actualVariants[index]!,offers=row.offerings.filter(o=>o.is_enabled);if(!offers.length||offers.some(o=>!o.price?.divisor||Math.round(o.price.amount/o.price.divisor*100)!==variant.price))throw new DraftReviewRequired('An Etsy draft SKU or price differs from Printify. Review the variants before finishing.');}
  const prerequisite=inventoryPrerequisite(actual.flatMap(p=>p.offerings));if(prerequisite)throw new DraftReviewRequired(prerequisite);
 }
 export function draftWithSize(snapshot:DraftSnapshot,product:PrintifyDraftProduct):DraftSnapshot{
