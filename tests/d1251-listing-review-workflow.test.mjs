@@ -55,3 +55,10 @@ test("D1252: Review color and size edits target the selected listing",()=>{
   assert.match(app,/onChange=\{ids=>void syncDraftVariantChoices\(axes\.colors,ids,focused\)\}/);
   assert.doesNotMatch(app,/A choice applies to every design draft/);
 });
+
+test("D1253: a listing editor request survives switching bundle products",()=>{
+  assert.match(app,/setReviewEdit\(\{phase:stage,id:target\.id,clientId:target\.clientId\}\)/);
+  assert.match(app,/if\(index>=0&&index!==bundleIndex\)openBundleProduct\(index\)/);
+  assert.match(app,/else if\(target\.phase==="variants"\)\{setActiveTask\("draft-colors"\);goToStep\("designs",false,true\)\}/);
+  assert.match(app,/else if\(target\.phase==="artwork"\)\{setActiveTask\("placement"\);goToStep\("designs",false,true\)\}/);
+});

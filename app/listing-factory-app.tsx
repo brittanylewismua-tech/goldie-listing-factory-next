@@ -1133,7 +1133,7 @@ export default function ListingFactoryApp() {
   const [photoFocusId,setPhotoFocusId]=useState("");
   const [draftPriceGroupKey,setDraftPriceGroupKey]=useState("");
   type ReviewSection="artwork"|"variants"|"pricing"|"photos"|"title"|"description"|"etsy";
-  const [reviewEdit,setReviewEdit]=useState<{phase:"details"|"title"|"description"|"etsy"|"mockups"|"pricing";id:string;clientId:string}|null>(null);
+  const [reviewEdit,setReviewEdit]=useState<{phase:"details"|"title"|"description"|"etsy"|"artwork"|"variants"|"photos"|"mockups"|"pricing";id:string;clientId:string}|null>(null);
   const [reviewEditing,setReviewEditing]=useState<{id:string;clientId:string;section?:ReviewSection}|null>(null);
   /* D787 · The batch-wide tools open on their own, above the listing grid. */
   const [batchToolsOpen, setBatchToolsOpen] = useState<boolean|null>(null);
@@ -3105,11 +3105,11 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     if(index>=0&&index!==bundleIndex)openBundleProduct(index);
   }
   function editReviewedProduct(stage:"artwork"|"variants"|"pricing"|"photos",target:{id?:string;clientId:string}){
-    if(target.id)setReviewEditing({id:target.id,clientId:target.clientId,section:stage});
-    setActiveDesign(target.clientId);
+    if(!target.id)return;
+    setReviewEditing({id:target.id,clientId:target.clientId,section:stage});
+    setReviewEdit({phase:stage,id:target.id,clientId:target.clientId});
     const index=target.id?bundleRecipes.findIndex(recipe=>bundleMembers[recipe.id]?.drafts.some(draft=>draft.id===target.id)):bundleIndex;
-    openGuidedDraftTask(stage==="artwork"?"placement":stage==="variants"?"draft-colors":stage==="pricing"?"draft-pricing":"photos",index>=0?index:bundleIndex);
-    goToStep("designs",false,true);
+    if(index>=0&&index!==bundleIndex)openBundleProduct(index);
   }
   function reviewedPricingAndShippingReady(target:{id?:string;costReview?:{required:boolean;approved:boolean}}){
     const costsReady=!target.costReview?.required||Boolean(target.costReview.approved);
@@ -3147,12 +3147,14 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     if(!reviewEdit||switchingProduct||restoringBatch||!drafts.some(draft=>draft.id===reviewEdit.id))return;
     const target=reviewEdit;setReviewEdit(null);setActiveDesign(target.clientId);
     setFinishPhase("details");
-    if(target.phase==="mockups"){setPhotoFocusId(target.clientId);setActiveTask("photos");goToStep("designs",false,true)}
+    if(target.phase==="mockups"||target.phase==="photos"){setPhotoFocusId(target.clientId);setActiveTask("photos");goToStep("designs",false,true)}
     else if(target.phase==="pricing"){setActiveTask("draft-pricing");goToStep("designs",false,true)}
+    else if(target.phase==="variants"){setActiveTask("draft-colors");goToStep("designs",false,true)}
+    else if(target.phase==="artwork"){setActiveTask("placement");goToStep("designs",false,true)}
     else goToStep("finish",false,true);
     // Wait for the normal page-top reset, then focus this specific editor.
     window.setTimeout(()=>{
-      const selector=target.phase==="mockups"?`[data-listing-row="${CSS.escape(target.clientId)}"]`:target.phase==="pricing"?".pricing-controls":target.phase==="description"?".individual-description-disclosure":target.phase==="etsy"?".factory-etsy-details-column":target.phase==="title"?".factory-listing-form .design-fields":".factory-listing-grid";
+      const selector=target.phase==="mockups"||target.phase==="photos"?`[data-listing-row="${CSS.escape(target.clientId)}"]`:target.phase==="variants"?".draft-color-selector":target.phase==="artwork"?".placement-review":target.phase==="pricing"?".pricing-controls":target.phase==="description"?".individual-description-disclosure":target.phase==="etsy"?".factory-etsy-details-column":target.phase==="title"?".factory-listing-form .design-fields":".factory-listing-grid";
       document.querySelector(selector)?.scrollIntoView({block:"start"});
     },300);
   },[reviewEdit,switchingProduct,restoringBatch,drafts]);
