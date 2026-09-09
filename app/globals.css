@@ -118,4 +118,5 @@
 
 .goldie-wait-help,.goldie-wait-reminder button{min-height:44px;padding:10px 16px;background:#111;color:#fff;border:2px solid #111;border-radius:8px;font:inherit;cursor:pointer}
 .goldie-wait-help:focus-visible,.goldie-wait-reminder button:focus-visible{outline:3px solid #111;outline-offset:4px}
+.goldie-wait-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.goldie-wait-actions a{display:flex;min-height:44px;align-items:center;justify-content:center;padding:10px 14px;border:2px solid #111;border-radius:8px;background:#111;color:#fff;font-weight:800;text-align:center;text-decoration:none}.goldie-wait-actions a+ a{background:#fffaf5;color:#111}.goldie-wait-actions a:focus-visible{outline:3px solid #f52fb2;outline-offset:3px}@media(max-width:520px){.goldie-wait-actions{grid-template-columns:1fr}}
 .goldie-wait-reminder{position:fixed;z-index:90;left:20px;top:20px;width:min(340px,calc(100vw - 40px));padding:16px;background:#fffaf5;color:#111;border:2px solid #111;border-radius:12px;box-shadow:4px 4px 0 #111;font-size:14px}.goldie-wait-reminder p{margin:8px 0;line-height:1.4}

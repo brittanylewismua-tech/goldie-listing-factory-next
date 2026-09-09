@@ -63,6 +63,18 @@ test("D1258: incomplete Review rows are requirements, not empty checkboxes or du
   assert.match(theme,/\.recipe-listing-sections>button>span\.is-required\{[^}]*border:0[^}]*border-radius:8px/);
 });
 
+test("post-draft size editing names its listing scope truthfully",()=>{
+  assert.match(app,/scope\?:"product"\|"listing"/);
+  assert.match(app,/scope==="listing"\?"Changes apply only to this listing\."/);
+  assert.match(app,/scope==="listing"\?\(remembering\?"Saving listing…":"✓ Saved to this listing"\)/);
+  assert.match(app,/inCard scope="listing"/);
+});
+
+test("Review uses singular variant grammar for one-option products",()=>{
+  const review=readFileSync(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8");
+  assert.match(review,/variants===1\?"variant":"variants"/);
+});
+
 test("D1251: the completion map and sticky editor navigation remain usable on narrow screens",()=>{
   assert.match(theme,/\.recipe-listing-sections>button:focus-visible/);
   assert.match(theme,/@media\(max-width:560px\)[\s\S]*?\.recipe-listing-sections>button/);

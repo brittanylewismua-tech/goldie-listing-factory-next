@@ -15,11 +15,14 @@ test("D1237: navigation becomes safe only after the whole draft submission is ad
   assert.match(app,/runDrafts\(remaining,true,true\)/);
 });
 
-test("D1250: draft creation keeps one centered progress surface through completion",()=>{
+test("draft creation keeps one centered progress surface with safe next actions after admission",()=>{
   const wait=read("app/wait-progress.tsx");
   assert.match(wait,/if\(!active\|\|helpOpen\|\|!dialog\.current\)return/);
   assert.doesNotMatch(wait,/if\(active\.background\).*goldie-background-progress/s);
-  assert.doesNotMatch(wait,/Background draft actions/);
+  assert.match(wait,/Continue while drafts are created/);
+  assert.match(wait,/Start another batch/);
+  assert.match(wait,/View Batch History/);
+  assert.match(wait,/containModalFocus\(active\.title,opener\)/);
   const app=read("app/listing-factory-app.tsx");
   assert.match(app,/background:draftsAdmitted/);
   assert.match(app,/processed===runTotal&&runTotal>0\?"Saving your finished batch"/);
