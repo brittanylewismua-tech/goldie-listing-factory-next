@@ -37,3 +37,8 @@ test("D1246: every reviewed product exposes its three edit destinations",()=>{
   assert.match(css,/\.recipe-product-settings/);
   assert.match(css,/@media\(max-width:560px\)[\s\S]*?\.recipe-product-settings\{display:grid/);
 });
+
+test("D1247: product edit controls have an unambiguous group label",()=>{
+  assert.match(review,/Product settings/);
+  assert.doesNotMatch(review,/Change product/);
+});
