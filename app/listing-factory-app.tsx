@@ -1445,7 +1445,7 @@ export default function ListingFactoryApp() {
      thing she is looking at; it should say so itself. */
   const missingRequirement = !connected ? "Connect Printify first" : !productSelected ? "Choose or add a saved product" : !templateLoaded ? "Connect its Printify template" : files.length === 0 ? "Add at least one design" : !designsFinished ? `Checking ${designsPreparing} ${designsPreparing===1?"design":"designs"}\u2026` : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
-  const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?2:(preflightOpen||running)?4:3;
+  const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?(complete&&reviewEditing?8:2):(preflightOpen||running)?4:3;
   // The guided factory always opens on the real connection step. The returning
   // dashboard remains available as a component, but must never replace step 1
   // or appear when a seller uses Back from the product step.
@@ -5097,7 +5097,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     designs: complete
       ? reviewEditing
         ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review." }
-        : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: "Everything your saved product already answers has been applied." }
+        : { eyebrow: "STEP 2 OF 3", title: "Finish your Printify drafts", copy: "Check artwork, colors, sizes, pricing, shipping, and listing photos." }
       : { eyebrow: "STEP 2 OF 3", title: "Add your designs", copy: "" },
     review: { eyebrow: "STEP 2 OF 3", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
     finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review." } : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: handoffBlockers().length?"Fix the missing items shown on the listing cards.":"Everything is ready. Save the batch to Etsy Drafts." },
