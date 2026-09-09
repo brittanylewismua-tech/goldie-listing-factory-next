@@ -15,12 +15,11 @@ test("D1237: navigation becomes safe only after the whole draft submission is ad
   assert.match(app,/runDrafts\(remaining,true,true\)/);
 });
 
-test("D1237: admitted draft creation uses a nonmodal progress surface with a return path",()=>{
+test("D1250: draft creation keeps one centered progress surface through completion",()=>{
   const wait=read("app/wait-progress.tsx");
-  assert.match(wait,/if\(!active\|\|active\.background\|\|helpOpen\|\|!dialog\.current\)return/);
-  assert.match(wait,/if\(active\.background\).*goldie-background-progress/s);
-  assert.match(wait,/href="\/batches">View Batch History/);
-  assert.match(wait,/href="\/listing-factory">Start another batch/);
+  assert.match(wait,/if\(!active\|\|helpOpen\|\|!dialog\.current\)return/);
+  assert.doesNotMatch(wait,/if\(active\.background\).*goldie-background-progress/s);
+  assert.doesNotMatch(wait,/Background draft actions/);
   const app=read("app/listing-factory-app.tsx");
   assert.match(app,/background:draftsAdmitted/);
   assert.match(app,/processed===runTotal&&runTotal>0\?"Saving your finished batch"/);

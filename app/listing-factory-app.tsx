@@ -4865,9 +4865,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:member.id,parentBatchId:activeBundle?runIdRef.current:undefined,status:finished?allCreated?"complete":"needs_attention":"processing",step:"designs",setupName:batchDisplayName||activeBundle?.name||member.recipe.name,productTitle:(member.state.templateDetails as TemplateDetails).blueprintTitle,designCount:member.designs.length,state:{...member.state,drafts:member.results.map(snapshotDraft),complete:allCreated,pricingApproved:finished?finalPricingApproved:false}})});
         if(!response.ok)throw Error("The batch could not be saved before background processing.");
       };
-      await Promise.all([persistRunNow(),runBounded(members,4,member=>saveMember(member))]);
+      /* Start durable history saving and server admission together. They do
+         not depend on one another, and serializing them left Printify idle for
+         several seconds on every submission. We still confirm both before the
+         browser becomes safe to close. */
+      const historySave=Promise.all([persistRunNow(),runBounded(members,4,member=>saveMember(member))]);
       setBundleBatchIds(ids);setRunTotal(requests.length);
-      const response=await fetchWithDeadline("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})},120000);
+      const [response]=await Promise.all([fetchWithDeadline("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})},120000),historySave]);
       const result=await response.json() as {accepted?:number;error?:string};
       if(!response.ok||result.accepted!==requests.length)throw Error(result.error||"The full submission has not been confirmed. Resume this batch to check its saved jobs.");
       setDraftsAdmitted(true);
@@ -4893,13 +4897,17 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          run even though both provider jobs finished in about nine seconds. */
       void Promise.allSettled(cacheWrites);
       await providerCompletion;
-      await runBounded(members,4,member=>saveMember(member,true));
       // Background completion changes sibling batches without changing the
       // selected product. Refresh once, not on every ordinary autosave.
       setBundleCompletionRevision(current=>current+1);
       const sourceMember=members.find(member=>member.recipe.id===sourceRecipe.id);
       const sourcePricingApproved=Boolean(sourceMember?.results.length)&&sourceMember!.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved));
       setPricingApproved(sourcePricingApproved);setBundleApproved(Object.fromEntries(members.map(member=>[member.recipe.id,member.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved))])));setComplete(Boolean(sourceMember?.results.some(draft=>draft.status==="Created"&&draft.id)));setUsageRevision(current=>current+1);openFinishedReview();
+      /* The canonical results already live on the server. Release the review
+         screen immediately while its Batch History snapshot finishes; the
+         existing save guard still protects that short final write. */
+      setRunning(false);
+      await runBounded(members,4,member=>saveMember(member,true));
       setSavedRevision(current=>current+1);
       window.setTimeout(()=>document.querySelector(".draft-card")?.scrollIntoView({block:"start"}),0);
     }catch(error){stopWith("Check this batch’s saved progress.",[error instanceof Error?error.message:"Resume this batch to check its drafts."],"Existing drafts will not be created twice.");}

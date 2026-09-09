@@ -23,10 +23,11 @@ test('creation prevents upload or product mutations and price changes paint in s
   assert.match(source,/useLayoutEffect\(\(\)=>setDraft\(\(value\/100\).toFixed\(2\)\),\[value\]\)/);
 });
 
-test('whole-submission completion refreshes sibling counts only after durable final saves',()=>{
+test('whole-submission completion opens review before the final history snapshot finishes',()=>{
   const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
   const queue=source.slice(source.indexOf('async function queueDraftSubmission()'),source.indexOf('function retryFailed()'));
-  assert.ok(queue.indexOf('setBundleCompletionRevision(current=>current+1)')>queue.indexOf('await runBounded(members,4,member=>saveMember(member,true))'));
+  assert.ok(queue.indexOf('openFinishedReview()')<queue.indexOf('await runBounded(members,4,member=>saveMember(member,true))'));
+  assert.ok(queue.indexOf('setRunning(false)')<queue.indexOf('await runBounded(members,4,member=>saveMember(member,true))'));
   assert.match(source,/\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,bundleCompletionRevision\]/);
   assert.doesNotMatch(source,/\[activeBundle,bundleRecipes,activeRecipe,bundleBatchIds,[^\]]*savedRevision/);
 });
@@ -113,7 +114,8 @@ test('the fresh submission path stages and saves every member before one bulk ad
   const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
   const queue=source.slice(source.indexOf('async function queueDraftSubmission()'),source.indexOf('function retryFailed()'));
   assert.match(queue,/recipes=activeBundle&&bundleRecipes.length>1\?bundleRecipes/);
-  assert.ok(queue.indexOf('await runBounded(members,4,member=>saveMember(member))')<queue.indexOf('JSON.stringify({requests})'));
+  assert.match(queue,/const historySave=Promise\.all\(\[persistRunNow\(\),runBounded\(members,4,member=>saveMember\(member\)\)\]\)/);
+  assert.match(queue,/const \[response\]=await Promise\.all\(\[fetchWithDeadline\("\/api\/printify\/drafts"[\s\S]*historySave\]\)/);
   assert.match(queue,/await runBounded\(members,4,member=>saveMember\(member,true\)\)/);
   assert.ok(queue.indexOf('result.accepted!==requests.length')<queue.indexOf('setDraftsAdmitted(true)'));
   assert.match(queue,/bundleMemberDesigns\(files,recipe.id,bundleQualityDecisions/);

@@ -13,7 +13,7 @@ test('D1218 draft creation only says the tab may close after background admissio
   assert.match(app,/background:draftsAdmitted/);
   assert.match(wait,/background\?:boolean/);
   assert.match(wait,/submitted drafts continue in the background/);
-  assert.match(wait,/if\(!active\|\|active\.background\|\|helpOpen/);
+  assert.match(wait,/if\(!active\|\|helpOpen/);
 });
 
 test('new draft creation begins with artwork while ready product switches stay compact and Listing resets to product one',()=>{
