@@ -22,9 +22,10 @@ test("the sibling approval effect is declared after the sibling state it reads",
 
 test("the Printify handoff validates every bundle draft, not retired publish selections", () => {
   const handoff = app.slice(app.indexOf("function handoffBlockers()"), app.indexOf("function suggestedBatchName()"));
-  assert.match(handoff, /bundlePublishDrafts\(\)\.filter\(draft=>draft\.status==="Created"\)/);
+  assert.match(handoff, /const drafts=bundlePublishDrafts\(\),created=drafts\.filter\(draft=>draft\.status==="Created"&&draft\.id\)/);
   assert.match(handoff, /runProductGaps\(\)/);
-  assert.match(handoff, /createdListingsMissingImages\(all\)/);
+  assert.match(handoff, /createdListingsMissingImages\(\[draft\]\)/);
+  assert.match(handoff, /if\(!design\?\.title\.trim\(\)\)issues\.push/);
 });
 
 test("a one-listing editor does not repeat a one-listing summary bar", () => {

@@ -11,7 +11,7 @@ test("D1251: Review reports readiness from saved listing data",()=>{
   assert.match(review,/etsyReady=Boolean\(design\?\.etsy\?\.category\?\.trim\(\)\)/);
   assert.match(review,/descriptionReady=Boolean\(String\(design\?\.descriptionOverride\?\?draft\.description/);
   assert.match(review,/variants=Number\(draft\.selectedVariantIds\?\.length\|\|draft\.costReview\?\.variants\.filter/);
-  assert.match(review,/section\.ready\?"✓":""/);
+  assert.match(review,/section\.ready\?"✓":"Required"/);
   assert.match(review,/pricingAndShippingReady\?\.\(draft\)/);
 });
 
@@ -32,12 +32,35 @@ test("D1251: the listing editor keeps every section and Review return visible",(
   }
   assert.match(app,/className="review-listing-editor-nav"/);
   assert.match(app,/>Back to Review<\/button>/);
+  assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
   assert.match(app,/\.factory-listing-form \.design-fields/);
   assert.match(app,/\.individual-description-disclosure/);
   assert.match(app,/\.factory-etsy-details-column/);
   assert.match(app,/visibleListings=reviewEditing\?listings\.filter/);
   assert.match(app,/position:reviewEditing\?\{index:listings\.findIndex/);
   assert.match(readFileSync(new URL("..\/app\/listing-rows.tsx",import.meta.url),"utf8"),/position=row\.position\|\|\{index:index\+1,total:rows\.length\}/);
+});
+
+test("D1258: Etsy handoff readiness checks every listing, independent of retired publish selection",()=>{
+  const handoff=app.slice(app.indexOf("function handoffBlockers()"),app.indexOf("function suggestedBatchName()"));
+  assert.match(handoff,/for\(const draft of drafts\)/);
+  assert.match(handoff,/if\(draft\.status!=="Created"\|\|!draft\.id\)/);
+  assert.match(handoff,/issues\.push\(\.\.\.handoffListingProblems\(draft\)\)/);
+  assert.doesNotMatch(handoff,/publishBlockers\(\)/);
+  for(const check of ["needs a title","needs Etsy tags","needs a description","needs its Etsy category and required details","needs its personalization settings completed"]){
+    assert.ok(handoff.includes(check),`missing handoff check: ${check}`);
+  }
+  assert.match(app,/handoffReadyCount\(\)\} of \$\{bundlePublishDrafts\(\)\.length\} listings ready/);
+});
+
+test("D1258: incomplete Review rows are requirements, not empty checkboxes or duplicate card warnings",()=>{
+  const branch=review.slice(review.indexOf("if(handoffOnly)"),review.indexOf("return <section className={`final-listing-review"));
+  assert.match(branch,/sections\.find\(section=>!section\.ready\)\?\.detail/);
+  assert.match(branch,/section\.ready\?"is-complete":"is-required"/);
+  assert.match(branch,/section\.ready\?"✓":"Required"/);
+  assert.match(branch,/\{!issue&&<strong className="ready">✓ Ready<\/strong>\}/);
+  assert.doesNotMatch(branch,/<strong className=\{issue\?"needs-attention":"ready"\}>/);
+  assert.match(theme,/\.recipe-listing-sections>button>span\.is-required\{[^}]*border:0[^}]*border-radius:8px/);
 });
 
 test("D1251: the completion map and sticky editor navigation remain usable on narrow screens",()=>{

@@ -61,7 +61,7 @@ test('pricing badges and sibling approvals use the saved batch decision, not mer
   assert.match(source,/const priceApproved=\(isActive\?pricingApproved:Boolean\(bundleApproved\[recipe.id\]\)\)&&productDrafts.length>0/);
   assert.match(source,/productName:recipe.name,pricingApproved:Boolean\(state.pricingApproved\)/);
   assert.match(source,/Boolean\(member.pricingApproved\)&&created.length>0/);
-  assert.match(source,/if\(!gateState\(\).pricingApproved\)issues.push\("Review the item prices."\)/);
+  assert.match(source,/if\(!reviewedPricingAndShippingReady\(draft\)\)issues.push\(`\$\{name\} needs pricing and shipping approval\.`\)/);
   assert.doesNotMatch(source,/titles · all 13 tags/);
   assert.match(source,/if\(approved\|\|preserveEdits\|\|!selectedProfile\|\|!variants.length\)return;const stillUsingTemplatePrices/);
 });

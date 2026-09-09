@@ -13,7 +13,7 @@ test("D1246: Review names the exact missing item without tool jargon",()=>{
   for(const issue of ["No title yet.","No Etsy tags yet.","Finished cost needs price approval.","No listing photo selected."]){
     assert.ok(review.includes(issue));
   }
-  assert.match(review,/\{issue\|\|"✓ Ready"\}/);
+  assert.match(review,/\{!issue&&<strong className="ready">✓ Ready<\/strong>\}/);
 });
 
 test("D1246: Etsy details remain automatic without a manual preparation control",()=>{

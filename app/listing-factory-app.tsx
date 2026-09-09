@@ -1678,21 +1678,34 @@ export default function ListingFactoryApp() {
      already-created Printify products, so hidden publisher checkboxes must not
      decide whether it works. Review every created draft in the batch instead. */
   function handoffBlockers(){
-    const issues=publishBlockers().filter(issue=>issue!=="Select at least one successful listing");
-    if(!bundlePublishDrafts().some(draft=>draft.status==="Created"))issues.push("Create at least one Printify draft before saving to Etsy.");
-    if(!gateState().pricingApproved)issues.push("Review the item prices.");
-    /* D1031 · The Printify handoff covers every finished draft, not the retired
-       Etsy-publish checkbox selection. A hidden subset must never make an
-       unfinished bundle claim it is ready. */
-    const all=bundlePublishDrafts().filter(draft=>draft.status==="Created");
-    for(const draft of all){
-      if(draft.costReview?.required&&!draft.costReview.verified)issues.push(`${draft.title||draft.name} is waiting for Printify's actual production costs.`);
-      else if(draft.costReview?.required&&!draft.costReview.approved)issues.push(`Review the final prices for ${draft.title||draft.name}.`);
+    const issues:string[]=[];
+    if(!localPreview&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");
+    if(batchHeldByAnotherTab)issues.push("This batch is open in another tab. Take over here before saving to Etsy, so the result is kept.");
+    const drafts=bundlePublishDrafts(),created=drafts.filter(draft=>draft.status==="Created"&&draft.id);
+    if(!created.length)issues.push("Create at least one Printify draft before saving to Etsy.");
+    for(const draft of drafts){
+      if(draft.status!=="Created"||!draft.id){issues.push(draft.error||"A Printify draft needs attention before saving to Etsy.");continue}
+      issues.push(...handoffListingProblems(draft));
     }
-    issues.push(...createdListingsMissingImages(all).map(draft=>`${draft.name} needs at least one listing photo.`));
     issues.push(...runProductGaps());
     return [...new Set(issues)];
   }
+  function handoffListingProblems(draft:DraftResult){
+    const design=bundlePublishFiles().find(file=>file.id===draft.clientId)||bundlePublishFiles().find(file=>file.name===draft.name);
+    const name=design?.title.trim()||`Listing ${Math.max(1,bundlePublishDrafts().findIndex(item=>item.id===draft.id)+1)}`;
+    const issues:string[]=[];
+    const variants=Number(draft.selectedVariantIds?.length||draft.costReview?.variants.filter(variant=>variant.isEnabled).length||0);
+    if(!variants)issues.push(`${name} needs colors and sizes.`);
+    if(!reviewedPricingAndShippingReady(draft))issues.push(`${name} needs pricing and shipping approval.`);
+    if(createdListingsMissingImages([draft]).length)issues.push(`${name} needs at least one listing photo.`);
+    if(!design?.title.trim())issues.push(`${name} needs a title.`);
+    if(!design?.tags.length)issues.push(`${name} needs Etsy tags.`);
+    if(!String(design?.descriptionOverride??draft.description??"").trim())issues.push(`${name} needs a description.`);
+    if(!etsyRequiredComplete(design?.etsy))issues.push(`${name} needs its Etsy category and required details.`);
+    if(personalizationProblem(design?.etsy))issues.push(`${name} needs its personalization settings completed.`);
+    return issues;
+  }
+  function handoffReadyCount(){return bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id&&!handoffListingProblems(draft).length).length}
   function suggestedBatchName(){const product=activeRecipe?.name||templateDetails?.blueprintTitle||"Listing batch",niche=files[0]?.tags?.[0]||files[0]?.title?.split(",")[0]?.trim()||"New designs",date=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(new Date());return `${product} · ${niche} · ${date}`.slice(0,160)}
   /* D378 - Keep the product -> batch map current. continueBundle mints a new
      batch per member, and a batch can also be created lazily on the first save,
@@ -1959,6 +1972,7 @@ export default function ListingFactoryApp() {
 
   async function goBackOneStep(){
     if(!await confirmUploadInterruption())return;
+    if(reviewEditing){setReviewEditing(null);openFinishedReview(false);return}
     if(progressIndex===0){window.history.back();return}
     if(progressIndex===1)return goToStep("connect",false,true);
     if(progressIndex===2)return goToStep("setup",false,true);
@@ -5661,7 +5675,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   Listings ready, titles and tags, listing photos, pricing and
                   shipping, published - every one of them, with the same value
                   and the same wording productRows gave them. */}
-              <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?"Finish the flagged listings":`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockers()[0]||"Creates unpublished Etsy drafts. Nothing goes live."}</span></div>
+              <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?`${handoffReadyCount()} of ${bundlePublishDrafts().length} listings ready`:`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockers()[0]||"Creates unpublished Etsy drafts. Nothing goes live."}</span></div>
               <button type="button" className="review-etsy-draft-button" disabled={creatingEtsyDrafts||!photoDeliveryStatusReady||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":"Save to Etsy Drafts"}</button>
               {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<details className="review-other-options"><summary>Other options</summary><a href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open Printify drafts ↗</a></details>}
               {false&&<><div className="publish-live-warning">{(()=>{

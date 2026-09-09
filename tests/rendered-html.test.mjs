@@ -5327,8 +5327,8 @@ test("the number on the button is the number that publishes — D561", async () 
      selection seeding effect and selectedPublishDrafts - because both were
      quietly shrinking the publish back down to the open product. */
   assert.ok(app.indexOf("function bundlePublishDrafts()") > 0);
-  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 14,
-    "declared once; the review, publish targets, selections, seeding, cost approval, destination status, primary Etsy action, photo delivery and recovery navigation all read it");
+  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 16,
+    "declared once; the review, publish targets, selections, seeding, handoff readiness, cost approval, destination status, primary Etsy action, photo delivery and recovery navigation all read it");
   assert.doesNotMatch(app, /function selectedPublishDrafts\(\)\{const selected=new Set\(selectedPublishIds\);return drafts\.filter/,
     "the button's count must not be taken from the open product alone");
 });
@@ -5923,11 +5923,14 @@ test("one list decides whether the press can happen, scoped to the selection —
   // Both the button and the guard read it, so they cannot diverge again.
   assert.match(app, /disabled=\{publishing\|\|publishBlockers\(\)\.length>0\}/);
   assert.match(app, /issues=publishBlockersRef\.current\(\);/);
-  /* D660 · a fifth reader: the final-review heading, which used to say "ready
-     for its final check" above this very button while it was disabled. Still
-     the one list - that is what this count protects. */
-  assert.ok((app.match(/publishBlockers\(\)/g) || []).length >= 5,
-    "every final handoff surface reads the same blocker list");
+  /* Publishing and Etsy-draft handoff select different scopes. Publishing
+     follows the seller's retired live-publish selection; handoff must inspect
+     every created listing even when that selection is empty. */
+  assert.equal((app.match(/publishBlockers\(\)/g) || []).length, 4,
+    "every live-publish surface reads the same blocker list");
+  const handoff=app.match(/function handoffBlockers\(\)\{[\s\S]*?\n  \}/)?.[0]||"";
+  assert.doesNotMatch(handoff,/publishBlockers\(\)/,
+    "Etsy-draft readiness cannot be bypassed by an empty live-publish selection");
   assert.match(app, /copy: handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/,
     "the handoff heading reads the same list as the handoff action");
   assert.match(app, /publishBlockersRef\.current=publishBlockers;/,
