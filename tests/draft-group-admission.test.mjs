@@ -49,8 +49,10 @@ test('submission preparation is bounded and settles copies before reporting an e
 test('fresh staged artwork is reused instead of copied before group admission',()=>{
   const route=readFileSync(new URL('../app/api/printify/drafts/route.ts',import.meta.url),'utf8');
   const group=route.slice(route.indexOf('async function handleGroupPOST'),route.indexOf('export const GET'));
-  assert.match(group,/if\(Number\(source\.customMetadata\.expires\)<=Date\.now\(\)\+8\*60\*60\*1000\)/);
-  assert.match(group,/else await source\.body\.cancel\(\)/);
+  assert.match(route,/bucket\.head\?bucket\.head\(key\):bucket\.get\(key\)/);
+  assert.match(group,/if\(Number\(metadata\.customMetadata\.expires\)<=Date\.now\(\)\+8\*60\*60\*1000\)/);
+  assert.match(group,/const source=await stagedArtworkBody\(runtime\.ARTWORK,artwork\.stagedId,metadata\)/);
+  assert.match(group,/else await metadata\.body\?\.cancel\(\)/);
   assert.match(group,/protectedArtworks\.push\(\{\.\.\.artwork,stagedId\}\)/);
   assert.match(group,/await runBounded\(prepared,4,async item=>/);
   assert.match(group,/const cleanup=async\(\)=>\{await runBounded\(prepared,4,async item=>/);
@@ -133,5 +135,5 @@ test('the fresh submission path stages and saves every member before one bulk ad
   assert.match(route,/claimDraftGroupSql\(plan.key\)/);assert.match(route,/DRAFT_CREATION.createBatch/);
   assert.match(route,/const won=new Set\(claimed.results.map/);
   assert.match(route,/if\(won.has\(item.key\)\)\{existing.push/);
-  assert.match(route,/source.customMetadata\?\.owner!==owner/);
+  assert.match(route,/metadata\.customMetadata\?\.owner!==owner/);
 });

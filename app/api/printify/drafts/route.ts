@@ -13,12 +13,18 @@ import type {DraftJobBindings,DraftJobInput,DraftRequestBody} from "./execute-jo
 import {printifyVariantLimitMessage} from "@/app/printify-variant-limit";
 
 type WorkflowBinding={create(options:{id:string;params:{key:string;owner:string}}):Promise<unknown>;createBatch(options:Array<{id:string;params:{key:string;owner:string}}>):Promise<unknown>;get(id:string):Promise<{status():Promise<unknown>}>};
-type Bindings=DraftJobBindings&{DRAFT_CREATION:WorkflowBinding;ARTWORK:DraftJobBindings["ARTWORK"]&{put(key:string,value:ReadableStream|Uint8Array,options?:{customMetadata?:Record<string,string>;httpMetadata?:{contentType?:string}}):Promise<unknown>;delete(key:string):Promise<void>}};
+type StagedArtworkObject={body?:ReadableStream;customMetadata?:Record<string,string>};
+type Bindings=DraftJobBindings&{DRAFT_CREATION:WorkflowBinding;ARTWORK:DraftJobBindings["ARTWORK"]&{head?(key:string):Promise<StagedArtworkObject|null>;put(key:string,value:ReadableStream|Uint8Array,options?:{customMetadata?:Record<string,string>;httpMetadata?:{contentType?:string}}):Promise<unknown>;delete(key:string):Promise<void>}};
 const bindings=()=>env as unknown as Bindings;
 type Row={status:string;response_json:string|null;updated_at:string;request_key:string};
 type Session=DraftJobInput["session"];
 async function legacyKey(batchId:string,clientId:string){const hash=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(`${batchId}:${clientId}`));return Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,"0")).join("");}
 async function lookup(key:string,owner:string){return bindings().DB.prepare("SELECT request_key,status,response_json,updated_at FROM printify_draft_results WHERE request_key=? AND user_id=?").bind(key,owner).first<Row>();}
+/** Fresh staged files already have enough runway for the durable workflow.
+ * Admission needs only ownership and expiry, so avoid downloading their bodies
+ * from R2 unless an older object actually needs a protective copy. */
+async function stagedArtworkMetadata(bucket:Bindings["ARTWORK"],key:string){return bucket.head?bucket.head(key):bucket.get(key);}
+async function stagedArtworkBody(bucket:Bindings["ARTWORK"],key:string,metadata:StagedArtworkObject){return metadata.body?metadata:bucket.get(key);}
 async function startJob(key:string,owner:string,job:PendingDraftJob){
   // createBatch is idempotent: existing IDs are skipped. Normal polling no
   // longer makes a deliberately failing create followed by a status request.
@@ -67,9 +73,11 @@ async function handlePOST(request:Request){
     // Transfer ownership of the staged files to this durable job. The original
     // browser cache may be shared by another bundle member and is not deleted.
     for(let index=0;index<artworks.length;index++){
-      const artwork=artworks[index],source=await runtime.ARTWORK.get(artwork.stagedId);
-      if(!source?.body||source.customMetadata?.owner!==user.userId||Number(source.customMetadata?.expires||0)<=Date.now())throw Error("Upload this design again; its protected file is no longer available.");
-      if(Number(source.customMetadata.expires)>Date.now()+8*60*60*1000){await source.body.cancel();continue;}
+      const artwork=artworks[index],metadata=await stagedArtworkMetadata(runtime.ARTWORK,artwork.stagedId);
+      if(!metadata||metadata.customMetadata?.owner!==user.userId||Number(metadata.customMetadata?.expires||0)<=Date.now())throw Error("Upload this design again; its protected file is no longer available.");
+      if(Number(metadata.customMetadata.expires)>Date.now()+8*60*60*1000){await metadata.body?.cancel();continue;}
+      const source=await stagedArtworkBody(runtime.ARTWORK,artwork.stagedId,metadata);
+      if(!source?.body)throw Error("Upload this design again; its protected file is no longer available.");
       const stagedId=jobObjectPrefix(user.userId,workflowId)+`artwork-${index}.bin`;
       await runtime.ARTWORK.put(stagedId,source.body,{customMetadata:{owner:user.userId,workflowId,expires:String(Date.now()+24*60*60*1000)},httpMetadata:{contentType:artwork.fileName.toLowerCase().endsWith(".png")?"image/png":"image/jpeg"}});
       copies.push(stagedId);artworks[index]={...artwork,stagedId};
@@ -126,8 +134,8 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
       prepared.push({key,batchId:body.batchId,clientId:body.clientId,job,copies});
       const protectedArtworks=[];
       for(let index=0;index<artworks.length;index++){
-        const artwork=artworks[index],source=await runtime.ARTWORK.get(artwork.stagedId);
-        if(!source?.body||source.customMetadata?.owner!==owner||Number(source.customMetadata?.expires||0)<=Date.now())throw Error("Upload this design again; its protected file is no longer available.");
+        const artwork=artworks[index],metadata=await stagedArtworkMetadata(runtime.ARTWORK,artwork.stagedId);
+        if(!metadata||metadata.customMetadata?.owner!==owner||Number(metadata.customMetadata?.expires||0)<=Date.now())throw Error("Upload this design again; its protected file is no longer available.");
         /* Fresh staging objects already survive for 24 hours. Copying every
            multi-draft upload into a second R2 object delayed admission by the
            full artwork transfer (45s in the measured two-draft run) before any
@@ -135,11 +143,13 @@ async function handleGroupPOST(request:Request,user:NonNullable<Awaited<ReturnTy
            while it has an eight-hour runway; only refresh an older object that
            may expire behind a long creation queue. */
         let stagedId=artwork.stagedId;
-        if(Number(source.customMetadata.expires)<=Date.now()+8*60*60*1000){
+        if(Number(metadata.customMetadata.expires)<=Date.now()+8*60*60*1000){
+          const source=await stagedArtworkBody(runtime.ARTWORK,artwork.stagedId,metadata);
+          if(!source?.body)throw Error("Upload this design again; its protected file is no longer available.");
           stagedId=jobObjectPrefix(owner,workflowId)+`artwork-${index}.bin`;
           copies.push(stagedId);
           await runtime.ARTWORK.put(stagedId,source.body,{customMetadata:{owner,workflowId,expires:String(Date.now()+24*60*60*1000)},httpMetadata:{contentType:artwork.fileName.toLowerCase().endsWith(".png")?"image/png":"image/jpeg"}});
-        }else await source.body.cancel();
+        }else await metadata.body?.cancel();
         protectedArtworks.push({...artwork,stagedId});
       }
       const protectedBody=body.artworks?.length?{...body,artworks:protectedArtworks}:{...body,stagedId:protectedArtworks[0].stagedId};
