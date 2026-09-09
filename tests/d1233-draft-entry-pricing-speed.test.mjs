@@ -23,7 +23,7 @@ test('D1233: item pricing is one outer card with line-separated groups',()=>{
 });
 
 test('D1233: local cache work never delays a finished provider result and polling checks immediately',()=>{
-  assert.match(app,/const delay=attempt===0\?0:attempt<14\?750:5000/);
+  assert.match(app,/const delay=attempt===0\?0:attempt<20\?500:5000/);
   assert.match(app,/cacheWrites\.push\(saveBatchFiles[\s\S]*\.then\(\(\)=>saveBatchArtworkAssets/);
   assert.match(app,/Promise\.all\(\[persistRunNow\(\),runBounded\(members,4,member=>saveMember\(member\)\)\]\)/);
   assert.match(app,/void Promise\.allSettled\(cacheWrites\);\s*await providerCompletion/);
