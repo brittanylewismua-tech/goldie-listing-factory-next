@@ -140,7 +140,7 @@ type EtsyShippingProfile={id:number;title:string;originCountry:string;currency:s
 type TemplateDetails = { id: string; batchId: string; title: string; description:string; blueprintId:number;blueprintTitle:string;brand:string;model:string;provider: string; enabledVariants: number;previewImage?:string;previewImages?:string[];productRenderings?:Array<{src:string;variantIds:number[];position:string}>;colorOptions?:ProductColor[];sizeOptions?:ProductSize[]; variants:ProductVariant[];printPositions?:string[]; shop: string; standardShipping?:number|null;shippingCurrency?:string;shippingTemplateId:string;shippingProfileNeedsSelection?:boolean;freeShipping:boolean;maxPrintWidth?: number | null; maxPrintHeight?: number | null; placementScale?: number | null; hasLabelArtwork?: boolean };
 type ArtworkSummary=Record<string,Array<{name:string;colors:string[]}>>;
 type DraftCostReview={required:boolean;verified:boolean;approved:boolean;variants:Array<{id:number;title?:string;cost:number;price:number;isEnabled:boolean}>};
-type DraftResult = { id?: string; batchId?: string; clientId: string; name: string; title?: string; tags?: string[]; previewUrl?: string; artworkPreviewUrls?:Record<string,string>; artworkOverridePreviewUrls?:Record<string,string>; printifyImages?: string[]; printifyImageDetails?:Array<{src:string;variantIds:number[];position:string}>; colorPreviewImageDetails?:Array<{src:string;variantIds:number[];position:string}>; selectedVariantIds?:number[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number;artworkSummary?:ArtworkSummary;artworkOverrides?:Record<string,{name:string;position:string}>;primaryArtworkImageIds?:Record<string,string>;priceEdits?:Record<string,number>;etsyDetails?:EtsyDetails;costReview?:DraftCostReview };
+type DraftResult = { id?: string; batchId?: string; clientId: string; name: string; title?: string; tags?: string[]; description?:string; previewUrl?: string; artworkPreviewUrls?:Record<string,string>; artworkOverridePreviewUrls?:Record<string,string>; printifyImages?: string[]; printifyImageDetails?:Array<{src:string;variantIds:number[];position:string}>; colorPreviewImageDetails?:Array<{src:string;variantIds:number[];position:string}>; selectedVariantIds?:number[]; shopId?: number; editorUrl?: string; status: "Created" | "Failed" | "NeedsRetry"; error?: string; productName?:string; placement?:{x:number;y:number;scale:number;angle:number};placementScale?:number;artworkSummary?:ArtworkSummary;artworkOverrides?:Record<string,{name:string;position:string}>;primaryArtworkImageIds?:Record<string,string>;priceEdits?:Record<string,number>;etsyDetails?:EtsyDetails;costReview?:DraftCostReview };
 type WorkflowStep = "connect" | "setup" | "designs" | "review" | "finish";
 type FinishPhase = "details" | "etsy" | "mockups" | "final";
 type PendingCategoryChange={designId:string;details:EtsyDetails;clearedCount:number};
@@ -1131,7 +1131,9 @@ export default function ListingFactoryApp() {
   const [activeDesign, setActiveDesign] = useState<string>("");
   const [photoFocusId,setPhotoFocusId]=useState("");
   const [draftPriceGroupKey,setDraftPriceGroupKey]=useState("");
-  const [reviewEdit,setReviewEdit]=useState<{phase:"details"|"mockups"|"pricing";id:string;clientId:string}|null>(null);
+  type ReviewSection="artwork"|"variants"|"pricing"|"photos"|"title"|"description"|"etsy";
+  const [reviewEdit,setReviewEdit]=useState<{phase:"details"|"title"|"description"|"etsy"|"mockups"|"pricing";id:string;clientId:string}|null>(null);
+  const [reviewEditing,setReviewEditing]=useState<{id:string;clientId:string;section?:ReviewSection}|null>(null);
   /* D787 · The batch-wide tools open on their own, above the listing grid. */
   const [batchToolsOpen, setBatchToolsOpen] = useState<boolean|null>(null);
   const [activeRecipe,setActiveRecipe]=useState<Recipe|null>(null);
@@ -3082,16 +3084,52 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       setFinishPhase("details");setActiveTask("photos");goToStep("designs",true,true);
     }
   },[restoringBatch,complete,workflowStep,finishPhase]);
-  function editReviewedListing(phase:"details"|"mockups"|"pricing",target:{id?:string;clientId:string}){
+  function editReviewedListing(phase:"details"|"title"|"description"|"etsy"|"mockups"|"pricing",target:{id?:string;clientId:string}){
     if(!target.id)return;
+    const section:ReviewSection=phase==="mockups"?"photos":phase==="pricing"?"pricing":phase==="description"?"description":phase==="etsy"?"etsy":"title";
+    setReviewEditing({id:target.id,clientId:target.clientId,section});
     setReviewEdit({phase,id:target.id,clientId:target.clientId});
     const index=bundleRecipes.findIndex(recipe=>bundleMembers[recipe.id]?.drafts.some(draft=>draft.id===target.id));
     if(index>=0&&index!==bundleIndex)openBundleProduct(index);
   }
-  function editReviewedProduct(stage:"design"|"pricing"|"photos",target:{id?:string}){
+  function editReviewedProduct(stage:"artwork"|"variants"|"pricing"|"photos",target:{id?:string;clientId:string}){
+    if(target.id)setReviewEditing({id:target.id,clientId:target.clientId,section:stage});
+    setActiveDesign(target.clientId);
     const index=target.id?bundleRecipes.findIndex(recipe=>bundleMembers[recipe.id]?.drafts.some(draft=>draft.id===target.id)):bundleIndex;
-    openGuidedDraftTask(stage==="design"?"placement":stage==="pricing"?"draft-pricing":"photos",index>=0?index:bundleIndex);
+    openGuidedDraftTask(stage==="artwork"?"placement":stage==="variants"?"draft-colors":stage==="pricing"?"draft-pricing":"photos",index>=0?index:bundleIndex);
     goToStep("designs",false,true);
+  }
+  function reviewedPricingAndShippingReady(target:{id?:string;costReview?:{required:boolean;approved:boolean}}){
+    const costsReady=!target.costReview?.required||Boolean(target.costReview.approved);
+    if(drafts.some(draft=>draft.id===target.id))return costsReady&&Boolean(pricingApproved)&&Boolean(etsyShippingProfileId);
+    const member=Object.values(bundleMembers).find(item=>item.drafts.some(draft=>draft.id===target.id));
+    return costsReady&&Boolean(member?.pricingApproved)&&Boolean(member?.shippingProfileId);
+  }
+  function reviewListingSectionNav(design?:DesignFile){
+    if(!reviewEditing||!design||reviewEditing.clientId!==design.id)return null;
+    const draft=drafts.find(item=>item.clientId===design.id&&item.id===reviewEditing.id)||drafts.find(item=>item.clientId===design.id);
+    if(!draft)return null;
+    const current=workflowStep==="finish"?(reviewEditing.section||"title"):activeTask==="placement"?"artwork":activeTask==="draft-colors"||activeTask==="draft-sizes"?"variants":activeTask==="draft-pricing"||activeTask==="draft-shipping"?"pricing":activeTask==="photos"?"photos":"";
+    const open=(section:ReviewSection)=>{
+      setActiveDesign(design.id);
+      setReviewEditing({...reviewEditing,section});
+      if(section==="title"||section==="description"||section==="etsy"){
+        setFinishPhase("details");goToStep("finish",false,true);
+        const selector=section==="title"?".factory-listing-form .design-fields":section==="description"?".individual-description-disclosure":".factory-etsy-details-column";
+        window.setTimeout(()=>document.querySelector(selector)?.scrollIntoView({block:"start"}),300);return;
+      }
+      setActiveTask(section==="artwork"?"placement":section==="variants"?"draft-colors":section==="pricing"?"draft-pricing":"photos");goToStep("designs",false,true);
+    };
+    const entries=[
+      {key:"artwork",label:"Artwork placement"},
+      {key:"variants",label:"Colors & sizes"},
+      {key:"pricing",label:"Pricing & shipping"},
+      {key:"photos",label:"Listing photos"},
+      {key:"title",label:"Title & tags"},
+      {key:"description",label:"Description"},
+      {key:"etsy",label:"Etsy details"},
+    ] as const;
+    return <aside className="review-listing-editor-nav" aria-label={`Edit listing ${files.findIndex(file=>file.id===design.id)+1}`}><div><small>Editing listing {files.findIndex(file=>file.id===design.id)+1} of {files.length}</small><b>{design.title.trim()||"Untitled listing"}</b></div><nav>{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} onClick={()=>open(entry.key)}>{entry.label}</button>)}</nav><button type="button" className="review-listing-done" onClick={()=>{setReviewEditing(null);setFinishPhase("final");goToStep("finish",false,true)}}>Back to Review</button></aside>;
   }
   useEffect(()=>{
     if(!reviewEdit||switchingProduct||restoringBatch||!drafts.some(draft=>draft.id===reviewEdit.id))return;
@@ -3102,7 +3140,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     else goToStep("finish",false,true);
     // Wait for the normal page-top reset, then focus this specific editor.
     window.setTimeout(()=>{
-      const selector=target.phase==="mockups"?`[data-listing-row="${CSS.escape(target.clientId)}"]`:target.phase==="pricing"?".pricing-controls":".factory-listing-grid";
+      const selector=target.phase==="mockups"?`[data-listing-row="${CSS.escape(target.clientId)}"]`:target.phase==="pricing"?".pricing-controls":target.phase==="description"?".individual-description-disclosure":target.phase==="etsy"?".factory-etsy-details-column":target.phase==="title"?".factory-listing-form .design-fields":".factory-listing-grid";
       document.querySelector(selector)?.scrollIntoView({block:"start"});
     },300);
   },[reviewEdit,switchingProduct,restoringBatch,drafts]);
@@ -3304,6 +3342,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     }
     if(task==="draft-shipping"&&templateDetails)return <div className="post-draft-shipping-review"><PricingReview section="shipping" variants={pricedVariants} pricing={pricing} prices={variantPrices} productName={classifyingProductName||templateDetails.blueprintTitle} profiles={etsyShippingProfiles} selectedProfileId={etsyShippingProfileId} templateShippingProfileId={Number(templateDetails.shippingTemplateId)||0} profilesLoading={shippingProfilesLoading} profilesError={shippingProfilesError} onReloadProfiles={()=>void loadEtsyShippingProfiles()} approved={pricingApproved} onPricing={setPricing} onPrices={setVariantPrices} onSelectProfile={value=>{setEtsyShippingProfileId(value);setPricingApproved(Boolean(value)&&costReviewDrafts().every(draft=>!draft.costReview?.required||draft.costReview.approved));if(activeRecipe&&value!==Number(activeRecipe.etsyShippingProfileId))void establish(activeRecipe,{etsyShippingProfileId:value})}} onCreateProfile={createCustomShippingProfile} onApprovalChange={setPricingApproved}/></div>;
     const listings=drafts.map(draft=>({draft,design:files.find(file=>file.id===draft.clientId),selectedImages:draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices}));
+    const visibleListings=reviewEditing?listings.filter(({draft})=>draft.clientId===reviewEditing.clientId):listings;
     /* D684 - "I don't need to see the title of the design... just show the listing
        photo and create some title that says what the listing is." Step 2 runs
        before titles are written in step 3, so design.title is empty here and every
@@ -3331,12 +3370,13 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
        difference between finding out now and finding out at the end. */
     const photoFlags=({count}:{count:number}):ListingFlag[]=>count?[]:[{tone:"attention",label:"No photos yet"}];
     const listingWorkRows=(work:(entry:{draft:typeof drafts[number];design:DesignFile;selectedImages:number[];count:number})=>ReactNode,flags?:(entry:{draft:typeof drafts[number];design:DesignFile;selectedImages:number[];count:number})=>ListingFlag[])=>{
-      const usable=listings.filter(({draft,design})=>draft.status==="Created"&&design&&draft.id);
+      const usable=visibleListings.filter(({draft,design})=>draft.status==="Created"&&design&&draft.id);
       return <ListingRows defaultOpen singleOpen compactNavigation focusedKey={photoFocusId} rows={usable.map(({draft,design,selectedImages})=>{
         const count=selectedImages.length+(preparedMockupCounts[draft.id||""]||0)+(design?.sizeGuideName??sizeGuideName?1:0);
         const entry={draft,design:design as DesignFile,selectedImages,count};
         return {
           key:draft.clientId,
+          position:reviewEditing?{index:listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1,total:listings.length}:undefined,
           thumb:draft.previewUrl||"",
           summary:listingLabel(design),
           meta:`${count} ${count===1?"photo":"photos"}`,
@@ -3357,14 +3397,14 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       <div className="task-panel-body placement-review-grid">
         <p className="placement-printify-note">To adjust these designs in Printify, sign in to Printify first and make sure the correct shop is selected. Otherwise, Printify may show an error when you open a draft.</p>
         {selectedPlacementDrafts.length?<div className="placement-selection-actions"><button type="button" onClick={()=>setSelectedPlacementDrafts(listings.filter(({draft})=>draft.status==="Created"&&draft.id).map(({draft})=>draft.id!))}>Select all</button><button type="button" onClick={()=>requestDraftTabs(drafts.filter(draft=>draft.id&&selectedPlacementDrafts.includes(draft.id)&&draft.editorUrl))}>Open selected listings in Printify ↗</button></div>:null}
-        {listings.filter(({draft})=>draft.status!=="Created").map(({draft,design})=>
+        {visibleListings.filter(({draft})=>draft.status!=="Created").map(({draft,design})=>
           <div className="task-listing failed" key={draft.clientId}>
             <div className="task-listing-ident"><span className="task-listing-index">Listing {listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
             <p className="failed-listing-reason" role="alert">{draft.error||"This private Printify draft is no longer available. Retry to create it again."}</p>
             <div className="failed-listing-actions"><button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button>
             <button className="error-help-link" onClick={()=>window.dispatchEvent(new CustomEvent("goldie-support",{detail:draft.error??"A design failed"}))}>Get help with this error</button></div>
           </div>)}
-        <ArtworkGrid items={listings.filter(({draft})=>draft.status==="Created").map(({draft,design})=>{
+        <ArtworkGrid items={visibleListings.filter(({draft})=>draft.status==="Created").map(({draft,design})=>{
           const displayScale=printTargetFor(templateDetails).scale;
           const quality=design?.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;
           const dpi=!quality?"Check print quality in Printify":`Estimated ${quality.dpi} DPI · primary design`;
@@ -3499,8 +3539,9 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const design=files.find(item=>item.id===activeDesign)||files[0];
     const index=files.findIndex(item=>item.id===design.id);
     const titled=files.filter(item=>(item.title||"").trim()).length;
-    const showListing=(id:string,source:HTMLElement)=>{const editor=source.closest(".factory-listing-screen")?.querySelector<HTMLElement>(".factory-listing-grid");setActiveDesign(id);window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>editor?.scrollIntoView({block:"start"})))};
+    const showListing=(id:string,source:HTMLElement)=>{const editor=source.closest(".factory-listing-screen")?.querySelector<HTMLElement>(".factory-listing-grid"),draft=drafts.find(item=>item.clientId===id);setActiveDesign(id);if(draft?.id)setReviewEditing({id:draft.id,clientId:id,section:reviewEditing?.section});window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>editor?.scrollIntoView({block:"start"})))};
     return <div className="factory-listing-screen">
+      {reviewListingSectionNav(design)}
       {/* Subordinate, and it says so: one section, collapsed by default once
           the titles exist, holding every batch-wide tool unchanged. */}
       <FactoryPanel index={1} title={activeBundle?"Titles for this product":"Titles for this batch"}
@@ -3594,6 +3635,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
             </span>
             <span className={`batch-product-state step-product-state ${toneClass}`}>{status.label}</span>
           </header>
+          {open&&complete&&workflowStep==="designs"?reviewListingSectionNav(files.find(file=>file.id===reviewEditing?.clientId)):null}
           {/* D499 - the same rows step 1 gives every product, on every step. The
               product being worked also shows its editor underneath them; the rest
               show their rows and a Change that opens them here. */}
@@ -5584,7 +5626,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 place while the list scrolls. Every gate, warning, confirmation
                 and failure path below is the same code in the same order. */}
             <div className="factory-review"><div className="factory-review-list">
-            <FinalListingReview handoffOnly productName={activeBundle&&bundleRecipes.length>1?"":activeRecipe?.name||templateDetails?.blueprintTitle||""} drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={editReviewedListing} onEditProduct={editReviewedProduct} onSelectionChange={setSelectedPublishIds} onSelectionTouched={()=>{sellerChosePublish.current=true}}/>{/* D548 - read as someone about to spend money, this said two untrue things.
+            <FinalListingReview handoffOnly productName={activeBundle&&bundleRecipes.length>1?"":activeRecipe?.name||templateDetails?.blueprintTitle||""} drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={editReviewedListing} onEditProduct={editReviewedProduct} pricingAndShippingReady={reviewedPricingAndShippingReady} onSelectionChange={setSelectedPublishIds} onSelectionTouched={()=>{sellerChosePublish.current=true}}/>{/* D548 - read as someone about to spend money, this said two untrue things.
               "Only the listings selected above" - the selection covers the product
               that is open, and on a bundle the button publishes every product, so
               the sentence promised a smaller press than the one it sat under. And

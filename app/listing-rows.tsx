@@ -28,6 +28,9 @@ export type ListingFlag = {
 
 export type ListingRow = {
   key: string;
+  /* A focused Review edit can intentionally pass one row from a larger batch.
+     Keep the listing's real batch position instead of relabelling it 1 of 1. */
+  position?: { index: number; total: number };
   thumb?: string;
   /* The one line under "Listing N of M": the title, the description, the
      category - whatever this panel is asking her to judge. */
@@ -152,6 +155,7 @@ export default function ListingRows({
       {rows.map((row, index) => {
         const flags = row.flags || [];
         const isOpen = open.has(row.key);
+        const position=row.position||{index:index+1,total:rows.length};
         if(compactNavigation&&!isOpen)return null;
         const needsAttention = flags.some(flag => flag.tone === "attention");
         return (
@@ -181,7 +185,7 @@ export default function ListingRows({
                 {/* Said plainly, where the eye lands first. Before this, one
                     listing was told apart from the next only by a heading that
                     read as a filename. */}
-                <span className="listing-card-index">Listing {index + 1} of {rows.length}</span>
+                <span className="listing-card-index">Listing {position.index} of {position.total}</span>
                 <span className="listing-card-summary">{row.summary}</span>
               </span>
               <span className="listing-card-flags">
@@ -212,10 +216,10 @@ export default function ListingRows({
                   ends. Clicking the body itself is deliberately NOT a close -
                   the body is a form, and a stray click while editing a title
                   must never throw the panel shut. */}
-              {singleOpen ? <div className="listing-card-pagination">
-                <button type="button" disabled={index === 0} onClick={() => openListing(index - 1)}>← Previous listing</button>
-                <b>Listing {index + 1} of {rows.length}</b>
-                <button type="button" disabled={index === rows.length - 1} onClick={() => openListing(index + 1)}>Next listing →</button>
+              {singleOpen ? <div className={`listing-card-pagination${row.position&&rows.length===1?" is-position-only":""}`}>
+                {!(row.position&&rows.length===1)&&<button type="button" disabled={index === 0} onClick={() => openListing(index - 1)}>← Previous listing</button>}
+                <b>Listing {position.index} of {position.total}</b>
+                {!(row.position&&rows.length===1)&&<button type="button" disabled={index === rows.length - 1} onClick={() => openListing(index + 1)}>Next listing →</button>}
               </div> : <button type="button" className="listing-card-done" onClick={() => toggle(row.key)}>
                   Close listing {index + 1}
                 </button>}

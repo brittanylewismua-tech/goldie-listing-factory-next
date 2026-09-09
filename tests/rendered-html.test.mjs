@@ -7244,7 +7244,8 @@ test("each listing in a task panel is separated and numbered — D685", async ()
   ]);
   /* D687 - numbered once, in the shared component, instead of in four hand-rolled
      copies that could drift apart. Said plainly, where the eye lands first. */
-  assert.match(rows, /Listing \{index \+ 1\} of \{rows\.length\}/);
+  assert.match(rows, /Listing \{position\.index\} of \{position\.total\}/);
+  assert.match(rows, /position=row\.position\|\|\{index:index\+1,total:rows\.length\}/);
   assert.match(clarity, /\.app-shell \.listing-card-index\{display:block;font-size:11px;font-weight:800/);
   // A bounded card with real space around it, not a hairline rule.
   assert.match(clarity, /\.app-shell \.listing-card\{border:1px solid[^}]*margin-bottom:10px/);

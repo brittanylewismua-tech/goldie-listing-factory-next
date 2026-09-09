@@ -24,22 +24,22 @@ test("D1246: Etsy details remain automatic without a manual preparation control"
   assert.match(footer,/children == null \? null : forward/);
 });
 
-test("D1246: every reviewed product exposes its three edit destinations",()=>{
-  for(const label of ["Artwork, colors &amp; sizes","Pricing &amp; shipping","Listing photos"]){
+test("D1251: every reviewed listing exposes all seven edit destinations",()=>{
+  for(const label of ["Artwork placement","Colors & sizes","Pricing & shipping","Listing photos","Title & tags","Description","Etsy details & personalization"]){
     assert.ok(review.includes(label));
   }
-  assert.match(review,/onEditProduct\("design",items\[0\]\)/);
-  assert.match(review,/onEditProduct\("pricing",items\[0\]\)/);
-  assert.match(review,/onEditProduct\("photos",items\[0\]\)/);
-  assert.match(app,/stage==="design"\?"placement":stage==="pricing"\?"draft-pricing":"photos"/);
+  for(const stage of ["artwork","variants","pricing","photos"])assert.ok(review.includes(`onEditProduct?.("${stage}",draft)`));
+  for(const phase of ["title","description","etsy"])assert.ok(review.includes(`onEdit("${phase}",draft)`));
+  assert.match(app,/stage==="artwork"\?"placement":stage==="variants"\?"draft-colors":stage==="pricing"\?"draft-pricing":"photos"/);
   assert.match(app,/onEditProduct=\{editReviewedProduct\}/);
   assert.doesNotMatch(app,/function finalProductOverview\(/);
-  assert.match(css,/\.recipe-product-settings/);
-  assert.match(css,/@media\(max-width:560px\)[\s\S]*?\.recipe-product-settings\{display:grid/);
+  assert.match(css,/\.recipe-listing-sections/);
+  assert.match(css,/@media\(max-width:560px\)[\s\S]*?\.recipe-listing-sections>button/);
 });
 
-test("D1247: product edit controls have an unambiguous group label",()=>{
-  assert.match(review,/Product settings/);
+test("D1251: settings are attached to the listing instead of a detached product strip",()=>{
+  assert.doesNotMatch(review,/Product settings/);
+  assert.match(review,/aria-label=\{`Edit listing/);
   assert.doesNotMatch(review,/Change product/);
 });
 

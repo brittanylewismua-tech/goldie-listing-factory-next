@@ -1558,6 +1558,10 @@ html, body { background: var(--lf-paper); }
    mistaken for the listing being edited. */
 .app-shell .factory-listing-screen{display:grid;gap:14px}
 .app-shell .factory-listing-screen > .factory-panel{margin:0}
+.app-shell .review-listing-editor-nav{position:sticky;z-index:18;top:88px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px 12px;padding:12px 14px;border:2px solid #171417;border-radius:12px;background:rgba(24,21,25,.97);color:#fff;box-shadow:4px 4px 0 #ff39ad;backdrop-filter:blur(12px)}
+.app-shell .review-listing-editor-nav>div{display:grid;gap:2px;min-width:0}.app-shell .review-listing-editor-nav>div small{color:#d5cbd2;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.app-shell .review-listing-editor-nav>div b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.app-shell .review-listing-editor-nav nav{grid-column:1/-1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));align-items:stretch;gap:6px;min-width:0}.app-shell .review-listing-editor-nav nav button,.app-shell .review-listing-done{min-height:40px;padding:7px 9px;border:1px solid rgba(255,255,255,.42);border-radius:8px;background:transparent;color:#fff;font:750 10px/1.25 Inter,sans-serif;cursor:pointer}.app-shell .review-listing-editor-nav nav button[aria-current="page"]{border-color:#ff39ad;background:#fff;color:#171417}.app-shell .review-listing-editor-nav button:focus-visible{outline:3px solid #ff39ad;outline-offset:2px}.app-shell .review-listing-done{white-space:nowrap;background:#fff;color:#171417;font-weight:850}
+@media(max-width:1000px){.app-shell .review-listing-editor-nav{position:static}.app-shell .review-listing-editor-nav nav{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:620px){.app-shell .review-listing-editor-nav{grid-template-columns:1fr}.app-shell .review-listing-editor-nav nav{grid-row:auto;grid-template-columns:1fr 1fr}.app-shell .review-listing-done{width:100%}}
 
 
 /* The form card holds the listing's own editors one under another, which is
@@ -3435,6 +3439,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .photo-order-heading>small{color:var(--lf-muted);font-size:11px}
 .app-shell .listing-photo-workspace .photo-order-strip{grid-template-columns:repeat(4,minmax(0,1fr));align-items:start}
 .app-shell .listing-card-pagination{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;margin-top:18px;padding-top:16px;border-top:1px solid var(--lf-line)}
+.app-shell .listing-card-pagination.is-position-only{grid-template-columns:1fr}
 .app-shell .listing-card-pagination>b{text-align:center;font-size:12px;color:var(--lf-muted)}
 .app-shell .listing-card-pagination>button{min-height:38px;padding:9px 14px;border:1px solid var(--lf-line);border-radius:8px;background:#fff;color:var(--lf-ink);font-weight:750;cursor:pointer}
 .app-shell .listing-card-pagination>button:last-child{justify-self:end;background:#111;color:#fff;border-color:#111}

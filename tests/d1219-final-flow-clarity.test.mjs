@@ -25,10 +25,11 @@ test("D1219 makes Review batch delays and blockers explicit", () => {
   assert.match(app, /stopWith\("Some Etsy details were not saved\.",failures\)/);
 });
 
-test("D1246 exposes each product's settings directly on Step 4", () => {
+test("D1251 exposes every editable area beneath each listing on Review", () => {
   assert.doesNotMatch(app, /function finalProductOverview\(/);
   assert.match(app, /onEditProduct=\{editReviewedProduct\}/);
-  assert.match(css, /recipe-product-settings/);
+  assert.match(css, /recipe-listing-sections/);
+  assert.doesNotMatch(css, /recipe-product-settings/);
 });
 
 test("D1240 keeps one primary Etsy-draft decision on Review", () => {

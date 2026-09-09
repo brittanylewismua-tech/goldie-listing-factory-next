@@ -18,12 +18,14 @@ test('D1240: Review has one instruction and one primary outcome',()=>{
   assert.match(app,/workflowStep!=="connect"&&!\(workflowStep==="finish"&&finishPhase==="final"\)/);
 });
 
-test('D1240: listing cards are the edit target instead of carrying action clusters',()=>{
+test('D1251: each listing carries a concise completion map with direct edits',()=>{
   const branch=review.slice(review.indexOf('if(handoffOnly)'),review.indexOf('return <section className={`final-listing-review'));
-  assert.match(branch,/<button type="button" aria-label=/);
-  assert.match(branch,/if\(draft\.status!=="Created"\).*onRetry\(draft\.clientId\).*onEdit\(issue\?correction\.phase:"details",draft\)/);
+  assert.match(branch,/<article className=\{`recipe-listing-card/);
+  assert.match(branch,/<nav className="recipe-listing-sections" aria-label=/);
+  assert.match(branch,/sections\.map\(section=><button type="button"/);
+  assert.match(branch,/onRetry\?\.\(draft\.clientId\)/);
   assert.doesNotMatch(branch,/recipe-listing-actions|View in Printify/);
-  assert.match(css,/\.recipe-listing-card:focus-visible/);
+  assert.match(css,/\.recipe-listing-sections>button:focus-visible/);
 });
 
 test('D1240: per-listing Etsy controls stay hidden until progress or recovery exists',()=>{
