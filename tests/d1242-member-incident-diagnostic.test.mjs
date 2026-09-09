@@ -20,3 +20,13 @@ test('D1242: member incident output summarizes jobs without returning private ch
   assert.match(route,/phase: typeof result\.phase/);
   assert.doesNotMatch(route,/inputKey:|workflowId:/);
 });
+
+test('D1245: owner diagnostics compare Louisa’s live Etsy and Printify variants without exposing SKUs',()=>{
+  assert.match(route,/includeVariantAudit/);
+  assert.match(route,/FROM photo_deliveries WHERE user_id=\?/);
+  assert.match(route,/missingInEtsy/);
+  assert.match(route,/extraInEtsy/);
+  assert.match(route,/priceMismatches/);
+  assert.match(route,/url\.searchParams\.get\("include"\)===\"variants\"/);
+  assert.doesNotMatch(route,/missingSkus|extraSkus/);
+});
