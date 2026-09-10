@@ -149,8 +149,10 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /analyzePadding/);
   assert.match(page, /MAX_CONCURRENT_DESIGNS = 4/);
   assert.match(page, /Creating drafts · \$\{processed\} of \$\{runTotal\} finished/);
-  assert.match(page, /aria-label="Printify drafts created"/);
-  assert.match(page, /aria-valuetext=\{`\$\{processed\} of \$\{runTotal\} drafts created`\}/);
+  assert.match(page, /aria-label="Printify draft creation progress"/);
+  assert.match(page, /aria-valuetext=\{creationProgressText\}/);
+  assert.match(page, /aria-valuenow=\{creationProgressPercent\}/);
+  assert.match(page, /<b>\{creationProgressPercent\}%<\/b>/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
   assert.match(page, /\/api\/printify\/stage/);
   assert.match(page, /prepareArtworkFile/);
@@ -1800,7 +1802,8 @@ test("protects batch allowance and lets sellers review uploaded designs",async()
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
   assert.match(page,/planDraftsRemaining/);
-  assert.match(page,/one draft per design/);
+  assert.match(page,/requestedListingCount/);
+  assert.match(page,/This submission exceeds 100 listings/);
   assert.match(page,/removeDesign/);
   assert.match(page,/design-upload-review/);
   assert.doesNotMatch(styles,/\.design-upload-review article\{grid-template-columns:76px/,
@@ -3787,8 +3790,8 @@ test("one press creates drafts for every product in a bundle — D485", async ()
   // It advances itself, and saves the final child before stopping rather than looping.
   assert.match(app, /if\(bundleIndex\+1>=bundleRecipes\.length\)\{[\s\S]{0,500}?persistBatchNow\(batchIdRef\.current\)[\s\S]{0,250}?setBundleRun\(null\)/);
   assert.match(app, /void continueBundle\(\)\.catch\(error=>\{setBundleRun\(null\);stopWith\([\s\S]{0,250}?\}\)\.finally\(\(\)=>\{bundleAdvancing\.current=false\}\)/);
-  assert.match(app, /if\(running\|\|preparingEtsy\|\|preflightOpen\|\|switchingProduct\)return/,
-    "it must not start a product while one is mid-flight or awaiting confirmation");
+  assert.match(app, /if\(running\|\|preparingEtsy\|\|switchingProduct\)return/,
+    "it must not start a product while one is mid-flight");
 
   // A product that is genuinely not set up stops the run instead of spinning.
   // Pricing is intentionally approved only after the finished draft reports its costs.
@@ -3941,7 +3944,7 @@ test("a reopened batch finishes preparing and the button says why it cannot run 
   assert.ok(ready > 0 && ready < missing, "designsFinished must be declared before it is read");
 });
 
-test("the drafts confirmation describes the run it is confirming — D492", async () => {
+test("private drafts start directly and retain the exclusion-aware allowance gate — D492", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
   /* Caught with the dialog open on her live bundle. The button read "Create
@@ -3950,12 +3953,10 @@ test("the drafts confirmation describes the run it is confirming — D492", asyn
      Midweight Softstyle Fleece Hoodie" under a singular "Printify product", and
      charged the plan allowance for 2. */
   // D1138: the same bundle total must also respect excluded product/design pairs.
-  assert.match(app, /Create \$\{requestedListingCount\} private/);
-  assert.match(app, /\$\{requestedListingCount\} drafts after exclusions/);
-  assert.match(app, /\{activeBundle&&bundleRecipes\.length>1\?"Products":"Product"\}/);
-  assert.match(app, /bundleRecipes\.map\(recipe=>recipe\.name\)\.join\(", "\)/);
-
-  assert.doesNotMatch(app.slice(app.indexOf('<h2 id="preflight-title">'),app.indexOf('</section></div>}',app.indexOf('<h2 id="preflight-title">'))), /Plan allowance/);
+  const action=app.slice(app.indexOf('function beginDraftCreation()'),app.indexOf('/** Stage every member'));
+  assert.match(action, /requestedListingCount>planDraftsRemaining/);
+  assert.match(action, /confirmDrafts\(\)/);
+  assert.doesNotMatch(app,/preflightOpen|preflight-backdrop|preflight-title/);
 });
 
 test("a bundle run saves each product's work before moving on — D493", async () => {
@@ -4375,7 +4376,7 @@ test("low resolution shows the table and never blocks — D509/D510/D511", async
   assert.match(app, /if\(undecided\.length\)\{setPixelWarningOpen\(true\);return\}/);
   assert.match(app, /activeBundle&&bundleQualityIssues\.length\n?\s*\?bundleQualityIssues\.map\(issue=>\(\{id:issue\.key/,
     "and the table carries every product a design is undersized for");
-  assert.match(app, /if\(undecided\.length\)\{decideAllQuality\("include"\);setPreflightOpen\(true\);return\}/,
+  assert.match(app, /if\(undecided\.length\)\{decideAllQuality\("include"\);beginDraftCreation\(\);return\}/,
     "Proceed anyway is the decision, not a trip back to make it again");
 
   /* D510 · Three batches of one bundle showed three different names, because
@@ -6911,11 +6912,9 @@ test("bundle DPI and variant totals cover every product — D659", async () => {
   assert.match(app, /const bundleProductsUnchecked=useMemo\(/);
   assert.match(app, /Reopen the unchecked/);
 
-  // Variants total the bundle, with the split inspectable.
-  assert.match(app, /const bundleVariantCounts=useMemo\(/);
-  assert.match(app, /Saved Printify colors and sizes/);
-  assert.match(app, /Review previews, prices, and shipping/);
-  assert.match(app, /detail:known\.map\(entry=>`\$\{entry\.name\}: \$\{entry\.count\}`\)\.join\(" · "\)/);
+  // The obsolete confirmation summary no longer computes an unused bundle total.
+  assert.doesNotMatch(app, /const bundleVariantCounts=useMemo\(/);
+  assert.doesNotMatch(app, /preflightOpen|preflight-backdrop/);
   assert.doesNotMatch(app, /All \{pricedVariants\.length\} enabled variants/,
     "the open product's count is not the bundle's count");
 });

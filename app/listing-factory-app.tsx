@@ -1177,7 +1177,7 @@ export default function ListingFactoryApp() {
   const [bundleShipping,setBundleShipping]=useState<Record<string,number>>({});
   const [bundleApproved,setBundleApproved]=useState<Record<string,boolean>>({});
   const [bundleQualityDecisions,setBundleQualityDecisions]=useState<Record<string,"include"|"exclude">>({});
-  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [preparationCompleted, setPreparationCompleted] = useState(0);
   const [printifyImageIndices,setPrintifyImageIndices]=useState<number[]>([]);
   const [printifyImageSelections,setPrintifyImageSelections]=useState<Record<string,number[]>>({});
   const [sharedMockups,setSharedMockups]=useState<{theme:string;ids:string[]}|undefined>();
@@ -1200,12 +1200,12 @@ export default function ListingFactoryApp() {
   const [batchDisplayName,setBatchDisplayName]=useState("");
   const [savingDraftBatch,setSavingDraftBatch]=useState(false);
   useEffect(()=>{
-    if(!restartBatchOpen&&!preflightOpen)return;
-    const restore=containModalFocus(restartBatchOpen?"restart-batch-title":"preflight-title");
-    const close=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!restartingBatch&&!running){event.preventDefault();setRestartBatchOpen(false);setPreflightOpen(false)}};
+    if(!restartBatchOpen)return;
+    const restore=containModalFocus("restart-batch-title");
+    const close=(event:KeyboardEvent)=>{if(event.key==="Escape"&&!restartingBatch&&!running){event.preventDefault();setRestartBatchOpen(false)}};
     window.addEventListener("keydown",close);
     return()=>{window.removeEventListener("keydown",close);restore()};
-  },[restartBatchOpen,preflightOpen,restartingBatch,running]);
+  },[restartBatchOpen,restartingBatch,running]);
   const saveDialogOpener=useRef<HTMLElement|null>(null);
   useEffect(()=>{
     if(!draftSaveOpen&&!draftSavedOpen)return;
@@ -1437,7 +1437,9 @@ export default function ListingFactoryApp() {
      thing she is looking at; it should say so itself. */
   const missingRequirement = !connected ? "Connect Printify first" : !productSelected ? "Choose or add a saved product" : !templateLoaded ? "Connect its Printify template" : files.length === 0 ? "Add at least one design" : !designsFinished ? `Checking ${designsPreparing} ${designsPreparing===1?"design":"designs"}\u2026` : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
-  const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?(complete&&reviewEditing?8:2):(preflightOpen||running)?4:3;
+  const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?(complete&&reviewEditing?8:2):running?4:3;
+  const creationProgressPercent=runTotal?Math.min(100,Math.round(((draftsAdmitted?runTotal:preparationCompleted)+(draftsAdmitted?processed:0))/(runTotal*2)*100)):0;
+  const creationProgressText=draftsAdmitted?`${processed} of ${runTotal} Printify drafts created`:`${preparationCompleted} of ${runTotal} artwork files prepared`;
   // The guided factory always opens on the real connection step. The returning
   // dashboard remains available as a component, but must never replace step 1
   // or appear when a seller uses Back from the product step.
@@ -1575,16 +1577,6 @@ export default function ListingFactoryApp() {
       setTitleBuildMessage(`This keyword bank now applies to all ${bundleRecipes.length} products in this bundle.`);
     }catch(error){setTitleBuildMessage(error instanceof Error?error.message:"The keyword bank could not be applied.")}finally{setApplyingBankToBundle(false)}
   }
-  const bundleVariantCounts=useMemo(()=>{
-    const perProduct=(activeBundle&&bundleRecipes.length>1?bundleRecipes:activeRecipe?[activeRecipe]:[]).map(recipe=>{
-      const details=bundleProductDetails[recipe.id];
-      const count=details?(details.variants||[]).filter(variant=>variant.templateEnabled!==false).length:0;
-      return {name:recipe.name,count,known:Boolean(details)};
-    });
-    const known=perProduct.filter(entry=>entry.known);
-    const total=known.length?known.reduce((sum,entry)=>sum+entry.count,0):pricedVariants.length;
-    return {total,perProduct,detail:known.map(entry=>`${entry.name}: ${entry.count}`).join(" · ")};
-  },[activeBundle,bundleRecipes,activeRecipe,bundleProductDetails,pricedVariants]);
   const bundleQualityIssues=useMemo(()=>productsInBatch.length?files.flatMap(file=>productsInBatch.flatMap(recipe=>{const details=bundleProductDetails[recipe.id];if(!details||!file.width||!file.height)return [];const {scale,width:requiredWidth,height:requiredHeight,printWidth}=printTargetFor(details),dpi=printifyDpi(file.width,printWidth,scale)?.dpi||0;if(!requiredWidth||!requiredHeight||file.width>=requiredWidth&&file.height>=requiredHeight)return [];return [{key:`${recipe.id}:${file.id}`,fileId:file.id,fileName:file.name,recipeId:recipe.id,productName:recipe.name,requiredWidth,requiredHeight,actualWidth:file.width,actualHeight:file.height,dpi,critical:dpi>0&&dpi<215}] })):[],[productsInBatch,files,bundleProductDetails]);
 
   /* One flagged pair per design AND per product meant a 3-design bundle across 3
@@ -1979,7 +1971,7 @@ export default function ListingFactoryApp() {
     /* D220 · Draft creation (3, 4) and mockups (7) live on the Images page now, so
        any legacy index pointing at them resolves there. Deep links and saved batch
        state still use the 0-8 numbering. */
-    const index=rawIndex===3||rawIndex===4||rawIndex===7?2:rawIndex;if(localPreview){if(index===0)return goToStep("connect",false,true);if(index===1)return goToStep("setup",false,true);if(index===2)return goToStep("designs",false,true);if(index>=3&&!templateDetails)await loadPreviewDemo();if(index===3){setPreflightOpen(false);return goToStep("review",false,true)}if(index===4){goToStep("review",false,true);setPreflightOpen(true);return}setPreflightOpen(false);setFinishPhase(index===8?"final":"details");return goToStep("finish",false,true)}
+    const index=rawIndex===3||rawIndex===4||rawIndex===7?2:rawIndex;if(localPreview){if(index===0)return goToStep("connect",false,true);if(index===1)return goToStep("setup",false,true);if(index===2)return goToStep("designs",false,true);if(index>=3&&!templateDetails)await loadPreviewDemo();if(index===3||index===4)return goToStep("review",false,true);setFinishPhase(index===8?"final":"details");return goToStep("finish",false,true)}
     /* D1239 · Review is one top-level stage with several focused editors inside
        it. When a listing card sent the seller to titles, prices, or photos,
        clicking the active Review step was treated like advancing to the final
@@ -2568,7 +2560,7 @@ export default function ListingFactoryApp() {
     setBundleApproved({});setBundlePrices({});setBundlePricing({});setBundleShipping({});
     setBundleSizeChoices({});setBundleMockupChoices({});setBundleKeywordChoices({});setBundleLoadErrors({});
     setSelectedSizeIds([]);setResumeProcessing(false);resumeAttempted.current=false;
-    templateLoadVersion.current+=1;setLoadingTemplate(false);setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setBatchKeywords([]);setTitleJoiner(", ");setTitleBuilderMode("ai");setAutoTitleBank(null);setAutoTitleBankId("");setManualKeywordBankId("");setActiveDesign("");setPreflightOpen(false);setUploadNoticeOpen(false);setPrintifyImageIndices([]);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setSelectedColorIds([]);setColorsRemembered(false);setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");syncedListingSignatures.current.clear();
+    templateLoadVersion.current+=1;setLoadingTemplate(false);setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setPreparationCompleted(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setBatchKeywords([]);setTitleJoiner(", ");setTitleBuilderMode("ai");setAutoTitleBank(null);setAutoTitleBankId("");setManualKeywordBankId("");setActiveDesign("");setUploadNoticeOpen(false);setPrintifyImageIndices([]);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setSelectedColorIds([]);setColorsRemembered(false);setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");syncedListingSignatures.current.clear();
     if(clearProduct){setTemplate("");setTemplateDetails(null);setTemplateError("");setDescription("");setMockupTheme("");setActiveRecipe(null);setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);setBundleColorProducts({});setBundleBatchIds({});setBundleColorChoices({});setBundleQualityDecisions({});setPricing(current=>({...current,targetProfit:DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0}))}
     if (folderPicker.current) folderPicker.current.value = "";
     if (imagePicker.current) imagePicker.current.value = "";
@@ -4003,7 +3995,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
        machinery for exactly this: remember the step, restore it once it opens. */
     requestedStep.current=workflowStep;
     url.searchParams.set("step",workflowStep);url.searchParams.delete("phase");window.history.pushState({},"",url);
-    setBundleIndex(targetIndex);setDrafts([]);setComplete(false);setProcessed(0);setRunTotal(0);setOpenedDrafts([]);setOpenAllMessage("");setPreflightOpen(false);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");setFiles(carriedFiles);setDescription("");setActiveDesign("");syncedListingSignatures.current.clear();
+    setBundleIndex(targetIndex);setDrafts([]);setComplete(false);setProcessed(0);setPreparationCompleted(0);setRunTotal(0);setOpenedDrafts([]);setOpenAllMessage("");setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");setFiles(carriedFiles);setDescription("");setActiveDesign("");syncedListingSignatures.current.clear();
     await saveBatchFiles(nextBatchId,carriedFiles.map(file=>file.file)).catch(()=>undefined);const carriedAssets=Object.fromEntries(carriedFiles.flatMap(design=>(design.artworkVersions||[]).filter(artwork=>!artwork.originalUnavailable&&artwork.file?.size).map(artwork=>[`${design.id}:${artwork.id}`,artwork.file])));await saveBatchArtworkAssets(nextBatchId,carriedAssets).catch(()=>undefined);setActiveRecipe(next);setPrintifyImageIndices(next.printifyImageIndices||[]);setEtsyShippingProfileId(Number(next.etsyShippingProfileId)||0);setTemplate(next.templateUrl);setMockupTheme(next.defaultMockupTheme||"");setAutoTitleBankId(next.keywordListId||"");setTitleBuildMessage("");const nextPricing={...pricing,targetProfit:Number(next.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);await loadTemplateUrl(next.templateUrl,nextPricing,Number(next.etsyShippingProfileId)||0,next.defaultColorIds||[],next.defaultSizeIds||[]);
     // Draft creation never performs paid title generation. Titles are an explicit Step 3 action.
     setWorkflowStep("designs");window.scrollTo({top:0});
@@ -4670,8 +4662,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       }
   }
 
-  /* D419 - Same exposure as publishing: the preflight confirm had no disabled
-     state, so a double click ran the whole draft creation twice - Printify quota
+  /* D419 - Same exposure as publishing: the creation action once had no synchronous
+     guard, so a double click ran the whole draft creation twice - Printify quota
      spent twice and duplicate drafts that then publish as duplicate listings. */
   const draftRunInFlight=useRef(false);
   async function runDrafts(targetFiles: DesignFile[], keepSuccessful = false, alreadyAdmitted = false) {
@@ -4966,7 +4958,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   const bundleFinishing=useRef(false);
   useEffect(()=>{
     if(!bundleRun)return;
-    if(running||preparingEtsy||preflightOpen||switchingProduct)return;
+    if(running||preparingEtsy||switchingProduct)return;
     if(complete){
       if(bundleIndex+1>=bundleRecipes.length){
         /* Do not declare the bundle finished until the final child's completed
@@ -4998,7 +4990,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     const targets=files.filter(file=>bundleQualityDecisions[`${activeRecipe?.id}:${file.id}`]!=="exclude");
     if(!targets.length){setBundleRun(null);return}
     void runDrafts(targets);
-  },[bundleRun,complete,running,preparingEtsy,preflightOpen,switchingProduct,ready,bundleIndex,files,activeRecipe,templateDetails,bundleRecipes]);
+  },[bundleRun,complete,running,preparingEtsy,switchingProduct,ready,bundleIndex,files,activeRecipe,templateDetails,bundleRecipes]);
 
   function printPlanFor(design:DesignFile){
     const productId=activeRecipe?.id||"",primary=primaryPrintSide(templateDetails?.printPositions),noun=productNoun(templateDetails?.blueprintTitle,templateDetails?.brand,templateDetails?.model),primaryLabel=noun==="garment"&&primary?printSideLabel(primary):primary&&/wrap|around/i.test(primary)?"Wrap":"Main",extras=(design.artworkVersions||[]).filter(artwork=>{const products=artwork.productIds?.length?artwork.productIds:(artwork.ownerProductId?[artwork.ownerProductId]:productId?[productId]:[]);return products.includes(productId)&&artwork.colorIds.length>0});
@@ -5006,6 +4998,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   return [primaryLabel,...extraSides].join(" + ");
   }
 
+  function beginDraftCreation(){if(planDraftsRemaining!==null&&requestedListingCount>planDraftsRemaining)return void stopWith("This batch is larger than your remaining plan allowance.",[activeBundle?`${files.length} designs × ${bundleProductCount} products = ${requestedListingCount} listings after exclusions. You have ${planDraftsRemaining} listings remaining this month.`:`${planDraftsRemaining} ${planDraftsRemaining===1?"listing remains":"listings remain"} this month, but this batch contains ${files.length} designs.`]);confirmDrafts()}
   function createDrafts() {const issues=requiredForStep("review");if(issues.length)return void stopWith("This batch isn’t ready to create.",issues);const undecided=bundleQualityGroups.filter(group=>group.keys.some(key=>!bundleQualityDecisions[key]));
     /* D509 - a flagged design in a bundle got a blocking dialog of sentences -
        one run-on line per design per product, no sizes, and no way past it. The
@@ -5014,14 +5007,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
        anyway. A bundle went down a different path and never reached it. Same
        table for both now, and it does not block: low resolution is a judgement
        for her to make, not a wall. */
-    if(undecided.length){setPixelWarningOpen(true);return}if(planDraftsRemaining!==null&&requestedListingCount>planDraftsRemaining)return void stopWith("This batch is larger than your remaining plan allowance.",[activeBundle?`${files.length} designs × ${bundleProductCount} products = ${requestedListingCount} listings after exclusions. You have ${planDraftsRemaining} listings remaining this month.`:`${planDraftsRemaining} ${planDraftsRemaining===1?"listing remains":"listings remain"} this month, but this batch contains ${files.length} designs.`]);setPreflightOpen(true);}
+    if(undecided.length){setPixelWarningOpen(true);return}beginDraftCreation();}
   /** Stage every member before admitting any new job. Once accepted, all
    * product/design pairs belong to the server, not to browser navigation. */
   async function queueDraftSubmission(){
     if(batchSaveConflict)return void stopWith("Reload the saved batch first.",[batchSaveConflict]);
     if(draftRunInFlight.current||!activeRecipe||!templateDetails)return;
     draftRunInFlight.current=true;draftRunActive.current=true;runInProgress.current=true;setDraftsAdmitted(false);
-    setPreflightOpen(false);setRunning(true);setProcessed(0);setRunTotal(requestedListingCount);
+    setRunning(true);setProcessed(0);setPreparationCompleted(0);setRunTotal(requestedListingCount);
     const sourceRecipe=activeRecipe,sourceId=batchIdRef.current||crypto.randomUUID();
     batchIdRef.current=sourceId;
     const recipes=activeBundle&&bundleRecipes.length>1?bundleRecipes:[sourceRecipe];
@@ -5032,7 +5025,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     const members:Array<{id:string;recipe:Recipe;designs:DesignFile[];state:Record<string,unknown>;results:DraftResult[]}>=[];
     const base=batchStateSnapshot();
     try{
-      setPreparationMessage("Preparing every listing for background creation…");
+      setPreparationMessage("Preparing artwork for secure upload…");
+      let preparedCount=0;
       for(let index=0;index<recipes.length;index++){
         const recipe=recipes[index],isActive=recipe.id===sourceRecipe.id;
         const details=isActive?templateDetails:bundleProductDetails[recipe.id];
@@ -5046,7 +5040,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         const designs=memberPlan.designs;
         if(!designs.length)throw Error(`${recipe.name} has no included designs.`);
         if(!variantsFor(details,colors,sizes).length)throw Error(`${recipe.name} needs an available color and size combination.`);
-        const outcomes=await runBounded(designs,MAX_CONCURRENT_DESIGNS,design=>processDesign(design,{details,recipe,colors,sizes,pricing:memberPricing,variantPrices:prices,shippingProfileId,description:isActive?description:normalizeProductDescription(details.description),collect:body=>requests.push(body)}));
+        const outcomes=await runBounded(designs,MAX_CONCURRENT_DESIGNS,design=>processDesign(design,{details,recipe,colors,sizes,pricing:memberPricing,variantPrices:prices,shippingProfileId,description:isActive?description:normalizeProductDescription(details.description),collect:body=>requests.push(body)}),result=>{if(result.status==="Prepared")setPreparationCompleted(++preparedCount)});
         const failed=outcomes.find(outcome=>outcome.status!=="Prepared");if(failed)throw Error(failed.error||"A design could not be prepared.");
         for(const design of designs)queuedDesignSessions.current.set(design.id,details.batchId);
         const snapshotDesigns=designs.map(({file,previewUrl,artworkPreviewUrl,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file,previewUrl,...artwork})=>artwork)}));
@@ -5075,7 +5069,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const [response]=await Promise.all([fetchWithDeadline("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})},120000),historySave]);
       const result=await response.json() as {accepted?:number;error?:string};
       if(!response.ok||result.accepted!==requests.length)throw Error(result.error||"The full submission has not been confirmed. Resume this batch to check its saved jobs.");
-      setDraftsAdmitted(true);
+      setPreparationCompleted(requests.length);setDraftsAdmitted(true);
       // Match the visible member to the exact admitted snapshot. Otherwise a
       // later autosave restores excluded files with no corresponding job.
       const activeMember=members.find(member=>member.recipe.id===sourceRecipe.id)!;
@@ -5112,12 +5106,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       setSavedRevision(current=>current+1);
       window.setTimeout(()=>document.querySelector(".draft-card")?.scrollIntoView({block:"start"}),0);
     }catch(error){stopWith("Check this batch’s saved progress.",[error instanceof Error?error.message:"Resume this batch to check its drafts."],"Existing drafts will not be created twice.");}
-    finally{setRunning(false);setDraftsAdmitted(false);setPreparationMessage("");setRunTotal(0);draftRunActive.current=false;draftRunInFlight.current=false;runInProgress.current=false;}
+    finally{setRunning(false);setDraftsAdmitted(false);setPreparationCompleted(0);setPreparationMessage("");setRunTotal(0);draftRunActive.current=false;draftRunInFlight.current=false;runInProgress.current=false;}
   }
   function confirmDrafts() {
     const fresh=!drafts.length&&(!activeBundle||Object.keys(bundleBatchIds).length<=1);
     if(fresh){void queueDraftSubmission();return;}
-    const recipeId=activeRecipe?.id;const targets=files.filter(file=>bundleQualityDecisions[`${recipeId}:${file.id}`]!=="exclude");setPreflightOpen(false);if(activeBundle&&bundleRecipes.length>1)setBundleRun({total:bundleRecipes.length});void runDrafts(targets);
+    const recipeId=activeRecipe?.id;const targets=files.filter(file=>bundleQualityDecisions[`${recipeId}:${file.id}`]!=="exclude");if(activeBundle&&bundleRecipes.length>1)setBundleRun({total:bundleRecipes.length});void runDrafts(targets);
   }
 
   function retryFailed() {
@@ -5904,9 +5898,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             <div className="batch-progress" role="status" aria-live="polite">
               <div className="progress-ring" aria-hidden="true"/>
               <div className="progress-copy"><b>{processed===runTotal&&runTotal>0?"Saving your finished batch":"Creating your Printify drafts"}</b><span>{processed===runTotal&&runTotal>0?`All ${runTotal} drafts are created. Saving them to Batch History.`:preparationMessage || "Checking saved draft progress…"}</span></div>
-              <div className="progress-track" role="progressbar" aria-label="Printify drafts created" aria-valuemin={0} aria-valuemax={100} aria-valuenow={runTotal?Math.min(100,Math.round(processed/runTotal*100)):0} aria-valuetext={`${processed} of ${runTotal} drafts created`}>
-                <span style={{ width: `${runTotal ? Math.min(100,(processed / runTotal) * 100) : 0}%` }} />
-                <b>{runTotal?Math.min(100,Math.round(processed/runTotal*100)):0}%</b>
+              <div className="progress-track" role="progressbar" aria-label="Printify draft creation progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={creationProgressPercent} aria-valuetext={creationProgressText}>
+                <span style={{ width: `${creationProgressPercent}%` }} />
+                <b>{creationProgressPercent}%</b>
               </div>
             </div>
           )}
@@ -5986,12 +5980,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
       {complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer">{reviewEditing?<button className="workflow-back" type="button" onClick={()=>openFinishedReview(false)}><span aria-hidden="true">←</span> Back to Review</button>:<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">{batchAuthenticationRequired||batchSaveConflict||batchHeldByAnotherTab?"!":"✓"}</i> {batchAuthenticationRequired?"Sign in to save":batchSaveConflict?"Saving paused":batchHeldByAnotherTab?"Saving paused in this tab":"Saved automatically"}</span>{/* D778 - this bar replaces the normal one once the drafts exist, and it had no slot, so on step 2 the step's own footer portalled into the hidden bar and the visible one showed no way forward at all. */}<span className="factory-footer-slot"/><button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Save to Batch History</button></div>}
 
-      {preflightOpen && <div className="preflight-backdrop" role="presentation" onMouseDown={(e)=>{if(e.target===e.currentTarget)setPreflightOpen(false)}}><section className="preflight" role="dialog" aria-modal="true" aria-labelledby="preflight-title"><p className="mini-label">CREATE PRINTIFY DRAFTS</p>{/* D492 - the button says "Create Printify drafts for all 3 products" and this
-    dialog, the last thing before it runs, said "Create 2 product drafts?" and
-    named only the hoodie. It was describing one product while six drafts were
-    about to be made. The confirmation has to describe the run it confirms. */}
-<h2 id="preflight-title">{`Create ${requestedListingCount} private ${requestedListingCount===1?"draft":"drafts"}?`}</h2><p className="preflight-timing">Nothing publishes yet.</p><div className="preflight-list"><div><span>{activeBundle&&bundleRecipes.length>1?"Products":"Product"}</span><b>{activeBundle&&bundleRecipes.length>1?bundleRecipes.map(recipe=>recipe.name).join(", "):templateDetails?.blueprintTitle||"Selected product"}</b></div><div><span>Designs</span><b>{requestedListingCount<files.length*bundleProductCount?`${files.length} uploaded · ${requestedListingCount} drafts after exclusions`:<>{files.length} · one draft per design{activeBundle&&bundleRecipes.length>1?" on each product":""}</>}</b></div><div><span>Starting options</span><b title={bundleVariantCounts.detail}>Saved Printify colors and sizes</b></div><div><span>Next</span><b>Review previews, prices, and shipping</b></div></div><div className="preflight-actions"><button className="preflight-cancel" onClick={()=>setPreflightOpen(false)}>Go back</button><button className="preflight-confirm" disabled={running} aria-busy={running} onClick={confirmDrafts}>Create Printify drafts →</button></div></section></div>}
-
       {false&&publishConfirmOpen&&<div className="publish-confirm-backdrop" role="presentation"><section className="publish-confirm" role="alertdialog" aria-modal="true" aria-labelledby="publish-confirm-title"><span className="publish-confirm-icon">!</span><p className="mini-label">FINAL PUBLISH CONFIRMATION</p>{/* D495 - one press now publishes every product in the bundle, so the last
     screen before real money is spent has to say how many listings that is
     across how many products, not describe only the one that is open. */}
@@ -6016,7 +6004,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                  demanded, so record it and carry on rather than sending her back
                  to make it again on the page behind. */
               const undecided=bundleQualityGroups.filter(group=>group.keys.some(key=>!bundleQualityDecisions[key]));
-              if(undecided.length){decideAllQuality("include");setPreflightOpen(true);return}
+              if(undecided.length){decideAllQuality("include");beginDraftCreation();return}
               if(complete){void goToStep("finish",false,true)}else{document.querySelector(".launch-panel")?.scrollIntoView({block:"start"})}}}>Proceed anyway</button></div></section></div>}
 
       <footer><span>GOLDIE LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>

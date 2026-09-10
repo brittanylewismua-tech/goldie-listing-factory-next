@@ -21,9 +21,10 @@ test("D905: shipping is rendered immediately after finished-cost pricing",()=>{
   assert.ok(actions.indexOf("editable-draft-pricing")<actions.indexOf("post-draft-shipping-review"));
 });
 
-test("D905: the preflight tells the truth about when pricing and shipping happen",()=>{
-  assert.match(app,/Next<\/span><b>Review previews, prices, and shipping/);
-  assert.match(app,/Saved Printify colors and sizes/);
+test("D905: direct draft creation does not claim pricing and shipping happen first",()=>{
+  const create=app.slice(app.indexOf("function beginDraftCreation()"),app.indexOf("async function queueDraftSubmission()"));
+  assert.doesNotMatch(create,/Review previews, prices, and shipping|enabled variants reviewed and approved/);
+  assert.match(create,/confirmDrafts\(\)/);
   assert.doesNotMatch(app,/enabled variants reviewed and approved/);
   assert.match(gates,/Choose the Etsy shipping profile after approving the finished prices on the Images step/);
 });

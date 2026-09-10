@@ -66,7 +66,7 @@ const FEATURES = [
   ["personalization questions", /<PersonalizationEditor/],
   /* D232 renamed this heading: "— what buyers pay" stated the obvious. */
   ["Etsy shipping profile choice", /<h4>Etsy shipping profile<\/h4>|Etsy shipping profile</],
-  ["Printify draft creation", /Create Printify drafts →/],
+  ["Printify draft creation", /Create Printify drafts/],
   ["final review before publish", /<FinalListingReview/],
   ["the command bar", /<GoldieCommandBar/],
   ["support chat", /<SupportChat/],

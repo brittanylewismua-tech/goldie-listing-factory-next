@@ -121,7 +121,7 @@ test("the connect step swaps its copy on state and hides the timing note once co
 test("preview navigation renders the real later-step experiences", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
   assert.match(page, /if\(index>=3&&!templateDetails\)await loadPreviewDemo\(\)/);
-  assert.match(page, /if\(index===4\)\{goToStep\("review",false,true\);setPreflightOpen\(true\);return\}/);
+  assert.match(page, /if\(index===3\|\|index===4\)return goToStep\("review",false,true\)/);
   assert.match(page, /setFinishPhase\(index===8\?"final":"details"\)/);
 });
 

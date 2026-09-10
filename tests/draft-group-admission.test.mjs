@@ -6,12 +6,12 @@ import {CLAIM_DRAFT_GROUP_SQL,draftCreationSlotReleased,shouldRestartDraftWorkfl
 import {restoreBatchDrafts} from '../app/batch-draft-integrity.ts';
 import {runBounded} from '../app/bounded-work.ts';
 
-test('creation confirmation uses the admitted exclusion-aware draft count',()=>{
+test('direct creation uses the admitted exclusion-aware draft count and keeps its plan gate',()=>{
   const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
-  const modal=source.slice(source.indexOf('<h2 id="preflight-title">'),source.indexOf('</section></div>}',source.indexOf('<h2 id="preflight-title">')));
-  assert.match(modal,/Create \$\{requestedListingCount\} private/);
-  assert.match(modal,/\$\{requestedListingCount\} drafts after exclusions/);
-  assert.doesNotMatch(modal,/Create \$\{files.length\*bundleRecipes.length\}/);
+  const action=source.slice(source.indexOf('function beginDraftCreation()'),source.indexOf('/** Stage every member'));
+  assert.match(action,/requestedListingCount>planDraftsRemaining/);
+  assert.match(action,/confirmDrafts\(\)/);
+  assert.doesNotMatch(source,/preflightOpen|preflight-backdrop/);
 });
 
 test('creation prevents upload or product mutations and price changes paint in sync',()=>{
@@ -126,7 +126,7 @@ test('the fresh submission path stages and saves every member before one bulk ad
   assert.match(queue,/const historySave=Promise\.all\(\[persistRunNow\(\),runBounded\(members,4,member=>saveMember\(member\)\)\]\)/);
   assert.match(queue,/const \[response\]=await Promise\.all\(\[fetchWithDeadline\("\/api\/printify\/drafts"[\s\S]*historySave\]\)/);
   assert.match(queue,/await runBounded\(members,4,member=>saveMember\(member,true\)\)/);
-  assert.ok(queue.indexOf('result.accepted!==requests.length')<queue.indexOf('setDraftsAdmitted(true)'));
+  assert.ok(queue.indexOf('result.accepted!==requests.length')<queue.indexOf('setPreparationCompleted(requests.length);setDraftsAdmitted(true)'));
   assert.match(queue,/bundleMemberDesigns\(files,recipe.id,bundleQualityDecisions/);
   assert.ok(queue.indexOf('setFiles(activeMember.designs)')>queue.indexOf('result.accepted!==requests.length'));
   assert.match(queue,/bundleQualityDecisions:memberPlan.decisions/);

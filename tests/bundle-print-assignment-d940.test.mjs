@@ -22,7 +22,8 @@ test("D940: the upload card makes product scope explicit and selectable",()=>{
   assert.match(css,/\.bundle-print-products button\.selected\{border-color:#2f7a50;background:#f1faf4!important/);
 });
 
-test("D940: final confirmation states listing and print-area scope",()=>{
-  assert.match(app,/one draft per design\{activeBundle&&bundleRecipes\.length>1\?" on each product":""\}/);
+test("D940: direct creation retains listing and print-area scope",()=>{
+  assert.match(app,/const requestedListingCount=Math\.max/);
+  assert.match(app,/bundleMemberDesigns\(files,recipe\.id,bundleQualityDecisions/);
   assert.match(app,/function printPlanFor\(design:DesignFile\)/);
 });

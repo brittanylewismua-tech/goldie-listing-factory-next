@@ -17,12 +17,12 @@ test("D1281: Printify creation has one inline progress surface",()=>{
   assert.match(app,/className="batch-progress" role="status" aria-live="polite"/);
 });
 
-test("D1283: inline draft progress shows a real percentage with its spinner",()=>{
+test("D1283/D1285: inline draft progress shows real preparation and provider progress",()=>{
   assert.match(app,/className="progress-ring" aria-hidden="true"\/\>/);
-  assert.match(app,/className="progress-track" role="progressbar" aria-label="Printify drafts created"/);
-  assert.match(app,/aria-valuenow=\{runTotal\?Math\.min\(100,Math\.round\(processed\/runTotal\*100\)\):0\}/);
-  assert.match(app,/aria-valuetext=\{`\$\{processed\} of \$\{runTotal\} drafts created`\}/);
-  assert.match(app,/<b>\{runTotal\?Math\.min\(100,Math\.round\(processed\/runTotal\*100\)\):0\}%<\/b>/);
+  assert.match(app,/className="progress-track" role="progressbar" aria-label="Printify draft creation progress"/);
+  assert.match(app,/aria-valuenow=\{creationProgressPercent\}/);
+  assert.match(app,/aria-valuetext=\{creationProgressText\}/);
+  assert.match(app,/<b>\{creationProgressPercent\}%<\/b>/);
   assert.match(baseTheme,/\.progress-track\{[^}]*height:24px[^}]*position:relative[^}]*place-items:center/);
 });
 

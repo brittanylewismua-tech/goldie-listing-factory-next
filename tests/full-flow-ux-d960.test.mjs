@@ -34,7 +34,7 @@ test("D960: final Printify handoff has one save action and honest non-blocking a
   assert.match(css, /final-design-group summary em\.advice\{/);
 });
 
-test("D960: internal confirmation is black and final handoff copy is readable", () => {
-  assert.match(css, /\.app-shell \.preflight \.preflight-confirm\{background:#0d0b0c!important;color:#fff!important/);
+test("D960: free draft creation has no confirmation and final handoff copy is readable", () => {
+  assert.doesNotMatch(app,/preflightOpen|preflight-backdrop|preflight-confirm/);
   assert.match(css, /\.factory-footer\.in-bar \.footer-forward-action\{/);
 });

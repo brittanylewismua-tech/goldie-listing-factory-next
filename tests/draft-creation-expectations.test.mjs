@@ -4,13 +4,15 @@ import fs from "node:fs";
 
 const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
-test("draft creation tells the seller the consequence before it starts",()=>{
-  assert.match(app,/Nothing publishes yet\./);
-  assert.match(app,/className="preflight-timing"/);
+test("draft creation starts directly without a redundant confirmation",()=>{
+  assert.match(app,/function createDrafts\(\)[\s\S]{0,1400}beginDraftCreation\(\)/);
+  assert.doesNotMatch(app,/preflightOpen|preflight-backdrop|preflight-timing/);
 });
 
 test("draft creation reports a live count instead of looking hung",()=>{
   assert.match(app,/Creating drafts · \$\{processed\} of \$\{runTotal\} finished/);
+  assert.match(app,/creationProgressPercent/);
+  assert.match(app,/artwork files prepared/);
 });
 
 test("the Printify photo limit names current photo sources",()=>{

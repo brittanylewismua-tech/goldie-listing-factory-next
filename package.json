@@ -21,7 +21,8 @@
     "konva": "^10.3.1",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "react-konva": "^19.2.5"
+    "react-konva": "^19.2.5",
+    "upng-js": "^2.1.0"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",

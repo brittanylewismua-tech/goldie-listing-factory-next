@@ -1427,7 +1427,8 @@ test("D419: the actions that cost money cannot be fired twice", async () => {
 
   assert.match(app, /const draftRunInFlight=useRef\(false\);/);
   assert.match(app, /if\(draftRunInFlight\.current\)return;/);
-  assert.match(app, /<button className="preflight-confirm" disabled=\{running\}/);
+  assert.match(app, /if\(draftRunInFlight\.current\|\|!activeRecipe\|\|!templateDetails\)return/);
+  assert.match(app, /className="launch-button"[^>]*disabled=\{!ready \|\| bundleQualityGroups\.length>0 \|\| running/);
 });
 
 /* D420/D422 · A number input bound straight to its number is a trap: clearing

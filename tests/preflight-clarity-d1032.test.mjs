@@ -3,14 +3,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-const modal=app.slice(app.indexOf('<h2 id="preflight-title">'),app.indexOf('</section></div>}',app.indexOf('<h2 id="preflight-title">')));
-
-test("draft confirmation contains only the decisions needed to continue",()=>{
-  assert.match(modal,/Nothing publishes yet/);
-  assert.match(modal,/Saved Printify colors and sizes/);
-  assert.match(modal,/Review previews, prices, and shipping/);
-  assert.doesNotMatch(modal,/Permanent description|Plan allowance|Inside-label artwork|Primary artwork makes/);
-  assert.equal((modal.match(/<div><span>/g)||[]).length,4);
+test("free private draft creation has no confirmation detour",()=>{
+  assert.doesNotMatch(app,/preflightOpen|preflight-backdrop|preflight-title/);
+  assert.match(app,/onClick=\{createDrafts\}/);
+  assert.match(app,/function beginDraftCreation\(\)[\s\S]{0,900}confirmDrafts\(\)/);
 });
 
 test("final price approval persists to its original product even when a bundle product is switched",()=>{

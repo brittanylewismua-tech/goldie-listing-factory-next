@@ -1,4 +1,41 @@
 export const MAX_DIRECT_PRINTIFY_BYTES = 40 * 1024 * 1024;
+const LARGE_TRANSPARENT_PNG_BYTES = 12 * 1024 * 1024;
+
+type OptimizerReply = { ok: true; buffer: ArrayBuffer } | { ok: false; error?: string };
+let optimizerQueue: Promise<void> = Promise.resolve();
+
+function runLargePngOptimizer(file: File) {
+  return new Promise<Blob | null>(async (resolve) => {
+    const worker = new Worker(new URL("./large-png-worker.ts", import.meta.url), { type: "module" });
+    const timeout = window.setTimeout(() => { worker.terminate(); resolve(null); }, 60_000);
+    worker.onmessage = (event: MessageEvent<OptimizerReply>) => {
+      window.clearTimeout(timeout);
+      worker.terminate();
+      resolve(event.data.ok ? new Blob([event.data.buffer], { type: "image/png" }) : null);
+    };
+    worker.onerror = () => { window.clearTimeout(timeout); worker.terminate(); resolve(null); };
+    try {
+      const buffer = await file.arrayBuffer();
+      worker.postMessage({ buffer, originalBytes: file.size }, [buffer]);
+    } catch {
+      window.clearTimeout(timeout);
+      worker.terminate();
+      resolve(null);
+    }
+  });
+}
+
+/* Large transparent PNGs are serialized so two 25–40 MB designs cannot each
+   hold several decoded pixel buffers at once on a memory-constrained laptop.
+   The worker accepts its smaller indexed result only when a sampled visual and
+   alpha-error gate passes; otherwise the untouched original is used. */
+function optimizeLargeTransparentPng(file: File) {
+  let finish!: () => void;
+  const turn = new Promise<void>((resolve) => { finish = resolve; });
+  const prior = optimizerQueue;
+  optimizerQueue = turn;
+  return prior.then(() => runLargePngOptimizer(file)).finally(finish);
+}
 
 function jpegBlob(canvas: HTMLCanvasElement, quality: number) {
   return new Promise<Blob>((resolve, reject) => canvas.toBlob(
@@ -9,6 +46,12 @@ function jpegBlob(canvas: HTMLCanvasElement, quality: number) {
 }
 
 export async function prepareArtworkFile(file: File, hasTransparency: boolean, allowWhiteFlatten = false) {
+  if (/\.png$/i.test(file.name) && hasTransparency && file.size > LARGE_TRANSPARENT_PNG_BYTES) {
+    const optimized = await optimizeLargeTransparentPng(file);
+    if (optimized && optimized.size < file.size * .75 && optimized.size <= MAX_DIRECT_PRINTIFY_BYTES) {
+      return { blob: optimized, fileName: file.name.replace(/\.png$/i, "-optimized.png") };
+    }
+  }
   if (file.size <= MAX_DIRECT_PRINTIFY_BYTES) return { blob: file as Blob, fileName: file.name };
   if (hasTransparency && !allowWhiteFlatten) throw new Error("This transparent PNG is too large for Printify's upload request. Export an optimized transparent PNG under 40 MB; keep the same pixel dimensions so the DPI does not change.");
 

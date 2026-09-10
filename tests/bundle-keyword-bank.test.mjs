@@ -23,7 +23,7 @@ test('draft creation does not spend AI credits generating unrequested titles',()
   const app=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
   const block=app.slice(app.indexOf('async function continueBundle('),app.indexOf('async function createCustomShippingProfile('));
   assert.doesNotMatch(block,/autoTitleForDesign|\/api\/keyword-lists/);
-  const apply=app.slice(app.indexOf('async function applyBankToBundle('),app.indexOf('const bundleVariantCounts='));
+  const apply=app.slice(app.indexOf('async function applyBankToBundle('),app.indexOf('const bundleQualityIssues='));
   assert.doesNotMatch(apply,/\/api\/product-recipes/);
   assert.match(apply,/method:"PATCH"/);
   assert.match(apply,/if\(!response.ok\)throw/);
