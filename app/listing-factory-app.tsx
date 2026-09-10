@@ -1430,6 +1430,26 @@ export default function ListingFactoryApp() {
   const [missingPhotoDraftIds,setMissingPhotoDraftIds]=useState<string[]>([]);
   const [titlePulseIds,setTitlePulseIds]=useState<Set<string>>(new Set());
 
+  /* D1314 · The remaining corrective dialogs had visible buttons but leaked
+     Tab into the page behind them and ignored Escape. Match the keyboard
+     behavior already used by Save, Restart, help, and image enlargement. */
+  useEffect(()=>{
+    const modal=blockingModal
+      ?{label:"blocking-modal-title",close:()=>setBlockingModal(null)}
+      :pendingCategoryChange
+        ?{label:"category-change-title",close:()=>setPendingCategoryChange(null)}
+        :missingPhotoDraftIds.length
+          ?{label:"missing-photo-title",close:()=>setMissingPhotoDraftIds([])}
+          :pixelWarningOpen
+            ?{label:"pixel-warning-title",close:()=>setPixelWarningOpen(false)}
+            :null;
+    if(!modal)return;
+    const restore=containModalFocus(modal.label);
+    const close=(event:KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();modal.close()}};
+    window.addEventListener("keydown",close);
+    return()=>{window.removeEventListener("keydown",close);restore()};
+  },[blockingModal,pendingCategoryChange,missingPhotoDraftIds.length,pixelWarningOpen]);
+
   useEffect(()=>{if(imageStepError&&allCreatedListingsHaveImages())setImageStepError("")},[imageStepError,printifyImageIndices,printifyImageSelections,preparedMockupCounts,drafts]);
   /* D544 - this waited for finishPhase==="etsy", a phase the app never enters:
      continueToEtsyDetails() sets it to "details" and only the URL said otherwise.
