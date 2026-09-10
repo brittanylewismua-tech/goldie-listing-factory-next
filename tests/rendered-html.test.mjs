@@ -439,7 +439,8 @@ test("matches Printify editor DPI instead of comparing against template pixel di
   const page = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   assert.match(page, /maxPlacementScale:isRigidPaperProduct\(templateDetails\)\?1:undefined/);
   assert.doesNotMatch(page, /Target:\s*\{templateDetails/);
-  assert.match(page, /Estimated \$\{quality.dpi\} DPI 路 primary design/);
+  assert.match(page, /Estimated \$\{quality.dpi\} DPI 路 \$\{artworkLabel\}/);
+  assert.match(page, /const artworkLabel=printSides\.length\?`\$\{printSides\.join\(" \+ "\)\} artwork`:"Primary artwork"/);
 });
 
 test("calculates every Printify variant price from its own cost and Etsy fee profile", async () => {
@@ -4812,7 +4813,8 @@ test("placement cards contain only the preview, identity, DPI and editor link 鈥
   assert.match(placement, /name:`Listing \$\{listings\.findIndex/);
   assert.doesNotMatch(placement, /name:design\?\.title|name:design\?\.name/,
     "a junk upload filename never outranks the listing number");
-  assert.match(placement, /Estimated \$\{quality.dpi\} DPI 路 primary design/);
+  assert.match(placement, /Estimated \$\{quality.dpi\} DPI 路 \$\{artworkLabel\}/);
+  assert.match(placement, /Object\.keys\(draft\.artworkSummary\|\|\{\}\)\.map\(printSideLabel\)/);
   assert.doesNotMatch(placement, /DPI 路 good to print/);
   assert.match(placement, /openLabel:.*Adjust in Printify/);
   assert.doesNotMatch(placement, /Printify views|Unpublished Printify draft|Choose the correct shop[^\"]*\)<\/small>/);

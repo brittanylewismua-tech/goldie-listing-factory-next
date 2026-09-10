@@ -5,8 +5,8 @@ import {readFileSync} from "node:fs";
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
 test("D1301: Review destinations open at their task heading instead of a buried field",()=>{
-  assert.match(app,/if\(section==="title"\|\|section==="description"\|\|section==="etsy"\)[\s\S]*?window\.setTimeout\(scrollFactoryToTop,300\)/);
-  assert.match(app,/if\(target\.phase==="description"\|\|target\.phase==="etsy"\|\|target\.phase==="title"\)scrollFactoryToTop\(\)/);
+  assert.match(app,/if\(section==="title"\|\|section==="description"\|\|section==="etsy"\)[\s\S]*?window\.setTimeout\(scrollReviewTaskToTop,300\)/);
+  assert.match(app,/else goToStep\("finish",false,true\);[\s\S]*?window\.setTimeout\(scrollReviewTaskToTop,300\)/);
   assert.doesNotMatch(app,/section==="title"\?"\.factory-listing-form \.design-fields"/);
   assert.doesNotMatch(app,/target\.phase==="description"\?"\.individual-description-disclosure"/);
 });

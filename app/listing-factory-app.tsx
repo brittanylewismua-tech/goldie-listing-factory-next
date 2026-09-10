@@ -2075,6 +2075,14 @@ export default function ListingFactoryApp() {
     reset();
     return reset;
   }
+  function scrollReviewTaskToTop(){
+    scrollFactoryToTop();
+    /* In a bundle, product headers can put the selected editor below the first
+       viewport even when the app scroller is at zero. The rail and work panel
+       share this top edge, so this lands on the task heading without skipping
+       into a nested price, color, photo or artwork control. */
+    document.querySelector<HTMLElement>(".review-listing-editor-nav")?.scrollIntoView({block:"start"});
+  }
   function goToStep(rawStep:WorkflowStep,replace=false,force=false){
     const step=normalizeStep(rawStep);if(!force){const issues=requiredForStep(step);if(issues.length)return stopWith("Finish all sections first.",issues);if(!canOpenStep(step))return;}setWorkflowStep(normalizeStep(step));const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);scrollFactoryToTop()}
 
@@ -3029,9 +3037,14 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
          its saved product explicitly says colour selection is not required. */
       const rowProduct=isActive?templateDetails:bundleColorProducts[recipe.id];
       const hasColorAxis=rowProduct?Boolean(rowProduct.colorOptions?.length):recipe.requiresColorSelection!==false;
-      const rowColors=(isActive?selectedColorIds:bundleColorChoices[recipe.id])||recipe.defaultColorIds||[];
-      const rowSizes=(isActive?selectedSizeIds:bundleSizeChoices[recipe.id])||recipe.defaultSizeIds||[];
       const productDrafts=isActive?drafts:(bundleMembers[recipe.id]?.drafts||[]);
+      /* Review edits belong to one listing. Its colors and sizes may differ
+         from every other listing on the same product, so the header must use
+         the selected draft instead of the product-wide defaults. */
+      const focusedReviewDraft=isActive&&reviewEditing?productDrafts.find(draft=>draft.id===reviewEditing.id):undefined;
+      const focusedReviewAxes=focusedReviewDraft?draftVariantAxes(focusedReviewDraft):null;
+      const rowColors=focusedReviewAxes?focusedReviewAxes.colors:((isActive?selectedColorIds:bundleColorChoices[recipe.id])||recipe.defaultColorIds||[]);
+      const rowSizes=focusedReviewAxes?focusedReviewAxes.sizes:((isActive?selectedSizeIds:bundleSizeChoices[recipe.id])||recipe.defaultSizeIds||[]);
       const ownerPrefix=`${recipe.id}:`;
       const priceGroups=costReviewGroups().filter(group=>group.key.startsWith(ownerPrefix));
       const priceReviewRequired=priceGroups.length>0;
@@ -3040,12 +3053,13 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       /* A focused Review edit is one listing. Reporting the product-wide photo
          total here made the section header say "2 photos" directly above a card
          that correctly said "1 photo". */
-      const focusedPhotoDraft=isActive&&reviewEditing?.section==="photos"?drafts.find(draft=>draft.id===reviewEditing.id):undefined;
+      const focusedPhotoDraft=isActive&&reviewEditing?.section==="photos"?focusedReviewDraft:undefined;
       const focusedPhotoDesign=focusedPhotoDraft?files.find(file=>file.id===focusedPhotoDraft.clientId):undefined;
       const focusedPhotoCount=focusedPhotoDraft?.id?(printifyImageSelections[focusedPhotoDraft.id]??printifyImageIndices).length+(preparedMockupCounts[focusedPhotoDraft.id]||0)+((focusedPhotoDesign?.sizeGuideName??sizeGuideName)?1:0):null;
       const listingPhotoCount=focusedPhotoCount??(counts.photos+counts.mockups);
+      const focusedArtworkValue=focusedReviewDraft?`Listing ${Math.max(1,files.findIndex(file=>file.id===focusedReviewDraft.clientId)+1)} of ${files.length}`:started?plural(counts.drafts,"listing"):blank;
       return [
-      {label:"Artwork placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
+      {label:"Artwork placement",value:focusedArtworkValue,pending,done:counts.drafts>0,task:"placement"},
       ...(hasColorAxis?[{label:"Product colors",value:rowColors.length?plural(rowColors.length,"color"):"Choose colors",pending,done:rowColors.length>0,task:"draft-colors"}]:[]),
       {label:"Sizes",value:rowSizes.length?plural(rowSizes.length,"size"):"Choose sizes",pending,done:rowSizes.length>0,task:"draft-sizes"},
       {label:"Set prices",value:priceApproved?(priceReviewRequired?"Saved":"Ready"):"Edit prices",pending,done:priceApproved,task:"draft-pricing"},
@@ -3197,18 +3211,18 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       rememberReviewEditor(targetDesign.id,section);
       if(section==="title"||section==="description"||section==="etsy"){
         setFinishPhase("details");goToStep("finish",false,true);
-        /* The page reset is the destination for these editors. Scrolling to a
-           field/card hid the section heading and its batch-wide controls under
-           the sticky shell, so sellers arrived halfway through the task. */
-        window.setTimeout(scrollFactoryToTop,300);return;
+        window.setTimeout(scrollReviewTaskToTop,300);return;
       }
       setActiveTask(section==="artwork"?"placement":section==="variants"?"draft-colors":section==="pricing"?"draft-pricing":"photos");goToStep("designs",false,true);
+      window.setTimeout(scrollReviewTaskToTop,300);
     };
     const axes=draftVariantAxes(draft),selectedPhotos=draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices;
     const listingPhotoCount=selectedPhotos.length+(draft.id?preparedMockupCounts[draft.id]||0:0);
+    const reviewProductFamily=productFamily(draft.productName||activeRecipe?.name||templateDetails?.blueprintTitle||"");
+    const productOptionsLabel=["tee","hoodie","crewneck","tank","longSleeve"].includes(reviewProductFamily)?"Colors & sizes":"Product options";
     const entries=[
       {key:"artwork",label:"Artwork placement",done:Boolean(draft.id&&draft.status==="Created")},
-      {key:"variants",label:"Colors & sizes",done:Boolean((!templateDetails?.colorOptions?.length||axes.colors.length)&&(!templateDetails?.sizeOptions?.length||axes.sizes.length))},
+      {key:"variants",label:productOptionsLabel,done:Boolean((!templateDetails?.colorOptions?.length||axes.colors.length)&&(!templateDetails?.sizeOptions?.length||axes.sizes.length))},
       {key:"pricing",label:"Pricing & shipping",done:reviewedPricingAndShippingReady(draft)},
       {key:"photos",label:"Listing photos",done:listingPhotoCount>0},
       {key:"title",label:"Title & tags",done:Boolean(design.title.trim()&&design.tags.length)},
@@ -3265,14 +3279,9 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     else if(target.phase==="variants"){setActiveTask("draft-colors");goToStep("designs",false,true)}
     else if(target.phase==="artwork"){setActiveTask("placement");goToStep("designs",false,true)}
     else goToStep("finish",false,true);
-    // Wait for the normal page-top reset, then focus this specific editor.
-    window.setTimeout(()=>{
-      if(target.phase==="description"||target.phase==="etsy"||target.phase==="title")scrollFactoryToTop();
-      else {
-        const selector=target.phase==="mockups"||target.phase==="photos"?`[data-listing-row="${CSS.escape(target.clientId)}"]`:target.phase==="variants"?".draft-color-selector":target.phase==="artwork"?".placement-review":target.phase==="pricing"?".pricing-controls":".factory-listing-grid";
-        document.querySelector(selector)?.scrollIntoView({block:"start"});
-      }
-    },300);
+    // Wait for the destination to render, then reset the app's own scroller.
+    // A nested scroll target hides the task heading and first controls.
+    window.setTimeout(scrollReviewTaskToTop,300);
   },[reviewEdit,switchingProduct,restoringBatch,drafts]);
   /* D553 - openListing chose which listing's work was visible. Nothing chooses
      now: opening a task shows every listing's work, which is what step 2 did
@@ -3529,7 +3538,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
           apart. Failed listings keep their own row: they have no preview to
           show and they must still offer retry and help. */}
       <div className="task-panel-body placement-review-grid">
-        <p className="placement-printify-note">To adjust these designs in Printify, sign in to Printify first and make sure the correct shop is selected. Otherwise, Printify may show an error when you open a draft.</p>
+        <p className="placement-printify-note">Printify may ask you to sign in and choose the matching shop before editing.</p>
         {selectedPlacementDrafts.length?<div className="placement-selection-actions"><button type="button" onClick={()=>setSelectedPlacementDrafts(listings.filter(({draft})=>draft.status==="Created"&&draft.id).map(({draft})=>draft.id!))}>Select all</button><button type="button" onClick={()=>requestDraftTabs(drafts.filter(draft=>draft.id&&selectedPlacementDrafts.includes(draft.id)&&draft.editorUrl))}>Open selected listings in Printify ↗</button></div>:null}
         {visibleListings.filter(({draft})=>draft.status!=="Created").map(({draft,design})=>
           <div className="task-listing failed" key={draft.clientId}>
@@ -3541,7 +3550,9 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
         <ArtworkGrid items={visibleListings.filter(({draft})=>draft.status==="Created").map(({draft,design})=>{
           const displayScale=printTargetFor(templateDetails).scale;
           const quality=design?.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;
-          const dpi=!quality?"Check print quality in Printify":`Estimated ${quality.dpi} DPI · primary design`;
+          const printSides=Object.keys(draft.artworkSummary||{}).map(printSideLabel);
+          const artworkLabel=printSides.length?`${printSides.join(" + ")} artwork`:"Primary artwork";
+          const dpi=!quality?`Check print quality in Printify · ${artworkLabel}`:`Estimated ${quality.dpi} DPI · ${artworkLabel}`;
           return {
             key:draft.clientId,
             previewUrl:draft.previewUrl||design?.previewUrl,
@@ -3691,7 +3702,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           <div className={titlePulseIds.size?"titles-resolving":""}>{titlesLead()}</div>
         </FactoryPanel>}
         {focusedSection==="description"&&<FactoryPanel index={1} title={activeBundle?"Product description":"Batch description"}
-          description="Set the shared description, then customize this listing only if needed."
+          description="Set the shared description, then customize individual listings only if needed."
           state={description.trim()?"Added":"Not added"}
           tone={description.trim()?"done":"attention"}
           open

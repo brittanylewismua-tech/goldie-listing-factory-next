@@ -18,10 +18,11 @@ test("D1251: Review reports readiness from saved listing data",()=>{
 });
 
 test("D1251: all Review rows route directly into the matching editor",()=>{
-  for(const pair of [["artwork","Artwork placement"],["variants","Colors & sizes"],["pricing","Pricing & shipping"],["photos","Listing photos"]]){
+  for(const pair of [["artwork","Artwork placement"],["pricing","Pricing & shipping"],["photos","Listing photos"]]){
     assert.ok(review.includes(`label:"${pair[1]}"`));
     assert.ok(review.includes(`onEditProduct?.("${pair[0]}",draft)`));
   }
+  assert.match(review,/label:optionLabel[\s\S]*?onEditProduct\?\.\("variants",draft\)/);
   for(const pair of [["title","Title & tags"],["description","Description"],["etsy","Etsy details & personalization"]]){
     assert.ok(review.includes(`label:"${pair[1]}"`));
     assert.ok(review.includes(`onEdit("${pair[0]}",draft)`));
@@ -29,14 +30,15 @@ test("D1251: all Review rows route directly into the matching editor",()=>{
 });
 
 test("D1251: the listing editor keeps every section and Review return visible",()=>{
-  for(const label of ["Artwork placement","Colors & sizes","Pricing & shipping","Listing photos","Title & tags","Description","Etsy details & personalization"]){
+  for(const label of ["Artwork placement","Pricing & shipping","Listing photos","Title & tags","Description","Etsy details & personalization"]){
     assert.ok(app.includes(`label:"${label}"`));
   }
+  assert.match(app,/\?"Colors & sizes":"Product options"/);
   assert.match(app,/className="review-listing-editor-nav"/);
   assert.match(app,/Back to Review<\/button>/);
   assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
-  assert.match(app,/window\.setTimeout\(scrollFactoryToTop,300\)/);
-  assert.match(app,/target\.phase==="description"\|\|target\.phase==="etsy"\|\|target\.phase==="title"/);
+  assert.match(app,/window\.setTimeout\(scrollReviewTaskToTop,300\)/);
+  assert.match(app,/function scrollReviewTaskToTop\(\)[\s\S]*?"\.review-listing-editor-nav"/);
   assert.match(app,/visibleListings=reviewEditing\?listings\.filter/);
   assert.match(app,/position:reviewEditing\?\{index:listings\.findIndex/);
   assert.match(readFileSync(new URL("..\/app\/listing-rows.tsx",import.meta.url),"utf8"),/position=row\.position\|\|\{index:index\+1,total:rows\.length\}/);
@@ -71,9 +73,10 @@ test("post-draft size editing names its listing scope truthfully",()=>{
   assert.match(app,/inCard scope="listing"/);
 });
 
-test("Review uses singular variant grammar for one-option products",()=>{
+test("Review uses singular product-option grammar for one-option products",()=>{
   const review=readFileSync(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8");
-  assert.match(review,/variants===1\?"variant":"variants"/);
+  assert.match(review,/reviewOptionSummary\(/);
+  assert.doesNotMatch(review,/variants===1\?"variant":"variants"/);
 });
 
 test("Review editing identifies the current listing instead of repeating the overview",()=>{
