@@ -5,7 +5,7 @@ import { isOwner } from "@/app/mastermind/access";
 import { scheduleTrialReminder, cancelTrialReminder } from "@/app/trial-reminder";
 import { billingRuntime } from "@/app/billing";
 import { logError } from "@/app/error-log";
-import {inspectLaunchListing} from './listing';
+import {cleanupLaunchListings,inspectLaunchListing} from './listing';
 export async function GET(request:Request){
  const user=await getChatGPTUser();if(!user||!isOwner(user))return NextResponse.json({error:'Not authorized.'},{status:403});
  const productId=new URL(request.url).searchParams.get('productId')||'';
@@ -16,8 +16,9 @@ export async function POST(request:Request){
   const user=await getChatGPTUser();
   if(!user||!isOwner(user))return NextResponse.json({error:"Not authorized."},{status:403});
   if(request.headers.get("origin")!==new URL(request.url).origin)return NextResponse.json({error:"Invalid origin."},{status:403});
-  const body=await request.json() as {action?:string;id?:string};
+  const body=await request.json() as {action?:string;id?:string;batchIds?:string[]};
   try{
+    if(body.action==="cleanup-qa")return NextResponse.json(await cleanupLaunchListings(user.userId,Array.isArray(body.batchIds)?body.batchIds:[]));
     if(body.action==="busy"){
       let accepted=0;
       await Promise.all(Array.from({length:20},async()=>{let attempts=0;const response=await boundedVisionFetch("https://fal.run/openrouter/router/vision",{method:"POST",body:'{"prompt":"local-simulation"}'},async()=>{attempts++;if(attempts===1)return new Response("busy",{status:429,headers:{"Retry-After":"0"}});accepted++;return Response.json({output:"ok"});});if(response.status!==200||attempts!==2)throw Error("Busy recovery failed.");}));

@@ -27,3 +27,41 @@ export async function inspectLaunchListing(owner:string,productId:string){
  }
  return {readOnly:true,productId,title:product.title,etsyShopId:etsy.shopId,linkedListingId:Number(product.external?.id)||null,locked:!!product.is_locked,variants:product.variants.length,enabled:product.variants.filter(v=>v.is_enabled).length,maxSkuLength:Math.max(0,...product.variants.map(v=>(v.sku||'').length)),prices:[...new Set(product.variants.filter(v=>v.is_enabled).map(v=>v.price))],variantFingerprint:await hash(product.variants.map(({id,price,is_enabled})=>({id,price,is_enabled}))),artworkFingerprint:await hash(product.print_areas),exactTitleMatches:matches,scans};
 }
+
+/** Delete only explicitly named, owner-created QA drafts after a complete
+ * provider preflight. This maintenance path cannot select customer products. */
+export async function cleanupLaunchListings(owner:string,batchIds:string[]){
+ const runtime=env as unknown as {DB:D1Database;ARTWORK:R2Bucket;PRINTIFY_TOKEN_KEY:string};
+ if(batchIds.length<1||batchIds.length>8||batchIds.some(id=>!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))throw Error('Choose 1 to 8 exact QA provider batch IDs.');
+ const marks=batchIds.map(()=>'?').join(',');
+ const rows=await runtime.DB.prepare(`SELECT batch_id,response_json FROM printify_draft_results WHERE user_id=? AND batch_id IN (${marks}) AND status='succeeded'`).bind(owner,...batchIds).all<{batch_id:string;response_json:string}>();
+ if(!rows.results.length||new Set(rows.results.map(row=>row.batch_id)).size!==new Set(batchIds).size)throw Error('Every QA provider batch must belong to this account and contain a successful draft.');
+ const drafts=await Promise.all(rows.results.map(async row=>unpackDraftMedia(row.response_json,owner,runtime.ARTWORK) as Promise<{id:string;shopId:number;title:string}>));
+ const unique=[...new Map(drafts.map(draft=>[draft.id,draft])).values()];
+ if(unique.some(draft=>!/^QA (?:CAPACITY|E2E)/.test(draft.title)))throw Error('Cleanup is restricted to exact QA CAPACITY or QA E2E products.');
+ const connection=await runtime.DB.prepare('SELECT encrypted_token FROM printify_connections WHERE user_id=?').bind(owner).first<{encrypted_token:string}>();
+ if(!connection)throw Error('Printify is not connected.');
+ const token=await decryptPrintifyToken(connection.encrypted_token,runtime.PRINTIFY_TOKEN_KEY),headers={Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory'};
+ const etsy=await etsyConnection(owner),etsyHeaders={'x-api-key':etsyApiCredential(),Authorization:`Bearer ${etsy.token}`};
+ const products:Array<{id:string;shopId:number;title:string;etsyId:number|null;missing:boolean}>=[];
+ for(const draft of unique){
+  const response=await fetch(`https://api.printify.com/v1/shops/${draft.shopId}/products/${draft.id}.json`,{headers,signal:AbortSignal.timeout(15000)});
+  if(response.status===404){products.push({...draft,etsyId:null,missing:true});continue}
+  if(!response.ok)throw Error('Printify could not preflight every exact QA product. Nothing was deleted.');
+  const product=await response.json() as {title:string;external?:{id?:string|number}};
+  if(!/^QA (?:CAPACITY|E2E)/.test(product.title)||product.title!==draft.title)throw Error('A selected product is no longer the exact QA draft. Nothing was deleted.');
+  const etsyId=Number(product.external?.id)||null;
+  if(etsyId){
+   const listingResponse=await fetch(`https://api.etsy.com/v3/application/listings/${etsyId}`,{headers:etsyHeaders,signal:AbortSignal.timeout(15000)});await recordEtsyCall(listingResponse);
+   if(!listingResponse.ok)throw Error('Etsy could not preflight every linked QA draft. Nothing was deleted.');
+   const listing=await listingResponse.json() as {shop_id:number;state:string;title:string};
+   if(Number(listing.shop_id)!==Number(etsy.shopId)||listing.state!=='draft'||!/^QA (?:CAPACITY|E2E)/.test(listing.title))throw Error('A linked Etsy item is not an exact QA draft. Nothing was deleted.');
+  }
+  products.push({...draft,etsyId,missing:false});
+ }
+ const deletedEtsy:number[]=[],pendingEtsy:number[]=[];let etsyDeleteError='';
+ for(const product of products){if(!product.etsyId)continue;try{const response=await fetch(`https://api.etsy.com/v3/application/listings/${product.etsyId}`,{method:'DELETE',headers:etsyHeaders,signal:AbortSignal.timeout(15000)});await recordEtsyCall(response);if(!response.ok)throw Error(`Etsy returned ${response.status}.`);deletedEtsy.push(product.etsyId)}catch(error){pendingEtsy.push(product.etsyId);etsyDeleteError=error instanceof Error?error.message:'Etsy could not delete the QA draft.'}}
+ const deletedPrintify:string[]=[],alreadyMissingPrintify=products.filter(product=>product.missing).map(product=>product.id);
+ for(const product of products){if(product.missing)continue;const response=await fetch(`https://api.printify.com/v1/shops/${product.shopId}/products/${product.id}.json`,{method:'DELETE',headers,signal:AbortSignal.timeout(15000)});if(!response.ok&&response.status!==404)throw Error(`Printify could not delete QA product ${product.id}.`);(response.status===404?alreadyMissingPrintify:deletedPrintify).push(product.id)}
+ return {deletedPrintify,alreadyMissingPrintify,deletedEtsy,pendingEtsy,etsyDeleteError,productIds:products.map(product=>product.id),etsyListingIds:products.flatMap(product=>product.etsyId?[product.etsyId]:[])};
+}

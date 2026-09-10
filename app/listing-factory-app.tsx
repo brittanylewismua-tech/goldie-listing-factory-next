@@ -2147,7 +2147,18 @@ export default function ListingFactoryApp() {
       const children=payload.children||[];
       const order=runState.run.productOrder||[];
       const byOrder=[...children].sort((a,b)=>order.indexOf(a.productId)-order.indexOf(b.productId));
-      const open=byOrder.find(child=>child.published===0)
+      const requestedListing=url.searchParams.get("listing");
+      let requestedChild:typeof children[number]|undefined;
+      if(requestedListing){
+        const inspected=await Promise.all(byOrder.map(async child=>{
+          const childResponse=await batchFetch(`/api/batches?id=${encodeURIComponent(child.id)}`);
+          if(!childResponse.ok)return null;
+          const childPayload=await childResponse.json() as {batch?:{state?:{designs?:Array<{id?:string}>}}};
+          return childPayload.batch?.state?.designs?.some(design=>design.id===requestedListing)?child:null;
+        }));
+        requestedChild=inspected.find((child):child is typeof children[number]=>Boolean(child));
+      }
+      const open=requestedChild||byOrder.find(child=>child.published===0)
         ||byOrder[byOrder.length-1];
       runIdRef.current=id;
       if(open&&open.id!==id){const restored=await restoreBatchById(open.id,requestedStep,requestedPhase,push);if(restored){const childMap=Object.fromEntries(children.filter(child=>child.productId&&child.id).map(child=>[child.productId,child.id]));setBundleBatchIds(current=>({...childMap,...current}))}return restored}
@@ -2172,13 +2183,16 @@ export default function ListingFactoryApp() {
        Printify drafts can still be finished here. */
     const unavailable=designs.filter(design=>design.originalUnavailable&&!savedDrafts.some(draft=>draft.clientId===design.id&&draft.status==="Created"&&draft.id)).length;
     if(unavailable)setRestoreNotice(`${unavailable===designs.length?"The original uploads are":"Some original uploads are"} not available in this browser. Your ${unavailable===1?"listing is":"listings are"} restored and can still be finished here. Upload the original ${unavailable===1?"file":"files"} again only if you need to recreate a Printify draft.`);
+    const requestedListing=url.searchParams.get("listing"),requestedSection=url.searchParams.get("section") as ReviewSection|null;
+    const focusedSection=requestedListing&&requestedSection&&["artwork","variants","pricing","photos","title","description","etsy"].includes(requestedSection)?requestedSection:null;
+    const focusedDraft=focusedSection?savedDrafts.find(draft=>draft.clientId===requestedListing&&draft.id):undefined;
     const savedProductColors=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-colors-${state.templateDetails.id}`)||"[]") as number[]:[];const savedProductSizes=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-sizes-${state.templateDetails.id}`)||"[]") as number[]:[];batchIdRef.current=id;setBatchDisplayName(state.batchDisplayName||"");/* D693 - restoring this from setup_name is how the stale recipe name kept coming back. D686 stopped Batch History READING setup_name as a seller-chosen name, but restore still seeded the seller-name field from it, autosave then wrote that into the snapshot, and the reader trusted it - the stale name laundered itself into the field meant to hold only what she typed. Measured on batch b8ce58cb after D686 deployed: state.batchDisplayName "Gildan Hoodie", activeRecipe "Comfort Colors 1566 crewneck", product_title "Unisex Garment-Dyed Sweatshirt". A batch she never named restores blank, and Batch History falls through to the design or the product, which is the truth. */setKeptAsDrafts(Boolean(state.keptAsDrafts));/* D703 - the snapshot SAVES batchReceipt and the restore never read it back, so
     opening a batch that had published left the receipt at its initial null, the
     next autosave wrote that null over the record, and the proof of what went live
     was destroyed by looking at it. Measured on 0b79a9b6: receipt present at
     02:53:56 with four Etsy URLs, null by 02:59:23 after I opened the batch to
     verify it. Batch History then reported it as a DRAFT with a Resume button while
-    its four listings were live on Etsy. */setBatchReceipt(state.batchReceipt||null);setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(normalizeProductDescription(state.description));if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(Array.isArray(state.selectedColorIds)?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(Array.isArray(state.selectedSizeIds)?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setBundleBatchIds(state.bundleBatchIds||{});setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",requestedPhase??requestedFinishPhase(requestedStep),Boolean(state.complete)));setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=restoredWorkflowStep(payload.batch.step||"connect",requestedStep,Boolean(state.complete));setWorkflowStep(normalizeStep(step));/* Once the parent run is known, its id remains the public address. A child id
+    its four listings were live on Etsy. */setBatchReceipt(state.batchReceipt||null);setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(normalizeProductDescription(state.description));if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(Array.isArray(state.selectedColorIds)?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(Array.isArray(state.selectedSizeIds)?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setBundleBatchIds(state.bundleBatchIds||{});setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",requestedPhase??requestedFinishPhase(requestedStep),Boolean(state.complete)));if(focusedDraft)setFinishPhase("details");if(focusedDraft&&focusedSection){setActiveDesign(focusedDraft.clientId);setReviewEditing({id:focusedDraft.id!,clientId:focusedDraft.clientId,section:focusedSection})}setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=focusedDraft&&focusedSection?["artwork","variants","pricing","photos"].includes(focusedSection)?"designs":"finish":restoredWorkflowStep(payload.batch.step||"connect",requestedStep,Boolean(state.complete));setWorkflowStep(normalizeStep(step));/* Once the parent run is known, its id remains the public address. A child id
     cannot recover the complete bundle after refresh. *//* D1023 · Parented runs
     rebuild the product map from the actual children returned by /api/batches.
     A child snapshot can be stale and must never manufacture a sibling from a
@@ -3176,10 +3190,10 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     const draft=drafts.find(item=>item.clientId===design.id&&item.id===reviewEditing.id)||drafts.find(item=>item.clientId===design.id);
     if(!draft)return null;
     const current=workflowStep==="finish"?(reviewEditing.section||"title"):activeTask==="placement"?"artwork":activeTask==="draft-colors"||activeTask==="draft-sizes"?"variants":activeTask==="draft-pricing"||activeTask==="draft-shipping"?"pricing":activeTask==="photos"?"photos":"";
-    const open=(section:ReviewSection)=>{
-      setActiveDesign(design.id);
-      setReviewEditing({...reviewEditing,section});
-      rememberReviewEditor(design.id,section);
+    const open=(section:ReviewSection,targetDesign=design,targetDraft=draft)=>{
+      setActiveDesign(targetDesign.id);
+      setReviewEditing({id:targetDraft.id!,clientId:targetDesign.id,section});
+      rememberReviewEditor(targetDesign.id,section);
       if(section==="title"||section==="description"||section==="etsy"){
         setFinishPhase("details");goToStep("finish",false,true);
         const selector=section==="title"?".factory-listing-form .design-fields":section==="description"?".individual-description-disclosure":".factory-etsy-details-column";
@@ -3196,7 +3210,9 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       {key:"description",label:"Description"},
       {key:"etsy",label:"Etsy details & personalization"},
     ] as const;
-    return <aside className="review-listing-editor-nav" aria-label={`Edit listing ${files.findIndex(file=>file.id===design.id)+1}`}><div><small>Editing listing {files.findIndex(file=>file.id===design.id)+1} of {files.length}</small><b>{design.title.trim()||"Untitled listing"}</b></div><nav>{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} onClick={()=>open(entry.key)}>{entry.label}</button>)}</nav><button type="button" className="review-listing-done" onClick={()=>openFinishedReview(false)}>Back to Review</button></aside>;
+    const position=files.findIndex(file=>file.id===design.id);
+    const move=(nextPosition:number)=>{const nextDesign=files[nextPosition],nextDraft=nextDesign?drafts.find(item=>item.clientId===nextDesign.id&&item.status==="Created"&&item.id):undefined;if(nextDesign&&nextDraft)open((reviewEditing.section||current||"title") as ReviewSection,nextDesign,nextDraft)};
+    return <aside className="review-listing-editor-nav" aria-label={`Edit listing ${position+1}`}><div><small>Editing listing {position+1} of {files.length}</small><b>{design.title.trim()||"Untitled listing"}</b></div><nav>{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} onClick={()=>open(entry.key)}>{entry.label}</button>)}</nav>{files.length>1&&<nav className="review-listing-position" aria-label="Move between listings"><button type="button" disabled={position<=0} onClick={()=>move(position-1)}>← Previous listing</button><span>Listing {position+1} of {files.length}</span><button type="button" disabled={position>=files.length-1} onClick={()=>move(position+1)}>Next listing →</button></nav>}<button type="button" className="review-listing-done" onClick={()=>openFinishedReview(false)}>Back to Review</button></aside>;
   }
   function rememberReviewEditor(clientId:string,section:ReviewSection){
     const url=new URL(window.location.href);
@@ -3905,6 +3921,13 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
      A product that has not been started yet has no batch to load; that is what
      continueBundle is for. It accepts the selected product index so an older
      partial run can recover an unfinished member that precedes the open one. */
+  function rememberIncomingBundleReview(recipe:Recipe){
+    if(!reviewEditing||!drafts.some(draft=>draft.id===reviewEditing.id))return;
+    const position=Math.max(0,files.findIndex(file=>file.id===reviewEditing.clientId));
+    const incoming=bundleMembers[recipe.id]?.drafts.filter(draft=>draft.status==="Created"&&draft.id)[position];
+    if(!incoming?.id)return;
+    const nextUrl=new URL(window.location.href);nextUrl.searchParams.set("listing",incoming.clientId);nextUrl.searchParams.set("section",reviewEditing.section||"title");window.history.replaceState({},"",nextUrl);
+  }
   function openBundleProduct(index:number){
     const requestedTask=requestedBundleTask.current;requestedBundleTask.current="";
     if(index===bundleIndex){if(requestedTask)setActiveTask(requestedTask);return;}
@@ -3925,6 +3948,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
              at the incoming batch that pending write would land on the wrong
              product, so flush the outgoing one first and wait for it. */
           await persistBatchNow(batchIdRef.current);
+          rememberIncomingBundleReview(recipe);
           setRestoringBatch(true);
           snapshotReady.current=false;
           await restoreBatchById(existing,workflowStep,finishPhase,true);
@@ -4654,14 +4678,19 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     if (!ready || !targetFiles.length || draftRunActive.current) return;
     draftRunActive.current=true;
     const completedDesignIds=new Set<string>();
+    /* A resumed provider run is still the original run. Keep its admitted total
+       and already-created count instead of presenting the remaining tail as a
+       brand-new batch. */
+    const restoredCreated=alreadyAdmitted?drafts.filter(draft=>draft.status==="Created"&&draft.id).length:0;
+    const admittedTotal=alreadyAdmitted?files.length:targetFiles.length;
     setRunning(true);
-    setRunTotal(targetFiles.length);
+    setRunTotal(admittedTotal);
     setComplete(false);
     const batchConcurrency=MAX_CONCURRENT_DESIGNS;
-    setPreparationMessage("Preparing every listing for background creation. Keep this page open.");
+    setPreparationMessage(alreadyAdmitted?"Printify is creating the remaining drafts. You can leave this page and check Batch History anytime.":"Preparing every listing for background creation. Keep this page open.");
     if (!keepSuccessful) setDrafts([]);
     else setDrafts((current) => current.filter((draft) => draft.status === "Created"));
-    setProcessed(0);
+    setProcessed(restoredCreated);
     const createdDesignResults:Array<{status?:string;id?:string|null;error?:string}>=[];
     try {
       await runBounded(targetFiles, batchConcurrency, processDesign, (result) => {
@@ -4672,7 +4701,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         setDrafts((current) => [...current, productResult]);
         if(result.id)setPrintifyImageSelections(current=>current[result.id!]?current:{...current,[result.id!]:printifyImageIndices});
         if(result.previewUrl)updateDesign(result.clientId,{previewUrl:result.previewUrl});
-        setProcessed(Math.min(completedDesignIds.size,targetFiles.length));
+        if(alreadyAdmitted)setProcessed(Math.min(restoredCreated+completedDesignIds.size,admittedTotal));
+        else setProcessed(Math.min(completedDesignIds.size,targetFiles.length));
       });
       /* D227 · Only move on if a draft actually exists. runDrafts used to set
          complete and jump to the Listing page whatever came back, so a run in

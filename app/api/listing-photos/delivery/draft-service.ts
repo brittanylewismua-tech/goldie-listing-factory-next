@@ -27,27 +27,36 @@ export function verifyInventory(product:PrintifyDraftProduct,inventory:EtsyInven
  for(const [index,row] of actual.entries()){const variant=actualVariants[index]!,offers=row.offerings.filter(o=>o.is_enabled);if(!offers.length||offers.some(o=>!o.price?.divisor||Math.round(o.price.amount/o.price.divisor*100)!==variant.price))throw new DraftReviewRequired('An Etsy draft SKU or price differs from Printify. Review the variants before finishing.');}
  const prerequisite=inventoryPrerequisite(actual.flatMap(p=>p.offerings));if(prerequisite)throw new DraftReviewRequired(prerequisite);
 }
-/** Remove buyer-visible choices that the seller removed from this exact Printify
- * draft. This deliberately handles narrowing only: adding a missing combination
- * without Etsy's original property row would require inventing inventory. */
-export function narrowedInventory(product:PrintifyDraftProduct,inventory:EtsyInventory){
- const allBySku=new Map((product.variants||[]).map(variant=>[variant.sku,variant])),expected=(product.variants||[]).filter(variant=>variant.is_enabled),rows=(inventory.products||[]).filter(row=>row.offerings?.some(offer=>offer.is_enabled));
- const expectedKeys=new Set(expected.map(variant=>visibleVariantKey(product,variant)).filter((key):key is string=>Boolean(key))),actual=rows.map(row=>({row,variant:allBySku.get(row.sku)}));
- if(!expectedKeys.size||actual.some(item=>!item.variant))return null;
- const actualKeys=actual.map(item=>visibleVariantKey(product,item.variant!));
- if(actualKeys.some(key=>!key)||expectedKeys.size>=new Set(actualKeys).size||[...expectedKeys].some(key=>!actualKeys.includes(key)))return null;
- const kept=new Map<string,(typeof rows)[number]>();
- for(const item of actual){const key=visibleVariantKey(product,item.variant!)!;if(expectedKeys.has(key)&&!kept.has(key))kept.set(key,item.row)}
- const products=[...kept.values()];
- if(products.length!==expectedKeys.size||products.some(row=>row.offerings.some(offer=>offer.is_enabled&&!Number.isSafeInteger(offer.quantity))))return null;
+/** Build Etsy's exact buyer-visible inventory from rows Etsy has already issued.
+ * The baseline is an immutable pre-edit inventory backup. It lets a later saved
+ * choice restore White after an earlier correction removed it, without inventing
+ * property rows, SKUs, quantities, or variants. Unknown live rows always stop the
+ * update so a seller's manual Etsy variation cannot be deleted silently. */
+export function synchronizedInventory(product:PrintifyDraftProduct,inventory:EtsyInventory,baseline:EtsyInventory=inventory){
+ const variants=product.variants||[],allBySku=new Map(variants.map(variant=>[variant.sku,variant])),expected=variants.filter(variant=>variant.is_enabled);
+ const expectedByKey=new Map<string,typeof expected>();
+ for(const variant of expected){const key=visibleVariantKey(product,variant);if(!key)return null;const group=expectedByKey.get(key)||[];group.push(variant);expectedByKey.set(key,group)}
+ if(!expectedByKey.size||[...expectedByKey.values()].some(group=>new Set(group.map(variant=>variant.price)).size!==1))return null;
+ const enabledLive=(inventory.products||[]).filter(row=>row.offerings?.some(offer=>offer.is_enabled));
+ if(enabledLive.some(row=>!allBySku.has(row.sku)))return null;
+ const sources=[...(inventory.products||[]),...(baseline.products||[])],products=[] as NonNullable<EtsyInventory['products']>;
+ for(const [key,group] of expectedByKey){
+  const expectedSkus=new Set(group.map(variant=>variant.sku));
+  const row=sources.find(candidate=>expectedSkus.has(candidate.sku)&&candidate.offerings?.length&&visibleVariantKey(product,allBySku.get(candidate.sku)!)===key);
+  const variant=row&&allBySku.get(row.sku);if(!row||!variant||row.offerings.some(offer=>!Number.isSafeInteger(offer.quantity)))return null;
+  products.push({...row,offerings:row.offerings.map(offer=>({...offer,price:{amount:variant.price,divisor:100},is_enabled:true}))});
+ }
+ if(new Set(products.map(row=>row.sku)).size!==products.length)return null;
  const candidate={...inventory,products};
  try{verifyInventory(product,candidate);return candidate}catch{return null}
 }
+/** Kept as a compatibility name for callers and older saved jobs. */
+export const narrowedInventory=(product:PrintifyDraftProduct,inventory:EtsyInventory)=>synchronizedInventory(product,inventory,inventory);
 export function inventoryUpdateBody(inventory:EtsyInventory){return {
  products:(inventory.products||[]).map(product=>({sku:product.sku,property_values:(product.property_values||[]).map(value=>({property_id:value.property_id,property_name:value.property_name,scale_id:value.scale_id??null,value_ids:value.value_ids||[],values:value.values||[]})),offerings:product.offerings.map(offer=>({price:offer.price.amount/offer.price.divisor,quantity:offer.quantity!,is_enabled:offer.is_enabled,...(offer.readiness_state_id!=null?{readiness_state_id:offer.readiness_state_id}:{})}))})),
  price_on_property:inventory.price_on_property||[],quantity_on_property:inventory.quantity_on_property||[],sku_on_property:inventory.sku_on_property||[],...(inventory.readiness_state_on_property?{readiness_state_on_property:inventory.readiness_state_on_property}:{})
 }}
-export async function synchronizeNarrowedInventory(request:Request,listingId:number,shopId:number,product:PrintifyDraftProduct,snapshot:DraftSnapshot,backup:(inventory:EtsyInventory)=>Promise<void>){
+export async function synchronizeNarrowedInventory(request:Request,listingId:number,shopId:number,product:PrintifyDraftProduct,snapshot:DraftSnapshot,backup:(inventory:EtsyInventory)=>Promise<void>,restore?:()=>Promise<EtsyInventory|null>){
  if(!snapshot.selected_variant_ids?.length)return false;
  const liveIds=(product.variants||[]).filter(variant=>variant.is_enabled).map(variant=>variant.id).sort((a,b)=>a-b);
  if(JSON.stringify(liveIds)!==JSON.stringify(snapshot.selected_variant_ids))throw new DraftReviewRequired('The saved colors or sizes changed after this Etsy draft was prepared. Return to Review and save the current choices again.');
@@ -55,10 +64,10 @@ export async function synchronizeNarrowedInventory(request:Request,listingId:num
  if(Number(listing.shop_id)!==shopId||listing.state!=='draft')throw new DraftReviewRequired('The linked listing must still be a draft in the original Etsy shop. Inventory was not changed.');
  const inventory=await (await request(`/listings/${listingId}/inventory`)).json() as EtsyInventory;
  try{verifyInventory(product,inventory);return false}catch(error){
-  const narrowed=narrowedInventory(product,inventory);
-  if(!narrowed)throw error;
+  const baseline=await restore?.()||inventory,corrected=synchronizedInventory(product,inventory,baseline);
+  if(!corrected)throw error;
   await backup(inventory);
-  await request(`/listings/${listingId}/inventory`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(inventoryUpdateBody(narrowed))});
+  await request(`/listings/${listingId}/inventory`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(inventoryUpdateBody(corrected))});
   const confirmed=await (await request(`/listings/${listingId}/inventory`)).json() as EtsyInventory;
   verifyInventory(product,confirmed);return true;
  }

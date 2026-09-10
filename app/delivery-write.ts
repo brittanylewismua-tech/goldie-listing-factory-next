@@ -8,7 +8,7 @@ export function resolvedDeliveryUncertainty(item:{status:string;choicesChanged?:
 }
 export function deliveryChoiceRecovery(item:{status:string;choiceCheckUnavailable?:boolean}){
  if(item.choiceCheckUnavailable)return 'Current saved choices could not be checked. Check saved progress before publishing.';
- if(item.status==='completed')return 'Your saved choices changed. Update this Etsy draft before publishing.';
+ if(item.status==='completed')return 'Your saved changes have not been applied to Etsy yet. Apply them here before publishing.';
  if(['preparing','waiting','delivering'].includes(item.status))return 'This delivery uses your earlier choices. Send the updated choices after it finishes, or cancel while waiting.';
  return 'This attempt has stopped. Review your current choices, then update this Etsy draft.';
 }
