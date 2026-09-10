@@ -29,6 +29,7 @@ import { runBounded } from "./bounded-work";
 import { bundleMemberDesigns } from "./bundle-member-designs";
 import { draftPhotoSelections } from "./draft-photo-selections";
 import { draftPriceEdits, updateDraftPriceEdits, finalPriceApproval } from "./draft-price-edits";
+import { laterDraftCreationPhase, measuredDraftCreationPercent, nextVisibleDraftCreationPercent, type DraftCreationPhase } from "./draft-creation-progress";
 import { productReadiness, recipeCarriesApprovedPricing, type Readiness } from "./product-readiness";
 import { KeywordBank, SavedWorkflow, type KeywordList, type Pricing, type ProductBundle, type Recipe } from "./factory-tools";
 import UploadedListingPhotos from "./uploaded-listing-photos";
@@ -1178,6 +1179,8 @@ export default function ListingFactoryApp() {
   const [bundleApproved,setBundleApproved]=useState<Record<string,boolean>>({});
   const [bundleQualityDecisions,setBundleQualityDecisions]=useState<Record<string,"include"|"exclude">>({});
   const [preparationCompleted, setPreparationCompleted] = useState(0);
+  const [draftCreationPhases,setDraftCreationPhases]=useState<Record<string,DraftCreationPhase>>({});
+  const [visibleDraftCreationPercent,setVisibleDraftCreationPercent]=useState(0);
   const [printifyImageIndices,setPrintifyImageIndices]=useState<number[]>([]);
   const [printifyImageSelections,setPrintifyImageSelections]=useState<Record<string,number[]>>({});
   const [sharedMockups,setSharedMockups]=useState<{theme:string;ids:string[]}|undefined>();
@@ -1439,10 +1442,21 @@ export default function ListingFactoryApp() {
   const missingRequirement = !connected ? "Connect Printify first" : !productSelected ? "Choose or add a saved product" : !templateLoaded ? "Connect its Printify template" : files.length === 0 ? "Add at least one design" : !designsFinished ? `Checking ${designsPreparing} ${designsPreparing===1?"design":"designs"}\u2026` : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
   const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?(complete&&reviewEditing?8:2):running?4:3;
-  const creationProgressPercent=runTotal?Math.min(100,Math.round(((draftsAdmitted?runTotal:preparationCompleted)+(draftsAdmitted?processed:0))/(runTotal*2)*100)):0;
+  const measuredCreationProgress=measuredDraftCreationPercent(draftCreationPhases,runTotal);
+  const creationProgressComplete=runTotal>0&&processed>=runTotal;
+  const creationProgressPercent=running?Math.max(3,creationProgressComplete?100:visibleDraftCreationPercent):0;
   const creationProgressText=draftsAdmitted?`${processed} of ${runTotal} Printify drafts created`:`${preparationCompleted} of ${runTotal} artwork files prepared`;
-  const artworkPreparationIndeterminate=running&&!draftsAdmitted&&preparationCompleted===0;
   const creationActivityText=processed===runTotal&&runTotal>0?"Saving to Batch History…":draftsAdmitted?"Printify is building your drafts…":preparationCompleted>0?"Preparing the remaining artwork…":"Preparing your artwork…";
+  useEffect(()=>{
+    if(!running){setVisibleDraftCreationPercent(0);return}
+    const advance=()=>setVisibleDraftCreationPercent(current=>nextVisibleDraftCreationPercent(current,measuredCreationProgress,creationProgressComplete));
+    advance();
+    const timer=window.setInterval(advance,650);
+    return()=>window.clearInterval(timer);
+  },[running,measuredCreationProgress,creationProgressComplete]);
+  function markDraftCreationPhase(clientId:string,phase:DraftCreationPhase){
+    setDraftCreationPhases(current=>{const next=laterDraftCreationPhase(current[clientId],phase);return next===current[clientId]?current:{...current,[clientId]:next}});
+  }
   // The guided factory always opens on the real connection step. The returning
   // dashboard remains available as a component, but must never replace step 1
   // or appear when a seller uses Back from the product step.
@@ -4580,7 +4594,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     return promise;
   }
 
-  async function recoverDraft(batchId: string, clientId: string) {
+  async function recoverDraft(batchId: string, clientId: string, onProgress?:(phase:DraftCreationPhase)=>void) {
     // The server owns the durable job. Poll quickly for normal completion,
     // then back off without turning a slow provider response into a new POST.
     for (let attempt=0;attempt<180;attempt++) {
@@ -4589,8 +4603,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       let response:Response;
       try{response=await fetchWithDeadline(`/api/printify/drafts?batchId=${encodeURIComponent(batchId)}&clientId=${encodeURIComponent(clientId)}`, {}, 15000);}catch{continue;}
       if(response.status>=500)continue;
-      const result = await response.json() as { status?: string; draft?: DraftResult;error?:string };
-      if (result.status === "succeeded" && result.draft) return result.draft;
+      const result = await response.json() as { status?: string; draft?: DraftResult;error?:string;phase?:DraftCreationPhase };
+      if(result.phase)onProgress?.(result.phase);
+      if (result.status === "succeeded" && result.draft) {onProgress?.("succeeded");return result.draft;}
       if(result.status==="failed")throw new Error(result.error||"This draft could not be completed.");
       if(result.status==="connection_missing")throw new Error(result.error||"Reload the saved product connection before continuing.");
       if(result.status==="not_found")return null;
@@ -4598,14 +4613,16 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     throw new Error("This draft is still being checked in the background. Reload this batch to see its saved result; do not create a second copy.");
   }
 
-  type DraftPreparation={details:TemplateDetails;recipe:Recipe;colors:number[];sizes:number[];pricing:Pricing;variantPrices:Record<string,number>;shippingProfileId:number;description:string;collect:(request:Record<string,unknown>)=>void};
+  type DraftPreparation={details:TemplateDetails;recipe:Recipe;colors:number[];sizes:number[];pricing:Pricing;variantPrices:Record<string,number>;shippingProfileId:number;description:string;collect:(request:Record<string,unknown>)=>void;onStage?:(clientId:string,phase:DraftCreationPhase)=>void};
   type PreparedDesign={clientId:string;name:string;status:"Prepared";error?:never};
   async function processDesign(design:DesignFile,preparation:DraftPreparation):Promise<DraftResult|PreparedDesign>;
-  async function processDesign(design:DesignFile):Promise<DraftResult>;
-  async function processDesign(design: DesignFile, preparation?:DraftPreparation): Promise<DraftResult|PreparedDesign> {
+  async function processDesign(design:DesignFile,preparation?:undefined,onProgress?:(phase:DraftCreationPhase)=>void):Promise<DraftResult>;
+  async function processDesign(design: DesignFile, preparation?:DraftPreparation, onProgress?:(phase:DraftCreationPhase)=>void): Promise<DraftResult|PreparedDesign> {
       const referenceRoot = `GLF-${crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()}`;
       let finalError: Error | null = null;
       try {
+        const reportProgress=(phase:DraftCreationPhase)=>{preparation?.onStage?.(design.id,phase);onProgress?.(phase)};
+        reportProgress("preparing");
         const queuedSession=queuedDesignSessions.current.get(design.id);
         if(!preparation&&queuedSession){
           const recovered=await recoverDraft(queuedSession,design.id);
@@ -4640,6 +4657,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
           try {
             const stagedArtworks=await Promise.all(artworkItems.map(async item=>{const staged=await stagedArtwork(`${design.id}:${item.key}`,item.artwork,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:staged.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:staged.bounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}}));
+            reportProgress("staged");
             const stagedBounds=new Map(stagedArtworks.map(artwork=>[artwork.key,artwork.bounds]));
             const availableColorIds=(requestDetails?.colorOptions||[]).filter(color=>color.available).map(color=>color.id);
             /* One representative size is enough to generate an honest image
@@ -4670,24 +4688,26 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               clientId:design.id,
             };
             const requestBody=versions.length?{...commonDraftRequest,artworks:stagedArtworks,artworkAssignments}:{...commonDraftRequest,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined,fileName:stagedArtworks[0].fileName,stagedId:stagedArtworks[0].stagedId};
-            if(preparation){preparation.collect(requestBody);return {clientId:design.id,name:design.name,status:"Prepared"};}
+            if(preparation){preparation.collect(requestBody);reportProgress("prepared");return {clientId:design.id,name:design.name,status:"Prepared"};}
             let response:Response;
             try {
               response = await fetchWithDeadline("/api/printify/drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody) }, 60_000);
             } catch (connectionError) {
               // A disconnected browser does not mean the server rejected the job.
               // Recover the same identity; never automatically send another POST.
-              const recovered=await recoverDraft(requestDetails!.batchId,design.id);
+              const recovered=await recoverDraft(requestDetails!.batchId,design.id,reportProgress);
               if(!recovered)throw connectionError;
               response=Response.json({draft:recovered});
             }
             const result = await response.json() as { draft?: DraftResult; error?: string;status?:string };
+            if(response.status===202||result.status==="running")reportProgress("queued");
             artworkItems.forEach(item=>stagedArtworkCache.current.delete(`${design.id}:${item.key}`));
             if (!result.draft && (response.status === 202 || response.status === 409 || result.status==="running" || /still completing this exact draft/i.test(result.error ?? ""))) {
-              const recovered = await recoverDraft(requestDetails!.batchId, design.id);
+              const recovered = await recoverDraft(requestDetails!.batchId, design.id,reportProgress);
               if (recovered) result.draft = recovered;
             }
             if (!result.draft) throw new Error(result.error || "Printify did not create this draft.");
+            reportProgress("succeeded");
             const colorName=new Map((requestDetails?.colorOptions||[]).map(color=>[color.id,color.title]));
             const summary:ArtworkSummary={[primarySide]:[{name:design.name,colors:(requestDetails?.colorOptions||[]).filter(color=>requestColors.includes(color.id)&&!assignedPrimaryColors.has(color.id)).map(color=>color.title)}]};
             for(const artwork of versions)(summary[artwork.side]??=[]).push({name:artwork.name,colors:artwork.colorIds.map(id=>colorName.get(id)||`Color ${id}`)});
@@ -4730,6 +4750,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     const restoredCreated=alreadyAdmitted?drafts.filter(draft=>draft.status==="Created"&&draft.id).length:0;
     const admittedTotal=alreadyAdmitted?files.length:targetFiles.length;
     setRunning(true);
+    setDraftCreationPhases(Object.fromEntries(targetFiles.map(file=>[file.id,alreadyAdmitted?"queued":"preparing"])));
+    setVisibleDraftCreationPercent(0);
     setRunTotal(admittedTotal);
     setComplete(false);
     const batchConcurrency=MAX_CONCURRENT_DESIGNS;
@@ -4739,7 +4761,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     setProcessed(restoredCreated);
     const createdDesignResults:Array<{status?:string;id?:string|null;error?:string}>=[];
     try {
-      await runBounded(targetFiles, batchConcurrency, processDesign, (result) => {
+      await runBounded(targetFiles, batchConcurrency, design=>processDesign(design,undefined,phase=>markDraftCreationPhase(design.id,phase)), (result) => {
         if(completedDesignIds.has(result.clientId))return;
         completedDesignIds.add(result.clientId);
         const productResult={...result,productName:result.productName||activeRecipe?.name||templateDetails?.blueprintTitle||"Saved product"};
@@ -5063,7 +5085,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     if(batchSaveConflict)return void stopWith("Reload the saved batch first.",[batchSaveConflict]);
     if(draftRunInFlight.current||!activeRecipe||!templateDetails)return;
     draftRunInFlight.current=true;draftRunActive.current=true;runInProgress.current=true;setDraftsAdmitted(false);
-    setRunning(true);setProcessed(0);setPreparationCompleted(0);setRunTotal(requestedListingCount);
+    setRunning(true);setProcessed(0);setPreparationCompleted(0);setDraftCreationPhases({});setVisibleDraftCreationPercent(0);setRunTotal(requestedListingCount);
     const sourceRecipe=activeRecipe,sourceId=batchIdRef.current||crypto.randomUUID();
     batchIdRef.current=sourceId;
     const recipes=activeBundle&&bundleRecipes.length>1?bundleRecipes:[sourceRecipe];
@@ -5089,7 +5111,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         const designs=memberPlan.designs;
         if(!designs.length)throw Error(`${recipe.name} has no included designs.`);
         if(!variantsFor(details,colors,sizes).length)throw Error(`${recipe.name} needs an available color and size combination.`);
-        const outcomes=await runBounded(designs,MAX_CONCURRENT_DESIGNS,design=>processDesign(design,{details,recipe,colors,sizes,pricing:memberPricing,variantPrices:prices,shippingProfileId,description:isActive?description:normalizeProductDescription(details.description),collect:body=>requests.push(body)}),result=>{if(result.status==="Prepared")setPreparationCompleted(++preparedCount)});
+        const outcomes=await runBounded(designs,MAX_CONCURRENT_DESIGNS,design=>processDesign(design,{details,recipe,colors,sizes,pricing:memberPricing,variantPrices:prices,shippingProfileId,description:isActive?description:normalizeProductDescription(details.description),collect:body=>requests.push(body),onStage:markDraftCreationPhase}),result=>{if(result.status==="Prepared")setPreparationCompleted(++preparedCount)});
         const failed=outcomes.find(outcome=>outcome.status!=="Prepared");if(failed)throw Error(failed.error||"A design could not be prepared.");
         for(const design of designs)queuedDesignSessions.current.set(design.id,details.batchId);
         const snapshotDesigns=designs.map(({file,previewUrl,artworkPreviewUrl,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file,previewUrl,...artwork})=>artwork)}));
@@ -5118,6 +5140,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const [response]=await Promise.all([fetchWithDeadline("/api/printify/drafts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests})},120000),historySave]);
       const result=await response.json() as {accepted?:number;error?:string};
       if(!response.ok||result.accepted!==requests.length)throw Error(result.error||"The full submission has not been confirmed. Resume this batch to check its saved jobs.");
+      for(const body of requests){const clientId=String(body.clientId||"");if(clientId)markDraftCreationPhase(clientId,"queued")}
       setPreparationCompleted(requests.length);setDraftsAdmitted(true);
       /* A reload may call provider recovery only after group admission is real.
          The pre-admission history copy stays a normal draft; this processing
@@ -5132,9 +5155,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       let finishedCount=0;
       const providerCompletion=runBounded(members.flatMap(member=>member.designs.map(design=>({member,design}))),MAX_CONCURRENT_DESIGNS,async({member,design})=>{
         let draft:DraftResult;
-        try{const recovered=await recoverDraft(queuedDesignSessions.current.get(design.id)!,design.id);if(!recovered)throw Error("A queued draft could not be found. Resume this batch to check again.");draft=recovered;}
+        try{const recovered=await recoverDraft(queuedDesignSessions.current.get(design.id)!,design.id,phase=>markDraftCreationPhase(design.id,phase));if(!recovered)throw Error("A queued draft could not be found. Resume this batch to check again.");draft=recovered;}
         catch(error){draft={clientId:design.id,name:design.name,status:"NeedsRetry",error:error instanceof Error?error.message:"Resume this batch to check its background job."};}
         member.results.push({...draft,productName:member.recipe.name});
+        markDraftCreationPhase(design.id,"succeeded");
         setProcessed(++finishedCount);
         if(member.recipe.id===sourceRecipe.id)setDrafts([...member.results]);
         return draft;
@@ -5956,10 +5980,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             <div className="batch-progress" role="status" aria-live="polite">
               <div className="progress-ring" aria-hidden="true"/>
               <div className="progress-copy"><b>{processed===runTotal&&runTotal>0?"Saving your finished batch":"Creating your Printify drafts"}</b><span>{creationActivityText}</span><small className="progress-activity"><i aria-hidden="true"/>Working</small></div>
-              {artworkPreparationIndeterminate?<div className="progress-track is-indeterminate" role="progressbar" aria-label="Preparing artwork for Printify" aria-valuetext="Preparing artwork"><span/></div>:<div className="progress-track" role="progressbar" aria-label="Printify draft creation progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={creationProgressPercent} aria-valuetext={creationProgressText}>
+              <div className="progress-track" role="progressbar" aria-label="Printify draft creation progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={creationProgressPercent} aria-valuetext={creationProgressText}>
                 <span style={{ width: `${creationProgressPercent}%` }} />
                 <b>{creationProgressPercent}%</b>
-              </div>}
+              </div>
             </div>
           )}
 

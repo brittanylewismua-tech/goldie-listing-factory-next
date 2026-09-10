@@ -48,7 +48,7 @@ test("production build serves the PNG worker from the public site, never a local
 test("D1285: the one progress bar covers preparation, admission, and provider completion",()=>{
   assert.match(app,/setPreparationCompleted\(\+\+preparedCount\)/);
   assert.match(app,/setPreparationCompleted\(requests\.length\);setDraftsAdmitted\(true\)/);
-  assert.match(app,/creationProgressPercent=runTotal\?Math\.min\(100/);
+  assert.match(app,/measuredCreationProgress=measuredDraftCreationPercent\(draftCreationPhases,runTotal\)/);
   assert.match(app,/Printify draft creation progress/);
   assert.match(app,/artwork files prepared/);
 });

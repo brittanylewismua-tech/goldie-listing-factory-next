@@ -152,7 +152,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /aria-label="Printify draft creation progress"/);
   assert.match(page, /aria-valuetext=\{creationProgressText\}/);
   assert.match(page, /aria-valuenow=\{creationProgressPercent\}/);
-  assert.match(page, /className="progress-track is-indeterminate"/);
+  assert.match(page, /className="progress-track"/);
+  assert.doesNotMatch(page, /progress-track is-indeterminate/);
   assert.match(page, /<b>\{creationProgressPercent\}%<\/b>/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
   assert.match(page, /\/api\/printify\/stage/);
@@ -477,7 +478,8 @@ test("processes a 20-design batch with bounded four-at-a-time concurrency", asyn
   assert.match(page, /const MAX_BATCH_FILES = 20/);
   assert.match(page, /const MAX_CONCURRENT_DESIGNS = 4/);
   assert.match(page, /async function processDesign/);
-  assert.match(page, /runBounded\(targetFiles, batchConcurrency, processDesign/);
+  assert.match(page, /runBounded\(targetFiles, batchConcurrency/);
+  assert.match(page, /processDesign\(design,undefined,phase=>markDraftCreationPhase\(design\.id,phase\)\)/);
   assert.match(page, /const batchConcurrency=MAX_CONCURRENT_DESIGNS/);
   assert.match(page, /setProcessed\(Math\.min\(completedDesignIds\.size,targetFiles\.length\)\)/);
   assert.match(boundedSource, /Math\.min\(limit, items\.length\)/);
@@ -7048,7 +7050,8 @@ test("background Etsy preparation runs two at a time, and only two — D662", as
 
   /* Draft creation is separately bounded at four independent requests. */
   assert.match(app, /const MAX_CONCURRENT_DESIGNS = 4;/);
-  assert.match(app, /runBounded\(targetFiles, batchConcurrency, processDesign/);
+  assert.match(app, /runBounded\(targetFiles, batchConcurrency/);
+  assert.match(app, /processDesign\(design,undefined,phase=>markDraftCreationPhase\(design\.id,phase\)\)/);
 });
 
 /* D663 · Found by acceptance Run 1, at the step that verifies the shipping

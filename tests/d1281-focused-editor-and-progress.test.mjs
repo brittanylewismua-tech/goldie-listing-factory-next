@@ -17,10 +17,8 @@ test("D1281: Printify creation has one inline progress surface",()=>{
   assert.match(app,/className="batch-progress" role="status" aria-live="polite"/);
 });
 
-test("D1283/D1292: inline draft progress stays visibly active while real completion waits",()=>{
+test("D1304: inline draft progress is a conventional solid fill that starts moving",()=>{
   assert.match(app,/className="progress-ring" aria-hidden="true"\/\>/);
-  assert.match(app,/artworkPreparationIndeterminate=running&&!draftsAdmitted&&preparationCompleted===0/);
-  assert.match(app,/className="progress-track is-indeterminate" role="progressbar" aria-label="Preparing artwork for Printify"/);
   assert.match(app,/className="progress-track" role="progressbar" aria-label="Printify draft creation progress"/);
   assert.match(app,/aria-valuenow=\{creationProgressPercent\}/);
   assert.match(app,/aria-valuetext=\{creationProgressText\}/);
@@ -28,11 +26,11 @@ test("D1283/D1292: inline draft progress stays visibly active while real complet
   assert.match(app,/className="progress-activity"><i aria-hidden="true"\/>Working<\/small>/);
   assert.match(app,/creationActivityText=.*Printify is building your drafts/);
   assert.match(baseTheme,/\.progress-track\{[^}]*height:24px[^}]*position:relative[^}]*place-items:center/);
-  assert.match(baseTheme,/\.progress-track\.is-indeterminate span\{[^}]*animation:goldie-progress-sweep/);
-  assert.match(baseTheme,/\.progress-track::after\{[^}]*animation:goldie-progress-activity/);
-  assert.match(baseTheme,/@keyframes goldie-progress-activity\{0%\{transform:translateX\(-110%\)\}100%\{transform:translateX\(365%\)\}\}/);
+  assert.match(baseTheme,/\.progress-track span\{[^}]*background:#d9a541[^}]*transition:width \.45s ease-out/);
+  assert.doesNotMatch(baseTheme,/progress-track::after|goldie-progress-sweep|goldie-progress-activity/);
   assert.match(baseTheme,/\.progress-activity i\{[^}]*animation:goldie-progress-pulse/);
-  assert.doesNotMatch(app,/setInterval\([^)]*creationProgressPercent|setTimeout\([^)]*creationProgressPercent/);
+  assert.match(app,/window\.setInterval\(advance,650\)/);
+  assert.match(app,/Math\.max\(3,creationProgressComplete\?100:visibleDraftCreationPercent\)/);
 });
 
 test("D1293: focused Review gives the work priority and scales listing navigation in a right rail",()=>{

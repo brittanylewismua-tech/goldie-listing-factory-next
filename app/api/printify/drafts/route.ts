@@ -36,7 +36,7 @@ async function jobResponse(row:Row,owner:string){
   if(job&&shouldRestartDraftWorkflow(row.status,row.updated_at))await startJob(row.request_key,owner,job);
   // Older interrupted jobs have no durable identity. Do not silently call them
   // failed or allow a second product just because ninety seconds elapsed.
-  return NextResponse.json({status:row.status,error:row.status==="failed"?job?.error:undefined,updatedAt:row.updated_at},{status:row.status==="failed"?200:202});
+  return NextResponse.json({status:row.status,phase:job?.phase,error:row.status==="failed"?job?.error:undefined,updatedAt:row.updated_at},{status:row.status==="failed"?200:202});
 }
 async function handleGET(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});
