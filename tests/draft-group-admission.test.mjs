@@ -137,3 +137,10 @@ test('the fresh submission path stages and saves every member before one bulk ad
   assert.match(route,/if\(won.has\(item.key\)\)\{existing.push/);
   assert.match(route,/metadata\.customMetadata\?\.owner!==owner/);
 });
+test('a reload can call provider recovery only after atomic admission is confirmed',()=>{
+  const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
+  assert.match(source,/status:finished\?allCreated\?"complete":"needs_attention":admitted\?"processing":"draft"/);
+  assert.match(source,/const admittedHistorySave=runBounded\(members,4,member=>saveMember\(member,false,true\)\)/);
+  assert.match(source,/void admittedHistorySave\.catch\(\(\)=>undefined\)/);
+  assert.match(source,/void Promise\.allSettled\(cacheWrites\);\s*await providerCompletion/);
+});

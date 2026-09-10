@@ -5055,10 +5055,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         members.push({id:ids[recipe.id],recipe,designs,state:{...state,bundleQualityDecisions:memberPlan.decisions},results:[]});
       }
       if(requests.length>100)throw Error("This submission exceeds 100 listings. Use a smaller bundle.");
-      const saveMember=async(member:typeof members[number],finished=false)=>{
+      const saveMember=async(member:typeof members[number],finished=false,admitted=false)=>{
         const allCreated=member.results.length===member.designs.length&&member.results.every(draft=>draft.status==="Created"&&draft.id);
         const finalPricingApproved=allCreated&&member.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved));
-        const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:member.id,parentBatchId:activeBundle?runIdRef.current:undefined,status:finished?allCreated?"complete":"needs_attention":"processing",step:"designs",setupName:batchDisplayName||activeBundle?.name||member.recipe.name,productTitle:(member.state.templateDetails as TemplateDetails).blueprintTitle,designCount:member.designs.length,state:{...member.state,drafts:member.results.map(snapshotDraft),complete:allCreated,pricingApproved:finished?finalPricingApproved:false}})});
+        const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:member.id,parentBatchId:activeBundle?runIdRef.current:undefined,status:finished?allCreated?"complete":"needs_attention":admitted?"processing":"draft",step:"designs",setupName:batchDisplayName||activeBundle?.name||member.recipe.name,productTitle:(member.state.templateDetails as TemplateDetails).blueprintTitle,designCount:member.designs.length,state:{...member.state,drafts:member.results.map(snapshotDraft),complete:allCreated,pricingApproved:finished?finalPricingApproved:false}})});
         if(!response.ok)throw Error("The batch could not be saved before background processing.");
       };
       /* Start durable history saving and server admission together. They do
@@ -5071,6 +5071,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const result=await response.json() as {accepted?:number;error?:string};
       if(!response.ok||result.accepted!==requests.length)throw Error(result.error||"The full submission has not been confirmed. Resume this batch to check its saved jobs.");
       setPreparationCompleted(requests.length);setDraftsAdmitted(true);
+      /* A reload may call provider recovery only after group admission is real.
+         The pre-admission history copy stays a normal draft; this processing
+         write overlaps the provider jobs without delaying finished results. */
+      const admittedHistorySave=runBounded(members,4,member=>saveMember(member,false,true));
       // Match the visible member to the exact admitted snapshot. Otherwise a
       // later autosave restores excluded files with no corresponding job.
       const activeMember=members.find(member=>member.recipe.id===sourceRecipe.id)!;
@@ -5091,6 +5095,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          copies can finish in the background; waiting for large IndexedDB writes
          after Printify is done added about 25 seconds to a measured two-draft
          run even though both provider jobs finished in about nine seconds. */
+      void admittedHistorySave.catch(()=>undefined);
       void Promise.allSettled(cacheWrites);
       await providerCompletion;
       // Background completion changes sibling batches without changing the
