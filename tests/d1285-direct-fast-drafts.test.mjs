@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 const upload=readFileSync(new URL("../app/client-artwork-upload.ts",import.meta.url),"utf8");
@@ -33,6 +33,16 @@ test("D1285: large transparent PNG preparation is serialized, native, and crop g
   assert.match(worker,/new OffscreenCanvas\(width, height\)/);
   assert.match(worker,/blob\.size >= event\.data\.originalBytes \* \.82/);
   assert.doesNotMatch(worker,/UPNG|quantize/);
+});
+
+test("production build serves the PNG worker from the public site, never a local file URL",()=>{
+  const staticRoot=new URL("../dist/client/_next/static/",import.meta.url);
+  const files=readdirSync(staticRoot,{recursive:true}).map(String);
+  const scripts=files.filter(file=>file.endsWith(".js"));
+  const bundled=scripts.map(file=>readFileSync(new URL(file,staticRoot),"utf8")).join("\n");
+  assert.doesNotMatch(bundled,/file:\/\/\/_next\/static\/large-png-worker-/);
+  assert.match(bundled,/\/_next\/static\/large-png-worker-[A-Za-z0-9_-]+\.js/);
+  assert.ok(files.some(file=>/large-png-worker-[A-Za-z0-9_-]+\.js$/.test(file)),"the referenced worker asset must be emitted");
 });
 
 test("D1285: the one progress bar covers preparation, admission, and provider completion",()=>{
