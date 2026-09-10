@@ -72,6 +72,17 @@ test("D1290: Review map uses boxed checks and Xs without a visible Needed label"
   assert.match(theme,/span\.is-incomplete\{color:#a52f3b;background:#fff\}/);
 });
 
+test("D1291: completion marks cannot turn green for half-finished content",()=>{
+  const nav=app.slice(app.indexOf("function reviewListingSectionNav"),app.indexOf("function rememberReviewEditor"));
+  assert.match(nav,/listingPhotoCount=selectedPhotos\.length\+\(draft\.id\?preparedMockupCounts\[draft\.id\]\|\|0:0\)/);
+  assert.match(nav,/key:"photos",label:"Listing photos",done:listingPhotoCount>0/);
+  assert.match(nav,/key:"title",label:"Title & tags",done:Boolean\(design\.title\.trim\(\)&&design\.tags\.length\)/);
+  assert.doesNotMatch(nav,/sizeGuideName[^\n]{0,120}done:/);
+  assert.match(review,/const photoCount=\(selections\[draft\.id\]\?\?defaultIndices\)\.length\+\(preparedMockupCounts\[draft\.id\]\|\|0\)/);
+  assert.match(review,/photoCount=selectedCount\+mockupCount,sizeGuideReady=/);
+  assert.match(review,/label:"Listing photos"[^\n]+ready:photoCount>0/);
+});
+
 test("D1284: focused title editing shows every listing together without pagination",()=>{
   assert.match(app,/focusedSection==="title"\?titlesRows\(undefined,true\)/);
   assert.match(app,/alwaysOpen=\{openAll\}/);

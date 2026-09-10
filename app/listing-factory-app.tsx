@@ -3188,13 +3188,13 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       setActiveTask(section==="artwork"?"placement":section==="variants"?"draft-colors":section==="pricing"?"draft-pricing":"photos");goToStep("designs",false,true);
     };
     const axes=draftVariantAxes(draft),selectedPhotos=draft.id?(printifyImageSelections[draft.id]??printifyImageIndices):printifyImageIndices;
-    const photoCount=selectedPhotos.length+(draft.id?preparedMockupCounts[draft.id]||0:0)+(design.sizeGuideName??sizeGuideName?1:0);
+    const listingPhotoCount=selectedPhotos.length+(draft.id?preparedMockupCounts[draft.id]||0:0);
     const entries=[
       {key:"artwork",label:"Artwork placement",done:Boolean(draft.id&&draft.status==="Created")},
       {key:"variants",label:"Colors & sizes",done:Boolean((!templateDetails?.colorOptions?.length||axes.colors.length)&&(!templateDetails?.sizeOptions?.length||axes.sizes.length))},
       {key:"pricing",label:"Pricing & shipping",done:reviewedPricingAndShippingReady(draft)},
-      {key:"photos",label:"Listing photos",done:photoCount>0},
-      {key:"title",label:"Title & tags",done:Boolean(design.title.trim())},
+      {key:"photos",label:"Listing photos",done:listingPhotoCount>0},
+      {key:"title",label:"Title & tags",done:Boolean(design.title.trim()&&design.tags.length)},
       {key:"description",label:"Description",done:Boolean(finalDescription(design,design.etsy).trim())},
       {key:"etsy",label:"Etsy details & personalization",done:etsyRequiredComplete(design.etsy)},
     ] as const;
