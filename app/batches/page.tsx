@@ -63,7 +63,7 @@ export default function BatchesPage() {
   }
   const visibleBatches=filterBatchHistory(batches,query),visibleIds=visibleBatches.filter(batch=>batch.status!=="processing").map(batch=>batch.id),visibleSelected=visibleIds.filter(id=>selected.includes(id));
   const creatingCount=batches.filter(batch=>batch.status==="processing").length;
-  const statusLabel=(batch:Batch)=>batch.published_count>0?`${batch.published_count} PUBLISHED TO ETSY`:batch.status==="processing"?`${batch.draft_count||0} OF ${batch.design_count*(batch.bundle_total||1)} DRAFTS CREATED`:batch.status==="needs_attention"?"NEEDS ATTENTION":batch.draft_count?`${batch.draft_count} ${batch.draft_count===1?"DRAFT":"DRAFTS"} READY`:"SAVED BATCH";
+  const statusLabel=(batch:Batch)=>{const expected=batch.design_count*(batch.bundle_total||1);return batch.published_count>0?`${batch.published_count} PUBLISHED TO ETSY`:batch.status==="processing"?`${batch.draft_count||0} OF ${expected} DRAFTS CREATED`:batch.status==="needs_attention"?"NEEDS ATTENTION":batch.members?.length&&batch.draft_count&&batch.draft_count<expected?`${batch.draft_count} OF ${expected} DRAFTS READY`:batch.draft_count?`${batch.draft_count} ${batch.draft_count===1?"DRAFT":"DRAFTS"} READY`:"SAVED BATCH"};
   return <FactoryShell active="batches" title="Batch History"><div className="management-page interior-page">
     
     <header><p className="mini-label">BATCH HISTORY</p><h1>Continue where you left off.</h1><p>Your product, listing work, results, and errors are saved with each batch. Any Printify drafts you already created will still be there when you return.</p></header>
@@ -86,7 +86,7 @@ export default function BatchesPage() {
           {batch.members?.length?<ul className="batch-history-members">{batch.members.map(member=><li key={member.batchId||`missing-${member.position}`} className={member.done?"done":""}><span className="member-mark" aria-hidden="true">{member.done?"✓":member.position}</span><b>{member.productName||`Product ${member.position}`}</b><small>{member.published>0?`${member.published} published`:member.drafts>0?`${member.drafts} ${member.drafts===1?"draft":"drafts"} ready`:batch.status==="processing"?"Creating drafts…":"Not started yet"}</small></li>)}</ul>:null}</div><div className="batch-history-controls"><small>Last saved {savedLabel(batch.updated_at)}</small><span className="batch-row-actions"><button onClick={() => resume(batch)}>{batch.status==="processing"?"View progress":batch.members?.length
               /* D871 · One action for the run, and it opens where the work
                  stopped rather than where it started. */
-              ?(batch.members.every(member=>member.done)?"Open published bundle":batch.members.find(member=>!member.done)?.batchId?`Resume ${batch.members.find(member=>!member.done)?.productName||"bundle"}`:"Resume bundle")
+              ?(batch.members.every(member=>member.done)?"Open published bundle":"Resume bundle")
               :batch.published_count>0 ? "Open published batch" : "Resume batch"} →</button></span><button className="remove-batch" disabled={batch.status==="processing"} title={batch.status==="processing"?"Wait for draft creation to finish before removing this batch.":undefined} onClick={()=>void remove(batch)}>Permanently remove from history</button></div></article>)}
     </section>
   </div></FactoryShell>;
