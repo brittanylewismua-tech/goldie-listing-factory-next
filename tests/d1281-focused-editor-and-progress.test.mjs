@@ -6,6 +6,7 @@ const app=readFileSync("app/listing-factory-app.tsx","utf8");
 const review=readFileSync("app/final-listing-review.tsx","utf8");
 const css=readFileSync("app/interface-v2.css","utf8");
 const theme=readFileSync("app/lilac-theme.css","utf8");
+const listingRows=readFileSync("app/listing-rows.tsx","utf8");
 
 test("D1281: Printify creation has one inline progress surface",()=>{
   const wait=app.slice(app.indexOf("<WaitProgress"),app.indexOf("{/* D721 · Top bar",app.indexOf("<WaitProgress")));
@@ -30,4 +31,11 @@ test("D1281: unfinished Review rows use a centered Needed badge",()=>{
   assert.match(review,/section\.ready\?"is-complete":"is-needed"/);
   assert.match(review,/section\.ready\?"✓":"Needed"/);
   assert.match(theme,/span\.is-needed\{[^}]*place-items:center[^}]*width:52px[^}]*height:24px[^}]*text-align:center/);
+});
+
+test("D1282: switching a focused photo listing cannot leave its workspace blank",()=>{
+  assert.match(listingRows,/const rowKeySignature=rows\.map\(row=>row\.key\)\.join/);
+  assert.match(listingRows,/compactNavigation&&rows\.length&&!rows\.some\(row=>current\.has\(row\.key\)\)/);
+  assert.match(listingRows,/return new Set\(\[rows\[0\]\.key\]\)/);
+  assert.match(listingRows,/\[focusedKey,compactNavigation,rowKeySignature\]/);
 });

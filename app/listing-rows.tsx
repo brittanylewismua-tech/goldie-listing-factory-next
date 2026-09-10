@@ -66,9 +66,19 @@ export default function ListingRows({
   const [open, setOpen] = useState<Set<string>>(
     () => new Set(defaultOpen ? (singleOpen ? rows.slice(0, 1).map(row => row.key) : rows.map(row => row.key)) : []),
   );
+  const rowKeySignature=rows.map(row=>row.key).join("\u001f");
   useEffect(()=>{
-    if(focusedKey&&rows.some(row=>row.key===focusedKey))setOpen(new Set([focusedKey]));
-  },[focusedKey]);
+    setOpen(current=>{
+      if(focusedKey&&rows.some(row=>row.key===focusedKey))return current.size===1&&current.has(focusedKey)?current:new Set([focusedKey]);
+      /* D1282 · A focused photo editor passes exactly the selected listing into
+         this component. When the seller switched listings, the old listing key
+         stayed in local state, compactNavigation hid the new row, and the whole
+         photo workspace appeared blank until reload. Keep a still-valid choice;
+         otherwise open the first row supplied by the new listing immediately. */
+      if(compactNavigation&&rows.length&&!rows.some(row=>current.has(row.key)))return new Set([rows[0].key]);
+      return current;
+    });
+  },[focusedKey,compactNavigation,rowKeySignature]);
 
   const flagged = useMemo(
     () => rows.filter(row => (row.flags || []).some(flag => flag.tone === "attention")),
