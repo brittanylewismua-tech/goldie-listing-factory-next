@@ -21,11 +21,12 @@ test('deep links and product switches retain the exact listing and editor sectio
   assert.match(app,/\["artwork","variants","pricing","photos"\]\.includes\(focusedSection\)\?"designs":"finish"/);
   assert.match(app,/nextUrl\.searchParams\.set\("listing",incoming\.clientId\)/);
   assert.match(app,/url\.searchParams\.delete\("listing"\)/);
-  assert.match(app,/aria-label="Move between listings"/);
-  assert.match(app,/← Previous listing/);
-  assert.match(app,/Next listing →/);
+  assert.match(app,/className="review-listing-switcher" aria-label="Choose a listing"/);
+  assert.match(app,/candidateDraft\?\.previewUrl\|\|candidate\.previewUrl/);
+  assert.match(app,/aria-current=\{selected\?"page":undefined\}/);
   assert.match(app,/open\(\(current\|\|reviewEditing\.section\|\|"title"\) as ReviewSection/);
-  assert.match(css,/\.review-listing-position/);
+  assert.match(css,/\.review-listing-switcher/);
+  assert.match(css,/\.step-product-card:has\(>\.review-listing-editor-nav\)/);
 });
 
 test('owner cleanup remains exact, preflighted, unpublished-only, and continues Printify cleanup after Etsy refusal',()=>{

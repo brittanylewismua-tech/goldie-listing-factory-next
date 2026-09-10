@@ -13,7 +13,7 @@ test("D1251: Review reports readiness from saved listing data",()=>{
   assert.match(review,/etsyReady=!etsyIssue/);
   assert.match(review,/descriptionReady=Boolean\(String\(design\?\.descriptionOverride\?\?draft\.description/);
   assert.match(review,/variants=Number\(draft\.selectedVariantIds\?\.length\|\|draft\.costReview\?\.variants\.filter/);
-  assert.match(review,/section\.ready\?"✓":"Required"/);
+  assert.match(review,/section\.ready\?"✓":"Needed"/);
   assert.match(review,/pricingAndShippingReady\?\.\(draft\)/);
 });
 
@@ -58,11 +58,11 @@ test("D1258: Etsy handoff readiness checks every listing, independent of retired
 test("D1258: incomplete Review rows are requirements, not empty checkboxes or duplicate card warnings",()=>{
   const branch=review.slice(review.indexOf("if(handoffOnly)"),review.indexOf("return <section className={`final-listing-review"));
   assert.match(branch,/sections\.find\(section=>!section\.ready\)\?\.detail/);
-  assert.match(branch,/section\.ready\?"is-complete":"is-required"/);
-  assert.match(branch,/section\.ready\?"✓":"Required"/);
+  assert.match(branch,/section\.ready\?"is-complete":"is-needed"/);
+  assert.match(branch,/section\.ready\?"✓":"Needed"/);
   assert.match(branch,/\{!issue&&<strong className="ready">✓ Ready<\/strong>\}/);
   assert.doesNotMatch(branch,/<strong className=\{issue\?"needs-attention":"ready"\}>/);
-  assert.match(theme,/\.recipe-listing-sections>button>span\.is-required\{[^}]*border:0[^}]*border-radius:8px/);
+  assert.match(theme,/\.recipe-listing-sections>button>span\.is-needed\{[^}]*place-items:center[^}]*width:52px[^}]*height:24px[^}]*text-align:center/);
 });
 
 test("post-draft size editing names its listing scope truthfully",()=>{
@@ -126,7 +126,7 @@ test("D1251: the completion map and sticky editor navigation remain usable on na
   assert.match(theme,/\.recipe-listing-sections>button:focus-visible/);
   assert.match(theme,/@media\(max-width:560px\)[\s\S]*?\.recipe-listing-sections>button/);
   assert.match(interfaceCss,/\.review-listing-editor-nav\{position:sticky/);
-  assert.match(interfaceCss,/@media\(max-width:620px\)[\s\S]*?\.review-listing-editor-nav nav/);
+  assert.match(interfaceCss,/@media\(max-width:620px\)[\s\S]*?\.review-section-switcher\{grid-template-columns:1fr 1fr\}/);
 });
 
 test("D1252: Review color and size edits target the selected listing",()=>{

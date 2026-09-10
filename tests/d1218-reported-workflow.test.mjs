@@ -10,7 +10,8 @@ test('D1218 draft creation only says the tab may close after background admissio
   assert.match(app,/Preparing every listing for background creation\. Keep this page open\./);
   assert.match(app,/result\.accepted!==requests\.length[\s\S]*setDraftsAdmitted\(true\)/);
   assert.match(app,/Printify is creating the drafts\. You can leave this page and check Batch History anytime\./);
-  assert.match(app,/background:draftsAdmitted/);
+  assert.match(app,/observeTools=\{!\(running\|\|Boolean\(bundleRun\)\)\}/);
+  assert.match(app,/creatingEtsyDrafts\|\|running\|\|bundleRun\?null/);
   assert.match(wait,/background\?:boolean/);
   assert.match(wait,/submitted drafts continue in the background/);
   assert.match(wait,/if\(!active\|\|helpOpen/);

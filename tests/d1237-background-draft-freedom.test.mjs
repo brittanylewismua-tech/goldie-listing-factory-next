@@ -15,7 +15,7 @@ test("D1237: navigation becomes safe only after the whole draft submission is ad
   assert.match(app,/runDrafts\(remaining,true,true\)/);
 });
 
-test("draft creation keeps one centered progress surface with safe next actions after admission",()=>{
+test("draft creation keeps one inline progress surface after admission",()=>{
   const wait=read("app/wait-progress.tsx");
   assert.match(wait,/if\(!active\|\|helpOpen\|\|!dialog\.current\)return/);
   assert.doesNotMatch(wait,/if\(active\.background\).*goldie-background-progress/s);
@@ -24,7 +24,9 @@ test("draft creation keeps one centered progress surface with safe next actions 
   assert.match(wait,/View Batch History/);
   assert.match(wait,/containModalFocus\(active\.title,opener\)/);
   const app=read("app/listing-factory-app.tsx");
-  assert.match(app,/background:draftsAdmitted/);
+  assert.match(app,/observeTools=\{!\(running\|\|Boolean\(bundleRun\)\)\}/);
+  assert.match(app,/creatingEtsyDrafts\|\|running\|\|bundleRun\?null/);
+  assert.match(app,/className="batch-progress" role="status" aria-live="polite"/);
   assert.match(app,/processed===runTotal&&runTotal>0\?"Saving your finished batch"/);
 });
 

@@ -11,8 +11,10 @@ test("D1235: routine restores and Etsy-detail preparation stay inline", async ()
     "preparing ordinary listing details must not open a blocking wait dialog");
   assert.doesNotMatch(wait, /restoringBatch\|\|switchingProduct\|\|loadingTemplate/,
     "saved-product reads already have inline states and must not interrupt the seller with a modal");
-  assert.match(wait, /running\|\|bundleRun/,
-    "real provider draft creation keeps an explicit progress surface");
+  assert.match(wait, /creatingEtsyDrafts\|\|running\|\|bundleRun\?null/,
+    "draft creation uses its existing inline progress surface instead of a second dialog");
+  assert.match(app, /className="batch-progress" role="status" aria-live="polite"/,
+    "real provider draft creation remains explicit and accessible inline");
   assert.match(wait, /titleBuilding\|\|applyingBankToBundle/,
     "potentially long batch title generation keeps explicit progress");
 });

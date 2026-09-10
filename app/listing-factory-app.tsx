@@ -3216,8 +3216,15 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
        saved reviewEditing value while activeTask has already opened a different
        section from the URL.  Preferring that stale value made Next jump from
        Listing photos to Colors & sizes on the following listing. */
-    const move=(nextPosition:number)=>{const nextDesign=files[nextPosition],nextDraft=nextDesign?drafts.find(item=>item.clientId===nextDesign.id&&item.status==="Created"&&item.id):undefined;if(nextDesign&&nextDraft)open((current||reviewEditing.section||"title") as ReviewSection,nextDesign,nextDraft)};
-    return <aside className="review-listing-editor-nav" aria-label={`Edit listing ${position+1}`}><div><small>Editing listing {position+1} of {files.length}</small><b>{design.title.trim()||"Untitled listing"}</b></div><nav>{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} onClick={()=>open(entry.key)}>{entry.label}</button>)}</nav>{files.length>1&&<nav className="review-listing-position" aria-label="Move between listings"><button type="button" disabled={position<=0} onClick={()=>move(position-1)}>← Previous listing</button><span>Listing {position+1} of {files.length}</span><button type="button" disabled={position>=files.length-1} onClick={()=>move(position+1)}>Next listing →</button></nav>}<button type="button" className="review-listing-done" onClick={()=>openFinishedReview(false)}>Back to Review</button></aside>;
+    const move=(nextDesign:DesignFile)=>{const nextDraft=drafts.find(item=>item.clientId===nextDesign.id&&item.status==="Created"&&item.id);if(nextDraft)open((current||reviewEditing.section||"title") as ReviewSection,nextDesign,nextDraft)};
+    return <>
+      {files.length>1&&<nav className="review-listing-switcher" aria-label="Choose a listing">{files.map((candidate,index)=>{const candidateDraft=drafts.find(item=>item.clientId===candidate.id&&item.status==="Created"&&item.id),preview=candidateDraft?.previewUrl||candidate.previewUrl,selected=candidate.id===design.id;return <button type="button" key={candidate.id} aria-current={selected?"page":undefined} disabled={!candidateDraft} onClick={()=>move(candidate)}><span className="review-listing-thumb">{preview?<img src={preview} alt="" decoding="async"/>:<span aria-hidden="true">{index+1}</span>}</span><span><small>Listing {index+1}</small><b>{candidate.title.trim()||"Untitled"}</b></span></button>})}</nav>}
+      <aside className="review-listing-editor-nav" aria-label={`Edit listing ${position+1}`}>
+        <div className="review-listing-current"><small>Editing now</small><b>{design.title.trim()||`Listing ${position+1}`}</b></div>
+        <nav className="review-section-switcher" aria-label="Listing sections">{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} onClick={()=>open(entry.key)}>{entry.label}</button>)}</nav>
+        <button type="button" className="review-listing-done" onClick={()=>openFinishedReview(false)}>Back to Review</button>
+      </aside>
+    </>;
   }
   function rememberReviewEditor(clientId:string,section:ReviewSection){
     const url=new URL(window.location.href);
@@ -5257,8 +5264,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           is what makes the sidebar fixed without position:fixed and without the
           padding-left reservation the old shell used. */}
       <div className="factory-main">
-        <WaitProgress observeTools operation={creatingEtsyDrafts?null:
-          running||bundleRun?{title:processed===runTotal&&runTotal>0?"Saving your finished batch":"Creating your Printify drafts",detail:processed===runTotal&&runTotal>0?`All ${runTotal} Printify drafts are created. Saving the finished batch to Batch History.`:preparationMessage||"Uploading artwork and waiting for Printify to create the previews.",done:processed,total:runTotal,background:draftsAdmitted}:
+        <WaitProgress observeTools={!(running||Boolean(bundleRun))} operation={creatingEtsyDrafts||running||bundleRun?null:
           titleBuilding||applyingBankToBundle?{title:"Building your listing titles",detail:titleBuildMessage||"Working through the selected designs. Large batches can take several minutes."}:
           savingDraftArtwork?{title:"Updating color artwork",detail:"Uploading the artwork and waiting for Printify to confirm the change."}:
           publishing?{title:"Finishing your handoff",detail:publishMessage||"Waiting for the requested handoff to be confirmed."}:null}/>
