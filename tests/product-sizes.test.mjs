@@ -754,7 +754,7 @@ test("Etsy readiness means required properties are set — D294", async () => {
      pill still read 3/3 ready on the deployed page above three rows saying
      0 of 1 required set. Every GATE must use the helper. */
   for (const gate of [
-    /files\.filter\(file=>etsyRequiredComplete\(file\.etsy\)\)\.length\}\/\{files\.length\} ready/,
+    /files\.filter\(file=>etsyListingDetailsComplete\(file\.etsy\)\)\.length\}\/\{files\.length\} ready/,
     /etsyDetailsReady:files\.length>0&&files\.every\(file=>etsyRequiredComplete/,
     /chosenFiles\.some\(file=>!etsyRequiredComplete\(file\.etsy\)\)/,
     /const unfinished=files\.filter\(file=>!etsyRequiredComplete\(file\.etsy\)\)/,

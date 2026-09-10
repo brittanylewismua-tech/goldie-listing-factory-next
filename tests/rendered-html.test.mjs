@@ -2522,7 +2522,7 @@ test("D226/D1064: a listing waiting for its title or Etsy response is not shown 
     "the retry button only appears after a real request error");
 
   /* And the success banner must not claim readiness while listings are waiting. */
-  assert.match(page, /\{files\.every\(file=>etsyRequiredComplete\(file\.etsy\)\)&&<div className="variant-transfer-note">/);
+  assert.match(page, /\{files\.every\(file=>etsyListingDetailsComplete\(file\.etsy\)\)&&<div className="variant-transfer-note">/);
 
   assert.match(css, /\.app-shell \.etsy-detail-pending\{/);
 });
@@ -6494,7 +6494,7 @@ test("the walkthrough's smaller faults are fixed — D648", async () => {
 
   /* And the step 3 badge called itself ready above a crimson row on the same
      card - D624's fault again, one row further down. */
-  assert.match(app, /const etsyReady=files\.filter\(file=>etsyRequiredComplete\(file\.etsy\)\)\.length;/);
+  assert.match(app, /const etsyReady=files\.filter\(file=>etsyListingDetailsComplete\(file\.etsy\)\)\.length;/);
   assert.match(app, /if\(etsyReady<files\.length\)return \{label:`\$\{etsyReady\} of \$\{files\.length\} Etsy details ready`,tone:"attention"\}/);
 });
 
@@ -7411,7 +7411,7 @@ test("every product's badge summarises its own rows, not just the open one — D
     "the step-agnostic fallback is gone");
 
   // The badge and the rows must read the same map, or they can disagree again.
-  assert.match(app, /etsyReady:designs\.filter\(design=>etsyRequiredComplete/);
+  assert.match(app, /etsyReady:designs\.filter\(design=>etsyListingDetailsComplete/);
 
   /* Placement kept its own card layout (D680) and with it lost the label every
      other panel has - two unlabelled previews side by side. */

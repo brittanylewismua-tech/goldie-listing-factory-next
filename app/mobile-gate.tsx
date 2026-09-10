@@ -31,7 +31,7 @@ export default function MobileGate() {
       <div className="mobile-card">
         <div className="mobile-command">&#8984;</div>
         <h1>Oops, this one needs a bigger screen.</h1>
-        <p>Goldie Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p>
+        <p>The Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p>
         <div className="mobile-saved">&#10003; Your progress is saved automatically.</div>
       </div>
       <div className="mobile-footer">Powered by Goldie AI &middot; &copy; 2026 Be A Wolf Biz</div>

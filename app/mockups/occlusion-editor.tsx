@@ -85,7 +85,7 @@ export default function OcclusionEditor({ src, maskUrl, onSave, onClose }: Props
       const payload = await response.json() as { masks?: Array<{ url: string }>; error?: string };
       if (!response.ok) throw new Error(payload.error || "That did not work.");
       const first = payload.masks?.[0]?.url;
-      if (!first) { setNote("Goldie could not find anything crossing the design here. If that is right, save it as is."); return; }
+      if (!first) { setNote("The Listing Factory could not find anything crossing the design here. If that is right, save it as is."); return; }
       await new Promise<void>((resolve) => {
         const layer = new Image(); layer.crossOrigin = "anonymous";
         layer.onload = () => { const canvas = canvasRef.current!; canvas.getContext("2d")!.drawImage(layer, 0, 0, canvas.width, canvas.height); resolve(); };

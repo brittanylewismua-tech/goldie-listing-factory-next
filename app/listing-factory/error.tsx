@@ -28,7 +28,7 @@ export default function ListingFactoryError({
   return (
     <main className="factory-startup-error" role="alert">
       <div>
-        <p>Goldie kept your saved work safe.</p>
+        <p>Your saved work is safe.</p>
         <h1>Listing Factory hit a startup problem.</h1>
         <p>The error has been recorded so it can be fixed. You can retry without deleting your saved batch.</p>
         <button type="button" onClick={reset}>Try opening Listing Factory again</button>

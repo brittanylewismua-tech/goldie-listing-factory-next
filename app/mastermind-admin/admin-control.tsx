@@ -80,7 +80,7 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
     <section className="diagnostics-card">
       <p className="mini-label">AUTOMATIC DIAGNOSTICS</p>
       <h2>Recent failed operations</h2>
-      <p className="diagnostics-intro">Goldie records the failed stage and sanitized Printify response for 30 days. Artwork and tokens are never stored here.</p>
+      <p className="diagnostics-intro">The Listing Factory records the failed stage and sanitized Printify response for 30 days. Artwork and tokens are never stored here.</p>
       {initialDiagnostics.length > 0 && <input className="diagnostics-search" value={diagnosticSearch} onChange={(event) => setDiagnosticSearch(event.target.value)} placeholder="Search reference, member, design or code" aria-label="Search diagnostics" />}
       {initialDiagnostics.length === 0 ? <div className="diagnostics-empty">No failures have been recorded.</div> : filteredDiagnostics.length === 0 ? <div className="diagnostics-empty">No diagnostics match that search.</div> : <div className="diagnostics-list">
         {filteredDiagnostics.map((item) => <article key={item.reference} className="diagnostic-item">

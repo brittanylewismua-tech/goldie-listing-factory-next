@@ -1024,6 +1024,10 @@ export function etsyRequiredComplete(etsy:{category?:string;properties?:Array<{r
   return required.every(property=>Boolean((property.value||"").trim()));
 }
 
+export function etsyListingDetailsComplete(etsy:EtsyDetails|null|undefined):boolean{
+  return etsyRequiredComplete(etsy)&&!personalizationProblem(etsy||undefined);
+}
+
 export const FACET_DESTINATION:Record<string,{step:WorkflowStep;selector:string}>={
   mockups:{step:"designs",selector:".mockup-default-block"},
   keywords:{step:"finish",selector:".keyword-bank"},
@@ -1529,7 +1533,7 @@ export default function ListingFactoryApp() {
   const draftVariantLimitError=printifyVariantLimitMessage(pricedVariants.length);
   useEffect(()=>{if(!templateDetails?.id||!selectedColorIds.length)return;window.localStorage.setItem(`goldie-colors-${templateDetails.id}`,JSON.stringify(selectedColorIds))},[templateDetails?.id,selectedColorIds]);
   useEffect(()=>{if(!templateDetails?.id||!selectedSizeIds.length)return;window.localStorage.setItem(`goldie-sizes-${templateDetails.id}`,JSON.stringify(selectedSizeIds))},[templateDetails?.id,selectedSizeIds]);
-  const createdDraftCount=drafts.filter(draft=>draft.status==="Created").length,titleCount=files.filter(file=>file.title.trim()).length,etsyReadyCount=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
+  const createdDraftCount=drafts.filter(draft=>draft.status==="Created").length,titleCount=files.filter(file=>file.title.trim()).length,etsyReadyCount=files.filter(file=>etsyListingDetailsComplete(file.etsy)).length;
   const lowDpiCount=files.filter(file=>{
     const details=templateDetails,fileWidth=Number(file.width||0);
     if(!details||!fileWidth)return false;
@@ -2792,7 +2796,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
              the card could call itself ready while a row under it could not
              publish. It summarises every row it sits above or it summarises
              nothing. */
-          const etsyReady=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
+          const etsyReady=files.filter(file=>etsyListingDetailsComplete(file.etsy)).length;
           if(etsyReady<files.length)return {label:`${etsyReady} of ${files.length} Etsy details ready`,tone:"attention"};
           /* D660 · Reported after every real blocker, and in the softer tone.
              A blocker still outranks it, so the badge never leads with advice
@@ -3007,7 +3011,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
            whether its Etsy fields were complete, so it had no way to report the
            one thing on this step that actually blocks publishing. Same map the
            rows read, so they cannot disagree. */
-        etsyReady:designs.filter(design=>etsyRequiredComplete((design as {etsy?:{properties?:Array<{required?:boolean;value?:string}>}}).etsy)).length,
+        etsyReady:designs.filter(design=>etsyListingDetailsComplete((design as {etsy?:EtsyDetails}).etsy)).length,
         drafts:(state.drafts||[]).length,
         described:Boolean(String(state.description||"").trim()),
         complete:Boolean(state.complete),
@@ -3138,13 +3142,13 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       {label:"Edit description",value:counts.described?"Attached":started?"Not attached":blank,pending,done:counts.described,task:"description"},
       {label:"Review Etsy category and fields",value:started?(()=>{
         if(!files.some(file=>file.etsy))return"Not created yet";
-        const ready=files.filter(file=>etsyRequiredComplete(file.etsy)).length;
+        const ready=files.filter(file=>etsyListingDetailsComplete(file.etsy)).length;
         if(ready===files.length)return`${ready} of ${files.length} ready`;
         /* D544 - "0 of 2 ready" is a score, not an instruction. When one field is
            blocking the whole batch, name it here. */
         const names=[...new Set(files.flatMap(file=>etsyMissingRequired(file.etsy)))];
         return names.length===1?`${ready} of ${files.length} ready · ${names[0]} still needed`:`${ready} of ${files.length} ready`;
-      })():blank,pending,done:files.length>0&&files.every(file=>etsyRequiredComplete(file.etsy)),task:"etsy"},
+      })():blank,pending,done:files.length>0&&files.every(file=>etsyListingDetailsComplete(file.etsy)),task:"etsy"},
     ];
   }
 
@@ -3255,7 +3259,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       {key:"photos",label:"Listing photos",done:listingPhotoCount>0},
       {key:"title",label:"Title & tags",done:Boolean(design.title.trim()&&design.tags.length)},
       {key:"description",label:"Description",done:Boolean(finalDescription(design,design.etsy).trim())},
-      {key:"etsy",label:"Etsy details & personalization",done:etsyRequiredComplete(design.etsy)},
+      {key:"etsy",label:"Etsy details & personalization",done:etsyListingDetailsComplete(design.etsy)},
     ] as const;
     const position=files.findIndex(file=>file.id===design.id);
     /* The work surface the seller can actually see is the source of truth when
@@ -3417,7 +3421,9 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
   }
   function etsyFlags(design:DesignFile):ListingFlag[]{
     if(!design.etsy)return [{tone:"attention",label:design.title.trim()?"Not created yet":"Waiting for a title"}];
-    if(etsyRequiredComplete(design.etsy))return [];
+    const personalization=personalizationProblem(design.etsy);
+    if(etsyRequiredComplete(design.etsy)&&!personalization)return [];
+    if(personalization)return [{tone:"attention",label:personalization}];
     const missing=etsyMissingRequired(design.etsy);
     if(!missing.length)return [{tone:"attention",label:"Review Etsy details"}];
     /* Name them. "2 required fields missing" still leaves her opening the row to
@@ -3472,7 +3478,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
                      batches did not, so it comes back where the description is now edited. */}{description.trim()!==String(activeRecipe?.description||"").trim()&&<button type="button" className="save-product-default" disabled={!description.trim()||savingProductDefault==="description"} onClick={()=>void saveProductDefaults({description},"description")}>{savingProductDefault==="description"?"Saving…":"Save as the product default"}</button>}</div>;return collapsed?<details className="shared-description-settings"><summary>Product description</summary>{body}</details>:<div className="task-panel-lead">{body}</div>}
   function descriptionRows(only?:DesignFile,openAll=false){return designTaskRows("description",design=>`${(finalDescription(design,design.etsy)||"").length} chars`,design=><details className="individual-description-disclosure"><summary><span>Description for this listing</span><svg className="description-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary><div className="individual-description-body"><textarea aria-label={`Description for listing ${files.findIndex(file=>file.id===design.id)+1}`} rows={10} value={finalDescription(design,design.etsy)} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/>{design.descriptionOverride!==undefined&&<div className="listing-card-actions"><button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>{activeBundle?"Use this product’s description again":"Use the batch description again"}</button></div>}</div></details>,descriptionFlags,only,openAll);}
   function etsyLead(){return <>
-      <div className="task-panel-lead"><div className="task-panel-heading"><h3>Review your Etsy listing details</h3><span className="done-mark">{files.filter(file=>etsyRequiredComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Review the pre-filled Etsy category and product fields for each listing.</p>{files.every(file=>etsyRequiredComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Core listing information is ready for your review.</b><small>This step contains additional Etsy category and product fields. Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
+      <div className="task-panel-lead"><div className="task-panel-heading"><h3>Review your Etsy listing details</h3><span className="done-mark">{files.filter(file=>etsyListingDetailsComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Review the pre-filled Etsy category, product fields, and personalization for each listing.</p>{files.every(file=>etsyListingDetailsComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Etsy details and personalization are ready.</b><small>Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
   </>;}
   function etsyRows(only?:DesignFile){return designTaskRows("etsy",design=>{
         /* D691 · This is the row's right-hand counter, and etsyFlags already says

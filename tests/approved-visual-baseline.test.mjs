@@ -67,11 +67,11 @@ test("keeps the Etsy details step clear and its icon locked to the optical cente
   const page = await readFile(listingFactoryPage, "utf8");
   const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(page, /Review your Etsy listing details/);
-  assert.match(page, /Review the pre-filled Etsy category and product fields for each listing\./);
+  assert.match(page, /Review the pre-filled Etsy category, product fields, and personalization for each listing\./);
   // Copy updated when the nine-step rail became five. The banner is now a
   // completion confirmation rather than a list of what the previous step did.
   assert.match(page, /<b>Titles, tags, and descriptions complete<\/b>/);
-  assert.match(page, /This step contains additional Etsy category and product fields\. Optional fields stay blank when there is not a clear match\./);
+  assert.match(page, /<b>Etsy details and personalization are ready\.<\/b><small>Optional fields stay blank when there is not a clear match\.<\/small>/);
   assert.doesNotMatch(page, /standardized attributes/);
   assert.doesNotMatch(page, /are already handled/);
   assert.match(css, /\.app-shell \.step-card>\.step-number:after,[\s\S]*left:50%;[\s\S]*top:50%;[\s\S]*transform:translate\(-50%,-50%\)!important/);
