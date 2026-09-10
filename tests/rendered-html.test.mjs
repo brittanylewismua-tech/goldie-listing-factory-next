@@ -149,7 +149,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /analyzePadding/);
   assert.match(page, /MAX_CONCURRENT_DESIGNS = 4/);
   assert.match(page, /Creating drafts · \$\{processed\} of \$\{runTotal\} finished/);
-  assert.match(page, /\{processed\}\/\{runTotal\}/);
+  assert.match(page, /aria-label="Printify drafts created"/);
+  assert.match(page, /aria-valuetext=\{`\$\{processed\} of \$\{runTotal\} drafts created`\}/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
   assert.match(page, /\/api\/printify\/stage/);
   assert.match(page, /prepareArtworkFile/);

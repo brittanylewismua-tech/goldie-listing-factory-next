@@ -399,9 +399,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .individual-size-guide p{color:#6b365a!important}
 .app-shell .variant-pricing.approved{border-color:#dfc8d5!important;background:rgba(252,244,254,.62)!important}
 .app-shell .batch-progress{border-color:#dfc8d5!important}
-.app-shell .progress-ring{background:conic-gradient(#b777b0 0 25%,rgba(223,200,213,.62) 25% 100%)!important}
-.app-shell .progress-ring:before{background:#faf1f9!important}
-.app-shell .progress-ring span{color:#5b304f!important}
+.app-shell .progress-ring{background:transparent!important;border-color:#dfc8d5!important;border-top-color:#b777b0!important}
 .app-shell .progress-copy span{color:rgba(74,42,62,.68)!important}
 .app-shell .progress-track{background:rgba(176,122,171,.16)!important}
 .app-shell .progress-track span{background:linear-gradient(90deg,#a765a0,#d992c5,#eee4eb)!important}

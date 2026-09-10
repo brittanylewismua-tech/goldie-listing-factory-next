@@ -5909,9 +5909,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
           {running && (
             <div className="batch-progress" role="status" aria-live="polite">
-              <div className="progress-ring" aria-hidden="true"><span>{processed}/{runTotal}</span></div>
+              <div className="progress-ring" aria-hidden="true"/>
               <div className="progress-copy"><b>{processed===runTotal&&runTotal>0?"Saving your finished batch":"Creating your Printify drafts"}</b><span>{processed===runTotal&&runTotal>0?`All ${runTotal} drafts are created. Saving them to Batch History.`:preparationMessage || "Checking saved draft progress…"}</span></div>
-              <div className="progress-track"><span style={{ width: `${runTotal ? (processed / runTotal) * 100 : 0}%` }} /></div>
+              <div className="progress-track" role="progressbar" aria-label="Printify drafts created" aria-valuemin={0} aria-valuemax={100} aria-valuenow={runTotal?Math.min(100,Math.round(processed/runTotal*100)):0} aria-valuetext={`${processed} of ${runTotal} drafts created`}>
+                <span style={{ width: `${runTotal ? Math.min(100,(processed / runTotal) * 100) : 0}%` }} />
+                <b>{runTotal?Math.min(100,Math.round(processed/runTotal*100)):0}%</b>
+              </div>
             </div>
           )}
 

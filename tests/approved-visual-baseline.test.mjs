@@ -185,7 +185,7 @@ test("keeps later workflow footers usable and removes obsolete description langu
 test("uses the Goldie palette while Printify drafts are being created", async () => {
   const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /\.app-shell \.batch-progress\{border-color:#dfc8d5!important/);
-  assert.match(css, /\.app-shell \.progress-ring\{background:conic-gradient\(#b777b0 0 25%,rgba\(223,200,213,\.62\) 25% 100%\)!important/);
+  assert.match(css, /\.app-shell \.progress-ring\{background:transparent!important;border-color:#dfc8d5!important;border-top-color:#b777b0!important/);
   /* D782 - the third stop was #b6a8ff, a periwinkle from the lilac theme this
      app used to wear. The bar now ends in the plum family it starts in. */
   assert.match(css, /\.app-shell \.progress-track span\{background:linear-gradient\(90deg,#a765a0,#d992c5,#eee4eb\)!important/);

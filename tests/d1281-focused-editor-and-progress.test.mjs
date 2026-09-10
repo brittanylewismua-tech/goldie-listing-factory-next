@@ -6,6 +6,7 @@ const app=readFileSync("app/listing-factory-app.tsx","utf8");
 const review=readFileSync("app/final-listing-review.tsx","utf8");
 const css=readFileSync("app/interface-v2.css","utf8");
 const theme=readFileSync("app/lilac-theme.css","utf8");
+const baseTheme=readFileSync("app/theme.css","utf8");
 const listingRows=readFileSync("app/listing-rows.tsx","utf8");
 
 test("D1281: Printify creation has one inline progress surface",()=>{
@@ -14,6 +15,15 @@ test("D1281: Printify creation has one inline progress surface",()=>{
   assert.match(wait,/creatingEtsyDrafts\|\|running\|\|bundleRun\?null/);
   assert.doesNotMatch(wait,/Creating your Printify drafts/);
   assert.match(app,/className="batch-progress" role="status" aria-live="polite"/);
+});
+
+test("D1283: inline draft progress shows a real percentage with its spinner",()=>{
+  assert.match(app,/className="progress-ring" aria-hidden="true"\/\>/);
+  assert.match(app,/className="progress-track" role="progressbar" aria-label="Printify drafts created"/);
+  assert.match(app,/aria-valuenow=\{runTotal\?Math\.min\(100,Math\.round\(processed\/runTotal\*100\)\):0\}/);
+  assert.match(app,/aria-valuetext=\{`\$\{processed\} of \$\{runTotal\} drafts created`\}/);
+  assert.match(app,/<b>\{runTotal\?Math\.min\(100,Math\.round\(processed\/runTotal\*100\)\):0\}%<\/b>/);
+  assert.match(baseTheme,/\.progress-track\{[^}]*height:24px[^}]*position:relative[^}]*place-items:center/);
 });
 
 test("D1281: focused Review exposes listings first and sections in a side rail",()=>{
