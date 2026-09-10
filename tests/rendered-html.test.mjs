@@ -152,6 +152,7 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /aria-label="Printify draft creation progress"/);
   assert.match(page, /aria-valuetext=\{creationProgressText\}/);
   assert.match(page, /aria-valuenow=\{creationProgressPercent\}/);
+  assert.match(page, /className="progress-track is-indeterminate"/);
   assert.match(page, /<b>\{creationProgressPercent\}%<\/b>/);
   assert.doesNotMatch(page, /Creating \$\{processed \+ 1\} of/);
   assert.match(page, /\/api\/printify\/stage/);

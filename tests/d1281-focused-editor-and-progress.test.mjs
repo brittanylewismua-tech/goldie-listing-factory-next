@@ -17,13 +17,16 @@ test("D1281: Printify creation has one inline progress surface",()=>{
   assert.match(app,/className="batch-progress" role="status" aria-live="polite"/);
 });
 
-test("D1283/D1285: inline draft progress shows real preparation and provider progress",()=>{
+test("D1283/D1290: inline draft progress moves during preparation, then shows real completion",()=>{
   assert.match(app,/className="progress-ring" aria-hidden="true"\/\>/);
+  assert.match(app,/artworkPreparationIndeterminate=running&&!draftsAdmitted&&preparationCompleted===0/);
+  assert.match(app,/className="progress-track is-indeterminate" role="progressbar" aria-label="Preparing artwork for Printify"/);
   assert.match(app,/className="progress-track" role="progressbar" aria-label="Printify draft creation progress"/);
   assert.match(app,/aria-valuenow=\{creationProgressPercent\}/);
   assert.match(app,/aria-valuetext=\{creationProgressText\}/);
   assert.match(app,/<b>\{creationProgressPercent\}%<\/b>/);
   assert.match(baseTheme,/\.progress-track\{[^}]*height:24px[^}]*position:relative[^}]*place-items:center/);
+  assert.match(baseTheme,/\.progress-track\.is-indeterminate span\{[^}]*animation:goldie-progress-sweep/);
 });
 
 test("D1281: focused Review exposes listings first and sections in a side rail",()=>{
@@ -37,10 +40,10 @@ test("D1281: focused Review exposes listings first and sections in a side rail",
   assert.match(css,/@media\(max-width:1000px\)[^{]*\{\.app-shell \.step-product-card:has\(>\.review-listing-editor-nav\)\{grid-template-columns:1fr\}/);
 });
 
-test("D1281: unfinished Review rows use a centered Needed badge",()=>{
-  assert.match(review,/section\.ready\?"is-complete":"is-needed"/);
-  assert.match(review,/section\.ready\?"✓":"Needed"/);
-  assert.match(theme,/span\.is-needed\{[^}]*place-items:center[^}]*width:52px[^}]*height:24px[^}]*text-align:center/);
+test("D1290: unfinished Review rows use a centered boxed X",()=>{
+  assert.match(review,/section\.ready\?"is-complete":"is-incomplete"/);
+  assert.match(review,/section\.ready\?"✓":"×"/);
+  assert.match(theme,/span\.is-incomplete\{color:#a52f3b;background:#fff\}/);
 });
 
 test("D1282: switching a focused photo listing cannot leave its workspace blank",()=>{
@@ -50,15 +53,23 @@ test("D1282: switching a focused photo listing cannot leave its workspace blank"
   assert.match(listingRows,/\[focusedKey,compactNavigation,rowKeySignature\]/);
 });
 
-test("D1284: focused editor rail shows compact completion marks and returns through the footer",()=>{
+test("D1284/D1290: focused editor rail shows compact completion marks and returns through the footer",()=>{
   const nav=app.slice(app.indexOf("function reviewListingSectionNav"),app.indexOf("function rememberReviewEditor"));
-  assert.match(nav,/className=\{`review-section-state \$\{entry\.done\?"is-done":"is-needed"\}`\}/);
+  assert.match(nav,/className=\{`review-section-state \$\{entry\.done\?"is-done":"is-incomplete"\}`\}/);
   assert.match(nav,/entry\.done\?"✓":"×"/);
-  assert.match(nav,/aria-label=\{`\$\{entry\.label\}: \$\{entry\.done\?"complete":"needed"\}`\}/);
+  assert.match(nav,/aria-label=\{`\$\{entry\.label\}: \$\{entry\.done\?"complete":"incomplete"\}`\}/);
+  assert.doesNotMatch(nav,/Needed|needed/);
   assert.doesNotMatch(nav,/className="review-listing-done"/);
   assert.match(app,/reviewEditing\?<button className="workflow-back"[^>]+onClick=\{\(\)=>openFinishedReview\(false\)\}[\s\S]*?Back to Review/);
   assert.match(css,/\.review-section-state\.is-done\{color:#53bd7c\}/);
-  assert.match(css,/\.review-section-state\.is-needed\{color:#f06a6a\}/);
+  assert.match(css,/\.review-section-state\.is-incomplete\{color:#f06a6a\}/);
+});
+
+test("D1290: Review map uses boxed checks and Xs without a visible Needed label",()=>{
+  assert.match(review,/section\.ready\?"is-complete":"is-incomplete"/);
+  assert.match(review,/section\.ready\?"✓":"×"/);
+  assert.doesNotMatch(review,/section\.ready\?"✓":"Needed"/);
+  assert.match(theme,/span\.is-incomplete\{color:#a52f3b;background:#fff\}/);
 });
 
 test("D1284: focused title editing shows every listing together without pagination",()=>{

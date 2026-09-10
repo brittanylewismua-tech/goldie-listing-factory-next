@@ -1441,6 +1441,7 @@ export default function ListingFactoryApp() {
   const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?(complete&&reviewEditing?8:2):running?4:3;
   const creationProgressPercent=runTotal?Math.min(100,Math.round(((draftsAdmitted?runTotal:preparationCompleted)+(draftsAdmitted?processed:0))/(runTotal*2)*100)):0;
   const creationProgressText=draftsAdmitted?`${processed} of ${runTotal} Printify drafts created`:`${preparationCompleted} of ${runTotal} artwork files prepared`;
+  const artworkPreparationIndeterminate=running&&!draftsAdmitted&&preparationCompleted===0;
   // The guided factory always opens on the real connection step. The returning
   // dashboard remains available as a component, but must never replace step 1
   // or appear when a seller uses Back from the product step.
@@ -3208,7 +3209,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       {files.length>1&&<nav className="review-listing-switcher" aria-label="Choose a listing">{files.map((candidate,index)=>{const candidateDraft=drafts.find(item=>item.clientId===candidate.id&&item.status==="Created"&&item.id),preview=candidateDraft?.previewUrl||candidate.previewUrl,selected=candidate.id===design.id;return <button type="button" key={candidate.id} aria-current={selected?"page":undefined} disabled={!candidateDraft} onClick={()=>move(candidate)}><span className="review-listing-thumb">{preview?<img src={preview} alt="" decoding="async"/>:<span aria-hidden="true">{index+1}</span>}</span><span><small>Listing {index+1}</small><b>{candidate.title.trim()||"Untitled"}</b></span></button>})}</nav>}
       <aside className="review-listing-editor-nav" aria-label={`Edit listing ${position+1}`}>
         <div className="review-listing-current"><small>Editing now</small><b>{design.title.trim()||`Listing ${position+1}`}</b></div>
-        <nav className="review-section-switcher" aria-label="Listing sections">{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} aria-label={`${entry.label}: ${entry.done?"complete":"needed"}`} onClick={()=>open(entry.key)}><span className={`review-section-state ${entry.done?"is-done":"is-needed"}`} aria-hidden="true">{entry.done?"✓":"×"}</span><span>{entry.label}</span></button>)}</nav>
+        <nav className="review-section-switcher" aria-label="Listing sections">{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} aria-label={`${entry.label}: ${entry.done?"complete":"incomplete"}`} onClick={()=>open(entry.key)}><span className={`review-section-state ${entry.done?"is-done":"is-incomplete"}`} aria-hidden="true">{entry.done?"✓":"×"}</span><span>{entry.label}</span></button>)}</nav>
       </aside>
     </>;
   }
@@ -5905,10 +5906,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             <div className="batch-progress" role="status" aria-live="polite">
               <div className="progress-ring" aria-hidden="true"/>
               <div className="progress-copy"><b>{processed===runTotal&&runTotal>0?"Saving your finished batch":"Creating your Printify drafts"}</b><span>{processed===runTotal&&runTotal>0?`All ${runTotal} drafts are created. Saving them to Batch History.`:preparationMessage || "Checking saved draft progress…"}</span></div>
-              <div className="progress-track" role="progressbar" aria-label="Printify draft creation progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={creationProgressPercent} aria-valuetext={creationProgressText}>
+              {artworkPreparationIndeterminate?<div className="progress-track is-indeterminate" role="progressbar" aria-label="Preparing artwork for Printify" aria-valuetext="Preparing artwork"><span/></div>:<div className="progress-track" role="progressbar" aria-label="Printify draft creation progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={creationProgressPercent} aria-valuetext={creationProgressText}>
                 <span style={{ width: `${creationProgressPercent}%` }} />
                 <b>{creationProgressPercent}%</b>
-              </div>
+              </div>}
             </div>
           )}
 

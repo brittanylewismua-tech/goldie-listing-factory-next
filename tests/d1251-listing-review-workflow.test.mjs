@@ -13,7 +13,7 @@ test("D1251: Review reports readiness from saved listing data",()=>{
   assert.match(review,/etsyReady=!etsyIssue/);
   assert.match(review,/descriptionReady=Boolean\(String\(design\?\.descriptionOverride\?\?draft\.description/);
   assert.match(review,/variants=Number\(draft\.selectedVariantIds\?\.length\|\|draft\.costReview\?\.variants\.filter/);
-  assert.match(review,/section\.ready\?"✓":"Needed"/);
+  assert.match(review,/section\.ready\?"✓":"×"/);
   assert.match(review,/pricingAndShippingReady\?\.\(draft\)/);
 });
 
@@ -58,11 +58,11 @@ test("D1258: Etsy handoff readiness checks every listing, independent of retired
 test("D1258: incomplete Review rows are requirements, not empty checkboxes or duplicate card warnings",()=>{
   const branch=review.slice(review.indexOf("if(handoffOnly)"),review.indexOf("return <section className={`final-listing-review"));
   assert.match(branch,/sections\.find\(section=>!section\.ready\)\?\.detail/);
-  assert.match(branch,/section\.ready\?"is-complete":"is-needed"/);
-  assert.match(branch,/section\.ready\?"✓":"Needed"/);
+  assert.match(branch,/section\.ready\?"is-complete":"is-incomplete"/);
+  assert.match(branch,/section\.ready\?"✓":"×"/);
   assert.match(branch,/\{!issue&&<strong className="ready">✓ Ready<\/strong>\}/);
   assert.doesNotMatch(branch,/<strong className=\{issue\?"needs-attention":"ready"\}>/);
-  assert.match(theme,/\.recipe-listing-sections>button>span\.is-needed\{[^}]*place-items:center[^}]*width:52px[^}]*height:24px[^}]*text-align:center/);
+  assert.match(theme,/\.recipe-listing-sections>button>span\.is-incomplete\{color:#a52f3b;background:#fff\}/);
 });
 
 test("post-draft size editing names its listing scope truthfully",()=>{

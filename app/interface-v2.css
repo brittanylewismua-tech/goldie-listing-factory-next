@@ -3966,9 +3966,9 @@ html, body { background: var(--lf-paper); }
 .app-shell .review-section-switcher button>span:last-child{min-width:0}
 .app-shell .review-section-state{display:grid;width:24px;height:24px;place-items:center;border:2px solid currentColor;border-radius:6px;font-size:17px;font-weight:900;line-height:1}
 .app-shell .review-section-state.is-done{color:#53bd7c}
-.app-shell .review-section-state.is-needed{color:#f06a6a}
+.app-shell .review-section-state.is-incomplete{color:#f06a6a}
 .app-shell .review-section-switcher button[aria-current="page"] .review-section-state.is-done{color:#237a48}
-.app-shell .review-section-switcher button[aria-current="page"] .review-section-state.is-needed{color:#a52f3b}
+.app-shell .review-section-switcher button[aria-current="page"] .review-section-state.is-incomplete{color:#a52f3b}
 .app-shell .listing-rows.is-static-open .listing-card-head{grid-template-columns:132px minmax(0,1fr) auto auto;cursor:default}
 .app-shell .listing-rows.is-static-open .listing-card-head:hover{background:#fffafc}
 .app-shell .focused-review-section .listing-rows.is-static-open{gap:22px}
