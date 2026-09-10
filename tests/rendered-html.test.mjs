@@ -2315,7 +2315,7 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
   assert.match(api,/draft_count:\(state\.drafts\|\|\[\]\)\.length/);
   /* D1237 · Batch History distinguishes saved work, active creation, completed
      Printify drafts and Etsy publication from the server's current status. */
-  assert.match(page,/batch\.published_count>0\?`\$\{batch\.published_count\} PUBLISHED TO ETSY`:batch\.status==="processing"/);
+  assert.match(page,/fullyPublished\(batch\)\?`\$\{batch\.published_count\} PUBLISHED TO ETSY`:`\$\{batch\.published_count\} OF \$\{expected\} PUBLISHED TO ETSY`/);
   assert.match(page,/DRAFTS CREATED/);
   assert.match(page,/DRAFTS?"\} READY/);
   assert.doesNotMatch(page,/SAVED · NOT YET DRAFTED/);

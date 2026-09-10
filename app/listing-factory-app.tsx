@@ -2171,7 +2171,7 @@ export default function ListingFactoryApp() {
   const batchRestoreFailed=useRef(false),batchRestoreRetryUrl=useRef("");
   async function restoreBatchById(id:string,requestedStep:string|null,requestedPhase:string|null,push=false):Promise<boolean>{
     batchRestoreFailed.current=false;setBatchRestoreError("");if(!batchRestoreRetryUrl.current)batchRestoreRetryUrl.current=window.location.href;
-    try{const url=new URL(window.location.href);if(!id)return false;const response=await batchFetch(`/api/batches?id=${encodeURIComponent(id)}`);if(response.status===404)return false;if(!response.ok)throw new Error("Saved batch unavailable");const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>};children?:Array<{id:string;productId:string;productName:string;drafts:number;published:number}>};if(!payload.batch?.state)throw new Error("Saved batch unavailable");
+    try{const url=new URL(window.location.href);if(!id)return false;const response=await batchFetch(`/api/batches?id=${encodeURIComponent(id)}`);if(response.status===404)return false;if(!response.ok)throw new Error("Saved batch unavailable");const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>};children?:Array<{id:string;productId:string;productName:string;drafts:number;expected:number;published:number}>};if(!payload.batch?.state)throw new Error("Saved batch unavailable");
     /* D1235 · A run always opens its first unfinished product. Remembering the
        last open product made a reload begin on product two while product one was
        collapsed, so the same saved batch had a different starting point each
@@ -2194,7 +2194,7 @@ export default function ListingFactoryApp() {
         }));
         requestedChild=inspected.find((child):child is typeof children[number]=>Boolean(child));
       }
-      const open=requestedChild||byOrder.find(child=>child.published===0)
+      const open=requestedChild||byOrder.find(child=>child.published<Math.max(child.expected,child.drafts))
         ||byOrder[byOrder.length-1];
       runIdRef.current=id;
       const childMap=Object.fromEntries(children.filter(child=>child.productId&&child.id).map(child=>[child.productId,child.id]));

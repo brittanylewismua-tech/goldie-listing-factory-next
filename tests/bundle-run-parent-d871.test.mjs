@@ -60,7 +60,7 @@ test("one run, one delete", () => {
 test("resume opens the first unfinished product, never a finished one", () => {
   const restore = app.slice(app.indexOf("const runState=payload.batch.state as"));
   const body = restore.slice(0, 1900);
-  assert.match(body, /byOrder\.find\(child=>child\.published===0\)/);
+  assert.match(body, /byOrder\.find\(child=>child\.published<Math\.max\(child\.expected,child\.drafts\)\)/);
   assert.doesNotMatch(body, /child\.productId===runState\.run\?\.activeProductId/,
     "reload and Batch History must not begin on whichever later product happened to be open");
   assert.match(body, /runIdRef\.current=id;/, "the run stays the run when a child is opened");
@@ -74,7 +74,7 @@ test("the card reports the run, and one action opens it", () => {
   assert.match(route, /const listings=designs\*Math\.max\(1,total\)/,
     "listings are designs x products - counting child rows reported 2 while she made 4");
   assert.match(route, /const resumeInto=members\.find\(member=>!member\.done&&member\.batchId\)\?\.batchId/);
-  assert.match(page, /batch\.members\.every\(member=>member\.done\)\?"Open published bundle"/);
+  assert.match(page, /fullyPublished\(batch\)\?"Open published bundle"/);
 });
 
 test("every Etsy duplicate-charge guard is still keyed on the product", () => {

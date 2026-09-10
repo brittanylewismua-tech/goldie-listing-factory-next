@@ -119,7 +119,8 @@ function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknow
     const published=drafts.filter(draft=>draft.id&&publishedAtByProduct[String(draft.id)]).length
       ||Number(publishedByBatch[String(child.id)])||0;
     const position=order.indexOf(recipeId);
-    return {batchId:String(child.id),recipeId,productName:String(state.activeRecipe?.name||"").trim(),position:position>=0?position+1:order.length+1,drafts:drafts.length,published,done:published>0};
+    const expected=Math.max(Number(child.design_count)||0,drafts.length);
+    return {batchId:String(child.id),recipeId,productName:String(state.activeRecipe?.name||"").trim(),position:position>=0?position+1:order.length+1,drafts:drafts.length,published,done:expected>0&&published>=expected};
   }).sort((a,b)=>a.position-b.position);
   const actualByRecipe=new Map(actualMembers.filter(member=>member.recipeId).map(member=>[member.recipeId!,member]));
   const members:RunChild[]=[...order.map((recipeId,index)=>actualByRecipe.get(recipeId)||{batchId:"",recipeId,productName:recipeNames.get(recipeId)||`Product ${index+1}`,position:index+1,drafts:0,published:0,done:false}),...actualMembers.filter(member=>!member.recipeId||!order.includes(member.recipeId))];
@@ -161,7 +162,7 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
        managed to autosave, so it is read from there. */
     const done=await database.prepare("SELECT product_id FROM etsy_publish_items WHERE user_id=? AND status='completed'").bind(user.userId).all<{product_id:string}>().catch(()=>({results:[] as Array<{product_id:string}>}));
     const publishedProductIds=new Set((done.results||[]).map(item=>String(item.product_id)));
-    const children=(kids.results||[]).map(child=>{let childState:BatchListState&{activeRecipe?:{id?:string;name?:string}}={};try{childState=JSON.parse(String(child.state_json||"{}"))}catch{/* keep going */}const drafts=childState.drafts||[];return {id:String(child.id),productId:String(childState.activeRecipe?.id||""),productName:String(childState.activeRecipe?.name||""),drafts:drafts.length,published:drafts.filter(draft=>draft.id&&publishedProductIds.has(String(draft.id))).length,updated_at:String(child.updated_at||"")}});
+    const children=(kids.results||[]).map(child=>{let childState:BatchListState&{activeRecipe?:{id?:string;name?:string}}={};try{childState=JSON.parse(String(child.state_json||"{}"))}catch{/* keep going */}const drafts=childState.drafts||[];return {id:String(child.id),productId:String(childState.activeRecipe?.id||""),productName:String(childState.activeRecipe?.name||""),drafts:drafts.length,expected:Math.max(Number(child.design_count)||0,drafts.length),published:drafts.filter(draft=>draft.id&&publishedProductIds.has(String(draft.id))).length,updated_at:String(child.updated_at||"")}});
     return NextResponse.json({batch:{...row,state},children,authoritativeReceipt})}/* D871 · Batch History lists runs, not the records a run keeps for each of its
      products. A parent and a single-product batch both have no parent of their
      own; a child never appears on its own. Legacy sibling rows predate the
