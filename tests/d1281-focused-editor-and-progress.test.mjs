@@ -53,6 +53,14 @@ test("D1293: focused Review gives the work priority and scales listing navigatio
   assert.match(css,/listing-rows:is\(\.is-static-open,\.is-compact\) \.listing-card\{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none/);
 });
 
+test("D1295: focused work uses one large surface instead of nested ornamental cards",()=>{
+  assert.match(css,/step-product-card:has\(>\.review-listing-editor-nav\) \.placement-review-grid\{grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(css,/step-product-card:has\(>\.review-listing-editor-nav\) \.factory-art-card\{border:0;border-radius:0;background:transparent/);
+  assert.match(css,/step-product-card:has\(>\.review-listing-editor-nav\) \.factory-art-preview\{height:clamp\(300px,45vw,560px\)/);
+  assert.match(css,/step-product-card:has\(>\.review-listing-editor-nav\) \.factory-art-meta\{padding:12px 2px 0;border:0/);
+  assert.match(css,/step-product-card:has\(>\.review-listing-editor-nav\) \.listing-photo-workspace>\.uploaded-listing-photos,[\s\S]*?border:0!important;border-top:1px solid #d9d0d6!important;[\s\S]*?box-shadow:none!important/);
+});
+
 test("D1290: unfinished Review rows use a centered boxed X",()=>{
   assert.match(review,/section\.ready\?"is-complete":"is-incomplete"/);
   assert.match(review,/section\.ready\?"✓":"×"/);

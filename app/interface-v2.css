@@ -3975,6 +3975,23 @@ html, body { background: var(--lf-paper); }
 .app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows .factory-panel-body{padding:14px}
 .app-shell .focused-review-section .factory-etsy-details-column .listing-product-preview{display:block;width:140px;max-width:100%;padding:0;border:1px solid #d8cfd4;border-radius:9px;background:#fff;overflow:hidden;cursor:zoom-in}
 .app-shell .focused-review-section .factory-etsy-details-column .listing-product-preview img{display:block;width:140px;max-width:100%;height:140px;object-fit:contain;background:#fff}
+
+/* D1295: the editor has one clear work surface and one right-hand navigator.
+   The active task owns the available width; its own preview and photo tools do
+   not add another ornamental card around content that is already inside the
+   task panel. Listing navigation stays constant-size whether there are 2 or 20
+   listings because the native picker renders one current choice at a time. */
+.app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows .factory-panel-body{padding:10px 12px 14px}
+.app-shell .step-product-card:has(>.review-listing-editor-nav) .placement-review-grid{grid-template-columns:minmax(0,1fr);gap:12px!important}
+.app-shell .step-product-card:has(>.review-listing-editor-nav) .placement-printify-note{margin:0;padding:8px 10px;border:0;border-left:3px solid var(--hot-pink);border-radius:0;background:#fff7fb;font-size:12px;line-height:1.45}
+.app-shell .step-product-card:has(>.review-listing-editor-nav) .factory-art-card{border:0;border-radius:0;background:transparent;overflow:visible}
+.app-shell .step-product-card:has(>.review-listing-editor-nav) .factory-art-preview{height:clamp(300px,45vw,560px);border-radius:9px;background:#f3eff2}
+.app-shell .step-product-card:has(>.review-listing-editor-nav) .factory-art-preview img{height:100%;max-height:560px}
+.app-shell .step-product-card:has(>.review-listing-editor-nav) .factory-art-meta{padding:12px 2px 0;border:0}
+.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-photo-workspace{gap:16px}
+.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-photo-workspace>:not(:first-child){padding-top:16px;border-top:1px solid #d9d0d6}
+.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-photo-workspace>.uploaded-listing-photos,
+.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-photo-workspace>.listing-photo-order{margin:0!important;padding:16px 0 0!important;border:0!important;border-top:1px solid #d9d0d6!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
 @media(max-width:760px){
   .app-shell .focused-review-section{display:grid;gap:16px}
   .app-shell .focused-review-section>.review-listing-editor-nav{position:static}
