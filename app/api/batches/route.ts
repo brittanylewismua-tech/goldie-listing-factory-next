@@ -9,7 +9,7 @@ import { unpackDraftMedia,type MediaBucket } from "@/app/draft-media-storage";
 import { packBatchSnapshot,unpackBatchSnapshot } from "@/app/batch-snapshot-storage";
 
 type RuntimeEnv={DB?:D1Database;ARTWORK:MediaBucket};
-type BatchListState={templateDetails?:{batchId?:string;previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};activeRecipe?:{name?:string};bundleIndex?:number;bundleRecipes?:unknown[];keptAsDrafts?:boolean;batchDisplayName?:string;designs?:Array<{id?:string;name?:string}>;drafts?:Array<{id?:string;clientId?:string;batchId?:string;status?:string;previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
+type BatchListState={templateDetails?:{batchId?:string;previewImage?:string;previewImages?:string[]};activeBundle?:{name?:string};activeRecipe?:{id?:string;name?:string};bundleIndex?:number;bundleRecipes?:Array<{id?:string;name?:string}>;keptAsDrafts?:boolean;batchDisplayName?:string;designs?:Array<{id?:string;name?:string}>;drafts?:Array<{id?:string;clientId?:string;batchId?:string;status?:string;previewUrl?:string}>;batchReceipt?:{publishedCount?:number}};
 function db(){return (env as unknown as RuntimeEnv).DB}
 async function ensure(database:D1Database){await database.prepare("CREATE TABLE IF NOT EXISTS listing_batches (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, status TEXT NOT NULL, step TEXT NOT NULL, setup_name TEXT NOT NULL DEFAULT '', product_title TEXT NOT NULL DEFAULT '', design_count INTEGER NOT NULL DEFAULT 0, state_json TEXT NOT NULL DEFAULT '{}', revision INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await database.prepare("CREATE INDEX IF NOT EXISTS idx_listing_batches_user_updated ON listing_batches(user_id, updated_at)").run();
   /* D871 · A bundle run is one job the seller started, and it was stored as one
@@ -102,14 +102,15 @@ function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string
    honestly exist. Listings are designs x products because that is what she
    asked for - counting the child rows that happen to exist reported 2 while
    she was making 4. */
-type RunChild={batchId:string;productName:string;position:number;drafts:number;published:number;done:boolean};
+type RunChild={batchId:string;recipeId?:string;productName:string;position:number;drafts:number;published:number;done:boolean};
 function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknown>,children:Array<Record<string,unknown>>,publishedByBatch:Record<string,number>,publishedAtByProduct:Record<string,string>){
   let parentState:{batchDisplayName?:string;run?:{bundleName?:string;productOrder?:string[];activeProductId?:string}}={};
   try{parentState=JSON.parse(String(parent.state_json||"{}"))}catch{/* a damaged parent must not hide the run */}
   const order=parentState.run?.productOrder||[];
-  const read=(child:Record<string,unknown>)=>{let state:BatchListState&{activeRecipe?:{id?:string;name?:string}}={};try{state=JSON.parse(String(child.state_json||"{}"))}catch{/* keep going */}return state};
-  const members:RunChild[]=children.map(child=>{
-    const state=read(child);
+  const read=(child:Record<string,unknown>)=>{let state:BatchListState={};try{state=JSON.parse(String(child.state_json||"{}"))}catch{/* keep going */}return state};
+  const childStates=children.map(child=>({child,state:read(child)}));
+  const recipeNames=new Map(childStates.flatMap(({state})=>(state.bundleRecipes||[]).map(recipe=>[String(recipe.id||""),String(recipe.name||"")] as const)).filter(([id])=>Boolean(id)));
+  const actualMembers:RunChild[]=childStates.map(({child,state})=>{
     const recipeId=String(state.activeRecipe?.id||"");
     const drafts=(state.drafts||[]);
     /* Published is counted per Printify product, the same way the rest of this
@@ -118,17 +119,19 @@ function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknow
     const published=drafts.filter(draft=>draft.id&&publishedAtByProduct[String(draft.id)]).length
       ||Number(publishedByBatch[String(child.id)])||0;
     const position=order.indexOf(recipeId);
-    return {batchId:String(child.id),productName:String(state.activeRecipe?.name||"").trim(),position:position>=0?position+1:order.length+1,drafts:drafts.length,published,done:published>0};
+    return {batchId:String(child.id),recipeId,productName:String(state.activeRecipe?.name||"").trim(),position:position>=0?position+1:order.length+1,drafts:drafts.length,published,done:published>0};
   }).sort((a,b)=>a.position-b.position);
+  const actualByRecipe=new Map(actualMembers.filter(member=>member.recipeId).map(member=>[member.recipeId!,member]));
+  const members:RunChild[]=[...order.map((recipeId,index)=>actualByRecipe.get(recipeId)||{batchId:"",recipeId,productName:recipeNames.get(recipeId)||`Product ${index+1}`,position:index+1,drafts:0,published:0,done:false}),...actualMembers.filter(member=>!member.recipeId||!order.includes(member.recipeId))];
   const total=Math.max(order.length,members.length);
   const designs=Math.max(0,...children.map(child=>Number(child.design_count)||0));
   const listings=designs*Math.max(1,total);
   const publishedTotal=members.reduce((sum,member)=>sum+member.published,0);
-  const childrenComplete=children.length>0&&children.every(child=>String(child.status)==="complete");
+  const childrenComplete=children.length>0&&(!order.length||children.length>=order.length)&&children.every(child=>String(child.status)==="complete");
   const aggregateStatus=children.some(child=>String(child.status)==="needs_attention")?"needs_attention":childrenComplete?"complete":children.some(child=>String(child.status)==="processing")?"processing":String(item.status||"draft");
   /* Where the work stopped, not where it started. D697's near-miss was a Resume
      button over listings that were already live. */
-  const resumeInto=members.find(member=>!member.done)?.batchId||members[members.length-1]?.batchId||String(parent.id);
+  const resumeInto=members.find(member=>!member.done&&member.batchId)?.batchId||members[members.length-1]?.batchId||String(parent.id);
   return {...item,
     status:aggregateStatus,
     display_name:String(parentState.batchDisplayName?.trim()||children.map(read).map(state=>state.batchDisplayName?.trim()).find(Boolean)||parentState.run?.bundleName||item.display_name||"Bundle run"),

@@ -36,7 +36,7 @@ test('manual group and individual prices preserve cents while automatic whole-nu
  let output;
  const functions=['changeCostGroupPrice','changeIndividualPrice'].map(fn=>{const start=app.indexOf('function '+fn);return app.slice(start,app.indexOf('\n  function ',start+1))}).join('\n');
  const js=ts.transpile(functions,{target:ts.ScriptTarget.ES2022});
- const api=new Function('variants','prices','onPrices','manualPriceEdit','setRecommendationMessage',js+';return {changeCostGroupPrice,changeIndividualPrice};')([{id:1,cost:1000,title:'Black'},{id:2,cost:1000,title:'White'}],{'1':2400,'2':2400},value=>output=value,{current:false},()=>{});
+ const api=new Function('variants','prices','onPrices','manualPriceEdit','setRecommendationMessage','optionNoun','optionNouns',js+';return {changeCostGroupPrice,changeIndividualPrice};')([{id:1,cost:1000,title:'Black'},{id:2,cost:1000,title:'White'}],{'1':2400,'2':2400},value=>output=value,{current:false},()=>{},'color and size combination','color and size combinations');
  api.changeCostGroupPrice(1000,2479);assert.deepEqual(output,{'1':2479,'2':2479});
  api.changeIndividualPrice({id:1,cost:1000,title:'Black'},2355);assert.deepEqual(output,{'1':2355,'2':2400});
  api.changeIndividualPrice({id:1,cost:1000,title:'Black'},900);assert.equal(output['1'],1000);

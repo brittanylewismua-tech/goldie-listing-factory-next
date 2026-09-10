@@ -13,7 +13,8 @@ test("the completed receipt is handed to the run write, not reread from stale Re
 
 test("restoring a run seeds every product-to-child link before cards are used",()=>{
   assert.match(app,/const childMap=Object\.fromEntries\(children\.filter/);
-  assert.match(app,/setBundleBatchIds\(current=>\(\{\.\.\.childMap,\.\.\.current\}\)\)/);
+  assert.match(app,/setBundleBatchIds\(childMap\)/);
+  assert.doesNotMatch(app,/setBundleBatchIds\(current=>\(\{\.\.\.childMap,\.\.\.current\}\)\)/);
   assert.match(app,/const reachable=many&&!open&&Boolean\(bundleBatchIds\[recipe\.id\]/);
 });
 

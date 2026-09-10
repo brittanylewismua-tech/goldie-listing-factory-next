@@ -43,7 +43,7 @@ test("every component that renders today still renders", async () => {
  * proves the behaviour, not merely the component. */
 const FEATURES = [
   ["grouped per-size pricing", /Item prices \+ buyer-paid shipping/],
-  ["pricing groups by identical Printify cost", /Variants are grouped only when Printify charges the/],
+  ["pricing groups by identical Printify cost", /are grouped only when Printify charges the same product cost/],
   ["a price field per group", /<PriceField/],
   ["whole-number pricing toggle", /Create whole-number pricing/],
   ["download every listing photo as a zip", /function DownloadListingPhotos/],

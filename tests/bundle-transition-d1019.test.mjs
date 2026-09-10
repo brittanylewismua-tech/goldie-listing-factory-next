@@ -46,6 +46,8 @@ test("D1022: a parent run never borrows children from another execution of the s
 test("D1023: a parented run rebuilds its child map from authoritative server children",()=>{
   assert.match(app,/if\(runIdRef\.current\)setBundleBatchIds\(\{\}\)/);
   assert.match(app,/const childMap=Object\.fromEntries\(children\.filter/);
+  assert.match(app,/setBundleBatchIds\(childMap\)/);
+  assert.doesNotMatch(app,/setBundleBatchIds\(current=>\(\{\.\.\.childMap,\.\.\.current\}\)\)/);
 });
 
 test("D1024: automatic creation is anchored to the stable recipe at the bundle index",()=>{

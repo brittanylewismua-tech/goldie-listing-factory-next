@@ -73,7 +73,7 @@ test("the card reports the run, and one action opens it", () => {
   assert.match(route, /product_title:`\$\{total\} products · \$\{listings\} \$\{listings===1\?"listing":"listings"\}/);
   assert.match(route, /const listings=designs\*Math\.max\(1,total\)/,
     "listings are designs x products - counting child rows reported 2 while she made 4");
-  assert.match(route, /const resumeInto=members\.find\(member=>!member\.done\)\?\.batchId/);
+  assert.match(route, /const resumeInto=members\.find\(member=>!member\.done&&member\.batchId\)\?\.batchId/);
   assert.match(page, /batch\.members\.every\(member=>member\.done\)\?"Open published bundle"/);
 });
 

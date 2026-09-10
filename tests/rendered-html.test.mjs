@@ -271,8 +271,8 @@ test("groups equal-cost Printify variants while preserving individual review and
   assert.match(page, /changeCostGroupPrice/);
   assert.match(page, /grouped\.set\(variant\.cost/);
   assert.match(page, /item\.cost===cost/);
-  assert.match(page, /exact same Printify product cost/);
-  assert.match(page, /color, size, material, finish, capacity, or model stays in a separate group/);
+  assert.match(page, /with that exact Printify cost/);
+  assert.match(page, /color, size, material, finish, capacity, or model stays separate automatically/);
   assert.doesNotMatch(page, /Sizes and colors shown below/);
   assert.match(page, /edit one separately/i);
   assert.doesNotMatch(page, /Approve pricing \+ shipping/);
@@ -2474,7 +2474,7 @@ test("Batch History does not label a bundle with one member's product — D196",
    * The row already parses state_json, so the bundle was knowable all along. */
   /* D511 added templateDetails to this shape so a batch with no drafts yet can
      still show its product's photo instead of a grey placeholder. */
-  assert.match(route, /activeBundle\?:\{name\?:string\};activeRecipe\?:\{name\?:string\};bundleIndex\?:number;bundleRecipes\?:unknown\[\]/);
+  assert.match(route, /activeBundle\?:\{name\?:string\};activeRecipe\?:\{id\?:string;name\?:string\};bundleIndex\?:number;bundleRecipes\?:Array<\{id\?:string;name\?:string\}>/);
   /* D551 - and it names which member, because D510's fix made every member of a
      run identical: "ZZ TEST BUNDLE / 3 products · 2 designs" three times over,
      one row per product, distinguishable only by timestamp. */
