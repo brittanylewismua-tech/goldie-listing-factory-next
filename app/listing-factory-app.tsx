@@ -495,10 +495,10 @@ function PrintifyImagePicker({ images,indices,reservedPhotos=0,onApplyOne,onAppl
         </>})()}</div>{lightbox}</>;
 }
 
-function UploadedDesignPreview({src}:{src:string}){
+function UploadedDesignPreview({src,label}:{src:string;label?:string}){
   const [open,setOpen]=useState(false);
   useEffect(()=>{if(!open)return;const restoreFocus=containModalFocus("Full-size design preview");const previous=document.body.style.overflow;const close=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false)};document.body.style.overflow="hidden";window.addEventListener("keydown",close);return()=>{document.body.style.overflow=previous;window.removeEventListener("keydown",close);restoreFocus()}},[open]);
-  return <><button type="button" className="uploaded-design-preview" onClick={()=>setOpen(true)} aria-label="View design larger"><img src={src} alt="" decoding="async"/></button>{open&&typeof document!=="undefined"?createPortal(<div className="printify-photo-lightbox" role="dialog" aria-modal="true" aria-label="Full-size design preview" onMouseDown={event=>{if(event.target===event.currentTarget)setOpen(false)}}><button type="button" onClick={()=>setOpen(false)} aria-label="Close design preview">×</button><img src={src} alt="Full-size design preview"/></div>,document.body):null}</>;
+  return <><button type="button" className="uploaded-design-preview" onClick={()=>setOpen(true)} aria-label="View design larger" title={label}><img src={src} alt="" decoding="async"/></button>{open&&typeof document!=="undefined"?createPortal(<div className="printify-photo-lightbox" role="dialog" aria-modal="true" aria-label="Full-size design preview" onMouseDown={event=>{if(event.target===event.currentTarget)setOpen(false)}}><button type="button" onClick={()=>setOpen(false)} aria-label="Close design preview">×</button><img src={src} alt="Full-size design preview"/></div>,document.body):null}</>;
 }
 
 /* D422 - Same defect the profit goal had, in the personalization fields: bound
@@ -3313,14 +3313,18 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
        available on its own; the row list is what the panel stack needed, not
        what the editor is. Same renderer, same onFocus, same everything else. */
     if(only)return <div onFocus={()=>setActiveDesign(only.id)}>{inner(only)}</div>;
-    return <ListingRows defaultOpen={openAll} alwaysOpen={openAll} rows={files.map(design=>({
+    return <ListingRows defaultOpen={openAll} alwaysOpen={openAll} rows={files.map(design=>{const shot=drafts.find(draft=>draft.clientId===design.id)?.previewUrl||design.previewUrl||"";return {
       key:`${task}:${design.id}`,
-      thumb:design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl||"",
+      thumb:shot,
+      preview:openAll&&shot?<UploadedDesignPreview src={shot} label={`Enlarge mockup for listing ${files.findIndex(file=>file.id===design.id)+1}`}/>:undefined,
       summary:taskSummary(task,design),
       meta:standing(design),
       flags:flags?flags(design):[],
-      detail:<div onFocus={()=>setActiveDesign(design.id)}>{inner(design)}</div>,
-    }))}/>;
+      /* D1296: focusing an inline title used to change activeDesign while
+         reviewEditing still named the prior listing. That mismatch exited the
+         all-listings editor and resurrected the obsolete Previous/Next page. */
+      detail:<div onFocus={openAll?undefined:()=>setActiveDesign(design.id)}>{inner(design)}</div>,
+    }})}/>;
   }
 
   /* D687 · The mechanical checks. Every one of these was already computable and
@@ -3372,7 +3376,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
   function titlesRows(only?:DesignFile,openAll=false){return designTaskRows("titles",design=>`${(design.title||"").trim().length}/140`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
         is unreadable, so the card cannot tell you which design you are writing a
         title for. The row stays compact; the preview comes back at a size you can
-        read once the row is open. */}{(()=>{const shot=design.previewUrl||drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;
+        read once the row is open. */}{!openAll&&(()=>{const shot=drafts.find(draft=>draft.clientId===design.id)?.previewUrl||design.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;
                     /* D830 · This used to be `tags:tagsFromTitle(title)`, unconditionally,
                        on every keystroke. Two things went wrong with that.
 
@@ -3649,7 +3653,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         :focusedSection==="description"?descriptionRows(design)
         :focusedSection==="etsy"?etsyRows(design)
         :null;
-      return <div className={`factory-listing-screen focused-review-section focused-review-${focusedSection}`}>
+      return <div className={"factory-listing-screen focused-review-section "+(focusedSection==="title"?"focused-review-title":`focused-review-${focusedSection}`)}>
         {reviewListingSectionNav(design)}
         {focusedSection==="title"&&<FactoryPanel index={1} title={activeBundle?"Titles for this product":"Titles for this batch"}
           description="Create titles and tags"

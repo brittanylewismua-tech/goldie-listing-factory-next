@@ -61,6 +61,17 @@ test("D1295: focused work uses one large surface instead of nested ornamental ca
   assert.match(css,/step-product-card:has\(>\.review-listing-editor-nav\) \.listing-photo-workspace>\.uploaded-listing-photos,[\s\S]*?border:0!important;border-top:1px solid #d9d0d6!important;[\s\S]*?box-shadow:none!important/);
 });
 
+test("D1296: title fields stay inline and each listing has a useful enlarged preview",()=>{
+  assert.match(app,/detail:<div onFocus=\{openAll\?undefined:\(\)=>setActiveDesign\(design\.id\)\}/);
+  assert.match(app,/preview:openAll&&shot\?<UploadedDesignPreview src=\{shot\} label=\{`Enlarge mockup for listing/);
+  assert.match(listingRows,/className="listing-card-preview"/);
+  assert.match(app,/!openAll&&\(\(\)=>\{const shot=drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl\|\|design\.previewUrl/);
+  assert.match(css,/\.focused-review-title \.factory-form-card:is\(\.factory-form-card\)\{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none\}/);
+  assert.match(css,/\.focused-review-title \.listing-rows\.is-static-open \.listing-card\{padding:16px;border:2px solid #171717/);
+  assert.match(css,/\.focused-review-title \.listing-card-preview\{display:block;width:176px;height:176px/);
+  assert.match(css,/\.focused-review-title \.listing-card-preview \.uploaded-design-preview\{width:176px!important;height:176px!important/);
+});
+
 test("D1290: unfinished Review rows use a centered boxed X",()=>{
   assert.match(review,/section\.ready\?"is-complete":"is-incomplete"/);
   assert.match(review,/section\.ready\?"✓":"×"/);

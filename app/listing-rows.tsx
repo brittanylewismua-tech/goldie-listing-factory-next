@@ -32,6 +32,9 @@ export type ListingRow = {
      Keep the listing's real batch position instead of relabelling it 1 of 1. */
   position?: { index: number; total: number };
   thumb?: string;
+  /* Focused batch editors can supply the product's existing accessible
+     lightbox control while every listing stays open. */
+  preview?: ReactNode;
   /* The one line under "Listing N of M": the title, the description, the
      category - whatever this panel is asking her to judge. */
   summary: string;
@@ -191,7 +194,9 @@ export default function ListingRows({
               }}
             >
               {!compactNavigation&&!alwaysOpen&&<span className="listing-card-caret" aria-hidden="true">{isOpen ? "▾" : "▸"}</span>}
-              {row.thumb
+              {row.preview
+                ? <span className="listing-card-preview">{row.preview}</span>
+                : row.thumb
                 ? <img className="listing-card-thumb" src={row.thumb} alt="" decoding="async"/>
                 : <span className="listing-card-thumb"/>}
               <span className="listing-card-ident">

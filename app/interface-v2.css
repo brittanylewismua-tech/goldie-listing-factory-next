@@ -3992,11 +3992,27 @@ html, body { background: var(--lf-paper); }
 .app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-photo-workspace>:not(:first-child){padding-top:16px;border-top:1px solid #d9d0d6}
 .app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-photo-workspace>.uploaded-listing-photos,
 .app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-photo-workspace>.listing-photo-order{margin:0!important;padding:16px 0 0!important;border:0!important;border-top:1px solid #d9d0d6!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+
+/* D1296: every title editor is one clearly bounded listing. Its mockup is big
+   enough to identify the design and has a separate enlargement target; the
+   redundant outer form card is removed so this does not become boxes in boxes. */
+.app-shell .focused-review-title .factory-form-card:is(.factory-form-card){padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.app-shell .focused-review-title .factory-form-card>h3{margin:0 0 14px;font-size:18px!important}
+.app-shell .focused-review-title .listing-rows.is-static-open{gap:28px}
+.app-shell .focused-review-title .listing-rows.is-static-open .listing-card{padding:16px;border:2px solid #171717;border-radius:12px;background:#fff;box-shadow:3px 3px 0 #171717}
+.app-shell .focused-review-title .listing-rows.is-static-open .listing-card-head{grid-template-columns:176px minmax(0,1fr) auto auto;padding:0 0 16px}
+.app-shell .focused-review-title .listing-card-preview{display:block;width:176px;height:176px}
+.app-shell .focused-review-title .listing-card-preview .uploaded-design-preview{width:176px!important;height:176px!important;border-color:#d8cfd4;border-radius:10px}
+.app-shell .focused-review-title .listing-card-preview .uploaded-design-preview:focus-visible{outline:3px solid #75516b;outline-offset:3px}
+.app-shell .focused-review-title .listing-card-detail{padding-top:16px!important}
 @media(max-width:760px){
   .app-shell .focused-review-section{display:grid;gap:16px}
   .app-shell .focused-review-section>.review-listing-editor-nav{position:static}
   .app-shell .review-section-switcher{grid-template-columns:1fr 1fr}
   .app-shell .listing-rows.is-static-open .listing-card-head{grid-template-columns:96px minmax(0,1fr)}
+  .app-shell .focused-review-title .listing-rows.is-static-open .listing-card-head{grid-template-columns:112px minmax(0,1fr)}
+  .app-shell .focused-review-title .listing-card-preview{width:112px;height:112px}
+  .app-shell .focused-review-title .listing-card-preview .uploaded-design-preview{width:112px!important;height:112px!important}
 }
 
 /* D1284: product color labels wrap instead of clipping their final letter. */
