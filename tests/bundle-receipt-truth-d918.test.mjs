@@ -4,6 +4,7 @@ import {readFileSync} from "node:fs";
 
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 const ui=readFileSync(new URL("../app/goldie-ui.tsx",import.meta.url),"utf8");
+const uploads=readFileSync(new URL("../app/uploaded-listing-photos.tsx",import.meta.url),"utf8");
 
 test("D918: a published child cannot declare an unfinished bundle complete",()=>{
   assert.match(app,/function nextUnfinishedBundleProduct\(\)/);
@@ -21,8 +22,8 @@ test("D918: the receipt can return to an unfinished product in either direction"
 });
 
 test("D919: photo ordering never invents a batch size guide",()=>{
-  assert.match(app,/batchName=\{sizeGuideName\}/);
-  assert.match(app,/guide\?\"Selected\":\"No size guide selected\"/);
-  assert.match(app,/guide\?\"Use a different size guide\":\"Choose a size guide\"/);
+  assert.match(app,/batchSizeGuideName=\{sizeGuideName\}/);
+  assert.match(uploads,/const guide=sizeGuideName\?\?batchSizeGuideName/);
+  assert.match(uploads,/guide\?"Change size guide":"Add size guide"/);
   assert.doesNotMatch(app,/name\|\|\"Using the batch size guide\"/);
 });

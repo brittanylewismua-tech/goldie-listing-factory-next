@@ -13,16 +13,16 @@ test("D972: the photo workspace shows one listing at a time with navigation at i
   assert.match(rows,/singleOpen \? rows\.slice\(0, 1\)/);
   assert.match(rows,/← Previous listing/);
   assert.match(rows,/Next listing →/);
-  assert.match(rows,/role=\{compactNavigation \? undefined : "button"\}/);
-  assert.match(rows,/aria-expanded=\{compactNavigation \? undefined : isOpen\}/);
-  assert.match(rows,/\{!compactNavigation&&<span className="listing-card-caret"/);
+  assert.match(rows,/role=\{compactNavigation\|\|alwaysOpen \? undefined : "button"\}/);
+  assert.match(rows,/aria-expanded=\{compactNavigation\|\|alwaysOpen \? undefined : isOpen\}/);
+  assert.match(rows,/\{!compactNavigation&&!alwaysOpen&&<span className="listing-card-caret"/);
   assert.match(rows,/compactNavigation \? " is-compact" : ""/);
   assert.match(css,/\.listing-rows\.is-compact \.listing-card-head[^}]*grid-template-columns:132px minmax\(0,1fr\) auto auto/);
 });
 
 test("D972: size guide and photo ordering are explicit, consistent controls",()=>{
   assert.match(order,/className="photo-order-heading"><b>Photo order<\/b>/);
-  assert.match(css,/\.listing-photo-workspace \.individual-size-guide>button\{[^}]*background:#111/);
+  assert.match(css,/\.uploaded-listing-photos \.listing-upload-actions button\{[^}]*min-height:40px/);
   assert.match(css,/\.listing-photo-workspace \.listing-photo-order\{[^}]*background:transparent/);
   assert.match(css,/\.listing-card-pagination>button:last-child\{[^}]*background:#111/);
   assert.doesNotMatch(legacy,/individual-size-guide button\{[^}]*background:[^}]*!important/);

@@ -48,6 +48,7 @@ export default function ListingRows({
   singleOpen = false,
   compactNavigation = false,
   focusedKey,
+  alwaysOpen = false,
   readyLabel = "Ready",
   noun = "listing",
 }: {
@@ -60,11 +61,12 @@ export default function ListingRows({
   singleOpen?: boolean;
   compactNavigation?: boolean;
   focusedKey?: string;
+  alwaysOpen?: boolean;
   readyLabel?: string;
   noun?: string;
 }) {
   const [open, setOpen] = useState<Set<string>>(
-    () => new Set(defaultOpen ? (singleOpen ? rows.slice(0, 1).map(row => row.key) : rows.map(row => row.key)) : []),
+    () => new Set((defaultOpen||alwaysOpen) ? (singleOpen ? rows.slice(0, 1).map(row => row.key) : rows.map(row => row.key)) : []),
   );
   const rowKeySignature=rows.map(row=>row.key).join("\u001f");
   useEffect(()=>{
@@ -79,6 +81,7 @@ export default function ListingRows({
       return current;
     });
   },[focusedKey,compactNavigation,rowKeySignature]);
+  useEffect(()=>{if(alwaysOpen)setOpen(new Set(rows.map(row=>row.key)))},[alwaysOpen,rowKeySignature]);
 
   const flagged = useMemo(
     () => rows.filter(row => (row.flags || []).some(flag => flag.tone === "attention")),
@@ -121,9 +124,9 @@ export default function ListingRows({
        needs its width. The indent that aligns a text field with the summary
        column above it costs 179px, which squeezed the picker to two tiles a row.
        Text panels keep the alignment; work surfaces get the width. */
-    <div className={`listing-rows${defaultOpen ? " is-worksurface" : ""}${compactNavigation ? " is-compact" : ""}`}>
+    <div className={`listing-rows${defaultOpen||alwaysOpen ? " is-worksurface" : ""}${compactNavigation ? " is-compact" : ""}${alwaysOpen?" is-static-open":""}`}>
       {compactNavigation&&rows.length>1&&<label className="photo-listing-switch">Working on<select aria-label="Choose listing to edit photos" value={rows.find(row=>open.has(row.key))?.key||rows[0].key} onChange={event=>openListing(rows.findIndex(row=>row.key===event.target.value))}>{rows.map((row,index)=><option key={row.key} value={row.key}>Listing {index+1} of {rows.length} · {row.summary} · {row.meta}</option>)}</select></label>}
-      {!compactNavigation&&rows.length>1&&<div className="listing-rows-bar">
+      {!compactNavigation&&!alwaysOpen&&rows.length>1&&<div className="listing-rows-bar">
         <div className="listing-rows-summary">
           <b>{rows.length} {rows.length === 1 ? noun : `${noun}s`}</b>
           {flagged.length > 0 && (
@@ -176,18 +179,18 @@ export default function ListingRows({
             <div
               className="listing-card-head"
               data-listing-row={row.key}
-              role={compactNavigation ? undefined : "button"}
-              tabIndex={compactNavigation ? undefined : 0}
-              aria-expanded={compactNavigation ? undefined : isOpen}
-              onClick={compactNavigation ? undefined : () => toggle(row.key)}
-              onKeyDown={compactNavigation ? undefined : event => {
+              role={compactNavigation||alwaysOpen ? undefined : "button"}
+              tabIndex={compactNavigation||alwaysOpen ? undefined : 0}
+              aria-expanded={compactNavigation||alwaysOpen ? undefined : isOpen}
+              onClick={compactNavigation||alwaysOpen ? undefined : () => toggle(row.key)}
+              onKeyDown={compactNavigation||alwaysOpen ? undefined : event => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   toggle(row.key);
                 }
               }}
             >
-              {!compactNavigation&&<span className="listing-card-caret" aria-hidden="true">{isOpen ? "▾" : "▸"}</span>}
+              {!compactNavigation&&!alwaysOpen&&<span className="listing-card-caret" aria-hidden="true">{isOpen ? "▾" : "▸"}</span>}
               {row.thumb
                 ? <img className="listing-card-thumb" src={row.thumb} alt="" decoding="async"/>
                 : <span className="listing-card-thumb"/>}
@@ -226,7 +229,7 @@ export default function ListingRows({
                   ends. Clicking the body itself is deliberately NOT a close -
                   the body is a form, and a stray click while editing a title
                   must never throw the panel shut. */}
-              {singleOpen ? <div className={`listing-card-pagination${row.position&&rows.length===1?" is-position-only":""}`}>
+              {alwaysOpen?null:singleOpen ? <div className={`listing-card-pagination${row.position&&rows.length===1?" is-position-only":""}`}>
                 {!(row.position&&rows.length===1)&&<button type="button" disabled={index === 0} onClick={() => openListing(index - 1)}>← Previous listing</button>}
                 <b>Listing {position.index} of {position.total}</b>
                 {!(row.position&&rows.length===1)&&<button type="button" disabled={index === rows.length - 1} onClick={() => openListing(index + 1)}>Next listing →</button>}

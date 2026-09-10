@@ -30,7 +30,7 @@ test("final photo order identifies the exact original design at a readable size"
   /* D709 · One identity block per listing now, not one per panel. It heads
      both the uploader and the order grid, so it carries the photo count. */
   assert.match(branch,/<UploadedListingPhotos /);
-  assert.match(branch,/<IndividualSizeGuide /);
+  assert.match(branch,/sizeGuideName=\{design\.sizeGuideName\}/);
   // Readable size: 180px was too small to judge. 240px, and it stays square.
   const v2=fs.readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
   assert.match(v2,/\.factory-photo-layout\{[^}]*grid-template-columns:240px/);

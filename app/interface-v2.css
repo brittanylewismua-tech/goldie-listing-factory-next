@@ -1569,8 +1569,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .review-listing-switcher>button>span:last-child{display:grid;gap:3px;min-width:0}.app-shell .review-listing-switcher small{color:#766b73;font-size:9px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.app-shell .review-listing-switcher b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.app-shell .review-listing-thumb{display:grid;place-items:center;overflow:hidden;width:48px;height:48px;border:1px solid #ded4da;border-radius:8px;background:#f6f1f4;color:#715666;font-size:13px;font-weight:900}.app-shell .review-listing-thumb img{width:100%;height:100%;object-fit:cover}
 .app-shell .review-listing-editor-nav{position:sticky;z-index:8;top:88px;display:grid;gap:10px;padding:12px;border:2px solid #171417;border-radius:12px;background:rgba(24,21,25,.97);color:#fff;box-shadow:4px 4px 0 #ff39ad;backdrop-filter:blur(12px)}
 .app-shell .review-listing-current{display:grid;gap:3px;min-width:0;padding:2px 2px 8px;border-bottom:1px solid rgba(255,255,255,.18)}.app-shell .review-listing-current small{color:#d5cbd2;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.app-shell .review-listing-current b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
-.app-shell .review-section-switcher{display:grid;gap:6px}.app-shell .review-section-switcher button,.app-shell .review-listing-done{display:flex;align-items:center;min-height:38px;padding:7px 10px;border:1px solid rgba(255,255,255,.4);border-radius:8px;background:transparent;color:#fff;font:750 10px/1.25 Inter,sans-serif;text-align:left;cursor:pointer}.app-shell .review-section-switcher button[aria-current="page"]{border-color:#ff39ad;background:#fff;color:#171417}.app-shell .review-listing-editor-nav button:focus-visible{outline:3px solid #ff39ad;outline-offset:2px}.app-shell .review-listing-done{justify-content:center;margin-top:2px;background:#fff;color:#171417;font-weight:850}
-@media(max-width:1000px){.app-shell .step-product-card:has(>.review-listing-editor-nav){grid-template-columns:1fr}.app-shell .step-product-card:has(>.review-listing-editor-nav)>header,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-switcher,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-editor-nav,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows{grid-column:1}.app-shell .review-listing-editor-nav{position:static}.app-shell .review-section-switcher{grid-template-columns:repeat(4,minmax(0,1fr))}.app-shell .review-listing-done{width:100%}}
+.app-shell .review-section-switcher{display:grid;gap:6px}.app-shell .review-section-switcher button{display:flex;align-items:center;min-height:38px;padding:7px 10px;border:1px solid rgba(255,255,255,.4);border-radius:8px;background:transparent;color:#fff;font:750 10px/1.25 Inter,sans-serif;text-align:left;cursor:pointer}.app-shell .review-section-switcher button[aria-current="page"]{border-color:#ff39ad;background:#fff;color:#171417}.app-shell .review-listing-editor-nav button:focus-visible{outline:3px solid #ff39ad;outline-offset:2px}
+@media(max-width:1000px){.app-shell .step-product-card:has(>.review-listing-editor-nav){grid-template-columns:1fr}.app-shell .step-product-card:has(>.review-listing-editor-nav)>header,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-switcher,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-editor-nav,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows{grid-column:1}.app-shell .review-listing-editor-nav{position:static}.app-shell .review-section-switcher{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:620px){.app-shell .review-listing-switcher>button{flex-basis:152px;grid-template-columns:42px minmax(78px,1fr)}.app-shell .review-listing-thumb{width:42px;height:42px}.app-shell .review-section-switcher{grid-template-columns:1fr 1fr}}
 
 
@@ -3441,10 +3441,6 @@ html, body { background: var(--lf-paper); }
    stack of one-photo view groups. */
 .app-shell .listing-photo-workspace{display:grid;gap:20px;min-width:0}
 .app-shell .listing-photo-workspace>:not(:first-child){padding-top:18px;border-top:1px solid #e7dfe4}
-.app-shell .listing-photo-workspace .individual-size-guide{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 18px;border:1px solid var(--lf-line);border-radius:10px;background:#fff}
-.app-shell .listing-photo-workspace .individual-size-guide>div{display:grid;gap:3px}
-.app-shell .listing-photo-workspace .individual-size-guide small{color:var(--lf-muted);font-size:12px}
-.app-shell .listing-photo-workspace .individual-size-guide>button{min-height:38px;padding:9px 15px;border:0;border-radius:8px;background:#111;color:#fff;font-weight:750;white-space:nowrap;cursor:pointer}
 .app-shell .listing-photo-workspace .listing-photo-order{display:grid;gap:12px;margin:0;padding:16px 0 0;border:0;border-top:1px solid var(--lf-line);border-radius:0;background:transparent}
 .app-shell .photo-order-heading{display:flex;align-items:baseline;justify-content:space-between;gap:16px}
 .app-shell .photo-order-heading>b{font-size:14px;color:var(--lf-ink)}
@@ -3527,7 +3523,6 @@ html, body { background: var(--lf-paper); }
 @media(max-width:700px){.app-shell .placement-review-grid{grid-template-columns:minmax(0,1fr)}}
 .app-shell .photo-order-strip article.drop-target{border-color:#111!important;box-shadow:0 0 0 3px rgba(17,17,17,.12)!important;transform:translateY(-3px)}
 .app-shell .photo-order-strip.is-reordering article:not(.dragging){transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease}
-.app-shell .individual-size-guide>button{margin-left:auto}
 .app-shell .save-draft-prices{justify-self:center;min-width:220px;min-height:42px;padding:10px 16px;border:0;border-radius:8px;background:#111;color:#fff;font-weight:800}
 
 /* D1041 · Required Step 3 work is visible on arrival, filenames no longer
@@ -3784,8 +3779,6 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-listing-screen > .factory-listing-grid{scroll-margin-top:160px}
 /* Do not flash an empty uploader or expose stale controls during restoration. */
 .app-shell .steps-column[data-restoring="true"]{display:none!important}
-.app-shell .size-guide-actions{margin-left:auto;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:12px}
-.app-shell .size-guide-actions button{margin:0}
 
 /* Optional title builders remain readable, keyboard-visible disclosure controls. */
 .app-shell .factory-work .design-fields .individual-title-builder > summary{
@@ -3902,11 +3895,9 @@ html, body { background: var(--lf-paper); }
 .app-shell .photo-listing-switch select{min-height:44px;width:100%;max-width:100%;border:1px solid #bdaeb7;border-radius:8px;background:#fff;color:#171717;padding:10px;font:inherit}
 .app-shell .mockup-tile-caption{display:block;padding:9px 6px;font-size:12px;font-weight:650;line-height:1.4;text-align:center;color:#171717;background:#fff}
 .app-shell .photo-listing-switch{display:grid;gap:8px;margin-bottom:20px;font-size:13px;font-weight:700}
-.app-shell .listing-photo-workspace>.individual-size-guide,.app-shell .listing-photo-workspace>.uploaded-listing-photos,.app-shell .listing-photo-workspace>.listing-photo-order{margin:24px 0!important;padding:20px!important;border:2px solid #171717!important;border-radius:10px!important;background:#fffafc!important;box-shadow:3px 3px 0 #171717!important}
-.app-shell .individual-size-guide>div>b{font-size:18px}
-.app-shell .individual-size-guide em,.app-shell .listing-photo-download em{font-size:11px;font-style:normal;font-weight:600;margin-left:8px;color:#665762}
+.app-shell .listing-photo-workspace>.uploaded-listing-photos,.app-shell .listing-photo-workspace>.listing-photo-order{margin:24px 0!important;padding:20px!important;border:2px solid #171717!important;border-radius:10px!important;background:#fffafc!important;box-shadow:3px 3px 0 #171717!important}
+.app-shell .listing-photo-download em{font-size:11px;font-style:normal;font-weight:600;margin-left:8px;color:#665762}
 .app-shell .mockup-view-tabs button:focus-visible,.app-shell .photo-listing-switch select:focus-visible{outline:3px solid #75516b;outline-offset:3px}
-@media(max-width:760px){.app-shell .listing-photo-workspace>.individual-size-guide{display:grid!important;gap:14px}.app-shell .size-guide-actions{flex-wrap:wrap}.app-shell .size-guide-actions button{min-height:44px;white-space:normal}}
 
 .photo-delivery-handoff{margin:24px 0;padding:22px;border:2px solid #151515;border-radius:12px;box-shadow:4px 4px 0 #151515;background:#fff8fb;color:#171717}
 .photo-delivery-handoff p{margin:12px 0;line-height:1.5}.photo-delivery-handoff>small{display:block;margin-top:14px;font-size:13px;line-height:1.5}.photo-delivery-handoff [role=status]{font-weight:700;margin:14px 0}.photo-delivery-handoff summary{padding:12px 0;cursor:pointer;font-weight:700}.photo-delivery-handoff ul{list-style:none;padding:0;margin:0}.photo-delivery-handoff li{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 0;border-top:1px solid #bcaeb5}.photo-delivery-handoff li strong{flex:1 1 220px;overflow-wrap:anywhere}.photo-delivery-handoff li small{flex-basis:100%}.photo-delivery-handoff button{min-height:44px;border:1px solid #171717;border-radius:7px;background:white;color:#171717;padding:8px 12px;cursor:pointer}.photo-delivery-error{padding:12px;border:2px solid var(--goldie-attention);border-radius:8px;background:#fff;margin-top:14px}.photo-delivery-handoff a{color:#171717;text-decoration:underline;text-underline-offset:3px}
@@ -3947,7 +3938,6 @@ html, body { background: var(--lf-paper); }
 .app-shell .individual-description-disclosure[open] .description-chevron{transform:rotate(180deg)}
 @media(max-width:600px){.app-shell .mockup-angle-controls{grid-template-columns:1fr;gap:8px}.app-shell .printify-image-option>.printify-photo-expand{width:40px;height:40px;bottom:44px}}
 
-.app-shell.app-shell .listing-photo-workspace .size-guide-actions button{min-height:44px!important;font-size:13px!important;padding:10px 14px!important}
 .app-shell.app-shell .listing-photo-workspace .photo-order-buttons button{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important}
 
 /* D1176: completed Etsy choices can stay compact; personalization remains visible. */
@@ -3960,6 +3950,57 @@ html, body { background: var(--lf-paper); }
 .app-shell .etsy-details-editor>summary:focus-visible{outline:3px solid #8b3368;outline-offset:-5px}
 .app-shell .etsy-details-editor-fields.factory-form-card{border:0;box-shadow:none;border-radius:0;background:#fffafc}
 .app-shell .etsy-detail-body>.personalization-editor{border:2px solid #171217;border-radius:12px;background:#fffafc;box-shadow:5px 5px 0 #111;padding:16px;margin-top:0}
+
+/* D1284: the focused listing editor keeps one compact side rail on every
+   section. Each destination shows only a boxed completion mark; all titles are
+   editable in one uninterrupted list. */
+@media(min-width:761px){
+  .app-shell .focused-review-section{display:grid;grid-template-columns:230px minmax(0,1fr);align-items:start;gap:16px 20px}
+  .app-shell .focused-review-section>.review-listing-switcher{grid-column:1/-1}
+  .app-shell .focused-review-section>.review-listing-editor-nav{grid-column:1;grid-row:2/span 20;position:sticky;top:88px}
+  .app-shell .focused-review-section>.review-listing-editor-nav .review-section-switcher{grid-template-columns:1fr}
+  .app-shell .focused-review-section>.factory-panel,
+  .app-shell .focused-review-section>.task-panel-lead,
+  .app-shell .focused-review-section>.factory-listing-grid{grid-column:2;min-width:0}
+}
+.app-shell .review-section-switcher button{display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px}
+.app-shell .review-section-switcher button>span:last-child{min-width:0}
+.app-shell .review-section-state{display:grid;width:24px;height:24px;place-items:center;border:2px solid currentColor;border-radius:6px;font-size:17px;font-weight:900;line-height:1}
+.app-shell .review-section-state.is-done{color:#53bd7c}
+.app-shell .review-section-state.is-needed{color:#f06a6a}
+.app-shell .review-section-switcher button[aria-current="page"] .review-section-state.is-done{color:#237a48}
+.app-shell .review-section-switcher button[aria-current="page"] .review-section-state.is-needed{color:#a52f3b}
+.app-shell .listing-rows.is-static-open .listing-card-head{grid-template-columns:132px minmax(0,1fr) auto auto;cursor:default}
+.app-shell .listing-rows.is-static-open .listing-card-head:hover{background:#fffafc}
+.app-shell .focused-review-section .listing-rows.is-static-open{gap:22px}
+.app-shell .focused-review-section .listing-rows.is-static-open .listing-card{padding:0;border:2px solid #171717;border-radius:10px;background:#fffafc;box-shadow:3px 3px 0 #171717}
+.app-shell .focused-review-section .listing-rows.is-static-open .listing-card-head{padding:14px;border-bottom:1px solid #ded1d8;background:#fffafc}
+.app-shell .focused-review-section .listing-rows.is-static-open .listing-card-detail{padding:18px!important}
+.app-shell .focused-review-section .factory-etsy-details-column .listing-product-preview{display:block;width:140px;max-width:100%;padding:0;border:1px solid #d8cfd4;border-radius:9px;background:#fff;overflow:hidden;cursor:zoom-in}
+.app-shell .focused-review-section .factory-etsy-details-column .listing-product-preview img{display:block;width:140px;max-width:100%;height:140px;object-fit:contain;background:#fff}
+@media(max-width:760px){
+  .app-shell .focused-review-section{display:grid;gap:16px}
+  .app-shell .focused-review-section>.review-listing-editor-nav{position:static}
+  .app-shell .review-section-switcher{grid-template-columns:1fr 1fr}
+  .app-shell .listing-rows.is-static-open .listing-card-head{grid-template-columns:96px minmax(0,1fr)}
+}
+
+/* D1284: product color labels wrap instead of clipping their final letter. */
+.app-shell .draft-color-grid button span{min-width:0;overflow:visible;text-overflow:clip;white-space:normal}
+
+/* D1284: enlargement is a quiet icon in the photo corner. */
+.app-shell .printify-image-option>.printify-photo-expand{right:8px;bottom:42px;width:28px;height:28px;min-width:28px;min-height:28px;border:0;border-radius:0;background:transparent;color:#171717;box-shadow:none}
+.app-shell .printify-image-option>.printify-photo-expand svg{width:18px;height:18px;filter:drop-shadow(0 1px 1px #fff)}
+@media(max-width:600px){.app-shell .printify-image-option>.printify-photo-expand{width:28px;height:28px;bottom:42px}}
+
+/* D1284: photos and their optional size guide share one upload card. */
+.app-shell .uploaded-listing-photos .listing-upload-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.app-shell .uploaded-listing-photos .listing-upload-actions button{min-height:40px}
+.app-shell .uploaded-size-guide{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px;border:1px solid #ded6dc;border-radius:9px;background:#fff}
+.app-shell .uploaded-size-guide>span{display:grid;gap:2px;min-width:0}
+.app-shell .uploaded-size-guide small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--lf-muted);font-size:12px}
+.app-shell .uploaded-size-guide>button{border:1px solid #d8aaa7!important;background:#fff!important;color:#963d3d!important}
+@media(max-width:700px){.app-shell .uploaded-listing-photos .listing-upload-actions{width:100%;justify-content:stretch}.app-shell .uploaded-listing-photos .listing-upload-actions button{flex:1 1 150px}}
 
 /* D1177: bound the artwork grid to its card, including narrow screens. */
 .app-shell .batch-design-drop.active-panel{grid-template-columns:minmax(0,1fr)!important}

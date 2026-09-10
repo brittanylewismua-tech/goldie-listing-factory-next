@@ -25,7 +25,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 const RENDERED_COMPONENTS = [
   "ActionReceipt", "BatchPreferencesPortal", "ContextHelp", "DownloadListingPhotos",
   "EtsyDetailsEditor", "FinalListingReview", "GoldieCommandBar",
-  "GoldieWordmark", "IndividualSizeGuide",
+  "GoldieWordmark",
   "UploadedListingPhotos", "KeywordBank", "ListingPhotoOrder", 
   "OutcomeReceipt", "PersonalizationEditor", "PriceField", "PricingReview",
   "PrintifyImagePicker", "ProductColorSelector", "ProductSizeSelector", "SavedWorkflow",
@@ -51,7 +51,7 @@ const FEATURES = [
   ["Printify product photos are selectable", /printify-image-picker bare/],
   ["seller photos can be uploaded", /<UploadedListingPhotos/],
   ["all listing photos can be reordered", /<ListingPhotoOrder/],
-  ["a size guide can be added to every listing", /<IndividualSizeGuide/],
+  ["a size guide can be added to every listing", /batchSizeGuideName=\{sizeGuideName\}/],
   ["AI titles for the whole batch", /Create all titles and tags/],
   ["manual title building from a bank", /Build this title yourself from a keyword bank/],
   /* D541 - the override moved out of a nested disclosure inside step 3's table
@@ -154,7 +154,7 @@ test("step-level controls sit below the cards, product-level inside them", async
      component must not return. */
   assert.ok(!images.body.includes("batch-size-guide") && !images.footer.includes("batch-size-guide"),
     "the old size-guide banner is gone");
-  assert.ok(app.includes('<IndividualSizeGuide') && app.includes('className="listing-photo-workspace"'),
+  assert.ok(app.includes('<UploadedListingPhotos') && app.includes('sizeGuideName={design.sizeGuideName}') && app.includes('className="listing-photo-workspace"'),
     "the size guide lives inside the listing's one photo workspace");
   for (const perStep of ["workflow-next", "image-step-blocker"]) {
     assert.ok(images.footer.includes(perStep), `${perStep} is about the step`);

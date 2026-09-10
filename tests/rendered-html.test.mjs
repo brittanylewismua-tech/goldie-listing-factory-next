@@ -319,10 +319,11 @@ test("provides thorough contextual help throughout all nine Listing Factory step
 });
 
 test("stages each finished mockup group for its exact Etsy listing", async () => {
-  const [mockups,images,page] = await Promise.all([
+  const [mockups,images,page,uploads] = await Promise.all([
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/etsy/images/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/uploaded-listing-photos.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(mockups, /productId/);
   assert.match(mockups, /stageForEtsy/);
@@ -334,7 +335,8 @@ test("stages each finished mockup group for its exact Etsy listing", async () =>
   assert.match(images, /kind==="size-guide"/);
   assert.match(images, /existing\.objects\.map\(object=>runtime\(\)\.ARTWORK\.delete\(object\.key\)\)/);
   assert.match(images, /catch\(error\)\{await Promise\.all\(saved\.map/);
-  assert.match(page, /<IndividualSizeGuide /);
+  assert.match(page, /<UploadedListingPhotos /);
+  assert.match(uploads, /form\.set\("kind","size-guide"\)/);
   assert.match(page, /printifyImageIndices/);
 });
 
@@ -4737,7 +4739,7 @@ test("a product card holds only its rows and the one open task — D540", async 
   const shared = app.slice(0, i);
   assert.ok(shared.includes("sizeGuideName"), "the size guide remains batch-wide state");
   assert.ok(shared.includes("Review all listings in Printify"));
-  assert.match(app, /<IndividualSizeGuide /);
+  assert.match(app, /<UploadedListingPhotos [\s\S]*?sizeGuideName=\{design\.sizeGuideName\}/);
   assert.doesNotMatch(app, /className="batch-size-guide/,"the banner component is gone rather than relocated");
 
   // And the heading that described the removed block is gone with it.
@@ -5010,7 +5012,7 @@ test("steps 1 to 3 say what their numbers mean — D550", async () => {
      once Printify photos exist the listing always has photos to arrange. The
      size guide is the optional row on this step now. The rule is unchanged and
      still needs a row to hold it. */
-  assert.match(app, /<IndividualSizeGuide /);
+  assert.match(app, /<UploadedListingPhotos [\s\S]*?sizeGuideName=\{design\.sizeGuideName\}/);
   assert.match(app, /row\.done\?"✓":row\.pending\?"…":row\.optional\?"–":"!"/);
   assert.match(css, /\.app-shell \.batch-product-row\.optional \.row-mark\{/);
 
@@ -7290,7 +7292,7 @@ test("panels that open by default get their width back — D690", async () => {
     readFile(new URL("../app/listing-rows.tsx", import.meta.url), "utf8"),
     Promise.all([readFile(new URL("../app/clarity-pass.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
-  assert.match(rows, /className=\{`listing-rows\$\{defaultOpen \? " is-worksurface" : ""\}\$\{compactNavigation \? " is-compact" : ""\}`\}/);
+  assert.match(rows, /className=\{`listing-rows\$\{defaultOpen\|\|alwaysOpen \? " is-worksurface" : ""\}\$\{compactNavigation \? " is-compact" : ""\}\$\{alwaysOpen\?" is-static-open":""\}`\}/);
   assert.match(clarity, /\.app-shell \.listing-rows\.is-worksurface \.listing-card-detail[^{]*\{padding-left:18px\}/);
   // Text panels keep the alignment - that is what made the detail read as nested.
   assert.match(clarity, /\.app-shell \.listing-card-detail\{padding:18px 18px 18px 99px/);

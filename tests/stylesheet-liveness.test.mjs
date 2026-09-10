@@ -65,7 +65,8 @@ test("current placement, preview, and size-guide controls retain their protectio
     "the live Printify placement action must remain readable");
   assert.match(v2, /\.factory-art-preview\{[^}]*height:190px/,
     "the live design preview must remain large enough to identify");
-  assert.match(app, /<IndividualSizeGuide /,
+  const uploads = await readFile(new URL("app/uploaded-listing-photos.tsx", root), "utf8");
+  assert.match(uploads, /form\.set\("kind","size-guide"\)/,
     "the live per-listing size-guide control remains reachable");
 });
 

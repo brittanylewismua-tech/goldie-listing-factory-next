@@ -10,7 +10,8 @@ test("D971: listing photos are one job, not three disconnected rows",()=>{
   assert.doesNotMatch(app,/label:"Final photo order"/);
   assert.doesNotMatch(app,/label:"Size guide"[^\n]+task:"sizeguide"/);
   const workspace=app.slice(app.indexOf('className="listing-photo-workspace"'),app.indexOf('className="listing-photo-workspace"')+5000);
-  for(const component of ["PrintifyImagePicker","UploadedListingPhotos","IndividualSizeGuide","ListingPhotoOrder"])assert.match(workspace,new RegExp(component));
+  for(const component of ["PrintifyImagePicker","UploadedListingPhotos","ListingPhotoOrder"])assert.match(workspace,new RegExp(component));
+  assert.doesNotMatch(workspace,/<IndividualSizeGuide/);
 });
 
 test("D971: Printify mockups use one compact grid with a complete expander",()=>{

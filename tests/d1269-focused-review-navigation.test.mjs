@@ -7,7 +7,7 @@ const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8"
 
 test("D1269: focused Review navigation replaces the work surface for all listing-detail sections",()=>{
   assert.match(app,/const focusedSection=reviewEditing\?\.clientId===design\.id\?\(reviewEditing\.section\|\|"title"\):null/);
-  assert.match(app,/focusedSection==="title"\?titlesRows\(design\)/);
+  assert.match(app,/focusedSection==="title"\?titlesRows\(undefined,true\)/);
   assert.match(app,/:focusedSection==="description"\?descriptionRows\(design\)/);
   assert.match(app,/:focusedSection==="etsy"\?etsyRows\(design\)/);
   assert.match(app,/focused-review-\$\{focusedSection\}/);

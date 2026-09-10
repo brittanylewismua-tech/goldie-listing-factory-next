@@ -33,7 +33,7 @@ test("D1251: the listing editor keeps every section and Review return visible",(
     assert.ok(app.includes(`label:"${label}"`));
   }
   assert.match(app,/className="review-listing-editor-nav"/);
-  assert.match(app,/>Back to Review<\/button>/);
+  assert.match(app,/Back to Review<\/button>/);
   assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
   assert.match(app,/\.factory-listing-form \.design-fields/);
   assert.match(app,/\.individual-description-disclosure/);
@@ -82,13 +82,13 @@ test("Review editing identifies the current listing instead of repeating the ove
   assert.match(app,/reviewEditing\s*\? \{ eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review\." \}/);
   assert.match(app,/finish: finishPhase==="details" \? \{ eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review\." \}/);
   assert.match(app,/>Continue to listing details <span/);
-  assert.equal((app.match(/progressIndex>0&&!reviewEditing&&<button className="workflow-back"/g)||[]).length,1);
-  assert.equal((app.match(/complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer">\{!reviewEditing&&<button/g)||[]).length,1);
+  assert.match(app,/reviewEditing\?<button className="workflow-back"[^>]+onClick=\{\(\)=>openFinishedReview\(false\)\}/);
+  assert.match(app,/complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer">\{reviewEditing\?<button/);
   assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
 });
 
 test("Review editors expose one unambiguous return and truthful save state",()=>{
-  assert.equal((app.match(/>Back to Review<\/button>/g)||[]).length,1);
+  assert.equal((app.match(/Back to Review<\/button>/g)||[]).length,2);
   assert.match(app,/const grouped=workflowStep==="designs"&&!reviewEditing/);
   assert.match(app,/reviewEditing\.section==="variants"\?\["draft-colors","draft-sizes"\]/);
   assert.match(app,/reviewEditing\.section==="pricing"\?\["draft-pricing","draft-shipping"\]/);
@@ -116,7 +116,7 @@ test("Etsy readiness requires a category as well as required property values",()
 });
 
 test("Review uses exact section names and exposes Printify drafts without a vague disclosure",()=>{
-  assert.match(app,/\{key:"etsy",label:"Etsy details & personalization"\}/);
+  assert.match(app,/\{key:"etsy",label:"Etsy details & personalization",done:/);
   assert.match(app,/>Open drafts in Printify ↗<\/a>/);
   assert.doesNotMatch(app,/<summary>Other options<\/summary>/);
   assert.match(app,/label\.startsWith\("Etsy "\)\?rows\[rowIndex\+1\]\.label/);

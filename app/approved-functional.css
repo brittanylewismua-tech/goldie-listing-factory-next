@@ -396,7 +396,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .ready-text,
 .app-shell .profit-pass,
 .app-shell .title-build-message,
-.app-shell .individual-size-guide p{color:#6b365a!important}
 .app-shell .variant-pricing.approved{border-color:#dfc8d5!important;background:rgba(252,244,254,.62)!important}
 .app-shell .batch-progress{border-color:#dfc8d5!important}
 .app-shell .progress-ring{background:transparent!important;border-color:#dfc8d5!important;border-top-color:#b777b0!important}
@@ -593,7 +592,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    carries its own spacing. */
 
 .app-shell .draft-card>.printify-image-picker{order:2}
-.app-shell .draft-card>.individual-size-guide{order:4}
 .app-shell .draft-card>.error-help-link{order:5}
 .app-shell .integrated-mockups .generate-inline{
   position:static!important;
@@ -907,7 +905,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 /* Finish workspace: dense rows with one in-place editor instead of stacked cards. */
 .app-shell .etsy-details-editor>summary{min-height:42px!important;padding:8px 10px!important}
 .app-shell .post-draft-workspace .draft-card{display:grid!important;grid-template-columns:1fr!important;gap:10px!important;padding:10px 12px!important;border-radius:12px!important;box-shadow:none!important}
-.app-shell .post-draft-workspace .draft-card>.printify-image-picker,.app-shell .post-draft-workspace .draft-card>.individual-size-guide,.app-shell .post-draft-workspace .draft-card>.listing-photo-download,.app-shell .post-draft-workspace .draft-card>.listing-photo-order{grid-column:1!important}
+.app-shell .post-draft-workspace .draft-card>.printify-image-picker,.app-shell .post-draft-workspace .draft-card>.listing-photo-download,.app-shell .post-draft-workspace .draft-card>.listing-photo-order{grid-column:1!important}
 /* D731 · interface-v2 owns this row now - see .final-listing-card there. */
 .app-shell .final-listing-card>img{width:56px!important;height:56px!important;object-fit:cover!important}
 /* D98 · This is the last screen before listings go live on Etsy, and it showed
@@ -1101,7 +1099,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .post-draft-workspace>.post-draft-heading>div{grid-column:1;width:100%!important;max-width:100%!important;margin-inline:auto!important;justify-self:stretch!important;justify-items:center!important;text-align:center!important}
 .app-shell .post-draft-heading h2{width:100%;max-width:900px;margin-inline:auto;text-align:center!important}
 .app-shell .post-draft-heading p{max-width:760px;margin-inline:auto;text-align:center!important}
-.app-shell .post-draft-workspace>.post-draft-heading>.open-all-button{grid-column:1;justify-self:center!important;align-self:center!important;margin-inline:auto!important}.app-shell .draft-card>.printify-image-picker{order:2}.app-shell .draft-card>.individual-size-guide{order:4}.app-shell .draft-card>.listing-photo-download{order:5}.app-shell .draft-card>.listing-photo-order{order:6}.app-shell .draft-card>.error-help-link{order:7}
+.app-shell .post-draft-workspace>.post-draft-heading>.open-all-button{grid-column:1;justify-self:center!important;align-self:center!important;margin-inline:auto!important}.app-shell .draft-card>.printify-image-picker{order:2}.app-shell .draft-card>.listing-photo-download{order:5}.app-shell .draft-card>.listing-photo-order{order:6}.app-shell .draft-card>.error-help-link{order:7}
 .app-shell .printify-image-grid .printify-image-option{position:relative;overflow:hidden;border:2px solid transparent;border-radius:12px;padding:4px;background:rgba(255,249,253,.78)}.app-shell .printify-image-grid .printify-image-option.selected{border-color:#bd73ae;box-shadow:0 0 0 3px rgba(189,115,174,.12)}.app-shell .printify-photo-selector{position:absolute!important;z-index:3!important;top:8px!important;left:8px!important;display:grid!important;width:20px!important;height:20px!important;place-items:center!important;padding:0!important;border:2px solid #7d496f!important;border-radius:6px!important;background:rgba(255,255,255,.96)!important;box-shadow:0 2px 7px rgba(45,20,38,.18)!important;cursor:pointer!important}.app-shell .printify-photo-selector:has(input:checked){background:#7d496f!important}.app-shell .printify-photo-selector input{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important;opacity:0!important;cursor:pointer!important}.app-shell .printify-photo-selector>span[aria-hidden]{color:#fff;font-size:12px;font-weight:900;line-height:1}.app-shell .printify-photo-expand{display:block;width:100%;padding:0;border:0;background:transparent;cursor:zoom-in}.app-shell .printify-photo-expand img{display:block;width:100%;height:100%;object-fit:cover}
 .app-shell .image-pref-actions button{position:relative}.app-shell .image-pref-actions button.confirmed{border-color:#68a67b!important;background:#eef9f1!important;color:#285f3a!important;box-shadow:0 0 0 3px rgba(71,145,91,.1)!important}.app-shell .image-pref-actions button.confirmed small{color:#3e704d!important}.app-shell .action-check{position:absolute;right:11px;top:10px;display:grid;width:21px;height:21px;place-items:center;border-radius:50%;background:#3d8b55;color:#fff;font-size:11px;font-weight:900}.app-shell .image-pref-feedback{margin:10px 0 0;padding:9px 12px;border-radius:10px;background:rgba(232,247,236,.9);color:#306342!important;font-size:10px!important;font-weight:750!important;text-align:center}
 .printify-photo-lightbox{position:fixed;inset:0;z-index:1200;display:grid;place-items:center;padding:40px;background:rgba(43,20,36,.38);backdrop-filter:blur(3px);cursor:zoom-out}.printify-photo-lightbox>button{position:fixed;right:24px;top:20px;z-index:2;width:42px;height:42px;border:1px solid rgba(255,255,255,.72);border-radius:50%;background:rgba(255,255,255,.94);box-shadow:0 8px 24px rgba(42,18,34,.2);color:#522d48;font-size:24px;cursor:pointer}.printify-photo-lightbox>img{display:block;width:auto;height:auto;min-width:min(640px,82vw);max-width:92vw;max-height:90vh;border-radius:14px;background:transparent;box-shadow:0 24px 70px rgba(30,12,24,.38);object-fit:contain;cursor:default}@media(max-width:720px){.printify-photo-lightbox{padding:24px 14px}.printify-photo-lightbox>img{min-width:0;width:94vw;max-height:86vh}.printify-photo-lightbox>button{right:12px;top:12px}}

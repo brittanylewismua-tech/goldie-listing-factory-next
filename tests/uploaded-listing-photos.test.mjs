@@ -20,8 +20,12 @@ test("seller uploads are exact-listing photos that publish, reorder, download an
   assert.match(app,/<PrintifyImagePicker bare/);
   assert.match(uploader,/form\.set\("productId",productId\)/);
   assert.match(uploader,/form\.set\("kind","upload"\)/);
+  assert.match(uploader,/form\.set\("kind","size-guide"\)/);
   assert.match(uploader,/multiple type="file"/);
   assert.match(uploader,/Upload photos/);
+  assert.match(uploader,/Add Listing Photos\/Size Guide/);
+  assert.match(uploader,/Change size guide/);
+  assert.match(uploader,/kind=size-guide/);
   assert.doesNotMatch(uploader,/<span>\{photo\.name\}<\/span>/);
   assert.match(uploader,/alt="Uploaded listing photo"/);
   assert.doesNotMatch(uploader,/No additional photos uploaded|keeps the files unchanged|uses them only for this listing/);
