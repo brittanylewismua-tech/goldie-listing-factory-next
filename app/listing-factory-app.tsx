@@ -3211,7 +3211,12 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       {key:"etsy",label:"Etsy details & personalization"},
     ] as const;
     const position=files.findIndex(file=>file.id===design.id);
-    const move=(nextPosition:number)=>{const nextDesign=files[nextPosition],nextDraft=nextDesign?drafts.find(item=>item.clientId===nextDesign.id&&item.status==="Created"&&item.id):undefined;if(nextDesign&&nextDraft)open((reviewEditing.section||current||"title") as ReviewSection,nextDesign,nextDraft)};
+    /* The work surface the seller can actually see is the source of truth when
+       moving between listings.  A restored batch can briefly carry the last
+       saved reviewEditing value while activeTask has already opened a different
+       section from the URL.  Preferring that stale value made Next jump from
+       Listing photos to Colors & sizes on the following listing. */
+    const move=(nextPosition:number)=>{const nextDesign=files[nextPosition],nextDraft=nextDesign?drafts.find(item=>item.clientId===nextDesign.id&&item.status==="Created"&&item.id):undefined;if(nextDesign&&nextDraft)open((current||reviewEditing.section||"title") as ReviewSection,nextDesign,nextDraft)};
     return <aside className="review-listing-editor-nav" aria-label={`Edit listing ${position+1}`}><div><small>Editing listing {position+1} of {files.length}</small><b>{design.title.trim()||"Untitled listing"}</b></div><nav>{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} onClick={()=>open(entry.key)}>{entry.label}</button>)}</nav>{files.length>1&&<nav className="review-listing-position" aria-label="Move between listings"><button type="button" disabled={position<=0} onClick={()=>move(position-1)}>← Previous listing</button><span>Listing {position+1} of {files.length}</span><button type="button" disabled={position>=files.length-1} onClick={()=>move(position+1)}>Next listing →</button></nav>}<button type="button" className="review-listing-done" onClick={()=>openFinishedReview(false)}>Back to Review</button></aside>;
   }
   function rememberReviewEditor(clientId:string,section:ReviewSection){

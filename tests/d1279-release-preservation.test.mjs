@@ -24,6 +24,7 @@ test('deep links and product switches retain the exact listing and editor sectio
   assert.match(app,/aria-label="Move between listings"/);
   assert.match(app,/← Previous listing/);
   assert.match(app,/Next listing →/);
+  assert.match(app,/open\(\(current\|\|reviewEditing\.section\|\|"title"\) as ReviewSection/);
   assert.match(css,/\.review-listing-position/);
 });
 
