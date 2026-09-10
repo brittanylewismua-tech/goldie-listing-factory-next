@@ -16,6 +16,8 @@ test("D1269: focused Review navigation replaces the work surface for all listing
 test("D1269: an Etsy destination with no title shows its waiting state instead of disappearing",()=>{
   assert.match(css,/\.focused-review-grid>\.factory-etsy-details-column:has\(\.etsy-detail-pending\)\{display:block\}/);
   assert.match(app,/Waiting for this listing’s title\./);
+  assert.match(app,/Open Title &amp; tags, add the title, then return here\./);
+  assert.doesNotMatch(app,/Create the title above to prepare the Etsy category/);
 });
 
 test("D1269: focused Review headings and photo counts describe the selected listing",()=>{
