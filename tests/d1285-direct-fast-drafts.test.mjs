@@ -20,13 +20,15 @@ test("D1285: the synchronous duplicate guard remains ahead of every mutation",()
   assert.ok(queue.indexOf("draftRunInFlight.current=true")<queue.indexOf("setRunning(true)"));
 });
 
-test("D1285: large transparent PNG optimization is serialized and quality gated",()=>{
+test("D1285: large transparent PNG preparation is serialized, native, and crop gated",()=>{
   assert.match(upload,/LARGE_TRANSPARENT_PNG_BYTES = 12 \* 1024 \* 1024/);
   assert.match(upload,/optimizerQueue = turn/);
-  assert.match(upload,/optimized\.size < file\.size \* \.75/);
-  assert.match(worker,/UPNG\.quantize\(\[original\], 256\)/);
-  assert.match(worker,/mean > 4 \|\| p95 > 18 \|\| alphaMean > 1/);
-  assert.match(worker,/encoded\.byteLength >= event\.data\.originalBytes \* \.75/);
+  assert.match(upload,/optimized\.size < file\.size \* \.82/);
+  assert.match(upload,/bounds: \{ left: 0, top: 0, right: 1, bottom: 1 \}/);
+  assert.match(worker,/createImageBitmap/);
+  assert.match(worker,/new OffscreenCanvas\(width, height\)/);
+  assert.match(worker,/blob\.size >= event\.data\.originalBytes \* \.82/);
+  assert.doesNotMatch(worker,/UPNG|quantize/);
 });
 
 test("D1285: the one progress bar covers preparation, admission, and provider completion",()=>{

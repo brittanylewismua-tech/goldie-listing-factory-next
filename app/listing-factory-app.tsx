@@ -1053,7 +1053,7 @@ export default function ListingFactoryApp() {
   const batchEditRevision=useRef(0);
   const resumeAttempted=useRef(false);
   const draftRunActive=useRef(false);
-  const stagedArtworkCache=useRef(new Map<string,{file:File;promise:Promise<{stagedId:string;reference:string;fileName:string}>}>());
+  const stagedArtworkCache=useRef(new Map<string,{file:File;promise:Promise<{stagedId:string;reference:string;fileName:string;bounds?:VisibleBounds}>}>());
   const templateLoadVersion=useRef(0);
   const etsyPreparationVersion=useRef(0);
   const etsyPreparationActive=useRef(false);
@@ -4486,7 +4486,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       throw new Error("Choose a PNG or JPG file. WebP artwork must be exported as PNG before uploading.");
     }
     const rigidPaperProduct=isRigidPaperProduct(templateDetails);
-    return prepareArtworkFile(file, design.hasTransparency !== false, rigidPaperProduct);
+    return prepareArtworkFile(file, design.hasTransparency !== false, rigidPaperProduct, design.visibleBounds);
   }
 
   async function stageUpload(blob: Blob, fileName: string, reference: string) {
@@ -4526,7 +4526,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     }
     const cached=stagedArtworkCache.current.get(cacheKey);
     if(cached?.file===artwork.file){const staged=await cached.promise,expires=Number(staged.stagedId.match(/^stage_(\d+)_/)?.[1]||0);if(expires>Date.now()+60_000)return staged;stagedArtworkCache.current.delete(cacheKey)}
-    const promise=preparedUpload(artwork).then(async upload=>({...await stageUpload(upload.blob,upload.fileName,reference),fileName:upload.fileName}));
+    const promise=preparedUpload(artwork).then(async upload=>({...await stageUpload(upload.blob,upload.fileName,reference),fileName:upload.fileName,bounds:upload.bounds??artwork.visibleBounds}));
     stagedArtworkCache.current.set(cacheKey,{file:artwork.file,promise});
     void promise.catch(()=>{if(stagedArtworkCache.current.get(cacheKey)?.promise===promise)stagedArtworkCache.current.delete(cacheKey)});
     return promise;
@@ -4591,7 +4591,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         for (let pipelineAttempt = 1; pipelineAttempt <= 1; pipelineAttempt += 1) {
           const supportReference = `${referenceRoot}-A${pipelineAttempt}`;
           try {
-            const stagedArtworks=await Promise.all(artworkItems.map(async item=>{const staged=await stagedArtwork(`${design.id}:${item.key}`,item.artwork,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:staged.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:item.artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}}));
+            const stagedArtworks=await Promise.all(artworkItems.map(async item=>{const staged=await stagedArtwork(`${design.id}:${item.key}`,item.artwork,`${supportReference}-${item.key.slice(0,8)}`);return {key:item.key,fileName:staged.fileName,stagedId:staged.stagedId,reference:staged.reference,bounds:staged.bounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}}));
+            const stagedBounds=new Map(stagedArtworks.map(artwork=>[artwork.key,artwork.bounds]));
             const availableColorIds=(requestDetails?.colorOptions||[]).filter(color=>color.available).map(color=>color.id);
             /* One representative size is enough to generate an honest image
                for every colour. Asking for every colour at every selected size
@@ -4609,7 +4610,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             const primarySide=primaryPrintSide(requestDetails?.printPositions)||"front";
             const assignedPrimaryColors=new Set(versions.filter(artwork=>artwork.side===primarySide).flatMap(artwork=>artwork.colorIds));
             const primaryVariantIds=variants.filter(variant=>variant.colorId==null||!assignedPrimaryColors.has(variant.colorId)).map(variant=>variant.id);
-            const artworkAssignments=[...(primaryVariantIds.length?[{position:primarySide,variantIds:primaryVariantIds,artworkKey:"primary",bounds:design.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}]:[]),...versions.map(artwork=>({position:artwork.side,variantIds:variants.filter(variant=>variant.colorId!=null&&artwork.colorIds.includes(variant.colorId)).map(variant=>variant.id),artworkKey:artwork.id,bounds:artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined})).filter(assignment=>assignment.variantIds.length)];
+            const artworkAssignments=[...(primaryVariantIds.length?[{position:primarySide,variantIds:primaryVariantIds,artworkKey:"primary",bounds:stagedBounds.get("primary"),maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined}]:[]),...versions.map(artwork=>({position:artwork.side,variantIds:variants.filter(variant=>variant.colorId!=null&&artwork.colorIds.includes(variant.colorId)).map(variant=>variant.id),artworkKey:artwork.id,bounds:stagedBounds.get(artwork.id),maxPlacementScale:isRigidPaperProduct(requestDetails)?1:undefined})).filter(assignment=>assignment.variantIds.length)];
             const fullDescription=[design.blurb||design.etsy?.blurb,preparation?.description??description].filter(Boolean).join("\n\n");
             const staged=stagedArtworks[0];
             const commonDraftRequest={
@@ -4796,7 +4797,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         const file=list?.[0];if(!file)return;
         const artwork=await inspectArtworkVersion(file,side),prepared=await preparedUpload(artwork),reference=`color-${draft.id.slice(0,8)}-${color.id}`;
         const staged=await stageUpload(prepared.blob,prepared.fileName,reference);
-        artworkUpdate={...artworkUpdate,stagedId:staged.stagedId,fileName:prepared.fileName,bounds:artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(templateDetails)?1:undefined};
+        artworkUpdate={...artworkUpdate,stagedId:staged.stagedId,fileName:prepared.fileName,bounds:prepared.bounds??artwork.visibleBounds,maxPlacementScale:isRigidPaperProduct(templateDetails)?1:undefined};
       }
       const response=await fetch("/api/printify/drafts/update",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({productId:draft.id,artworkUpdate})});
       const payload=await response.json().catch(()=>({})) as {draft?:DraftResult;error?:string};
