@@ -71,8 +71,8 @@ test("resume opens the first unfinished product, never a finished one", () => {
 
 test("the card reports the run, and one action opens it", () => {
   assert.match(route, /product_title:`\$\{total\} products · \$\{listings\} \$\{listings===1\?"listing":"listings"\}/);
-  assert.match(route, /const listings=designs\*Math\.max\(1,total\)/,
-    "listings are designs x products - counting child rows reported 2 while she made 4");
+  assert.match(route, /const listings=members\.reduce\(\(sum,member\)=>sum\+member\.expected,0\)\|\|designs\*Math\.max\(1,total\)/,
+    "listings are the sum each product actually requested, including product-specific exclusions");
   assert.match(route, /const resumeInto=members\.find\(member=>!member\.done&&member\.batchId\)\?\.batchId/);
   assert.match(page, /fullyPublished\(batch\)\?"Open published bundle"/);
 });

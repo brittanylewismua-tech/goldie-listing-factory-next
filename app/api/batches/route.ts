@@ -102,7 +102,7 @@ function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string
    honestly exist. Listings are designs x products because that is what she
    asked for - counting the child rows that happen to exist reported 2 while
    she was making 4. */
-type RunChild={batchId:string;recipeId?:string;productName:string;position:number;drafts:number;published:number;done:boolean};
+type RunChild={batchId:string;recipeId?:string;productName:string;position:number;drafts:number;expected:number;published:number;done:boolean};
 function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknown>,children:Array<Record<string,unknown>>,publishedByBatch:Record<string,number>,publishedAtByProduct:Record<string,string>){
   let parentState:{batchDisplayName?:string;run?:{bundleName?:string;productOrder?:string[];activeProductId?:string}}={};
   try{parentState=JSON.parse(String(parent.state_json||"{}"))}catch{/* a damaged parent must not hide the run */}
@@ -120,13 +120,14 @@ function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknow
       ||Number(publishedByBatch[String(child.id)])||0;
     const position=order.indexOf(recipeId);
     const expected=Math.max(Number(child.design_count)||0,drafts.length);
-    return {batchId:String(child.id),recipeId,productName:String(state.activeRecipe?.name||"").trim(),position:position>=0?position+1:order.length+1,drafts:drafts.length,published,done:expected>0&&published>=expected};
+    return {batchId:String(child.id),recipeId,productName:String(state.activeRecipe?.name||"").trim(),position:position>=0?position+1:order.length+1,drafts:drafts.length,expected,published,done:expected>0&&published>=expected};
   }).sort((a,b)=>a.position-b.position);
   const actualByRecipe=new Map(actualMembers.filter(member=>member.recipeId).map(member=>[member.recipeId!,member]));
-  const members:RunChild[]=[...order.map((recipeId,index)=>actualByRecipe.get(recipeId)||{batchId:"",recipeId,productName:recipeNames.get(recipeId)||`Product ${index+1}`,position:index+1,drafts:0,published:0,done:false}),...actualMembers.filter(member=>!member.recipeId||!order.includes(member.recipeId))];
+  const parentDesigns=Math.max(0,Number(parent.design_count)||Number(item.design_count)||0);
+  const members:RunChild[]=[...order.map((recipeId,index)=>actualByRecipe.get(recipeId)||{batchId:"",recipeId,productName:recipeNames.get(recipeId)||`Product ${index+1}`,position:index+1,drafts:0,expected:parentDesigns,published:0,done:false}),...actualMembers.filter(member=>!member.recipeId||!order.includes(member.recipeId))];
   const total=Math.max(order.length,members.length);
   const designs=Math.max(0,...children.map(child=>Number(child.design_count)||0));
-  const listings=designs*Math.max(1,total);
+  const listings=members.reduce((sum,member)=>sum+member.expected,0)||designs*Math.max(1,total);
   const publishedTotal=members.reduce((sum,member)=>sum+member.published,0);
   const childrenComplete=children.length>0&&(!order.length||children.length>=order.length)&&children.every(child=>String(child.status)==="complete");
   const aggregateStatus=children.some(child=>String(child.status)==="needs_attention")?"needs_attention":childrenComplete?"complete":children.some(child=>String(child.status)==="processing")?"processing":String(item.status||"draft");
@@ -143,6 +144,7 @@ function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknow
     thumbnail_url:String(item.thumbnail_url||"")||children.map(child=>{const state=read(child);return (state.drafts||[]).find(draft=>draft.previewUrl)?.previewUrl||state.templateDetails?.previewImage||""}).find(Boolean)||"",
     members,
     bundle_total:total,
+    expected_listing_count:listings,
     resume_batch_id:resumeInto};
 }
 

@@ -11,7 +11,13 @@ test("partial Etsy publication is counted instead of presented as complete",()=>
   assert.match(history,/`\$\{batch\.published_count\} OF \$\{expected\} PUBLISHED TO ETSY`/);
   assert.match(history,/fullyPublished\(batch\)\?"Open published bundle":"Resume bundle"/);
   assert.match(history,/fullyPublished\(batch\) \? "Open published batch" : "Resume batch"/);
-  assert.match(history,/`\$\{member\.published\} of \$\{batch\.design_count\} published`/);
+  assert.match(history,/`\$\{member\.published\} of \$\{member\.expected\} published`/);
+});
+
+test("product-specific exclusions reduce the bundle total instead of leaving phantom listings",()=>{
+  assert.match(route,/const listings=members\.reduce\(\(sum,member\)=>sum\+member\.expected,0\)\|\|designs\*Math\.max\(1,total\)/);
+  assert.match(route,/expected_listing_count:listings/);
+  assert.match(history,/batch\.expected_listing_count\?\?batch\.design_count\*\(batch\.bundle_total\|\|1\)/);
 });
 
 test("a bundle member is complete only after every expected listing is published",()=>{
