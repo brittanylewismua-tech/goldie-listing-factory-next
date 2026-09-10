@@ -24,3 +24,12 @@ test("D1269: focused Review headings and photo counts describe the selected list
   assert.match(app,/const focusedPhotoCount=focusedPhotoDraft\?\.id\?\(printifyImageSelections\[focusedPhotoDraft\.id\]\?\?printifyImageIndices\)\.length/);
   assert.match(app,/const listingPhotoCount=focusedPhotoCount\?\?\(counts\.photos\+counts\.mockups\)/);
 });
+
+test("D1270: reload restores the exact listing and section instead of dropping into an arbitrary editor",()=>{
+  assert.match(app,/url\.searchParams\.set\("listing",clientId\)/);
+  assert.match(app,/url\.searchParams\.set\("section",section\)/);
+  assert.match(app,/const draft=drafts\.find\(item=>item\.clientId===clientId&&item\.id\)/);
+  assert.match(app,/setReviewEditing\(\{id:draft\.id,clientId,section\}\)/);
+  assert.match(app,/url\.searchParams\.delete\("listing"\)/);
+  assert.match(app,/url\.searchParams\.delete\("section"\)/);
+});

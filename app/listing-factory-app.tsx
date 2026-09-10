@@ -1841,11 +1841,14 @@ export default function ListingFactoryApp() {
     window.scrollTo(0,0);
   }
   function openFinishedReview(replace=true){
+    setReviewEditing(null);
     setFinishPhase("final");
     setWorkflowStep("finish");
     const url=new URL(window.location.href);
     url.searchParams.set("step","finish");
     url.searchParams.set("phase","final");
+    url.searchParams.delete("listing");
+    url.searchParams.delete("section");
     window.history[replace?"replaceState":"pushState"]({},"",url);
     scrollFactoryToTop();
   }
@@ -3149,6 +3152,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     if(!target.id)return;
     const section:ReviewSection=phase==="mockups"?"photos":phase==="pricing"?"pricing":phase==="description"?"description":phase==="etsy"?"etsy":"title";
     setReviewEditing({id:target.id,clientId:target.clientId,section});
+    rememberReviewEditor(target.clientId,section);
     setReviewEdit({phase,id:target.id,clientId:target.clientId});
     const index=bundleRecipes.findIndex(recipe=>bundleMembers[recipe.id]?.drafts.some(draft=>draft.id===target.id));
     if(index>=0&&index!==bundleIndex)openBundleProduct(index);
@@ -3156,6 +3160,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
   function editReviewedProduct(stage:"artwork"|"variants"|"pricing"|"photos",target:{id?:string;clientId:string}){
     if(!target.id)return;
     setReviewEditing({id:target.id,clientId:target.clientId,section:stage});
+    rememberReviewEditor(target.clientId,stage);
     setReviewEdit({phase:stage,id:target.id,clientId:target.clientId});
     const index=target.id?bundleRecipes.findIndex(recipe=>bundleMembers[recipe.id]?.drafts.some(draft=>draft.id===target.id)):bundleIndex;
     if(index>=0&&index!==bundleIndex)openBundleProduct(index);
@@ -3174,6 +3179,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     const open=(section:ReviewSection)=>{
       setActiveDesign(design.id);
       setReviewEditing({...reviewEditing,section});
+      rememberReviewEditor(design.id,section);
       if(section==="title"||section==="description"||section==="etsy"){
         setFinishPhase("details");goToStep("finish",false,true);
         const selector=section==="title"?".factory-listing-form .design-fields":section==="description"?".individual-description-disclosure":".factory-etsy-details-column";
@@ -3190,8 +3196,23 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       {key:"description",label:"Description"},
       {key:"etsy",label:"Etsy details & personalization"},
     ] as const;
-    return <aside className="review-listing-editor-nav" aria-label={`Edit listing ${files.findIndex(file=>file.id===design.id)+1}`}><div><small>Editing listing {files.findIndex(file=>file.id===design.id)+1} of {files.length}</small><b>{design.title.trim()||"Untitled listing"}</b></div><nav>{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} onClick={()=>open(entry.key)}>{entry.label}</button>)}</nav><button type="button" className="review-listing-done" onClick={()=>{setReviewEditing(null);setFinishPhase("final");goToStep("finish",false,true)}}>Back to Review</button></aside>;
+    return <aside className="review-listing-editor-nav" aria-label={`Edit listing ${files.findIndex(file=>file.id===design.id)+1}`}><div><small>Editing listing {files.findIndex(file=>file.id===design.id)+1} of {files.length}</small><b>{design.title.trim()||"Untitled listing"}</b></div><nav>{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} onClick={()=>open(entry.key)}>{entry.label}</button>)}</nav><button type="button" className="review-listing-done" onClick={()=>openFinishedReview(false)}>Back to Review</button></aside>;
   }
+  function rememberReviewEditor(clientId:string,section:ReviewSection){
+    const url=new URL(window.location.href);
+    url.searchParams.set("listing",clientId);
+    url.searchParams.set("section",section);
+    window.history.replaceState({},"",url);
+  }
+  useEffect(()=>{
+    if(restoringBatch||reviewEditing||!complete||!drafts.length)return;
+    const url=new URL(window.location.href),clientId=url.searchParams.get("listing"),section=url.searchParams.get("section") as ReviewSection|null;
+    if(!clientId||!section||!["artwork","variants","pricing","photos","title","description","etsy"].includes(section))return;
+    const draft=drafts.find(item=>item.clientId===clientId&&item.id);
+    if(!draft?.id)return;
+    setActiveDesign(clientId);
+    setReviewEditing({id:draft.id,clientId,section});
+  },[restoringBatch,reviewEditing,complete,drafts]);
   useEffect(()=>{
     if(!reviewEdit||switchingProduct||restoringBatch||!drafts.some(draft=>draft.id===reviewEdit.id))return;
     const target=reviewEdit;setReviewEdit(null);setActiveDesign(target.clientId);
