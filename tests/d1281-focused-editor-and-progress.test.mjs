@@ -67,9 +67,16 @@ test("D1296: title fields stay inline and each listing has a useful enlarged pre
   assert.match(listingRows,/className="listing-card-preview"/);
   assert.match(app,/!openAll&&\(\(\)=>\{const shot=drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl\|\|design\.previewUrl/);
   assert.match(css,/\.focused-review-title \.factory-form-card:is\(\.factory-form-card\)\{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none\}/);
-  assert.match(css,/\.focused-review-title \.listing-rows\.is-static-open \.listing-card\{padding:16px;border:2px solid #171717/);
+  assert.match(css,/\.focused-review-section\.focused-review-title \.listing-rows\.is-static-open \.listing-card\{padding:16px;border:2px solid #171717/);
   assert.match(css,/\.focused-review-title \.listing-card-preview\{display:block;width:176px;height:176px/);
   assert.match(css,/\.focused-review-title \.listing-card-preview \.uploaded-design-preview\{width:176px!important;height:176px!important/);
+});
+
+test("D1297: the all-listings title page does not pretend one listing is selected",()=>{
+  const nav=app.slice(app.indexOf("function reviewListingSectionNav"),app.indexOf("function rememberReviewEditor"));
+  assert.match(nav,/const editingAllListings=current==="title"/);
+  assert.match(nav,/Editing all listings/);
+  assert.match(nav,/!editingAllListings&&files\.length>1&&<div className="review-listing-picker"/);
 });
 
 test("D1290: unfinished Review rows use a centered boxed X",()=>{
