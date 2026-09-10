@@ -33,9 +33,9 @@ test('D1244: every price blocker has a working correction path',()=>{
   assert.match(app,/target\.phase==="pricing"\)\{setActiveTask\("draft-pricing"\);goToStep\("designs",false,true\)\}/);
   assert.doesNotMatch(app,/target\.phase==="pricing"\)\{setActiveTask\("prices"\)/);
   assert.match(app,/priceTarget=costReviewDrafts\(\)\.find/);
-  assert.match(app,/Review item prices →/);
+  assert.match(app,/canOpenPricing\?"Review item prices":"Review batch"/);
   assert.match(app,/disabled=\{savingEtsyDetails\|\|Boolean\(issues\.length&&!canOpenPricing\)\}/);
-  assert.match(css,/\.review-gate-action\{[^}]*min-height:44px/);
+  assert.doesNotMatch(css,/\.review-gate-action/);
 });
 
 test('D1244: returning from sign-in retries the preserved save',()=>{
