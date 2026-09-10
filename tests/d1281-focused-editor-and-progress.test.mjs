@@ -50,7 +50,7 @@ test("D1293: focused Review gives the work priority and scales listing navigatio
   assert.match(css,/\.focused-review-section>\.review-listing-editor-nav\{grid-column:2/);
   assert.match(css,/\.review-listing-editor-nav\{position:sticky/);
   assert.match(css,/@media\(max-width:1000px\)[^{]*\{\.app-shell \.step-product-card:has\(>\.review-listing-editor-nav\)\{grid-template-columns:1fr\}/);
-  assert.match(css,/listing-rows\.is-static-open \.listing-card\{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none/);
+  assert.match(css,/listing-rows:is\(\.is-static-open,\.is-compact\) \.listing-card\{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none/);
 });
 
 test("D1290: unfinished Review rows use a centered boxed X",()=>{

@@ -3969,9 +3969,9 @@ html, body { background: var(--lf-paper); }
 .app-shell .listing-rows.is-static-open .listing-card-head{grid-template-columns:132px minmax(0,1fr) auto auto;cursor:default}
 .app-shell .listing-rows.is-static-open .listing-card-head:hover{background:#fffafc}
 .app-shell .focused-review-section .listing-rows.is-static-open{gap:22px}
-.app-shell .focused-review-section .listing-rows.is-static-open .listing-card,.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-rows.is-static-open .listing-card{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
-.app-shell .focused-review-section .listing-rows.is-static-open .listing-card-head,.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-rows.is-static-open .listing-card-head{padding:0 0 12px;border-bottom:1px solid #ded1d8;background:transparent}
-.app-shell .focused-review-section .listing-rows.is-static-open .listing-card-detail,.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-rows.is-static-open .listing-card-detail{padding:14px 0 0!important}
+.app-shell .focused-review-section .listing-rows:is(.is-static-open,.is-compact) .listing-card,.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-rows:is(.is-static-open,.is-compact) .listing-card{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.app-shell .focused-review-section .listing-rows:is(.is-static-open,.is-compact) .listing-card-head,.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-rows:is(.is-static-open,.is-compact) .listing-card-head{padding:0 0 12px;border-bottom:1px solid #ded1d8;background:transparent}
+.app-shell .focused-review-section .listing-rows:is(.is-static-open,.is-compact) .listing-card-detail,.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-rows:is(.is-static-open,.is-compact) .listing-card-detail{padding:14px 0 0!important}
 .app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows .factory-panel-body{padding:14px}
 .app-shell .focused-review-section .factory-etsy-details-column .listing-product-preview{display:block;width:140px;max-width:100%;padding:0;border:1px solid #d8cfd4;border-radius:9px;background:#fff;overflow:hidden;cursor:zoom-in}
 .app-shell .focused-review-section .factory-etsy-details-column .listing-product-preview img{display:block;width:140px;max-width:100%;height:140px;object-fit:contain;background:#fff}
