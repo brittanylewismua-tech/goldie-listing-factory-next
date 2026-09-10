@@ -40,7 +40,9 @@ test("D1293: focused Review gives the work priority and scales listing navigatio
   assert.doesNotMatch(nav,/className="review-listing-switcher"/);
   assert.match(app,/className="review-listing-thumb"/);
   assert.match(nav,/className="review-listing-picker"/);
-  assert.match(nav,/<select aria-label="Jump to listing" value=\{design\.id\}/);
+  assert.match(nav,/className="review-listing-chooser"/);
+  assert.match(nav,/className="review-listing-choices"/);
+  assert.doesNotMatch(nav,/<select aria-label="Jump to listing"/);
   assert.match(nav,/files\.map\(\(candidate,index\)=>/);
   assert.match(nav,/aria-label="Previous listing"/);
   assert.match(nav,/aria-label="Next listing"/);
@@ -66,15 +68,15 @@ test("D1296: title fields stay inline and each listing has a useful enlarged pre
   assert.match(app,/preview:openAll&&shot\?<UploadedDesignPreview src=\{shot\} label=\{`Enlarge mockup for listing/);
   assert.match(listingRows,/className="listing-card-preview"/);
   assert.match(app,/!openAll&&\(\(\)=>\{const shot=drafts\.find\(draft=>draft\.clientId===design\.id\)\?\.previewUrl\|\|design\.previewUrl/);
-  assert.match(css,/\.focused-review-title \.factory-form-card:is\(\.factory-form-card\)\{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none\}/);
-  assert.match(css,/\.focused-review-section\.focused-review-title \.listing-rows\.is-static-open \.listing-card\{padding:16px;border:2px solid #171717/);
-  assert.match(css,/\.focused-review-title \.listing-card-preview\{display:block;width:176px;height:176px/);
-  assert.match(css,/\.focused-review-title \.listing-card-preview \.uploaded-design-preview\{width:176px!important;height:176px!important/);
+  assert.match(css,/\.focused-review-all-listings \.factory-form-card:is\(\.factory-form-card\)\{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none\}/);
+  assert.match(css,/\.focused-review-section\.focused-review-all-listings \.listing-rows\.is-static-open \.listing-card\{padding:16px;border:2px solid #171717/);
+  assert.match(css,/\.focused-review-all-listings \.listing-card-preview\{display:block;width:176px;height:176px/);
+  assert.match(css,/\.focused-review-all-listings \.listing-card-preview \.uploaded-design-preview\{width:176px!important;height:176px!important/);
 });
 
 test("D1297: the all-listings title page does not pretend one listing is selected",()=>{
   const nav=app.slice(app.indexOf("function reviewListingSectionNav"),app.indexOf("function rememberReviewEditor"));
-  assert.match(nav,/const editingAllListings=current==="title"/);
+  assert.match(nav,/const editingAllListings=current==="title"\|\|current==="description"/);
   assert.match(nav,/Editing all listings/);
   assert.match(nav,/!editingAllListings&&files\.length>1&&<div className="review-listing-picker"/);
 });
@@ -134,7 +136,7 @@ test("D1284: photos, size guide, zoom, previews and color labels stay compact",(
   const workspace=app.slice(app.indexOf('className="listing-photo-workspace"'),app.indexOf('className="listing-photo-workspace"')+5000);
   assert.match(workspace,/<UploadedListingPhotos[\s\S]+?sizeGuideName=\{design\.sizeGuideName\}[\s\S]+?onSizeGuideSaved=/);
   assert.doesNotMatch(workspace,/<IndividualSizeGuide/);
-  assert.match(app,/Download photos to your computer/);
+  assert.match(app,/Download photos to computer/);
   assert.match(css,/\.printify-image-option>\.printify-photo-expand\{right:8px;bottom:42px;width:28px;height:28px;min-width:28px;min-height:28px;border:0;border-radius:0;background:transparent/);
   assert.match(css,/\.focused-review-section \.factory-etsy-details-column \.listing-product-preview\{[^}]*width:140px/);
   assert.match(css,/\.draft-color-grid button span\{[^}]*overflow:visible[^}]*white-space:normal/);

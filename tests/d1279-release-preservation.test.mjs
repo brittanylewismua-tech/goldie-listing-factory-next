@@ -22,7 +22,8 @@ test('deep links and product switches retain the exact listing and editor sectio
   assert.match(app,/nextUrl\.searchParams\.set\("listing",incoming\.clientId\)/);
   assert.match(app,/url\.searchParams\.delete\("listing"\)/);
   assert.match(app,/className="review-listing-picker"/);
-  assert.match(app,/<select aria-label="Jump to listing" value=\{design\.id\}/);
+  assert.match(app,/className="review-listing-chooser"/);
+  assert.match(app,/className="review-listing-choices"/);
   assert.match(app,/movableListings=files\.filter/);
   assert.match(app,/open\(\(current\|\|reviewEditing\.section\|\|"title"\) as ReviewSection/);
   assert.match(css,/\.review-listing-picker/);

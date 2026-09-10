@@ -1569,7 +1569,7 @@ test("downloads each listing's selected Printify photos and uploaded photos as o
     readFile(new URL("../app/api/listing-photos/download/route.ts",import.meta.url),"utf8"),
     Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n")),
   ]);
-  assert.match(page,/Download this listing’s photos/);
+  assert.match(page,/Download photos to computer/);
   assert.match(page,/Preparing photos…/);
   assert.match(page,/printifyImageIndices:indices/);
   assert.match(route,/SELECT response_json FROM printify_draft_results/);
