@@ -23,3 +23,10 @@ test("D938: every visible goal describes prepared listings",()=>{
   assert.match(usage,/target for listings prepared as Printify drafts/);
   for(const source of [shell,app,goals,usage]) assert.doesNotMatch(source,/goal[^\n]{0,180}publish receipt/i);
 });
+
+test("a completed draft run refreshes the visible goal without requiring a reload",()=>{
+  assert.match(app,/const \[goalRevision,setGoalRevision\]=useState\(0\)/);
+  assert.match(app,/\},\[listingGoal,batchReceipt,goalRevision\]\)/);
+  const completion=app.slice(app.indexOf("await providerCompletion"),app.indexOf("function confirmDrafts()"));
+  assert.match(completion,/setGoalRevision\(current=>current\+1\)/);
+});

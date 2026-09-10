@@ -1395,6 +1395,7 @@ export default function ListingFactoryApp() {
   const [goalDays,setGoalDays]=useState<PublishedDay[]>([]);
   const [goalDaysLoaded,setGoalDaysLoaded]=useState(false);
   const [goalDaysError,setGoalDaysError]=useState(false);
+  const [goalRevision,setGoalRevision]=useState(0);
   /* D721 · Account menu in the top bar. Sign out moves inside it; the link
      itself is unchanged so the sign-out route and return_to are preserved. */
   const [accountMenuOpen,setAccountMenuOpen]=useState(false);
@@ -1405,7 +1406,7 @@ export default function ListingFactoryApp() {
   useEffect(()=>{if(!listingGoal)return;
     void (batchFetch("/api/batches").then(response=>{if(!response.ok)throw Error("Listing count unavailable");return response.json()}) as Promise<{prepared?:PublishedDay[];preparedAvailable?:boolean}>).then((result:{prepared?:PublishedDay[];preparedAvailable?:boolean})=>{
       setGoalDays(preparedDaysFromHistory(result));setGoalDaysLoaded(true);setGoalDaysError(false)}).catch(()=>{setGoalDaysLoaded(false);setGoalDaysError(true)});
-  },[listingGoal,batchReceipt]);
+  },[listingGoal,batchReceipt,goalRevision]);
   const goalDone=listingGoal?publishedDaysThisPeriod(goalDays,listingGoal):0;
   const [preparedMockupCounts,setPreparedMockupCounts]=useState<Record<string,number>>({});
   const [imageStepError,setImageStepError]=useState("");
@@ -5103,7 +5104,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       setBundleCompletionRevision(current=>current+1);
       const sourceMember=members.find(member=>member.recipe.id===sourceRecipe.id);
       const sourcePricingApproved=Boolean(sourceMember?.results.length)&&sourceMember!.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved));
-      setPricingApproved(sourcePricingApproved);setBundleApproved(Object.fromEntries(members.map(member=>[member.recipe.id,member.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved))])));setComplete(Boolean(sourceMember?.results.some(draft=>draft.status==="Created"&&draft.id)));setUsageRevision(current=>current+1);openFinishedReview();
+      setPricingApproved(sourcePricingApproved);setBundleApproved(Object.fromEntries(members.map(member=>[member.recipe.id,member.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved))])));setComplete(Boolean(sourceMember?.results.some(draft=>draft.status==="Created"&&draft.id)));setUsageRevision(current=>current+1);setGoalRevision(current=>current+1);openFinishedReview();
       /* The canonical results already live on the server. Release the review
          screen immediately while its Batch History snapshot finishes; the
          existing save guard still protects that short final write. */
