@@ -53,7 +53,8 @@ test("D1258: Etsy handoff readiness checks every listing, independent of retired
   for(const check of ["needs a title","needs Etsy tags","needs a description","needs its Etsy category and required details","needs its personalization settings completed"]){
     assert.ok(handoff.includes(check),`missing handoff check: ${check}`);
   }
-  assert.match(app,/handoffReadyCount\(\)\} of \$\{bundlePublishDrafts\(\)\.length\} listings ready/);
+  assert.match(app,/handoffReadyCount\(\)\} of \$\{handoffExpectedCount\(\)\} listings complete/);
+  assert.match(app,/Math\.max\(bundlePublishDrafts\(\)\.length,requestedListingCount\)/);
 });
 
 test("D1258: incomplete Review rows are requirements, not empty checkboxes or duplicate card warnings",()=>{

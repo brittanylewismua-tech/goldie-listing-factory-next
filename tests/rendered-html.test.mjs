@@ -5338,7 +5338,7 @@ test("the number on the button is the number that publishes — D561", async () 
      selection seeding effect and selectedPublishDrafts - because both were
      quietly shrinking the publish back down to the open product. */
   assert.ok(app.indexOf("function bundlePublishDrafts()") > 0);
-  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 17,
+  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 18,
     "declared once; the review, publish targets, selections, seeding, handoff readiness, cost approval, destination status, primary Etsy action, photo delivery and recovery navigation all read it");
   assert.doesNotMatch(app, /function selectedPublishDrafts\(\)\{const selected=new Set\(selectedPublishIds\);return drafts\.filter/,
     "the button's count must not be taken from the open product alone");

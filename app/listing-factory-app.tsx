@@ -1720,6 +1720,7 @@ export default function ListingFactoryApp() {
     return issues;
   }
   function handoffReadyCount(){return bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id&&!handoffListingProblems(draft).length).length}
+  function handoffExpectedCount(){return activeBundle&&bundleRecipes.length>1?Math.max(bundlePublishDrafts().length,requestedListingCount):bundlePublishDrafts().length}
   function handoffBlockerSummary(){
     const blockers=handoffBlockers();
     if(!blockers.length)return "Creates unpublished Etsy drafts. Nothing goes live.";
@@ -5897,7 +5898,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   Listings ready, titles and tags, listing photos, pricing and
                   shipping, published - every one of them, with the same value
                   and the same wording productRows gave them. */}
-              <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?`${handoffReadyCount()} of ${bundlePublishDrafts().length} listings ready`:`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockerSummary()}</span></div>
+              <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?`${handoffReadyCount()} of ${handoffExpectedCount()} listings complete`:`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockerSummary()}</span></div>
               <button type="button" className="review-etsy-draft-button" disabled={creatingEtsyDrafts||!photoDeliveryStatusReady||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":"Save to Etsy Drafts"}</button>
               {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<a className="review-printify-link" href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open drafts in Printify ↗</a>}
               {false&&<><div className="publish-live-warning">{(()=>{

@@ -19,6 +19,12 @@ test("D1307: a product without a child batch is actionable instead of called loa
   assert.match(app,/bundleBatchIds\[recipe\.id\]\?`Still reading \$\{recipe\.name\}\.\`:`Create the Printify drafts for \$\{recipe\.name\}\.\`/);
 });
 
+test("D1308: partial bundle readiness counts the listings the run actually expects",()=>{
+  assert.match(app,/function handoffExpectedCount\(\)\{return activeBundle&&bundleRecipes\.length>1\?Math\.max\(bundlePublishDrafts\(\)\.length,requestedListingCount\):bundlePublishDrafts\(\)\.length\}/);
+  assert.match(app,/`\$\{handoffReadyCount\(\)\} of \$\{handoffExpectedCount\(\)\} listings complete`/);
+  assert.doesNotMatch(app,/`\$\{handoffReadyCount\(\)\} of \$\{bundlePublishDrafts\(\)\.length\} listings ready`/);
+});
+
 test("D1306: bundle history represents ordered products that have no child batch yet",()=>{
   assert.match(route,/const recipeNames=new Map\(/);
   assert.match(route,/order\.map\(\(recipeId,index\)=>actualByRecipe\.get\(recipeId\)\|\|\{batchId:"",recipeId,productName:recipeNames\.get\(recipeId\)\|\|`Product \$\{index\+1\}`/);
