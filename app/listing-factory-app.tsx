@@ -3022,13 +3022,20 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       const priceReviewRequired=priceGroups.length>0;
       const priceApproved=(isActive?pricingApproved:Boolean(bundleApproved[recipe.id]))&&productDrafts.length>0&&(!priceReviewRequired||priceGroups.every(group=>group.drafts.every(draft=>draft.costReview?.approved)));
       const shippingReady=isActive?Boolean(etsyShippingProfileId):Boolean(bundleMembers[recipe.id]?.shippingProfileId||recipe.etsyShippingProfileId);
+      /* A focused Review edit is one listing. Reporting the product-wide photo
+         total here made the section header say "2 photos" directly above a card
+         that correctly said "1 photo". */
+      const focusedPhotoDraft=isActive&&reviewEditing?.section==="photos"?drafts.find(draft=>draft.id===reviewEditing.id):undefined;
+      const focusedPhotoDesign=focusedPhotoDraft?files.find(file=>file.id===focusedPhotoDraft.clientId):undefined;
+      const focusedPhotoCount=focusedPhotoDraft?.id?(printifyImageSelections[focusedPhotoDraft.id]??printifyImageIndices).length+(preparedMockupCounts[focusedPhotoDraft.id]||0)+((focusedPhotoDesign?.sizeGuideName??sizeGuideName)?1:0):null;
+      const listingPhotoCount=focusedPhotoCount??(counts.photos+counts.mockups);
       return [
       {label:"Artwork placement",value:started?plural(counts.drafts,"listing"):blank,pending,done:counts.drafts>0,task:"placement"},
       ...(hasColorAxis?[{label:"Product colors",value:rowColors.length?plural(rowColors.length,"color"):"Choose colors",pending,done:rowColors.length>0,task:"draft-colors"}]:[]),
       {label:"Sizes",value:rowSizes.length?plural(rowSizes.length,"size"):"Choose sizes",pending,done:rowSizes.length>0,task:"draft-sizes"},
       {label:"Set prices",value:priceApproved?(priceReviewRequired?"Saved":"Ready"):"Edit prices",pending,done:priceApproved,task:"draft-pricing"},
       {label:"Etsy shipping",value:shippingReady?"Selected":"Choose shipping",pending,done:shippingReady,task:"draft-shipping"},
-      {label:"Listing photos",value:started?plural(counts.photos+counts.mockups,"photo"):blank,pending,done:counts.photos+counts.mockups>0,task:"photos"},
+      {label:"Listing photos",value:started?plural(listingPhotoCount,"photo"):blank,pending,done:listingPhotoCount>0,task:"photos"},
       /* D550 - lifestyle mockups are optional: nothing about publishing requires
          them, and her hoodie published-ready with four Printify photos and none.
          The row still rendered "! None made yet" in alert red on every product
@@ -3596,6 +3603,40 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const index=files.findIndex(item=>item.id===design.id);
     const titled=files.filter(item=>(item.title||"").trim()).length;
     const showListing=(id:string,source:HTMLElement)=>{const editor=source.closest(".factory-listing-screen")?.querySelector<HTMLElement>(".factory-listing-grid"),draft=drafts.find(item=>item.clientId===id);setActiveDesign(id);if(draft?.id)setReviewEditing({id:draft.id,clientId:id,section:reviewEditing?.section});window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>editor?.scrollIntoView({block:"start"})))};
+    const focusedSection=reviewEditing?.clientId===design.id?(reviewEditing.section||"title"):null;
+    if(focusedSection){
+      const focusedBody=focusedSection==="title"?titlesRows(design)
+        :focusedSection==="description"?descriptionRows(design)
+        :focusedSection==="etsy"?etsyRows(design)
+        :null;
+      return <div className={`factory-listing-screen focused-review-section focused-review-${focusedSection}`}>
+        {reviewListingSectionNav(design)}
+        {focusedSection==="title"&&<FactoryPanel index={1} title={activeBundle?"Titles for this product":"Titles for this batch"}
+          description="Create titles and tags"
+          state={`${titled} of ${files.length} titled`}
+          tone={titled===files.length?"done":"attention"}
+          open
+          toggleLabel="">
+          <div className={titlePulseIds.size?"titles-resolving":""}>{titlesLead()}</div>
+        </FactoryPanel>}
+        {focusedSection==="description"&&<FactoryPanel index={1} title={activeBundle?"Product description":"Batch description"}
+          description="Set the shared description, then customize this listing only if needed."
+          state={description.trim()?"Added":"Not added"}
+          tone={description.trim()?"done":"attention"}
+          open
+          toggleLabel="">
+          {descriptionLead()}
+        </FactoryPanel>}
+        {focusedSection==="etsy"&&etsyLead()}
+        <div className="factory-listing-grid focused-review-grid">
+          <div className={`factory-form-card ${focusedSection==="etsy"?"factory-etsy-details-column":"factory-listing-form"}`}>
+            <h3>{focusedSection==="etsy"?"Etsy details and personalization":focusedSection==="description"?"Description":`Listing ${index+1} of ${files.length}`}</h3>
+            {(()=>{const shot=drafts.find(draft=>draft.clientId===design.id)?.previewUrl;return shot?<button key={`${design.id}:${shot}`} type="button" className="listing-product-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label="Open the Printify listing preview larger"><img src={shot} alt="Printify listing preview" decoding="async"/></button>:null})()}
+            {focusedBody}
+          </div>
+        </div>
+      </div>;
+    }
     return <div className="factory-listing-screen">
       {reviewListingSectionNav(design)}
       {/* Subordinate, and it says so: one section, collapsed by default once
@@ -5071,6 +5112,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   /* D760 · On Connect the status belongs on the card it describes, not in the
      page head's far corner. Her words: "they're not connected yet should be on
      the card and not way off in the far right". */
+  const focusedReviewSummary=reviewEditing?`Listing ${Math.max(1,files.findIndex(file=>file.id===reviewEditing.clientId)+1)} of ${files.length}`:"";
   const heroSummary = workflowStep==="connect"
     ? undefined
     : workflowStep==="setup"
@@ -5082,7 +5124,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         ? reviewEditing?`Listing ${Math.max(1,files.findIndex(file=>file.id===reviewEditing.clientId)+1)} of ${files.length}`:`${files.length} ${files.length===1?"design":"designs"}${bundleRunDrafts?` · ${bundleRunDrafts} Printify ${bundleRunDrafts===1?"draft":"drafts"}`:""}`
         : workflowStep==="review"
           ? `${bundleRunDrafts} of ${Math.max(bundleRunListings,files.length)} drafts created`
-          : runCountLabel;
+          : focusedReviewSummary||runCountLabel;
   const workflowHero = {
     connect: { eyebrow: "ACCOUNT SETUP", title: "Connect your accounts", copy: connected&&etsyConnected?"Both accounts are connected and ready.":"Connect Printify and Etsy so the listings can be prepared." },
     setup: templateDetails&&productSelected&&!showProductLibrary
