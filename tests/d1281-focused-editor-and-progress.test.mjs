@@ -17,7 +17,7 @@ test("D1281: Printify creation has one inline progress surface",()=>{
   assert.match(app,/className="batch-progress" role="status" aria-live="polite"/);
 });
 
-test("D1283/D1290: inline draft progress moves during preparation, then shows real completion",()=>{
+test("D1283/D1292: inline draft progress stays visibly active while real completion waits",()=>{
   assert.match(app,/className="progress-ring" aria-hidden="true"\/\>/);
   assert.match(app,/artworkPreparationIndeterminate=running&&!draftsAdmitted&&preparationCompleted===0/);
   assert.match(app,/className="progress-track is-indeterminate" role="progressbar" aria-label="Preparing artwork for Printify"/);
@@ -25,8 +25,14 @@ test("D1283/D1290: inline draft progress moves during preparation, then shows re
   assert.match(app,/aria-valuenow=\{creationProgressPercent\}/);
   assert.match(app,/aria-valuetext=\{creationProgressText\}/);
   assert.match(app,/<b>\{creationProgressPercent\}%<\/b>/);
+  assert.match(app,/className="progress-activity"><i aria-hidden="true"\/>Working<\/small>/);
+  assert.match(app,/creationActivityText=.*Printify is building your drafts/);
   assert.match(baseTheme,/\.progress-track\{[^}]*height:24px[^}]*position:relative[^}]*place-items:center/);
   assert.match(baseTheme,/\.progress-track\.is-indeterminate span\{[^}]*animation:goldie-progress-sweep/);
+  assert.match(baseTheme,/\.progress-track::after\{[^}]*animation:goldie-progress-activity/);
+  assert.match(baseTheme,/@keyframes goldie-progress-activity\{0%\{transform:translateX\(-110%\)\}100%\{transform:translateX\(365%\)\}\}/);
+  assert.match(baseTheme,/\.progress-activity i\{[^}]*animation:goldie-progress-pulse/);
+  assert.doesNotMatch(app,/setInterval\([^)]*creationProgressPercent|setTimeout\([^)]*creationProgressPercent/);
 });
 
 test("D1281: focused Review exposes listings first and sections in a side rail",()=>{

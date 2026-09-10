@@ -1442,6 +1442,7 @@ export default function ListingFactoryApp() {
   const creationProgressPercent=runTotal?Math.min(100,Math.round(((draftsAdmitted?runTotal:preparationCompleted)+(draftsAdmitted?processed:0))/(runTotal*2)*100)):0;
   const creationProgressText=draftsAdmitted?`${processed} of ${runTotal} Printify drafts created`:`${preparationCompleted} of ${runTotal} artwork files prepared`;
   const artworkPreparationIndeterminate=running&&!draftsAdmitted&&preparationCompleted===0;
+  const creationActivityText=processed===runTotal&&runTotal>0?"Saving to Batch History…":draftsAdmitted?"Printify is building your drafts…":preparationCompleted>0?"Preparing the remaining artwork…":"Preparing your artwork…";
   // The guided factory always opens on the real connection step. The returning
   // dashboard remains available as a component, but must never replace step 1
   // or appear when a seller uses Back from the product step.
@@ -5905,7 +5906,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           {running && (
             <div className="batch-progress" role="status" aria-live="polite">
               <div className="progress-ring" aria-hidden="true"/>
-              <div className="progress-copy"><b>{processed===runTotal&&runTotal>0?"Saving your finished batch":"Creating your Printify drafts"}</b><span>{processed===runTotal&&runTotal>0?`All ${runTotal} drafts are created. Saving them to Batch History.`:preparationMessage || "Checking saved draft progress…"}</span></div>
+              <div className="progress-copy"><b>{processed===runTotal&&runTotal>0?"Saving your finished batch":"Creating your Printify drafts"}</b><span>{creationActivityText}</span><small className="progress-activity"><i aria-hidden="true"/>Working</small></div>
               {artworkPreparationIndeterminate?<div className="progress-track is-indeterminate" role="progressbar" aria-label="Preparing artwork for Printify" aria-valuetext="Preparing artwork"><span/></div>:<div className="progress-track" role="progressbar" aria-label="Printify draft creation progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={creationProgressPercent} aria-valuetext={creationProgressText}>
                 <span style={{ width: `${creationProgressPercent}%` }} />
                 <b>{creationProgressPercent}%</b>
