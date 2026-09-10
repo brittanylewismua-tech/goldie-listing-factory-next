@@ -41,6 +41,8 @@ test("D950: every workflow hero states only the immediate task",()=>{
     "Check artwork, colors, sizes, pricing, shipping, and listing photos.",
     "Review the plan, then create the private drafts.",
     "Update any section below, then return to Review.",
+    "Update every listing below, then return to Review.",
+    "Update the shared description or any listing below, then return to Review.",
     "Fix the missing items shown on the listing cards.",
     "Everything is ready. Save the batch to Etsy Drafts.",
   ]) assert.ok(app.includes(copy),`missing concise workflow copy: ${copy}`);

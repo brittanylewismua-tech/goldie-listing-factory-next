@@ -21,7 +21,8 @@ test("D1269: an Etsy destination with no title shows its waiting state instead o
 });
 
 test("D1269: focused Review headings and photo counts describe the selected listing",()=>{
-  assert.match(app,/const focusedReviewSummary=reviewEditing\?`Listing \$\{Math\.max\(1,files\.findIndex/);
+  assert.match(app,/const focusedReviewSummary=reviewEditing\?\(editingAllListingDetails\?/);
+  assert.match(app,/:`Listing \$\{Math\.max\(1,files\.findIndex/);
   assert.match(app,/const focusedPhotoDraft=isActive&&reviewEditing\?\.section==="photos"/);
   assert.match(app,/const focusedPhotoCount=focusedPhotoDraft\?\.id\?\(printifyImageSelections\[focusedPhotoDraft\.id\]\?\?printifyImageIndices\)\.length/);
   assert.match(app,/const listingPhotoCount=focusedPhotoCount\?\?\(counts\.photos\+counts\.mockups\)/);

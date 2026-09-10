@@ -35,9 +35,8 @@ test("D1251: the listing editor keeps every section and Review return visible",(
   assert.match(app,/className="review-listing-editor-nav"/);
   assert.match(app,/Back to Review<\/button>/);
   assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
-  assert.match(app,/\.factory-listing-form \.design-fields/);
-  assert.match(app,/\.individual-description-disclosure/);
-  assert.match(app,/\.factory-etsy-details-column/);
+  assert.match(app,/window\.setTimeout\(scrollFactoryToTop,300\)/);
+  assert.match(app,/target\.phase==="description"\|\|target\.phase==="etsy"\|\|target\.phase==="title"/);
   assert.match(app,/visibleListings=reviewEditing\?listings\.filter/);
   assert.match(app,/position:reviewEditing\?\{index:listings\.findIndex/);
   assert.match(readFileSync(new URL("..\/app\/listing-rows.tsx",import.meta.url),"utf8"),/position=row\.position\|\|\{index:index\+1,total:rows\.length\}/);
@@ -78,9 +77,11 @@ test("Review uses singular variant grammar for one-option products",()=>{
 });
 
 test("Review editing identifies the current listing instead of repeating the overview",()=>{
-  assert.match(app,/reviewEditing\?`Listing \$\{Math\.max\(1,files\.findIndex/);
-  assert.match(app,/reviewEditing\s*\? \{ eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review\." \}/);
-  assert.match(app,/finish: finishPhase==="details" \? \{ eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review\." \}/);
+  assert.match(app,/editingAllListingDetails\?`\$\{files\.length\} \$\{files\.length===1\?"listing":"listings"\}`:`Listing \$\{Math\.max\(1,files\.findIndex/);
+  assert.match(app,/reviewEditing\?\.section==="title"[\s\S]*?title:"Edit titles and tags"/);
+  assert.match(app,/reviewEditing\?\.section==="description"[\s\S]*?title:"Edit descriptions"/);
+  assert.match(app,/title:"Edit this listing",copy:"Update any section below, then return to Review\."/);
+  assert.match(app,/finish: finishPhase==="details" \? reviewEditorHero/);
   assert.match(app,/>Continue to listing details <span/);
   assert.match(app,/reviewEditing\?<button className="workflow-back"[^>]+onClick=\{\(\)=>openFinishedReview\(false\)\}/);
   assert.match(app,/complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer">\{reviewEditing\?<button/);

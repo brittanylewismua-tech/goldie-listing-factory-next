@@ -2079,6 +2079,17 @@ export default function ListingFactoryApp() {
     const step=normalizeStep(rawStep);if(!force){const issues=requiredForStep(step);if(issues.length)return stopWith("Finish all sections first.",issues);if(!canOpenStep(step))return;}setWorkflowStep(normalizeStep(step));const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);scrollFactoryToTop()}
 
   useEffect(()=>{const read=()=>{const url=new URL(window.location.href),value=url.searchParams.get("step") as WorkflowStep|null,phase=url.searchParams.get("phase") as FinishPhase|null;const canonical=canonicalStep(value);if(canonical)setWorkflowStep(normalizeStep(canonical));if(phase&&["details","etsy","mockups","final"].includes(phase))setFinishPhase(phase);scrollFactoryToTop()};read();window.addEventListener("popstate",read);return()=>window.removeEventListener("popstate",read)},[]);
+  useEffect(()=>{
+    const restoreReviewLocation=()=>{
+      const url=new URL(window.location.href),step=url.searchParams.get("step"),phase=url.searchParams.get("phase"),clientId=url.searchParams.get("listing"),section=url.searchParams.get("section") as ReviewSection|null;
+      if(step==="finish"&&phase==="final"){setReviewEditing(null);return}
+      if(!complete||!clientId||!section||!["artwork","variants","pricing","photos","title","description","etsy"].includes(section)){if(!clientId||!section)setReviewEditing(null);return}
+      const draft=drafts.find(item=>item.clientId===clientId&&item.id);
+      if(!draft?.id)return;
+      setActiveDesign(clientId);setReviewEditing({id:draft.id,clientId,section});
+    };
+    window.addEventListener("popstate",restoreReviewLocation);return()=>window.removeEventListener("popstate",restoreReviewLocation);
+  },[complete,drafts]);
   useEffect(()=>{if(workflowStep!=="finish")return;const url=new URL(window.location.href);url.searchParams.set("phase",finishPhase);window.history.replaceState({},"",url)},[workflowStep,finishPhase]);
   useLayoutEffect(()=>{
     const reset=scrollFactoryToTop();
@@ -3176,15 +3187,20 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     if(!reviewEditing||!design||reviewEditing.clientId!==design.id)return null;
     const draft=drafts.find(item=>item.clientId===design.id&&item.id===reviewEditing.id)||drafts.find(item=>item.clientId===design.id);
     if(!draft)return null;
-    const current=workflowStep==="finish"?(reviewEditing.section||"title"):activeTask==="placement"?"artwork":activeTask==="draft-colors"||activeTask==="draft-sizes"?"variants":activeTask==="draft-pricing"||activeTask==="draft-shipping"?"pricing":activeTask==="photos"?"photos":"";
+    /* reviewEditing drives the focused work surface itself, including after a
+       reload. Using the transient product-task state here left every rail item
+       unselected after restoring an exact listing/section URL. */
+    const current=reviewEditing.section||"title";
     const open=(section:ReviewSection,targetDesign=design,targetDraft=draft)=>{
       setActiveDesign(targetDesign.id);
       setReviewEditing({id:targetDraft.id!,clientId:targetDesign.id,section});
       rememberReviewEditor(targetDesign.id,section);
       if(section==="title"||section==="description"||section==="etsy"){
         setFinishPhase("details");goToStep("finish",false,true);
-        const selector=section==="title"?".factory-listing-form .design-fields":section==="description"?".individual-description-disclosure":".factory-etsy-details-column";
-        window.setTimeout(()=>document.querySelector(selector)?.scrollIntoView({block:"start"}),300);return;
+        /* The page reset is the destination for these editors. Scrolling to a
+           field/card hid the section heading and its batch-wide controls under
+           the sticky shell, so sellers arrived halfway through the task. */
+        window.setTimeout(scrollFactoryToTop,300);return;
       }
       setActiveTask(section==="artwork"?"placement":section==="variants"?"draft-colors":section==="pricing"?"draft-pricing":"photos");goToStep("designs",false,true);
     };
@@ -3251,8 +3267,11 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     else goToStep("finish",false,true);
     // Wait for the normal page-top reset, then focus this specific editor.
     window.setTimeout(()=>{
-      const selector=target.phase==="mockups"||target.phase==="photos"?`[data-listing-row="${CSS.escape(target.clientId)}"]`:target.phase==="variants"?".draft-color-selector":target.phase==="artwork"?".placement-review":target.phase==="pricing"?".pricing-controls":target.phase==="description"?".individual-description-disclosure":target.phase==="etsy"?".factory-etsy-details-column":target.phase==="title"?".factory-listing-form .design-fields":".factory-listing-grid";
-      document.querySelector(selector)?.scrollIntoView({block:"start"});
+      if(target.phase==="description"||target.phase==="etsy"||target.phase==="title")scrollFactoryToTop();
+      else {
+        const selector=target.phase==="mockups"||target.phase==="photos"?`[data-listing-row="${CSS.escape(target.clientId)}"]`:target.phase==="variants"?".draft-color-selector":target.phase==="artwork"?".placement-review":target.phase==="pricing"?".pricing-controls":".factory-listing-grid";
+        document.querySelector(selector)?.scrollIntoView({block:"start"});
+      }
     },300);
   },[reviewEdit,switchingProduct,restoringBatch,drafts]);
   /* D553 - openListing chose which listing's work was visible. Nothing chooses
@@ -3410,7 +3429,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
                     const untouched=!design.tags.length||(design.tags.length===derived.length&&design.tags.every((tag,index)=>tag===derived[index]));
                     const next=tagsFromTitle(title);
                     const keep=!untouched||(!next.length&&design.tags.length>0);
-                    updateDesign(design.id,keep?{title,etsyError:""}:{title,tags:next,etsyError:""})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsyError:""})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}{!design.tags.length&&<small>Matching tags appear here when you auto-create this product’s titles.</small>}</div>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags,only,openAll);}
+                    updateDesign(design.id,keep?{title,etsyError:""}:{title,tags:next,etsyError:""})}}/></label><label>Tags <span>{design.tags.length}/13</span><textarea className="listing-tags-field" rows={3} value={design.tags.join(", ")} onChange={event=>updateDesign(design.id,{tags:[...new Set(event.target.value.split(",").map(tag=>tag.trim().toLowerCase()).filter(tag=>tag&&tag.length<=20))].slice(0,13),etsyError:""})} placeholder="Exact title phrases, separated by commas"/></label><div className="tag-row">{design.tags.map(tag=><span key={tag}>{tag}</span>)}</div>{design.etsyError&&<small className="field-error">{design.etsyError}</small>}</div></div>,titleFlags,only,openAll);}
   function descriptionLead(collapsed=false){const body=<div className="batch-description-body"><label><span className="description-product-heading">{activeBundle?"Description for this product’s listings":"Description for every listing"}</span><textarea rows={9} value={description} onChange={event=>setDescription(event.target.value)} placeholder="Add sizing, materials, production, care, and shipping information"/></label>{/* D232 · "Save this description as the default" went with the settings block. The
                      shared editor survived the move but the way to keep the wording for future
                      batches did not, so it comes back where the description is now edited. */}{description.trim()!==String(activeRecipe?.description||"").trim()&&<button type="button" className="save-product-default" disabled={!description.trim()||savingProductDefault==="description"} onClick={()=>void saveProductDefaults({description},"description")}>{savingProductDefault==="description"?"Saving…":"Save as the product default"}</button>}</div>;return collapsed?<details className="shared-description-settings"><summary>Product description</summary>{body}</details>:<div className="task-panel-lead">{body}</div>}
@@ -5186,7 +5205,13 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   /* D760 · On Connect the status belongs on the card it describes, not in the
      page head's far corner. Her words: "they're not connected yet should be on
      the card and not way off in the far right". */
-  const focusedReviewSummary=reviewEditing?`Listing ${Math.max(1,files.findIndex(file=>file.id===reviewEditing.clientId)+1)} of ${files.length}`:"";
+  const editingAllListingDetails=Boolean(reviewEditing&&(reviewEditing.section==="title"||reviewEditing.section==="description"));
+  const focusedReviewSummary=reviewEditing?(editingAllListingDetails?`${files.length} ${files.length===1?"listing":"listings"}`:`Listing ${Math.max(1,files.findIndex(file=>file.id===reviewEditing.clientId)+1)} of ${files.length}`):"";
+  const reviewEditorHero=reviewEditing?.section==="title"
+    ?{eyebrow:"STEP 3 OF 3 · REVIEW",title:"Edit titles and tags",copy:"Update every listing below, then return to Review."}
+    :reviewEditing?.section==="description"
+      ?{eyebrow:"STEP 3 OF 3 · REVIEW",title:"Edit descriptions",copy:"Update the shared description or any listing below, then return to Review."}
+      :{eyebrow:"STEP 3 OF 3 · REVIEW",title:"Edit this listing",copy:"Update any section below, then return to Review."};
   const heroSummary = workflowStep==="connect"
     ? undefined
     : workflowStep==="setup"
@@ -5212,11 +5237,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       : { eyebrow: "STEP 1 OF 3", title: "Choose a product or bundle", copy: "Select one to start your batch." },
     designs: complete
       ? reviewEditing
-        ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review." }
+        ? reviewEditorHero
         : { eyebrow: "STEP 2 OF 3", title: "Finish your Printify drafts", copy: "Check artwork, colors, sizes, pricing, shipping, and listing photos." }
       : { eyebrow: "STEP 2 OF 3", title: "Add your designs", copy: "" },
     review: { eyebrow: "STEP 2 OF 3", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
-    finish: finishPhase==="details" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review." } : finishPhase==="etsy" ? { eyebrow: "STEP 3 OF 3 · REVIEW", title: "Edit this listing", copy: "Update any section below, then return to Review." } : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: handoffBlockers().length?"Fix the missing items shown on the listing cards.":"Everything is ready. Save the batch to Etsy Drafts." },
+    finish: finishPhase==="details" ? reviewEditorHero : finishPhase==="etsy" ? reviewEditorHero : { eyebrow: "STEP 3 OF 3", title: "Review your listings", copy: handoffBlockers().length?"Fix the missing items shown on the listing cards.":"Everything is ready. Save the batch to Etsy Drafts." },
   }[workflowStep];
   const workflowHelp=workflowStep==="designs"
     ?complete
