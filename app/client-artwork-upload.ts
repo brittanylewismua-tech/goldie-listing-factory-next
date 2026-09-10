@@ -1,3 +1,5 @@
+import largePngWorkerUrl from "./large-png-worker.ts?worker&url";
+
 export const MAX_DIRECT_PRINTIFY_BYTES = 40 * 1024 * 1024;
 const LARGE_TRANSPARENT_PNG_BYTES = 12 * 1024 * 1024;
 
@@ -5,10 +7,14 @@ type Bounds = { left: number; top: number; right: number; bottom: number };
 type OptimizerReply = { ok: true; buffer: ArrayBuffer } | { ok: false; error?: string };
 let optimizerQueue: Promise<void> = Promise.resolve();
 
-function runLargePngOptimizer(file: File, bounds?: Bounds) {
-  return new Promise<Blob | null>(async (resolve) => {
-    const worker = new Worker(new URL("./large-png-worker.ts", import.meta.url), { type: "module" });
-    const timeout = window.setTimeout(() => { worker.terminate(); resolve(null); }, 60_000);
+async function runLargePngOptimizer(file: File, bounds?: Bounds) {
+  let buffer: ArrayBuffer;
+  try { buffer = await file.arrayBuffer(); } catch { return null; }
+  return new Promise<Blob | null>((resolve) => {
+    let worker: Worker;
+    try { worker = new Worker(largePngWorkerUrl, { type: "module" }); }
+    catch { resolve(null); return; }
+    const timeout = window.setTimeout(() => { worker.terminate(); resolve(null); }, 30_000);
     worker.onmessage = (event: MessageEvent<OptimizerReply>) => {
       window.clearTimeout(timeout);
       worker.terminate();
@@ -16,7 +22,6 @@ function runLargePngOptimizer(file: File, bounds?: Bounds) {
     };
     worker.onerror = () => { window.clearTimeout(timeout); worker.terminate(); resolve(null); };
     try {
-      const buffer = await file.arrayBuffer();
       worker.postMessage({ buffer, originalBytes: file.size, bounds }, [buffer]);
     } catch {
       window.clearTimeout(timeout);

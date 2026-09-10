@@ -23,6 +23,10 @@ test("D1285: the synchronous duplicate guard remains ahead of every mutation",()
 test("D1285: large transparent PNG preparation is serialized, native, and crop gated",()=>{
   assert.match(upload,/LARGE_TRANSPARENT_PNG_BYTES = 12 \* 1024 \* 1024/);
   assert.match(upload,/optimizerQueue = turn/);
+  assert.match(upload,/large-png-worker\.ts\?worker&url/);
+  assert.match(upload,/new Worker\(largePngWorkerUrl/);
+  assert.doesNotMatch(upload,/new Promise<Blob \| null>\(async/);
+  assert.match(upload,/catch \{ resolve\(null\); return; \}/);
   assert.match(upload,/optimized\.size < file\.size \* \.82/);
   assert.match(upload,/bounds: \{ left: 0, top: 0, right: 1, bottom: 1 \}/);
   assert.match(worker,/createImageBitmap/);
