@@ -21,6 +21,7 @@ test("D1298: single-listing sections use a scalable visual chooser",()=>{
   assert.match(nav,/className="review-listing-chooser"/);
   assert.match(nav,/className="review-listing-choices"/);
   assert.match(nav,/className="review-listing-choice-thumb"/);
+  assert.match(nav,/aria-label=\{`Open listing \$\{index\+1\}: \$\{title\}`\}/);
   assert.match(nav,/files\.map\(\(candidate,index\)=>/);
   assert.doesNotMatch(nav,/<select aria-label="Jump to listing"/);
   assert.match(css,/\.review-listing-choices\{[^}]*max-height:290px;overflow:auto/);
