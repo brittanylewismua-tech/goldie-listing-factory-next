@@ -12,5 +12,5 @@ test("automatic Etsy draft creation respects unfinished pricing while the recove
 });
 
 test("starting fresh clears both the child batch and parent bundle-run identities", () => {
-  assert.match(app, /batchIdRef\.current="";runIdRef\.current="";runStartedRef\.current="";setBundleRun\(null\)/);
+  assert.match(app, /batchIdRef\.current="";runIdRef\.current="";authoritativeRunBatchIds\.current=null;runStartedRef\.current="";setBundleRun\(null\)/);
 });

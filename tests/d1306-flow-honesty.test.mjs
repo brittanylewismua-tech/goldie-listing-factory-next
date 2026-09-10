@@ -9,8 +9,14 @@ const css=await readFile(new URL("../app/interface-v2.css",import.meta.url),"utf
 
 test("D1306: restoring a bundle replaces stale child ids with the server's exact child map",()=>{
   assert.match(app,/const childMap=Object\.fromEntries\(children\.filter\(child=>child\.productId&&child\.id\)/);
+  assert.match(app,/authoritativeRunBatchIds\.current=childMap;setBundleBatchIds\(childMap\)/);
+  assert.match(app,/if\(runIdRef\.current\)setBundleBatchIds\(authoritativeRunBatchIds\.current\|\|\{\}\)/);
   assert.match(app,/setBundleBatchIds\(childMap\)/);
   assert.doesNotMatch(app,/setBundleBatchIds\(current=>\(\{\.\.\.childMap,\.\.\.current\}\)\)/);
+});
+
+test("D1307: a product without a child batch is actionable instead of called loading",()=>{
+  assert.match(app,/bundleBatchIds\[recipe\.id\]\?`Still reading \$\{recipe\.name\}\.\`:`Create the Printify drafts for \$\{recipe\.name\}\.\`/);
 });
 
 test("D1306: bundle history represents ordered products that have no child batch yet",()=>{

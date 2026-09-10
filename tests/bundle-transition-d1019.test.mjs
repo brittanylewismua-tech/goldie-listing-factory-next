@@ -34,7 +34,7 @@ test("D1020: each draft request derives variants and identity from its protected
 });
 
 test("D1021: a new bundle starts with separate parent-run and first-child ids",()=>{
-  assert.match(app,/runIdRef\.current=crypto\.randomUUID\(\);runStartedRef\.current=new Date\(\)\.toISOString\(\);[\s\S]*?const firstBatchId=crypto\.randomUUID\(\);batchIdRef\.current=firstBatchId/);
+  assert.match(app,/runIdRef\.current=crypto\.randomUUID\(\);authoritativeRunBatchIds\.current=null;runStartedRef\.current=new Date\(\)\.toISOString\(\);[\s\S]*?const firstBatchId=crypto\.randomUUID\(\);batchIdRef\.current=firstBatchId/);
   assert.match(app,/setBundleBatchIds\(\{\[recipes\[0\]\.id\]:firstBatchId\}\)/);
   assert.match(app,/batchUrl\.searchParams\.set\("batch",runIdRef\.current\|\|durableBatchId\)/);
 });
@@ -44,8 +44,9 @@ test("D1022: a parent run never borrows children from another execution of the s
 });
 
 test("D1023: a parented run rebuilds its child map from authoritative server children",()=>{
-  assert.match(app,/if\(runIdRef\.current\)setBundleBatchIds\(\{\}\)/);
   assert.match(app,/const childMap=Object\.fromEntries\(children\.filter/);
+  assert.match(app,/authoritativeRunBatchIds\.current=childMap;setBundleBatchIds\(childMap\)/);
+  assert.match(app,/if\(runIdRef\.current\)setBundleBatchIds\(authoritativeRunBatchIds\.current\|\|\{\}\)/);
   assert.match(app,/setBundleBatchIds\(childMap\)/);
   assert.doesNotMatch(app,/setBundleBatchIds\(current=>\(\{\.\.\.childMap,\.\.\.current\}\)\)/);
 });

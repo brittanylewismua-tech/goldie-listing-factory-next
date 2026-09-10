@@ -15,7 +15,7 @@ const page = fs.readFileSync(new URL("../app/batches/page.tsx", import.meta.url)
 test("the run id is minted per execution, not taken from the saved bundle", () => {
   /* activeBundle.id identifies the bundle she SAVED. Two runs of it share that
      id, so it can never be the identity of one run. */
-  assert.match(app, /runIdRef\.current=crypto\.randomUUID\(\);runStartedRef\.current=new Date\(\)\.toISOString\(\);/);
+  assert.match(app, /runIdRef\.current=crypto\.randomUUID\(\);authoritativeRunBatchIds\.current=null;runStartedRef\.current=new Date\(\)\.toISOString\(\);/);
   const start = app.slice(app.indexOf("runIdRef.current=crypto.randomUUID()"));
   assert.match(start.slice(0, 400), /setActiveBundle\(bundle\)/,
     "the run id is minted where a run starts, beside the bundle it runs");
@@ -59,7 +59,7 @@ test("one run, one delete", () => {
 
 test("resume opens the first unfinished product, never a finished one", () => {
   const restore = app.slice(app.indexOf("const runState=payload.batch.state as"));
-  const body = restore.slice(0, 1400);
+  const body = restore.slice(0, 1900);
   assert.match(body, /byOrder\.find\(child=>child\.published===0\)/);
   assert.doesNotMatch(body, /child\.productId===runState\.run\?\.activeProductId/,
     "reload and Batch History must not begin on whichever later product happened to be open");

@@ -1047,6 +1047,11 @@ export default function ListingFactoryApp() {
      saved bundle twice produces two of them, which activeBundle.id (the saved
      definition, shared by every run of it) can never do. */
   const runIdRef=useRef("");
+  /* A parent run's children come from the server relation, not from any child
+     snapshot. Keep that exact set outside React's queued state updates so a
+     recursive child restore cannot briefly or permanently reintroduce an old
+     product-to-batch link. */
+  const authoritativeRunBatchIds=useRef<Record<string,string>|null>(null);
   const runStartedRef=useRef("");
   const snapshotReady=useRef(false);
   const writeBatch=useRef(serializedBatchWrites());
@@ -1746,6 +1751,7 @@ export default function ListingFactoryApp() {
      so bind the id at snapshot time rather than trusting one code path. */
   function rememberBundleBatch(recipeId:string|undefined,batchId:string){
     if(!recipeId||!batchId)return;
+    if(authoritativeRunBatchIds.current)authoritativeRunBatchIds.current={...authoritativeRunBatchIds.current,[recipeId]:batchId};
     setBundleBatchIds(current=>current[recipeId]===batchId?current:{...current,[recipeId]:batchId});
   }
   /* D547 - her three-product bundle ran perfectly: batches minted 15 and 10
@@ -2186,7 +2192,9 @@ export default function ListingFactoryApp() {
       const open=requestedChild||byOrder.find(child=>child.published===0)
         ||byOrder[byOrder.length-1];
       runIdRef.current=id;
-      if(open&&open.id!==id){const restored=await restoreBatchById(open.id,requestedStep,requestedPhase,push);if(restored){const childMap=Object.fromEntries(children.filter(child=>child.productId&&child.id).map(child=>[child.productId,child.id]));setBundleBatchIds(childMap)}return restored}
+      const childMap=Object.fromEntries(children.filter(child=>child.productId&&child.id).map(child=>[child.productId,child.id]));
+      authoritativeRunBatchIds.current=childMap;setBundleBatchIds(childMap);
+      if(open&&open.id!==id){const restored=await restoreBatchById(open.id,requestedStep,requestedPhase,push);if(restored)setBundleBatchIds(childMap);return restored}
     }const state=payload.batch.state as {template?:string;templateDetails?:TemplateDetails;description?:string;pricing?:Pricing;mockupTheme?:string;activeRecipe?:Recipe;activeBundle?:ProductBundle;bundleRecipes?:Recipe[];bundleIndex?:number;bundleBatchIds?:Record<string,string>;designs?:Array<Omit<DesignFile,"file"|"previewUrl"|"artworkVersions">&{artworkVersions?:Array<Omit<ArtworkVersion,"file"|"previewUrl">>}>;drafts?:DraftResult[];complete?:boolean;finishPhase?:FinishPhase;bulkTitles?:string;printifyImageIndices?:number[];printifyImageSelections?:Record<string,number[]>;selectedColorIds?:number[];selectedSizeIds?:number[];variantPrices?:Record<string,number>;etsyShippingProfileId?:number;pricingApproved?:boolean;sizeGuideName?:string;batchKeywords?:string[];titleJoiner?:string;titleBuilderMode?:"ai"|"manual";autoTitleBankId?:string;manualKeywordBankId?:string;sharedMockups?:{theme:string;ids:string[]};preparedMockupCounts?:Record<string,number>;keptAsDrafts?:boolean;batchDisplayName?:string;batchReceipt?:BatchReceipt|null};
     const queued=(payload.batch.state as {queuedDesignSessions?:Record<string,string>}).queuedDesignSessions||{};
     for(const [designId,sessionId] of Object.entries(queued))queuedDesignSessions.current.set(designId,sessionId);
@@ -2217,11 +2225,11 @@ export default function ListingFactoryApp() {
     was destroyed by looking at it. Measured on 0b79a9b6: receipt present at
     02:53:56 with four Etsy URLs, null by 02:59:23 after I opened the batch to
     verify it. Batch History then reported it as a DRAFT with a Resume button while
-    its four listings were live on Etsy. */setBatchReceipt(state.batchReceipt||null);setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(normalizeProductDescription(state.description));if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(Array.isArray(state.selectedColorIds)?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(Array.isArray(state.selectedSizeIds)?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setBundleBatchIds(state.bundleBatchIds||{});setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",requestedPhase??requestedFinishPhase(requestedStep),Boolean(state.complete)));if(focusedDraft)setFinishPhase("details");if(focusedDraft&&focusedSection){setActiveDesign(focusedDraft.clientId);setReviewEditing({id:focusedDraft.id!,clientId:focusedDraft.clientId,section:focusedSection})}setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=focusedDraft&&focusedSection?["artwork","variants","pricing","photos"].includes(focusedSection)?"designs":"finish":restoredWorkflowStep(payload.batch.step||"connect",requestedStep,Boolean(state.complete));setWorkflowStep(normalizeStep(step));/* Once the parent run is known, its id remains the public address. A child id
+    its four listings were live on Etsy. */setBatchReceipt(state.batchReceipt||null);setTemplate(state.template||"");setTemplateDetails(state.templateDetails||null);setDescription(normalizeProductDescription(state.description));if(state.pricing)setPricing(state.pricing);setVariantPrices(state.variantPrices||{});setSelectedColorIds(Array.isArray(state.selectedColorIds)?state.selectedColorIds:state.activeRecipe?.defaultColorIds?.length?state.activeRecipe.defaultColorIds:savedProductColors);setSelectedSizeIds(Array.isArray(state.selectedSizeIds)?state.selectedSizeIds:state.activeRecipe?.defaultSizeIds?.length?state.activeRecipe.defaultSizeIds:savedProductSizes);setEtsyShippingProfileId(Number(state.etsyShippingProfileId)||0);setPricingApproved(Boolean(state.pricingApproved));setMockupTheme(state.mockupTheme||"");setActiveRecipe(state.activeRecipe||null);setActiveBundle(state.activeBundle||null);setBundleRecipes(state.bundleRecipes||[]);setBundleIndex(Math.max(0,Number(state.bundleIndex)||0));setFiles(designs);setDrafts(state.drafts||[]);setComplete(Boolean(state.complete));setFinishPhase(restoredFinishPhase(state.finishPhase||"details",requestedPhase??requestedFinishPhase(requestedStep),Boolean(state.complete)));if(focusedDraft)setFinishPhase("details");if(focusedDraft&&focusedSection){setActiveDesign(focusedDraft.clientId);setReviewEditing({id:focusedDraft.id!,clientId:focusedDraft.clientId,section:focusedSection})}setBulkTitles(state.bulkTitles||"");setBatchKeywords(state.batchKeywords||[]);setTitleJoiner(state.titleJoiner||", ");setTitleBuilderMode(state.titleBuilderMode||"ai");setAutoTitleBankId(state.autoTitleBankId||"");setManualKeywordBankId(state.manualKeywordBankId||"");setSharedMockups(state.sharedMockups);setPreparedMockupCounts(state.preparedMockupCounts||{});setPrintifyImageIndices(state.printifyImageIndices||[]);setPrintifyImageSelections(state.printifyImageSelections||{});setSizeGuideName(state.sizeGuideName||"");setResumeProcessing(payload.batch.status==="processing"&&designs.length>0);const step=focusedDraft&&focusedSection?["artwork","variants","pricing","photos"].includes(focusedSection)?"designs":"finish":restoredWorkflowStep(payload.batch.step||"connect",requestedStep,Boolean(state.complete));setWorkflowStep(normalizeStep(step));/* Once the parent run is known, its id remains the public address. A child id
     cannot recover the complete bundle after refresh. *//* D1023 · Parented runs
     rebuild the product map from the actual children returned by /api/batches.
     A child snapshot can be stale and must never manufacture a sibling from a
-    different execution. */if(runIdRef.current)setBundleBatchIds({});url.searchParams.set("batch",runIdRef.current||id);url.searchParams.set("step",step);url.searchParams.delete("phase");if(push)window.history.pushState({},"",url);else window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&!state.complete&&state.template)void refreshRestoredTemplate(state.template,Number(state.etsyShippingProfileId)||0);return true}catch{batchRestoreFailed.current=true;setBatchRestoreError("Your saved batch could not be loaded. The connection may be interrupted. Try opening it again; your saved work has not been cleared.");return false}finally{snapshotReady.current=true;setRestoringBatch(false)}
+    different execution. */if(runIdRef.current)setBundleBatchIds(authoritativeRunBatchIds.current||{});else{authoritativeRunBatchIds.current=null;setBundleBatchIds(state.bundleBatchIds||{})}url.searchParams.set("batch",runIdRef.current||id);url.searchParams.set("step",step);url.searchParams.delete("phase");if(push)window.history.pushState({},"",url);else window.history.replaceState({},"",url);if(payload.batch.status==="processing"&&!state.complete&&state.template)void refreshRestoredTemplate(state.template,Number(state.etsyShippingProfileId)||0);return true}catch{batchRestoreFailed.current=true;setBatchRestoreError("Your saved batch could not be loaded. The connection may be interrupted. Try opening it again; your saved work has not been cleared.");return false}finally{snapshotReady.current=true;setRestoringBatch(false)}
   }
   useEffect(()=>{if(activeRecipe||template||files.length||drafts.length)setRestoreNotice("")},[activeRecipe,template,files.length,drafts.length]);
   /* D1028 · A completed Printify draft is not the same thing as an approved
@@ -2586,7 +2594,7 @@ export default function ListingFactoryApp() {
     const publishedThisBatch=Number(batchReceipt?.publishedCount)||0;
     if(priorBatch&&!preserveSavedBatch&&!publishedThisBatch){void clearBatchFiles(priorBatch);void batchFetch(`/api/batches?id=${encodeURIComponent(priorBatch)}`,{method:"DELETE"})}
     if(!preserveSavedBatch&&!publishedThisBatch)drafts.forEach(draft=>{if(draft.id)void fetch(`/api/etsy/images?productId=${encodeURIComponent(draft.id)}`,{method:"DELETE"})});
-    batchIdRef.current="";runIdRef.current="";runStartedRef.current="";setBundleRun(null);window.localStorage.removeItem("goldie-active-batch");
+    batchIdRef.current="";runIdRef.current="";authoritativeRunBatchIds.current=null;runStartedRef.current="";setBundleRun(null);window.localStorage.removeItem("goldie-active-batch");
     const freshUrl=new URL(window.location.href);freshUrl.searchParams.delete("batch");window.history.replaceState({},"",freshUrl);
     files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
     setBatchToolsOpen(true);
@@ -2713,7 +2721,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
        same saved bundle next week mints another: bundle.id identifies the
        bundle she saved, not the run she just started, so it can never be the
        run's identity. */
-    runIdRef.current=crypto.randomUUID();runStartedRef.current=new Date().toISOString();setActiveBundle(bundle);setBundleRecipes(recipes);setBundleIndex(0);
+    runIdRef.current=crypto.randomUUID();authoritativeRunBatchIds.current=null;runStartedRef.current=new Date().toISOString();setActiveBundle(bundle);setBundleRecipes(recipes);setBundleIndex(0);
     /* D1021 · A bundle run is the parent, never the first product's child.
        Reusing the run id for both let persistRunNow and persistBatchNow race to
        overwrite one row. The first product then vanished from the saved run
@@ -4156,7 +4164,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       const counts=active
         ?{designs:files.length,titled:files.filter(file=>Boolean(file.title.trim())).length,tagged:files.filter(file=>file.tags.length>0).length,etsyReady:files.filter(file=>etsyRequiredComplete(file.etsy)).length}
         :bundleBatchSummary[recipe.id];
-      if(!counts)return [`Still reading ${recipe.name}.`];
+      if(!counts)return [bundleBatchIds[recipe.id]?`Still reading ${recipe.name}.`:`Create the Printify drafts for ${recipe.name}.`];
       const memberDrafts=active?drafts:bundleMembers[recipe.id]?.drafts||[];
       const created=memberDrafts.filter(draft=>draft.status==="Created");
       if(created.length<counts.designs)return [`Finish the Printify drafts for ${recipe.name}.`];
