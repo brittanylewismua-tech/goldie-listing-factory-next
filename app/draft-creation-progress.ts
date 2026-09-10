@@ -30,9 +30,9 @@ export function measuredDraftCreationPercent(phases: Record<string, DraftCreatio
   return Math.min(100, Math.round((values.reduce((sum, value) => sum + value, 0) + missing * 3) / total));
 }
 
-/** Printify does not expose byte-level or product-build percentages. Move the
- * visible estimate within the current verified stage, but never cross the next
- * stage's safe ceiling or claim completion before every result exists. */
+/** Printify does not expose byte-level or product-build percentages. Keep a
+ * bounded visible estimate moving between verified stages, without ever
+ * claiming completion before every result exists. */
 export function nextVisibleDraftCreationPercent(current: number, measured: number, complete: boolean) {
   if (complete) return 100;
   const floor = Math.max(3, Math.min(94, measured));

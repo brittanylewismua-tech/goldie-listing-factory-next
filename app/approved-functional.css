@@ -401,7 +401,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .progress-ring{background:transparent!important;border-color:#dfc8d5!important;border-top-color:#b777b0!important}
 .app-shell .progress-copy span{color:rgba(74,42,62,.68)!important}
 .app-shell .progress-track{background:rgba(176,122,171,.16)!important}
-.app-shell .progress-track span{background:linear-gradient(90deg,#a765a0,#d992c5,#eee4eb)!important}
+.app-shell .progress-track span{background:#b777b0!important}
 .app-shell .upload-notice{border-color:rgba(183,119,176,.58)!important;color:#4b283e!important}
 .app-shell .upload-notice-icon{color:#fff!important}
 .app-shell .upload-notice-progress{color:#633f5c!important}

@@ -186,9 +186,10 @@ test("uses the Goldie palette while Printify drafts are being created", async ()
   const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
   assert.match(css, /\.app-shell \.batch-progress\{border-color:#dfc8d5!important/);
   assert.match(css, /\.app-shell \.progress-ring\{background:transparent!important;border-color:#dfc8d5!important;border-top-color:#b777b0!important/);
-  /* D782 - the third stop was #b6a8ff, a periwinkle from the lilac theme this
-     app used to wear. The bar now ends in the plum family it starts in. */
-  assert.match(css, /\.app-shell \.progress-track span\{background:linear-gradient\(90deg,#a765a0,#d992c5,#eee4eb\)!important/);
+  /* D1305 - one solid fill makes the changing width read as progress. There is
+     no gradient highlight that can look like motion independent of the work. */
+  assert.match(css, /\.app-shell \.progress-track span\{background:#b777b0!important/);
+  assert.doesNotMatch(css, /progress-track span\{background:linear-gradient/);
   assert.match(css, /\.app-shell \.upload-notice\{border-color:rgba\(183,119,176,\.58\)!important/);
 });
 

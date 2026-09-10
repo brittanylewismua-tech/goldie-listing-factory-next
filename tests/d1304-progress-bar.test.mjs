@@ -33,3 +33,9 @@ test("D1304 starts immediately, advances between provider checkpoints, and reser
   assert.equal(visible,94);
   assert.equal(nextVisibleDraftCreationPercent(visible,100,true),100);
 });
+
+test("D1305 keeps the production progress fill solid",()=>{
+  const css=readFileSync(new URL("../app/approved-functional.css",import.meta.url),"utf8");
+  assert.match(css,/\.app-shell \.progress-track span\{background:#b777b0!important\}/);
+  assert.doesNotMatch(css,/progress-track span\{background:linear-gradient/);
+});
