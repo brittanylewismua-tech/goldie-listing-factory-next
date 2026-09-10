@@ -14,7 +14,7 @@ test("D931: the final action creates Etsy drafts while live publishing stays dis
   assert.match(app,/photoDeliveryRef\.current\?\.prepare\(\)/);
   assert.match(app,/setCreatingEtsyDrafts\(true\)/);
   assert.match(app,/Creates unpublished Etsy drafts\. Nothing goes live/);
-  assert.match(app,/className="review-etsy-draft-button" disabled=\{creatingEtsyDrafts/);
+  assert.match(app,/className="review-etsy-draft-button"[^>]*disabled=\{creatingEtsyDrafts/);
   assert.match(app,/<FinalListingReview handoffOnly/);
   assert.match(review,/className="final-listing-review handoff-only recipe-listing-review"/);
   assert.match(review,/!handoffOnly&&<label className="final-select-all"/);

@@ -21,7 +21,8 @@ test("D862: requirements gate forward movement, never review of an earlier stage
 });
 
 test("D862: a bundle receipt only calls every product complete when every product has published",()=>{
-  assert.match(app,/bundleRecipes\.every\(\(recipe,index\)=>index===bundleIndex\?Number\(batchReceipt\?\.publishedCount\)>0:Number\(bundleBatchSummary\[recipe\.id\]\?\.published\)>0\)/);
+  assert.match(app,/bundleRecipes\.every\(bundleProductFullyPublished\)/);
+  assert.match(app,/expected>0&&published>=expected/);
   assert.doesNotMatch(app,/bundleComplete=\{Boolean\(activeBundle&&bundleIndex===bundleRecipes\.length-1\)\}/);
 });
 

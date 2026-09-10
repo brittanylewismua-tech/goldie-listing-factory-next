@@ -4189,7 +4189,16 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
   }
   function nextUnfinishedBundleProduct(){
     if(!activeBundle||bundleRecipes.length<2)return null;
-    return bundleRecipes.find((recipe,index)=>index!==bundleIndex&&Number(bundleBatchSummary[recipe.id]?.published||0)===0)||null;
+    return bundleRecipes.find((recipe,index)=>index!==bundleIndex&&!bundleProductFullyPublished(recipe,index))||null;
+  }
+  /* D1313 · A single published listing is not a finished product. The receipt
+     still used the pre-D1311 boolean rule after Batch History and restore had
+     moved to expected counts, so a two-listing product with one success could
+     make the bundle receipt claim completion and skip the remaining listing. */
+  function bundleProductFullyPublished(recipe:Recipe,index:number){
+    const expected=index===bundleIndex?files.length:Math.max(Number(bundleBatchSummary[recipe.id]?.designs)||0,bundleMembers[recipe.id]?.designs.length||0);
+    const published=index===bundleIndex?Number(batchReceipt?.publishedCount)||0:Number(bundleBatchSummary[recipe.id]?.published)||0;
+    return expected>0&&published>=expected;
   }
   function bundleListingsToPublish(){
     if(!activeBundle||bundleRecipes.length<2)return selectedPublishDrafts().length;
@@ -5868,7 +5877,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 screen, and pushed the Publish panel further down for it. The card
                 reports photo readiness; nothing else needs to. The banner style
                 is still used by step 2, so only this instance goes. */}
-              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal&&goalDaysLoaded?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={nextUnfinishedBundleProduct()?.name} bundleComplete={Boolean(activeBundle&&bundleRecipes.length>0&&bundleRecipes.every((recipe,index)=>index===bundleIndex?Number(batchReceipt?.publishedCount)>0:Number(bundleBatchSummary[recipe.id]?.published)>0))} onNextBundleProduct={()=>{const pending=nextUnfinishedBundleProduct();if(pending)void openBundleProduct(bundleRecipes.findIndex(recipe=>recipe.id===pending.id))}} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<>{/* D546 - her words, looking at it: "this whole section doesn't need to be on
+              <article className="step-card final-review active-panel"><div className="step-content">{batchReceipt?<OutcomeReceipt goalLine={listingGoal&&goalDaysLoaded?`That is ${goalDone} of your ${listingGoal.target} listings this ${listingGoal.period}.`:undefined} receipt={batchReceipt} productName={templateDetails?.blueprintTitle||""} shippingProfile={etsyShippingProfiles.find(profile=>profile.id===etsyShippingProfileId)?.title||""} imageCount={printifyImageIndices.length} sizeGuideName={sizeGuideName} tagCount={files.reduce((sum,file)=>sum+file.tags.length,0)} variantCount={pricedVariants.length*files.length} minutesSaved={Math.max(12,Math.round(files.length*11.1))} nextBundleProduct={nextUnfinishedBundleProduct()?.name} bundleComplete={Boolean(activeBundle&&bundleRecipes.length>0&&bundleRecipes.every(bundleProductFullyPublished))} onNextBundleProduct={()=>{const pending=nextUnfinishedBundleProduct();if(pending)void openBundleProduct(bundleRecipes.findIndex(recipe=>recipe.id===pending.id))}} onNewBatch={()=>{clearCurrentBatch(true);goToStep("setup")}}/>:<>{/* D546 - her words, looking at it: "this whole section doesn't need to be on
               the final step because above it, you list every product and everything
               that's in every product." It repeated the cards line for line - prices,
               description, Etsy details, photos - and the two things it alone
@@ -5905,7 +5914,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   shipping, published - every one of them, with the same value
                   and the same wording productRows gave them. */}
               <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?`${handoffReadyCount()} of ${handoffExpectedCount()} listings complete`:`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockerSummary()}</span></div>
-              <button type="button" className="review-etsy-draft-button" disabled={creatingEtsyDrafts||!photoDeliveryStatusReady||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":"Save to Etsy Drafts"}</button>
+              {/* D1313 · The delivery status read intentionally holds this action
+                  until it knows whether an Etsy draft already exists. The button
+                  previously kept saying “Save to Etsy Drafts” while disabled, so
+                  the final screen looked broken during that check. Put the wait
+                  on the control the seller is trying to use. */}
+              <button type="button" className="review-etsy-draft-button" aria-busy={creatingEtsyDrafts||!photoDeliveryStatusReady} disabled={creatingEtsyDrafts||!photoDeliveryStatusReady||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":!photoDeliveryStatusReady?"Checking saved Etsy drafts…":"Save to Etsy Drafts"}</button>
               {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<a className="review-printify-link" href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open drafts in Printify ↗</a>}
               {false&&<><div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
