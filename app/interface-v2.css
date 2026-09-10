@@ -1559,18 +1559,16 @@ html, body { background: var(--lf-paper); }
    mistaken for the listing being edited. */
 .app-shell .factory-listing-screen{display:grid;gap:14px}
 .app-shell .factory-listing-screen > .factory-panel{margin:0}
-.app-shell .step-product-card:has(>.review-listing-editor-nav){display:grid;grid-template-columns:230px minmax(0,1fr);align-items:start;gap:16px 20px}
-.app-shell .step-product-card:has(>.review-listing-editor-nav)>header,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-switcher{grid-column:1/-1}
-.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-editor-nav{grid-column:1}.app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows{grid-column:2;min-width:0}
-.app-shell .review-listing-switcher{display:flex;gap:9px;overflow-x:auto;padding:3px 3px 8px;scrollbar-width:thin;scroll-snap-type:x proximity}
-.app-shell .review-listing-switcher>button{display:grid;grid-template-columns:48px minmax(92px,1fr);align-items:center;gap:9px;flex:0 0 180px;min-height:62px;padding:6px;border:1px solid #d8ced5;border-radius:10px;background:#fff;color:#2c2329;text-align:left;cursor:pointer;scroll-snap-align:start}
-.app-shell .review-listing-switcher>button:hover{border-color:#171417}.app-shell .review-listing-switcher>button[aria-current="page"]{border:2px solid #171417;background:#fff8fc;box-shadow:3px 3px 0 #ff39ad}.app-shell .review-listing-switcher>button:focus-visible{outline:3px solid #ff39ad;outline-offset:2px}.app-shell .review-listing-switcher>button:disabled{opacity:.55;cursor:not-allowed}
-.app-shell .review-listing-switcher>button>span:last-child{display:grid;gap:3px;min-width:0}.app-shell .review-listing-switcher small{color:#766b73;font-size:9px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.app-shell .review-listing-switcher b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.app-shell .review-listing-thumb{display:grid;place-items:center;overflow:hidden;width:48px;height:48px;border:1px solid #ded4da;border-radius:8px;background:#f6f1f4;color:#715666;font-size:13px;font-weight:900}.app-shell .review-listing-thumb img{width:100%;height:100%;object-fit:cover}
+.app-shell .step-product-card:has(>.review-listing-editor-nav){display:grid;grid-template-columns:minmax(0,1fr) 250px;align-items:start;gap:14px 20px}
+.app-shell .step-product-card:has(>.review-listing-editor-nav)>header{grid-column:1/-1}
+.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-editor-nav{grid-column:2;grid-row:2/span 20}.app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows{grid-column:1;grid-row:2;min-width:0}
+.app-shell .review-listing-thumb{display:grid;place-items:center;overflow:hidden;width:54px;height:54px;flex:none;border:1px solid #ded4da;border-radius:8px;background:#f6f1f4;color:#715666;font-size:13px;font-weight:900}.app-shell .review-listing-thumb img{width:100%;height:100%;object-fit:cover}
 .app-shell .review-listing-editor-nav{position:sticky;z-index:8;top:88px;display:grid;gap:10px;padding:12px;border:2px solid #171417;border-radius:12px;background:rgba(24,21,25,.97);color:#fff;box-shadow:4px 4px 0 #ff39ad;backdrop-filter:blur(12px)}
-.app-shell .review-listing-current{display:grid;gap:3px;min-width:0;padding:2px 2px 8px;border-bottom:1px solid rgba(255,255,255,.18)}.app-shell .review-listing-current small{color:#d5cbd2;font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.app-shell .review-listing-current b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.app-shell .review-listing-current{display:grid;grid-template-columns:54px minmax(0,1fr);align-items:center;gap:9px;min-width:0;padding:2px 2px 10px;border-bottom:1px solid rgba(255,255,255,.18)}.app-shell .review-listing-current>span:last-child{display:grid;gap:3px;min-width:0}.app-shell .review-listing-current small{color:#d5cbd2;font-size:9px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.app-shell .review-listing-current b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.app-shell .review-listing-picker{display:grid;grid-template-columns:38px minmax(0,1fr) 38px;align-items:end;gap:6px}.app-shell .review-listing-picker>button{display:grid;place-items:center;width:38px;height:38px;padding:0;border:1px solid rgba(255,255,255,.48);border-radius:8px;background:transparent;color:#fff;font-size:17px;cursor:pointer}.app-shell .review-listing-picker>button:disabled{opacity:.3;cursor:not-allowed}.app-shell .review-listing-picker label{display:grid;gap:4px;min-width:0}.app-shell .review-listing-picker label>span{color:#d5cbd2;font-size:8px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.app-shell .review-listing-picker select{width:100%;height:38px;min-width:0;padding:0 25px 0 8px;border:1px solid rgba(255,255,255,.48);border-radius:8px;background:#fff;color:#171417;font:750 10px/1 Inter,sans-serif;cursor:pointer}.app-shell .review-listing-picker :is(button,select):focus-visible{outline:3px solid #ff39ad;outline-offset:2px}
 .app-shell .review-section-switcher{display:grid;gap:6px}.app-shell .review-section-switcher button{display:flex;align-items:center;min-height:38px;padding:7px 10px;border:1px solid rgba(255,255,255,.4);border-radius:8px;background:transparent;color:#fff;font:750 10px/1.25 Inter,sans-serif;text-align:left;cursor:pointer}.app-shell .review-section-switcher button[aria-current="page"]{border-color:#ff39ad;background:#fff;color:#171417}.app-shell .review-listing-editor-nav button:focus-visible{outline:3px solid #ff39ad;outline-offset:2px}
-@media(max-width:1000px){.app-shell .step-product-card:has(>.review-listing-editor-nav){grid-template-columns:1fr}.app-shell .step-product-card:has(>.review-listing-editor-nav)>header,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-switcher,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-editor-nav,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows{grid-column:1}.app-shell .review-listing-editor-nav{position:static}.app-shell .review-section-switcher{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:620px){.app-shell .review-listing-switcher>button{flex-basis:152px;grid-template-columns:42px minmax(78px,1fr)}.app-shell .review-listing-thumb{width:42px;height:42px}.app-shell .review-section-switcher{grid-template-columns:1fr 1fr}}
+@media(max-width:1000px){.app-shell .step-product-card:has(>.review-listing-editor-nav){grid-template-columns:1fr}.app-shell .step-product-card:has(>.review-listing-editor-nav)>header,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-editor-nav,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows{grid-column:1;grid-row:auto}.app-shell .review-listing-editor-nav{position:static}.app-shell .review-section-switcher{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:620px){.app-shell .review-listing-thumb{width:48px;height:48px}.app-shell .review-listing-current{grid-template-columns:48px minmax(0,1fr)}.app-shell .review-section-switcher{grid-template-columns:1fr 1fr}}
 
 
 /* The form card holds the listing's own editors one under another, which is
@@ -3954,13 +3952,12 @@ html, body { background: var(--lf-paper); }
    section. Each destination shows only a boxed completion mark; all titles are
    editable in one uninterrupted list. */
 @media(min-width:761px){
-  .app-shell .focused-review-section{display:grid;grid-template-columns:230px minmax(0,1fr);align-items:start;gap:16px 20px}
-  .app-shell .focused-review-section>.review-listing-switcher{grid-column:1/-1}
-  .app-shell .focused-review-section>.review-listing-editor-nav{grid-column:1;grid-row:2/span 20;position:sticky;top:88px}
+  .app-shell .focused-review-section{display:grid;grid-template-columns:minmax(0,1fr) 250px;align-items:start;gap:14px 20px}
+  .app-shell .focused-review-section>.review-listing-editor-nav{grid-column:2;grid-row:1/span 20;position:sticky;top:88px}
   .app-shell .focused-review-section>.review-listing-editor-nav .review-section-switcher{grid-template-columns:1fr}
   .app-shell .focused-review-section>.factory-panel,
   .app-shell .focused-review-section>.task-panel-lead,
-  .app-shell .focused-review-section>.factory-listing-grid{grid-column:2;min-width:0}
+  .app-shell .focused-review-section>.factory-listing-grid{grid-column:1;min-width:0}
 }
 .app-shell .review-section-switcher button{display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px}
 .app-shell .review-section-switcher button>span:last-child{min-width:0}
@@ -3972,9 +3969,10 @@ html, body { background: var(--lf-paper); }
 .app-shell .listing-rows.is-static-open .listing-card-head{grid-template-columns:132px minmax(0,1fr) auto auto;cursor:default}
 .app-shell .listing-rows.is-static-open .listing-card-head:hover{background:#fffafc}
 .app-shell .focused-review-section .listing-rows.is-static-open{gap:22px}
-.app-shell .focused-review-section .listing-rows.is-static-open .listing-card{padding:0;border:2px solid #171717;border-radius:10px;background:#fffafc;box-shadow:3px 3px 0 #171717}
-.app-shell .focused-review-section .listing-rows.is-static-open .listing-card-head{padding:14px;border-bottom:1px solid #ded1d8;background:#fffafc}
-.app-shell .focused-review-section .listing-rows.is-static-open .listing-card-detail{padding:18px!important}
+.app-shell .focused-review-section .listing-rows.is-static-open .listing-card,.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-rows.is-static-open .listing-card{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.app-shell .focused-review-section .listing-rows.is-static-open .listing-card-head,.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-rows.is-static-open .listing-card-head{padding:0 0 12px;border-bottom:1px solid #ded1d8;background:transparent}
+.app-shell .focused-review-section .listing-rows.is-static-open .listing-card-detail,.app-shell .step-product-card:has(>.review-listing-editor-nav) .listing-rows.is-static-open .listing-card-detail{padding:14px 0 0!important}
+.app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows .factory-panel-body{padding:14px}
 .app-shell .focused-review-section .factory-etsy-details-column .listing-product-preview{display:block;width:140px;max-width:100%;padding:0;border:1px solid #d8cfd4;border-radius:9px;background:#fff;overflow:hidden;cursor:zoom-in}
 .app-shell .focused-review-section .factory-etsy-details-column .listing-product-preview img{display:block;width:140px;max-width:100%;height:140px;object-fit:contain;background:#fff}
 @media(max-width:760px){

@@ -35,15 +35,22 @@ test("D1283/D1292: inline draft progress stays visibly active while real complet
   assert.doesNotMatch(app,/setInterval\([^)]*creationProgressPercent|setTimeout\([^)]*creationProgressPercent/);
 });
 
-test("D1281: focused Review exposes listings first and sections in a side rail",()=>{
-  assert.match(app,/className="review-listing-switcher" aria-label="Choose a listing"/);
+test("D1293: focused Review gives the work priority and scales listing navigation in a right rail",()=>{
+  const nav=app.slice(app.indexOf("function reviewListingSectionNav"),app.indexOf("function rememberReviewEditor"));
+  assert.doesNotMatch(nav,/className="review-listing-switcher"/);
   assert.match(app,/className="review-listing-thumb"/);
-  assert.match(app,/candidateDraft\?\.previewUrl\|\|candidate\.previewUrl/);
+  assert.match(nav,/className="review-listing-picker"/);
+  assert.match(nav,/<select aria-label="Jump to listing" value=\{design\.id\}/);
+  assert.match(nav,/files\.map\(\(candidate,index\)=>/);
+  assert.match(nav,/aria-label="Previous listing"/);
+  assert.match(nav,/aria-label="Next listing"/);
   assert.match(app,/className="review-section-switcher" aria-label="Listing sections"/);
-  assert.doesNotMatch(app.slice(app.indexOf("function reviewListingSectionNav"),app.indexOf("function rememberReviewEditor")),/Previous listing|Next listing/);
-  assert.match(css,/grid-template-columns:230px minmax\(0,1fr\)/);
+  assert.match(css,/\.step-product-card:has\(>\.review-listing-editor-nav\)\{display:grid;grid-template-columns:minmax\(0,1fr\) 250px/);
+  assert.match(css,/\.focused-review-section\{display:grid;grid-template-columns:minmax\(0,1fr\) 250px/);
+  assert.match(css,/\.focused-review-section>\.review-listing-editor-nav\{grid-column:2/);
   assert.match(css,/\.review-listing-editor-nav\{position:sticky/);
   assert.match(css,/@media\(max-width:1000px\)[^{]*\{\.app-shell \.step-product-card:has\(>\.review-listing-editor-nav\)\{grid-template-columns:1fr\}/);
+  assert.match(css,/listing-rows\.is-static-open \.listing-card\{padding:0;border:0;border-radius:0;background:transparent;box-shadow:none/);
 });
 
 test("D1290: unfinished Review rows use a centered boxed X",()=>{
