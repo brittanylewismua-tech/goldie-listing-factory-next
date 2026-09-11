@@ -94,7 +94,8 @@ test("D895: growing product libraries keep prominent, separated section headers"
 });
 
 test("D896: library headings describe the library, not a misleading item count",()=>{
-  assert.match(tools,/<span>\{bundleForm\?"Products":"Saved products"\}<\/span>/);
+  assert.match(tools,/bundleForm&&<div className="recipe-library-head"><span>Products<\/span>/);
+  assert.doesNotMatch(tools,/bundleForm\?"Products":"Saved products"/);
   assert.match(tools,/bundle-card-heading"><span>Saved bundles<\/span>/);
   assert.doesNotMatch(tools,/reachable\.length} saved/);
   assert.doesNotMatch(tools,/usableBundles\.length} saved product/);

@@ -7,7 +7,7 @@ const tools=readFileSync(new URL("../app/factory-tools.tsx",import.meta.url),"ut
 const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
 
 test("D946: the product chooser states its instruction once",()=>{
-  assert.match(app,/title: "Choose a product or bundle", copy: "Select one to start your batch\."/);
+  assert.match(app,/title: "Start your batch", copy: "Choose a saved product or bundle\."/);
   assert.match(app,/"Saved products and bundles"/);
   assert.doesNotMatch(tools,/>Select a product to use for this batch\.<\/p>/);
 });

@@ -2168,8 +2168,8 @@ test("records real pricing approval and invalidates it after edits (fixes D23 an
 
 test("shows one binding design-capacity status after uploads (fixes D28 and D49)",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(app,/files\.length > 0 && designsFinished && <div className="batch-capacity">/);
-  assert.match(app,/`\$\{files\.length\} design\$\{files\.length===1\?"":"s"\} added`/);
+  assert.doesNotMatch(app,/files\.length > 0 && designsFinished && <div className="batch-capacity">/);
+  assert.match(app,/`\$\{files.length\} \${files.length===1\?"listing":"listings"} in this batch`/);
   assert.doesNotMatch(app,/listings left on your plan/);
   assert.match(app,/<p className="upload-guidance batch-limits file-reminder">/);
   assert.match(app,/files\.length>0&&!designsFinished&&<section className="design-preparation-status working"/);

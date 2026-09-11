@@ -10,7 +10,7 @@ test("D949: the upload screen presents one short instruction and compact progres
   assert.match(app,/activeBundle&&bundleRecipes\.length>1\?`Upload each \$\{uploadPrimaryLabel\} design once for every product in this bundle\.`:`Upload one \$\{uploadPrimaryLabel\} design per listing\.`/);
   assert.doesNotMatch(app,/Main upload: one/);
   assert.doesNotMatch(app,/listings left on your plan/);
-  assert.match(app,/`\$\{files\.length\} design\$\{files\.length===1\?"":"s"\} added`/);
+  assert.doesNotMatch(app,/files\.length > 0 && designsFinished && <div className="batch-capacity">/);
 });
 
 test("D949: upload choices read as controls and the work surface separates from the page",()=>{

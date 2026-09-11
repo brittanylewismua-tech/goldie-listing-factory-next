@@ -94,7 +94,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .browse-chip{font-size:12px!important;font-weight:750!important}
 .app-shell .design-preparation-status b{font-size:14px!important;line-height:1.35!important}
 .app-shell .design-preparation-status small{color:rgba(74,42,62,.74)!important;font-size:11px!important;line-height:1.45!important}
-.app-shell .batch-capacity span{color:rgba(74,42,62,.72)!important;font-size:11px!important}
 .app-shell .design-upload-review{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:12px}
 .app-shell .pixel-warning-inline small{font-size:11px!important}
 .app-shell .pricing-section-heading p{font-size:12px!important;line-height:1.55!important}
@@ -328,7 +327,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .finish-mode .batch-limits,
 .app-shell .finish-mode .file-reminder,
 .app-shell .finish-mode .upload-actions,
-.app-shell .finish-mode .batch-capacity,
 .app-shell .finish-mode .design-preparation-status,
 .app-shell .finish-mode>.step-content>input{display:none!important}
 
@@ -359,7 +357,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   color:#6d4167!important;
 }
 .app-shell .browse-chip{border-color:#d9cbd3!important;background:rgba(255,255,255,.74)!important;color:#5b3656!important}
-.app-shell .batch-capacity,
 .app-shell .design-preparation-status,
 .app-shell .design-preparation-status.ready{
   border-color:#ded1d8!important;
@@ -367,8 +364,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   box-shadow:0 8px 22px rgba(74,42,62,.07)!important;
 }
 .app-shell .design-preparation-status b{color:var(--ink)!important}
-.app-shell .design-preparation-status small,
-.app-shell .batch-capacity span{color:rgba(74,42,62,.66)!important}
+.app-shell .design-preparation-status small{color:rgba(74,42,62,.66)!important}
 .app-shell .design-preparation-status strong{color:#6b365a!important}
 .app-shell .design-status-icon,
 .app-shell .design-preparation-status.ready .design-status-icon{

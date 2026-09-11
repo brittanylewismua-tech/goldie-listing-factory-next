@@ -1791,6 +1791,7 @@ body{min-width:0}
 }
 .app-shell .listing-goal-track>i{
   display:block!important;height:100%!important;border-radius:16px!important;
+  max-width:100%!important;
   background:linear-gradient(90deg,#d7a6cf,#8e4c78)!important;
   box-shadow:0 0 10px -2px rgba(214,150,200,.95)!important;
 }

@@ -12,5 +12,5 @@ test("review editors return leftward from the left side of the footer", () => {
   assert.match(app, /<span aria-hidden="true">←<\/span> Back to Review<\/button>/);
   assert.doesNotMatch(app, /Back to Review <span aria-hidden="true">→<\/span>/);
   assert.match(css, /\.workflow-footer-actions>\.review-return\{[\s\S]*?margin:0 auto 5px 0!important/);
-  assert.match(marker, /BUILD_MARKER = "D1351"/);
+  assert.match(marker, /BUILD_MARKER = "D1352"/);
 });

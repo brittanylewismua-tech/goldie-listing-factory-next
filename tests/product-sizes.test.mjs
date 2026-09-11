@@ -854,7 +854,7 @@ test("step 1 names the current action in both states — D322/D946", async () =>
   const app = await read("app/listing-factory-app.tsx");
   assert.doesNotMatch(app, /title: "Build this batch"/,
     "a step may not rename itself when something is selected");
-  assert.match(app,/title: "Choose a product or bundle"/);
+  assert.match(app,/title: "Start your batch"/);
   assert.match(app,/title: files\.length\?"Review your product and designs":"Add your designs"/);
 });
 
