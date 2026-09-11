@@ -32,18 +32,24 @@ const MIN_AGE_DAYS = 7;
 const BUDGET_FLOOR = 200;
 
 /**
- * The print-on-demand shelf, by name rather than by id.
- *
- * Etsy has no "is print on demand" flag — it cannot tell a printed tee from a
- * hand-screened one, and neither can we. What it does have is a category tree,
- * and POD is in practice a known set of products. Matched by name against the
- * live tree rather than hardcoded as numbers, because an id copied from a blog
- * post can quietly come to mean something else and nobody would notice.
+ * The print-on-demand shelf uses explicit product searches. Etsy's seller tree
+ * contains several identically named nodes under unrelated branches; choosing
+ * the first "Hoodies" node produced a global marketplace feed. A product term
+ * is the public search evidence a seller can independently reproduce.
  */
 const POD_PRODUCTS = [
-  "T-Shirts", "Sweatshirts", "Hoodies", "Tank Tops",
-  "Mugs", "Tote Bags", "Prints", "Stickers",
-  "Phone Cases", "Blankets", "Throw Pillows", "Hats",
+  { taxonomyId: 90_001, label: "T-Shirts", query: "t shirt" },
+  { taxonomyId: 90_002, label: "Sweatshirts", query: "sweatshirt" },
+  { taxonomyId: 90_003, label: "Hoodies", query: "hoodie" },
+  { taxonomyId: 90_004, label: "Tank Tops", query: "tank top" },
+  { taxonomyId: 90_005, label: "Mugs", query: "mug" },
+  { taxonomyId: 90_006, label: "Tote Bags", query: "tote bag" },
+  { taxonomyId: 90_007, label: "Prints", query: "wall art print" },
+  { taxonomyId: 90_008, label: "Stickers", query: "sticker" },
+  { taxonomyId: 90_009, label: "Phone Cases", query: "phone case" },
+  { taxonomyId: 90_010, label: "Blankets", query: "blanket" },
+  { taxonomyId: 90_011, label: "Throw Pillows", query: "throw pillow" },
+  { taxonomyId: 90_012, label: "Hats", query: "hat" },
 ];
 
 export type DropListing = {
@@ -77,11 +83,13 @@ type EtsyRow = {
   original_creation_timestamp?: number;
   price?: { amount?: number; divisor?: number; currency_code?: string };
   images?: { url_570xN?: string; url_fullxfull?: string }[];
+  listing_type?: string; type?: string;
 };
 
 function shape(rows: EtsyRow[]): DropListing[] {
   const now = Date.now();
   return rows.flatMap((row, i) => {
+    if (row.listing_type === "download" || row.type === "download") return [];
     const listingId = Number(row.listing_id);
     if (!listingId) return [];
     const created = Number(row.original_creation_timestamp) * 1000;
@@ -106,41 +114,6 @@ function shape(rows: EtsyRow[]): DropListing[] {
   });
 }
 
-/** Etsy's category tree, fetched once and kept. It changes about never. */
-async function taxonomy(): Promise<{ id: number; name: string }[]> {
-  const cached = await db().prepare("SELECT nodes_json FROM etsy_taxonomy_cache WHERE id=1").first<{ nodes_json: string }>();
-  if (cached) { try { return JSON.parse(cached.nodes_json) as { id: number; name: string }[]; } catch { /* refetch */ } }
-
-  await waitForEtsyCapacity();
-  const response = await fetch("https://openapi.etsy.com/v3/application/seller-taxonomy/nodes", {
-    headers: { "x-api-key": etsyApiCredential() }, signal: AbortSignal.timeout(20000),
-  });
-  await recordEtsyCall(response, "taxonomy");
-  if (!response.ok) throw new Error(`Etsy would not give the category list (${response.status}).`);
-
-  const payload = await response.json() as { results?: { id?: number; name?: string; children?: unknown[] }[] };
-  const flat: { id: number; name: string }[] = [];
-  const walk = (nodes: unknown[]) => {
-    for (const raw of nodes) {
-      const node = raw as { id?: number; name?: string; children?: unknown[] };
-      if (node.id && node.name) flat.push({ id: Number(node.id), name: String(node.name) });
-      if (Array.isArray(node.children)) walk(node.children);
-    }
-  };
-  walk(payload.results ?? []);
-  await db().prepare("INSERT INTO etsy_taxonomy_cache (id,nodes_json) VALUES (1,?) ON CONFLICT(id) DO UPDATE SET nodes_json=excluded.nodes_json,fetched_at=CURRENT_TIMESTAMP").bind(JSON.stringify(flat)).run();
-  return flat;
-}
-
-/** The POD shelf: the first tree node whose name matches each product. */
-async function podCategories() {
-  const nodes = await taxonomy();
-  return POD_PRODUCTS.flatMap(want => {
-    const hit = nodes.find(n => n.name.toLowerCase() === want.toLowerCase());
-    return hit ? [{ taxonomyId: hit.id, label: want }] : [];
-  });
-}
-
 /**
  * Build the day's drop, once.
  *
@@ -154,7 +127,11 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
 
   const state = await db().prepare("SELECT last_built_day,building_day,building_since FROM pod_drop_state WHERE id=1")
     .first<{ last_built_day: string | null; building_day: string | null; building_since: string | null }>();
-  if (state?.last_built_day === day) return { built: false, why: "already built today" };
+  const currentCount = await db().prepare(
+    `SELECT COUNT(*) count FROM pod_drop_snapshots WHERE day=? AND taxonomy_id IN (${POD_PRODUCTS.map(() => "?").join(",")})`,
+  ).bind(day, ...POD_PRODUCTS.map(product => product.taxonomyId)).first<{ count: number }>();
+  if (state?.last_built_day === day && Number(currentCount?.count) === POD_PRODUCTS.length)
+    return { built: false, why: "already built today" };
 
   /* Publishing outranks the drop. Somebody's batch going out is what they paid
      for; today's intel can be yesterday's for another hour. */
@@ -167,16 +144,20 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
   if (!claimed.meta.changes) return { built: false, why: "another request is building it" };
 
   try {
-    const categories = await podCategories();
-    if (!categories.length) throw new Error("No print-on-demand categories matched Etsy's tree.");
+    const categories = POD_PRODUCTS;
 
     for (const category of categories) {
+      const saved = await db().prepare("SELECT 1 ok FROM pod_drop_snapshots WHERE day_taxonomy=?")
+        .bind(`${day}:${category.taxonomyId}`).first<{ ok: number }>();
+      if (saved) continue;
       await waitForEtsyCapacity();
       const query = new URLSearchParams({
-        taxonomy_id: String(category.taxonomyId),
+        keywords: category.query,
         limit: String(PER_CATEGORY),
         sort_on: "score",
         sort_order: "desc",
+        is_safe: "true",
+        includes: "Images",
       });
       const response = await fetch(`https://openapi.etsy.com/v3/application/listings/active?${query}`, {
         headers: { "x-api-key": etsyApiCredential() }, signal: AbortSignal.timeout(20000),
@@ -191,7 +172,14 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
       ).bind(`${day}:${category.taxonomyId}`, day, category.taxonomyId, category.label, JSON.stringify(shape(payload.results ?? []))).run();
     }
 
-    await db().prepare("UPDATE pod_drop_state SET last_built_day=?,building_day=NULL,last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=1").bind(day).run();
+    const completed = await db().prepare(
+      `SELECT COUNT(*) count FROM pod_drop_snapshots WHERE day=? AND taxonomy_id IN (${POD_PRODUCTS.map(() => "?").join(",")})`,
+    ).bind(day, ...POD_PRODUCTS.map(product => product.taxonomyId)).first<{ count: number }>();
+    await db().prepare("UPDATE pod_drop_state SET last_built_day=?,building_day=NULL,last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=1")
+      .bind(Number(completed?.count) === POD_PRODUCTS.length ? day : null).run();
+    await db().prepare(
+      `DELETE FROM pod_drop_snapshots WHERE day=? AND taxonomy_id NOT IN (${POD_PRODUCTS.map(() => "?").join(",")})`,
+    ).bind(day, ...POD_PRODUCTS.map(product => product.taxonomyId)).run();
     /* THE DIFF NEEDS TWO DAYS. THE ARCHIVE NEEDS ALL OF THEM.
        A seller keeps every day they have already opened, so the snapshot it
        replays has to still be here — a fortnight's retention would quietly

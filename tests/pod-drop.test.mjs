@@ -46,6 +46,19 @@ test("the drop is built once a day for everybody, not once per seller", () => {
   assert.match(source, /pod_drop_snapshots/);
 });
 
+test("each shelf uses an explicit product search and resumes partial builds", () => {
+  const source = read("pod-drop.ts");
+  for (const query of ["t shirt", "sweatshirt", "hoodie", "mug", "tote bag", "phone case"])
+    assert.match(source, new RegExp(`query: "${query}"`));
+  assert.match(source, /keywords: category\.query/);
+  assert.doesNotMatch(source, /seller-taxonomy\/nodes/,
+    "duplicate taxonomy names must not silently choose an unrelated Etsy branch");
+  assert.match(source, /SELECT 1 ok FROM pod_drop_snapshots WHERE day_taxonomy=\?/,
+    "a retry must keep completed product searches instead of spending them again");
+  assert.match(source, /listing_type === "download"/,
+    "explicit digital downloads do not belong on the physical-product shelf");
+});
+
 test("the streak is earned from real listings and cannot be tapped", () => {
   /* No check-in button. A star is a day something actually published, read out
      of the publish record — so it cannot be gamed by opening the tab, and
