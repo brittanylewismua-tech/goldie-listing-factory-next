@@ -66,3 +66,56 @@ test("the streak copy never scolds", () => {
   for (const forbidden of [/behind/i, /you failed/i, /broke your/i, /lost your streak/i, /don't break/i])
     assert.doesNotMatch(source.replace(/\/\*[\s\S]*?\*\//g, ""), forbidden);
 });
+
+test("the week resets the access and never the history", () => {
+  /* The commercial engine: everything re-locks on Monday so the tool is worth
+     opening in week forty. The line that keeps it from being a punishment is
+     that the cards already turned are kept — losing something earned stings
+     about twice as hard as gaining it, which is the discouragement this whole
+     design exists to avoid. */
+  const source = read("unlocks.ts");
+  assert.match(source, /substr\(COALESCE\(created_at,updated_at\),1,10\) >= \?/,
+    "the counter is scored on this week's listings");
+  assert.match(source, /export function weekStart/);
+  assert.match(source, /ORDER BY ordinal DESC LIMIT 30/,
+    "every card ever turned is still read back — history does not reset");
+  assert.match(source, /COALESCE\(MAX\(ordinal\),0\) top FROM unlock_cards WHERE user_id=\?/,
+    "ordinals keep climbing across weeks");
+  assert.match(read("unlock-cards.tsx"), /yours to keep/);
+});
+
+test("a card is only ever bonus intel, and an empty pack does not spend it", () => {
+  const unlocks = read("unlocks.ts");
+  /* Nothing a seller needs to get work out may sit behind a card, or the game
+     becomes a paywall inside a subscription. */
+  for (const milestone of ["full-drop", "climbers", "lookup", "vault"])
+    assert.match(unlocks, new RegExp(`key: "${milestone}"`), `${milestone} is intel, not function`);
+  assert.doesNotMatch(unlocks, /publish|draft_job|printify_draft_jobs/i,
+    "no listing capability is ever gated behind a card");
+  assert.match(unlocks, /if \(!pick\) return null;/,
+    "nothing to give must not burn the card");
+});
+
+test("nothing in the card system is scored on a sale", () => {
+  const source = read("unlocks.ts") + read("unlock-cards.tsx");
+  for (const forbidden of [/\bsold\b/i, /\bsales\b/i, /revenue/i, /conversion/i])
+    assert.doesNotMatch(source.replace(/\/\*[\s\S]*?\*\//g, ""), forbidden,
+      "the counter moves on work going out, which is the only part a seller controls");
+});
+
+test("a day already read is never taken back", () => {
+  /* The weekly reset is the engine and this is the thing that keeps it from
+     souring. Monday re-locks what is NEW; every day already opened stays open
+     at the depth it was opened, forever. You keep what you have seen and you
+     earn what is new. */
+  const lib = read("pod-drop.ts");
+  assert.match(lib, /export async function markSeen/);
+  assert.match(lib, /depth=MAX\(depth,excluded\.depth\)/,
+    "listing more in the afternoon opens the morning further, never closes it");
+  assert.match(lib, /export async function readArchive/);
+  /* The archive replays real snapshots, so they have to outlive the two days
+     the diff needs — a fortnight's retention would empty it underneath them. */
+  assert.match(lib, /pod_drop_snapshots WHERE day < date\('now','-400 days'\)/);
+  assert.match(read("api/drop/route.ts"), /await markSeen\(user\.userId, day, depth\)/);
+  assert.match(read("drop/page.tsx"), /never what you have already seen/);
+});

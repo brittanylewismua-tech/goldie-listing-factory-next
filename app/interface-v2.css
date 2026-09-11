@@ -4335,3 +4335,33 @@ html, body { background: var(--lf-paper); }
 .listing-streak .star.extra{font-size:13px;opacity:.6;align-self:center;font-weight:700}
 .listing-streak .streak-message{margin:0;font-weight:700}
 .listing-streak .streak-reward{margin:4px 0 0;font-size:14px;opacity:.75;max-width:60ch}
+
+/* THE CARDS. The face-down state is drawn at least as carefully as the open
+   one — the wanting is the mechanic and the turn is only its release. */
+.unlock-cards{margin:18px 0}
+.unlock-progress{margin:6px 0 10px}
+.unlock-progress p{margin:5px 0 0;font-size:13px;opacity:.7}
+.unlock-track{height:6px;border-radius:6px;background:rgba(0,0,0,.1);overflow:hidden}
+.unlock-track span{display:block;height:100%;background:#ee6fc0;transition:width .4s ease}
+.unlock-card{border-radius:14px;padding:16px;text-align:left}
+.unlock-card.facedown{width:100%;display:flex;align-items:center;gap:12px;border:1px dashed var(--line,rgba(0,0,0,.25));background:none;font:inherit;cursor:not-allowed;opacity:.55}
+.unlock-card.facedown.ready{cursor:pointer;opacity:1;border-style:solid;border-color:#ee6fc0;background:#fdeef7}
+.unlock-back{font-size:20px;line-height:1}
+.unlock-cta{font-weight:700;font-size:14px}
+.unlock-card.open{border:1px solid var(--line,rgba(0,0,0,.14));margin-top:12px}
+.unlock-card.open h3{margin:2px 0 6px;font-size:16px}
+.unlock-kind{margin:0;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.55}
+.unlock-line{margin:0 0 8px;font-size:14px}
+.unlock-note{margin:8px 0 0;font-size:13px;opacity:.7}
+.unlock-next{margin:12px 0 0;font-size:13px;opacity:.75;max-width:62ch}
+.unlock-history{margin-top:12px;font-size:13px}
+.unlock-history summary{cursor:pointer;opacity:.7}
+.unlock-history ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px}
+.drop-page .drop-archive{margin-top:30px;border-top:1px solid var(--line,rgba(0,0,0,.12));padding-top:18px}
+.drop-page .drop-archive-intro{margin:4px 0 12px;font-size:13px;opacity:.7;max-width:62ch}
+.drop-page .drop-archive details{border-bottom:1px solid var(--line,rgba(0,0,0,.1));padding:8px 0}
+.drop-page .drop-archive summary{cursor:pointer;font-size:14px;font-weight:700}
+.drop-page .drop-archive summary small{font-weight:400;opacity:.6}
+.drop-page .drop-archive-cat{margin:8px 0 0}
+.drop-page .drop-archive-label{margin:0;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.55}
+.drop-page .drop-archive ul{margin:4px 0 0;padding-left:18px;font-size:13px;display:grid;gap:3px}

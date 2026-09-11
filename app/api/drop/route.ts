@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
-import { buildDrop, listingStreak, readDrop, STREAK_TARGET } from "@/app/pod-drop";
+import { buildDrop, listingStreak, markSeen, readArchive, readDrop, STREAK_TARGET } from "@/app/pod-drop";
+import { unlockState } from "@/app/unlocks";
 
 /**
  * THE DAILY DROP, AND THE SELLER'S OWN WEEK.
@@ -39,9 +40,22 @@ async function handleGET() {
     unavailable = true;
   }
 
-  const [{ day, categories }, streak] = await Promise.all([readDrop(), listingStreak(user.userId)]);
+  const [{ day, categories }, streak, unlocks] = await Promise.all([
+    readDrop(), listingStreak(user.userId), unlockState(user.userId),
+  ]);
 
-  const unlocked = streak.hit;
+  /* Two ways in, both weekly: five listing days, or three listings. The week
+     is the season — everything re-locks on Monday so the tool is worth opening
+     in week forty as much as in week one. What never re-locks is the cards
+     they turned; those are history and history is theirs. */
+  const unlocked = streak.hit || unlocks.milestones.some(m => m.key === "full-drop" && m.unlocked);
+  const depth = unlocked ? 30 : PREVIEW;
+
+  /* Recorded before it is returned, so this day is theirs at this depth from
+     now on. The week's access re-locks on Monday; a day already read never
+     does. You keep what you have seen and earn what is new. */
+  if (categories.length) await markSeen(user.userId, day, depth);
+  const archive = await readArchive(user.userId);
   return NextResponse.json({
     day,
     /* Said plainly, because "today's drop" dated yesterday would otherwise
@@ -52,9 +66,12 @@ async function handleGET() {
     unlocked,
     lockedCount: unlocked ? 0 : Math.max(0, STREAK_TARGET - streak.count),
     streak,
+    unlocks,
+    /* Everything they have opened before, at the depth they opened it. */
+    archive: archive.filter(entry => entry.day !== day),
     categories: categories.map(category => ({
       ...category,
-      listings: unlocked ? category.listings : category.listings.slice(0, PREVIEW),
+      listings: category.listings.slice(0, depth),
       held: unlocked ? 0 : Math.max(0, category.listings.length - PREVIEW),
     })),
   });

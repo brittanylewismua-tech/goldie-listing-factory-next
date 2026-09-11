@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import FactoryShell from "../factory-shell";
+import UnlockCards from "../unlock-cards";
 
 /**
  * TODAY'S DROP.
@@ -23,9 +24,10 @@ type Category = {
   taxonomyId: number; label: string; listings: Listing[]; heat: number;
   newToday: number[]; climbing: number[]; held: number;
 };
+type ArchiveDay = { day: string; depth: number; categories: { label: string; listings: Listing[] }[] };
 type Drop = {
   day: string; fresh: boolean; building: boolean; unavailable: boolean; unlocked: boolean;
-  lockedCount: number;
+  lockedCount: number; archive: ArchiveDay[];
   streak: { count: number; target: number; message: string; hit: boolean };
   categories: Category[];
 };
@@ -58,6 +60,8 @@ export default function DropPage() {
     {!drop && !error && <p>Reading the shelf…</p>}
 
     {drop && <>
+      <UnlockCards />
+
       <section className="drop-streak">
         <p className="streak-message">{drop.streak.message}</p>
         {!drop.unlocked && <p className="streak-reward">
@@ -132,6 +136,25 @@ export default function DropPage() {
               </article>}
             </section>)}
         </>}
+
+      {drop.archive.length > 0 && <section className="drop-archive">
+        {/* The softening the weekly reset needs. Monday takes back the NEW
+            shelf, never a day already read — so the thing that grows as they
+            keep listing is a library, and quitting for a week costs them
+            nothing they already had. */}
+        <p className="mini-label">YOUR ARCHIVE</p>
+        <p className="drop-archive-intro">Every day you have opened, kept. Monday re-locks what is new, never what you have already seen.</p>
+        {drop.archive.map(entry => <details key={entry.day}>
+          <summary>{new Date(`${entry.day}T00:00:00`).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}
+            <small> · {entry.categories.length} categories</small></summary>
+          {entry.categories.map(category => <div key={category.label} className="drop-archive-cat">
+            <p className="drop-archive-label">{category.label}</p>
+            <ul>{category.listings.slice(0,6).map(listing => <li key={listing.listingId}>
+              <a href={listing.url} target="_blank" rel="noopener noreferrer">{listing.title}</a>
+            </li>)}</ul>
+          </div>)}
+        </details>)}
+      </section>}
 
       <p className="drop-note">
         Positions are Etsy&apos;s own ranking, which weighs how well a listing matches the search as well as how it performs — and new listings get a deliberate visibility boost. A high position is not proof of sales. Some of what appears here is handmade rather than printed; the categories do not separate them.

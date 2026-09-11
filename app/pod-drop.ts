@@ -192,9 +192,12 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
     }
 
     await db().prepare("UPDATE pod_drop_state SET last_built_day=?,building_day=NULL,last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=1").bind(day).run();
-    /* Yesterday and today are what the diff needs; a fortnight is enough to
-       show a climb without the table growing forever. */
-    await db().prepare("DELETE FROM pod_drop_snapshots WHERE day < date('now','-14 days')").run();
+    /* THE DIFF NEEDS TWO DAYS. THE ARCHIVE NEEDS ALL OF THEM.
+       A seller keeps every day they have already opened, so the snapshot it
+       replays has to still be here — a fortnight's retention would quietly
+       empty their archive from underneath them. Twelve rows of JSON a day is
+       about four thousand a year; the Vault is made of exactly this. */
+    await db().prepare("DELETE FROM pod_drop_snapshots WHERE day < date('now','-400 days')").run();
     return { built: true };
   } catch (error) {
     await db().prepare("UPDATE pod_drop_state SET building_day=NULL,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=1")
@@ -281,4 +284,48 @@ export async function listingStreak(userId: string) {
         ? "List anything today to start your week."
         : `${count} of ${STREAK_TARGET} listing days this week.`,
   };
+}
+
+/**
+ * MARK TODAY AS SEEN, AT THE DEPTH THEY WERE GIVEN.
+ *
+ * Recorded at read time rather than inferred later, because the depth is a
+ * fact about the moment: they had earned ten per category on Tuesday, so
+ * Tuesday is theirs at ten forever, whatever they earn afterwards. Upserted to
+ * the deepest they reached that day — listing more in the afternoon should
+ * open the morning further, never close it.
+ */
+export async function markSeen(userId: string, day: string, depth: number) {
+  await db().prepare(
+    "INSERT INTO drop_seen (user_day,user_id,day,depth) VALUES (?,?,?,?) ON CONFLICT(user_day) DO UPDATE SET depth=MAX(depth,excluded.depth),seen_at=CURRENT_TIMESTAMP",
+  ).bind(`${userId}:${day}`, userId, day, depth).run();
+}
+
+/** Every day this seller has opened, newest first, with what they saw in it. */
+export async function readArchive(userId: string, limit = 30) {
+  const seen = await db().prepare(
+    "SELECT day,depth FROM drop_seen WHERE user_id=? ORDER BY day DESC LIMIT ?",
+  ).bind(userId, limit).all<{ day: string; depth: number }>();
+  const days = ((seen.results ?? []) as Row[]).map(r => ({ day: String(r.day), depth: Number(r.depth) }));
+  if (!days.length) return [];
+
+  const rows = await db().prepare(
+    `SELECT day,taxonomy_id,label,listings_json FROM pod_drop_snapshots WHERE day IN (${days.map(() => "?").join(",")})`,
+  ).bind(...days.map(d => d.day)).all<{ day: string; taxonomy_id: number; label: string; listings_json: string }>();
+
+  const byDay = new Map<string, { label: string; listings: DropListing[] }[]>();
+  for (const raw of ((rows.results ?? []) as Row[])) {
+    const day = String(raw.day);
+    const listings = (() => { try { return JSON.parse(String(raw.listings_json)) as DropListing[]; } catch { return []; } })();
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day)!.push({ label: String(raw.label), listings });
+  }
+
+  return days.flatMap(({ day, depth }) => {
+    const categories = byDay.get(day);
+    /* A day whose snapshot has aged out is dropped rather than shown empty —
+       an archive entry that opens onto nothing is worse than one absent. */
+    if (!categories?.length) return [];
+    return [{ day, depth, categories: categories.map(c => ({ ...c, listings: c.listings.slice(0, depth) })) }];
+  });
 }
