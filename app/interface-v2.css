@@ -4234,3 +4234,51 @@ html, body { background: var(--lf-paper); }
   .app-shell .compact-title-tools .keyword-workspace.compact-keywords{grid-template-columns:minmax(0,1fr)!important}
   .app-shell .compact-title-tools .compact-keywords .keyword-workspace-heading{min-width:0}
 }
+
+/* D1350: the Etsy handoff uses the same pale-blush glass hierarchy as the
+   listing editor rail. The surface stays distinct; one black action carries
+   the decision while status and progress remain calm and readable. */
+.app-shell .factory-publish-box{
+  border-color:#171417;background:rgba(255,244,250,.84);color:#2d2229;
+  box-shadow:7px 7px 0 #111!important;backdrop-filter:blur(16px) saturate(115%)
+}
+.app-shell .factory-publish-box .publish-box-eyebrow{color:#765f6d}
+.app-shell .factory-publish-box h3,
+.app-shell .factory-publish-box h2,
+.app-shell .factory-publish-box b,
+.app-shell .factory-publish-box strong{color:#2d2229}
+.app-shell .factory-publish-box p,
+.app-shell .factory-publish-box small,
+.app-shell .factory-publish-box .publish-box-ready span{color:#6d5966}
+.app-shell .factory-publish-box .publish-box-ready{border-top-color:rgba(23,20,23,.18)}
+.app-shell .factory-publish-box .publish-box-ready.needs-work b{color:#a9344c}
+.app-shell .review-etsy-draft-button{
+  border-color:#171417;background:#171417;color:#fff;box-shadow:4px 4px 0 var(--g-pink)
+}
+.app-shell .review-etsy-draft-button:disabled{
+  border-color:#cbbdc5;background:#e8e0e5;color:#786a72;box-shadow:none
+}
+.app-shell .review-printify-link{border-top-color:rgba(23,20,23,.18);color:#2d2229}
+.app-shell .factory-publish-box .photo-delivery-handoff{
+  border-top-color:rgba(23,20,23,.18);color:#2d2229
+}
+.app-shell .factory-publish-box .etsy-transfer-progress-heading small,
+.app-shell .factory-publish-box .etsy-transfer-count>span,
+.app-shell .factory-publish-box .etsy-transfer-count>small,
+.app-shell .factory-publish-box .etsy-transfer-progress p{color:#6d5966!important}
+.app-shell .factory-publish-box .etsy-transfer-spinner{border-color:#d4c5ce;border-top-color:var(--g-pink)}
+.app-shell .factory-publish-box .etsy-transfer-progress.is-complete .etsy-transfer-spinner{border:1px solid #90c8a7;color:#3f8a62}
+.app-shell .factory-publish-box .etsy-transfer-progress.is-complete .etsy-transfer-spinner{background:#f2faf5}
+.app-shell .etsy-transfer-spinner svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.app-shell .factory-publish-box .etsy-transfer-track{border-color:#cbbdc5;background:#e8e0e5}
+.app-shell .factory-publish-box .draft-handoff-details{border-top-color:rgba(23,20,23,.16)}
+.app-shell .factory-publish-box .draft-handoff-details>summary,
+.app-shell .factory-publish-box .draft-handoff-details>summary b,
+.app-shell .factory-publish-box .etsy-production-partner-choice{color:#2d2229}
+.app-shell .factory-publish-box .etsy-production-partner-choice small{color:#6d5966}
+.app-shell .factory-publish-box .publish-live-warning,
+.app-shell .factory-publish-box .publish-live-warning b,
+.app-shell .factory-publish-box .publish-live-warning h3{color:#2d2229}
+.app-shell .factory-publish-box .publish-live-warning span,
+.app-shell .factory-publish-box .publish-live-warning p,
+.app-shell .factory-publish-box .publish-live-warning small{color:#6d5966}

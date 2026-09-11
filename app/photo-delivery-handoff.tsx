@@ -19,7 +19,7 @@ function TransferProgress({targets,deliveries,busy,prepared,startedAt}:{targets:
  const current=active.sort((a,b)=>(a.progress||0)-(b.progress||0))[0],elapsed=waitProgress(now,startedAt||current?.createdAt||now,current?.updatedAt).elapsed;
  const done=completed===targets.length&&targets.length>0;
  return <section className={`etsy-transfer-progress ${done?'is-complete':''}`} aria-live="polite" aria-busy={!done}>
-  <div className="etsy-transfer-progress-heading"><span className="etsy-transfer-spinner" aria-hidden="true">{done?'✓':''}</span><div><b>{done?'Etsy drafts ready':'Creating Etsy drafts'}</b><small>{done?'Every draft was checked on Etsy.':current?.stage||'Saving your draft request'}</small></div></div>
+  <div className="etsy-transfer-progress-heading"><span className="etsy-transfer-spinner" aria-hidden="true">{done?<svg viewBox="0 0 16 16" focusable="false"><path d="m3.5 8.2 2.7 2.7 6.3-6.3"/></svg>:null}</span><div><b>{done?'Etsy drafts ready':'Creating Etsy drafts'}</b><small>{done?'Every draft was checked on Etsy.':current?.stage||'Saving your draft request'}</small></div></div>
   <div className="etsy-transfer-track" role="progressbar" aria-label="Etsy draft progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><span style={{width:`${progress}%`}}/></div>
   <div className="etsy-transfer-count"><b>{progress}%</b><span>{completed} of {targets.length} verified</span><small>{done?'Complete':elapsed}</small></div>
   {!done&&<p>You can leave this page. The batch continues in the background.</p>}
