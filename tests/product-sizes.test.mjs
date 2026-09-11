@@ -266,9 +266,10 @@ test("every setting a batch needs is a facet on the card — D182", async () => 
      with them — a value set there still becomes the product's default. */
   assert.match(app, /establish\(recipe,\{etsyShippingProfileId:value\}\)/);
   assert.match(app, /establish\(recipe,\{defaultProfitTarget:value\.targetProfit\}\)/);
-  /* D221 · The keyword bank is chosen on the Listing page now, and still
-     persists to the recipe from there. */
-  assert.match(app, /establish\(activeRecipe,\{keywordListId:list\.id\}\)/);
+  /* D1353 · The bank describes the current artwork, not the physical product.
+     It is stored in the batch snapshot and must not rewrite the saved product. */
+  assert.match(app, /autoTitleBankId,manualKeywordBankId/);
+  assert.doesNotMatch(app, /establish\(activeRecipe,\{keywordListId:list\.id\}\)/);
 });
 
 test("Edit bundle visibly does something — D176", async () => {

@@ -2339,7 +2339,8 @@ test("keeps a short accurate AI result and never retries to force filler (fixes 
   assert.match(route,/Short title \\u2014 only a few phrases in this bank accurately match this design\./);
   assert.doesNotMatch(route,/tagCandidates\.filter\(candidate=>!rankedTags\.includes\(candidate\)\)/);
   assert.match(app,/titleError:item\.error/);
-  assert.match(app,/each affected listing explains why below/);
+  assert.match(app,/title-listing-error" role="alert">\{design\.titleError\}/);
+  assert.match(app,/Choose a different keyword bank or write the/);
   assert.match(app,/Boolean\(file\.title\.trim\(\)\)&&!file\.titleError/);
   assert.match(app,/file\.tags\.length>0&&!file\.titleError/);
   assert.match(app,/change\.title!==undefined&&change\.titleError===undefined/);
@@ -2541,7 +2542,7 @@ test("D230: a warning never contradicts the title sitting above it", async () =>
 
   /* And the count message must agree with itself: "1 titles created" was live. */
   assert.match(app, /\$\{files\.length-failed===1\?"title":"titles"\} created/);
-  assert.match(app, /\$\{failed===1\?"needs":"need"\} another try/);
+  assert.match(app, /\$\{failed===1\?"affected title":"affected titles"\} below/);
 });
 
 /* D364 · Clearing test batches meant one confirm dialog per batch. A checkbox on
@@ -5355,13 +5356,13 @@ test("the publish review is one collapsed row per design — D562", async () => 
     "nothing opens itself");
 
   // The finished product, once, at a size worth judging - not the raw upload.
-  assert.match(review, /const productPreview=\(\(\)=>\{/);
-  assert.match(review, /productPreview&&group\.length===1\?<div/,
+  assert.match(review, /const productPreviews=group\.flatMap/);
+  assert.match(review, /productPreviews\.length&&group\.length===1\?<div/,
     'a bundle shows each product in its own row without repeating the first product above it');
   assert.match(review, /if\(group\.length>1\)return `Design \$\{designIndex\+1\}`/,
     'a multi-product design group must not be named after just its first product');
-  assert.match(review, /if\(draft\.previewUrl\)return draft\.previewUrl/);
-  assert.match(review, /<div className="final-product-preview"><img src=\{productPreview\}/);
+  assert.match(review, /previewSources\(draft\.id\?covers\[draft\.id\]:undefined,draft\.previewUrl,draft\.printifyImages/);
+  assert.match(review, /<div className="final-product-preview"><ReviewPreviewImage sources=\{productPreviews\}/);
   assert.match(css, /\.app-shell \.final-product-preview img\{width:min\(360px,70%\)/);
 
   // Then every product carrying it, each with its checkbox.

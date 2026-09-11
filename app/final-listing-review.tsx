@@ -23,6 +23,19 @@ function batchHasMixedProducts(drafts: Array<{ productName?: string }>): boolean
   return new Set(drafts.map((d) => d.productName || "")).size > 1;
 }
 
+function previewSources(...values:Array<string|string[]|undefined>){
+  const seen=new Set<string>();
+  return values.flatMap(value=>Array.isArray(value)?value:[value]).map(value=>String(value||"").trim()).filter(value=>/^(?:https?:\/\/|blob:|data:image\/|\/)/i.test(value)&&!seen.has(value)&&(seen.add(value),true));
+}
+
+function ReviewPreviewImage({sources,alt,className}:{sources:string[];alt:string;className?:string}){
+  const key=sources.join("\n"),[index,setIndex]=useState(0);
+  useEffect(()=>setIndex(0),[key]);
+  const source=sources[index];
+  if(!source)return null;
+  return <img key={source} className={className} src={source} alt={alt} decoding="async" onError={()=>setIndex(current=>current+1)}/>;
+}
+
 export default function FinalListingReview({drafts,files,selections,defaultIndices,preparedMockupCounts,batchSizeGuide,productName,printSides,onRetry,onEdit,onEditProduct,pricingAndShippingReady,etsyDetailsIssue,onSelectionChange,onSelectionTouched,handoffOnly=false}:Props){
   const selectable=drafts.filter(draft=>draft.status==="Created"&&draft.id);
   const [covers,setCovers]=useState<Record<string,string>>({});
@@ -132,7 +145,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
       <div className="recipe-product-groups">{productGroups.map(([name,items],productIndex)=>{
         return <section className="recipe-product-group" key={name}>
           <header><div><small>{productGroups.length>1?`Product ${productIndex+1} of ${productGroups.length}`:"Saved product"}</small><h4>{name}</h4></div></header>
-          <div className="recipe-listing-grid">{items.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,photoCount=selectedCount+mockupCount,sizeGuideReady=Boolean(design?.sizeGuideName??batchSizeGuide),preview=covers[draft.id||""]||draft.previewUrl||design?.previewUrl,etsyIssue=etsyDetailsIssue?.(draft)??(Boolean(design?.etsy?.category?.trim())&&!(design?.etsy?.properties||[]).some(property=>property.required&&!String(property.value||"").trim())?"":"Choose a category or required details"),etsyReady=!etsyIssue,descriptionReady=Boolean(String(design?.descriptionOverride??draft.description??"").trim()),titleReady=Boolean(design?.title.trim()),tagsReady=Boolean(design?.tags.length),variants=Number(draft.selectedVariantIds?.length||draft.costReview?.variants.filter(variant=>variant.isEnabled).length||0),family=productFamily(draft.productName||productName||""),optionLabel=["tee","hoodie","crewneck","tank","longSleeve"].includes(family)?"Colors & sizes":"Product options",sections=[
+          <div className="recipe-listing-grid">{items.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,photoCount=selectedCount+mockupCount,sizeGuideReady=Boolean(design?.sizeGuideName??batchSizeGuide),previews=previewSources(covers[draft.id||""],draft.previewUrl,draft.printifyImages,design?.previewUrl),etsyIssue=etsyDetailsIssue?.(draft)??(Boolean(design?.etsy?.category?.trim())&&!(design?.etsy?.properties||[]).some(property=>property.required&&!String(property.value||"").trim())?"":"Choose a category or required details"),etsyReady=!etsyIssue,descriptionReady=Boolean(String(design?.descriptionOverride??draft.description??"").trim()),titleReady=Boolean(design?.title.trim()),tagsReady=Boolean(design?.tags.length),variants=Number(draft.selectedVariantIds?.length||draft.costReview?.variants.filter(variant=>variant.isEnabled).length||0),family=productFamily(draft.productName||productName||""),optionLabel=["tee","hoodie","crewneck","tank","longSleeve"].includes(family)?"Colors & sizes":"Product options",sections=[
             {label:"Artwork placement",detail:productPrintSideSummary(draft.artworkSummary?Object.keys(draft.artworkSummary):printSides,"print",draft.productName||productName)||"Printify draft ready",ready:draft.status==="Created",run:()=>onEditProduct?.("artwork",draft)},
             {label:optionLabel,detail:reviewOptionSummary(optionLabel==="Colors & sizes",draft.costReview?.variants||[],draft.selectedVariantIds),ready:variants>0,run:()=>onEditProduct?.("variants",draft)},
             {label:"Pricing & shipping",detail:pricingAndShippingReady?.(draft)?"Saved":"Review prices or shipping",ready:Boolean(pricingAndShippingReady?.(draft)),run:()=>onEditProduct?.("pricing",draft)},
@@ -141,7 +154,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
             {label:"Description",detail:descriptionReady?"Added":"No description yet",ready:descriptionReady,run:()=>onEdit("description",draft)},
             {label:"Etsy details & personalization",detail:etsyReady?"Etsy details ready":etsyIssue,ready:etsyReady,run:()=>onEdit("etsy",draft)},
           ],issue=sections.find(section=>!section.ready)?.detail||"";return <article className={`recipe-listing-card ${issue?"needs-work":"is-ready"}`} key={`${name}:${draft.clientId}`}>
-            <div className="recipe-listing-image">{preview?<img src={preview} alt="Product preview" decoding="async"/>:<span>No preview</span>}</div>
+            <div className="recipe-listing-image">{previews.length?<ReviewPreviewImage sources={previews} alt="Product preview"/>:<span>No preview</span>}</div>
             <div className="recipe-listing-copy"><small>Listing {items.indexOf(draft)+1} of {items.length}</small><h5>{design?.title||`Untitled listing ${items.indexOf(draft)+1}`}</h5><p>{priceLabel(draft)} · {design?.tags?.length||0}/13 tags · {photoCount} {photoCount===1?"photo":"photos"}{sizeGuideReady?" · size guide ready":""}</p>{!issue&&<strong className="ready">✓ Ready</strong>}</div>
             {draft.status!=="Created"?<button type="button" className="recipe-listing-retry" onClick={()=>onRetry?.(draft.clientId)||window.dispatchEvent(new CustomEvent("goldie-retry-draft",{detail:{clientId:draft.clientId}}))}>Retry listing</button>:<nav className="recipe-listing-sections" aria-label={`Edit listing ${items.indexOf(draft)+1}`}>{sections.map(section=><button type="button" key={section.label} aria-label={`${section.label}: ${section.ready?"complete":"incomplete"}. ${section.detail}`} onClick={section.run}><span className={section.ready?"is-complete":"is-incomplete"} aria-hidden="true">{section.ready?"✓":"×"}</span><b>{section.label}</b><small>{section.detail}</small><em>Edit <span aria-hidden="true">→</span></em></button>)}</nav>}
           </article>})}</div>
@@ -162,18 +175,12 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
       Twenty designs across three products was sixty rows open on arrival. One
       collapsed row per design; open it and the artwork is there at a size you can
       judge, with every product carrying it underneath. */
-    const productPreview=(()=>{
-      for(const draft of group){
-        if(draft.id&&covers[draft.id])return covers[draft.id];
-        if(draft.previewUrl)return draft.previewUrl;
-      }
-      return "";
-    })();
+    const productPreviews=group.flatMap(draft=>previewSources(draft.id?covers[draft.id]:undefined,draft.previewUrl,draft.printifyImages,files.find(file=>file.id===draft.clientId)?.previewUrl));
     const groupSelectable=group.filter(draft=>draft.id&&!reviewNeeded(draft));
     const groupIds=groupSelectable.map(draft=>draft.id!);
     const groupAllSelected=groupIds.length>0&&groupIds.every(id=>selected.has(id));
     const groupIssue=group.map(exactIssue).find(Boolean)||"";
-    return <details className="final-design-group" key={designName}><summary>{productPreview?<img className="final-group-thumb" src={productPreview} alt="" decoding="async"/>:null}{/* D558 - D253 already set this rule: "a seller reviewing a batch read
+    return <details className="final-design-group" key={designName}><summary>{productPreviews.length?<ReviewPreviewImage className="final-group-thumb" sources={productPreviews} alt=""/>:null}{/* D558 - D253 already set this rule: "a seller reviewing a batch read
         'ChatGPT Image Aug 21, 2026, 05_32_41 PM (2).png' as the heading over their
         own listing. Prefer the design's own title; otherwise tidy the filename."
         The rule was applied to the listing rows and not to the heading above them,
@@ -207,8 +214,8 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
         counts as selectable, or what reviewNeeded refuses to select, changes. */}
       {handoffOnly&&groupIssue&&<small className="final-group-issue">{groupIssue}</small>}{!handoffOnly&&groupSelectable.length>0&&<label className="final-group-select" onClick={event=>{event.preventDefault();event.stopPropagation();changeSelection(groupAllSelected?selectedIds.filter(id=>!groupIds.includes(id)):[...new Set([...selectedIds,...groupSelectable.map(draft=>draft.id!)])])}}>
         <input type="checkbox" readOnly checked={groupAllSelected} aria-label={`Publish ${group.length===1?"this listing":"these listings"}`}/>
-      </label>}</summary>{productPreview&&group.length===1?<div className="final-product-preview"><img src={productPreview} alt="Product with this design" decoding="async"/></div>:null}<div className="final-listing-grid">{group.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,hasPhoto=selectedCount+mockupCount>0,publishable=draft.status==="Created"&&hasPhoto,review=contentReview(design);return <article className={`final-listing-card ${handoffOnly&&group.length===1?"single-preview":""} ${publishable?(review.needed?"review-needed":""):"failed"}`} key={`${draft.productName||"product"}:${draft.clientId}`}>
-      {!handoffOnly&&(draft.id&&draft.status==="Created"?<label className="final-listing-select" aria-label="Select listing for publishing"><input type="checkbox" checked={selected.has(draft.id)} onChange={()=>toggle(draft.id!)}/></label>:<span className="final-listing-select-placeholder"/>)}{!(handoffOnly&&group.length===1)&&((covers[draft.id||""]||draft.previewUrl)?<img src={covers[draft.id||""]||draft.previewUrl} alt="Product preview" decoding="async"/>:design?<img src={design.previewUrl} alt="Design preview" decoding="async"/>:<span className="final-listing-no-image">No preview</span>)}
+      </label>}</summary>{productPreviews.length&&group.length===1?<div className="final-product-preview"><ReviewPreviewImage sources={productPreviews} alt="Product with this design"/></div>:null}<div className="final-listing-grid">{group.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,hasPhoto=selectedCount+mockupCount>0,publishable=draft.status==="Created"&&hasPhoto,review=contentReview(design),previews=previewSources(draft.id?covers[draft.id]:undefined,draft.previewUrl,draft.printifyImages,design?.previewUrl);return <article className={`final-listing-card ${handoffOnly&&group.length===1?"single-preview":""} ${publishable?(review.needed?"review-needed":""):"failed"}`} key={`${draft.productName||"product"}:${draft.clientId}`}>
+      {!handoffOnly&&(draft.id&&draft.status==="Created"?<label className="final-listing-select" aria-label="Select listing for publishing"><input type="checkbox" checked={selected.has(draft.id)} onChange={()=>toggle(draft.id!)}/></label>:<span className="final-listing-select-placeholder"/>)}{!(handoffOnly&&group.length===1)&&(previews.length?<ReviewPreviewImage sources={previews} alt="Product preview"/>:<span className="final-listing-no-image">No preview</span>)}
       <div>{mixedProducts&&<small className="final-product-name">{draft.productName||"Saved product"}</small>}<b>{design?.title||"Untitled listing"}</b><small>{priceLabel(draft)} · {(design?.title||"").length}/140 characters · {design?.tags?.length||0}/13 tags · {selectedCount+mockupCount+(design?.sizeGuideName??batchSizeGuide?1:0)} {selectedCount+mockupCount+(design?.sizeGuideName??batchSizeGuide?1:0)===1?"photo":"photos"}{design?.sizeGuideName??batchSizeGuide?" · size guide ready":""}</small>{draft.artworkSummary&&<div className="final-artwork-summary" aria-label="Artwork and print locations">{Object.entries(draft.artworkSummary).flatMap(([side,items])=>items.map((item,index)=><span key={`${side}:${index}`}><b>{productPrintSideLabel(side,draft.productName||productName)} artwork</b><small>{item.colors.length?item.colors.join(", "):"All remaining colors"}</small></span>))}</div>}{(()=>{const issue=exactIssue(draft);return <span className={issue?(review.needed?"content-review":"needs-attention"):"ready"}>{issue|| (handoffOnly?"✓ Ready":"✓ Ready for final publish")}</span>})()}</div>
       <div className="final-listing-links">{draft.status!=="Created"?<button onClick={()=>onRetry?.(draft.clientId)||window.dispatchEvent(new CustomEvent("goldie-retry-listing",{detail:draft.clientId}))}>Retry this listing</button>:<><button onClick={()=>onEdit("details",draft)}>Edit listing details</button><button onClick={()=>onEdit("mockups",draft)}>{handoffOnly?"Photos & download":"Edit images"}</button></>}{draft.editorUrl&&<a href={draft.editorUrl} target="_blank" rel="noopener noreferrer">View in Printify ↗</a>}</div>
     </article>})}</div></details>})}</div>

@@ -1385,7 +1385,7 @@ export default function ListingFactoryApp() {
   const [autoTitleBankId,setAutoTitleBankId]=useState("");
   const [manualKeywordBankId,setManualKeywordBankId]=useState("");
   useEffect(()=>{
-    const id=activeRecipe?.keywordListId||"";
+    const id=autoTitleBankId;
     if(!id){setAutoTitleBank(null);return}
     let alive=true;
     void (fetch("/api/keyword-lists").then(response=>response.ok?response.json():{lists:[]}) as Promise<{lists?:KeywordList[]}>).then(payload=>{
@@ -1394,7 +1394,7 @@ export default function ListingFactoryApp() {
       setAutoTitleBank(bank);setAutoTitleBankId(bank?.id||"");
     }).catch(()=>{if(alive)setAutoTitleBank(null)});
     return()=>{alive=false};
-  },[activeRecipe?.keywordListId]);
+  },[autoTitleBankId]);
 
   const [blockingModal,setBlockingModal]=useState<{title:string;issues:string[];copy?:string}|null>(null);
   /* D519 - the guard below runs before either run state is declared, so the fact
@@ -2680,7 +2680,7 @@ export default function ListingFactoryApp() {
     setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:recipe.defaultProfitTarget,etsyShippingProfileId:recipe.etsyShippingProfileId}));/* D404 - Restore the prices and the whole-number toggle the seller saved on this
        product, so the product step survives a refresh. */
     setVariantPrices(recipe.variantPrices&&Object.keys(recipe.variantPrices).length?{...recipe.variantPrices}:{});
-    setWholeNumberByRecipe(current=>({...current,[recipe.id]:recipe.wholeNumberPricing===true}));setTemplate(recipe.templateUrl);const savedTheme=recipe.defaultMockupTheme||"",savedMockups=savedTheme?{theme:savedTheme,ids:recipe.mockupIds||[]}:undefined;setMockupTheme(savedTheme);setSharedMockups(savedMockups);window.sessionStorage.setItem("goldie-batch-mockups",JSON.stringify(savedMockups||null));setAutoTitleBankId(recipe.keywordListId||"");const nextPricing={...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);const details=await loadTemplateUrl(recipe.templateUrl,nextPricing,Number(recipe.etsyShippingProfileId)||0,recipe.defaultColorIds||[],recipe.defaultSizeIds||[]);if(!details)return null;
+    setWholeNumberByRecipe(current=>({...current,[recipe.id]:recipe.wholeNumberPricing===true}));setTemplate(recipe.templateUrl);const savedTheme=recipe.defaultMockupTheme||"",savedMockups=savedTheme?{theme:savedTheme,ids:recipe.mockupIds||[]}:undefined;setMockupTheme(savedTheme);setSharedMockups(savedMockups);window.sessionStorage.setItem("goldie-batch-mockups",JSON.stringify(savedMockups||null));setAutoTitleBank(null);setAutoTitleBankId("");const nextPricing={...pricing,targetProfit:Number(recipe.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);const details=await loadTemplateUrl(recipe.templateUrl,nextPricing,Number(recipe.etsyShippingProfileId)||0,recipe.defaultColorIds||[],recipe.defaultSizeIds||[]);if(!details)return null;
     /* D842 · Remember this product's flatlay on the recipe. The saved-product
        tiles showed a grey placeholder garment for every product - she asked for
        the real one anywhere a product is referenced - and the tiles have no
@@ -3502,6 +3502,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
      it, so they have to be separable. Nothing inside them is changed - the same
      handlers, guards, counters and flags, moved intact. */
   function titleFormatControls(){return <div className="title-style-toggle"><span>Title format</span><button className={titleJoiner===", "?"active":""} onClick={()=>changeTitleJoiner(", ")}>With commas</button><button className={titleJoiner===" "?"active":""} onClick={()=>changeTitleJoiner(" ")}>Without commas</button><button type="button" className={titleCaps?"active":""} aria-pressed={titleCaps} onClick={()=>changeTitleCaps(!titleCaps)}>{titleCaps?"Capitalized":"Not capitalized"}</button></div>}
+  function chooseAutoTitleBank(list:KeywordList|null){setAutoTitleBank(list);setAutoTitleBankId(list?.id||"");setTitleBuildMessage("");setFiles(current=>current.map(file=>file.titleError||file.titleWarning?{...file,titleError:"",titleWarning:""}:file))}
   function titlesLead(){
     const titled=files.filter(file=>file.title.trim()).length;
     const bankForOtherProducts=activeBundle&&bundleRecipes.length>1&&autoTitleBank&&bundleRecipes.some(recipe=>recipe.id!==activeRecipe?.id&&recipe.keywordListId!==autoTitleBank.id);
@@ -3509,7 +3510,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       <div className="title-tools-heading"><h3>Create titles and tags</h3><span>{titled} of {files.length} ready</span></div>
       {titleBuilderMode==="ai"?<div className="title-builder-pane">
         <div className="title-options-row"><b>Title options</b>{titleFormatControls()}<button type="button" className="title-mode-switch" onClick={()=>setTitleBuilderMode("manual")}>Build titles manually</button>{bankForOtherProducts?<button type="button" className="title-mode-switch" disabled={applyingBankToBundle} onClick={()=>void applyBankToBundle()}>{applyingBankToBundle?"Applying…":`Use this bank for all ${bundleRecipes.length} products`}</button>:null}</div>
-        <KeywordBank compact selectionOnly initialId={autoTitleBankId||activeRecipe?.keywordListId||""} onSelect={list=>{setAutoTitleBank(list);setAutoTitleBankId(list?.id||"");if(activeRecipe&&list?.id&&list.id!==activeRecipe.keywordListId)void establish(activeRecipe,{keywordListId:list.id})}} title="Keyword bank" copy=""/>
+        <KeywordBank compact selectionOnly initialId={autoTitleBankId} onSelect={chooseAutoTitleBank} title="Keyword bank" copy=""/>
         <button className="ai-title-button" title={batchHeldByAnotherTab?"This batch is open in another tab, so nothing saved here would be kept.":!autoTitleBank?"Choose a keyword bank first.":!files.length?"Upload a design first.":undefined} disabled={titleBuilding||!autoTitleBank||!files.length||batchHeldByAnotherTab} onClick={()=>void buildBatchTitle()}>{titleBuilding?`Creating ${files.length} titles and tags…`:activeBundle?"Create titles and tags for this product":"Create all titles and tags"}</button>
         {titleBuilding&&<div className={`title-generation-progress${titleBuildProgress.completed===0?" is-starting":""}`} role="status" aria-live="polite">
           <div className="title-generation-progress-heading"><span className="title-generation-spinner" aria-hidden="true"/><b>Creating titles and tags</b><span>{titleBuildProgress.completed} of {titleBuildProgress.total}</span></div>
@@ -3529,7 +3530,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
   function titlesRows(only?:DesignFile,openAll=false){return designTaskRows("titles",design=>`${(design.title||"").trim().length}/140`,design=><div className="task-listing-edit">{/* D541 - D408 found this the hard way: at thumbnail size the artwork
         is unreadable, so the card cannot tell you which design you are writing a
         title for. The row stays compact; the preview comes back at a size you can
-        read once the row is open. */}{!openAll&&(()=>{const shot=drafts.find(draft=>draft.clientId===design.id)?.previewUrl||design.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;
+        read once the row is open. */}{!openAll&&(()=>{const shot=drafts.find(draft=>draft.clientId===design.id)?.previewUrl||design.previewUrl;return shot?<button type="button" className="task-listing-preview" onClick={()=>window.open(shot,"_blank","noopener,noreferrer")} aria-label={`Open a larger preview of ${design.title.trim()||design.name}`}><img src={shot} alt={design.name||"Design artwork"} decoding="async"/><span>Enlarge</span></button>:null})()}{design.titleError&&<p className="field-error title-listing-error" role="alert">{design.titleError}</p>}<div className="design-fields"><label>Title <span>{design.title.length}/140</span><textarea className="listing-title-field" rows={3} value={design.title} maxLength={140} onChange={event=>{const title=event.target.value;
                     /* D830 · This used to be `tags:tagsFromTitle(title)`, unconditionally,
                        on every keystroke. Two things went wrong with that.
 
@@ -4168,7 +4169,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     requestedStep.current=workflowStep;
     url.searchParams.set("step",workflowStep);url.searchParams.delete("phase");window.history.pushState({},"",url);
     setBundleIndex(targetIndex);setDrafts([]);setComplete(false);setProcessed(0);setPreparationCompleted(0);setRunTotal(0);setOpenedDrafts([]);setOpenAllMessage("");setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");setFiles(carriedFiles);setDescription("");setActiveDesign("");syncedListingSignatures.current.clear();
-    await saveBatchFiles(nextBatchId,carriedFiles.map(file=>file.file)).catch(()=>undefined);const carriedAssets=Object.fromEntries(carriedFiles.flatMap(design=>(design.artworkVersions||[]).filter(artwork=>!artwork.originalUnavailable&&artwork.file?.size).map(artwork=>[`${design.id}:${artwork.id}`,artwork.file])));await saveBatchArtworkAssets(nextBatchId,carriedAssets).catch(()=>undefined);setActiveRecipe(next);setPrintifyImageIndices(next.printifyImageIndices||[]);setEtsyShippingProfileId(Number(next.etsyShippingProfileId)||0);setTemplate(next.templateUrl);setMockupTheme(next.defaultMockupTheme||"");setAutoTitleBankId(next.keywordListId||"");setTitleBuildMessage("");const nextPricing={...pricing,targetProfit:Number(next.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);await loadTemplateUrl(next.templateUrl,nextPricing,Number(next.etsyShippingProfileId)||0,next.defaultColorIds||[],next.defaultSizeIds||[]);
+    await saveBatchFiles(nextBatchId,carriedFiles.map(file=>file.file)).catch(()=>undefined);const carriedAssets=Object.fromEntries(carriedFiles.flatMap(design=>(design.artworkVersions||[]).filter(artwork=>!artwork.originalUnavailable&&artwork.file?.size).map(artwork=>[`${design.id}:${artwork.id}`,artwork.file])));await saveBatchArtworkAssets(nextBatchId,carriedAssets).catch(()=>undefined);setActiveRecipe(next);setPrintifyImageIndices(next.printifyImageIndices||[]);setEtsyShippingProfileId(Number(next.etsyShippingProfileId)||0);setTemplate(next.templateUrl);setMockupTheme(next.defaultMockupTheme||"");setAutoTitleBank(null);setAutoTitleBankId("");setTitleBuildMessage("");const nextPricing={...pricing,targetProfit:Number(next.defaultProfitTarget)||DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0};setPricing(nextPricing);setTemplateDetails(null);await loadTemplateUrl(next.templateUrl,nextPricing,Number(next.etsyShippingProfileId)||0,next.defaultColorIds||[],next.defaultSizeIds||[]);
     // Draft creation never performs paid title generation. Titles are an explicit Step 3 action.
     setWorkflowStep("designs");window.scrollTo({top:0});
   }
@@ -4226,7 +4227,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         if("result" in item&&item.result){updateDesign(item.design.id,{title:styledTitle(item.result.title),tags:item.result.tags,titleWarning:item.result.titleWarning,titleError:"",etsyError:""});pulseTitle(item.design.id);}
         else if("error" in item){failed++;updateDesign(item.design.id,{titleError:item.error,titleWarning:""});}
       });
-      if(batchTitleGuard.current.inScope(sourceScope))setTitleBuildMessage(skipped?`${skipped} ${skipped===1?"listing kept its":"listings kept their"} newer edits. Review the current titles below.`:failed?`${files.length-failed} ${files.length-failed===1?"title":"titles"} created. ${failed} ${failed===1?"needs":"need"} another try; each affected listing explains why below.`:`✓ ${files.length} unique ${files.length===1?"title":"titles"} and separately ranked Etsy tags created. Review them below.`);
+      if(batchTitleGuard.current.inScope(sourceScope))setTitleBuildMessage(skipped?`${skipped} ${skipped===1?"listing kept its":"listings kept their"} newer edits. Review the current titles below.`:failed?`${files.length-failed} ${files.length-failed===1?"title":"titles"} created. Choose a different keyword bank or write the ${failed===1?"affected title":"affected titles"} below.`:`✓ ${files.length} unique ${files.length===1?"title":"titles"} and separately ranked Etsy tags created. Review them below.`);
     }finally{batchTitleBuilding.current=false;setTitleBuilding(false);}
   }
 
@@ -5282,7 +5283,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         const failed=outcomes.find(outcome=>outcome.status!=="Prepared");if(failed)throw Error(failed.error||"A design could not be prepared.");
         for(const design of designs)queuedDesignSessions.current.set(design.id,details.batchId);
         const snapshotDesigns=designs.map(({file,previewUrl,artworkPreviewUrl,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file,previewUrl,...artwork})=>artwork)}));
-        const state={...base,template:recipe.templateUrl,templateDetails:details,activeRecipe:recipe,bundleIndex:index,bundleBatchIds:ids,designs:snapshotDesigns,drafts:[],complete:false,pricing:memberPricing,variantPrices:prices,selectedColorIds:colors,selectedSizeIds:sizes,etsyShippingProfileId:shippingProfileId,description:isActive?description:normalizeProductDescription(details.description),pricingApproved:false,autoTitleBankId:recipe.keywordListId||"",manualKeywordBankId:"",printifyImageIndices:recipe.printifyImageIndices||[],printifyImageSelections:{},preparedMockupCounts:{},sizeGuideName:"",batchReceipt:null,queuedDesignSessions:Object.fromEntries(designs.map(design=>[design.id,details.batchId]))};
+        const state={...base,template:recipe.templateUrl,templateDetails:details,activeRecipe:recipe,bundleIndex:index,bundleBatchIds:ids,designs:snapshotDesigns,drafts:[],complete:false,pricing:memberPricing,variantPrices:prices,selectedColorIds:colors,selectedSizeIds:sizes,etsyShippingProfileId:shippingProfileId,description:isActive?description:normalizeProductDescription(details.description),pricingApproved:false,autoTitleBankId:isActive?autoTitleBankId:"",manualKeywordBankId:"",printifyImageIndices:recipe.printifyImageIndices||[],printifyImageSelections:{},preparedMockupCounts:{},sizeGuideName:"",batchReceipt:null,queuedDesignSessions:Object.fromEntries(designs.map(design=>[design.id,details.batchId]))};
         /* These browser-resume copies do not feed Printify; the already staged
            R2 objects do. Start the local writes now and overlap them with cloud
            admission and provider work instead of delaying every draft. Keep

@@ -23,7 +23,7 @@ test("D1228: a deleted saved keyword bank cannot leave an impossible bundle acti
     readFile(appUrl, "utf8"),
     readFile(new URL("../app/factory-tools.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(tools, /if\(active&&!current\)\{setActive\(""\);onSelect\?\.\(null\);return\}/);
+  assert.match(tools, /if\(active&&!current\)\{setActive\(""\);onSelectRef\.current\?\.\(null\);return\}/);
   assert.match(app, /activeBundle&&bundleRecipes\.length>1&&autoTitleBank&&bundleRecipes\.some/);
   assert.doesNotMatch(app, /activeBundle&&bundleRecipes\.length>1&&autoTitleBankId&&bundleRecipes\.some/);
 });

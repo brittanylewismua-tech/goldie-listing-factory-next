@@ -28,5 +28,5 @@ test("core workflow text receives a readable, consistent polish",()=>{
   assert.match(css,/\.batch-description-body textarea\{min-height:240px;font-size:14px;line-height:1\.55/);
   assert.match(css,/\.review-section-switcher button\{min-height:42px;font-size:11px;line-height:1\.3\}/);
   assert.match(css,/\.factory-publish-box \.publish-box-ready span,[\s\S]*font-size:12px/);
-  assert.match(marker,/D1352/);
+  assert.match(marker,/D1353/);
 });
