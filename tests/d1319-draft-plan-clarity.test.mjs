@@ -12,3 +12,10 @@ test("future bundle outputs are never labelled as drafts that already exist",()=
   assert.match(app,/\$\{bundleRecoveryOnly\?files\.length:requestedListingCount\} drafts to create/);
   assert.doesNotMatch(app,/\$\{requestedListingCount\} private drafts/);
 });
+
+test("D1333: the plan and rail describe future drafts and the actual Etsy-draft action",()=>{
+  assert.match(app,/`\$\{requestedListingCount\} \$\{requestedListingCount===1\?"draft":"drafts"\} to create`/);
+  assert.match(app,/live\?"Ready to save to Etsy Drafts"/);
+  assert.doesNotMatch(app,/`\$\{requestedListingCount\} private \$\{requestedListingCount===1\?"draft":"drafts"\}`/);
+  assert.doesNotMatch(app,/live\?"Ready to publish"/);
+});
