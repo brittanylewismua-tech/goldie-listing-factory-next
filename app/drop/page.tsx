@@ -50,10 +50,12 @@ export default function DropPage() {
   }, []);
 
   return <FactoryShell active="drop" title="Today's Drop"><div className="drop-page interior-page">
-    <header>
+    {/* One line. The explaining that used to live here is in the footnote,
+        where somebody can go and find it if they want it. */}
+    <header className="drop-head">
       <p className="mini-label">TODAY&apos;S DROP</p>
-      <h1>What moved overnight</h1>
-      <p>Etsy&apos;s own top listings across the print-on-demand shelf, read fresh each morning. Positions, saves and age are Etsy&apos;s numbers — nobody publishes sales, so nothing here claims them.</p>
+      <h1>What&apos;s on the shelf</h1>
+      <p>Etsy&apos;s top listings across print-on-demand, read fresh this morning.</p>
     </header>
 
     {error && <section className="drop-error" role="alert"><h2>Not today</h2><p>{error}</p></section>}
@@ -63,13 +65,11 @@ export default function DropPage() {
       <UnlockCards />
 
       <section className="drop-streak">
-        <p className="streak-message">{drop.streak.message}</p>
-        {!drop.unlocked && <p className="streak-reward">
-          {/* The lock is stated as what opens, never as what is being withheld. */}
-          {drop.lockedCount === 1
-            ? "One more listing day opens every category in full."
-            : `${drop.lockedCount} more listing days open every category in full.`}
-        </p>}
+        <span className="drop-streak-count">{drop.streak.count}<small>/{drop.streak.target}</small></span>
+        <span className="drop-streak-label">listing days this week</span>
+        {!drop.unlocked && <span className="drop-streak-lock">
+          {drop.lockedCount === 1 ? "1 more opens every category" : `${drop.lockedCount} more opens every category`}
+        </span>}
       </section>
 
       {!drop.fresh && <p className="drop-stale">
@@ -96,7 +96,7 @@ export default function DropPage() {
                 {category.label}
                 {/* Heat is the median saves-per-day of the shelf: which product
                     type is moving fastest, not which has the biggest numbers. */}
-                {category.heat > 0 && <small> {category.heat}/day</small>}
+                
               </button>)}
           </nav>
 
@@ -142,8 +142,7 @@ export default function DropPage() {
             shelf, never a day already read — so the thing that grows as they
             keep listing is a library, and quitting for a week costs them
             nothing they already had. */}
-        <p className="mini-label">YOUR ARCHIVE</p>
-        <p className="drop-archive-intro">Every day you have opened, kept. Monday re-locks what is new, never what you have already seen.</p>
+        <p className="mini-label">ARCHIVE <small>· kept, always</small></p>
         {drop.archive.map(entry => <details key={entry.day}>
           <summary>{new Date(`${entry.day}T00:00:00`).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}
             <small> · {entry.categories.length} categories</small></summary>
@@ -156,9 +155,10 @@ export default function DropPage() {
         </details>)}
       </section>}
 
-      <p className="drop-note">
-        Positions are Etsy&apos;s own ranking, which weighs how well a listing matches the search as well as how it performs — and new listings get a deliberate visibility boost. A high position is not proof of sales. Some of what appears here is handmade rather than printed; the categories do not separate them.
-      </p>
+      <details className="drop-note">
+        <summary>About these numbers</summary>
+        <p>Positions are Etsy&apos;s own ranking, which weighs keyword match as well as performance, and new listings get a visibility boost — a high position is not proof of sales, and Etsy publishes none. Some of what appears here is handmade rather than printed; the categories do not separate them.</p>
+      </details>
     </>}
   </div></FactoryShell>;
 }

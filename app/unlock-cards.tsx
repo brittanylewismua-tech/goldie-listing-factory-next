@@ -65,11 +65,6 @@ export default function UnlockCards() {
       <p>{state.unopened > 0
         ? `${state.unopened} card${state.unopened > 1 ? "s" : ""} waiting`
         : `${state.remaining} more to your next card`}</p>
-      {/* Said every week, because it is the whole argument for bundles: the
-          same three listings are worth five as a set and three apart. */}
-      <p className="unlock-sets">{state.sets > 0
-        ? `${state.sets} set${state.sets > 1 ? "s" : ""} this week — a design on three or more products earns two extra, however many you put it on.`
-        : "One design on a tee, a sweatshirt and a hoodie earns two more than the same three listings apart."}</p>
     </div>
 
     {/* Face-down, and drawn as an object rather than a button, because the
@@ -90,11 +85,19 @@ export default function UnlockCards() {
       {just.listing && <a href={just.listing.url} target="_blank" rel="noopener noreferrer">{just.listing.title}</a>}
     </article>}
 
-    {next
-      ? <p className="unlock-next">
-          <strong>{next.name}</strong> at {next.needsSets ? `${next.at} sets` : next.at} this week — {next.remaining} to go. {next.blurb}
-        </p>
-      : <p className="unlock-next"><strong>Everything is open.</strong> The week turns over on Monday and the shelf is new again.</p>}
+    {/* The ladder as a row of chips rather than a sentence about the next one.
+        Seeing four rungs with two lit is the thing that pulls; a paragraph
+        describing the next rung is not. */}
+    <ul className="unlock-ladder">
+      {state.milestones.map(m => <li key={m.key} className={m.unlocked ? "on" : undefined}>
+        <span className="rung-name">{m.name}</span>
+        <span className="rung-at">{m.unlocked ? "open" : m.needsSets ? `${m.remaining} sets` : `${m.remaining} to go`}</span>
+      </li>)}
+    </ul>
+    {/* One line, and only the line that changes behaviour. */}
+    <p className="unlock-sets">{state.sets > 0
+      ? `${state.sets} set${state.sets > 1 ? "s" : ""} this week`
+      : "A design on three products counts for more than three apart"}</p>
 
     {state.opened.length > 0 && <details className="unlock-history">
       {/* Kept forever, and said so. The week's access re-locks on Monday;

@@ -75,8 +75,6 @@ export type DropListing = {
   /** Where Etsy put it. Kept because it is real, and it is not the same
    *  question as which of these is moving. */
   etsyRank?: number;
-  /** Sort key only — see the note where it is set. Never rendered. */
-  pace?: number;
 };
 export type DropCategory = {
   taxonomyId: number; label: string;
@@ -141,7 +139,6 @@ function shape(rows: EtsyRow[]): DropListing[] {
         and never shown to anybody. Honest number on the page, usable number
         for the sort.
       */
-      pace: ageDays > 0 ? favorites / Math.max(ageDays, MIN_AGE_DAYS) : 0,
       etsyRank: i + 1,
       rank: i + 1,
     }];
@@ -201,13 +198,7 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
          failed one. The rest of the shelf is still worth reading. */
       if (!response.ok) continue;
       const payload = await response.json() as { results?: EtsyRow[] };
-      /* The whole pool, ranked by pace, trimmed to the shelf. Positions are
-         renumbered so #1 is the fastest-moving thing here rather than whatever
-         Etsy considered the best keyword match. */
-      const ranked = shape(payload.results ?? [])
-        .sort((a, b) => (b.pace ?? 0) - (a.pace ?? 0))
-        .slice(0, PER_CATEGORY)
-        .map((listing, index) => ({ ...listing, rank: index + 1 }));
+      const ranked = shape(payload.results ?? []);
       await db().prepare(
         "INSERT INTO pod_drop_snapshots (day_taxonomy,day,taxonomy_id,label,listings_json) VALUES (?,?,?,?,?) ON CONFLICT(day_taxonomy) DO UPDATE SET listings_json=excluded.listings_json",
       ).bind(`${day}:${category.taxonomyId}`, day, category.taxonomyId, category.label, JSON.stringify(ranked)).run();

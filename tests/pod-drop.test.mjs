@@ -137,7 +137,8 @@ test("a day already read is never taken back", () => {
      the diff needs — a fortnight's retention would empty it underneath them. */
   assert.match(lib, /pod_drop_snapshots WHERE day < date\('now','-400 days'\)/);
   assert.match(read("api/drop/route.ts"), /await markSeen\(user\.userId, day, depth\)/);
-  assert.match(read("drop/page.tsx"), /never what you have already seen/);
+  assert.match(read("drop/page.tsx"), /kept, always/,
+    "the page has to say the archive is permanent, however briefly");
 });
 
 test("a set is worth more than the listings inside it", () => {
@@ -197,21 +198,20 @@ test("the budget believes Etsy over its own tally", () => {
     "an already-applied production migration must remain immutable");
 });
 
-test("the shelf is ranked by what is moving, not by Etsy's relevance", () => {
-  /* The first real read: the top of the t-shirt shelf was a three-year-old
-     listing for sleeve clips, 28 of 30 were over six months old, and the
-     median shelf was saved less than a tenth of a time a day. Score sorts by
-     relevance and relevance rewards age. One request returns a hundred, so a
-     bigger pool ranked by pace costs exactly the same twelve calls a day. */
+test("the shelf is Etsy's order, and the pictures are asked for", () => {
+  /* A pace ranking was built and taken out. It answered a real question —
+     which of these is growing — but not the one a seller is asking, which is
+     what a shopper sees when they search. Position four here is position four
+     there, and nothing reorders it. */
   const lib = read("pod-drop.ts");
-  assert.match(lib, /FETCH_PER_CATEGORY = 100/);
-  assert.match(lib, /limit: String\(FETCH_PER_CATEGORY\)/);
-  assert.match(lib, /\.sort\(\(a, b\) => \(b\.pace \?\? 0\) - \(a\.pace \?\? 0\)\)/);
-  assert.match(lib, /\.slice\(0, PER_CATEGORY\)/);
-  /* pace floors young listings at a week so a genuine breakout is rankable
-     without being credited a rate it has not earned. Never rendered. */
-  assert.match(lib, /favorites \/ Math\.max\(ageDays, MIN_AGE_DAYS\)/);
-  assert.doesNotMatch(read("drop/page.tsx"), /\.pace\b/, "pace is a sort key, never shown");
+  assert.match(lib, /sort_on: "score"/);
+  assert.doesNotMatch(lib, /\bpace\b/, "nothing reorders Etsy's shelf");
+  assert.match(lib, /const ranked = shape\(payload\.results \?\? \[\]\);/);
+
+  /* AND THE PICTURES. listings/active returns no images unless they are asked
+     for by name — the first live drop rendered 360 listings and not one
+     photograph, because the field was absent and read as null in silence. */
+  assert.match(lib, /includes: "Images"/);
 });
 
 test("a wrong drop is not stuck until tomorrow", () => {
