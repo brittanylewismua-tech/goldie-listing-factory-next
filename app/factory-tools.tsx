@@ -1,6 +1,7 @@
 "use client";
 import { confirmAction } from "./confirm-dialog";
 import { scopeBank } from "./bank-scope";
+import { productOptionAxis } from "./product-type-utils";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export type Pricing = { targetProfit: number; etsyFeePercent: number; fixedFee: number; listingFee: number; shippingCost: number; shippingCharged: number };
@@ -48,6 +49,8 @@ export function recipeSummary(recipe: Recipe): string {
   const parts: string[] = [];
   const colors = (recipe.defaultColorIds || []).length;
   const sizes = (recipe.defaultSizeIds || []).length;
+  const optionAxis = productOptionAxis(recipe.name || "");
+  const optionNoun = optionAxis.choice === "size" ? "size" : "product option";
   /* D272 · Zero saved colours simply dropped the word, so Gildan Tee read
      "5 sizes · keyword bank" — indistinguishable from a product that has no
      colour choices at all, while the batch panel below it showed four colours
@@ -55,8 +58,8 @@ export function recipeSummary(recipe: Recipe): string {
      card is where that has to be visible. */
   if (colors) parts.push(`${colors} color${colors === 1 ? "" : "s"}`);
   else if (recipe.requiresColorSelection!==false&&sizes) parts.push("colors not set");
-  if (sizes) parts.push(`${sizes} size${sizes === 1 ? "" : "s"}`);
-  else if (recipe.requiresSizeSelection!==false&&colors) parts.push("sizes not set");
+  if (sizes) parts.push(`${sizes} ${optionNoun}${sizes === 1 ? "" : "s"}`);
+  else if (recipe.requiresSizeSelection!==false&&colors) parts.push(`${optionAxis.label.toLowerCase()} not set`);
   /* Deliberately NOT the saved mockup theme. Whether a set fits depends on its
    * surfaceKind against the product's blueprint title, and this screen never
    * loads either — it would take one Printify fetch per card. Two of the three

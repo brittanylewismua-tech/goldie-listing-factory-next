@@ -1130,16 +1130,18 @@ test("D198: recipeSummary reports saved detail and is honest when there is none"
   const source = body.slice(0, body.indexOf("\n}") + 2)
     .replace("export function recipeSummary(recipe: Recipe): string", "function recipeSummary(recipe)")
     .replace(/: string\[\]/g, "");
-  const recipeSummary = new Function(`${source}; return recipeSummary;`)();
+  const recipeSummary = new Function("productOptionAxis",`${source}; return recipeSummary;`)(title=>/tee|shirt|hoodie|sweatshirt|crewneck|tank|long sleeve/i.test(title)?{label:"Sizes",choice:"size"}:{label:"Product options",choice:"option"});
 
   assert.equal(recipeSummary({}), "No details saved yet");
   assert.equal(recipeSummary({ defaultColorIds: [], defaultSizeIds: [] }), "No details saved yet");
   /* D272 · A half-configured recipe must say so. Zero colours used to drop the
      word entirely, so a tee with sizes but no saved colours read exactly like a
      product that has no colour choices at all. */
-  assert.equal(recipeSummary({ defaultColorIds: [1] }), "1 color · sizes not set");
-  assert.equal(recipeSummary({ defaultSizeIds: [1, 2, 3, 4, 5] }), "colors not set · 5 sizes");
-  assert.equal(recipeSummary({ defaultColorIds: [1, 2], defaultSizeIds: [3, 4, 5] }), "2 colors · 3 sizes");
+  assert.equal(recipeSummary({ name:"Gildan Tee",defaultColorIds: [1] }), "1 color · sizes not set");
+  assert.equal(recipeSummary({ name:"Gildan Tee",defaultSizeIds: [1, 2, 3, 4, 5] }), "colors not set · 5 sizes");
+  assert.equal(recipeSummary({ name:"Gildan Tee",defaultColorIds: [1, 2], defaultSizeIds: [3, 4, 5] }), "2 colors · 3 sizes");
+  assert.equal(recipeSummary({ name:"iphone case",requiresColorSelection:false,defaultSizeIds:[17] }), "1 product option");
+  assert.equal(recipeSummary({ name:"11 oz mug",requiresColorSelection:false,defaultSizeIds:[11] }), "1 product option");
   // The mockup theme is deliberately excluded: this screen cannot verify that a
   // set fits the product, and asserting an incompatible one contradicts the
   // wizard on the very next screen.
@@ -1151,7 +1153,7 @@ test("D198: recipeSummary reports saved detail and is honest when there is none"
      bank on it?" The rule this test defends is unchanged and is stronger for
      it — the summary carries only what differs. */
   assert.equal(
-    recipeSummary({ defaultColorIds: [1], defaultMockupTheme: "BACH TEES", keywordListId: "k1" }),
+    recipeSummary({ name:"Gildan Tee",defaultColorIds: [1], defaultMockupTheme: "BACH TEES", keywordListId: "k1" }),
     "1 color · sizes not set",
   );
   assert.equal(recipeSummary({ defaultMockupTheme: "BACH TEES" }), "No details saved yet");
@@ -1240,7 +1242,7 @@ test("D204: the product line never reports template defaults as the seller's cho
   assert.match(app, /const readiness=readinessFor\(product,recipe\);/);
   assert.match(app, /colorsChosen:!asked\.has\("colors"\)/);
   assert.match(app, /sizesChosen:!asked\.has\("sizes"\)/);
-  assert.match(app, /variantSummary\(summaryAxes\(templateDetails,activeRecipe\)\)/);
+  assert.match(app, /variantSummary\(summaryAxes\(templateDetails,activeRecipe\),templateDetails\.blueprintTitle\)/);
   assert.doesNotMatch(
     app,
     /variantSummary\(selectedColorIds\.length,selectedSizeIds\.length/,
@@ -1251,7 +1253,7 @@ test("D204: the product line never reports template defaults as the seller's cho
   const source = body.slice(0, body.indexOf("\n}") + 2)
     .replace(/:\{[^}]*\}/, "")
     .replace(/:string\[\]/g, "").replace(/\(n:number,word:string\)/, "(n,word)");
-  const variantSummary = new Function(`${source}; return variantSummary;`)();
+  const variantSummary = new Function("productOptionAxis",`${source}; return variantSummary;`)(title=>/phone|mug/i.test(title)?{choice:"option"}:{choice:"size"});
 
   const base = { colors: 4, sizes: 6, availableColors: 25, availableSizes: 8, total: 200 };
 
@@ -1259,6 +1261,10 @@ test("D204: the product line never reports template defaults as the seller's cho
   assert.equal(
     variantSummary({ ...base, colorsChosen: true, sizesChosen: true }),
     "4 colors × 6 sizes",
+  );
+  assert.equal(
+    variantSummary({ ...base, colors:0, availableColors:0, sizes:1, availableSizes:43, colorsChosen:true, sizesChosen:true },"Phone case"),
+    "1 product option",
   );
 
   // The live hoodie: nothing chosen. It must describe the product, not claim

@@ -103,16 +103,17 @@ import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./
  * choices produced it. Say the choices instead — they multiply to the same
  * figure and need no glossary. Falls back to the count when an axis is missing,
  * which is the one-size and no-colour products. */
-function variantSummary(axes:{colorsChosen:boolean;sizesChosen:boolean;colors:number;sizes:number;availableColors:number;availableSizes:number;total:number}){
+function variantSummary(axes:{colorsChosen:boolean;sizesChosen:boolean;colors:number;sizes:number;availableColors:number;availableSizes:number;total:number},blueprintTitle=""){
   const {colorsChosen,sizesChosen,colors,sizes,availableColors,availableSizes,total}=axes;
   const plural=(n:number,word:string)=>`${n} ${word}${n===1?"":"s"}`;
   const hasColors=colorsChosen?colors>0:availableColors>0;
   const hasSizes=sizesChosen?sizes>0:availableSizes>0;
+  const optionNoun=productOptionAxis(blueprintTitle).choice==="size"?"size":"product option";
   if(!hasColors&&!hasSizes)return plural(total,"option");
-  if(colorsChosen&&sizesChosen&&hasColors&&hasSizes)return `${plural(colors,"color")} × ${plural(sizes,"size")}`;
+  if(colorsChosen&&sizesChosen&&hasColors&&hasSizes)return `${plural(colors,"color")} × ${plural(sizes,optionNoun)}`;
   const parts:string[]=[];
   if(hasColors)parts.push(colorsChosen?plural(colors,"color"):`${plural(availableColors,"color")} available`);
-  if(hasSizes)parts.push(sizesChosen?plural(sizes,"size"):`${plural(availableSizes,"size")} available`);
+  if(hasSizes)parts.push(sizesChosen?plural(sizes,optionNoun):`${plural(availableSizes,optionNoun)} available`);
   return parts.join(" · ");
 }
 
@@ -5640,7 +5641,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 {(()=>{const photo=activeRecipe?.previewImage||(templateDetails?pickProductPhoto(templateDetails):"")||"";
                   return photo
                     ? <img className="product-thumb bundle-product-photo" src={photo} alt={templateDetails?.blueprintTitle||"Product"} decoding="async"/>
-                    : <div className="product-thumb product-photo-loading" aria-label="Loading product photo"><span className="goldie-spinner" aria-hidden="true"/></div>})()}<div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own colors, sizes, mockups, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe))}</span><span>✓ Product, placement, sizes, and shipping profile imported</span></>}</div></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>
+                    : <div className="product-thumb product-photo-loading" aria-label="Loading product photo"><span className="goldie-spinner" aria-hidden="true"/></div>})()}<div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own product choices, photos, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe),templateDetails.blueprintTitle)}</span><span>✓ Product, placement, {productOptionAxis(templateDetails.blueprintTitle).label.toLowerCase()}, and shipping profile imported</span></>}</div></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>
           {localPreview&&!templateDetails&&<button className="preview-demo-button" onClick={()=>void loadPreviewDemo()}>Load a complete poster demo to review every step</button>}
           {workflowStep==="setup"&&files.length===0&&!bundleCreationMode&&!productFormMode&&<FactoryFooter status={`${missingRequirement} to continue`}><button className="workflow-next" type="button" disabled>{missingRequirement}</button></FactoryFooter>}
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}
