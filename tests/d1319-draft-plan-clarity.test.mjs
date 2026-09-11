@@ -9,6 +9,6 @@ test("the draft-plan screen names the action that is actually available",()=>{
 });
 
 test("future bundle outputs are never labelled as drafts that already exist",()=>{
-  assert.match(app,/\$\{requestedListingCount\} drafts to create/);
+  assert.match(app,/\$\{bundleRecoveryOnly\?files\.length:requestedListingCount\} drafts to create/);
   assert.doesNotMatch(app,/\$\{requestedListingCount\} private drafts/);
 });

@@ -1268,7 +1268,7 @@ test("D378: any product card can be opened, not only the next one", async () => 
     "each bundle member is its own batch; without the map only forward works");
   assert.match(app, /bundleRecipes,bundleIndex,bundleBatchIds,/,
     "and it has to survive a refresh like everything else on these steps");
-  assert.match(app, /function openBundleProduct\(index:number\)/);
+  assert.match(app, /function openBundleProduct\(index:number,recoveryOnly=false\)/);
   assert.match(app, /void continueBundle\(index\)/,
     "a product with no batch yet can be started from either side of a partial bundle");
 });

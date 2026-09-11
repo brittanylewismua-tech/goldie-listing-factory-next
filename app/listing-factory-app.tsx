@@ -4072,7 +4072,9 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     if(!incoming?.id)return;
     const nextUrl=new URL(window.location.href);nextUrl.searchParams.set("listing",incoming.clientId);nextUrl.searchParams.set("section",reviewEditing.section||"title");window.history.replaceState({},"",nextUrl);
   }
-  function openBundleProduct(index:number){
+  function openBundleProduct(index:number,recoveryOnly=false){
+    setBundleRecoveryOnly(recoveryOnly);
+    const scopeUrl=new URL(window.location.href);if(recoveryOnly)scopeUrl.searchParams.set("scope","product");else scopeUrl.searchParams.delete("scope");window.history.replaceState({},"",scopeUrl);
     const requestedTask=requestedBundleTask.current;requestedBundleTask.current="";
     if(index===bundleIndex){if(requestedTask)setActiveTask(requestedTask);return;}
     const recipe=bundleRecipes[index];
@@ -5165,6 +5167,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
      itself to the next product carrying the same designs, and repeats. The
      confirmation is asked once, not once per product. */
   const [bundleRun,setBundleRun]=useState<{total:number}|null>(null);
+  const [bundleRecoveryOnly,setBundleRecoveryOnly]=useState(()=>typeof window!=="undefined"&&new URLSearchParams(window.location.search).get("scope")==="product");
   useEffect(()=>{runInProgress.current=Boolean(bundleRun)},[bundleRun]);
   const bundleAdvancing=useRef(false);
   const bundleFinishing=useRef(false);
@@ -5330,7 +5333,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   function confirmDrafts() {
     const fresh=!drafts.length&&(!activeBundle||Object.keys(bundleBatchIds).length<=1);
     if(fresh){void queueDraftSubmission();return;}
-    const recipeId=activeRecipe?.id;const targets=files.filter(file=>bundleQualityDecisions[`${recipeId}:${file.id}`]!=="exclude");if(activeBundle&&bundleRecipes.length>1)setBundleRun({total:bundleRecipes.length});void runDrafts(targets);
+    const recipeId=activeRecipe?.id;const targets=files.filter(file=>bundleQualityDecisions[`${recipeId}:${file.id}`]!=="exclude");if(activeBundle&&bundleRecipes.length>1&&!bundleRecoveryOnly)setBundleRun({total:bundleRecipes.length});void runDrafts(targets);
   }
 
   function retryFailed() {
@@ -5368,11 +5371,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   /* D726 · The prototype's .goldie-summary chip. Every value is read from the
      same state the step itself renders, so it cannot drift from the screen. */
   const createdDrafts = drafts.filter(draft=>draft.status==="Created").length;
-  const bundleRunDrafts=activeBundle&&bundleRecipes.length>1
+  const bundleRunDrafts=activeBundle&&bundleRecipes.length>1&&!bundleRecoveryOnly
     ?bundleRecipes.reduce((total,recipe,index)=>total+(index===bundleIndex?createdDrafts:Number(bundleBatchSummary[recipe.id]?.drafts)||0),0)
     :createdDrafts;
-  const bundleRunListings=activeBundle&&bundleRecipes.length>1?requestedListingCount:files.length;
-  const runCountLabel=activeBundle&&bundleRecipes.length>1?`${bundleRunListings} ${bundleRunListings===1?"listing":"listings"} · ${bundleRecipes.length} products`:`${files.length} ${files.length===1?"listing":"listings"} in this batch`;
+  const bundleRunListings=activeBundle&&bundleRecipes.length>1&&!bundleRecoveryOnly?requestedListingCount:files.length;
+  const runCountLabel=activeBundle&&bundleRecipes.length>1&&!bundleRecoveryOnly?`${bundleRunListings} ${bundleRunListings===1?"listing":"listings"} · ${bundleRecipes.length} products`:`${files.length} ${files.length===1?"listing":"listings"} in this batch`;
   const photoDeliveryRef=useRef<PhotoDeliveryHandle>(null);
   const [photoDeliveryStatusReady,setPhotoDeliveryStatusReady]=useState(false);
   const [creatingEtsyDrafts,setCreatingEtsyDrafts]=useState(false);
@@ -5926,7 +5929,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {fileError && <p className="file-limit-error" role="alert"><b>That batch can’t be added.</b><span>{fileError}</span></p>}
               {fileNotice&&(workflowStep==="setup"||workflowStep==="designs")&&<p className="file-add-notice" role="status"><b>Upload updated</b><span>{fileNotice}</span></p>}
               {files.length>0&&!designsFinished&&<section className="design-preparation-status working" role="status" aria-live="polite"><span className="design-status-icon" aria-hidden="true"/><div><b>{`Preparing designs: ${designsReady} of ${files.length} ready`}</b><small>Keep this page open while the files are checked.</small><div className="design-status-track"><i style={{width:`${files.length?designsReady/files.length*100:0}%`}}/></div></div><strong>{designsReady}/{files.length}</strong></section>}
-              {files.length > 0 && designsFinished && <div className="batch-capacity"><b>{activeBundle?`${files.length} design${files.length===1?"":"s"} · ${requestedListingCount} drafts to create`:`${files.length} design${files.length===1?"":"s"} added`}</b></div>}
+              {files.length > 0 && designsFinished && <div className="batch-capacity"><b>{activeBundle?`${files.length} design${files.length===1?"":"s"} · ${bundleRecoveryOnly?files.length:requestedListingCount} drafts to create`:`${files.length} design${files.length===1?"":"s"} added`}</b></div>}
               {!complete&&bundleQualityGroups.length>0&&<section className="bundle-quality-review" aria-label="Product-specific print quality warnings"><div><b>{bundleQualityGroups.length} of {files.length} {files.length===1?"design needs":"designs need"} a print decision</b><span>{productsInBatch.length>1?"The same artwork can be sharp on one product and too small for another. ":""}Anything below 215 DPI is flagged as very low resolution.</span>{bundleProductsUnchecked.length?<span className="inline-note" role="status">Reopen the unchecked {bundleProductsUnchecked.length===1?"product":"products"} to finish this review.</span>:null}<div className="bundle-quality-bulk"><button type="button" onClick={()=>decideAllQuality("include")}>Proceed with all {bundleQualityGroups.length}</button><button type="button" onClick={()=>decideAllQuality("exclude")}>Exclude all {bundleQualityGroups.length}</button></div></div>{bundleQualityGroups.map((group,index)=>{const decision=qualityGroupDecision(group.keys);const productList=[...new Set(group.products)];return <article className={group.critical?"critical-dpi":""} key={group.fileId}><div><b>Design {index+1}</b><span>{group.critical?<strong>VERY LOW RESOLUTION · {group.worstDpi} DPI · </strong>:null}{group.actualWidth} × {group.actualHeight}px is below the recommended size{productsInBatch.length>1?<> for <strong>{productList.join(", ")}</strong>{productList.length>1?` — ${productList.length} products in this bundle`:""}</>:<> for <strong>{productList[0]||"this product"}</strong></>}.</span></div><div><button className={decision==="include"?"selected":""} onClick={()=>decideQualityGroup(group.keys,"include")}>{group.critical?"I understand — proceed":"Proceed anyway"}</button><button className={decision==="exclude"?"selected exclude":""} onClick={()=>decideQualityGroup(group.keys,"exclude")}>{productList.length>1?"Exclude these listings":"Exclude this listing"}</button></div></article>})}</section>}
               {workflowStep==="designs"&&files.length>0&&<div id="batch-preferences-after-designs" className="batch-preferences-after-designs"/>}
               {files.length>0&&(workflowStep==="setup"||workflowStep==="designs")&&<div inert={running||Boolean(bundleRun)} className="design-upload-review" aria-label="Review uploaded designs">{files.map(file=>{const colors=(templateDetails?.colorOptions||[]).filter(color=>selectedColorIds.includes(color.id)),sides=orderedPrintSides(templateDetails?.printPositions),primarySide=primaryPrintSide(sides),secondarySides=sides.filter(side=>side!==primarySide),itemNoun=productNoun(templateDetails?.blueprintTitle,templateDetails?.brand,templateDetails?.model),secondaryVersions=(file.artworkVersions||[]).filter(artwork=>artwork.side!==primarySide);return <article className="design-artwork-card" key={file.id}>
@@ -6026,7 +6029,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   shipping, published - every one of them, with the same value
                   and the same wording productRows gave them. */}
               <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?`${handoffReadyCount()} of ${handoffExpectedCount()} listings complete`:`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockerSummary()}</span></div>
-              {(()=>{const recipe=nextBundleProductToFinish();if(!recipe)return null;const index=bundleRecipes.findIndex(item=>item.id===recipe.id);return <button type="button" className="review-bundle-recovery-button" disabled={switchingProduct===recipe.id||index<0} onClick={()=>openBundleProduct(index)}>{switchingProduct===recipe.id?`Opening ${recipe.name}…`:`Finish ${recipe.name} →`}</button>})()}
+              {(()=>{const recipe=nextBundleProductToFinish();if(!recipe)return null;const index=bundleRecipes.findIndex(item=>item.id===recipe.id);return <button type="button" className="review-bundle-recovery-button" disabled={switchingProduct===recipe.id||index<0} onClick={()=>openBundleProduct(index,true)}>{switchingProduct===recipe.id?`Opening ${recipe.name}…`:`Finish ${recipe.name} →`}</button>})()}
               {/* D1313 · The delivery status read intentionally holds this action
                   until it knows whether an Etsy draft already exists. The button
                   previously kept saying “Save to Etsy Drafts” while disabled, so
@@ -6139,8 +6142,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             {workflowStep==="designs"&&<FactoryFooter status={running||preparingEtsy||Boolean(bundleRun)?preparationMessage||"Creating private Printify drafts…":bundleQualityGroups.length?`Review ${bundleQualityGroups.length} resolution ${bundleQualityGroups.length===1?"warning":"warnings"} above`:!ready?missingRequirement:"Ready to create private Printify drafts"}><button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || bundleQualityGroups.length>0 || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>
               {/* D485 - one press covers the whole bundle, so the button says so
                   rather than naming a single product, and reports which product
-                  Goldie is on while it works its way through them. */}
-              <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? processed===runTotal&&runTotal>0?"Saving finished batch…":(bundleRun&&activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: creating drafts · ${processed} of ${runTotal} finished…`:`Creating drafts · ${processed} of ${runTotal} finished…`) : bundleQualityGroups.length?"Review resolution warnings above":!ready ? missingRequirement : activeBundle&&bundleRecipes.length>1?`Create drafts for all ${bundleRecipes.length} products`:"Create Printify drafts"}<span>→</span>
+                  The Listing Factory is on while it works through them. */}
+              <span className="button-glint" />{bundleRun&&!running?`Moving to ${bundleRecipes[bundleIndex+1]?.name||"the next product"}…`:preparingEtsy?"Completing Etsy details…":running ? processed===runTotal&&runTotal>0?"Saving finished batch…":(bundleRun&&activeBundle&&bundleRecipes.length>1?`${activeRecipe?.name||"Product"} ${bundleIndex+1} of ${bundleRecipes.length}: creating drafts · ${processed} of ${runTotal} finished…`:`Creating drafts · ${processed} of ${runTotal} finished…`) : bundleQualityGroups.length?"Review resolution warnings above":!ready ? missingRequirement : activeBundle&&bundleRecipes.length>1&&!bundleRecoveryOnly?`Create drafts for all ${bundleRecipes.length} products`:`Create ${files.length} ${files.length===1?"Printify draft":"Printify drafts"}`}<span>→</span>
             </button></FactoryFooter>}
               {/* D708 · The label already changes while Goldie works, but a changing
                   label does not tell you HOW LONG. Draft creation and Etsy publishing

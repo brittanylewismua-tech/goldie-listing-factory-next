@@ -30,5 +30,9 @@ test("D1325: partial bundle review offers a direct route to the unfinished produ
   assert.match(source,/function nextBundleProductToFinish\(\)/);
   assert.match(source,/className="review-bundle-recovery-button"/);
   assert.match(source,/`Finish \$\{recipe\.name\} →`/);
-  assert.match(source,/onClick=\{\(\)=>openBundleProduct\(index\)\}/);
+  assert.match(source,/onClick=\{\(\)=>openBundleProduct\(index,true\)\}/);
+  assert.match(source,/activeBundle&&bundleRecipes\.length>1&&!bundleRecoveryOnly\)setBundleRun/);
+  assert.match(source,/bundleRecoveryOnly\?files\.length:requestedListingCount/);
+  assert.match(source,/scopeUrl\.searchParams\.set\("scope","product"\)/);
+  assert.match(source,/get\("scope"\)==="product"/);
 });

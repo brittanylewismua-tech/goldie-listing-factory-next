@@ -12,8 +12,8 @@ test("D1238: the three-step rail names the job each stage performs",()=>{
 
 test("D943: moving from Product cannot claim it creates drafts",()=>{
   assert.match(app,/setupForwardReady\?"Review draft plan"/);
-  assert.match(app,/activeBundle&&bundleRecipes\.length>1\?`Create drafts for all/);
-  assert.match(app,/:"Create Printify drafts"/);
+  assert.match(app,/activeBundle&&bundleRecipes\.length>1&&!bundleRecoveryOnly\?`Create drafts for all/);
+  assert.match(app,/:`Create \$\{files\.length\} \$\{files\.length===1\?"Printify draft":"Printify drafts"\}`/);
   assert.doesNotMatch(app,/setupForwardReady\?"Continue to create drafts"/);
 });
 
@@ -23,9 +23,9 @@ test("D949: Step 2 names the immediate task without another review layer",()=>{
 });
 
 test("D943: bundle summaries count the whole run",()=>{
-  assert.match(app,/bundleRunDrafts=activeBundle&&bundleRecipes\.length>1[\s\S]*bundleBatchSummary\[recipe\.id\]\?\.drafts/);
-  assert.match(app,/bundleRunListings=activeBundle&&bundleRecipes\.length>1\?requestedListingCount:files\.length/);
-  assert.match(app,/runCountLabel=activeBundle&&bundleRecipes\.length>1\?`\$\{bundleRunListings\}.*\$\{bundleRecipes\.length\} products`/);
+  assert.match(app,/bundleRunDrafts=activeBundle&&bundleRecipes\.length>1&&!bundleRecoveryOnly[\s\S]*bundleBatchSummary\[recipe\.id\]\?\.drafts/);
+  assert.match(app,/bundleRunListings=activeBundle&&bundleRecipes\.length>1&&!bundleRecoveryOnly\?requestedListingCount:files\.length/);
+  assert.match(app,/runCountLabel=activeBundle&&bundleRecipes\.length>1&&!bundleRecoveryOnly\?`\$\{bundleRunListings\}.*\$\{bundleRecipes\.length\} products`/);
 });
 
 test("D943: restored work never claims it will publish automatically",()=>{

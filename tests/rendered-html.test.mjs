@@ -3788,7 +3788,7 @@ test("one press creates drafts for every product in a bundle — D485", async ()
      product at once, and then step 2 made her press "Create Printify drafts"
      once per product, walking each one through by hand. */
   assert.match(app, /const \[bundleRun,setBundleRun\]=useState<\{total:number\}\|null>\(null\)/);
-  assert.match(app, /if\(activeBundle&&bundleRecipes\.length>1\)setBundleRun\(\{total:bundleRecipes\.length\}\)/,
+  assert.match(app, /if\(activeBundle&&bundleRecipes\.length>1&&!bundleRecoveryOnly\)setBundleRun\(\{total:bundleRecipes\.length\}\)/,
     "the single confirmation starts the whole run");
   assert.match(app, /Create drafts for all \$\{bundleRecipes\.length\} products/);
 
@@ -6859,7 +6859,7 @@ test("each bundle product owns its own batch, and switching says so — D659", a
   assert.match(app, /await restoreBatchById\(existing,workflowStep,finishPhase,true\);/);
   /* The outgoing product's pending autosave is flushed first, or the last
      keystrokes land on the incoming product's batch. */
-  const openBody = app.slice(app.indexOf("function openBundleProduct(index:number){"), app.indexOf("function openBundleProduct(index:number){") + 1400);
+  const openBody = app.slice(app.indexOf("function openBundleProduct(index:number,recoveryOnly=false){"), app.indexOf("function openBundleProduct(index:number,recoveryOnly=false){") + 1600);
   assert.ok(openBody.indexOf("await persistBatchNow(batchIdRef.current)") < openBody.indexOf("restoreBatchById(existing"),
     "the outgoing batch must be flushed before the incoming one is restored");
 
