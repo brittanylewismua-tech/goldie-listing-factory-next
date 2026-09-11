@@ -99,7 +99,7 @@ test("D1284/D1290: focused editor rail shows compact completion marks and return
   assert.match(nav,/aria-label=\{`\$\{entry\.label\}: \$\{entry\.done\?"complete":"incomplete"\}`\}/);
   assert.doesNotMatch(nav,/Needed|needed/);
   assert.doesNotMatch(nav,/className="review-listing-done"/);
-  assert.match(app,/reviewEditing\?<button className="workflow-back"[^>]+onClick=\{\(\)=>openFinishedReview\(false\)\}[\s\S]*?Back to Review/);
+  assert.match(app,/reviewEditing\?<button className="workflow-next"[^>]+onClick=\{\(\)=>openFinishedReview\(false\)\}>Back to Review/);
   assert.match(css,/\.review-section-state\.is-done\{color:#53bd7c\}/);
   assert.match(css,/\.review-section-state\.is-incomplete\{color:#f06a6a\}/);
 });
@@ -109,6 +109,12 @@ test("D1290: Review map uses boxed checks and Xs without a visible Needed label"
   assert.match(review,/section\.ready\?"✓":"×"/);
   assert.doesNotMatch(review,/section\.ready\?"✓":"Needed"/);
   assert.match(theme,/span\.is-incomplete\{color:#a52f3b;background:#fff\}/);
+});
+
+test("D1336: focused editors keep a usable work column at laptop and mobile widths",()=>{
+  assert.match(css,/@media\(min-width:761px\) and \(max-width:1179px\)[\s\S]*?focused-review-section[\s\S]*?grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.match(css,/compact-title-tools \.keyword-workspace\.compact-keywords\{grid-template-columns:max-content minmax\(180px,1fr\)!important\}/);
+  assert.match(css,/@media\(max-width:700px\)[\s\S]*?draft-color-workspace\{grid-template-columns:minmax\(0,1fr\)!important\}/);
 });
 
 test("D1291: completion marks cannot turn green for half-finished content",()=>{

@@ -6,7 +6,8 @@ const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.u
 
 test("a listing opened from Review has one stable Review return and no unrelated step footer",()=>{
   assert.match(app,/!reviewEditing&&\(!etsyDetailsPrepared\?<FactoryFooter/);
-  assert.match(app,/reviewEditing\?<button className="workflow-back"[^>]*>[\s\S]*?Back to Review<\/button>/);
+  assert.match(app,/reviewEditing\?<button className="workflow-next"[^>]*>[\s\S]*?Back to Review <span/);
+  assert.match(app,/reviewEditing\?<button className="workflow-next"[\s\S]*?:<button className="save-draft-link"/);
 });
 
 test("focused Etsy details has one heading",()=>{

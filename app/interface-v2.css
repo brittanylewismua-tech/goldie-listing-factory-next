@@ -4113,6 +4113,33 @@ html, body { background: var(--lf-paper); }
 .app-shell .post-draft-pricing-panel .price-group-details{border-top:1px solid #eee8ec}
 .app-shell .post-draft-pricing-panel .price-group-details>summary{padding:12px 0}
 .app-shell .post-draft-pricing-panel .individual-variant-list{padding:0 0 16px}
+/* D1336: pricing rows were visually pressed against the left edge of the
+   focused work surface. Give the actual pricing task its own reading inset;
+   the outer panel still owns the border and the narrow layout keeps its room. */
+.app-shell .post-draft-pricing-panel{padding-left:18px}
+@media(max-width:640px){.app-shell .post-draft-pricing-panel{padding-left:8px}}
+/* D1336: a viewport-width breakpoint left only 466px for the work surface at
+   1024px because the app sidebar and the listing rail had already consumed
+   more than half the window. Stack the rail at laptop widths, then keep the
+   compact title controls in a two-row grid instead of crushing “Keyword bank”
+   into a 13px column. */
+@media(min-width:761px) and (max-width:1179px){
+ .app-shell .focused-review-section,
+ .app-shell .step-product-card:has(>.review-listing-editor-nav){grid-template-columns:minmax(0,1fr)!important}
+ .app-shell .focused-review-section>.review-listing-editor-nav,
+ .app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-editor-nav{grid-column:1!important;grid-row:auto!important;position:static!important}
+ .app-shell .focused-review-section>.factory-panel,
+ .app-shell .focused-review-section>.task-panel-lead,
+ .app-shell .focused-review-section>.factory-listing-grid,
+ .app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows{grid-column:1!important;grid-row:auto!important}
+ .app-shell .review-section-switcher{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+ .app-shell .compact-title-tools .keyword-workspace.compact-keywords{grid-template-columns:max-content minmax(180px,1fr)!important}
+ .app-shell .compact-title-tools .compact-keywords>p{grid-column:1/-1}
+}
+@media(max-width:700px){
+ .app-shell .draft-color-workspace{grid-template-columns:minmax(0,1fr)!important}
+ .app-shell .draft-color-main,.app-shell .draft-color-choices,.app-shell .draft-color-selected,.app-shell .draft-color-grid{min-width:0;max-width:100%}
+}
 @media(max-width:1279px){
  .app-shell .step-product-card .factory-panel-head{scroll-margin-top:200px}
 }

@@ -2804,29 +2804,23 @@ test("a bank phrase that is not in the artwork does not reach the listing — D4
   assert.match(route, /is not actually shown in the artwork, do not select it/);
 });
 
-test("every step's footer is the same three things — D430/D432", async () => {
+test("ordinary footers can save for later; a focused editor leads back to Review — D430/D1336", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
-  /* Checked on the live site across all four steps: the forward control belongs
-     to the section it completes, and the footer is always Back / truthful save
-     status / Save to Batch History. A focused Review editor hides the footer's
-     Back because its persistent listing navigation owns Back to Review. Images drifted from this twice in one day -
-     first carrying a second forward button, then carrying the only one and
-     losing Save as draft - so the shape is asserted rather than remembered. */
-  const footers = [...app.matchAll(/workflow-footer-actions[^"]*"/g)].map(match => {
-    const segment = app.slice(match.index, match.index + 1800);
-    const end = segment.indexOf("</div>}");
-    return end > 0 ? segment.slice(0, end) : segment;
-  });
-
-  assert.ok(footers.length >= 2, "both footer variants are present");
-  for (const footer of footers) {
-    assert.match(footer, /workflow-back/, "every footer can go back");
-    assert.match(footer, /autosave-note/, "and says the work is saved");
-    assert.match(footer, /save-draft-link/, "and can stop and save a draft");
-    assert.doesNotMatch(footer, /workflow-next/,
-      "the forward control lives on the section it completes, never in the footer");
-  }
+  /* Save to Batch History is useful while navigating the workflow. Inside a
+     completed listing editor it looked like the only next step, even though the
+     seller must return to Review to finish. That state gets one primary return;
+     ordinary states retain Back, save status, and save-for-later. */
+  const postStart=app.indexOf('workflow-footer-actions post-draft-footer');
+  const post=app.slice(postStart,postStart+2200);
+  assert.match(post,/reviewEditing\?null:<button className="workflow-back"/);
+  assert.match(post,/autosave-note/);
+  assert.match(post,/reviewEditing\?<button className="workflow-next"[\s\S]*?\}>Back to Review/);
+  assert.match(post,/:<button className="save-draft-link"/);
+  const ordinary=app.slice(app.indexOf('workflow-footer-actions">'),postStart);
+  assert.match(ordinary,/workflow-back/);
+  assert.match(ordinary,/autosave-note/);
+  assert.match(ordinary,/save-draft-link/);
 });
 
 test("mockup placement is derived from the Printify preview, for any product — D433", async () => {
