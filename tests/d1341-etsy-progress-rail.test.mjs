@@ -17,7 +17,7 @@ test('the Etsy transfer status lives in the right review rail and owns one visib
  const app=read('app/listing-factory-app.tsx'),ui=read('app/photo-delivery-handoff.tsx'),css=read('app/interface-v2.css');
  const left=app.indexOf('<div className="factory-review-list">'),right=app.indexOf('<div className="factory-publish-box">'),handoff=app.indexOf('<PhotoDeliveryHandoff',right);
  assert.ok(left>=0&&right>left&&handoff>right);
- assert.match(ui,/role="progressbar"/);assert.match(ui,/aria-valuenow=\{progress\}/);assert.match(ui,/Saving your draft request/);assert.match(ui,/Every draft was checked on Etsy/);
+ assert.match(ui,/role="progressbar"/);assert.match(ui,/aria-valuenow=\{progress\}/);assert.match(ui,/Saving your draft request/);assert.match(ui,/Every draft was checked on Etsy/);assert.match(ui,/done\?'Complete':elapsed/);assert.match(ui,/completed===targets.length\?'Open Etsy drafts'/);
  assert.doesNotMatch(ui,/WaitProgress|WaitCard/);assert.match(app,/etsyDraftTransferState!==\'complete\'/);
  assert.match(css,/\.factory-publish-box \.photo-delivery-handoff/);assert.match(css,/@keyframes etsy-transfer-spin/);
 });
