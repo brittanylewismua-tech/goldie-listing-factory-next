@@ -20,9 +20,9 @@ type Card = {
   category?: string; openedAt?: string;
   listing?: { title: string; url: string; image: string | null };
 };
-type Milestone = { at: number; key: string; name: string; blurb: string; unlocked: boolean; remaining: number };
+type Milestone = { at: number; key: string; name: string; blurb: string; unlocked: boolean; remaining: number; needsSets: number };
 type State = {
-  weekStart: string; listings: number; earned: number; openedThisWeek: number;
+  weekStart: string; listings: number; sets: number; credits: number; earned: number; openedThisWeek: number;
   unopened: number; toward: number; remaining: number;
   opened: Card[]; milestones: Milestone[];
 };
@@ -64,7 +64,12 @@ export default function UnlockCards() {
       <div className="unlock-track"><span style={{ width: `${(state.toward / (state.toward + state.remaining)) * 100}%` }} /></div>
       <p>{state.unopened > 0
         ? `${state.unopened} card${state.unopened > 1 ? "s" : ""} waiting`
-        : `${state.remaining} more listing${state.remaining > 1 ? "s" : ""} to your next card`}</p>
+        : `${state.remaining} more to your next card`}</p>
+      {/* Said every week, because it is the whole argument for bundles: the
+          same three listings are worth five as a set and three apart. */}
+      <p className="unlock-sets">{state.sets > 0
+        ? `${state.sets} set${state.sets > 1 ? "s" : ""} this week — one design on three products is worth 5, the same three apart are worth 3.`
+        : "One design on a tee, a sweatshirt and a hoodie counts as 5. The same three listings apart count as 3."}</p>
     </div>
 
     {/* Face-down, and drawn as an object rather than a button, because the
@@ -87,7 +92,7 @@ export default function UnlockCards() {
 
     {next
       ? <p className="unlock-next">
-          <strong>{next.name}</strong> at {next.at} listings this week — {next.remaining} to go. {next.blurb}
+          <strong>{next.name}</strong> at {next.needsSets ? `${next.at} sets` : next.at} this week — {next.remaining} to go. {next.blurb}
         </p>
       : <p className="unlock-next"><strong>Everything is open.</strong> The week turns over on Monday and the shelf is new again.</p>}
 

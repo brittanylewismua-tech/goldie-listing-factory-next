@@ -27,6 +27,17 @@ import { etsyApiCredential, etsyBudget, recordEtsyCall, waitForEtsyCapacity } fr
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WANT = 30;
 
+/**
+ * FRESH LOOKUPS A SELLER MAY SPEND IN A DAY.
+ *
+ * Only counted on a cache miss. Every keyword is stored for the day and shared
+ * by everyone, so a phrase another seller looked up this morning is free to
+ * serve again and must not count against anybody — the limit is there to bound
+ * Etsy calls, not curiosity. In practice a seller researching one world hits
+ * the same phrases as the last person in it, and never sees this number.
+ */
+const FRESH_PER_DAY = 25;
+
 /** One shared row per keyword per day — see etsy_keyword_snapshots. */
 const keyOf = (keyword: string, day: string) => `${day}:${keyword}`;
 const tidy = (raw: string) =>
@@ -116,6 +127,17 @@ async function handleGET(request: Request) {
     have — yesterday's winners are a perfectly good answer — and never take a
     call that publishing might need.
   */
+  /* Checked only now, after the cache has already answered for free. */
+  const spentRow = await db
+    .prepare("SELECT fresh_lookups FROM keyword_lookup_usage WHERE user_day=?")
+    .bind(`${user.userId}:${day}`)
+    .first<{ fresh_lookups: number }>();
+  if (Number(spentRow?.fresh_lookups || 0) >= FRESH_PER_DAY)
+    return NextResponse.json(
+      { error: `That is ${FRESH_PER_DAY} new keywords today. Anything already looked up is still free — this resets tomorrow.`, capped: true },
+      { status: 429 },
+    );
+
   const budget = await etsyBudget();
   if (budget.remaining < 50) {
     const recent = await db
@@ -154,10 +176,13 @@ async function handleGET(request: Request) {
 
   /* Written even when empty, so a keyword with no results does not re-ask Etsy
      on every visit for the rest of the day. */
-  await db
-    .prepare("INSERT INTO etsy_keyword_snapshots (keyword_day,keyword,day,listings_json) VALUES (?,?,?,?) ON CONFLICT(keyword_day) DO UPDATE SET listings_json=excluded.listings_json")
-    .bind(cacheKey, keyword, day, JSON.stringify(listings))
-    .run();
+  await db.batch([
+    db.prepare("INSERT INTO etsy_keyword_snapshots (keyword_day,keyword,day,listings_json) VALUES (?,?,?,?) ON CONFLICT(keyword_day) DO UPDATE SET listings_json=excluded.listings_json")
+      .bind(cacheKey, keyword, day, JSON.stringify(listings)),
+    /* Spent only here — the one path that actually cost an Etsy call. */
+    db.prepare("INSERT INTO keyword_lookup_usage (user_day,user_id,day,fresh_lookups) VALUES (?,?,?,1) ON CONFLICT(user_day) DO UPDATE SET fresh_lookups=fresh_lookups+1,updated_at=CURRENT_TIMESTAMP")
+      .bind(`${user.userId}:${day}`, user.userId, day),
+  ]);
 
   return NextResponse.json({ keyword, day, fresh: true, listings });
 }

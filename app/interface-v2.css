@@ -4365,3 +4365,4 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-archive-cat{margin:8px 0 0}
 .drop-page .drop-archive-label{margin:0;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.55}
 .drop-page .drop-archive ul{margin:4px 0 0;padding-left:18px;font-size:13px;display:grid;gap:3px}
+.unlock-sets{margin:6px 0 0;font-size:13px;opacity:.7;max-width:60ch}

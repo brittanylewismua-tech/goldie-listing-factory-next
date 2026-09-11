@@ -39,6 +39,27 @@ import { readDrop, type DropListing } from "@/app/pod-drop";
  */
 export const PER_CARD = 5;
 
+/**
+ * A SET IS ONE DESIGN ON THREE OR MORE PRODUCTS, AND IT IS WORTH MORE.
+ *
+ * The tee, the sweatshirt and the hoodie. It is the thing the method has
+ * always told people to do and the thing they skip, because it is three times
+ * the listing work for one design.
+ *
+ * So the counter stops counting listings and starts counting credits: a
+ * standalone listing is one, a set is five. Three singles earn three; the same
+ * three listings as a set earn five. Nobody has to be told the set is better —
+ * the number says it, every time.
+ *
+ * AND IT IS NOT A TRICK. A set genuinely is worth more than three unrelated
+ * listings: the design work happened once and it gets three shots at the
+ * market on three different shelves. The reward is pointed at the thing that
+ * is actually true, which is the only kind of incentive that survives somebody
+ * working out how it is scored.
+ */
+export const SET_PRODUCTS = 3;
+export const SET_CREDITS = 5;
+
 /** Monday, UTC. Everyone's week turns together, so "this week" means one thing. */
 export function weekStart(at: Date = new Date()): string {
   const d = new Date(at);
@@ -54,9 +75,18 @@ export function weekStart(at: Date = new Date()): string {
 export const MILESTONES = [
   { at: 3, key: "full-drop", name: "The full drop", blurb: "Thirty listings per category instead of ten, all week." },
   { at: 6, key: "climbers", name: "The Climbers board", blurb: "Everything rising across every category, not just today's snapshot." },
-  { at: 10, key: "lookup", name: "Keyword lookup", blurb: "Type any phrase and see its top thirty." },
-  { at: 15, key: "vault", name: "The Vault", blurb: "Thirty days of movement — what has climbed for a month against what spiked and died." },
+  { at: 12, key: "lookup", name: "Keyword lookup", blurb: "Type any phrase and see its top thirty." },
 ] as const;
+
+/**
+ * The Vault is the one tier credits cannot buy.
+ *
+ * Three sets in a week — nine listings, but only if they are three designs
+ * each on three products. Somebody grinding out fifteen singles does not reach
+ * it, and that is the point: the top reward is behind the behaviour the method
+ * is actually about, not behind volume.
+ */
+export const VAULT_SETS = 3;
 
 export type CardKind = "climber" | "hot-shelf" | "newcomer" | "stayer";
 export type Card = {
@@ -66,14 +96,35 @@ export type Card = {
 };
 
 type Runtime = { DB: D1Database };
+type Row = Record<string, unknown>;
 const db = () => (env as unknown as Runtime).DB;
 
-/** Successful listings since Monday. This is the number the week is scored on. */
-async function listingsThisWeek(userId: string) {
-  const row = await db()
-    .prepare("SELECT COUNT(*) count FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND substr(COALESCE(created_at,updated_at),1,10) >= ?")
-    .bind(userId, weekStart()).first<{ count: number }>();
-  return Number(row?.count || 0);
+/**
+ * The week in credits, and how it was earned.
+ *
+ * A bundle run puts one design through several child batches, one per product,
+ * so the same client_id across three or more batch_ids IS a set — detectable
+ * out of the existing record with nothing new to track, and true of everything
+ * anybody has already published.
+ */
+async function weekScore(userId: string) {
+  const monday = weekStart();
+  const rows = await db().prepare(
+    `SELECT client_id, COUNT(DISTINCT batch_id) products
+       FROM printify_draft_results
+      WHERE user_id=? AND status='succeeded'
+        AND substr(COALESCE(created_at,updated_at),1,10) >= ?
+      GROUP BY client_id`,
+  ).bind(userId, monday).all<{ client_id: string; products: number }>();
+
+  let listings = 0, sets = 0, credits = 0;
+  for (const raw of ((rows.results ?? []) as Row[])) {
+    const products = Number(raw.products) || 0;
+    listings += products;
+    if (products >= SET_PRODUCTS) { sets += 1; credits += SET_CREDITS; }
+    else credits += products;
+  }
+  return { listings, sets, credits };
 }
 
 /**
@@ -136,8 +187,8 @@ async function candidates(): Promise<Card[]> {
 
 export async function unlockState(userId: string) {
   const monday = weekStart();
-  const [listings, openedRows, thisWeekRow] = await Promise.all([
-    listingsThisWeek(userId),
+  const [score, openedRows, thisWeekRow] = await Promise.all([
+    weekScore(userId),
     /* Every card ever turned. History does not reset. */
     db().prepare("SELECT ordinal,kind,payload_json,opened_at FROM unlock_cards WHERE user_id=? ORDER BY ordinal DESC LIMIT 30")
       .bind(userId).all<{ ordinal: number; kind: string; payload_json: string; opened_at: string }>(),
@@ -153,11 +204,14 @@ export async function unlockState(userId: string) {
     } catch { return []; }
   });
 
-  const earned = Math.floor(listings / PER_CARD);
-  const toward = listings % PER_CARD;
+  const { listings, sets, credits } = score;
+  const earned = Math.floor(credits / PER_CARD);
+  const toward = credits % PER_CARD;
   return {
     weekStart: monday,
     listings,
+    sets,
+    credits,
     earned,
     openedThisWeek,
     /* Cards sit unopened until they are opened, deliberately. The turn is the
@@ -166,7 +220,14 @@ export async function unlockState(userId: string) {
     toward,
     remaining: PER_CARD - toward,
     opened,
-    milestones: MILESTONES.map(m => ({ ...m, unlocked: listings >= m.at, remaining: Math.max(0, m.at - listings) })),
+    milestones: [
+      ...MILESTONES.map(m => ({ ...m, unlocked: credits >= m.at, remaining: Math.max(0, m.at - credits), needsSets: 0 })),
+      {
+        at: VAULT_SETS, key: "vault", name: "The Vault",
+        blurb: "Thirty days of movement — what has climbed for a month against what spiked and died. Sets only.",
+        unlocked: sets >= VAULT_SETS, remaining: Math.max(0, VAULT_SETS - sets), needsSets: VAULT_SETS,
+      },
+    ],
   };
 }
 

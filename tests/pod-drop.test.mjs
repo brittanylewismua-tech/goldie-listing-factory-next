@@ -103,8 +103,14 @@ test("a card is only ever bonus intel, and an empty pack does not spend it", () 
      becomes a paywall inside a subscription. */
   for (const milestone of ["full-drop", "climbers", "lookup", "vault"])
     assert.match(unlocks, new RegExp(`key: "${milestone}"`), `${milestone} is intel, not function`);
-  assert.doesNotMatch(unlocks, /publish|draft_job|printify_draft_jobs/i,
-    "no listing capability is ever gated behind a card");
+  /* The rule is about what a milestone GATES, not about which words appear in
+     the file — an earlier version of this matched the word "published" in a
+     comment and failed for no reason. Every milestone must unlock intel, so
+     every one of them is named here; a new key has to be added deliberately
+     and somebody has to think about which kind it is. */
+  const keys = [...unlocks.matchAll(/key: "([a-z-]+)"/g)].map(m => m[1]);
+  assert.deepEqual(keys.sort(), ["climbers", "full-drop", "lookup", "vault"],
+    "a new milestone must be added to this list on purpose — and it must be intel, never a listing capability");
   assert.match(unlocks, /if \(!pick\) return null;/,
     "nothing to give must not burn the card");
 });
@@ -131,4 +137,34 @@ test("a day already read is never taken back", () => {
   assert.match(lib, /pod_drop_snapshots WHERE day < date\('now','-400 days'\)/);
   assert.match(read("api/drop/route.ts"), /await markSeen\(user\.userId, day, depth\)/);
   assert.match(read("drop/page.tsx"), /never what you have already seen/);
+});
+
+test("a set is worth more than the listings inside it", () => {
+  /* One design on a tee, a sweatshirt and a hoodie. It is what the method has
+     always told people to do and what they skip, because it is three times the
+     listing work for one design. Three singles earn three credits; the same
+     three as a set earn five, so the number makes the argument. */
+  const source = read("unlocks.ts");
+  assert.match(source, /SET_PRODUCTS = 3/);
+  assert.match(source, /SET_CREDITS = 5/);
+  assert.match(source, /COUNT\(DISTINCT batch_id\) products/,
+    "a set is one design across three or more child batches — no new tracking");
+  assert.match(source, /if \(products >= SET_PRODUCTS\) \{ sets \+= 1; credits \+= SET_CREDITS; \}/);
+  /* And the top tier is the one credits cannot buy. Fifteen singles does not
+     reach it; three sets does. */
+  assert.match(source, /VAULT_SETS = 3/);
+  assert.match(source, /unlocked: sets >= VAULT_SETS/);
+});
+
+test("keyword lookups are capped on fresh calls only", () => {
+  /* The cache is shared, so a phrase somebody else looked up this morning
+     costs nothing to serve again and must not count against anyone. The limit
+     bounds Etsy calls, not curiosity. */
+  const source = read("api/whats-selling/route.ts");
+  assert.match(source, /FRESH_PER_DAY = 25/);
+  const capIndex = source.indexOf("fresh_lookups FROM keyword_lookup_usage");
+  const cacheIndex = source.indexOf("SELECT listings_json FROM etsy_keyword_snapshots");
+  assert.ok(cacheIndex >= 0 && capIndex > cacheIndex,
+    "the cache must answer before the cap is consulted, or cached keywords would be charged for");
+  assert.match(source, /fresh_lookups=fresh_lookups\+1/);
 });
