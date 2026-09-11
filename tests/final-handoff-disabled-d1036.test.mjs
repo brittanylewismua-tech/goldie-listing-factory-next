@@ -6,7 +6,7 @@ const css = await readFile(new URL("../app/interface-v2.css", import.meta.url), 
 const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
 test("automatic Etsy draft creation respects unfinished pricing while the recovery link remains available", async () => {
-  assert.match(app,/disabled=\{creatingEtsyDrafts\|\|!photoDeliveryStatusReady\|\|Boolean\(handoffBlockers\(\)\.length\)\}/);
+  assert.match(app,/disabled=\{creatingEtsyDrafts\|\|etsyDraftTransferState==='working'\|\|!photoDeliveryStatusReady\|\|Boolean\(handoffBlockers\(\)\.length\)\}/);
   assert.match(app,/photoDeliveryRef\.current\?\.prepare\(\)/);
   assert.match(app,/<a className="review-printify-link" href="https:\/\/printify\.com\/app\/store\/products"/);
 });

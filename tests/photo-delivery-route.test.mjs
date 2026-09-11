@@ -8,6 +8,7 @@ import ts from 'typescript';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8').replace("from '../../etsy/request-pacing'",`from '${pacingModule}'`);
 const url=source=>'data:text/javascript;base64,'+Buffer.from(ts.transpile(source,{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022})).toString('base64');
 const draftEngine=url(read('app/api/listing-photos/delivery/draft-engine.ts'));
+const progressUrl=url(read('app/api/listing-photos/delivery/progress.ts'));
 const packageUrl=url(read('app/listing-photo-package.ts'));
 const db=new DatabaseSync(':memory:');db.exec(read('drizzle/0022_photo_deliveries.sql'));db.exec(read('drizzle/0023_etsy_draft_finishing.sql'));db.exec(read('drizzle/0024_automatic_etsy_drafts.sql'));
 db.exec("CREATE TABLE printify_draft_results(user_id TEXT,status TEXT,response_json TEXT,request_key TEXT);CREATE TABLE printify_connections(user_id TEXT,encrypted_token TEXT);CREATE TABLE etsy_connections(user_id TEXT,is_active INTEGER,shop_id INTEGER);");
@@ -17,6 +18,7 @@ let creations=[],failStart=false;
 const runtime={DB,ARTWORK:bucket,PHOTO_DELIVERY:{async create(input){creations.push(input);if(failStart)throw Error('start failed')}}};
 globalThis.__photoRoute={runtime,user:{userId:'owner'}};
 let source=read('app/api/listing-photos/delivery/route.ts').replace("from './prerequisites'",`from '${prerequisitesModule}'`)
+ .replace("from './progress'",`from '${progressUrl}'`)
  .replace(/import \{cachedJson[^;]+;/,"const TAXONOMY_TTL_SECONDS=3600,cachedJson=async(a,b,c,load)=>load();")
  .replace("from './draft-engine'",`from '${draftEngine}'`)
  .replace("from './reuse-photos'",`from '${url(read('app/api/listing-photos/delivery/reuse-photos.ts'))}'`)

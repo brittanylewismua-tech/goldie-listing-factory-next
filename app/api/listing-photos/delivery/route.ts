@@ -11,7 +11,8 @@ import {etsyConnection,etsyFetch} from '../../etsy/client';
 import {freezeDraft,type SourceDraft} from './draft-engine';
 import {prepareEtsySkus} from '../../printify/etsy-sku-preflight';
 import {requiredPrintifyPartner} from '../../etsy/production-partner';
-const publicRow=(row:DeliveryRow)=>({id:row.id,productId:row.product_id,status:row.status,error:row.error?deliveryMessage(row.error):null,photoCount:JSON.parse(row.photos_json).length,createdAt:row.created_at,updatedAt:row.updated_at,expiresAt:row.expires_at,automaticDraft:Boolean(row.transfer_json),mode:row.draft_json?'draft':'photos',listingId:row.state_json?JSON.parse(row.state_json).listingId:null});
+import {deliveryProgress} from './progress';
+const publicRow=(row:DeliveryRow)=>({id:row.id,productId:row.product_id,status:row.status,error:row.error?deliveryMessage(row.error):null,photoCount:JSON.parse(row.photos_json).length,createdAt:row.created_at,updatedAt:row.updated_at,expiresAt:row.expires_at,automaticDraft:Boolean(row.transfer_json),mode:row.draft_json?'draft':'photos',listingId:row.state_json?JSON.parse(row.state_json).listingId:null,...deliveryProgress(row)});
 async function selectionPlan(runtime:ReturnType<typeof deliveryEnv>,owner:string,productId:string,draft:{printifyImages?:string[]},indices:number[],shopId:number,draftSnapshot:ReturnType<typeof freezeDraft>|null){
   const prefix=`etsy-listing-images/${owner}/${productId}/`,objects=await runtime.ARTWORK.list({prefix,limit:100});
   if(objects.truncated)throw Error('Too many stored photos. Remove unused photos before preparing delivery.');

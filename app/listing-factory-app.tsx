@@ -5381,6 +5381,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   const photoDeliveryRef=useRef<PhotoDeliveryHandle>(null);
   const [photoDeliveryStatusReady,setPhotoDeliveryStatusReady]=useState(false);
   const [creatingEtsyDrafts,setCreatingEtsyDrafts]=useState(false);
+  const [etsyDraftTransferState,setEtsyDraftTransferState]=useState<'idle'|'working'|'complete'|'attention'>('idle');
   const checkingConnections=checkingConnection||checkingEtsyConnection;
   const connectStatus = checkingConnections?"Checking saved connections":connected&&etsyConnected?"Both accounts connected":connected?"Printify connected":etsyConnected?"Etsy connected":"Not connected yet";
   /* D760 · On Connect the status belongs on the card it describes, not in the
@@ -6015,7 +6016,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               the sentence promised a smaller press than the one it sat under. And
               it named the fee per listing without ever multiplying it, on the one
               screen where the total is the thing worth knowing. */}
-            <PhotoDeliveryHandoff ref={photoDeliveryRef} onStatusReady={setPhotoDeliveryStatusReady} onReview={(id,photos)=>{const draft=bundlePublishDrafts().find(item=>item.id===id);if(draft)editReviewedListing(photos?"mockups":"details",draft)}} targets={bundlePublishDrafts().filter(draft=>draft.id&&draft.status==="Created").map((draft,index)=>{const design=bundlePublishFiles().find(file=>file.id===draft.clientId)||bundlePublishFiles().find(file=>file.name===draft.name);return{id:draft.id!,title:design?.title||`Listing ${index+1}`,indices:bundlePublishSelections()[draft.id!]??printifyImageIndices,shippingProfileId:drafts.some(own=>own.id===draft.id)?etsyShippingProfileId:Number(Object.values(bundleMembers).find(member=>member.drafts.some(own=>own.id===draft.id))?.shippingProfileId)||0}})} beforePrepare={async()=>{await persistBatchNow();await persistRunNow()}}/>
             </div><div className="factory-publish-box">{/* D785 - the prototype's box opens by
               naming the connected destination shop without implying Goldie publishes
               in 20px. Production had the shop only inside the press, at 10px,
@@ -6031,13 +6031,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   shipping, published - every one of them, with the same value
                   and the same wording productRows gave them. */}
               <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?`${handoffReadyCount()} of ${handoffExpectedCount()} listings complete`:`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockerSummary()}</span></div>
+              <PhotoDeliveryHandoff ref={photoDeliveryRef} onStatusReady={setPhotoDeliveryStatusReady} onTransferState={setEtsyDraftTransferState} onReview={(id,photos)=>{const draft=bundlePublishDrafts().find(item=>item.id===id);if(draft)editReviewedListing(photos?"mockups":"details",draft)}} targets={bundlePublishDrafts().filter(draft=>draft.id&&draft.status==="Created").map((draft,index)=>{const design=bundlePublishFiles().find(file=>file.id===draft.clientId)||bundlePublishFiles().find(file=>file.name===draft.name);return{id:draft.id!,title:design?.title||`Listing ${index+1}`,indices:bundlePublishSelections()[draft.id!]??printifyImageIndices,shippingProfileId:drafts.some(own=>own.id===draft.id)?etsyShippingProfileId:Number(Object.values(bundleMembers).find(member=>member.drafts.some(own=>own.id===draft.id))?.shippingProfileId)||0}})} beforePrepare={async()=>{await persistBatchNow();await persistRunNow()}}/>
               {(()=>{const recipe=nextBundleProductToFinish();if(!recipe)return null;const index=bundleRecipes.findIndex(item=>item.id===recipe.id);return <button type="button" className="review-bundle-recovery-button" disabled={switchingProduct===recipe.id||index<0} onClick={()=>openBundleProduct(index,true)}>{switchingProduct===recipe.id?`Opening ${recipe.name}…`:`Finish ${recipe.name} →`}</button>})()}
               {/* D1313 · The delivery status read intentionally holds this action
                   until it knows whether an Etsy draft already exists. The button
                   previously kept saying “Save to Etsy Drafts” while disabled, so
                   the final screen looked broken during that check. Put the wait
                   on the control the seller is trying to use. */}
-              <button type="button" className="review-etsy-draft-button" aria-busy={creatingEtsyDrafts||!photoDeliveryStatusReady} disabled={creatingEtsyDrafts||!photoDeliveryStatusReady||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":!photoDeliveryStatusReady?"Checking saved Etsy drafts…":"Save to Etsy Drafts"}</button>
+              {etsyDraftTransferState!=='complete'&&<button type="button" className="review-etsy-draft-button" aria-busy={creatingEtsyDrafts||etsyDraftTransferState==='working'||!photoDeliveryStatusReady} disabled={creatingEtsyDrafts||etsyDraftTransferState==='working'||!photoDeliveryStatusReady||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":etsyDraftTransferState==='working'?"Creating Etsy drafts…":!photoDeliveryStatusReady?"Checking saved Etsy drafts…":"Save to Etsy Drafts"}</button>}
               {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<a className="review-printify-link" href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open drafts in Printify ↗</a>}
               {false&&<><div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
