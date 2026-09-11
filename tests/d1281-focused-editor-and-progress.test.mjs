@@ -11,7 +11,7 @@ const listingRows=readFileSync("app/listing-rows.tsx","utf8");
 
 test("D1281: Printify creation has one inline progress surface",()=>{
   const wait=app.slice(app.indexOf("<WaitProgress"),app.indexOf("{/* D721 · Top bar",app.indexOf("<WaitProgress")));
-  assert.match(wait,/observeTools=\{!\(running\|\|Boolean\(bundleRun\)\)\}/);
+  assert.match(wait,/observeTools=\{!\(running\|\|Boolean\(bundleRun\)\|\|titleBuilding\)\}/);
   assert.match(wait,/creatingEtsyDrafts\|\|running\|\|bundleRun\?null/);
   assert.doesNotMatch(wait,/Creating your Printify drafts/);
   assert.match(app,/className="batch-progress" role="status" aria-live="polite"/);

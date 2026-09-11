@@ -15,8 +15,12 @@ test("D1235: routine restores and Etsy-detail preparation stay inline", async ()
     "draft creation uses its existing inline progress surface instead of a second dialog");
   assert.match(app, /className="batch-progress" role="status" aria-live="polite"/,
     "real provider draft creation remains explicit and accessible inline");
-  assert.match(wait, /titleBuilding\|\|applyingBankToBundle/,
-    "potentially long batch title generation keeps explicit progress");
+  assert.doesNotMatch(wait, /titleBuilding\|\|applyingBankToBundle/,
+    "title generation uses its inline progress surface instead of a blocking dialog");
+  assert.match(wait,/observeTools=\{!\(running\|\|Boolean\(bundleRun\)\|\|titleBuilding\)\}/,
+    "generic busy-state observation is disabled while inline title progress is active");
+  assert.match(app, /className={`title-generation-progress\$\{titleBuildProgress\.completed===0\?" is-starting":""\}`}/,
+    "automatic titles expose immediate inline activity and real completion progress");
 });
 
 test("D1235: a failed listing explains the failure before recovery actions", async () => {

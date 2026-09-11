@@ -1378,6 +1378,7 @@ export default function ListingFactoryApp() {
   const [publishFailures,setPublishFailures]=useState<Array<{productId:string;error:string}>>([]);
   const [titleBuilding,setTitleBuilding]=useState(false);
   const [titleBuildMessage,setTitleBuildMessage]=useState("");
+  const [titleBuildProgress,setTitleBuildProgress]=useState({completed:0,total:0});
   const [batchKeywords,setBatchKeywords]=useState<string[]>([]);
   const [titleBuilderMode,setTitleBuilderMode]=useState<"ai"|"manual">("ai");
   const [autoTitleBank,setAutoTitleBank]=useState<KeywordList|null>(null);
@@ -3510,7 +3511,12 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
         <div className="title-options-row"><b>Title options</b>{titleFormatControls()}<button type="button" className="title-mode-switch" onClick={()=>setTitleBuilderMode("manual")}>Build titles manually</button>{bankForOtherProducts?<button type="button" className="title-mode-switch" disabled={applyingBankToBundle} onClick={()=>void applyBankToBundle()}>{applyingBankToBundle?"Applying…":`Use this bank for all ${bundleRecipes.length} products`}</button>:null}</div>
         <KeywordBank compact selectionOnly initialId={autoTitleBankId||activeRecipe?.keywordListId||""} onSelect={list=>{setAutoTitleBank(list);setAutoTitleBankId(list?.id||"");if(activeRecipe&&list?.id&&list.id!==activeRecipe.keywordListId)void establish(activeRecipe,{keywordListId:list.id})}} title="Keyword bank" copy=""/>
         <button className="ai-title-button" title={batchHeldByAnotherTab?"This batch is open in another tab, so nothing saved here would be kept.":!autoTitleBank?"Choose a keyword bank first.":!files.length?"Upload a design first.":undefined} disabled={titleBuilding||!autoTitleBank||!files.length||batchHeldByAnotherTab} onClick={()=>void buildBatchTitle()}>{titleBuilding?`Creating ${files.length} titles and tags…`:activeBundle?"Create titles and tags for this product":"Create all titles and tags"}</button>
-        {titleBuildMessage&&<p className="title-build-message" role="status">{titleBuildMessage}</p>}
+        {titleBuilding&&<div className={`title-generation-progress${titleBuildProgress.completed===0?" is-starting":""}`} role="status" aria-live="polite">
+          <div className="title-generation-progress-heading"><span className="title-generation-spinner" aria-hidden="true"/><b>Creating titles and tags</b><span>{titleBuildProgress.completed} of {titleBuildProgress.total}</span></div>
+          <div className="title-generation-progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={Math.max(1,titleBuildProgress.total)} aria-valuenow={titleBuildProgress.completed} aria-valuetext={titleBuildProgress.completed===0?"Starting title generation":`${titleBuildProgress.completed} of ${titleBuildProgress.total} titles and tag sets created`}><i style={{width:`${titleBuildProgress.total?Math.round(titleBuildProgress.completed/titleBuildProgress.total*100):0}%`}}/></div>
+          <small>{titleBuildProgress.completed===0?"Starting…":`${Math.round(titleBuildProgress.completed/titleBuildProgress.total*100)}% complete`}</small>
+        </div>}
+        {!titleBuilding&&titleBuildMessage&&<p className="title-build-message" role="status">{titleBuildMessage}</p>}
       </div>:<div className="title-builder-pane manual-title-builder">
         <div className="manual-title-heading"><b>Build titles manually</b><button type="button" className="title-mode-switch" onClick={()=>setTitleBuilderMode("ai")}>Use automatic titles</button></div>
         <div className="title-options-row"><b>Title options</b>{titleFormatControls()}</div>
@@ -4205,7 +4211,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
   async function buildBatchTitle(){
     if(!autoTitleBank)return setTitleBuildMessage("Choose a keyword bank first.");
     if(batchTitleBuilding.current||batchHeldByAnotherTab||batchSaveConflict)return;
-    batchTitleBuilding.current=true;setTitleBuilding(true);setTitleBuildMessage(`Creating 0 of ${files.length} titles…`);
+    batchTitleBuilding.current=true;setTitleBuildProgress({completed:0,total:files.length});setTitleBuilding(true);setTitleBuildMessage("");
     const sourceScope=batchTitleScope,requests=files.map(design=>({design,ticket:batchTitleGuard.current.begin(design.id)}));
     let completed=0,failed=0,skipped=0;
     try{
@@ -4215,10 +4221,10 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         catch(error){return {...item,error:error instanceof Error?error.message:"This title could not be created."};}
       },item=>{
         completed++;
+        if(batchTitleGuard.current.inScope(sourceScope))setTitleBuildProgress({completed,total:files.length});
         if(!batchTitleGuard.current.current(item.ticket)){skipped++;return;}
         if("result" in item&&item.result){updateDesign(item.design.id,{title:styledTitle(item.result.title),tags:item.result.tags,titleWarning:item.result.titleWarning,titleError:"",etsyError:""});pulseTitle(item.design.id);}
         else if("error" in item){failed++;updateDesign(item.design.id,{titleError:item.error,titleWarning:""});}
-        if(batchTitleGuard.current.inScope(sourceScope))setTitleBuildMessage(`Creating ${completed} of ${files.length} titles…`);
       });
       if(batchTitleGuard.current.inScope(sourceScope))setTitleBuildMessage(skipped?`${skipped} ${skipped===1?"listing kept its":"listings kept their"} newer edits. Review the current titles below.`:failed?`${files.length-failed} ${files.length-failed===1?"title":"titles"} created. ${failed} ${failed===1?"needs":"need"} another try; each affected listing explains why below.`:`✓ ${files.length} unique ${files.length===1?"title":"titles"} and separately ranked Etsy tags created. Review them below.`);
     }finally{batchTitleBuilding.current=false;setTitleBuilding(false);}
@@ -5497,8 +5503,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           is what makes the sidebar fixed without position:fixed and without the
           padding-left reservation the old shell used. */}
       <div className="factory-main">
-        <WaitProgress observeTools={!(running||Boolean(bundleRun))} operation={creatingEtsyDrafts||running||bundleRun?null:
-          titleBuilding||applyingBankToBundle?{title:"Building your listing titles",detail:titleBuildMessage||"Working through the selected designs. Large batches can take several minutes."}:
+        <WaitProgress observeTools={!(running||Boolean(bundleRun)||titleBuilding)} operation={creatingEtsyDrafts||running||bundleRun?null:
+          applyingBankToBundle?{title:"Applying your keyword bank",detail:titleBuildMessage||"Updating the products in this bundle."}:
           savingDraftArtwork?{title:"Updating color artwork",detail:"Uploading the artwork and waiting for Printify to confirm the change."}:
           publishing?{title:"Finishing your handoff",detail:publishMessage||"Waiting for the requested handoff to be confirmed."}:null}/>
 

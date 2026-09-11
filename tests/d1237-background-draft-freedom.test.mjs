@@ -24,7 +24,7 @@ test("draft creation keeps one inline progress surface after admission",()=>{
   assert.match(wait,/View Batch History/);
   assert.match(wait,/containModalFocus\(active\.title,opener\)/);
   const app=read("app/listing-factory-app.tsx");
-  assert.match(app,/observeTools=\{!\(running\|\|Boolean\(bundleRun\)\)\}/);
+  assert.match(app,/observeTools=\{!\(running\|\|Boolean\(bundleRun\)\|\|titleBuilding\)\}/);
   assert.match(app,/creatingEtsyDrafts\|\|running\|\|bundleRun\?null/);
   assert.match(app,/className="batch-progress" role="status" aria-live="polite"/);
   assert.match(app,/processed===runTotal&&runTotal>0\?"Saving your finished batch"/);

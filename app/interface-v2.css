@@ -4142,6 +4142,28 @@ html, body { background: var(--lf-paper); }
  .app-shell .draft-color-workspace{grid-template-columns:minmax(0,1fr)!important}
  .app-shell .draft-color-main,.app-shell .draft-color-choices,.app-shell .draft-color-selected,.app-shell .draft-color-grid{min-width:0;max-width:100%}
 }
+
+/* D1347: automatic title generation reports progress beside the action that
+   started it. The moving segment is used only before the first real result;
+   after that, the fill and percentage represent completed listings. */
+.app-shell .title-generation-progress{
+  margin-top:10px;padding:12px 14px;border:1px solid #d9cbd4;border-radius:9px;
+  background:#fffafc;color:#392b34
+}
+.app-shell .title-generation-progress-heading{display:flex;align-items:center;gap:9px;font-size:12px}
+.app-shell .title-generation-progress-heading>b{font-size:13px}
+.app-shell .title-generation-progress-heading>span:last-child{margin-left:auto;font-weight:750;color:#6b5262}
+.app-shell .title-generation-spinner{width:15px;height:15px;border:2px solid #d9cbd4;border-top-color:#ed3aaa;border-radius:50%;animation:title-generation-spin .8s linear infinite}
+.app-shell .title-generation-progress-track{position:relative;overflow:hidden;height:8px;margin-top:10px;border-radius:6px;background:#e8e0e5}
+.app-shell .title-generation-progress-track>i{display:block;height:100%;border-radius:inherit;background:#ed3aaa;transition:width .22s ease}
+.app-shell .title-generation-progress>small{display:block;margin-top:6px;font-size:11px;font-weight:700;color:#6b5262}
+.app-shell .title-generation-progress.is-starting .title-generation-progress-track::after{content:"";position:absolute;inset:0 auto 0 -28%;width:28%;border-radius:inherit;background:#ed3aaa;animation:title-generation-scan 1.15s ease-in-out infinite}
+@keyframes title-generation-spin{to{transform:rotate(360deg)}}
+@keyframes title-generation-scan{to{left:100%}}
+@media(prefers-reduced-motion:reduce){
+ .app-shell .title-generation-spinner{animation:none;border-top-color:#d9cbd4;background:#ed3aaa}
+ .app-shell .title-generation-progress.is-starting .title-generation-progress-track::after{animation:none;left:0;opacity:.65}
+}
 @media(max-width:1279px){
  .app-shell .step-product-card .factory-panel-head{scroll-margin-top:200px}
 }
