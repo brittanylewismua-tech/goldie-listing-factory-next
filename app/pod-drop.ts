@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { apiKey, etsyBudget, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
+import { etsyApiCredential, etsyBudget, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 
 /**
  * TODAY'S DROP — WHAT MOVED IN PRINT-ON-DEMAND WHILE THEY WERE AWAY.
@@ -113,7 +113,7 @@ async function taxonomy(): Promise<{ id: number; name: string }[]> {
 
   await waitForEtsyCapacity();
   const response = await fetch("https://openapi.etsy.com/v3/application/seller-taxonomy/nodes", {
-    headers: { "x-api-key": apiKey() }, signal: AbortSignal.timeout(20000),
+    headers: { "x-api-key": etsyApiCredential() }, signal: AbortSignal.timeout(20000),
   });
   await recordEtsyCall(response, "taxonomy");
   if (!response.ok) throw new Error(`Etsy would not give the category list (${response.status}).`);
@@ -179,7 +179,7 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
         sort_order: "desc",
       });
       const response = await fetch(`https://openapi.etsy.com/v3/application/listings/active?${query}`, {
-        headers: { "x-api-key": apiKey() }, signal: AbortSignal.timeout(20000),
+        headers: { "x-api-key": etsyApiCredential() }, signal: AbortSignal.timeout(20000),
       });
       await recordEtsyCall(response, "search");
       /* One category Etsy will not answer for is a thinner drop, never a

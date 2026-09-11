@@ -30,11 +30,13 @@ async function handleGET() {
   if (!user) return NextResponse.json({ error: "Sign in to see today's drop." }, { status: 401 });
 
   let building = false;
+  let unavailable = false;
   try {
     building = (await buildDrop()).built;
   } catch {
-    /* Logged by withErrorLog on the way out if it throws; a drop that cannot
-       be rebuilt still has yesterday to show. */
+    /* Yesterday remains useful. On the first day there is no fallback, so the
+       page must say the read failed instead of pretending it is still running. */
+    unavailable = true;
   }
 
   const [{ day, categories }, streak] = await Promise.all([readDrop(), listingStreak(user.userId)]);
@@ -46,6 +48,7 @@ async function handleGET() {
        look like a bug rather than a quiet morning. */
     fresh: day === new Date().toISOString().slice(0, 10),
     building,
+    unavailable: unavailable && categories.length === 0,
     unlocked,
     lockedCount: unlocked ? 0 : Math.max(0, STREAK_TARGET - streak.count),
     streak,

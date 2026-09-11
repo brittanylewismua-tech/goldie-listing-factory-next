@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
-import { apiKey, etsyBudget, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
+import { etsyApiCredential, etsyBudget, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 
 /**
  * WHAT IS ALREADY WINNING THIS SEARCH.
@@ -138,7 +138,7 @@ async function handleGET(request: Request) {
     sort_order: "desc",
   });
   const response = await fetch(`https://api.etsy.com/v3/application/listings/active?${query}`, {
-    headers: { "x-api-key": apiKey() },
+    headers: { "x-api-key": etsyApiCredential() },
     signal: AbortSignal.timeout(20000),
   });
   await recordEtsyCall(response, "search");

@@ -24,7 +24,7 @@ type Category = {
   newToday: number[]; climbing: number[]; held: number;
 };
 type Drop = {
-  day: string; fresh: boolean; building: boolean; unlocked: boolean;
+  day: string; fresh: boolean; building: boolean; unavailable: boolean; unlocked: boolean;
   lockedCount: number;
   streak: { count: number; target: number; message: string; hit: boolean };
   categories: Category[];
@@ -75,7 +75,13 @@ export default function DropPage() {
       </p>}
 
       {drop.categories.length === 0
-        ? <p>The first read is still running. This fills in within a few minutes.</p>
+        ? drop.unavailable
+          ? <section className="drop-error" role="alert">
+              <h2>Today&apos;s listings couldn&apos;t load</h2>
+              <p>Etsy did not return the shelf. Try again in a moment.</p>
+              <button type="button" onClick={() => window.location.reload()}>Try again</button>
+            </section>
+          : <p>The first read is still running. This fills in within a few minutes.</p>
         : <>
           <nav className="drop-tabs" aria-label="Product categories">
             {drop.categories.map(category =>
