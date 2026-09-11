@@ -2190,7 +2190,7 @@ test("D994: upload starts with the choices and primary workflow cards have a cri
 
 test("D903: the Images page describes only work performed on that page",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*title: "Add your designs"/);
+  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*title: "Create Printify drafts"/);
   assert.match(app,/copy: "Check artwork, colors, sizes, pricing, shipping, and listing photos\."/);
   assert.doesNotMatch(app,/choose and arrange the listing photos/);
 });

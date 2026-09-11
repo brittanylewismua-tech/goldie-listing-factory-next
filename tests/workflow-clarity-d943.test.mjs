@@ -19,7 +19,7 @@ test("D943: moving from Product cannot claim it creates drafts",()=>{
 
 test("D949: Step 2 names the immediate task without another review layer",()=>{
   assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*Check artwork, colors, sizes, pricing, shipping, and listing photos/);
-  assert.match(app,/title: "Add your designs", copy: ""/);
+  assert.match(app,/title: "Create Printify drafts", copy: "Check the products and designs below, then create the drafts\."/);
 });
 
 test("D943: bundle summaries count the whole run",()=>{
