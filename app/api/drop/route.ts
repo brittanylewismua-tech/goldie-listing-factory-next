@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
-import { buildDrop, listingStreak, markSeen, readArchive, readDrop, STREAK_TARGET } from "@/app/pod-drop";
+import { buildDrop, forgetToday, listingStreak, markSeen, readArchive, readDrop, STREAK_TARGET } from "@/app/pod-drop";
+import { getChatGPTUser as owner } from "@/app/chatgpt-auth";
+import { isOwner } from "@/app/mastermind/access";
 import { unlockState } from "@/app/unlocks";
 
 /**
@@ -78,3 +80,18 @@ async function handleGET() {
 }
 
 export const GET = withErrorLog("drop", handleGET);
+
+/**
+ * Rebuild today's drop. Owner only — it spends a dozen Etsy calls, so it is
+ * for landing a fix on the same day rather than a refresh anybody can lean on.
+ */
+async function handlePOST() {
+  const user = await owner();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not for you." }, { status: 403 });
+  await forgetToday();
+  const built = await buildDrop();
+  return NextResponse.json({ rebuilt: built.built, why: built.why ?? null });
+}
+
+export const POST = withErrorLog("drop", handlePOST);

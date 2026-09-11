@@ -25,6 +25,22 @@ import { etsyApiCredential, etsyBudget, recordEtsyCall, waitForEtsyCapacity } fr
  */
 
 const DAY_MS = 86_400_000;
+/**
+ * ASK FOR A HUNDRED, KEEP THE THIRTY THAT ARE ACTUALLY MOVING.
+ *
+ * Etsy's score sort ranks by relevance, and relevance rewards listings that
+ * have been around. The first real read proved it: the top of the t-shirt
+ * shelf was a three-year-old listing for sleeve clips, twenty-eight of the
+ * thirty were over six months old, and the median shelf was being saved less
+ * than a tenth of a time a day. A page promising what moved overnight was
+ * showing a stable list of old best-matches.
+ *
+ * One request returns up to a hundred, so a bigger pool costs exactly the same
+ * twelve Etsy calls a day. Rank that pool by how fast each listing is being
+ * saved and keep the top thirty, and the shelf becomes what it claims to be
+ * without spending anything.
+ */
+const FETCH_PER_CATEGORY = 100;
 const PER_CATEGORY = 30;
 /** Below this a listing is too new for saves-per-day to mean anything. */
 const MIN_AGE_DAYS = 7;
@@ -56,6 +72,11 @@ export type DropListing = {
   listingId: number; title: string; url: string; image: string | null;
   price: number | null; currency: string; favorites: number;
   ageDays: number; savesPerDay: number; rank: number;
+  /** Where Etsy put it. Kept because it is real, and it is not the same
+   *  question as which of these is moving. */
+  etsyRank?: number;
+  /** Sort key only — see the note where it is set. Never rendered. */
+  pace?: number;
 };
 export type DropCategory = {
   taxonomyId: number; label: string;
@@ -109,6 +130,19 @@ function shape(rows: EtsyRow[]): DropListing[] {
          forever; it is too new to have a rate. Reported as zero rather than as
          a spectacular number that would top every chart it appears in. */
       savesPerDay: ageDays >= MIN_AGE_DAYS ? Number((favorites / ageDays).toFixed(2)) : 0,
+      /*
+        A LISTING TOO YOUNG FOR A RATE STILL HAS TO BE RANKABLE.
+
+        savesPerDay is reported as zero under a week old, because sixty saves
+        on a four-day-old listing is not fifteen a day. But zero would sort
+        every genuine breakout to the bottom of the shelf — the exact thing
+        this page exists to surface. So ranking uses a rate that pretends the
+        listing is a full week old: an under-estimate, never an over-estimate,
+        and never shown to anybody. Honest number on the page, usable number
+        for the sort.
+      */
+      pace: ageDays > 0 ? favorites / Math.max(ageDays, MIN_AGE_DAYS) : 0,
+      etsyRank: i + 1,
       rank: i + 1,
     }];
   });
@@ -153,7 +187,7 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
       await waitForEtsyCapacity();
       const query = new URLSearchParams({
         keywords: category.query,
-        limit: String(PER_CATEGORY),
+        limit: String(FETCH_PER_CATEGORY),
         sort_on: "score",
         sort_order: "desc",
         is_safe: "true",
@@ -167,9 +201,16 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
          failed one. The rest of the shelf is still worth reading. */
       if (!response.ok) continue;
       const payload = await response.json() as { results?: EtsyRow[] };
+      /* The whole pool, ranked by pace, trimmed to the shelf. Positions are
+         renumbered so #1 is the fastest-moving thing here rather than whatever
+         Etsy considered the best keyword match. */
+      const ranked = shape(payload.results ?? [])
+        .sort((a, b) => (b.pace ?? 0) - (a.pace ?? 0))
+        .slice(0, PER_CATEGORY)
+        .map((listing, index) => ({ ...listing, rank: index + 1 }));
       await db().prepare(
         "INSERT INTO pod_drop_snapshots (day_taxonomy,day,taxonomy_id,label,listings_json) VALUES (?,?,?,?,?) ON CONFLICT(day_taxonomy) DO UPDATE SET listings_json=excluded.listings_json",
-      ).bind(`${day}:${category.taxonomyId}`, day, category.taxonomyId, category.label, JSON.stringify(shape(payload.results ?? []))).run();
+      ).bind(`${day}:${category.taxonomyId}`, day, category.taxonomyId, category.label, JSON.stringify(ranked)).run();
     }
 
     const completed = await db().prepare(
@@ -316,4 +357,21 @@ export async function readArchive(userId: string, limit = 30) {
     if (!categories?.length) return [];
     return [{ day, depth, categories: categories.map(c => ({ ...c, listings: c.listings.slice(0, depth) })) }];
   });
+}
+
+/**
+ * FORGET TODAY WAS BUILT, SO IT CAN BE BUILT AGAIN.
+ *
+ * The drop is built once a day on purpose, which also means a drop that came
+ * out wrong is wrong until tomorrow. That is fine for a quiet morning and
+ * useless the day the ranking changes — the first real read showed a shelf of
+ * three-year-old listings and there was no way to see the fix land.
+ *
+ * Owner only. It spends a dozen Etsy calls, so it is a maintenance tool rather
+ * than a refresh button, and it clears the claim as well as the date so a
+ * build abandoned mid-way cannot lock it out.
+ */
+export async function forgetToday() {
+  await db().prepare("UPDATE pod_drop_state SET last_built_day=NULL,building_day=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=1").run();
+  await db().prepare("DELETE FROM pod_drop_snapshots WHERE day=?").bind(today()).run();
 }

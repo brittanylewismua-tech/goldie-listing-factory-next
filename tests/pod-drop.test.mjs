@@ -196,3 +196,29 @@ test("the budget believes Etsy over its own tally", () => {
   assert.doesNotMatch(readRoot("drizzle/0031_drop_archive.sql"), /remaining_today|remaining_at/,
     "an already-applied production migration must remain immutable");
 });
+
+test("the shelf is ranked by what is moving, not by Etsy's relevance", () => {
+  /* The first real read: the top of the t-shirt shelf was a three-year-old
+     listing for sleeve clips, 28 of 30 were over six months old, and the
+     median shelf was saved less than a tenth of a time a day. Score sorts by
+     relevance and relevance rewards age. One request returns a hundred, so a
+     bigger pool ranked by pace costs exactly the same twelve calls a day. */
+  const lib = read("pod-drop.ts");
+  assert.match(lib, /FETCH_PER_CATEGORY = 100/);
+  assert.match(lib, /limit: String\(FETCH_PER_CATEGORY\)/);
+  assert.match(lib, /\.sort\(\(a, b\) => \(b\.pace \?\? 0\) - \(a\.pace \?\? 0\)\)/);
+  assert.match(lib, /\.slice\(0, PER_CATEGORY\)/);
+  /* pace floors young listings at a week so a genuine breakout is rankable
+     without being credited a rate it has not earned. Never rendered. */
+  assert.match(lib, /favorites \/ Math\.max\(ageDays, MIN_AGE_DAYS\)/);
+  assert.doesNotMatch(read("drop/page.tsx"), /\.pace\b/, "pace is a sort key, never shown");
+});
+
+test("a wrong drop is not stuck until tomorrow", () => {
+  /* Built once a day on purpose, which also means a bad build lasts a day.
+     Owner only, because it spends a dozen Etsy calls. */
+  assert.match(read("pod-drop.ts"), /export async function forgetToday/);
+  const route = read("api/drop/route.ts");
+  assert.match(route, /isOwner\(user\)/);
+  assert.match(route, /status: 403/);
+});
