@@ -19,3 +19,12 @@ test("D1333: the plan and rail describe future drafts and the actual Etsy-draft 
   assert.doesNotMatch(app,/`\$\{requestedListingCount\} private \$\{requestedListingCount===1\?"draft":"drafts"\}`/);
   assert.doesNotMatch(app,/live\?"Ready to publish"/);
 });
+
+test("D1334: help, gates, and owner diagnostics use the current product language",()=>{
+  assert.match(app,/total drafts to create/);
+  assert.match(app,/Create at least one Printify draft before continuing\./);
+  assert.match(app,/aria-label="Open Listing Factory diagnostics" title="Listing Factory diagnostics"/);
+  assert.doesNotMatch(app,/total private drafts in this run/);
+  assert.doesNotMatch(app,/created successfully before publishing/);
+  assert.doesNotMatch(app,/Open Goldie Diagnostics/);
+});
