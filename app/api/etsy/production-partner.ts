@@ -2,13 +2,17 @@ export type EtsyProductionPartner={production_partner_id?:number;partner_name?:s
 type PartnerPayload={results?:EtsyProductionPartner[]};
 const cache=new Map<number,{id:number;expires:number}>(),inFlight=new Map<number,Promise<number>>();
 
-/** Printify only auto-attaches its production partner when the Etsy shop has a
- * saved partner whose real name is Printify. Resolve that shop-owned ID once,
- * then carry it in the immutable draft snapshot so every listing can be
- * assigned and verified before completion. Missing setup is never cached. */
+/** Etsy may return a seller's public partner label instead of the private name
+ * shown in Shop Manager. Prefer an explicit Printify match, but when the shop
+ * has exactly one valid partner that partner is unambiguous and safe to use.
+ * Resolve the shop-owned ID once, then carry it in the immutable draft snapshot
+ * so every listing can be assigned and verified before completion. */
 export function printifyPartnerId(payload:PartnerPayload){
- const matches=(payload.results||[]).filter(partner=>partner.partner_name?.trim().toLowerCase()==='printify'&&Number.isSafeInteger(partner.production_partner_id)&&Number(partner.production_partner_id)>0);
- if(!matches.length)throw Error('Add Printify as a production partner in Etsy before saving drafts. In Etsy Shop Manager, open Settings → Partners you work with, add Printify, then try again.');
+ const partners=(payload.results||[]).filter(partner=>Number.isSafeInteger(partner.production_partner_id)&&Number(partner.production_partner_id)>0);
+ const matches=partners.filter(partner=>partner.partner_name?.trim().toLowerCase()==='printify');
+ if(!matches.length&&partners.length===1)return Number(partners[0].production_partner_id);
+ if(!matches.length&&!partners.length)throw Error('Add Printify as a production partner in Etsy before saving drafts. In Etsy Shop Manager, open Settings → Partners you work with, add Printify, then try again.');
+ if(!matches.length)throw Error('Etsy returned more than one saved production partner without identifying which one is Printify. Review Partners you work with in Etsy, then try again.');
  if(matches.length>1)throw Error('Etsy has more than one production partner named Printify. Keep the correct Printify partner in Etsy, then try again.');
  return Number(matches[0].production_partner_id);
 }
