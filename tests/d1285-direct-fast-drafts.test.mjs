@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 const upload=readFileSync(new URL("../app/client-artwork-upload.ts",import.meta.url),"utf8");
-const worker=readFileSync(new URL("../app/large-png-worker.ts",import.meta.url),"utf8");
+const worker=readFileSync(new URL("../public/large-png-worker.js",import.meta.url),"utf8");
 
 test("D1285: Create Printify drafts starts immediately after validation",()=>{
   const create=app.slice(app.indexOf("function beginDraftCreation()"),app.indexOf("/** Stage every member"));
@@ -23,8 +23,8 @@ test("D1285: the synchronous duplicate guard remains ahead of every mutation",()
 test("D1285: large transparent PNG preparation is serialized, native, and crop gated",()=>{
   assert.match(upload,/LARGE_TRANSPARENT_PNG_BYTES = 12 \* 1024 \* 1024/);
   assert.match(upload,/optimizerQueue = turn/);
-  assert.match(upload,/large-png-worker\.ts\?worker&url/);
-  assert.match(upload,/new Worker\(largePngWorkerUrl/);
+  assert.match(upload,/new Worker\("\/large-png-worker\.js"\)/);
+  assert.doesNotMatch(upload,/\?worker&url|file:\/\//);
   assert.doesNotMatch(upload,/new Promise<Blob \| null>\(async/);
   assert.match(upload,/catch \{ resolve\(null\); return; \}/);
   assert.match(upload,/optimized\.size < file\.size \* \.82/);
@@ -41,8 +41,8 @@ test("production build serves the PNG worker from the public site, never a local
   const scripts=files.filter(file=>file.endsWith(".js"));
   const bundled=scripts.map(file=>readFileSync(new URL(file,staticRoot),"utf8")).join("\n");
   assert.doesNotMatch(bundled,/file:\/\/\/_next\/static\/large-png-worker-/);
-  assert.match(bundled,/\/_next\/static\/large-png-worker-[A-Za-z0-9_-]+\.js/);
-  assert.ok(files.some(file=>/large-png-worker-[A-Za-z0-9_-]+\.js$/.test(file)),"the referenced worker asset must be emitted");
+  assert.match(bundled,/new Worker\(["'`]\/large-png-worker\.js["'`]\)/);
+  assert.doesNotThrow(()=>readFileSync(new URL("../dist/client/large-png-worker.js",import.meta.url),"utf8"));
 });
 
 test("D1285: the one progress bar covers preparation, admission, and provider completion",()=>{

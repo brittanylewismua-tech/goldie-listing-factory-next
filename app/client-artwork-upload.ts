@@ -1,5 +1,3 @@
-import largePngWorkerUrl from "./large-png-worker.ts?worker&url";
-
 export const MAX_DIRECT_PRINTIFY_BYTES = 40 * 1024 * 1024;
 const LARGE_TRANSPARENT_PNG_BYTES = 12 * 1024 * 1024;
 
@@ -12,7 +10,9 @@ async function runLargePngOptimizer(file: File, bounds?: Bounds) {
   try { buffer = await file.arrayBuffer(); } catch { return null; }
   return new Promise<Blob | null>((resolve) => {
     let worker: Worker;
-    try { worker = new Worker(largePngWorkerUrl, { type: "module" }); }
+    /* Keep the worker at a real same-origin public URL. The production bundler
+       otherwise emitted a build-machine address that browsers reject. */
+    try { worker = new Worker("/large-png-worker.js"); }
     catch { resolve(null); return; }
     const timeout = window.setTimeout(() => { worker.terminate(); resolve(null); }, 30_000);
     worker.onmessage = (event: MessageEvent<OptimizerReply>) => {

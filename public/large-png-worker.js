@@ -1,10 +1,7 @@
-type Bounds = { left: number; top: number; right: number; bottom: number };
-type Request = { buffer: ArrayBuffer; originalBytes: number; bounds?: Bounds };
-
 /* Crop already-measured transparent padding with the browser's native image
-   decoder/encoder. This preserves every visible source pixel and avoids the
-   large palette-analysis cost that made a 5,016px PNG sit at 0% for a minute. */
-self.onmessage = async (event: MessageEvent<Request>) => {
+   decoder/encoder. This public same-origin worker keeps production browsers
+   away from build-machine addresses. */
+self.onmessage = async (event) => {
   try {
     const source = await createImageBitmap(new Blob([event.data.buffer], { type: "image/png" }));
     const measured = event.data.bounds ?? { left: 0, top: 0, right: 1, bottom: 1 };
@@ -38,5 +35,3 @@ self.onmessage = async (event: MessageEvent<Request>) => {
     self.postMessage({ ok: false, error: error instanceof Error ? error.message : "optimization_failed" });
   }
 };
-
-export {};
