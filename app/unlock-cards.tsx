@@ -68,8 +68,8 @@ export default function UnlockCards() {
       {/* Said every week, because it is the whole argument for bundles: the
           same three listings are worth five as a set and three apart. */}
       <p className="unlock-sets">{state.sets > 0
-        ? `${state.sets} set${state.sets > 1 ? "s" : ""} this week — one design on three products is worth 5, the same three apart are worth 3.`
-        : "One design on a tee, a sweatshirt and a hoodie counts as 5. The same three listings apart count as 3."}</p>
+        ? `${state.sets} set${state.sets > 1 ? "s" : ""} this week — a design on three or more products earns two extra, however many you put it on.`
+        : "One design on a tee, a sweatshirt and a hoodie earns two more than the same three listings apart."}</p>
     </div>
 
     {/* Face-down, and drawn as an object rather than a button, because the

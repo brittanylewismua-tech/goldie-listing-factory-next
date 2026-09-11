@@ -58,7 +58,20 @@ export const PER_CARD = 5;
  * working out how it is scored.
  */
 export const SET_PRODUCTS = 3;
-export const SET_CREDITS = 5;
+
+/**
+ * A SET IS ITS LISTINGS PLUS TWO. NOT A FLAT FIVE.
+ *
+ * The first version paid a flat five for any set, which quietly punished the
+ * best behaviour in the product: one design on six products earned five, while
+ * six unrelated singles earned six. Doing the harder and more valuable thing
+ * scored worse, and the first seller to notice would have stopped doing it.
+ *
+ * Products plus two is monotonic — more products always earns more — and a set
+ * always beats the same listings published apart, by the same two, whatever
+ * its size. Three products earn five, four earn six, six earn eight.
+ */
+export const SET_BONUS = 2;
 
 /** Monday, UTC. Everyone's week turns together, so "this week" means one thing. */
 export function weekStart(at: Date = new Date()): string {
@@ -121,7 +134,7 @@ async function weekScore(userId: string) {
   for (const raw of ((rows.results ?? []) as Row[])) {
     const products = Number(raw.products) || 0;
     listings += products;
-    if (products >= SET_PRODUCTS) { sets += 1; credits += SET_CREDITS; }
+    if (products >= SET_PRODUCTS) { sets += 1; credits += products + SET_BONUS; }
     else credits += products;
   }
   return { listings, sets, credits };

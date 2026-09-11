@@ -36,7 +36,7 @@ const WANT = 30;
  * Etsy calls, not curiosity. In practice a seller researching one world hits
  * the same phrases as the last person in it, and never sees this number.
  */
-const FRESH_PER_DAY = 25;
+const FRESH_PER_DAY = 15;
 
 /** One shared row per keyword per day — see etsy_keyword_snapshots. */
 const keyOf = (keyword: string, day: string) => `${day}:${keyword}`;

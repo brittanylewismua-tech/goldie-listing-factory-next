@@ -146,10 +146,16 @@ test("a set is worth more than the listings inside it", () => {
      three as a set earn five, so the number makes the argument. */
   const source = read("unlocks.ts");
   assert.match(source, /SET_PRODUCTS = 3/);
-  assert.match(source, /SET_CREDITS = 5/);
+  assert.match(source, /SET_BONUS = 2/);
   assert.match(source, /COUNT\(DISTINCT batch_id\) products/,
     "a set is one design across three or more child batches — no new tracking");
-  assert.match(source, /if \(products >= SET_PRODUCTS\) \{ sets \+= 1; credits \+= SET_CREDITS; \}/);
+  /* Monotonic on purpose. A flat set price punished the best behaviour in the
+     product: one design on six products would have earned five while six
+     unrelated singles earned six, so the harder and more valuable thing scored
+     worse. Products plus a bonus means more products always earns more. */
+  assert.match(source, /credits \+= products \+ SET_BONUS/);
+  assert.doesNotMatch(source, /credits \+= SET_CREDITS/,
+    "a set must never be worth a flat amount — that pays less for more work");
   /* And the top tier is the one credits cannot buy. Fifteen singles does not
      reach it; three sets does. */
   assert.match(source, /VAULT_SETS = 3/);
@@ -161,7 +167,7 @@ test("keyword lookups are capped on fresh calls only", () => {
      costs nothing to serve again and must not count against anyone. The limit
      bounds Etsy calls, not curiosity. */
   const source = read("api/whats-selling/route.ts");
-  assert.match(source, /FRESH_PER_DAY = 25/);
+  assert.match(source, /FRESH_PER_DAY = 15/);
   const capIndex = source.indexOf("fresh_lookups FROM keyword_lookup_usage");
   const cacheIndex = source.indexOf("SELECT listings_json FROM etsy_keyword_snapshots");
   assert.ok(cacheIndex >= 0 && capIndex > cacheIndex,
