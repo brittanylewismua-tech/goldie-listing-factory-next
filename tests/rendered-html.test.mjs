@@ -2258,7 +2258,7 @@ test("traverses every workflow phase with one shared gate and never enables an i
   assert.match(app,/issues\[0\]\|\|`\$\{progressStatus/);
   /* D545 - and a batch whose saving is paused because another tab holds it must
      not run work that costs credits and is then thrown away. */
-  assert.match(app,/\{!etsyDetailsPrepared\?<FactoryFooter status=\{preparingEtsy\?"Preparing Etsy details automatically…"/);
+  assert.match(app,/\{!reviewEditing&&\(!etsyDetailsPrepared\?<FactoryFooter status=\{preparingEtsy\?"Preparing Etsy details automatically…"/);
   assert.doesNotMatch(app,/className="secondary-action prepare-etsy"/);
   assert.match(app,/function markShippingEdit\(\)\{onApprovalChange\(false\)/);
   assert.doesNotMatch(app,/if\(!selectedProfile\|\|customDirty\)onApprovalChange/);
@@ -4890,8 +4890,8 @@ test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", as
      to be in. Keying it on finishPhase==="details" meant the button never swapped
      for Next step, because D221 had already made that phase permanent - so step 3
      had no way forward at all. */
-  assert.match(app, /\{!etsyDetailsPrepared\?<FactoryFooter status=\{preparingEtsy\?"Preparing Etsy details automatically…"/,
-    "automatic Etsy preparation reports progress under the cards");
+  assert.match(app, /\{!reviewEditing&&\(!etsyDetailsPrepared\?<FactoryFooter status=\{preparingEtsy\?"Preparing Etsy details automatically…"/,
+    "automatic Etsy preparation reports progress under the cards, while a focused editor keeps only its Review return");
   assert.doesNotMatch(app, /className="secondary-action prepare-etsy"/);
   assert.match(app, /const etsyDetailsPrepared=files\.length>0&&files\.every\(file=>Boolean\(file\.etsy\)\)/);
   assert.doesNotMatch(app, /url\.searchParams\.set\("phase","etsy"\)/,

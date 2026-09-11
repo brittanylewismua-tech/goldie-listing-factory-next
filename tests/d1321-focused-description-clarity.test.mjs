@@ -9,6 +9,7 @@ test("description rows summarize their source instead of repeating the full desc
   assert.match(summary,/if\(task==="description"\)/);
   assert.match(summary,/return activeBundle\?"Uses this product’s description":"Uses batch description"/);
   assert.doesNotMatch(summary,/replace\(\/\\s\+\/g/);
+  assert.match(app,/return design\.descriptionOverride!==undefined\?\[\{tone:"note",label:"Customized"\}\]:\[\]/);
 });
 
 test("the product badge follows the focused description or Etsy task",()=>{

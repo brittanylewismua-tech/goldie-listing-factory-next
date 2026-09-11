@@ -366,7 +366,7 @@ test("step 3 always has a way forward — D544", async () => {
   /* D767 · Both branches sit in the step's footer row now, the same one every
      other step uses. The rule is unchanged: exactly one of the two, chosen by
      whether the work is done, so there is never a step 3 with neither. */
-  const footer = app.slice(app.indexOf('{!etsyDetailsPrepared?<FactoryFooter'));
+  const footer = app.slice(app.indexOf('{!reviewEditing&&(!etsyDetailsPrepared?<FactoryFooter'));
   assert.ok(footer.indexOf('className="workflow-next"') > 0, "the other branch is Next step");
   assert.ok(footer.indexOf('className="workflow-next"') < footer.indexOf("</FactoryFooter>}"), "in the same footer");
 
