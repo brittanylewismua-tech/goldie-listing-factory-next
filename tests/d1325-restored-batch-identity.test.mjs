@@ -35,4 +35,6 @@ test("D1325: partial bundle review offers a direct route to the unfinished produ
   assert.match(source,/bundleRecoveryOnly\?files\.length:requestedListingCount/);
   assert.match(source,/scopeUrl\.searchParams\.set\("scope","product"\)/);
   assert.match(source,/get\("scope"\)==="product"/);
+  assert.match(source,/requestedBundleTask\.current=task;openBundleProduct\(index,true\)/);
+  assert.match(source,/openBundleProduct\(index,status\.tone!=="ready"&&status\.tone!=="advice"\)/);
 });

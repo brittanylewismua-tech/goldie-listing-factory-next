@@ -4678,7 +4678,7 @@ test("a task row owns its panel inside the product card — D539", async () => {
   assert.match(app, /setActiveTask\(current=>current===task\?"__closed":task\)/);
 
   // Switching product keeps the task, so the tee opens where the hoodie was.
-  assert.match(app, /if\(!open\)\{if\(reachable\)\{setActiveTask\(task\);openBundleProduct\(index\)\}return\}/);
+  assert.match(app, /if\(!open\)\{if\(reachable\)\{setActiveTask\(task\);openBundleProduct\(index,status\.tone!=="ready"&&status\.tone!=="advice"\)\}return\}/);
 
   // Inside a task, a listing is a compact row that expands its own work.
   /* D553 - the chooser is gone: opening a task shows every listing's work, each

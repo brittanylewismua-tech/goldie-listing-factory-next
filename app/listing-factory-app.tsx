@@ -3248,7 +3248,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
     // Guidance may reopen saved products; it must never create a new child batch.
     if(index!==bundleIndex&&!bundleBatchIds[bundleRecipes[index]?.id])return;
     guidedTaskFocus.current=true;setTaskFocusRequest(value=>value+1);setActiveTask(task);
-    if(index!==bundleIndex){requestedBundleTask.current=task;openBundleProduct(index)}
+    if(index!==bundleIndex){requestedBundleTask.current=task;openBundleProduct(index,true)}
   }
   function unfinishedDraftGuidance(){
     const products=activeBundle&&bundleRecipes.length>1?bundleRecipes:(activeRecipe?[activeRecipe]:[]);
@@ -3895,8 +3895,8 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         return <article className={`batch-product-card step-product-card ${open?"is-open":"is-closed"} ${status.tone==="ready"||status.tone==="advice"?"is-ready":"needs-setup"} ${many?"in-batch":""}`} key={recipe.id}>
           <header
             {...(reachable?{role:"button",tabIndex:0,
-              onClick:()=>openBundleProduct(index),
-              onKeyDown:(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openBundleProduct(index)}}}:{})}
+              onClick:()=>openBundleProduct(index,status.tone!=="ready"&&status.tone!=="advice"),
+              onKeyDown:(event:React.KeyboardEvent)=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openBundleProduct(index,status.tone!=="ready"&&status.tone!=="advice")}}}:{})}
             className={reachable?"is-openable":undefined}
             aria-expanded={many?open:undefined}
             aria-busy={opening||undefined}>
@@ -3939,8 +3939,8 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
                were bookmarks into a shared block. Steps 3 and 4 were the last two
                using it, and neither does now. */
             const openRow=(_target?:string,task?:string)=>{
-              if(!task){if(!open&&reachable)openBundleProduct(index);return}
-              if(!open){if(reachable){setActiveTask(task);openBundleProduct(index)}return}
+              if(!task){if(!open&&reachable)openBundleProduct(index,status.tone!=="ready"&&status.tone!=="advice");return}
+              if(!open){if(reachable){setActiveTask(task);openBundleProduct(index,status.tone!=="ready"&&status.tone!=="advice")}return}
               setActiveTask(current=>current===task?"__closed":task);
             };
             /* D723 · Each task row is a prototype panel: index chip, title, description,
