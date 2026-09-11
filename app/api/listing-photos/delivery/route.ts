@@ -53,7 +53,7 @@ export async function POST(request:Request){
  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:'Sign in to prepare photo delivery.'},{status:401});
  const runtime=deliveryEnv();let id='';
  try{
-  const body=await request.json() as {productId?:string;printifyImageIndices?:number[];mode?:'draft';automaticDraft?:boolean;shippingProfileId?:number;recheckId?:string};
+  const body=await request.json() as {productId?:string;printifyImageIndices?:number[];mode?:'draft';automaticDraft?:boolean;shippingProfileId?:number;productionPartnerId?:number;recheckId?:string};
   if(body.mode!==undefined&&body.mode!=='draft')return NextResponse.json({error:'Choose a supported delivery mode.'},{status:400});
   if(body.automaticDraft&&body.mode!=='draft')return NextResponse.json({error:'Automatic creation requires draft-only mode.'},{status:400});
   const productId=String(body.productId||'');if(!productId||!Array.isArray(body.printifyImageIndices))return NextResponse.json({error:'Choose a listing and its photos first.'},{status:400});
@@ -81,7 +81,7 @@ export async function POST(request:Request){
   if(body.mode==='draft'){
     const connection=await etsyConnection(user.userId);
     if(Number(connection.shopId)!==Number(shop.shop_id))throw Error('Your Etsy shop changed. Refresh before preparing this draft.');
-    const productionPartnerId=await requiredPrintifyPartner(connection.shopId,()=>etsyFetch(`/shops/${connection.shopId}/production-partners`,connection.token));
+    const productionPartnerId=await requiredPrintifyPartner(connection.shopId,()=>etsyFetch(`/shops/${connection.shopId}/production-partners`,connection.token),Date.now(),body.productionPartnerId);
     const preparedSnapshot=freezeDraft({...draft as SourceDraft,etsyShippingProfileId:body.shippingProfileId,productionPartnerId});draftSnapshot=preparedSnapshot;
     const profile=await etsyFetch<{shipping_profile_id:number;is_deleted?:boolean}>(`/shops/${connection.shopId}/shipping-profiles/${preparedSnapshot.shipping_profile_id}`,connection.token);
     if(Number(profile.shipping_profile_id)!==preparedSnapshot.shipping_profile_id||profile.is_deleted)throw Error('The selected shipping profile is unavailable in this Etsy shop. Choose another profile.');

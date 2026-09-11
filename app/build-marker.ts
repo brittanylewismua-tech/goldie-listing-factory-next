@@ -4,7 +4,7 @@
    with every deployable commit and served from /api/version, so "is my fix
    actually live" is one request with a yes or no answer. */
 /* D868 removes the redundant autosave label from every workflow action bar. */
-export const BUILD_MARKER = "D1339";
+export const BUILD_MARKER = "D1340";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
