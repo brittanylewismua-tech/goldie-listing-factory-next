@@ -6,7 +6,7 @@ import {containModalFocus} from './modal-focus';
 export type WaitOperation={title:string;detail?:string;done?:number;total?:number;background?:boolean};
 /** One visible wait surface. A clock is elapsed time, never an invented completion percentage. */
 export function WaitCard({title,detail,started,lastConfirmed,done,total,background=false,onHelp}:{onHelp?:()=>void;title:string;detail?:string;started:number;lastConfirmed?:number;done?:number;total?:number;background?:boolean}){
- const [now,setNow]=useState(Date.now());
+ const [now,setNow]=useState(started);
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer)},[]);
  const state=waitProgress(now,started,lastConfirmed),value=progressValue(done,total);
  return <div className="goldie-wait-card">

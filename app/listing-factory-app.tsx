@@ -565,6 +565,7 @@ function DraftColorSelector({product,drafts,selected,selectedByDraft,saving,artw
      over another swatch while the native file dialog is closing; that hover is
      a preview affordance, not permission to retarget the upload. */
   const artworkUploadColor=useRef<ProductColor|null>(null);
+  const explicitlyChosenColor=useRef<ProductColor|null>(null);
   const artworkPickerRef=useRef<HTMLInputElement|null>(null);
   useEffect(()=>{
     const input=artworkPickerRef.current;
@@ -572,7 +573,6 @@ function DraftColorSelector({product,drafts,selected,selectedByDraft,saving,artw
     input?.addEventListener("cancel",cancel);
     return()=>input?.removeEventListener("cancel",cancel);
   });
-  const explicitlyChosenColor=useRef<ProductColor|null>(colors.find(color=>color.id===activeColor)||colors[0]||null);
   const draft=drafts.find(item=>item.id===activeDraft)||drafts.find(item=>item.status==="Created");
   useEffect(()=>{if(draft?.id&&!activeDraft)setActiveDraft(draft.id)},[draft?.id,activeDraft]);
   useEffect(()=>{setShowRealPreview(false)},[draft?.id,JSON.stringify(draft?.artworkOverrides)]);
@@ -585,7 +585,10 @@ function DraftColorSelector({product,drafts,selected,selectedByDraft,saving,artw
     return printifyMockupForColor(draft.colorPreviewImageDetails?.length?draft.colorPreviewImageDetails:draft.printifyImageDetails?.length?draft.printifyImageDetails:printifyMockupDetails(draft.printifyImages),variants)
       ||"";
   };
-  const focused=artworkUploadColor.current||colors.find(color=>color.id===activeColor)||colors[0];
+  /* Render from state only. The ref exists solely to remember the exact color
+     whose native file picker is open; reading it here made rendering depend on
+     a mutation that does not schedule a render. */
+  const focused=colors.find(color=>color.id===activeColor)||colors[0];
   const realPreview=imageFor(focused);
   const focusedVariants=variantIdsFor(focused);
   const renderingSide=primaryPrintSide(orderedPrintSides(product.printPositions))||"other";

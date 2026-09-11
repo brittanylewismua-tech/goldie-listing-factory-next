@@ -218,13 +218,14 @@ export function SavedWorkflow(props: WorkflowProps) {
      living next to each other, and the bundle CREATOR quietly kept using the
      unscoped list - see app/bank-scope.ts for what that cost. */
   const { reachable, usableBundles, hiddenCount, blockedMembers } = scopeBank(recipes, bundles);
+  void hiddenCount;
   useEffect(()=>props.onBundleAvailabilityChange?.(reachable.length>=2),[reachable.length,props.onBundleAvailabilityChange]);
   const bundleBlockers = (bundle: ProductBundle) => {
     const away = blockedMembers(bundle);
     return { away, stores: [...new Set(away.map(recipe => recipe.printifyShopTitle || "another store"))] };
   };
 
-  const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json() as Promise<{recipes?:Recipe[];activeEtsyShop?:{shopId:number;shopName:string}|null}>),fetch("/api/product-bundles").then(r=>r.json() as Promise<{bundles?:ProductBundle[]}>)]).then(([products,groups])=>{setRecipes(products.recipes||[]);setActiveShop(products.activeEtsyShop||null);setBundles(groups.bundles||[]);backfillPhotos(products.recipes||[])}).catch(() => undefined).finally(()=>setRecipesLoaded(true));
+  const reload = () => Promise.all([fetch("/api/product-recipes").then((r) => r.json() as Promise<{recipes?:Recipe[];activeEtsyShop?:{shopId:number;shopName:string}|null}>),fetch("/api/product-bundles").then(r=>r.json() as Promise<{bundles?:ProductBundle[]}>)]).then(([products,groups])=>{setRecipes(products.recipes||[]);setActiveShop(products.activeEtsyShop||null);setBundles(groups.bundles||[]);backfillPhotos()}).catch(() => undefined).finally(()=>setRecipesLoaded(true));
   /* D848 · Fill in the flatlays the bank never had. D842 remembers a photo when
      a product is OPENED, which leaves every product saved before it showing the
      placeholder garment forever - all five of hers. Ask the server once, only
@@ -232,7 +233,7 @@ export function SavedWorkflow(props: WorkflowProps) {
      photoBackfill guards it so a re-render or a second reload cannot repeat a
      round trip that has already been made. */
   const photoBackfill=useRef(false);
-  function backfillPhotos(loaded:Recipe[]){
+  function backfillPhotos(){
     if(photoBackfill.current)return;
     photoBackfill.current=true;
     void (fetch("/api/product-recipes/photos",{method:"POST"}).then(r=>r.ok?r.json():null) as Promise<{photos?:Record<string,string>}|null>).then((payload:{photos?:Record<string,string>}|null)=>{
@@ -290,6 +291,7 @@ export function SavedWorkflow(props: WorkflowProps) {
       const result = await response.json() as { id?: string; error?: string };
       if (!response.ok){setMessage(result.error || "The product could not be saved.");return}
       const saved:Recipe={id:result.id||editingId,name:name.trim(),templateUrl:props.templateUrl,description:existing?.description||"",defaultTitle:"",keywordListId,normalizePadding:true,etsyShippingProfileId:shippingProfileId,defaultColorIds:existing?.defaultColorIds,defaultSizeIds:existing?.defaultSizeIds,printifyImageIndices:existing?.printifyImageIndices,etsyDefaults:existing?.etsyDefaults,defaultMockupTheme:existing?.defaultMockupTheme,mockupIds:existing?.mockupIds,setupComplete,defaultProfitTarget:existing?.defaultProfitTarget};
+      setRecipes(currentRecipes=>editingId?currentRecipes.map(recipe=>recipe.id===editingId?saved:recipe):[saved,...currentRecipes]);
       /* Saving a product used to select it and start building with it. Creating
          a product and choosing one for this batch are two different intentions —
          the Printify link was already verified above, so nothing needs loading
