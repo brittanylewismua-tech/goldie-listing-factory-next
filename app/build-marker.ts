@@ -5,6 +5,8 @@
    actually live" is one request with a yes or no answer. */
 /* D868 removes the redundant autosave label from every workflow action bar. */
 export const BUILD_MARKER = "D1336";
+/* D1336's deployment artifacts are built only after the release commit exists,
+   so every public version endpoint identifies the exact source it serves. */
 
 /* D629 - and then it went stale for two deploys running, which is the exact
    failure D479 built it to prevent: D627 and D628 both shipped while this file
