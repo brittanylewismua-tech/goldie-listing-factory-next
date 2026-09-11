@@ -1161,7 +1161,8 @@ test("keeps pricing simple while using a real Etsy shipping profile and exact te
   /* D232 · "— what buyers pay" stated the obvious; buyers always pay shipping. */
   assert.match(page,/\{section==="all"\?"2\. ":""\}Etsy shipping profile/);
   assert.doesNotMatch(page,/Update prices/);
-  assert.match(page,/Prices update automatically/);
+  assert.match(page,/Target profit/);
+  assert.match(page,/Change this to recalculate prices/);
   assert.match(page,/changeProfit\(value:number\)[\s\S]*recalculate\(nextPricing\)/);
   assert.match(page,/Create a custom shipping profile \(optional\)/);
   assert.match(page,/Your current prices already meet this profit goal/);
@@ -5336,7 +5337,7 @@ test("the number on the button is the number that publishes — D561", async () 
      selection seeding effect and selectedPublishDrafts - because both were
      quietly shrinking the publish back down to the open product. */
   assert.ok(app.indexOf("function bundlePublishDrafts()") > 0);
-  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 20,
+  assert.equal((app.match(/bundlePublishDrafts\(\)/g) || []).length, 24,
     "declared once; the review, availability check, publish targets, selections, seeding, handoff readiness, cost approval, destination status, primary Etsy action, photo delivery and recovery navigation all read it");
   assert.doesNotMatch(app, /function selectedPublishDrafts\(\)\{const selected=new Set\(selectedPublishIds\);return drafts\.filter/,
     "the button's count must not be taken from the open product alone");
@@ -5940,7 +5941,7 @@ test("one list decides whether the press can happen, scoped to the selection —
   const handoff=app.match(/function handoffBlockers\(\)\{[\s\S]*?\n  \}/)?.[0]||"";
   assert.doesNotMatch(handoff,/publishBlockers\(\)/,
     "Etsy-draft readiness cannot be bypassed by an empty live-publish selection");
-  assert.match(app, /copy: handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/,
+  assert.match(app, /copy: etsyDraftTransferState==="complete"\?"Your Etsy drafts were created and verified\."[\s\S]*handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/,
     "the handoff heading reads the same list as the handoff action");
   assert.match(app, /publishBlockersRef\.current=publishBlockers;/,
     "and by the guard through a ref refreshed every render - D644");
@@ -6983,7 +6984,7 @@ test("the final review reads honestly — D660", async () => {
   assert.match(css, /\.app-shell \.row-value\{min-width:0;overflow-wrap:anywhere\}/);
 
   // The heading must agree with the button underneath it.
-  assert.match(app, /title: "Review your listings", copy: handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/);
+  assert.match(app, /title: "Review your listings", copy: etsyDraftTransferState==="complete"\?"Your Etsy drafts were created and verified\."[\s\S]*handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/);
 
   /* The heading and the draft chip overlapped once the chip carried a product
      name: "✓ 2 drafts on Gildan Hoodie" printed through the heading. */

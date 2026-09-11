@@ -20,7 +20,7 @@ test("D1008: failed shipping cannot coexist with a ready handoff", () => {
   assert.match(app, /handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\."/);
   assert.match(app, /if\(!blockers\.length\)return "Creates unpublished Etsy drafts\. Nothing goes live\."/,
     "unfinished work stays visible while external navigation remains available");
-  assert.match(app, /<span>\{handoffBlockerSummary\(\)\}<\/span>/,
+  assert.match(app, /:handoffBlockerSummary\(\)\}<\/span>/,
     "the final handoff uses the complete listing summary");
   const handoff=app.slice(app.indexOf("function handoffBlockers()"),app.indexOf("function suggestedBatchName()"));
   assert.match(handoff, /if\(draft\.status!=="Created"\|\|!draft\.id\)/);

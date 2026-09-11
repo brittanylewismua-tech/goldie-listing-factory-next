@@ -12,7 +12,7 @@ test("final Review summarizes every required correction without hiding later blo
   assert.match(summary,/if\(missingTags\)missing\.push\(line\(missingTags,"Etsy tags"\)\)/);
   assert.match(summary,/if\(missingEtsy\)missing\.push\(line\(missingEtsy,"Etsy details"\)\)/);
   assert.match(summary,/if\(missing\.length\)return `\$\{missing\.join\(" · "\)\}\.`/);
-  assert.match(app,/<span>\{handoffBlockerSummary\(\)\}<\/span>/);
+  assert.match(app,/:handoffBlockerSummary\(\)\}<\/span>/);
 });
 
 test("completed progress steps do not carry a contradictory missing-work tooltip",()=>{
