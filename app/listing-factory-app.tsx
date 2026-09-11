@@ -1182,6 +1182,8 @@ export default function ListingFactoryApp() {
   /* D379 - Which card is being opened, so the one you clicked can say so and the
      rest cannot be clicked underneath a load already in flight. */
   const [switchingProduct,setSwitchingProduct]=useState("");
+  const [draftAvailability,setDraftAvailability]=useState<{signature:string;status:"idle"|"checking"|"ready"|"error";error?:string}>({signature:"",status:"idle"});
+  const [draftAvailabilityRevision,setDraftAvailabilityRevision]=useState(0);
   const [wholeNumberByRecipe,setWholeNumberByRecipe]=useState<Record<string,boolean>>({});
   /* D378 - A closed card has to say where that product stands, and the honest
      source is the batch list Batch History already reads: status, draft count,
@@ -1723,6 +1725,7 @@ export default function ListingFactoryApp() {
      decide whether it works. Review every created draft in the batch instead. */
   function handoffBlockers(){
     const issues:string[]=[];
+    if(!localPreview&&draftAvailability.status!=="ready")issues.push(draftAvailability.status==="error"?(draftAvailability.error||"The Printify drafts could not be confirmed."):"Checking that every Printify draft still exists.");
     if(!localPreview&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");
     if(batchHeldByAnotherTab)issues.push("This batch is open in another tab. Take over here before saving to Etsy, so the result is kept.");
     const drafts=bundlePublishDrafts(),created=drafts.filter(draft=>draft.status==="Created"&&draft.id);
@@ -4367,6 +4370,37 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     return bundleRecipes.filter(recipe=>recipe.id!==activeRecipe?.id)
       .reduce((all,recipe)=>({...all,...(bundleMembers[recipe.id]?.preparedMockupCounts||{})}),{...preparedMockupCounts});
   }
+  /* A saved batch is a receipt for what The Listing Factory created, not proof
+     that the seller has kept every Printify draft forever. Verify all source
+     drafts before the final Etsy handoff can call the batch ready. This is one
+     browser request and a bounded server check, including every bundle member. */
+  const draftAvailabilityIds=bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!).sort();
+  const draftAvailabilitySignature=draftAvailabilityIds.join(",");
+  const draftAvailabilitySettled=localPreview||!draftAvailabilitySignature||(draftAvailability.status==="ready"&&draftAvailability.signature===draftAvailabilitySignature);
+  useEffect(()=>{
+    if(localPreview||workflowStep!=="finish"||finishPhase!=="final"||bundleProductsStillReading().length)return;
+    const ids=bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id).map(draft=>draft.id!).sort();
+    const signature=ids.join(",");
+    if(!signature){setDraftAvailability({signature:"",status:"ready"});return}
+    let alive=true;
+    setDraftAvailability({signature,status:"checking"});
+    void (async()=>{
+      try{
+        const response=await fetchWithDeadline("/api/printify/drafts/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({productIds:ids})},20000);
+        const payload=await response.json() as {missing?:string[];errors?:string[];error?:string};
+        if(!response.ok)throw new Error(payload.error||"The Printify drafts could not be confirmed.");
+        if(payload.errors?.length)throw new Error(payload.errors[0]);
+        if(!alive)return;
+        const missing=new Set(payload.missing||[]),message="This Printify draft no longer exists. Remove this saved batch from Batch History and start a new batch from the saved product.";
+        if(missing.size){
+          setDrafts(current=>current.map(draft=>draft.id&&missing.has(draft.id)?{...draft,status:"Failed",error:message}:draft));
+          setBundleMembers(current=>Object.fromEntries(Object.entries(current).map(([recipeId,member])=>[recipeId,{...member,drafts:member.drafts.map(draft=>draft.id&&missing.has(draft.id)?{...draft,status:"Failed",error:message}:draft)}])));
+        }
+        setDraftAvailability({signature,status:"ready"});
+      }catch(error){if(alive)setDraftAvailability({signature,status:"error",error:error instanceof Error?error.message:"The Printify drafts could not be confirmed."})}
+    })();
+    return()=>{alive=false};
+  },[localPreview,workflowStep,finishPhase,draftAvailabilitySignature,bundleProductsStillReading().length,draftAvailabilityRevision]);
   /* D626 · Lives here, below the bundle state it reads. Its dependency array is
      evaluated during render, so at its old position near the other selection
      effects it referenced bundleMembers hundreds of lines before that state was
@@ -5889,7 +5923,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   Keep one reason and one next action in the predictable footer. */}
               {!etsyDetailsPrepared?<FactoryFooter status={preparingEtsy?"Preparing Etsy details automatically…":progressGateIssues(6)[0]||"Etsy details are preparing automatically."}/>:(()=>{const issues=progressGateIssues(7),priceTarget=costReviewDrafts().find(draft=>draft.status==="Created"&&!draft.costReview?.approved),canOpenPricing=Boolean(priceTarget)||(!gateState().pricingApproved&&costReviewGroups().length>0);const openPricing=()=>{if(priceTarget)editReviewedListing("pricing",priceTarget);else{setActiveTask("draft-pricing");goToStep("designs",false,true)}};return <FactoryFooter status={savingEtsyDetails?"Saving your latest listing changes before review…":issues[0]||"Every listing is ready for review"}><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||Boolean(issues.length&&!canOpenPricing)} title={issues[0]} onClick={canOpenPricing?openPricing:()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Opening final review…":canOpenPricing?"Review item prices":"Review batch"} <span>→</span></button></FactoryFooter>})()}
             </>)}
-          {workflowStep==="finish"&&finishPhase==="final"&&(bundleProductsStillReading().length?<section className="listing-review-gate is-saving bundle-final-loading" role="status" aria-live="polite"><b>Loading every product in this batch…</b><p>Checking the saved listings, prices, photos, and Etsy details before showing the final review.</p></section>:stepProductCards(bundleCardStatus("publish"),null,false,<>{/* D497 - publish covered one product until D495, so these cards kept their
+          {workflowStep==="finish"&&finishPhase==="final"&&((bundleProductsStillReading().length||!draftAvailabilitySettled)?<section className="listing-review-gate is-saving bundle-final-loading" role="status" aria-live="polite"><b>{bundleProductsStillReading().length?"Loading every product in this batch…":draftAvailability.status==="error"?"The Printify drafts could not be confirmed.":"Checking every Printify draft…"}</b><p>{bundleProductsStillReading().length?"Checking the saved listings, prices, photos, and Etsy details before showing the final review.":draftAvailability.status==="error"?(draftAvailability.error||"Try the check again before saving to Etsy."):"Making sure the drafts still exist before showing the final review."}</p>{draftAvailability.status==="error"?<button type="button" className="secondary-action" onClick={()=>setDraftAvailabilityRevision(value=>value+1)}>Try again</button>:null}</section>:stepProductCards(bundleCardStatus("publish"),null,false,<>{/* D497 - publish covered one product until D495, so these cards kept their
     own open controls. Now one press publishes the whole bundle, and a card
     offering to go and open Gildan Tee separately contradicts the button
     underneath it - the same thing that was wrong on step 2. The action is a

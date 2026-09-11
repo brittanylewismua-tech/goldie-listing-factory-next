@@ -43,7 +43,7 @@ test("D1224: restored Etsy details use one provider sync path",()=>{
 });
 
 test("D1224: final bundle review waits for every product and explains the real Etsy Drafts action",()=>{
-  assert.match(app,/bundleProductsStillReading\(\)\.length\?<section className="listing-review-gate is-saving bundle-final-loading"/);
+  assert.match(app,/bundleProductsStillReading\(\)\.length\|\|!draftAvailabilitySettled\)\?<section className="listing-review-gate is-saving bundle-final-loading"/);
   assert.match(app,/title:"Finish your Etsy drafts"/);
   assert.match(app,/heading:"Save to Etsy Drafts"/);
   assert.doesNotMatch(app,/last checkpoint before you finish publishing in Printify/);

@@ -308,7 +308,7 @@ test("D376: every restored finish phase is one that actually renders", async () 
      footer under the cards rather than as the open card's body. The banner still
      travels with that action; what changed is that it sits under every product
      card instead of inside one of them. */
-  assert.match(app, /finishPhase==="final"&&\(bundleProductsStillReading\(\)\.length\?<section[^]*?:stepProductCards\(bundleCardStatus\("publish"\),null,false,<>/,
+  assert.match(app, /finishPhase==="final"&&\(\(bundleProductsStillReading\(\)\.length\|\|!draftAvailabilitySettled\)\?<section[^]*?:stepProductCards\(bundleCardStatus\("publish"\),null,false,<>/,
     "step 4 waits for the full bundle, then places its action below every product card");
   assert.match(app, /<article className="step-card final-review active-panel">/);
   /* D541 - step 3 used to pass one block holding everything; now its rows own
