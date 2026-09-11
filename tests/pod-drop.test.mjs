@@ -191,4 +191,8 @@ test("the budget believes Etsy over its own tally", () => {
     "whichever number is worse wins — never the optimistic one");
   assert.match(client, /remaining_at>datetime\('now','-1 hour'\)/,
     "a stale figure is worse than an over-cautious local count");
+  assert.match(readRoot("drizzle/0033_etsy_reported_quota.sql"), /ADD COLUMN `remaining_today` integer/);
+  assert.match(readRoot("drizzle/0033_etsy_reported_quota.sql"), /ADD COLUMN `remaining_at` text/);
+  assert.doesNotMatch(readRoot("drizzle/0031_drop_archive.sql"), /remaining_today|remaining_at/,
+    "an already-applied production migration must remain immutable");
 });

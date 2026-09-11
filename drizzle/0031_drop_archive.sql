@@ -16,11 +16,3 @@ CREATE TABLE IF NOT EXISTS `drop_seen` (
 );
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS `idx_drop_seen_user` ON `drop_seen` (`user_id`,`day`);
---> statement-breakpoint
--- Etsy reports what is left of the day's quota on every response, and that
--- figure covers the whole app key — including whatever World Builder spent on
--- the same key. Counting only our own calls would leave the budget believing
--- in headroom another product had already used.
-ALTER TABLE `etsy_queue_state` ADD COLUMN `remaining_today` integer;
---> statement-breakpoint
-ALTER TABLE `etsy_queue_state` ADD COLUMN `remaining_at` text;
