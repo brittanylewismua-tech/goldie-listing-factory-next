@@ -15,8 +15,9 @@ test('D1241: missing titles open on one batch-wide action',()=>{
   assert.doesNotMatch(branch,/title-builder-choice|How do you want to create batch titles|Review every generated title/);
 });
 
-test('D1241: optional title decisions and the shared description start collapsed',()=>{
-  assert.match(app,/<details className="title-builder-options"><summary>Title options<\/summary>/);
+test('D1241/D1345: title decisions stay visible while the shared description starts collapsed',()=>{
+  assert.match(app,/<div className="title-options-row"><b>Title options<\/b>\{titleFormatControls\(\)\}/);
+  assert.doesNotMatch(app,/<details className="title-builder-options"><summary>Title options<\/summary>/);
   assert.match(app,/<button type="button" className="title-mode-switch" onClick=\{\(\)=>setTitleBuilderMode\("manual"\)\}>Build titles manually<\/button>/);
   assert.match(app,/descriptionLead\(true\)/);
   assert.match(app,/<details className="shared-description-settings"><summary>Product description<\/summary>/);
