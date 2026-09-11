@@ -19,7 +19,7 @@ test("the keyword-bank label cannot collapse or clip",()=>{
   assert.match(css,/\.title-options-row\{[\s\S]*?display:flex[\s\S]*?flex-wrap:nowrap/);
   assert.match(css,/\.title-options-row \.title-style-toggle>span\{display:none\}/);
   assert.match(css,/@media\(max-width:700px\)\{[\s\S]*?\.title-options-row\{[^}]*flex-direction:column;flex-wrap:wrap/);
-  assert.match(marker,/BUILD_MARKER = "D1353"/);
+  assert.match(marker,/BUILD_MARKER = "D1354"/);
 });
 
 test("the optional title editor names the task and keeps its chevron beside the label",()=>{
