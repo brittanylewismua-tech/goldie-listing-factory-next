@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const read = name => readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
+const readRoot = name => readFileSync(new URL(`../${name}`, import.meta.url), "utf8");
 
 test("the drop never claims a sale it cannot see", () => {
   /* The discipline the whole product runs on: eRank data and counted numbers
@@ -173,4 +174,8 @@ test("keyword lookups are capped on fresh calls only", () => {
   assert.ok(cacheIndex >= 0 && capIndex > cacheIndex,
     "the cache must answer before the cap is consulted, or cached keywords would be charged for");
   assert.match(source, /fresh_lookups=fresh_lookups\+1/);
+  assert.match(readRoot("drizzle/0032_keyword_lookup_usage.sql"), /CREATE TABLE IF NOT EXISTS `keyword_lookup_usage`/,
+    "the live database must receive the table through a new migration");
+  assert.doesNotMatch(readRoot("drizzle/0031_drop_archive.sql"), /keyword_lookup_usage/,
+    "an already-applied production migration must remain immutable");
 });
