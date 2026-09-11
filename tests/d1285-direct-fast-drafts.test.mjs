@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
+import { prepareArtworkFile } from "../app/client-artwork-upload.ts";
 
 const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 const upload=readFileSync(new URL("../app/client-artwork-upload.ts",import.meta.url),"utf8");
@@ -33,6 +34,16 @@ test("D1285: large transparent PNG preparation is serialized, native, and crop g
   assert.match(worker,/new OffscreenCanvas\(width, height\)/);
   assert.match(worker,/blob\.size >= event\.data\.originalBytes \* \.82/);
   assert.doesNotMatch(worker,/UPNG|quantize/);
+});
+
+test("D1323: artwork Printify already accepts bypasses the optional PNG optimizer",async()=>{
+  const direct=upload.indexOf("if (file.size <= MAX_DIRECT_PRINTIFY_BYTES) return");
+  const optimize=upload.indexOf("const optimized = await optimizeLargeTransparentPng",direct);
+  assert.ok(direct>0&&optimize>direct,"the direct accepted-file path must run before optional optimization");
+  const accepted={name:"large-transparent.png",size:20*1024*1024};
+  const result=await prepareArtworkFile(accepted,true,false);
+  assert.equal(result.blob,accepted);
+  assert.equal(result.fileName,accepted.name);
 });
 
 test("production build serves the PNG worker from the public site, never a local file URL",()=>{

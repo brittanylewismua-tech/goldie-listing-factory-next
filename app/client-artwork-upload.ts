@@ -52,13 +52,19 @@ function jpegBlob(canvas: HTMLCanvasElement, quality: number) {
 }
 
 export async function prepareArtworkFile(file: File, hasTransparency: boolean, allowWhiteFlatten = false, bounds?: Bounds) {
+  /* Printify already accepts this file. Sending its original bytes is both the
+     fastest and the safest path: the previous order ran the PNG optimizer for
+     every transparent file over 12 MB even when it was under Printify's 40 MB
+     limit. A rejected optimization then added up to 30 seconds and returned
+     this exact original file anyway. Reserve optimization for a file that
+     cannot be sent directly. */
+  if (file.size <= MAX_DIRECT_PRINTIFY_BYTES) return { blob: file as Blob, fileName: file.name };
   if (/\.png$/i.test(file.name) && hasTransparency && file.size > LARGE_TRANSPARENT_PNG_BYTES) {
     const optimized = await optimizeLargeTransparentPng(file, bounds);
     if (optimized && optimized.size < file.size * .82 && optimized.size <= MAX_DIRECT_PRINTIFY_BYTES) {
       return { blob: optimized, fileName: file.name.replace(/\.png$/i, "-optimized.png"), bounds: { left: 0, top: 0, right: 1, bottom: 1 } };
     }
   }
-  if (file.size <= MAX_DIRECT_PRINTIFY_BYTES) return { blob: file as Blob, fileName: file.name };
   if (hasTransparency && !allowWhiteFlatten) throw new Error("This transparent PNG is too large for Printify's upload request. Export an optimized transparent PNG under 40 MB; keep the same pixel dimensions so the DPI does not change.");
 
   const bitmap = await createImageBitmap(file);
