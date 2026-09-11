@@ -31,7 +31,7 @@ test("D1306: bundle history represents ordered products that have no child batch
   assert.match(route,/children\.length>=order\.length/);
   assert.match(history,/member\.batchId\|\|`missing-\$\{member\.position\}`/);
   assert.match(history,/fullyPublished\(batch\)\?"Open published bundle":"Resume bundle"/);
-  assert.match(history,/batch\.draft_count<expected\?`\$\{batch\.draft_count\} OF \$\{expected\} DRAFTS READY`/);
+  assert.match(history,/batch\.draft_count<expected\?`\$\{batch\.draft_count\} OF \$\{expected\} PRINTIFY DRAFTS SAVED`/);
 });
 
 test("D1306: focused artwork editing does not show irrelevant multi-select controls",()=>{

@@ -2317,7 +2317,8 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
      Printify drafts and Etsy publication from the server's current status. */
   assert.match(page,/fullyPublished\(batch\)\?`\$\{batch\.published_count\} PUBLISHED TO ETSY`:`\$\{batch\.published_count\} OF \$\{expected\} PUBLISHED TO ETSY`/);
   assert.match(page,/DRAFTS CREATED/);
-  assert.match(page,/DRAFTS?"\} READY/);
+  assert.match(page,/PRINTIFY \$\{batch\.draft_count===1\?"DRAFT":"DRAFTS"\} SAVED/);
+  assert.doesNotMatch(page,/DRAFTS READY|DRAFT READY|drafts ready|draft ready/);
   assert.doesNotMatch(page,/SAVED · NOT YET DRAFTED/);
   assert.doesNotMatch(page,/status\.replace\("_"," "\)/);
   assert.match(app,/keptAsDrafts,batchReceipt,batchDisplayName,\.\.\.overrides\}/);
