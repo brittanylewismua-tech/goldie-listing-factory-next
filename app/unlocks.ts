@@ -236,8 +236,8 @@ export async function unlockState(userId: string) {
     milestones: [
       ...MILESTONES.map(m => ({ ...m, unlocked: credits >= m.at, remaining: Math.max(0, m.at - credits), needsSets: 0 })),
       {
-        at: VAULT_SETS, key: "vault", name: "The Vault",
-        blurb: "Thirty days of movement — what has climbed for a month against what spiked and died. Sets only.",
+        at: VAULT_SETS, key: "vault", name: "30 days of history",
+        blurb: "What has climbed all month against what spiked and died. Sets only.",
         unlocked: sets >= VAULT_SETS, remaining: Math.max(0, VAULT_SETS - sets), needsSets: VAULT_SETS,
       },
     ],

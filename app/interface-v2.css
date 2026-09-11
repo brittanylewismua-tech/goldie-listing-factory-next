@@ -4414,3 +4414,14 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-rebuild{border:1px dashed var(--line,rgba(0,0,0,.25));background:none;border-radius:10px;
   padding:6px 12px;font:inherit;font-size:13px;opacity:.6;cursor:pointer;margin:0 0 14px}
 .drop-page .drop-rebuild:hover:not(:disabled){opacity:1;border-style:solid}
+
+/* ONE SURFACE. The streak, the cards, the tabs and the shelf sit on a single
+   panel so the page reads as one thing you opened rather than four widgets
+   sharing a background. */
+.drop-page .drop-card-surface{background:#fff;border:1px solid var(--line,rgba(0,0,0,.1));
+  border-radius:16px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.drop-page .drop-card-surface > .drop-streak{margin-top:0}
+.drop-page .drop-grid{margin-top:2px}
+.drop-page .drop-note{margin-top:22px}
+.drop-page .drop-archive{margin-top:22px;border-top:0;background:#fff;
+  border:1px solid var(--line,rgba(0,0,0,.1));border-radius:16px;padding:18px 20px}

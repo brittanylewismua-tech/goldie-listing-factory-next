@@ -153,6 +153,44 @@ function shape(rows: EtsyRow[]): DropListing[] {
  * uses. A build that dies mid-way leaves the claim behind, so a claim older
  * than ten minutes is treated as abandoned and retaken.
  */
+/**
+ * THE PICTURES COME FROM A SECOND CALL, BECAUSE SEARCH WILL NOT SEND THEM.
+ *
+ * listings/active returns no images. `includes=Images` was tried on it and
+ * changed nothing — three hundred and sixty listings and not one photograph,
+ * twice. The endpoint that does honour it is listings/batch, which is how the
+ * shop reader has always got artwork, so this follows a path already known to
+ * work rather than another guess at the search endpoint.
+ *
+ * One extra call per category: twelve a day for the whole app, against ten
+ * thousand. A picture wall with no pictures is not worth saving twelve calls.
+ *
+ * Failing to get them does not fail the build. A shelf of titles and numbers
+ * is thin but real, and better than no drop at all.
+ */
+async function withImages(listings: DropListing[]): Promise<DropListing[]> {
+  const ids = listings.map(l => l.listingId).filter(Boolean);
+  if (!ids.length) return listings;
+  try {
+    await waitForEtsyCapacity();
+    const response = await fetch(
+      `https://openapi.etsy.com/v3/application/listings/batch?listing_ids=${ids.join(",")}&includes=Images`,
+      { headers: { "x-api-key": etsyApiCredential() }, signal: AbortSignal.timeout(20000) },
+    );
+    await recordEtsyCall(response, "search");
+    if (!response.ok) return listings;
+    const payload = await response.json() as { results?: { listing_id?: number; images?: { url_570xN?: string; url_fullxfull?: string }[] }[] };
+    const art = new Map<number, string>();
+    for (const row of payload.results ?? []) {
+      const url = row.images?.[0]?.url_570xN ?? row.images?.[0]?.url_fullxfull;
+      if (row.listing_id && url) art.set(Number(row.listing_id), url);
+    }
+    return listings.map(l => ({ ...l, image: art.get(l.listingId) ?? l.image }));
+  } catch {
+    return listings;
+  }
+}
+
 export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
   const day = today();
 
@@ -198,7 +236,7 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
          failed one. The rest of the shelf is still worth reading. */
       if (!response.ok) continue;
       const payload = await response.json() as { results?: EtsyRow[] };
-      const ranked = shape(payload.results ?? []);
+      const ranked = await withImages(shape(payload.results ?? []));
       await db().prepare(
         "INSERT INTO pod_drop_snapshots (day_taxonomy,day,taxonomy_id,label,listings_json) VALUES (?,?,?,?,?) ON CONFLICT(day_taxonomy) DO UPDATE SET listings_json=excluded.listings_json",
       ).bind(`${day}:${category.taxonomyId}`, day, category.taxonomyId, category.label, JSON.stringify(ranked)).run();

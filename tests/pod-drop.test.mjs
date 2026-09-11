@@ -206,12 +206,16 @@ test("the shelf is Etsy's order, and the pictures are asked for", () => {
   const lib = read("pod-drop.ts");
   assert.match(lib, /sort_on: "score"/);
   assert.doesNotMatch(lib, /\bpace\b/, "nothing reorders Etsy's shelf");
-  assert.match(lib, /const ranked = shape\(payload\.results \?\? \[\]\);/);
+  assert.match(lib, /const ranked = await withImages\(shape\(payload\.results \?\? \[\]\)\);/);
 
-  /* AND THE PICTURES. listings/active returns no images unless they are asked
-     for by name — the first live drop rendered 360 listings and not one
-     photograph, because the field was absent and read as null in silence. */
-  assert.match(lib, /includes: "Images"/);
+  /* AND THE PICTURES. listings/active sends none, and includes=Images on it
+     changed nothing — 360 listings and not one photograph, twice. The endpoint
+     that honours it is listings/batch, which is how the shop reader has always
+     got artwork. This asserts the working path, not the one that looked right. */
+  assert.match(lib, /listings\/batch\?listing_ids=/);
+  assert.match(lib, /includes=Images/);
+  assert.match(lib, /catch \{\n    return listings;/,
+    "no pictures is a thin drop, never a failed one");
 });
 
 test("a wrong drop is not stuck until tomorrow", () => {

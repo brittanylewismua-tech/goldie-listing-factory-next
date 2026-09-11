@@ -81,6 +81,11 @@ export default function DropPage() {
     {!drop && !error && <p>Reading the shelf…</p>}
 
     {drop && <>
+      {/* One card. Before this the streak, the cards, the tabs and the grid
+          were four things floating on the page background with nothing holding
+          them together — it read as a list of unrelated widgets rather than a
+          thing you had opened. */}
+      <div className="drop-card-surface">
       {drop.owner && <button type="button" className="drop-rebuild" onClick={rebuild} disabled={rebuilding}>
         {rebuilding ? "Reading Etsy…" : "Rebuild today's drop"}
       </button>}
@@ -159,6 +164,8 @@ export default function DropPage() {
               </article>}
             </section>)}
         </>}
+
+      </div>
 
       {drop.archive.length > 0 && <section className="drop-archive">
         {/* The softening the weekly reset needs. Monday takes back the NEW
