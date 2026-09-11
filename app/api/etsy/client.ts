@@ -35,6 +35,19 @@ export type EtsyFeature="publish"|"photos"|"search"|"taxonomy"|"shipping"|"conne
 export async function recordEtsyCall(response:Response,feature:EtsyFeature="unlabelled"){
   const bucket=hourBucket(),observedLimit=Math.max(0,Number(response.headers.get("x-limit-per-day"))||0);
   const statements=[runtime().DB.prepare("INSERT INTO etsy_api_usage_buckets (bucket,feature,calls,rate_limited,qpd_limit,updated_at) VALUES (?,?,1,?,?,CURRENT_TIMESTAMP) ON CONFLICT(bucket,feature) DO UPDATE SET calls=calls+1,rate_limited=rate_limited+excluded.rate_limited,qpd_limit=CASE WHEN excluded.qpd_limit>0 THEN excluded.qpd_limit ELSE qpd_limit END,updated_at=CURRENT_TIMESTAMP").bind(bucket,feature,response.status===429?1:0,observedLimit)];
+  /*
+    WHAT ETSY SAYS IS LEFT, WHICH INCLUDES WHAT WE DID NOT SPEND.
+
+    The quota belongs to the Etsy APP, not to this codebase, and World Builder
+    runs on the same key. Counting only our own calls means the budget believes
+    in headroom another product already used, and the first anybody would know
+    is a seller's publish failing in the middle of a batch.
+
+    Etsy states the truth on every response. It costs nothing to believe it.
+  */
+  const remaining=Number(response.headers.get("x-remaining-today"));
+  if(Number.isSafeInteger(remaining)&&remaining>=0)
+    statements.push(runtime().DB.prepare("INSERT INTO etsy_queue_state (id,remaining_today,remaining_at,updated_at) VALUES (1,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET remaining_today=excluded.remaining_today,remaining_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP").bind(remaining));
   const qps=Number(response.headers.get("x-limit-per-second"));
   if(Number.isSafeInteger(qps)&&qps>0)statements.push(runtime().DB.prepare('UPDATE etsy_request_pacing SET qps_limit=?,updated_at=? WHERE id=1').bind(qps,Date.now()));
   if(response.status===429){const retryAfter=Math.max(60,Math.min(1800,Number(response.headers.get("retry-after"))||300));statements.push(runtime().DB.prepare("INSERT INTO etsy_queue_state (id,paused_until,last_worker_status,last_error,updated_at) VALUES (1,?,'rate_limited','Etsy asked The Listing Factory to slow down.',CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET paused_until=MAX(paused_until,excluded.paused_until),last_worker_status=excluded.last_worker_status,last_error=excluded.last_error,updated_at=CURRENT_TIMESTAMP").bind(Math.floor(Date.now()/1000)+retryAfter))}
@@ -43,11 +56,23 @@ export async function recordEtsyCall(response:Response,feature:EtsyFeature="unla
 export async function etsyBudget(){
   const since=new Date(Date.now()-24*60*60*1000).toISOString().slice(0,13);
   const [row,observed,breakdown]=await Promise.all([runtime().DB.prepare("SELECT COALESCE(SUM(calls),0) calls,COALESCE(SUM(rate_limited),0) rate_limited FROM etsy_api_usage_buckets WHERE bucket>=?").bind(since).first<{calls:number;rate_limited:number}>(),runtime().DB.prepare("SELECT qpd_limit FROM etsy_api_usage_buckets WHERE qpd_limit>0 ORDER BY updated_at DESC LIMIT 1").first<{qpd_limit:number}>(),runtime().DB.prepare("SELECT feature,SUM(calls) calls FROM etsy_api_usage_buckets WHERE bucket>=? GROUP BY feature ORDER BY calls DESC").bind(since).all<{feature:string;calls:number}>()]);
-  const limit=Number(observed?.qpd_limit)||etsyQpdLimit(),usable=Math.floor(limit*.8),used=Number(row?.calls||0);
+  const limit=Number(observed?.qpd_limit)||etsyQpdLimit(),usable=Math.floor(limit*.8);
+  /*
+    Etsy's figure wins when it is fresh. Ours counts this app's calls; Etsy's
+    counts the whole key, so on a morning World Builder has swept a hundred
+    shops the two disagree and Etsy is the one that is right. Whichever number
+    is worse wins, never the optimistic one. Stale after an hour — an
+    over-cautious local count beats yesterday's figure used as though it were
+    now.
+  */
+  const live=await runtime().DB.prepare("SELECT remaining_today FROM etsy_queue_state WHERE id=1 AND remaining_at>datetime('now','-1 hour')").first<{remaining_today:number}>();
+  const reported=Number(live?.remaining_today);
+  const reportedUsed=Number.isSafeInteger(reported)?Math.max(0,limit-reported):0;
+  const used=Math.max(Number(row?.calls||0),reportedUsed);
   return {limit,usable,used,remaining:Math.max(0,usable-used),reserved:limit-usable,rateLimited:Number(row?.rate_limited||0),
     /* Ordered heaviest first — the first row is the thing to fix, and the whole
        list is what goes to Etsy when asking for more. */
-    byFeature:(breakdown.results??[]).map(r=>({feature:String(r.feature),calls:Number(r.calls)}))};
+    byFeature:((breakdown.results??[]) as Record<string,unknown>[]).map(r=>({feature:String(r.feature),calls:Number(r.calls)}))};
 }
 
 export async function encryptEtsy(value:string){return encryptPrintifyToken(value,secret())}

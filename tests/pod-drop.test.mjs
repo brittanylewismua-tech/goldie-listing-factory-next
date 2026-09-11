@@ -179,3 +179,16 @@ test("keyword lookups are capped on fresh calls only", () => {
   assert.doesNotMatch(readRoot("drizzle/0031_drop_archive.sql"), /keyword_lookup_usage/,
     "an already-applied production migration must remain immutable");
 });
+
+test("the budget believes Etsy over its own tally", () => {
+  /* The quota belongs to the Etsy APP, and World Builder runs on the same key.
+     Counting only this codebase's calls means believing in headroom another
+     product already spent, and the first anybody would know is a seller's
+     publish failing mid-batch. Etsy states what is left on every response. */
+  const client = read("api/etsy/client.ts");
+  assert.match(client, /x-remaining-today/);
+  assert.match(client, /Math\.max\(Number\(row\?\.calls\|\|0\),reportedUsed\)/,
+    "whichever number is worse wins — never the optimistic one");
+  assert.match(client, /remaining_at>datetime\('now','-1 hour'\)/,
+    "a stale figure is worse than an over-cautious local count");
+});
