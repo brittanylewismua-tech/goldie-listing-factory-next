@@ -66,8 +66,9 @@ test("keeps the Step 4 footer controls below the pricing card without collisions
 test("keeps the Etsy details step clear and its icon locked to the optical center", async () => {
   const page = await readFile(listingFactoryPage, "utf8");
   const css = await Promise.all([readFile(new URL("app/approved-functional.css",root),"utf8"),readFile(new URL("app/interface-v2.css",root),"utf8")]).then(x=>x.join("\n"));
-  assert.match(page, /Review your Etsy listing details/);
-  assert.match(page, /Review the pre-filled Etsy category, product fields, and personalization for each listing\./);
+  assert.match(page, /<h3>Etsy details and personalization<\/h3>/);
+  assert.match(page, /Review the category, required details, and personalization for each listing\./);
+  assert.doesNotMatch(page, /Review the pre-filled Etsy category/);
   // Copy updated when the nine-step rail became five. The banner is now a
   // completion confirmation rather than a list of what the previous step did.
   assert.match(page, /<b>Titles, tags, and descriptions complete<\/b>/);

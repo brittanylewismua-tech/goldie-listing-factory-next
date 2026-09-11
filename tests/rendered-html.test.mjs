@@ -7334,7 +7334,8 @@ test("one language survives a sweep of every panel — D691", async () => {
 
   // Each panel's row previews what THAT panel asks her to judge, not the title thrice.
   assert.match(app, /function taskSummary\(task:string,design:DesignFile\):string\{/);
-  assert.match(app, /if\(task==="description"\)return \(finalDescription/);
+  assert.match(app, /if\(task==="description"\)\{/);
+  assert.match(app, /return activeBundle\?"Uses this product’s description":"Uses batch description"/);
   assert.match(app, /if\(task==="etsy"\)return design\.etsy\?\.category/);
 
   // "1 need attention" was not English.

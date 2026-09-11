@@ -4,11 +4,14 @@ import fs from "node:fs";
 
 const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
-test("final Review summarizes every listing with the same required correction",()=>{
+test("final Review summarizes every required correction without hiding later blockers",()=>{
   const summary=app.slice(app.indexOf("function handoffBlockerSummary()"),app.indexOf("function suggestedBatchName()"));
   assert.match(summary,/const unpriced=count\(draft=>!reviewedPricingAndShippingReady\(draft\)\)/);
-  assert.match(summary,/if\(unpriced\)return line\(unpriced,"pricing and shipping approval"\)/);
-  assert.match(summary,/if\(missingTitles\)return line\(missingTitles,"a title"\)/);
+  assert.match(summary,/if\(unpriced\)missing\.push\(line\(unpriced,"pricing and shipping approval"\)\)/);
+  assert.match(summary,/if\(missingTitles\)missing\.push\(line\(missingTitles,"a title","titles"\)\)/);
+  assert.match(summary,/if\(missingTags\)missing\.push\(line\(missingTags,"Etsy tags"\)\)/);
+  assert.match(summary,/if\(missingEtsy\)missing\.push\(line\(missingEtsy,"Etsy details"\)\)/);
+  assert.match(summary,/if\(missing\.length\)return `\$\{missing\.join\(" · "\)\}\.`/);
   assert.match(app,/<span>\{handoffBlockerSummary\(\)\}<\/span>/);
 });
 

@@ -1759,24 +1759,26 @@ export default function ListingFactoryApp() {
     if(!blockers.length)return "Creates unpublished Etsy drafts. Nothing goes live.";
     const created=bundlePublishDrafts().filter(draft=>draft.status==="Created"&&draft.id);
     const count=(predicate:(draft:DraftResult)=>boolean)=>created.filter(predicate).length;
-    const line=(amount:number,problem:string)=>`${amount} ${amount===1?"listing":"listings"} ${amount===1?"needs":"need"} ${problem}.`;
+    const line=(amount:number,singular:string,plural=singular)=>`${amount} ${amount===1?"needs":"need"} ${amount===1?singular:plural}`;
+    const missing:string[]=[];
     const unpriced=count(draft=>!reviewedPricingAndShippingReady(draft));
-    if(unpriced)return line(unpriced,"pricing and shipping approval");
+    if(unpriced)missing.push(line(unpriced,"pricing and shipping approval"));
     const missingVariants=count(draft=>!Number(draft.selectedVariantIds?.length||draft.costReview?.variants.filter(variant=>variant.isEnabled).length||0));
-    if(missingVariants)return line(missingVariants,"colors and sizes");
+    if(missingVariants)missing.push(line(missingVariants,"colors and sizes"));
     const missingPhotos=count(draft=>createdListingsMissingImages([draft]).length>0);
-    if(missingPhotos)return line(missingPhotos,"at least one listing photo");
+    if(missingPhotos)missing.push(line(missingPhotos,"a listing photo","listing photos"));
     const designFor=(draft:DraftResult)=>bundlePublishFiles().find(file=>file.id===draft.clientId)||bundlePublishFiles().find(file=>file.name===draft.name);
     const missingTitles=count(draft=>!designFor(draft)?.title.trim());
-    if(missingTitles)return line(missingTitles,"a title");
+    if(missingTitles)missing.push(line(missingTitles,"a title","titles"));
     const missingTags=count(draft=>!designFor(draft)?.tags.length);
-    if(missingTags)return line(missingTags,"Etsy tags");
+    if(missingTags)missing.push(line(missingTags,"Etsy tags"));
     const missingDescriptions=count(draft=>!String(designFor(draft)?.descriptionOverride??draft.description??"").trim());
-    if(missingDescriptions)return line(missingDescriptions,"a description");
+    if(missingDescriptions)missing.push(line(missingDescriptions,"a description","descriptions"));
     const missingEtsy=count(draft=>!etsyRequiredComplete(designFor(draft)?.etsy));
-    if(missingEtsy)return line(missingEtsy,"an Etsy category or required detail");
+    if(missingEtsy)missing.push(line(missingEtsy,"Etsy details"));
     const missingPersonalization=count(draft=>Boolean(personalizationProblem(designFor(draft)?.etsy)));
-    if(missingPersonalization)return line(missingPersonalization,"completed personalization settings");
+    if(missingPersonalization)missing.push(line(missingPersonalization,"personalization settings"));
+    if(missing.length)return `${missing.join(" · ")}.`;
     return blockers[0];
   }
   function suggestedBatchName(){const product=activeRecipe?.name||templateDetails?.blueprintTitle||"Listing batch",niche=files[0]?.tags?.[0]||files[0]?.title?.split(",")[0]?.trim()||"New designs",date=new Intl.DateTimeFormat("en-US",{month:"short",day:"numeric"}).format(new Date());return `${product} · ${niche} · ${date}`.slice(0,160)}
@@ -2803,6 +2805,15 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       if(index===bundleIndex){
         if(step==="images")return complete?{label:`${createdDraftCount} ${createdDraftCount===1?"draft":"drafts"}`,tone:createdDraftCount?"ready":"attention"}:{label:`${files.length} ${files.length===1?"design":"designs"}`,tone:"attention"};
         if(step==="listing"){
+          const focused=reviewEditing?.section;
+          if(focused==="description"){
+            const ready=files.filter(file=>Boolean(finalDescription(file,file.etsy).trim())).length;
+            return {label:`${ready} of ${files.length} descriptions ready`,tone:ready===files.length&&files.length?"ready":"attention"};
+          }
+          if(focused==="etsy"){
+            const ready=files.filter(file=>etsyListingDetailsComplete(file.etsy)).length;
+            return {label:`${ready} of ${files.length} Etsy details ready`,tone:ready===files.length&&files.length?"ready":"attention"};
+          }
           /* D624 · This card said "Titles ready" in green while the row directly
              beneath it said "2 of 2 titles · 0 of 2 with all 13 tags" in crimson
              with a warning mark. Both were true - the titles were written, the
@@ -2866,6 +2877,12 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       }
       if(step==="listing"){
         if(!summary.designs)return {label:"Not started yet",tone:"waiting"};
+        if(reviewEditing?.section==="description"){
+          const siblingMember=bundleMembers[recipe.id];
+          const ready=(siblingMember?.designs||[]).filter(design=>Boolean(String(design.descriptionOverride??siblingMember?.drafts.find(draft=>draft.clientId===design.id)?.description??"").trim())).length;
+          return {label:`${ready} of ${summary.designs} descriptions ready`,tone:ready===summary.designs?"ready":"attention"};
+        }
+        if(reviewEditing?.section==="etsy")return {label:`${summary.etsyReady} of ${summary.designs} Etsy details ready`,tone:summary.etsyReady===summary.designs?"ready":"attention"};
         if(summary.titled<summary.designs)return {label:`${summary.titled} of ${summary.designs} titled`,tone:"attention"};
         /* A blocker outranks advice here too, so the badge never leads with the
            tag shortfall while Etsy fields underneath cannot publish. */
@@ -3400,7 +3417,11 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
      as three identical lists of titles and the preview line told her nothing
      about the thing she had opened the panel to check. */
   function taskSummary(task:string,design:DesignFile):string{
-    if(task==="description")return (finalDescription(design,design.etsy)||"").replace(/\s+/g," ").trim()||"No description";
+    if(task==="description"){
+      if(!finalDescription(design,design.etsy).trim())return "No description";
+      if(design.descriptionOverride!==undefined)return "Custom description";
+      return activeBundle?"Uses this product’s description":"Uses batch description";
+    }
     if(task==="etsy")return design.etsy?.category?.trim()||"No Etsy category yet";
     return design.title.trim()||`Listing ${files.findIndex(file=>file.id===design.id)+1}`;
   }
@@ -3508,7 +3529,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
                      batches did not, so it comes back where the description is now edited. */}{description.trim()!==String(activeRecipe?.description||"").trim()&&<button type="button" className="save-product-default" disabled={!description.trim()||savingProductDefault==="description"} onClick={()=>void saveProductDefaults({description},"description")}>{savingProductDefault==="description"?"Saving…":"Save as the product default"}</button>}</div>;return collapsed?<details className="shared-description-settings"><summary>Product description</summary>{body}</details>:<div className="task-panel-lead">{body}</div>}
   function descriptionRows(only?:DesignFile,openAll=false){return designTaskRows("description",design=>`${(finalDescription(design,design.etsy)||"").length} chars`,design=><details className="individual-description-disclosure"><summary><span>Description for this listing</span><svg className="description-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary><div className="individual-description-body"><textarea aria-label={`Description for listing ${files.findIndex(file=>file.id===design.id)+1}`} rows={10} value={finalDescription(design,design.etsy)} onChange={event=>updateDesign(design.id,{descriptionOverride:event.target.value,etsyError:""})}/>{design.descriptionOverride!==undefined&&<div className="listing-card-actions"><button type="button" onClick={()=>updateDesign(design.id,{descriptionOverride:undefined,etsyError:""})}>{activeBundle?"Use this product’s description again":"Use the batch description again"}</button></div>}</div></details>,descriptionFlags,only,openAll);}
   function etsyLead(){return <>
-      <div className="task-panel-lead"><div className="task-panel-heading"><h3>Review your Etsy listing details</h3><span className="done-mark">{files.filter(file=>etsyListingDetailsComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Review the pre-filled Etsy category, product fields, and personalization for each listing.</p>{files.every(file=>etsyListingDetailsComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Etsy details and personalization are ready.</b><small>Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
+      <div className="task-panel-lead"><div className="task-panel-heading"><h3>Etsy details and personalization</h3><span className="done-mark">{files.filter(file=>etsyListingDetailsComplete(file.etsy)).length}/{files.length} ready</span></div><p className="step-copy">Review the category, required details, and personalization for each listing.</p>{files.every(file=>etsyListingDetailsComplete(file.etsy))&&<div className="variant-transfer-note"><span>✓</span><div><b>Etsy details and personalization are ready.</b><small>Optional fields stay blank when there is not a clear match.</small></div></div>}</div>
   </>;}
   function etsyRows(only?:DesignFile){return designTaskRows("etsy",design=>{
         /* D691 · This is the row's right-hand counter, and etsyFlags already says
