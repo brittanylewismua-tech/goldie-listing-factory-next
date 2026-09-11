@@ -2222,9 +2222,11 @@ export default function ListingFactoryApp() {
       const children=payload.children||[];
       const order=runState.run.productOrder||[];
       const byOrder=[...children].sort((a,b)=>order.indexOf(a.productId)-order.indexOf(b.productId));
+      const requestedProduct=url.searchParams.get("product");
       const requestedListing=url.searchParams.get("listing");
       let requestedChild:typeof children[number]|undefined;
-      if(requestedListing){
+      if(requestedProduct)requestedChild=byOrder.find(child=>child.productId===requestedProduct);
+      if(!requestedChild&&requestedListing){
         const inspected=await Promise.all(byOrder.map(async child=>{
           const childResponse=await batchFetch(`/api/batches?id=${encodeURIComponent(child.id)}`);
           if(!childResponse.ok)return null;
@@ -4073,12 +4075,12 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const nextUrl=new URL(window.location.href);nextUrl.searchParams.set("listing",incoming.clientId);nextUrl.searchParams.set("section",reviewEditing.section||"title");window.history.replaceState({},"",nextUrl);
   }
   function openBundleProduct(index:number,recoveryOnly=false){
-    setBundleRecoveryOnly(recoveryOnly);
-    const scopeUrl=new URL(window.location.href);if(recoveryOnly)scopeUrl.searchParams.set("scope","product");else scopeUrl.searchParams.delete("scope");window.history.replaceState({},"",scopeUrl);
-    const requestedTask=requestedBundleTask.current;requestedBundleTask.current="";
-    if(index===bundleIndex){if(requestedTask)setActiveTask(requestedTask);return;}
     const recipe=bundleRecipes[index];
     if(!recipe)return;
+    setBundleRecoveryOnly(recoveryOnly);
+    const scopeUrl=new URL(window.location.href);if(recoveryOnly){scopeUrl.searchParams.set("scope","product");scopeUrl.searchParams.set("product",recipe.id)}else{scopeUrl.searchParams.delete("scope");scopeUrl.searchParams.delete("product")}window.history.replaceState({},"",scopeUrl);
+    const requestedTask=requestedBundleTask.current;requestedBundleTask.current="";
+    if(index===bundleIndex){if(requestedTask)setActiveTask(requestedTask);return;}
     const existing=bundleBatchIds[recipe.id];
     if(existing){
       if(switchingProduct)return;
