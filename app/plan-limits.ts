@@ -1,14 +1,27 @@
+/*
+  AI-RENDERED MOCKUPS ARE GONE, AND SO IS THEIR ALLOWANCE.
+
+  Sellers upload their own mockups now. The generator that used to make them
+  was taken out of the interface, but its allowance stayed in every plan — so
+  the pricing page went on advertising 50, 150 and 300 AI mockups a month, and
+  the usage screen went on showing a counter for them, for a feature with no
+  way to reach it. Somebody comparing Starter to Pro was weighing a number that
+  means nothing, and the difference between the tiers looked bigger than it is.
+
+  The field is deleted rather than zeroed. A zero still renders, and
+  "0 of 0 AI mockups" is a worse lie than saying nothing at all.
+*/
 export const PLANS = {
   // `goldie` is retained as the stored key so existing $29 customers remain on
   // the correct plan. Its public name is now Starter.
-  goldie: { key: "goldie", name: "Starter", price: 14.99, drafts: 100, dailyListings: 40, aiMockups: 50, mockupSets: 10, mockupsPerSet: 50, annualPrice: 149 },
-  pro: { key: "pro", name: "Pro", price: 24.99, drafts: 250, dailyListings: 75, aiMockups: 150, mockupSets: 30, mockupsPerSet: 50, annualPrice: 249 },
-  scale: { key: "scale", name: "Scale", price: 39.99, drafts: 500, dailyListings: 100, aiMockups: 300, mockupSets: 75, mockupsPerSet: 50, annualPrice: 399 },
+  goldie: { key: "goldie", name: "Starter", price: 14.99, drafts: 100, dailyListings: 40, mockupSets: 10, mockupsPerSet: 50, annualPrice: 149 },
+  pro: { key: "pro", name: "Pro", price: 24.99, drafts: 250, dailyListings: 75, mockupSets: 30, mockupsPerSet: 50, annualPrice: 249 },
+  scale: { key: "scale", name: "Scale", price: 39.99, drafts: 500, dailyListings: 100, mockupSets: 75, mockupsPerSet: 50, annualPrice: 399 },
 } as const;
 
-export const TRIAL_PLAN = { key: "trial", name: "Free Trial", price: 0, drafts: 10, dailyListings: 10, aiMockups: 6, mockupSets: 2, mockupsPerSet: 10 } as const;
-export const MASTERMIND_BETA_PLAN = { key: "mastermind_beta", name: "Mastermind beta", price: 0, drafts: 10, dailyListings: 10, aiMockups: 0, mockupSets: 10, mockupsPerSet: 50 } as const;
-export const OWNER_TEST_PLAN = { key: "owner_test", name: "Owner testing", price: 0, drafts: 10000, dailyListings: 1000, aiMockups: 10000, mockupSets: 1000, mockupsPerSet: 50 } as const;
+export const TRIAL_PLAN = { key: "trial", name: "Free Trial", price: 0, drafts: 10, dailyListings: 10, mockupSets: 2, mockupsPerSet: 10 } as const;
+export const MASTERMIND_BETA_PLAN = { key: "mastermind_beta", name: "Mastermind beta", price: 0, drafts: 10, dailyListings: 10, mockupSets: 10, mockupsPerSet: 50 } as const;
+export const OWNER_TEST_PLAN = { key: "owner_test", name: "Owner testing", price: 0, drafts: 10000, dailyListings: 1000, mockupSets: 1000, mockupsPerSet: 50 } as const;
 
 export type PlanKey = keyof typeof PLANS;
 export type BillingInterval = "month" | "year";

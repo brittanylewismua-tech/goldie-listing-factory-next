@@ -4,6 +4,7 @@ import {readDraftImplementation} from "./draft-implementation-source.mjs";
    app's styles. Not one assertion is relaxed — only the file set widens. */
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import test from "node:test";
 import {registerHooks} from "node:module";
 // Public-page SSR runs under Node. The Worker now exports a native Workflow
@@ -1005,20 +1006,23 @@ test("handles up to eight lifestyle mockups in a reliable queue and shows the re
 });
 
 test("enforces paid-plan usage on the server and exposes honest usage", async()=>{
-  const [plans,drafts,renders,library,usage]=await Promise.all([
+  const [plans,drafts,library,usage]=await Promise.all([
     readFile(new URL("../app/plan-limits.ts",import.meta.url),"utf8"),
     readDraftImplementation(),
-    readFile(new URL("../app/api/mockups/render/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/mockups/library/route.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/api/usage/route.ts",import.meta.url),"utf8"),
   ]);
-  assert.match(plans,/name: "Starter", price: 14.99, drafts: 100, dailyListings: 40, aiMockups: 50, mockupSets: 10/);
-  assert.match(plans,/name: "Pro", price: 24.99, drafts: 250, dailyListings: 75, aiMockups: 150, mockupSets: 30/);
-  assert.match(plans,/name: "Scale", price: 39.99, drafts: 500, dailyListings: 100, aiMockups: 300, mockupSets: 75/);
+  /* The aiMockups allowance is gone with the generator it metered. A plan may
+     not advertise an allowance for a feature that cannot be reached — see
+     app/plan-limits.ts. */
+  assert.match(plans,/name: "Starter", price: 14.99, drafts: 100, dailyListings: 40, mockupSets: 10/);
+  assert.match(plans,/name: "Pro", price: 24.99, drafts: 250, dailyListings: 75, mockupSets: 30/);
+  assert.match(plans,/name: "Scale", price: 39.99, drafts: 500, dailyListings: 100, mockupSets: 75/);
+  assert.doesNotMatch(plans,/aiMockups/,"no plan may meter a feature that no longer exists");
   assert.match(drafts,/plan\.drafts/);assert.match(drafts,/status='succeeded'/);
-  assert.match(renders,/plan\.aiMockups/);assert.match(renders,/MAX\(0,/);
   assert.match(library,/plan\.mockupSets/);assert.match(library,/COUNT\(DISTINCT theme\)/);
-  assert.match(usage,/nextReset/);assert.match(usage,/COALESCE\(SUM\(count\),0\)/);
+  assert.match(usage,/nextReset/);
+  assert.doesNotMatch(usage,/mockup_render_usage/,"and the usage screen may not count them");
 });
 
 test("saved mockup sets can be renamed and deleted with confirmation", async () => {
@@ -1042,11 +1046,9 @@ test("saved mockup sets can be renamed and deleted with confirmation", async () 
 });
 
 test("routes each product surface deliberately and never releases a partial batch", async () => {
-  const [page,integrated,renderers,route]=await Promise.all([
+  const [page,integrated]=await Promise.all([
     readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/integrated-mockups.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/mockups/product-renderers.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/mockups/render/route.ts", import.meta.url), "utf8"),
   ]);
   assert.match(page,/"rigid-flat" \| "phone-case" \| "t-shirt" \| "sweatshirt" \| "hoodie" \| "other-apparel" \| "apparel" \| "soft-goods" \| "curved" \| "irregular"/);
   assert.match(page,/made\.forEach\(item=>URL\.revokeObjectURL/);
@@ -1058,6 +1060,13 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(page,/return makeMockup\(file,template\);/);
   assert.doesNotMatch(page,/api\/mockups\/render/,
     "the Mockup Library must not send a design to an image model either");
+  /* The generative renderer had already been taken out of both screens; its
+     routes, its prompt file and its job table were left deployed behind them,
+     holding a live fal key and an allowance the plans still advertised. Gone
+     now, and this is what keeps them gone. */
+  for (const dead of ["api/mockups/render/route.ts","api/mockups/render-test/route.ts","mockups/product-renderers.ts"])
+    assert.equal(existsSync(new URL(`../app/${dead}`, import.meta.url)), false,
+      `${dead} is the generative renderer and must not come back`);
   // The calibrated branch now lives in generate(), because the padded design and
   // the trimmed design must not be able to reach the wrong renderer.
   /* D433 · The calibrated path now derives its placement from the Printify
@@ -1094,18 +1103,6 @@ test("routes each product surface deliberately and never releases a partial batc
   assert.match(integrated,/needsReference=chosen\.some\(t=>!isCalibratedSurface/);
   assert.doesNotMatch(page,/cleanArtworkBackground/);
   assert.doesNotMatch(integrated,/cleanArtworkBackground/);
-  assert.match(route,/if\(!body\.reference\)/);
-  assert.match(route,/plan\.aiMockups/);
-  assert.match(route,/monthKey/);
-  assert.match(route,/queue\.fal\.run/);
-  assert.match(route,/mockup_render_jobs/);
-  assert.match(route,/statusPayload\.status!=="COMPLETED"/);
-  assert.doesNotMatch(renderers,/fashn\/tryon/);
-  assert.match(renderers,/Do not create, replace, redraw, layer, or paste in a new shirt or garment/);
-  assert.match(renderers,/only visible change.*design printed on the original garment/);
-  assert.doesNotMatch(renderers,/shirt-design/);
-  assert.match(renderers,/flux-2-flex\/edit/);
-  assert.match(renderers,/guidance_scale:2\.5/);
 });
 
 test("restores batch colors and blocks publishing until every selected listing has a photo", async () => {
@@ -1542,7 +1539,7 @@ test("keeps mastermind access owner-controlled without a timed expiry", async ()
   assert.match(access, /redeemed:accessEnabled&&redeemed/);
   assert.doesNotMatch(redeem, /hours:48|aiMockups:20/);
   assert.match(redeem, /plan_key='mastermind_beta'/);
-  assert.match(plans, /drafts: 10, dailyListings: 10, aiMockups: 0/);
+  assert.match(plans, /drafts: 10, dailyListings: 10, mockupSets: 10/);
 });
 
 test("blocks the factory workflow on mobile while preserving saved work", async () => {
@@ -3015,7 +3012,7 @@ test("every failure is recorded against a person, and Brittany is emailed — D4
 
   // And the unpredicted throw is caught by wrapping, not by remembering.
   assert.match(log, /export function withErrorLog/);
-  for (const route of ["listing-intelligence", "mockups/render", "printify/drafts"]) {
+  for (const route of ["listing-intelligence", "mockups/analyze", "printify/drafts"]) {
     const source = await readFile(new URL(`../app/api/${route}/route.ts`, import.meta.url), "utf8");
     assert.match(source, /withErrorLog\("/, `${route} reports its failures`);
   }

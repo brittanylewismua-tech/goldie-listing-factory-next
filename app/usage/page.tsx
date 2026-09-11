@@ -4,7 +4,7 @@ import "../pricing-profile.css";
 import FactoryShell from "../factory-shell";
 import { PLANS, type BillingInterval } from "../plan-limits";
 type PlanKey="trial"|"goldie"|"pro"|"scale"|"mastermind_beta"|"owner_test";
-type Data={plan:{key:PlanKey;name:string;price:number;drafts:number;dailyListings:number;aiMockups:number;mockupSets:number;mockupsPerSet:number};resetAt:string|null;usage:{drafts:number;aiMockups:number;mockupSets:number;publishedToday:number;publishing:number};billing?:{active:boolean;terms?:{amount:number;currency:string;interval:string;intervalCount:number}|null;subscription?:{status:string;currentPeriodEnd:number|null;cancelAtPeriodEnd:number}|null}};
+type Data={plan:{key:PlanKey;name:string;price:number;drafts:number;dailyListings:number;mockupSets:number;mockupsPerSet:number};resetAt:string|null;usage:{drafts:number;mockupSets:number;publishedToday:number;publishing:number};billing?:{active:boolean;terms?:{amount:number;currency:string;interval:string;intervalCount:number}|null;subscription?:{status:string;currentPeriodEnd:number|null;cancelAtPeriodEnd:number}|null}};
 type Fees={etsyFeePercent:number;fixedFee:number;listingFee:number};
 type Goal={enabled:boolean;period:"week"|"month";target:number};
 /* D422 · Bound straight to the number, so clearing the box made Number("") = 0,

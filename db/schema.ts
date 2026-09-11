@@ -104,13 +104,6 @@ export const mockupTemplates = sqliteTable("mockup_templates", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [index("idx_mockup_templates_user_theme").on(table.userId, table.theme)]);
 
-export const mockupRenderUsage = sqliteTable("mockup_render_usage", {
-  userDay: text("user_day").primaryKey(),
-  userId: text("user_id").notNull(),
-  day: text("day").notNull(),
-  count: integer("count").notNull().default(0),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
 
 export const productRecipes = sqliteTable("product_recipes", {
   id: text("id").primaryKey(),

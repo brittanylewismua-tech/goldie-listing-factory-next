@@ -28,7 +28,7 @@ async function analyzeRoute(user, block) {
   const source=readFileSync(new URL('../app/api/mockups/analyze/route.ts',import.meta.url),'utf8');
   const stripped=source.replace(/^import .*;\n/gm,'');
   const compiled=ts.transpileModule(stripped,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText;
-  const preamble=`const NextResponse={json:(body,init)=>Response.json(body,init)}; const getChatGPTUser=async()=>(${JSON.stringify(user)}); const customerLaunchBlock=async()=>(${JSON.stringify(block)});`;
+  const preamble=`const withErrorLog=(area,handler)=>handler; const NextResponse={json:(body,init)=>Response.json(body,init)}; const getChatGPTUser=async()=>(${JSON.stringify(user)}); const customerLaunchBlock=async()=>(${JSON.stringify(block)});`;
   return import('data:text/javascript;base64,'+Buffer.from(preamble+compiled).toString('base64'));
 }
 test('anonymous scene analysis cannot consume paid inference',async()=>{

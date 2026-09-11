@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 
@@ -12,7 +13,7 @@ function allowedImageUrl(value: string, request: Request) {
   } catch { return false; }
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   try {
     const user = await getChatGPTUser();
     if (!user) return NextResponse.json({ error: "Sign in to prepare mockups." }, { status: 401 });
@@ -40,3 +41,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "The scene could not be analyzed." }, { status: 500 });
   }
 }
+
+/* The generative renderer used to be the fal route that reported its
+   failures. It is gone; this is the fal route that is left, and a seller
+   whose scene will not analyse should leave the same trace. */
+export const POST = withErrorLog("mockups-analyze", handlePOST);

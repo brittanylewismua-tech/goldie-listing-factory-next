@@ -20,7 +20,7 @@ test('old beta redemptions stay valid until owner closes access; unredeemed user
 });
 function database(){const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE printify_draft_results(request_key TEXT PRIMARY KEY,user_id TEXT,batch_id TEXT,client_id TEXT,status TEXT,response_json TEXT,updated_at TEXT,created_at TEXT)');for(let i=0;i<9;i++)db.prepare("INSERT INTO printify_draft_results VALUES (?, 'member','batch',?,'succeeded','{}','2020-01-01','2020-01-01')").run('old'+i,'old'+i);return db;}
 test('beta ten-listing lifetime quota includes earlier months and reserves the last slot atomically',()=>{
- assert.equal(MASTERMIND_BETA_PLAN.drafts,10);assert.equal(MASTERMIND_BETA_PLAN.aiMockups,0);
+ assert.equal(MASTERMIND_BETA_PLAN.drafts,10);assert.equal(MASTERMIND_BETA_PLAN.aiMockups,undefined);
  const db=database(),claim=db.prepare(claimDraftJobSql('mastermind_beta'));
  assert.ok(claim.get('last','member','batch','last',10,'{}'));
  assert.equal(claim.get('eleventh','member','batch','eleventh',10,'{}'),undefined);

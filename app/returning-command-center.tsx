@@ -7,7 +7,7 @@ import { GoldieButton,GoldieStatus } from "./goldie-ui";
 type Batch={id:string;status:string;setup_name:string;product_title:string;design_count:number;updated_at:string};
 type KeywordBank={id:string;name:string;keywords:string[]};
 type Mockup={id:string;theme:string;name:string};
-type Usage={usage?:{drafts:number;aiMockups:number;mockupSets:number}};
+type Usage={usage?:{drafts:number;mockupSets:number}};
 export type CommandCenterData={batches:Batch[];recipes:Recipe[];keywords:KeywordBank[];mockups:Mockup[];draftsThisMonth:number};
 
 export function ReturningCommandCenter({printifyConnected,etsyConnected,onUseProduct,onStartBlank,onData}:{printifyConnected:boolean;etsyConnected:boolean;onUseProduct:(recipe:Recipe)=>void;onStartBlank:()=>void;onData?:(data:CommandCenterData)=>void}){
