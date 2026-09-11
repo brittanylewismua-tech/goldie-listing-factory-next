@@ -27,7 +27,7 @@ type Category = {
 type ArchiveDay = { day: string; depth: number; categories: { label: string; listings: Listing[] }[] };
 type Drop = {
   day: string; fresh: boolean; building: boolean; unavailable: boolean; unlocked: boolean;
-  lockedCount: number; archive: ArchiveDay[];
+  lockedCount: number; archive: ArchiveDay[]; owner?: boolean;
   streak: { count: number; target: number; message: string; hit: boolean };
   categories: Category[];
 };
@@ -39,6 +39,25 @@ export default function DropPage() {
   const [drop, setDrop] = useState<Drop | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState<number | null>(null);
+  const [rebuilding, setRebuilding] = useState(false);
+
+  /*
+    REBUILD TODAY. Owner only, and the server enforces that — a 403 simply
+    means the button is not for you and it is never drawn again.
+
+    It exists because the drop is built once a day on purpose, which also means
+    a drop built before a fix is wrong until tomorrow. The day the images
+    landed there was no way to see them without waiting.
+  */
+  async function rebuild() {
+    if (rebuilding) return;
+    setRebuilding(true);
+    try {
+      const response = await fetch("/api/drop", { method: "POST" });
+      if (response.ok) window.location.reload();
+      else setRebuilding(false);
+    } catch { setRebuilding(false); }
+  }
 
   useEffect(() => {
     fetch("/api/drop").then(async response => {
@@ -62,6 +81,10 @@ export default function DropPage() {
     {!drop && !error && <p>Reading the shelf…</p>}
 
     {drop && <>
+      {drop.owner && <button type="button" className="drop-rebuild" onClick={rebuild} disabled={rebuilding}>
+        {rebuilding ? "Reading Etsy…" : "Rebuild today's drop"}
+      </button>}
+
       <UnlockCards />
 
       <section className="drop-streak">

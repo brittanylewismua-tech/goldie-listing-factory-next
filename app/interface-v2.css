@@ -4402,3 +4402,15 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-note summary{font-size:13px;opacity:.6;cursor:pointer}
 .drop-page .drop-note p{margin:8px 0 0;font-size:13px;opacity:.6;max-width:66ch}
 .drop-page .drop-archive .mini-label small{font-weight:400;opacity:.6;letter-spacing:0}
+
+/* Today's Drop sits with the actions, not the workspaces. Quieter than Start
+   a new batch so the primary action keeps its weight, and lit when you are on
+   it so the rail still says where you are. */
+.app-shell > .topbar .rail-drop-button{display:flex;align-items:center;gap:8px;
+  border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:10px 14px;margin-bottom:8px;
+  color:var(--lf-rail-dim);text-decoration:none;font:650 13px/1.2 Inter,system-ui,sans-serif}
+.app-shell > .topbar .rail-drop-button:hover{background:#141414;color:#fff}
+.app-shell > .topbar .rail-drop-button.active{background:var(--lf-pink);border-color:var(--lf-pink);color:#1b0e17;font-weight:700}
+.drop-page .drop-rebuild{border:1px dashed var(--line,rgba(0,0,0,.25));background:none;border-radius:10px;
+  padding:6px 12px;font:inherit;font-size:13px;opacity:.6;cursor:pointer;margin:0 0 14px}
+.drop-page .drop-rebuild:hover:not(:disabled){opacity:1;border-style:solid}

@@ -29,15 +29,15 @@ import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./
 
 type NavKey = "factory" | "drop" | "batches" | "keywords" | "usage" | "connections";
 
+/* "drop" stays in NavKey so the page can name itself, but it is deliberately
+   not in NAV. The rail's three links are workspaces — places work happens and
+   stays. Today's Drop is a destination you visit and leave, which is the same
+   shape as Start a new batch, so it sits with that instead. */
+
 /* D834 · Usage + Plan and Connections moved into the account menu, where the
    account itself already lives. The rail is the three places work happens. */
 const NAV: { key: NavKey; label: string; href: string }[] = [
   { key: "factory", label: "Listing Factory", href: "/listing-factory" },
-  /* Second, deliberately: it is the reason to open this on a morning nobody
-     feels like listing, so it sits on the way to the work rather than behind
-     a menu. The rail's height budget was reopened to fit it — see D835 in
-     interface-v2.css and the test that guards it. */
-  { key: "drop", label: "Today's Drop", href: "/drop" },
   { key: "batches", label: "Batch History", href: "/batches" },
   { key: "keywords", label: "Keyword Banks", href: "/keywords" },
 ];
@@ -99,6 +99,11 @@ export default function FactoryShell({ active, title, children }:
         {/* D818 · on the workflow this is a button because it has to clear live
             batch state first. There is no batch to clear here, so the same
             control is the link it actually is. */}
+        {/* Above the primary action, because that is the order of the morning:
+            see what moved, then go and list. Styled quieter than Start a new
+            batch so the money action keeps its weight. */}
+        <a className={`rail-drop-button${active === "drop" ? " active" : ""}`} href="/drop">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v13" /><path d="m7 12 5 5 5-5" /><path d="M5 21h14" /></svg> Today&apos;s Drop</a>
         <a className="workflow-restart-button" href="/listing-factory">
           <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" /><path d="M3 21v-5h5" /></svg> Start a new batch</a>
       </div>

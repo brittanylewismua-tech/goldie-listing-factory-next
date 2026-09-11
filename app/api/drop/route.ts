@@ -67,6 +67,7 @@ async function handleGET() {
     unavailable: unavailable && categories.length === 0,
     unlocked,
     lockedCount: unlocked ? 0 : Math.max(0, STREAK_TARGET - streak.count),
+    owner: isOwner(user),
     streak,
     unlocks,
     /* Everything they have opened before, at the depth they opened it. */
