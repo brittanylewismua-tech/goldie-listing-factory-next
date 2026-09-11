@@ -35,7 +35,7 @@ test("D1251: the listing editor keeps every section and Review return visible",(
   }
   assert.match(app,/\?"Colors & sizes":"Product options"/);
   assert.match(app,/className="review-listing-editor-nav"/);
-  assert.match(app,/Back to Review <span aria-hidden="true">→<\/span><\/button>/);
+  assert.match(app,/<span aria-hidden="true">←<\/span> Back to Review<\/button>/);
   assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
   assert.match(app,/window\.setTimeout\(scrollReviewTaskToTop,300\)/);
   assert.match(app,/function scrollReviewTaskToTop\(\)[\s\S]*?const reset=scrollFactoryToTop\(\);[\s\S]*?window\.requestAnimationFrame\(reset\)/);
@@ -87,14 +87,14 @@ test("Review editing identifies the current listing instead of repeating the ove
   assert.match(app,/title:"Edit this listing",copy:"Update any section below, then return to Review\."/);
   assert.match(app,/finish: finishPhase==="details" \? reviewEditorHero/);
   assert.match(app,/>Continue to listing details <span/);
-  assert.match(app,/reviewEditing\?<button className="workflow-next"[^>]+onClick=\{\(\)=>openFinishedReview\(false\)\}>Back to Review/);
+  assert.match(app,/reviewEditing\?<button className="workflow-back review-return"[\s\S]{0,180}<span aria-hidden="true">←<\/span> Back to Review/);
   assert.match(app,/complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer">\{reviewEditing\?null:<button className="workflow-back"/);
   assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
 });
 
 test("Review editors expose one unambiguous return and truthful save state",()=>{
   assert.equal((app.match(/Back to Review/g)||[]).length,2);
-  assert.match(app,/reviewEditing\?<button className="workflow-next"[\s\S]*?:<button className="save-draft-link"/);
+  assert.match(app,/reviewEditing\?<button className="workflow-back review-return"[\s\S]*?:<button className="save-draft-link"/);
   assert.match(app,/const grouped=workflowStep==="designs"&&!reviewEditing/);
   assert.match(app,/reviewEditing\.section==="variants"\?\["draft-colors","draft-sizes"\]/);
   assert.match(app,/reviewEditing\.section==="pricing"\?\["draft-pricing","draft-shipping"\]/);

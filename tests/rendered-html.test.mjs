@@ -2805,7 +2805,7 @@ test("a bank phrase that is not in the artwork does not reach the listing — D4
   assert.match(route, /is not actually shown in the artwork, do not select it/);
 });
 
-test("ordinary footers can save for later; a focused editor leads back to Review — D430/D1336", async () => {
+test("ordinary footers can save for later; a focused editor returns leftward to Review — D430/D1336/D1344", async () => {
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
   /* Save to Batch History is useful while navigating the workflow. Inside a
@@ -2816,12 +2816,12 @@ test("ordinary footers can save for later; a focused editor leads back to Review
   const post=app.slice(postStart,postStart+2200);
   assert.match(post,/reviewEditing\?null:<button className="workflow-back"/);
   assert.match(post,/autosave-note/);
-  assert.match(post,/reviewEditing\?<button className="workflow-next"[\s\S]*?\}>Back to Review/);
+  assert.match(post,/reviewEditing\?<button className="workflow-back review-return"[\s\S]*?<span aria-hidden="true">←<\/span> Back to Review/);
   assert.match(post,/:<button className="save-draft-link"/);
   const ordinary=app.slice(app.indexOf('workflow-footer-actions">'),postStart);
   assert.match(ordinary,/reviewEditing\?null:progressIndex>0&&<button className="workflow-back"/);
   assert.match(ordinary,/autosave-note/);
-  assert.match(ordinary,/reviewEditing\?<button className="workflow-next"[\s\S]*?Back to Review/);
+  assert.match(ordinary,/reviewEditing\?<button className="workflow-back review-return"[\s\S]*?<span aria-hidden="true">←<\/span> Back to Review/);
   assert.match(ordinary,/:<>[\s\S]*?save-draft-link/);
 });
 

@@ -99,7 +99,7 @@ test("D1284/D1290: focused editor rail shows compact completion marks and return
   assert.match(nav,/aria-label=\{`\$\{entry\.label\}: \$\{entry\.done\?"complete":"incomplete"\}`\}/);
   assert.doesNotMatch(nav,/Needed|needed/);
   assert.doesNotMatch(nav,/className="review-listing-done"/);
-  assert.match(app,/reviewEditing\?<button className="workflow-next"[^>]+onClick=\{\(\)=>openFinishedReview\(false\)\}>Back to Review/);
+  assert.match(app,/reviewEditing\?<button className="workflow-back review-return"[\s\S]{0,180}<span aria-hidden="true">←<\/span> Back to Review/);
   assert.match(css,/\.review-section-state\.is-done\{color:#53bd7c\}/);
   assert.match(css,/\.review-section-state\.is-incomplete\{color:#f06a6a\}/);
 });

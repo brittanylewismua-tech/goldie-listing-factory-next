@@ -4174,3 +4174,14 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-publish-box .etsy-transfer-progress p,
 .app-shell .etsy-transfer-progress-heading small{font-size:12px;line-height:1.45}
 .app-shell .etsy-transfer-count{font-size:12px}
+
+/* D1344: returning from a listing editor is a backward action and stays at
+   the left edge of the persistent footer. */
+.app-shell .workflow-footer-actions>.review-return{
+  order:1;flex:0 0 auto;align-self:center!important;margin:0 auto 5px 0!important
+}
+@media(max-width:600px){
+  .app-shell .workflow-footer-actions>.review-return{
+    grid-row:1;grid-column:1/-1;justify-self:start;width:auto!important
+  }
+}
