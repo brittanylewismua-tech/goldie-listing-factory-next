@@ -18,9 +18,23 @@ export async function waitForEtsyCapacity(){
   reserve:async(now,interval)=>{const row=await runtime().DB.prepare(RESERVE_ETSY_SLOT_SQL).bind(now,interval,now).first<{next_at_ms:number}>();return row?.next_at_ms??null},
   wait:ms=>new Promise(resolve=>setTimeout(resolve,ms))});
 }
-export async function recordEtsyCall(response:Response){
+/**
+ * WHAT SPENT THE QUOTA, NOT JUST HOW MUCH.
+ *
+ * Every call has always been counted. None of them said what they were for, so
+ * the log could tell you nine thousand requests had gone and never which
+ * feature took them — no way to know what to make cheaper, and nothing to send
+ * Etsy, who want proof of need before they raise a limit. A number is a
+ * complaint; a breakdown is a case.
+ *
+ * `feature` defaults to "unlabelled" so an unlabelled call still records
+ * against the budget. Missing a label must never mean missing a call.
+ */
+export type EtsyFeature="publish"|"photos"|"search"|"taxonomy"|"shipping"|"connect"|"qa"|"unlabelled";
+
+export async function recordEtsyCall(response:Response,feature:EtsyFeature="unlabelled"){
   const bucket=hourBucket(),observedLimit=Math.max(0,Number(response.headers.get("x-limit-per-day"))||0);
-  const statements=[runtime().DB.prepare("INSERT INTO etsy_api_usage_buckets (bucket,calls,rate_limited,qpd_limit,updated_at) VALUES (?,1,?,?,CURRENT_TIMESTAMP) ON CONFLICT(bucket) DO UPDATE SET calls=calls+1,rate_limited=rate_limited+excluded.rate_limited,qpd_limit=CASE WHEN excluded.qpd_limit>0 THEN excluded.qpd_limit ELSE qpd_limit END,updated_at=CURRENT_TIMESTAMP").bind(bucket,response.status===429?1:0,observedLimit)];
+  const statements=[runtime().DB.prepare("INSERT INTO etsy_api_usage_buckets (bucket,feature,calls,rate_limited,qpd_limit,updated_at) VALUES (?,?,1,?,?,CURRENT_TIMESTAMP) ON CONFLICT(bucket,feature) DO UPDATE SET calls=calls+1,rate_limited=rate_limited+excluded.rate_limited,qpd_limit=CASE WHEN excluded.qpd_limit>0 THEN excluded.qpd_limit ELSE qpd_limit END,updated_at=CURRENT_TIMESTAMP").bind(bucket,feature,response.status===429?1:0,observedLimit)];
   const qps=Number(response.headers.get("x-limit-per-second"));
   if(Number.isSafeInteger(qps)&&qps>0)statements.push(runtime().DB.prepare('UPDATE etsy_request_pacing SET qps_limit=?,updated_at=? WHERE id=1').bind(qps,Date.now()));
   if(response.status===429){const retryAfter=Math.max(60,Math.min(1800,Number(response.headers.get("retry-after"))||300));statements.push(runtime().DB.prepare("INSERT INTO etsy_queue_state (id,paused_until,last_worker_status,last_error,updated_at) VALUES (1,?,'rate_limited','Etsy asked The Listing Factory to slow down.',CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET paused_until=MAX(paused_until,excluded.paused_until),last_worker_status=excluded.last_worker_status,last_error=excluded.last_error,updated_at=CURRENT_TIMESTAMP").bind(Math.floor(Date.now()/1000)+retryAfter))}
@@ -28,9 +42,12 @@ export async function recordEtsyCall(response:Response){
 }
 export async function etsyBudget(){
   const since=new Date(Date.now()-24*60*60*1000).toISOString().slice(0,13);
-  const [row,observed]=await Promise.all([runtime().DB.prepare("SELECT COALESCE(SUM(calls),0) calls,COALESCE(SUM(rate_limited),0) rate_limited FROM etsy_api_usage_buckets WHERE bucket>=?").bind(since).first<{calls:number;rate_limited:number}>(),runtime().DB.prepare("SELECT qpd_limit FROM etsy_api_usage_buckets WHERE qpd_limit>0 ORDER BY updated_at DESC LIMIT 1").first<{qpd_limit:number}>()]);
+  const [row,observed,breakdown]=await Promise.all([runtime().DB.prepare("SELECT COALESCE(SUM(calls),0) calls,COALESCE(SUM(rate_limited),0) rate_limited FROM etsy_api_usage_buckets WHERE bucket>=?").bind(since).first<{calls:number;rate_limited:number}>(),runtime().DB.prepare("SELECT qpd_limit FROM etsy_api_usage_buckets WHERE qpd_limit>0 ORDER BY updated_at DESC LIMIT 1").first<{qpd_limit:number}>(),runtime().DB.prepare("SELECT feature,SUM(calls) calls FROM etsy_api_usage_buckets WHERE bucket>=? GROUP BY feature ORDER BY calls DESC").bind(since).all<{feature:string;calls:number}>()]);
   const limit=Number(observed?.qpd_limit)||etsyQpdLimit(),usable=Math.floor(limit*.8),used=Number(row?.calls||0);
-  return {limit,usable,used,remaining:Math.max(0,usable-used),reserved:limit-usable,rateLimited:Number(row?.rate_limited||0)};
+  return {limit,usable,used,remaining:Math.max(0,usable-used),reserved:limit-usable,rateLimited:Number(row?.rate_limited||0),
+    /* Ordered heaviest first — the first row is the thing to fix, and the whole
+       list is what goes to Etsy when asking for more. */
+    byFeature:(breakdown.results??[]).map(r=>({feature:String(r.feature),calls:Number(r.calls)}))};
 }
 
 export async function encryptEtsy(value:string){return encryptPrintifyToken(value,secret())}
@@ -53,12 +70,12 @@ export async function etsyConnection(userId:string){
   return {token,shopId:row.shop_id,shopName:row.shop_name,etsyUserId:row.etsy_user_id};
 }
 
-export async function etsyFetch<T>(path:string,token:string,init?:RequestInit,meter?:{calls:number}):Promise<T>{
+export async function etsyFetch<T>(path:string,token:string,init?:RequestInit,meter?:{calls:number},feature:EtsyFeature="publish"):Promise<T>{
   for(let attempt=0;attempt<5;attempt+=1){
     await waitForEtsyCapacity();
     const response=await fetch(`${API}${path}`,{...init,signal:init?.signal??AbortSignal.timeout(30000),headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`,...(init?.body instanceof URLSearchParams?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});
     if(meter)meter.calls+=1;
-    await recordEtsyCall(response);
+    await recordEtsyCall(response,feature);
     if(response.status===429)throw new EtsyRateLimited('Etsy asked The Listing Factory to slow down. Your saved work will continue automatically.');
     const text=await response.text();let payload:unknown={};try{payload=text?JSON.parse(text):{}}catch{payload={error:text}}
     if(response.ok)return payload as T;

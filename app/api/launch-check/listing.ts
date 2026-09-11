@@ -20,7 +20,7 @@ export async function inspectLaunchListing(owner:string,productId:string){
  const matches:Array<{id:number;title:string;state:string;url:string}> = [],scans:Array<{state:string;count:number;scanned:number;complete:boolean}>=[];
  for(const state of ['draft','active','inactive']){
   const result=await fetch(`https://api.etsy.com/v3/application/shops/${etsy.shopId}/listings?state=${state}&limit=100&sort_on=created&sort_order=desc`,{headers:{'x-api-key':etsyApiCredential(),Authorization:`Bearer ${etsy.token}`},signal:AbortSignal.timeout(20000)});
-  await recordEtsyCall(result);if(!result.ok)throw Error(`Etsy could not read ${state} listings (${result.status}).`);
+  await recordEtsyCall(result,"qa");if(!result.ok)throw Error(`Etsy could not read ${state} listings (${result.status}).`);
   const page=await result.json() as {count:number;results:Array<{listing_id:number;title:string;state:string;url:string}>};
   scans.push({state,count:page.count,scanned:page.results.length,complete:page.count<=page.results.length});
   for(const listing of page.results)if(listing.title===product.title)matches.push({id:listing.listing_id,title:listing.title,state:listing.state,url:listing.url});
@@ -52,7 +52,7 @@ export async function cleanupLaunchListings(owner:string,batchIds:string[]){
   if(!/^QA (?:CAPACITY|E2E)/.test(product.title)||product.title!==draft.title)throw Error('A selected product is no longer the exact QA draft. Nothing was deleted.');
   const etsyId=Number(product.external?.id)||null;
   if(etsyId){
-   const listingResponse=await fetch(`https://api.etsy.com/v3/application/listings/${etsyId}`,{headers:etsyHeaders,signal:AbortSignal.timeout(15000)});await recordEtsyCall(listingResponse);
+   const listingResponse=await fetch(`https://api.etsy.com/v3/application/listings/${etsyId}`,{headers:etsyHeaders,signal:AbortSignal.timeout(15000)});await recordEtsyCall(listingResponse,"qa");
    if(!listingResponse.ok)throw Error('Etsy could not preflight every linked QA draft. Nothing was deleted.');
    const listing=await listingResponse.json() as {shop_id:number;state:string;title:string};
    if(Number(listing.shop_id)!==Number(etsy.shopId)||listing.state!=='draft'||!/^QA (?:CAPACITY|E2E)/.test(listing.title))throw Error('A linked Etsy item is not an exact QA draft. Nothing was deleted.');
@@ -60,7 +60,7 @@ export async function cleanupLaunchListings(owner:string,batchIds:string[]){
   products.push({...draft,etsyId,missing:false});
  }
  const deletedEtsy:number[]=[],pendingEtsy:number[]=[];let etsyDeleteError='';
- for(const product of products){if(!product.etsyId)continue;try{const response=await fetch(`https://api.etsy.com/v3/application/listings/${product.etsyId}`,{method:'DELETE',headers:etsyHeaders,signal:AbortSignal.timeout(15000)});await recordEtsyCall(response);if(!response.ok)throw Error(`Etsy returned ${response.status}.`);deletedEtsy.push(product.etsyId)}catch(error){pendingEtsy.push(product.etsyId);etsyDeleteError=error instanceof Error?error.message:'Etsy could not delete the QA draft.'}}
+ for(const product of products){if(!product.etsyId)continue;try{const response=await fetch(`https://api.etsy.com/v3/application/listings/${product.etsyId}`,{method:'DELETE',headers:etsyHeaders,signal:AbortSignal.timeout(15000)});await recordEtsyCall(response,"qa");if(!response.ok)throw Error(`Etsy returned ${response.status}.`);deletedEtsy.push(product.etsyId)}catch(error){pendingEtsy.push(product.etsyId);etsyDeleteError=error instanceof Error?error.message:'Etsy could not delete the QA draft.'}}
  const deletedPrintify:string[]=[],alreadyMissingPrintify=products.filter(product=>product.missing).map(product=>product.id);
  for(const product of products){if(product.missing)continue;const response=await fetch(`https://api.printify.com/v1/shops/${product.shopId}/products/${product.id}.json`,{method:'DELETE',headers,signal:AbortSignal.timeout(15000)});if(!response.ok&&response.status!==404)throw Error(`Printify could not delete QA product ${product.id}.`);(response.status===404?alreadyMissingPrintify:deletedPrintify).push(product.id)}
  return {deletedPrintify,alreadyMissingPrintify,deletedEtsy,pendingEtsy,etsyDeleteError,productIds:products.map(product=>product.id),etsyListingIds:products.flatMap(product=>product.etsyId?[product.etsyId]:[])};

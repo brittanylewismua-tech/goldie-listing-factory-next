@@ -125,7 +125,7 @@ export async function runDeliveryTick(id:string,owner:string){
     const request=async(path:string,init?:RequestInit)=>{
       await waitForEtsyCapacity();
       const response=await fetch(`https://api.etsy.com/v3/application${path}`,{...init,headers:{...Object.fromEntries(new Headers(init?.headers)), 'x-api-key':etsyApiCredential(),Authorization:`Bearer ${connection.token}`},signal:AbortSignal.timeout(25000)});
-      await recordEtsyCall(response);
+      await recordEtsyCall(response,"photos");
       if(response.status===429)throw new EtsyRateLimited('Etsy asked The Listing Factory to slow down. Your saved draft will continue automatically.');
       if(!response.ok){const detail=(await response.text()).replace(/[<>]/g,'').slice(0,250);const message=`Etsy returned ${response.status}: ${detail}`;if(row.draft_json&&[400,401,403,404,409,422].includes(response.status))throw new DraftWriteRejected(message);throw Error(message);}
       return response;

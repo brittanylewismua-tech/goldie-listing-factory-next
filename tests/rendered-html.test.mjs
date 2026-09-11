@@ -1615,8 +1615,12 @@ test("queues Etsy publishing durably and protects shared API capacity",async()=>
   assert.match(client,/Math\.floor\(limit\*\.8\)/);
   assert.match(client,/etsy_api_usage_buckets/);
   assert.match(client,/x-limit-per-day/);
-  assert.match(client,/recordEtsyCall\(response\)/);
-  assert.match(finish,/recordEtsyCall\(response\)/);
+  /* Every call is still recorded — and now says which feature spent it, so the
+     budget can name the thing eating the quota instead of only its size. */
+  assert.match(client,/recordEtsyCall\(response,feature\)/);
+  assert.match(finish,/recordEtsyCall\(response,"photos"\)/);
+  assert.match(client,/PRIMARY KEY|ON CONFLICT\(bucket,feature\)/);
+  assert.match(client,/byFeature/,"the budget reports the breakdown, which is what Etsy asks for");
   assert.match(schema,/etsyPublishJobs/);
   assert.match(schema,/etsyApiUsageBuckets/);
   assert.match(migration,/CREATE UNIQUE INDEX `idx_etsy_publish_items_user_product`/);

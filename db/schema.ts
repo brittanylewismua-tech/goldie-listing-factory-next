@@ -214,12 +214,16 @@ export const etsyPublishItems = sqliteTable("etsy_publish_items", {
 }, (table) => [index("idx_etsy_publish_items_job_status").on(table.jobId, table.status), index("idx_etsy_publish_items_status_available").on(table.status, table.availableAt, table.createdAt), index("idx_etsy_publish_items_status_locked").on(table.status, table.lockedAt), uniqueIndex("idx_etsy_publish_items_user_product").on(table.userId, table.productId)]);
 
 export const etsyApiUsageBuckets = sqliteTable("etsy_api_usage_buckets", {
-  bucket: text("bucket").primaryKey(),
+  bucket: text("bucket").notNull(),
+  /* Which feature spent the call. Without this the log can say the quota is
+     nearly gone and never say what took it — no way to know what to make
+     cheaper, and nothing to show Etsy when asking for a raise. */
+  feature: text("feature").notNull().default("unlabelled"),
   calls: integer("calls").notNull().default(0),
   rateLimited: integer("rate_limited").notNull().default(0),
   qpdLimit: integer("qpd_limit").notNull().default(0),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [primaryKey({ columns: [table.bucket, table.feature] }), index("idx_etsy_usage_bucket").on(table.bucket)]);
 
 export const etsyListingUsage = sqliteTable("etsy_listing_usage", {
   userProduct: text("user_product").primaryKey(),
@@ -331,3 +335,22 @@ export const platformCache = sqliteTable("platform_cache", {
   expiresAt: integer("expires_at").notNull(),
   storedAt: integer("stored_at").notNull(),
 }, (table) => [index("platform_cache_expires").on(table.expiresAt)]);
+
+/**
+ * A DAY'S ANSWER TO ONE KEYWORD, SHARED BY EVERYONE.
+ *
+ * Etsy allows 10,000 calls a day for the whole app. A live search on every
+ * keystroke, for every seller, would eat that and take publishing down with
+ * it. But "what is winning for feminist tote bag" is the same answer for all
+ * of them, and it does not change meaningfully within a day — so it is
+ * fetched once, kept here, and served to everybody from one row.
+ *
+ * One call per keyword per day, for any number of sellers.
+ */
+export const etsyKeywordSnapshots = sqliteTable("etsy_keyword_snapshots", {
+  keywordDay: text("keyword_day").primaryKey(),
+  keyword: text("keyword").notNull(),
+  day: text("day").notNull(),
+  listingsJson: text("listings_json").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("idx_keyword_snapshots_day").on(table.day)]);

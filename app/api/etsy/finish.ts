@@ -73,7 +73,7 @@ async function applyListingImages(userId:string,token:string,shopId:number,listi
   for(let position=0;position<ordered.length;position++){const id=ordered[position],rank=position+1,form=new FormData(),object=objects.get(id);let fileName="listing image";
     if(id.startsWith("printify:")){const image=printifyByIndex.get(Number(id.slice(9)));if(!image||!keep.has(Number(id.slice(9))))continue;form.set("listing_image_id",String(image.listing_image_id));fileName=`Printify image ${Number(id.slice(9))+1}`}
     else if(object){const value=await runtime().ARTWORK.get(object.key);if(!value)continue;fileName=value.customMetadata?.name||object.key.split("/").pop()||"listing-image.jpg";form.set("image",new File([await value.arrayBuffer()],fileName,{type:value.httpMetadata?.contentType||"image/jpeg"}))}else continue;
-    form.set("rank",String(rank));const response=await fetch(`https://api.etsy.com/v3/application/shops/${shopId}/listings/${listingId}/images`,{method:"POST",headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`},body:form});meter.calls+=1;await recordEtsyCall(response);if(!response.ok)throw new Error(`Etsy could not place ${fileName} in photo position ${rank} (${response.status}).`)
+    form.set("rank",String(rank));const response=await fetch(`https://api.etsy.com/v3/application/shops/${shopId}/listings/${listingId}/images`,{method:"POST",headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`},body:form});meter.calls+=1;await recordEtsyCall(response,"photos");if(!response.ok)throw new Error(`Etsy could not place ${fileName} in photo position ${rank} (${response.status}).`)
   }
 }
 
