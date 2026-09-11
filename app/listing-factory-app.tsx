@@ -3818,7 +3818,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
           open
           toggleLabel="">
           <details className="shared-description-settings optional-title-tools" open={batchToolsOpen??!titleSetsReady} onToggle={event=>setBatchToolsOpen(event.currentTarget.open)}>
-            <summary>{titleSetsReady?"Create different titles and tags":"Create missing titles and tags"}</summary>
+            <summary>{titleSetsReady?"Edit titles and tags":"Create missing titles and tags"}</summary>
             <div className={titlePulseIds.size?"titles-resolving":""}>{titlesLead()}</div>
           </details>
         </FactoryPanel>}

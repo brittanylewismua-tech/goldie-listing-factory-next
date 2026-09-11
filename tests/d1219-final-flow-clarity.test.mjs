@@ -8,10 +8,12 @@ const handoff = await readFile(new URL("../app/photo-delivery-handoff.tsx", impo
 const css = (await Promise.all(["interface-v2.css","lilac-theme.css"].map(name=>readFile(new URL(`../app/${name}`, import.meta.url), "utf8")))).join("\n");
 const usage = await readFile(new URL("../app/usage/page.tsx", import.meta.url), "utf8");
 
-test("D1219 fills partial generated tag sets from valid keyword fallbacks", () => {
-  const tags=completedGeneratedTags(["Jane Austen"],["Pride and Prejudice"],["Jane Austen","Most Ardently","This phrase is far too long to be an Etsy tag","Book Lover Gift"]);
-  assert.deepEqual(tags,["jane austen","pride and prejudice","most ardently","book lover gift"]);
+test("generated tags contain only relevant phrases selected from the current bank", () => {
+  const tags=completedGeneratedTags(["Jane Austen","Summerween"],["Pride and Prejudice"],["Jane Austen","Pride and Prejudice","Most Ardently","Book Lover Gift"]);
+  assert.deepEqual(tags,["jane austen","pride and prejudice"]);
   assert.ok(tags.every(tag=>tag.length<=20));
+  assert.ok(!tags.includes("most ardently"),"unused bank phrases must not fill empty tag slots");
+  assert.ok(!tags.includes("summerween"),"a returned phrase outside the current bank is rejected");
   assert.match(app, /completedGeneratedTags\(payload\.tags\|\|\[\],payload\.keywords\|\|\[\],keywords\)/);
   assert.doesNotMatch(app, /returnedTags\.length\?returnedTags:fallback/);
 });

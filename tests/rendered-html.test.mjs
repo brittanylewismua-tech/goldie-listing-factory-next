@@ -743,10 +743,10 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.doesNotMatch(page,/The complete description is shown below/);
   assert.match(page,/descriptionOverride/);assert.match(page,/scrollIntoView/);
   assert.match(tools,/keywordListsCache/);assert.match(tools,/selectionOnly/);assert.match(tools,/onSelect/);
-  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!picked\.length\)return NextResponse\.json\(\{error:"This keyword bank is empty/);
+  assert.match(intelligence,/selected_keywords/);assert.match(intelligence,/allowedByLower/);assert.match(intelligence,/PRODUCT TYPE RULE/);assert.match(intelligence,/if\(!picked\.length\)return NextResponse\.json\(\{error:"No phrase in this keyword bank accurately describes the design/);
   assert.match(intelligence,/tagCandidates=keywords\.filter/);
   assert.match(intelligence,/tag_keywords/);
-  assert.match(intelligence,/requiredTagCount=Math\.min\(13,tagCandidates\.length\)/);
+  assert.doesNotMatch(intelligence,/requiredTagCount|rankedTagFallback/);
   assert.match(intelligence,/return NextResponse\.json\(\{title,keywords:included,tags:pickedTags\.length\?pickedTags:tags,titleWarning,designText\}\)/);
 });
 
@@ -2326,18 +2326,17 @@ test("reports published listings instead of workflow completion (fixes D88)",asy
   assert.match(app,/keptAsDrafts,batchReceipt\]\);/);
 });
 
-test("retries thin AI title output once and then rejects the row (fixes D77)",async()=>{
+test("keeps a short accurate AI result and never retries to force filler (fixes D77)",async()=>{
   const route=await readFile(new URL("../app/api/listing-intelligence/route.ts",import.meta.url),"utf8");
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(route,/minimumTitlePhrases=titleCandidates\.length>=8\?8:1/);
-  assert.match(route,/requiredTagCount=Math\.min\(13,tagCandidates\.length\)/);
-  assert.match(route,/selection=await requestSelection\(0\);if\(selection\.selected\.length<minimumTitlePhrases\|\|selection\.tags\.length<requiredTagCount\)selection=richer\(selection,await requestSelection\(1\)\)/);
+  assert.doesNotMatch(route,/minimumTitlePhrases|requiredTagCount|requestSelection\(1\)|selection=richer/);
+  assert.match(route,/selection=await requestSelection\(\)/);
   /* The retry still fires on phrase count — cheap and harmless. But the row is
    * only REJECTED on the assembled title's length. Gating rejection on phrase
    * count failed 2 of 3 real listings, one at "7 of 8 required title phrases
    * and 13 of 13 available Etsy tags". See D77 in DEFECTS.md. */
   assert.match(route,/const titleIsShort=couldHaveDoneBetter&&title\.length<TITLE_FILL_FLOOR;/);
-  assert.match(route,/Short title \\u2014 few phrases in this bank match this design\./);
+  assert.match(route,/Short title \\u2014 only a few phrases in this bank accurately match this design\./);
   assert.doesNotMatch(route,/tagCandidates\.filter\(candidate=>!rankedTags\.includes\(candidate\)\)/);
   assert.match(app,/titleError:item\.error/);
   assert.match(app,/each affected listing explains why below/);
@@ -2586,7 +2585,7 @@ test("D377: the publish checklist names the shipping profile readably", async ()
    mismatch (a feature that mostly says no). Neither: rank the bank by how well
    each phrase matches what is actually on the design, take the closest, and warn
    when the fit looks weak. */
-test("D414: a chosen bank always produces a title, ranked by fit", async () => {
+test("D414: a mismatched bank is stopped instead of producing a padded title", async () => {
   const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
 
   const ranking = await readFile(new URL("../app/keyword-ranking.ts", import.meta.url), "utf8");
@@ -2596,15 +2595,10 @@ test("D414: a chosen bank always produces a title, ranked by fit", async () => {
      match outrank a phrase matching several times. */
   assert.match(ranking, /scored\.sort\(\(a,b\)=>b\.score-a\.score\|\|a\.parts-b\.parts\|\|a\.index-b\.index\)/,
     "ranked by fit, then specificity, ties keeping bank order so the result is stable");
-  assert.match(route, /const picked=selected\.length\?selected:bestFitFromBank/);
-
-  /* Refusal is reserved for an empty bank. */
-  assert.match(route, /if\(!picked\.length\)return NextResponse\.json\(\{error:"This keyword bank is empty/);
-  assert.doesNotMatch(route, /bankFit==="mismatch"\)return NextResponse/,
-    "a weak fit is a warning, not a refusal");
-
-  /* And the seller is still told when the bank looks wrong for the design. */
-  assert.match(route, /bankFit==="mismatch"\?"This bank may not match this design/);
+  assert.match(route, /if\(bankFit==="mismatch"\)return NextResponse\.json\(\{error:"This keyword bank does not match this design/);
+  assert.match(route, /const picked=selected\.filter\(phrase=>bankFitForDesign\(\[phrase\],designSignals\)!=="mismatch"\)/);
+  assert.doesNotMatch(route, /bestFitFromBank/,
+    "The server must never replace an empty relevant selection with arbitrary bank phrases.");
 });
 
 /* D415 · Ranking on the design's visible text alone left art-only designs
@@ -2618,8 +2612,8 @@ test("D415: ranking uses what the model saw, not only readable text", async () =
   assert.match(route, /design_subjects/, "the model is asked what the art depicts");
   assert.match(route, /designSubjects=\(parsed\.design_subjects\|\|\[\]\)/);
   assert.match(route, /const designSignals=\[\.\.\.designText,\.\.\.designSubjects\]/);
-  assert.match(route, /bestFitFromBank\(titleCandidates,designSignals,body\.product\)/,
-    "and the ranking reads both");
+  assert.match(route, /bankFitForDesign\(titleCandidates,designSignals\)/,
+    "and the mismatch check reads both");
 
   /* One vision call, as before - this must not become a second request. */
   assert.equal((route.match(/fal\.run\/openrouter\/router\/vision/g) || []).length, 2,
@@ -2966,7 +2960,7 @@ test("creating drafts stays on Images, and the final check says what is wrong �
      throw it away and return a paragraph explaining why the field was empty. */
   assert.doesNotMatch(route, /of 140 title characters for this design/);
   assert.match(route, /const titleIsShort=/);
-  assert.match(route, /Short title \\u2014 few phrases in this bank match this design\./);
+  assert.match(route, /Short title \\u2014 only a few phrases in this bank accurately match this design\./);
   assert.match(route, /return NextResponse\.json\(\{title,keywords:included/,
     "the title is returned even when it is short");
 

@@ -135,7 +135,7 @@ test("no management screen relies on scrollIntoView — it is clipped away", asy
   }
 });
 
-test("a thin title fails on its own length, not on phrase count — D77", async () => {
+test("a short accurate title is kept without retrying or padding — D77", async () => {
   const { readFile } = await import("node:fs/promises");
   const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
 
@@ -156,9 +156,9 @@ test("a thin title fails on its own length, not on phrase count — D77", async 
     "The gate must test the finished title's length.");
   assert.doesNotMatch(route, /selected\.length<minimumTitlePhrases\|\|tags\.length<requiredTagCount\)return NextResponse/,
     "Hard-failing a row on phrase count rejects good listings. Judge the assembled title instead.");
-  // The retry itself may still use phrase count — it is cheap and harmless.
-    /* D544 - kept only when the retry comes back richer than the first attempt. */
-  assert.match(route, /selection=richer\(selection,await requestSelection\(1\)\)/);
+  assert.match(route, /selection=await requestSelection\(\)/);
+  assert.doesNotMatch(route, /requestSelection\(1\)|minimumTitlePhrases|requiredTagCount/,
+    "Relevance is decided once; a second call must not pressure the model to pad the answer.");
 });
 
 test("both Printify product links work, and a bare id too — D116", async () => {
@@ -202,29 +202,17 @@ test("machine-default filenames do not become batch names — D142", async () =>
  * with ten empty tag slots; the second used under a tenth of its title. Both
  * came from the same bank, which had plenty of fitting phrases for both.
  * Three separate causes, all pinned here. */
-test("Etsy's title and tag space is filled when the bank can fill it — D544", async () => {
+test("Etsy title and tag space is never filled with unselected bank phrases — D544", async () => {
   const { readFile } = await import("node:fs/promises");
   const route = await readFile(new URL("../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
 
-  // 1. The retry is kept only when it is actually better than the first attempt.
-  assert.match(route, /\(b\.selected\.length\+b\.tags\.length\)>\(a\.selected\.length\+a\.tags\.length\)\?b:a/);
-  assert.match(route, /selection=richer\(selection,await requestSelection\(1\)\)/);
-
-  /* 2. Tags: the fallback used to fire only on an empty list, so three tags out
-        of thirteen was accepted in silence. The model's ranking leads and the
-        bank fills the rest. */
-  assert.match(route, /const rankedTagFallback=bestFitFromBank\(tagCandidates,designSignals,body\.product\)/);
-  assert.match(route, /const pickedTags=withoutCaseCollisions\(\[\.\.\.tags,\.\.\.rankedTagFallback\]\)\.slice\(0,requiredTagCount\|\|13\)/);
-  assert.doesNotMatch(route, /withoutCaseCollisions\(tags\.length\?tags:/,
-    "a short tag list must be topped up, not accepted");
-
-  /* 3. Title: TITLE_FILL_FLOOR already noticed a thin title and only warned about
-        it. It fills it now, from the same ranked bank, without repeating a
-        phrase already in the title or one contained in it. */
-  assert.match(route, /if\(title\.length<90\)\{/);
-  assert.match(route, /for\(const phrase of bestFitFromBank\(titleCandidates,designSignals,body\.product\)\)/);
-  assert.match(route, /if\(already\.has\(phrase\.toLocaleLowerCase\(\)\)\|\|contained\(phrase\)\)continue/);
-  assert.match(route, /if\(title\.length>=90\)break/);
+  assert.match(route, /selection=await requestSelection\(\)/);
+  assert.doesNotMatch(route, /requestSelection\(1\)|rankedTagFallback|bestFitFromBank/);
+  assert.match(route, /const pickedTags=withoutCaseCollisions\(tags\.filter\(phrase=>bankFitForDesign\(\[phrase\],designSignals\)!=="mismatch"\)\)\.slice\(0,13\)/);
+  assert.match(route, /const picked=selected\.filter\(phrase=>bankFitForDesign\(\[phrase\],designSignals\)!=="mismatch"\)/,
+    "every selected phrase is checked, so one good phrase cannot shelter unrelated phrases in a mixed bank");
+  assert.doesNotMatch(route, /if\(title\.length<90\)\{/,
+    "a short result stays short rather than borrowing unrelated phrases");
 
   // And the 140 character ceiling still governs every phrase that goes in.
   assert.match(route, /const addPhrase=\(phrase:string\)=>\{const candidate=title\?`\$\{title\}\$\{joiner\}\$\{phrase\}`:phrase;if\(candidate\.length>140\)return/);

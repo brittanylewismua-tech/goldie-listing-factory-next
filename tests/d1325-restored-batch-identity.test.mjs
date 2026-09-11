@@ -21,7 +21,7 @@ test("D1325: completed title work leads with editable listings instead of a disa
   assert.match(source,/const titleSetsReady=files\.every\(item=>Boolean\(item\.title\.trim\(\)&&item\.tags\.length\)\)/);
   assert.match(source,/description=\{titleSetsReady\?"Review or change every listing below\."/);
   assert.match(source,/open=\{batchToolsOpen\?\?!titleSetsReady\}/);
-  assert.match(source, /\{titleSetsReady\?"Create different titles and tags":"Create missing titles and tags"\}/);
+  assert.match(source, /\{titleSetsReady\?"Edit titles and tags":"Create missing titles and tags"\}/);
   assert.match(source,/onToggle=\{event=>setBatchToolsOpen\(event\.currentTarget\.open\)\}/);
 });
 

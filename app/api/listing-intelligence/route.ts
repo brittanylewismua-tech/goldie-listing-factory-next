@@ -1,6 +1,6 @@
 import { withErrorLog } from "@/app/error-log";
 import { NextResponse } from "next/server";
-import { bestFitFromBank, clean, normalize } from "../../keyword-ranking.ts";
+import { clean, normalize } from "../../keyword-ranking.ts";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { excludedProductNouns, namesExcludedProduct } from "@/app/product-type-utils";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
@@ -74,63 +74,39 @@ async function handlePOST(request:Request){
     const excludedNouns=excludedProductNouns(body.product?.blueprintTitle||"");
     const titleCandidates=keywords.filter(keyword=>!namesExcludedProduct(keyword,excludedNouns));
     const tagCandidates=keywords.filter(keyword=>keyword.length<=20&&!namesExcludedProduct(keyword,excludedNouns));
-    const minimumTitlePhrases=titleCandidates.length>=8?8:1,requiredTagCount=Math.min(13,tagCandidates.length);
-    async function requestSelection(attempt:number){
-      const correction=attempt===1?`\nCORRECTION: Your first response returned too few validated phrases. Return at least ${minimumTitlePhrases} title phrases and exactly ${requiredTagCount} tag phrases from the supplied candidates. If you cannot do that accurately, still return your best exact candidates; the server will reject this row instead of publishing thin or mismatched SEO.`:"";
+    async function requestSelection(){
       const titleResponse=await fetch("https://fal.run/openrouter/router/vision",{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify({image_urls:[body.image],model:"google/gemini-2.5-flash",temperature:0,system_prompt:"Return only compact valid JSON. Never use markdown.",prompt:`Inspect this specific design. First transcribe its meaningful visible wording as exact lines. Then select the exact phrases from this seller-validated keyword bank that best fit it: ${JSON.stringify(keywords)}. Product: ${JSON.stringify(body.product||{})}.
 
 PRODUCT TYPE RULE (most important): this listing is for the physical product named above. Reject every phrase that names any different product type. For this exact Printify blueprint, the excluded product nouns are: ${JSON.stringify(excludedNouns)}. A phrase containing any excluded noun is always wrong, no matter how strong its search data.
 
-HOW MANY: order your title selections most relevant first, then keep going. Select between 8 and 13 title phrases: the CLOSEST MATCHING phrases in the bank, ranked best first. The seller chose this bank on purpose, so always return the best available matches even when the fit is loose - rank by how well each phrase fits and let the weaker ones fall to the end. Only return fewer than 8 if the bank genuinely holds fewer usable phrases than that. The seller's phrases will be joined into one Etsy title with a 140 character limit, so aim to give enough phrases to use most of that limit. Quality still wins: never pad the title with a phrase that does not fit the design or names the wrong product.
+HOW MANY: order the accurate title selections most relevant first. Return only phrases that describe this design. A short accurate list is correct. Never choose a merely related or loose-fit phrase to make the title longer. The seller's phrases will be joined into one Etsy title with a 140 character limit.
 
 ETSY TAGS ARE A SEPARATE FIELD: rank these tag-length phrases from most to least relevant to this design: ${JSON.stringify(tagCandidates)}. Return every fitting candidate in ranked order, up to 13. Never split, shorten, combine, rewrite, or invent a tag. Tags do not need to appear in the title.
 
-Select only phrases a shopper looking at THIS artwork would call accurate. If a phrase names an animal, object, place, occasion or activity that is not actually shown in the artwork, do not select it, however well it suits the bank's general theme. Returning two or three phrases is a correct answer. Never pad the list to reach a count. Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any phrase. Copy each phrase exactly as it appears in the bank. Also describe what the artwork DEPICTS in design_subjects: 3 to 8 short plain words or phrases covering the subject, motifs, setting, occasion, and style. These are your own words, not phrases from the bank, and they are how The Listing Factory ranks a bank against art that carries little or no text. Return only {"design_text":["exact visible line from the design"],"design_subjects":["short description of what the art shows"],"selected_keywords":["exact title phrase copied from the bank"],"tag_keywords":["exact tag phrase copied from the supplied tag candidates"]}.${correction}`})});
+Select only phrases a shopper looking at THIS artwork would call accurate. If a phrase names an animal, identity, object, place, occasion or activity that is not actually shown in the artwork, do not select it, however well it suits the bank's general theme. Returning two or three phrases is a correct answer. Never pad the list to reach a count. Avoid duplicate meaning. Do not rewrite, combine, expand, correct, or invent any phrase. Copy each phrase exactly as it appears in the bank. Also describe what the artwork DEPICTS in design_subjects: 3 to 8 short plain words or phrases covering the subject, motifs, setting, occasion, and style. These are your own words, not phrases from the bank, and they are how The Listing Factory checks that the selected bank fits art that carries little or no text. Return only {"design_text":["exact visible line from the design"],"design_subjects":["short description of what the art shows"],"selected_keywords":["exact title phrase copied from the bank"],"tag_keywords":["exact tag phrase copied from the supplied tag candidates"]}.`})});
       const titlePayload=await titleResponse.json() as {output?:string;detail?:string};if(!titleResponse.ok)throw new Error(titlePayload.detail||"The Listing Factory could not build this title.");const match=titlePayload.output?.match(/\{[\s\S]*\}/);if(!match)throw new Error("The Listing Factory could not read the prepared title.");const parsed=JSON.parse(match[0]) as {selected_keywords?:string[];tag_keywords?:string[];design_text?:string[];design_subjects?:string[]},allowedByLower=new Map(titleCandidates.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),selected=[...new Set((parsed.selected_keywords||[]).map(value=>allowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13),tagAllowedByLower=new Map(tagCandidates.map(keyword=>[keyword.toLocaleLowerCase(),keyword])),tags=[...new Set((parsed.tag_keywords||[]).map(value=>tagAllowedByLower.get(clean(value).toLocaleLowerCase())).filter((value):value is string=>Boolean(value)))].slice(0,13),designText=(parsed.design_text||[]).map(clean).filter(Boolean).slice(0,12),designSubjects=(parsed.design_subjects||[]).map(clean).filter(Boolean).slice(0,8);return {selected,tags,designText,designSubjects};
     }
-    /* D544 - measured on her own batch, two listings from the same bank and the
-       same run: one came back with three title phrases and three tags, the other
-       with thirteen tags. The retry existed already, but its result was used
-       unconditionally - so a second attempt that came back worse replaced a
-       better first one, and nothing checked. Keep whichever attempt actually
-       returned more. */
-    type Selection={selected:string[];tags:string[];designText:string[];designSubjects:string[]};
-    const richer=(a:Selection,b:Selection):Selection=>
-      (b.selected.length+b.tags.length)>(a.selected.length+a.tags.length)?b:a;
-    let selection;try{selection=await requestSelection(0);if(selection.selected.length<minimumTitlePhrases||selection.tags.length<requiredTagCount)selection=richer(selection,await requestSelection(1))}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"The Listing Factory could not build this title."},{status:502})}
+    /* One vision pass decides relevance. Retrying because it returned fewer than
+       thirteen phrases pressured the model to fill space and doubled the wait.
+       Fewer accurate phrases are a valid result. */
+    let selection;try{selection=await requestSelection()}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"The Listing Factory could not build this title."},{status:502})}
     const {selected,tags,designText,designSubjects}=selection;
     
-    /* D414 - This has swung between two bad extremes. It used to fall back to
-       keywords.slice(0,13) - the first thirteen phrases in alphabetical order -
-       which produced a confident title built from arbitrary phrases. D403 then
-       refused outright whenever the bank did not verifiably describe the design,
-       which made the feature useless: the seller picks a bank deliberately, and
-       being told "no" is not an answer.
-
-       Neither. The seller chose the bank; The Listing Factory picks the closest matches in it,
-       ranked, and says so when the fit looks weak. Refusing is reserved for the
-       one case where there is genuinely nothing to choose from. */
-    /* D415 - Ranking on visible text alone left art-only designs unrankable, and the
-       vision model is already looking at the picture - asking it to name what the
-       art depicts costs nothing extra, it is the same call. Rank on what it saw. */
+    /* Check both readable words and what the vision pass saw. A mixed bank may
+       contain one matching topic alongside unrelated phrases, so validate each
+       selected phrase too; a whole-bank pass is not enough. */
     const designSignals=[...designText,...designSubjects];
     const bankFit=bankFitForDesign(titleCandidates,designSignals);
-    const picked=selected.length?selected:bestFitFromBank(titleCandidates,designSignals,body.product);
+    if(bankFit==="mismatch")return NextResponse.json({error:"This keyword bank does not match this design. Choose a bank that describes the artwork, or write the title yourself."},{status:422});
+    const picked=selected.filter(phrase=>bankFitForDesign([phrase],designSignals)!=="mismatch");
     /* D453 - Etsy refuses two tags that differ only by case, and a bank may hold
        both on purpose: exact duplicates are removed from a bank, case variants
        are not, because a plural or a deliberate misspelling is a separate
        keyword with its own data. The collision is resolved here, on the way
        out, rather than by editing what she typed. */
     const withoutCaseCollisions=(list:string[])=>{const seen=new Set<string>();return list.filter(phrase=>{const key=phrase.toLocaleLowerCase();if(seen.has(key))return false;seen.add(key);return true})};
-    /* D544 - this only fell back when the model returned NO tags. Three tags out
-       of thirteen was accepted in silence, and Etsy gives thirteen slots: on her
-       run one listing shipped with three, so ten slots of search coverage were
-       left empty for no reason. The model's ranking still leads; the bank fills
-       what it left behind, in bank-fit order, so the slots are used whenever the
-       bank can fill them. */
-    const rankedTagFallback=bestFitFromBank(tagCandidates,designSignals,body.product);
-    const pickedTags=withoutCaseCollisions([...tags,...rankedTagFallback]).slice(0,requiredTagCount||13);
-    if(!picked.length)return NextResponse.json({error:"This keyword bank is empty, so there is nothing to build a title from. Pick a bank with phrases in it, or write this title yourself."},{status:422});
+    const pickedTags=withoutCaseCollisions(tags.filter(phrase=>bankFitForDesign([phrase],designSignals)!=="mismatch")).slice(0,13);
+    if(!picked.length)return NextResponse.json({error:"No phrase in this keyword bank accurately describes the design. Choose another bank, or write the title yourself."},{status:422});
     /* D157: `selected` is de-duplicated for exact matches only, so a bank holding
      * both "girls gone mild" and "bachelorette girls gone mild" put BOTH in the
      * title — one row literally read "Bachelorette Girls Gone Mild, Girls Gone
@@ -145,48 +121,13 @@ Select only phrases a shopper looking at THIS artwork would call accurate. If a 
       joiner=body.useCommas?", ":" ";let title="";const included:string[]=[];
     const addPhrase=(phrase:string)=>{const candidate=title?`${title}${joiner}${phrase}`:phrase;if(candidate.length>140)return;title=candidate;included.push(phrase)};
     for(const phrase of chosen)addPhrase(phrase);
-    /* D544 - one of her two listings came back with a twelve character title,
-       "Bride Hoodie", out of the 140 Etsy allows and a bank with dozens of
-       fitting phrases. TITLE_FILL_FLOOR below already noticed and printed a
-       warning; it never did anything about it. The model's ranking still leads,
-       and the bank's own fit ranking fills the rest of the space rather than
-       leaving nine tenths of the title empty and telling her about it. */
-    if(title.length<90){
-      const already=new Set(included.map(phrase=>phrase.toLocaleLowerCase()));
-      const contained=(phrase:string)=>{const inner=normalisePhrase(phrase);return included.some(other=>{const outer=normalisePhrase(other);return outer.includes(inner)||inner.includes(outer)})};
-      for(const phrase of bestFitFromBank(titleCandidates,designSignals,body.product)){
-        if(title.length>=90)break;
-        if(already.has(phrase.toLocaleLowerCase())||contained(phrase))continue;
-        addPhrase(phrase);already.add(phrase.toLocaleLowerCase());
-      }
-    }
     if(!title)return NextResponse.json({error:"The Listing Factory could not build a usable title."},{status:502});
-    /* D77 is about listings that come out thin — one row got 45 of 140
-     * characters while its siblings got 130. Judge that directly.
-     *
-     * The first attempt at this gated on phrase count (>=8) and failed a row
-     * that returned 7 phrases and all 13 tags. Seven good phrases is a good
-     * listing; refusing to build it is worse than the defect. What matters is
-     * whether the finished title uses the space Etsy gives it. */
+    /* A short accurate title is kept and labelled. Length never authorizes
+       filling it with phrases the relevance pass did not select. */
     const TITLE_FILL_FLOOR=90;
     const couldHaveDoneBetter=titleCandidates.length>=8;
-    /* D438 - this used to refuse. It built an 81 character title from five of her
-       phrases, threw it away, and returned a paragraph explaining why. A short
-       title is a warning, not a failure: she can read it, edit it, or change the
-       bank, and none of that is possible if the field is left empty. */
-    const titleIsShort=couldHaveDoneBetter&&title.length<TITLE_FILL_FLOOR;/* D230 · This fires when the bank does not match the ARTWORK, but a title has
-       already been built from that bank — so "No phrase in this bank matches this
-       design" was printed directly beneath a finished title made of nine of its
-       phrases. Measured live on a nautical design titled from a Jane Austen bank.
-       Say what is actually true: the title exists, and it may not describe the art. */
-    /* D403 - A verified mismatch is refused above. This warning is now only for the
-       case The Listing Factory cannot check: a design with no readable text. */
-    /* D414 - The Listing Factory always builds from the bank the seller chose. It says when the
-       fit looks weak, and when it could not check - it does not refuse. */
-    /* D438 - these explained themselves three times over. What she needs is what
-       is wrong and what to do about it, in one line. */
-    const titleWarning=bankFit==="mismatch"?"This bank may not match this design. Check the title, or pick a different bank."
-      :titleIsShort?"Short title \u2014 few phrases in this bank match this design."
+    const titleIsShort=couldHaveDoneBetter&&title.length<TITLE_FILL_FLOOR;
+    const titleWarning=titleIsShort?"Short title \u2014 only a few phrases in this bank accurately match this design."
       :bankFit==="unknown"?"The Listing Factory could not read any text in this design, so it could not check the bank. Check the title.":"";
     return NextResponse.json({title,keywords:included,tags:pickedTags.length?pickedTags:tags,titleWarning,designText});
   }
