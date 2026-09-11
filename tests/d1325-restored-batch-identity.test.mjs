@@ -11,7 +11,9 @@ test("D1325: a restored batch keeps its history label in the header without turn
   assert.doesNotMatch(source,/setBatchDisplayName\(payload\.batch\.display_name/);
   const route=fs.readFileSync(new URL('../app/api/batches/route.ts',import.meta.url),'utf8');
   assert.match(route,/const restoredIdentity=batchListItem\(\{\.\.\.row,state_json:JSON\.stringify\(state\)\}\)/);
-  assert.match(route,/batch:\{\.\.\.row,display_name:restoredIdentity\.display_name,state\}/);
+  assert.match(route,/const restoredRunName=\(state as BatchListState&\{run\?:\{bundleName\?:string\}\}\)\.run\?\.bundleName/);
+  assert.match(route,/const restoredDisplayName=String\(state\.batchDisplayName\?\.trim\(\)\|\|restoredRunName\|\|restoredIdentity\.display_name\)/);
+  assert.match(route,/batch:\{\.\.\.row,display_name:restoredDisplayName,state\}/);
   assert.match(source,/setRestoredBatchName\(""\)/);
 });
 

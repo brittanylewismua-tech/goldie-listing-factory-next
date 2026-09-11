@@ -172,7 +172,9 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
        batch". Use the same identity function for list and restore so the name
        cannot change merely because the seller opened the batch. */
     const restoredIdentity=batchListItem({...row,state_json:JSON.stringify(state)});
-    return NextResponse.json({batch:{...row,display_name:restoredIdentity.display_name,state},children,authoritativeReceipt})}/* D871 · Batch History lists runs, not the records a run keeps for each of its
+    const restoredRunName=(state as BatchListState&{run?:{bundleName?:string}}).run?.bundleName;
+    const restoredDisplayName=String(state.batchDisplayName?.trim()||restoredRunName||restoredIdentity.display_name);
+    return NextResponse.json({batch:{...row,display_name:restoredDisplayName,state},children,authoritativeReceipt})}/* D871 · Batch History lists runs, not the records a run keeps for each of its
      products. A parent and a single-product batch both have no parent of their
      own; a child never appears on its own. Legacy sibling rows predate the
      column, so parent_batch_id is NULL on all of them and they list exactly as
