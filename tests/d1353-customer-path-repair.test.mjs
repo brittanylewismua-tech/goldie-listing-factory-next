@@ -38,5 +38,5 @@ test("D1353: resumed Review previews reject placeholders and fall through to Pri
 });
 
 test("D1353: build marker advances",()=>{
-  assert.match(read("app/build-marker.ts"),/BUILD_MARKER = "D1358"/);
+  assert.match(read("app/build-marker.ts"),/BUILD_MARKER = "D1359"/);
 });
