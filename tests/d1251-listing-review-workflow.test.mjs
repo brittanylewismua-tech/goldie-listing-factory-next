@@ -38,7 +38,7 @@ test("D1251: the listing editor keeps every section and Review return visible",(
   assert.match(app,/Back to Review <span aria-hidden="true">→<\/span><\/button>/);
   assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
   assert.match(app,/window\.setTimeout\(scrollReviewTaskToTop,300\)/);
-  assert.match(app,/function scrollReviewTaskToTop\(\)[\s\S]*?"\.review-listing-editor-nav"/);
+  assert.match(app,/function scrollReviewTaskToTop\(\)[\s\S]*?const reset=scrollFactoryToTop\(\);[\s\S]*?window\.requestAnimationFrame\(reset\)/);
   assert.match(app,/visibleListings=reviewEditing\?listings\.filter/);
   assert.match(app,/position:reviewEditing\?\{index:listings\.findIndex/);
   assert.match(readFileSync(new URL("..\/app\/listing-rows.tsx",import.meta.url),"utf8"),/position=row\.position\|\|\{index:index\+1,total:rows\.length\}/);

@@ -2144,13 +2144,12 @@ export default function ListingFactoryApp() {
     return reset;
   }
   function scrollReviewTaskToTop(){
-    scrollFactoryToTop();
-    /* Keep the product and task heading in view when the right rail changes
-       sections. Scrolling the rail itself to the top skipped past the heading,
-       so Description -> Etsy details looked as if the new screen began in the
-       middle of a form. The rail and work surface share this parent. */
-    const rail=document.querySelector<HTMLElement>(".review-listing-editor-nav");
-    rail?.closest<HTMLElement>(".step-product-card,.focused-review-section")?.scrollIntoView({block:"start"});
+    /* The page heading and product identity sit above the focused editor. Any
+       scrollIntoView target inside the editor therefore skips that context.
+       Reset the real pane after React commits, then repeat on the next frame so
+       scroll anchoring cannot restore the old section's position. */
+    const reset=scrollFactoryToTop();
+    window.requestAnimationFrame(reset);
   }
   function goToStep(rawStep:WorkflowStep,replace=false,force=false){
     const step=normalizeStep(rawStep);if(!force){const issues=requiredForStep(step);if(issues.length)return stopWith("Finish all sections first.",issues);if(!canOpenStep(step))return;}setWorkflowStep(normalizeStep(step));const url=new URL(window.location.href);url.searchParams.set("step",step);window.history[replace?"replaceState":"pushState"]({},"",url);scrollFactoryToTop()}

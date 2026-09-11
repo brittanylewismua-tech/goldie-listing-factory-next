@@ -6,7 +6,7 @@ const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url)
 const review=readFileSync(new URL("../app/final-listing-review.tsx",import.meta.url),"utf8");
 
 test("D1302: every Review destination resets the app scroller after rendering",()=>{
-  assert.match(app,/function scrollReviewTaskToTop\(\)[\s\S]*?scrollFactoryToTop\(\);[\s\S]*?"\.review-listing-editor-nav"[\s\S]*?scrollIntoView\(\{block:"start"\}\)/);
+  assert.match(app,/function scrollReviewTaskToTop\(\)[\s\S]*?const reset=scrollFactoryToTop\(\);[\s\S]*?window\.requestAnimationFrame\(reset\)/);
   assert.match(app,/setActiveTask\(section==="artwork"[\s\S]*?goToStep\("designs",false,true\);[\s\S]*?window\.setTimeout\(scrollReviewTaskToTop,300\)/);
   assert.match(app,/else goToStep\("finish",false,true\);[\s\S]*?window\.setTimeout\(scrollReviewTaskToTop,300\)/);
   assert.doesNotMatch(app,/document\.querySelector\(selector\)\?\.scrollIntoView\(\{block:"start"\}\)/);

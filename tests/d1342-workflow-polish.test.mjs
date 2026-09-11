@@ -14,8 +14,8 @@ test("completed and working Etsy transfers replace the unfinished review instruc
 });
 
 test("section changes return to the product task heading instead of scrolling the rail past it",()=>{
-  assert.match(app,/rail\?\.closest<HTMLElement>\("\.step-product-card,\.focused-review-section"\)\?\.scrollIntoView\(\{block:"start"\}\)/);
-  assert.doesNotMatch(app,/querySelector<HTMLElement>\("\.review-listing-editor-nav"\)\?\.scrollIntoView/);
+  assert.match(app,/function scrollReviewTaskToTop\(\)\{[\s\S]*?const reset=scrollFactoryToTop\(\);[\s\S]*?window\.requestAnimationFrame\(reset\)/);
+  assert.doesNotMatch(app,/function scrollReviewTaskToTop\(\)[\s\S]{0,500}review-listing-editor-nav/);
 });
 
 test("stage footer and pricing copy describe the whole task honestly",()=>{
@@ -28,5 +28,5 @@ test("core workflow text receives a readable, consistent polish",()=>{
   assert.match(css,/\.batch-description-body textarea\{min-height:240px;font-size:14px;line-height:1\.55/);
   assert.match(css,/\.review-section-switcher button\{min-height:42px;font-size:11px;line-height:1\.3\}/);
   assert.match(css,/\.factory-publish-box \.publish-box-ready span,[\s\S]*font-size:12px/);
-  assert.match(marker,/D1342/);
+  assert.match(marker,/D1343/);
 });
