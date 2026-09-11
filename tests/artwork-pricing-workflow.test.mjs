@@ -67,7 +67,7 @@ test("draft creation, resume, final review, and publishing share the same safegu
   assert.match(app,/const productName=draft\.productName\|\|member\?\.productName/);
   assert.match(app,/artworkVersions:artworkVersions\?\.map/);
   assert.match(review,/Artwork and print locations/);
-  assert.match(review,/printSideLabel\(side\)\} artwork/);
+  assert.match(review,/productPrintSideLabel\(side,draft\.productName\|\|productName\)/);
   assert.doesNotMatch(review,/printSideLabel\(side\).*\{item\.name\}/);
   assert.match(review,/Object\.entries\(draft\.artworkSummary\)/);
 });

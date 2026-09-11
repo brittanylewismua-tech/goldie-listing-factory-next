@@ -111,7 +111,8 @@ test("the connect step swaps its copy on state and hides the timing note once co
   // connected accounts. It must only appear when something is still unconnected.
   assert.match(page, /\{!checkingConnections&&\(!connected\|\|!etsyConnected\)&&<p className="connect-timing">/);
   // C1: a returning seller sees a confirmation, not setup instructions.
-  assert.match(page, /connected&&etsyConnected\?"Both connections are verified\./);
+  assert.doesNotMatch(page, /connected&&etsyConnected\?"Both connections are verified\./);
+  assert.match(page, /\(checkingConnections\|\|!connected\|\|!etsyConnected\)&&<p className="connect-status">/);
   /* D735 · The note still sits under the copy and still disappears once both
      accounts are connected - both checked above, from the markup. What changed
      is only that it reads left, with the rest of the migrated screen, instead
@@ -510,7 +511,7 @@ test("the Etsy details summary does not invent work on optional-only fields — 
    *
    * When a category genuinely has required attributes, count those. When it has
    * none, say what was added and that the rest are optional. */
-  assert.match(page, /required\.length\?`\$\{requiredDone\.length\} of \$\{required\.length\} required set`:`\$\{completed\.length\} added · all optional`/,
+  assert.match(page, /const propertyStatus=required\.length\?`\$\{requiredDone\.length\} of \$\{required\.length\} required set`:completed\.length\?`\$\{completed\.length\} optional \$\{completed\.length===1\?"detail":"details"\} added`:"Optional details blank"/,
     "The summary must count required fields, or state that the rest are optional.");
   assert.doesNotMatch(page, /<small>\{completed\.length\} of \{properties\.length\} set/,
     "Counting every optional attribute as outstanding work is the D112 defect.");

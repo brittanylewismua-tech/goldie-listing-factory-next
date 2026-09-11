@@ -60,4 +60,15 @@ export function productNoun(...parts:Array<string|null|undefined>){
   return "item";
 }
 
+export function productPrintSideLabel(position:string|null|undefined,...productParts:Array<string|null|undefined>){
+  const label=printSideLabel(position);
+  return productNoun(...productParts)!=="garment"&&label==="Front"?"Main":label;
+}
+
+export function productPrintSideSummary(inputs:SideInput[]|null|undefined,kind:"artwork"|"print"="print",...productParts:Array<string|null|undefined>){
+  const labels=orderedPrintSides(inputs).map(side=>productPrintSideLabel(side,...productParts));
+  if(!labels.length)return "";
+  return kind==="artwork"?`${labels.join(" + ")} artwork`:`${labels.join(" + ")} ${labels.length===1?"print":"prints"}`;
+}
+
 export function colorNoun(...parts:Array<string|null|undefined>){return `${productNoun(...parts)} color`}

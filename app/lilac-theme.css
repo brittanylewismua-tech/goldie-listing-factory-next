@@ -234,6 +234,10 @@ html,body{background:#e9e7e4}
 .review-etsy-draft-button:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--g-pink)}
 .review-etsy-draft-button:focus-visible{outline:3px solid var(--g-pink);outline-offset:3px}
 .review-etsy-draft-button:disabled{border-color:rgba(255,255,255,.35);color:rgba(255,255,255,.55);box-shadow:none;cursor:not-allowed}
+.review-bundle-recovery-button{width:100%;min-height:44px;margin-top:16px;padding:10px 14px;border:2px solid #fff;border-radius:10px;background:#fff;color:#171318;font-size:13px;font-weight:900;cursor:pointer;box-shadow:4px 4px 0 var(--g-pink)}
+.review-bundle-recovery-button:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--g-pink)}
+.review-bundle-recovery-button:focus-visible{outline:3px solid var(--g-pink);outline-offset:3px}
+.review-bundle-recovery-button:disabled{opacity:.7;cursor:wait}
 
 /* D1241: listing details opens on one required action. Formatting, manual
    assembly, and the reusable description remain available without competing

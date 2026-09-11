@@ -58,7 +58,7 @@ import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { productFamily, productOptionAxis } from "./product-type-utils";
 import { printifyMockupDetails, printifyMockupForColor, printifyVariantIdsForColor } from "./printify-color-mockup";
-import { orderedPrintSides,primaryPrintSide,printSideLabel,printSideSummary,productNoun } from "./print-sides";
+import { orderedPrintSides,primaryPrintSide,printSideLabel,productPrintSideSummary,productNoun } from "./print-sides";
 import ProductColorRendering from "./product-color-rendering";
 import {completedGeneratedTags,validEtsyTags} from "./listing-title-tags";
 import {printifyVariantLimitMessage} from "./printify-variant-limit";
@@ -685,6 +685,12 @@ function PersonalizationEditor({value,onChange}:{value?:EtsyPersonalization;onCh
   return <section className="personalization-editor"><div className="personalization-heading"><div><b>Personalization</b><small>Saved questions are added to your Etsy draft during finishing.</small></div><label className="personalization-switch"><input type="checkbox" role="switch" aria-label="Personalization" aria-checked={enabled} checked={enabled} onChange={event=>toggle(event.target.checked)}/><span>{enabled?"On":"Off"}</span></label></div>{problem&&<p className="field-error" role="alert">{problem}</p>}{enabled&&<><div className="personalization-questions">{questions.map((question,index)=><article key={question.id}><div className="personalization-question-head"><b>Question {index+1}</b><button type="button" onClick={()=>onChange({enabled:true,questions:questions.filter(item=>item.id!==question.id)})}>Remove</button></div><label>Answer type<select value={question.type} onChange={event=>{const type=event.target.value as PersonalizationQuestion["type"];update(question.id,{type,options:type==="dropdown"&&question.options.length<2?["Option 1","Option 2"]:question.options})}}><option value="text_input">Text answer</option><option value="dropdown">Dropdown choices</option><option value="unlabeled_upload">File upload</option></select></label><label>Question<input maxLength={120} value={question.question} placeholder="Example: What name should appear on the shirt?" onChange={event=>update(question.id,{question:event.target.value})}/></label>{question.type!=="dropdown"&&<label>Instructions <span>{question.instructions.length}/120</span><textarea rows={2} maxLength={120} value={question.instructions} placeholder="Tell the buyer exactly what to provide." onChange={event=>update(question.id,{instructions:event.target.value})}/></label>}{question.type==="text_input"&&<label>Maximum characters<IntegerField value={question.maxCharacters} min={1} max={1024} label="Maximum characters" onCommit={next=>update(question.id,{maxCharacters:next})}/></label>}{question.type==="unlabeled_upload"&&<label>Maximum files<IntegerField value={question.maxFiles} min={1} max={10} label="Maximum files" onCommit={next=>update(question.id,{maxFiles:next})}/></label>}{question.type==="dropdown"&&<label>Dropdown choices<textarea rows={3} value={question.options.join("\n")} placeholder={"Small\nMedium\nLarge"} onChange={event=>update(question.id,{options:event.target.value.split(/\r?\n/).slice(0,30)})}/><small>Enter one choice per line. Etsy allows up to 30 choices, with 20 characters per choice.</small></label>}<label className="personalization-required"><input type="checkbox" checked={question.required} onChange={event=>update(question.id,{required:event.target.checked})}/>Buyer must answer this question</label></article>)}</div>{questions.length<5&&<button type="button" className="add-personalization-question" onClick={()=>onChange({enabled:true,questions:[...questions,blank()]})}>Add another question</button>}<small className="personalization-note">Etsy allows up to five questions. Review every question before publishing.</small></>}</section>
 }
 
+function etsyDetailsSummary(details:EtsyDetails,properties:EtsyPropertySelection[]){
+  const required=properties.filter(property=>property.required),requiredDone=required.filter(property=>property.value.trim()),completed=properties.filter(property=>property.value.trim());
+  const propertyStatus=required.length?`${requiredDone.length} of ${required.length} required set`:completed.length?`${completed.length} optional ${completed.length===1?"detail":"details"} added`:"Optional details blank";
+  return `${details.category?.trim()||"Choose an Etsy category"} · ${propertyStatus}`;
+}
+
 /* D793 · `checklist` off when the screen already shows one. Step 3 is the
    preview's two-column grid now, and the checklist beside the listing is the
    outer one. This editor drawing its own put every Etsy property on the
@@ -694,7 +700,7 @@ function LegacyEtsyDetailsEditor({design,categories,onChange,onCategory,checklis
   const properties=details.properties||[],completed=properties.filter(property=>property.value.trim()),physical=completed.filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)),preview=physical.slice(0,3).map(property=>property.value).join(", ");
   async function choose(id:number){setLoading(true);try{await onCategory(id)}finally{setLoading(false)}}
   function setProperty(property:EtsyPropertySelection,value:string){const option=property.possibleValues.find(item=>String(item.value_id)===value),next={...property,valueId:option?.value_id||null,value:option?.name||value};onChange({...details,properties:(details.properties||[]).map(item=>item.propertyId===property.propertyId?next:item)})}
-  return <details aria-busy={loading} aria-label="Loading Etsy category options" className="etsy-details-editor"><summary><span><b>Etsy details</b><small>{(()=>{const required=properties.filter(property=>property.required),requiredDone=required.filter(property=>property.value.trim());return required.length?`${requiredDone.length} of ${required.length} required set`:`${completed.length} added · all optional`})()}{preview?` · ${preview}`:""}</small></span><em>Edit</em></summary><div className="factory-listing-grid">{/* D730 - prototype .goldie-listing-grid: the fields on the left, and
+  return <details aria-busy={loading} aria-label="Loading Etsy category options" className="etsy-details-editor"><summary><span><b>Etsy details</b><small>{etsyDetailsSummary(details,properties)}{preview?` · ${preview}`:""}</small></span><em>Edit</em></summary><div className="factory-listing-grid">{/* D730 - prototype .goldie-listing-grid: the fields on the left, and
       beside them the list of what Etsy still needs. The summary line already
       counted them ("2 of 5 required set"); the checklist names them. Every
       field, handler and validation below is unchanged. */}<div className="etsy-details-editor-fields factory-form-card"><label>Etsy category<select value={details.taxonomyId||""} disabled={loading} onChange={event=>void choose(Number(event.target.value))}>{!details.taxonomyId&&<option value="">Choose an Etsy category</option>}{Boolean(details.taxonomyId)&&!categories.some(category=>category.id===details.taxonomyId)&&<option value={details.taxonomyId}>{details.category||"Category already chosen for this listing"}</option>}{categories.map(category=><option key={category.id} value={category.id}>{category.path}</option>)}</select></label>{loading&&<small>Loading the exact Etsy options for this category…</small>}<div className="etsy-attribute-grid">{properties.map(property=><label key={property.propertyId}>{property.label}{property.required&&<em>Required</em>}{property.possibleValues.length?<select aria-label={property.label} value={property.valueId||""} onChange={event=>setProperty(property,event.target.value)}><option value="">{property.required?"Choose one":"Not applicable"}</option>{property.possibleValues.map(option=><option key={option.value_id} value={option.value_id}>{option.name}</option>)}</select>:<input aria-label={property.label} value={property.value} onChange={event=>setProperty(property,event.target.value)}/>}</label>)}</div><small className="optional-note">These are Etsy’s actual fields for the selected category. Optional fields can stay blank.</small><PersonalizationEditor value={details.personalization} onChange={personalization=>onChange({...details,personalization})}/></div>{checklist?<RequiredDetailsChecklist items={[{key:"category",label:"Etsy category",value:details.category||"",required:true},...properties.filter(property=>property.required||property.value.trim()).map(property=>({key:String(property.propertyId),label:property.label,value:property.value,required:property.required}))]}/>:null}</div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close Etsy details</button></details>
@@ -716,8 +722,7 @@ function EtsyDetailsEditor({design,categories,onChange,onCategory,checklist=true
   const matches=query.trim().length<2?[]:categories.filter(category=>category.path.toLowerCase().includes(query.trim().toLowerCase())).slice(0,30);
   async function choose(id:number){setLoading(true);try{await onCategory(id);setQuery("")}finally{setLoading(false)}}
   function setProperty(property:EtsyPropertySelection,value:string){const option=property.possibleValues.find(item=>String(item.value_id)===value),next={...property,valueId:option?.value_id||null,value:option?.name||value};onChange({...details,properties:properties.map(item=>item.propertyId===property.propertyId?next:item)})}
-  const required=properties.filter(property=>property.required),requiredDone=required.filter(property=>property.value.trim());
-  return <><details className="etsy-details-editor" open={detailsOpen} onToggle={event=>setDetailsOpen(event.currentTarget.open)}><summary><span><b>Etsy details</b><small>{required.length?`${requiredDone.length} of ${required.length} required set`:`${completed.length} added · all optional`}{preview?` · ${preview}`:""}</small></span><span className="etsy-details-chevron" aria-hidden="true">⌄</span></summary><div className="factory-listing-grid">{/* D730 - prototype .goldie-listing-grid: the fields on the left, and
+  return <><details className="etsy-details-editor" open={detailsOpen} onToggle={event=>setDetailsOpen(event.currentTarget.open)}><summary><span><b>Etsy details</b><small>{etsyDetailsSummary(details,properties)}{preview?` · ${preview}`:""}</small></span><span className="etsy-details-chevron" aria-hidden="true">⌄</span></summary><div className="factory-listing-grid">{/* D730 - prototype .goldie-listing-grid: the fields on the left, and
       beside them the list of what Etsy still needs. The summary line already
       counted them ("2 of 5 required set"); the checklist names them. Every
       field, handler and validation below is unchanged. */}<div className="etsy-details-editor-fields factory-form-card"><label>Etsy category<small>Current: {details.category||"None chosen"}</small><input type="search" value={query} placeholder="Search Etsy categories" onChange={event=>setQuery(event.target.value)} disabled={loading}/></label>{matches.length?<div className="etsy-category-results" role="listbox" aria-label="Matching Etsy categories">{matches.map(category=><button type="button" key={category.id} onClick={()=>void choose(category.id)}>{category.path}</button>)}</div>:query.trim().length>=2?<small>No matching Etsy categories.</small>:null}{loading&&<small>Loading the exact Etsy options for this category…</small>}<div className="etsy-attribute-list">{properties.map(property=><LazyEtsyProperty key={property.propertyId} property={property} onValue={value=>setProperty(property,value)}/>)}</div><small className="optional-note">This category and these attributes are added to your Etsy draft when you finish. Optional fields can stay blank.</small></div>{checklist?<RequiredDetailsChecklist items={[{key:"category",label:"Etsy category",value:details.category||"",required:true},...properties.filter(property=>property.required||property.value.trim()).map(property=>({key:String(property.propertyId),label:property.label,value:property.value,required:property.required}))]}/>:null}</div></details><PersonalizationEditor value={details.personalization} onChange={personalization=>onChange({...details,personalization})}/></>;
@@ -733,6 +738,7 @@ function PricingReview({section="all",variants,pricing,prices,productName,profil
   const apparelPricing=["tee","hoodie","crewneck","tank","longSleeve"].includes(productFamily(productName));
   const optionNoun=apparelPricing?"color and size combination":"product option";
   const optionNouns=apparelPricing?"color and size combinations":"product options";
+  const optionNounsLabel=`${optionNouns[0].toUpperCase()}${optionNouns.slice(1)}`;
   const [attachedProfileId,setAttachedProfileId]=useState(0),attachedProductName=useRef(productName);
   useEffect(()=>{if(attachedProductName.current!==productName){attachedProductName.current=productName;setAttachedProfileId(selectedProfileId||0);return}if(!attachedProfileId&&selectedProfileId)setAttachedProfileId(selectedProfileId)},[productName,selectedProfileId,attachedProfileId]);
   function resetProfileEditor(profile=selectedProfile){setCustomCharge(profile?profile.domesticPrimary.toFixed(2):"");setCustomAdditional(profile?profile.domesticAdditional.toFixed(2):"");setCustomInternational(profile?profile.international.map(rate=>({...rate,primary:rate.primary.toFixed(2),additional:rate.additional.toFixed(2)})):[]);setCustomProfileName("");setProfileMessage("")}
@@ -877,7 +883,7 @@ function PricingReview({section="all",variants,pricing,prices,productName,profil
         {section==="all"&&<h3>Pricing</h3>}</div>
         {section==="all"&&approved&&<span>✓ Approved</span>}
       </div>
-      {(section==="all"||section==="prices")&&<section className="item-pricing-section"><div className="item-pricing-heading pricing-section-heading"><div><div className="heading-with-help"><h4>{section==="all"?"1. ":""}Item prices{section==="all"&&<span> · {productName}</span>}</h4><ContextHelp label="Explain item pricing" title="How grouped pricing works" intro={`${optionNouns[0].toUpperCase()}${optionNouns.slice(1)} are grouped only when Printify charges the same product cost. This saves repetitive typing without taking away your control.`} sections={[{heading:"Set your profit goal",copy:"Enter the item profit you want left after the Printify product cost and Etsy fees. Buyer-paid shipping is configured and shown separately below."},{heading:"Change one matching-cost group",copy:`Editing a group updates every ${optionNoun} with that exact Printify cost. A higher-cost color, size, material, finish, capacity, or model stays separate automatically.`},{heading:"Change one option only",copy:`Open “View included ${optionNouns}” when one specific option needs a different retail price. That edit does not change the rest of its group.`},{heading:"Review before continuing",copy:"The item profit shown includes product cost and the saved Etsy fee profile. It does not include buyer-paid shipping, Offsite Ads, or sales tax."}]}/></div><p>{optionNouns[0].toUpperCase()}{optionNouns.slice(1)} with the same Printify product cost share one item price. Item profit includes the Printify product cost and Etsy fees.</p></div><div className="pricing-heading-actions"><label className="whole-pricing-toggle"><input type="checkbox" checked={wholeNumberPricing} onChange={event=>toggleWholeNumberPricing(event.target.checked)}/><span aria-hidden="true"/><b>Create whole-number pricing</b></label><div className="profit-goal-control"><label>Profit goal<span className="money-input">$<input aria-label="Profit goal" type="number" min="0" step="0.01" value={profitDraft??String(pricing.targetProfit)} onChange={event=>{const raw=event.target.value;setProfitDraft(raw);const parsed=Number(raw);if(raw!==""&&Number.isFinite(parsed))changeProfit(parsed)}} onBlur={()=>setProfitDraft(null)}/></span><small>Prices update automatically.</small></label></div></div></div>{recommendationMessage&&<p className="recommendation-result" role="status">{recommendationMessage}</p>}
+      {(section==="all"||section==="prices")&&<section className="item-pricing-section"><div className="item-pricing-heading pricing-section-heading"><div><div className="heading-with-help"><h4>{section==="all"?"1. ":""}Item prices{section==="all"&&<span> · {productName}</span>}</h4><ContextHelp label="Explain item pricing" title="How grouped pricing works" intro={`${optionNounsLabel} are grouped only when Printify charges the same product cost. This saves repetitive typing without taking away your control.`} sections={[{heading:"Set your profit goal",copy:"Enter the item profit you want left after the Printify product cost and Etsy fees. Buyer-paid shipping is configured and shown separately below."},{heading:"Change one matching-cost group",copy:`Editing a group updates every ${optionNoun} with that exact Printify cost. A higher-cost color, size, material, finish, capacity, or model stays separate automatically.`},{heading:"Change one option only",copy:`Open “View included ${optionNouns}” when one specific option needs a different retail price. That edit does not change the rest of its group.`},{heading:"Review before continuing",copy:"The item profit shown includes product cost and the saved Etsy fee profile. It does not include buyer-paid shipping, Offsite Ads, or sales tax."}]}/></div><p>{optionNounsLabel} with the same Printify product cost share one item price. Item profit includes the Printify product cost and Etsy fees.</p></div><div className="pricing-heading-actions"><label className="whole-pricing-toggle"><input type="checkbox" checked={wholeNumberPricing} onChange={event=>toggleWholeNumberPricing(event.target.checked)}/><span aria-hidden="true"/><b>Create whole-number pricing</b></label><div className="profit-goal-control"><label>Profit goal<span className="money-input">$<input aria-label="Profit goal" type="number" min="0" step="0.01" value={profitDraft??String(pricing.targetProfit)} onChange={event=>{const raw=event.target.value;setProfitDraft(raw);const parsed=Number(raw);if(raw!==""&&Number.isFinite(parsed))changeProfit(parsed)}} onBlur={()=>setProfitDraft(null)}/></span><small>Prices update automatically.</small></label></div></div></div>{recommendationMessage&&<p className="recommendation-result" role="status">{recommendationMessage}</p>}
       <div className="price-group-list">{priceGroups.map(group=>{const groupPrices=group.items.map(variant=>prices[String(variant.id)]??variant.templatePrice),groupPrice=Math.max(...groupPrices),profits=group.items.map(variant=>estimatedProfit(groupPrice,variant.cost,pricing)),lowestProfit=Math.min(...profits),examples=group.items.map(item=>item.title).filter(Boolean);return <article className="price-group" key={group.cost}>
         <div className="price-group-row"><div className="price-group-variants"><b>{group.items.length} {group.items.length===1?optionNoun:optionNouns}</b><small>{examples.slice(0,2).join(" · ")}{examples.length>2?` · +${examples.length-2} more`:""}</small></div><div><small>Printify product cost</small><b>${(group.cost/100).toFixed(2)}</b></div><div><small>Your item price</small><PriceField value={groupPrice} minimum={group.cost/100} label={`Price for all ${optionNouns} costing $${(group.cost/100).toFixed(2)}`} onCommit={cents=>changeCostGroupPrice(group.cost,cents)}/></div><div className={lowestProfit+0.005>=pricing.targetProfit?"profit-pass":"profit-low"}><small>Lowest estimated item profit</small><b>${lowestProfit.toFixed(2)}</b><small className="profit-fee-note">Shipping not included</small></div></div>
         <details className="price-group-details"><summary>View included {optionNouns} or edit one separately</summary><div className="individual-variant-list">{group.items.map(variant=>{const itemCents=prices[String(variant.id)]??variant.templatePrice,profit=estimatedProfit(itemCents,variant.cost,pricing);return <div key={variant.id}><span><b>{variant.title}</b><small>Printify cost ${(variant.cost/100).toFixed(2)}</small></span><PriceField value={itemCents} minimum={variant.cost/100} label={`Individual price for ${variant.title}`} onCommit={cents=>changeIndividualPrice(variant,cents)}/><span className={profit+0.005>=pricing.targetProfit?"profit-pass":"profit-low"}><b>${profit.toFixed(2)} item profit</b><small>Shipping not included</small></span></div>})}</div><button type="button" className="panel-collapse-foot" onClick={event=>{const box=(event.currentTarget as HTMLElement).closest("details");if(box){(box as HTMLDetailsElement).open=false;box.scrollIntoView({block:"nearest"})}}}>Close options</button></details>
@@ -1223,6 +1229,7 @@ export default function ListingFactoryApp() {
   const [restartBatchName,setRestartBatchName]=useState("");
   const [restartingBatch,setRestartingBatch]=useState(false);
   const [batchDisplayName,setBatchDisplayName]=useState("");
+  const [restoredBatchName,setRestoredBatchName]=useState("");
   const [savingDraftBatch,setSavingDraftBatch]=useState(false);
   useEffect(()=>{
     if(!restartBatchOpen)return;
@@ -2202,7 +2209,7 @@ export default function ListingFactoryApp() {
   const batchRestoreFailed=useRef(false),batchRestoreRetryUrl=useRef("");
   async function restoreBatchById(id:string,requestedStep:string|null,requestedPhase:string|null,push=false):Promise<boolean>{
     batchRestoreFailed.current=false;setBatchRestoreError("");if(!batchRestoreRetryUrl.current)batchRestoreRetryUrl.current=window.location.href;
-    try{const url=new URL(window.location.href);if(!id)return false;const response=await batchFetch(`/api/batches?id=${encodeURIComponent(id)}`);if(response.status===404)return false;if(!response.ok)throw new Error("Saved batch unavailable");const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;state?:Record<string,unknown>};children?:Array<{id:string;productId:string;productName:string;drafts:number;expected:number;published:number}>};if(!payload.batch?.state)throw new Error("Saved batch unavailable");
+    try{const url=new URL(window.location.href);if(!id)return false;const response=await batchFetch(`/api/batches?id=${encodeURIComponent(id)}`);if(response.status===404)return false;if(!response.ok)throw new Error("Saved batch unavailable");const payload=await response.json() as {batch?:{id:string;step:WorkflowStep;status:string;setup_name?:string;display_name?:string;state?:Record<string,unknown>};children?:Array<{id:string;productId:string;productName:string;drafts:number;expected:number;published:number}>};if(!payload.batch?.state)throw new Error("Saved batch unavailable");
     /* D1235 · A run always opens its first unfinished product. Remembering the
        last open product made a reload begin on product two while product one was
        collapsed, so the same saved batch had a different starting point each
@@ -2211,6 +2218,7 @@ export default function ListingFactoryApp() {
        have already reached Etsy. */
     const runState=payload.batch.state as {run?:{activeProductId?:string;productOrder?:string[]}};
     if(runState.run&&(payload.children||[]).length){
+      setRestoredBatchName(payload.batch.display_name||"");
       const children=payload.children||[];
       const order=runState.run.productOrder||[];
       const byOrder=[...children].sort((a,b)=>order.indexOf(a.productId)-order.indexOf(b.productId));
@@ -2255,7 +2263,7 @@ export default function ListingFactoryApp() {
     const requestedListing=url.searchParams.get("listing"),requestedSection=url.searchParams.get("section") as ReviewSection|null;
     const focusedSection=requestedListing&&requestedSection&&["artwork","variants","pricing","photos","title","description","etsy"].includes(requestedSection)?requestedSection:null;
     const focusedDraft=focusedSection?savedDrafts.find(draft=>draft.clientId===requestedListing&&draft.id):undefined;
-    const savedProductColors=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-colors-${state.templateDetails.id}`)||"[]") as number[]:[];const savedProductSizes=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-sizes-${state.templateDetails.id}`)||"[]") as number[]:[];batchIdRef.current=id;setBatchDisplayName(state.batchDisplayName||"");/* D693 - restoring this from setup_name is how the stale recipe name kept coming back. D686 stopped Batch History READING setup_name as a seller-chosen name, but restore still seeded the seller-name field from it, autosave then wrote that into the snapshot, and the reader trusted it - the stale name laundered itself into the field meant to hold only what she typed. Measured on batch b8ce58cb after D686 deployed: state.batchDisplayName "Gildan Hoodie", activeRecipe "Comfort Colors 1566 crewneck", product_title "Unisex Garment-Dyed Sweatshirt". A batch she never named restores blank, and Batch History falls through to the design or the product, which is the truth. */setKeptAsDrafts(Boolean(state.keptAsDrafts));/* D703 - the snapshot SAVES batchReceipt and the restore never read it back, so
+    const savedProductColors=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-colors-${state.templateDetails.id}`)||"[]") as number[]:[];const savedProductSizes=state.templateDetails?.id?JSON.parse(window.localStorage.getItem(`goldie-sizes-${state.templateDetails.id}`)||"[]") as number[]:[];batchIdRef.current=id;if(!runIdRef.current)setRestoredBatchName(payload.batch.display_name||"");setBatchDisplayName(state.batchDisplayName||"");/* D693 - restoring this from setup_name is how the stale recipe name kept coming back. D686 stopped Batch History READING setup_name as a seller-chosen name, but restore still seeded the seller-name field from it, autosave then wrote that into the snapshot, and the reader trusted it - the stale name laundered itself into the field meant to hold only what she typed. Measured on batch b8ce58cb after D686 deployed: state.batchDisplayName "Gildan Hoodie", activeRecipe "Comfort Colors 1566 crewneck", product_title "Unisex Garment-Dyed Sweatshirt". A batch she never named restores blank, and Batch History falls through to the design or the product, which is the truth. */setKeptAsDrafts(Boolean(state.keptAsDrafts));/* D703 - the snapshot SAVES batchReceipt and the restore never read it back, so
     opening a batch that had published left the receipt at its initial null, the
     next autosave wrote that null over the record, and the proof of what went live
     was destroyed by looking at it. Measured on 0b79a9b6: receipt present at
@@ -2635,6 +2643,7 @@ export default function ListingFactoryApp() {
     files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
     setBatchToolsOpen(true);
     setBatchDisplayName("");
+    setRestoredBatchName("");
     setKeptAsDrafts(false);
     setBatchSaveStatus("idle");
     // Editor focus, validation and approvals belong to a run, not a saved
@@ -3636,7 +3645,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
           const displayScale=printTargetFor(templateDetails).scale;
           const quality=design?.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;
           const printSides=Object.keys(draft.artworkSummary||{});
-          const artworkLabel=printSideSummary(printSides.length?printSides:templateDetails?.printPositions,"artwork")||"Primary artwork";
+          const artworkLabel=productPrintSideSummary(printSides.length?printSides:templateDetails?.printPositions,"artwork",templateDetails?.blueprintTitle,templateDetails?.brand,templateDetails?.model)||"Primary artwork";
           const dpi=!quality?`Check print quality in Printify · ${artworkLabel}`:`Estimated ${quality.dpi} DPI · ${artworkLabel}`;
           return {
             key:draft.clientId,
@@ -3769,6 +3778,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const design=files.find(item=>item.id===activeDesign)||files[0];
     const index=files.findIndex(item=>item.id===design.id);
     const titled=files.filter(item=>(item.title||"").trim()).length;
+    const titleSetsReady=files.every(item=>Boolean(item.title.trim()&&item.tags.length));
     const showListing=(id:string,source:HTMLElement)=>{const editor=source.closest(".factory-listing-screen")?.querySelector<HTMLElement>(".factory-listing-grid"),draft=drafts.find(item=>item.clientId===id);setActiveDesign(id);if(draft?.id)setReviewEditing({id:draft.id,clientId:id,section:reviewEditing?.section});window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>editor?.scrollIntoView({block:"start"})))};
     const focusedSection=reviewEditing?.clientId===design.id?(reviewEditing.section||"title"):null;
     if(focusedSection){
@@ -3779,12 +3789,15 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
       return <div className={`factory-listing-screen focused-review-section focused-review-${focusedSection}${focusedSection==="title"||focusedSection==="description"?" focused-review-all-listings":""}`}>
         {reviewListingSectionNav(design)}
         {focusedSection==="title"&&<FactoryPanel index={1} title={activeBundle?"Titles for this product":"Titles for this batch"}
-          description="Create titles and tags"
+          description={titleSetsReady?"Review or change every listing below.":"Create the missing titles and tags, then review every listing below."}
           state={`${titled} of ${files.length} titled`}
           tone={titled===files.length?"done":"attention"}
           open
           toggleLabel="">
-          <div className={titlePulseIds.size?"titles-resolving":""}>{titlesLead()}</div>
+          <details className="shared-description-settings optional-title-tools" open={batchToolsOpen??!titleSetsReady} onToggle={event=>setBatchToolsOpen(event.currentTarget.open)}>
+            <summary>{titleSetsReady?"Create different titles and tags":"Create missing titles and tags"}</summary>
+            <div className={titlePulseIds.size?"titles-resolving":""}>{titlesLead()}</div>
+          </details>
         </FactoryPanel>}
         {focusedSection==="description"&&<FactoryPanel index={1} title={activeBundle?"Product description":"Batch description"}
           description="Set the shared description, then customize individual listings only if needed."
@@ -4242,6 +4255,22 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
   function nextUnfinishedBundleProduct(){
     if(!activeBundle||bundleRecipes.length<2)return null;
     return bundleRecipes.find((recipe,index)=>index!==bundleIndex&&!bundleProductFullyPublished(recipe,index))||null;
+  }
+  /* D1325 · A restored partial bundle could explain that another product still
+     needed drafts while offering no way to reach it. The only visible action
+     was the disabled Etsy button, so Review was a dead end. Point the recovery
+     action at the first other product whose saved work is incomplete. */
+  function nextBundleProductToFinish(){
+    if(!activeBundle||bundleRecipes.length<2)return null;
+    return bundleRecipes.find((recipe,index)=>{
+      if(index===bundleIndex)return false;
+      const summary=bundleBatchSummary[recipe.id];
+      if(!bundleBatchIds[recipe.id]||summary?.unreadable)return true;
+      if(!summary)return false;
+      const member=bundleMembers[recipe.id];
+      const created=member?.drafts.filter(draft=>draft.status==="Created"&&draft.id)||[];
+      return !summary.complete||created.length<summary.designs||created.some(draft=>!reviewedPricingAndShippingReady(draft))||createdListingsMissingImages(created).length>0||!member?.shippingProfileId||summary.titled<summary.designs||summary.tagged<summary.designs||summary.etsyReady<summary.designs;
+    })||null;
   }
   /* D1313 · A single published listing is not a finished product. The receipt
      still used the pre-D1311 boolean rule after Batch History and restore had
@@ -5380,7 +5409,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          and eyebrow both still read PRODUCT. The rail's own stage title is
          "Choose product", so that is the name three places already agree on. The
          title stays put; the copy carries the state. */
-      ? { eyebrow: "STEP 1 OF 3", title: "Add your designs", copy: "" }
+      ? { eyebrow: "STEP 1 OF 3", title: files.length?"Review your product and designs":"Add your designs", copy: "" }
       : { eyebrow: "STEP 1 OF 3", title: "Choose a product or bundle", copy: "Select one to start your batch." },
     designs: complete
       ? reviewEditing
@@ -5457,7 +5486,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             batchDisplayName, the autosave state and the sign-out route all
             already existed; this gives them the position the preview shows. */}
         <header className="factory-top">
-          <b className="factory-top-batch">{batchDisplayName?.trim()||"New listing batch"}</b>
+          <b className="factory-top-batch">{batchDisplayName?.trim()||restoredBatchName.trim()||"New listing batch"}</b>
           <div className="factory-top-right">
             <span className="factory-top-save" role="status">{batchAuthenticationRequired?<button type="button" onClick={retryAuthenticatedSave}>Sign in to save · Retry</button>:batchSaveConflict?<button type="button" onClick={()=>void reloadConflictedBatch()}>Saving paused · Reload saved batch</button>:batchSaveStatus==="failed"?<button type="button" onClick={()=>void persistBatchNow(batchIdRef.current).catch(()=>undefined)}>Changes not saved · Retry</button>:batchSaveStatus==="saving"?"Saving…":batchSaveStatus==="saved"?"Saved":""}</span>
             <div className="factory-account-wrap">
@@ -5636,9 +5665,9 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           <article className={`step-card connect-step workflow-panel ${connected ? "done" : ""} ${workflowStep==="connect"?"active-panel":"hidden-panel"}`}>
             
             <div className="step-content">
-              <p className="connect-status">{connectStatus}</p>
+              {(checkingConnections||!connected||!etsyConnected)&&<p className="connect-status">{connectStatus}</p>}
               {/* D284 · The page title already reads "Connect your accounts"; this card repeated it word for word directly beneath. */}
-              <p className="step-copy">{checkingConnections?"Verifying the accounts you already connected…":connected&&etsyConnected?"Both connections are verified.":"Connect the Printify account that creates your products and the Etsy shop that receives them."}</p>
+              {(checkingConnections||!connected||!etsyConnected)&&<p className="step-copy">{checkingConnections?"Verifying the accounts you already connected…":"Connect the Printify account that creates your products and the Etsy shop that receives them."}</p>}
               {!checkingConnections&&(!connected||!etsyConnected)&&<p className="connect-timing">◷ First-time connection usually takes about 2 minutes.</p>}
               {checkingConnections ? (
                 <div className="connection-row"><span className="connection-icon">P</span><div><b>Secure connection check…</b><small>This takes just a moment</small></div></div>
@@ -5911,7 +5940,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 drafts do not exist, the forward once they do. */}
               {/* D728 - prototype .goldie-footer: the designs step's forward
                   action and its status share one bar. Same gate, same handler. */}
-              {workflowStep==="setup"&&<FactoryFooter status={setupForwardReady?"Your product and designs are ready":templateError||missingRequirement||failedBundleNames()[0]||`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`}><button className="workflow-next" disabled={!setupForwardReady} onClick={()=>goToStep("designs")}>{setupForwardReady?"Review draft plan":templateError||missingRequirement||"Finish the product above"} {setupForwardReady&&<span>→</span>}</button></FactoryFooter>}</>}
+              {workflowStep==="setup"&&<FactoryFooter status={setupForwardReady?`Your ${activeBundle&&bundleRecipes.length>1?"products are":"product is"} ready with ${files.length} ${files.length===1?"design":"designs"}`:templateError||missingRequirement||failedBundleNames()[0]||`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`}><button className="workflow-next" disabled={!setupForwardReady} onClick={()=>goToStep("designs")}>{setupForwardReady?"Review draft plan":templateError||missingRequirement||"Finish the product above"} {setupForwardReady&&<span>→</span>}</button></FactoryFooter>}</>}
               {workflowStep==="setup"&&files.length>0&&complete&&<FactoryFooter status="Your Printify drafts are ready"><button className="workflow-next" onClick={()=>goToStep("designs")}>Continue to drafts <span>→</span></button></FactoryFooter>}
             </div>
           </article>
@@ -5997,6 +6026,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   shipping, published - every one of them, with the same value
                   and the same wording productRows gave them. */}
               <div className={`publish-box-ready ${handoffBlockers().length?"needs-work":"is-ready"}`}><b>{handoffBlockers().length?`${handoffReadyCount()} of ${handoffExpectedCount()} listings complete`:`${bundlePublishDrafts().length} ${bundlePublishDrafts().length===1?"listing":"listings"} ready`}</b><span>{handoffBlockerSummary()}</span></div>
+              {(()=>{const recipe=nextBundleProductToFinish();if(!recipe)return null;const index=bundleRecipes.findIndex(item=>item.id===recipe.id);return <button type="button" className="review-bundle-recovery-button" disabled={switchingProduct===recipe.id||index<0} onClick={()=>openBundleProduct(index)}>{switchingProduct===recipe.id?`Opening ${recipe.name}…`:`Finish ${recipe.name} →`}</button>})()}
               {/* D1313 · The delivery status read intentionally holds this action
                   until it knows whether an Etsy draft already exists. The button
                   previously kept saying “Save to Etsy Drafts” while disabled, so

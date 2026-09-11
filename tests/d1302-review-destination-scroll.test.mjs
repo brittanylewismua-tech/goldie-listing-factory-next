@@ -35,7 +35,7 @@ test("D1302: focused product headers use the selected listing's saved choices",(
 
 test("D1302: artwork review names saved print sides without a long warning",()=>{
   assert.match(app,/const printSides=Object\.keys\(draft\.artworkSummary\|\|\{\}\)/);
-  assert.match(app,/printSideSummary\(printSides\.length\?printSides:templateDetails\?\.printPositions,"artwork"\)/);
+  assert.match(app,/productPrintSideSummary\(printSides\.length\?printSides:templateDetails\?\.printPositions,"artwork",templateDetails\?\.blueprintTitle,templateDetails\?\.brand,templateDetails\?\.model\)/);
   assert.match(app,/Printify may ask you to sign in and choose the matching shop before editing\./);
   assert.doesNotMatch(app,/Otherwise, Printify may show an error when you open a draft\./);
 });
