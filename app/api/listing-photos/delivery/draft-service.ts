@@ -79,7 +79,7 @@ export function draftWithSize(snapshot:DraftSnapshot,product:PrintifyDraftProduc
  return snapshot;
 }
 export async function readDraft(request:Request,listingId:number,shopId:number,product:PrintifyDraftProduct):Promise<DraftView>{
- const listing=await (await request(`/listings/${listingId}`)).json() as {shop_id:number;state:string;title:string;description:string;tags:string[];taxonomy_id:number;shipping_profile_id:number};
+ const listing=await (await request(`/listings/${listingId}`)).json() as {shop_id:number;state:string;title:string;description:string;tags:string[];taxonomy_id:number;shipping_profile_id:number;who_made?:string;when_made?:string;is_supply?:boolean;production_partners?:Array<{production_partner_id?:number}>|null};
  if(Number(listing.shop_id)!==shopId||listing.state!=='draft')throw new DraftReviewRequired('The linked listing must still be a draft in the original Etsy shop. Finishing stopped.');
  // Ownership/state is checked first. Settle every read before any caller may mutate or retry.
  const reads=await Promise.allSettled([
@@ -91,7 +91,7 @@ export async function readDraft(request:Request,listingId:number,shopId:number,p
  const [inventory,properties,personal]=reads.map(result=>(result as PromiseFulfilledResult<unknown>).value) as [Parameters<typeof verifyInventory>[1],{results?:DraftSnapshot['properties']},{personalization_questions?:Question[]}];
  verifyInventory(product,inventory);
  if(!Array.isArray(properties.results)||!Array.isArray(personal.personalization_questions))throw new DraftReviewRequired('Etsy returned incomplete draft details. Nothing further was changed.');
- return {shopId:Number(listing.shop_id),state:listing.state,basic:{title:decodeEtsyText(listing.title),description:decodeEtsyText(listing.description),tags:listing.tags.map(decodeEtsyText),taxonomy_id:Number(listing.taxonomy_id),shipping_profile_id:Number(listing.shipping_profile_id)},properties:properties.results.map(p=>({property_id:p.property_id,value_ids:p.value_ids||[],values:(p.values||[]).map(decodeEtsyText)})),questions:personal.personalization_questions.map(q=>({...q,question_text:decodeEtsyText(q.question_text),instructions:decodeEtsyText(q.instructions||''),options:q.options?.map(o=>({label:decodeEtsyText(o.label)}))}))};
+ return {shopId:Number(listing.shop_id),state:listing.state,basic:{title:decodeEtsyText(listing.title),description:decodeEtsyText(listing.description),tags:listing.tags.map(decodeEtsyText),taxonomy_id:Number(listing.taxonomy_id),shipping_profile_id:Number(listing.shipping_profile_id),who_made:String(listing.who_made||''),when_made:String(listing.when_made||''),is_supply:Boolean(listing.is_supply),production_partner_ids:(listing.production_partners||[]).map(partner=>Number(partner.production_partner_id)).filter(id=>Number.isSafeInteger(id)&&id>0)},properties:properties.results.map(p=>({property_id:p.property_id,value_ids:p.value_ids||[],values:(p.values||[]).map(decodeEtsyText)})),questions:personal.personalization_questions.map(q=>({...q,question_text:decodeEtsyText(q.question_text),instructions:decodeEtsyText(q.instructions||''),options:q.options?.map(o=>({label:decodeEtsyText(o.label)}))}))};
 }
 export async function finishDraftMetadata(args:{request:Request;listingId:number;shopId:number;product:PrintifyDraftProduct;snapshot:DraftSnapshot;saved:DraftState|null;save:(s:DraftState)=>Promise<void>;backup:(v:DraftView)=>Promise<void>;verifyOnly?:boolean}){
  const {request,listingId,shopId,product,snapshot,saved,save,backup}=args;
@@ -102,7 +102,7 @@ export async function finishDraftMetadata(args:{request:Request;listingId:number
   if(Number(check.shop_id)!==shopId||check.state!=='draft')throw new DraftReviewRequired('The Etsy listing changed shop or is no longer a draft. Finishing stopped.');
   const base=`/shops/${shopId}/listings/${listingId}`;
   if(op.key==='basic'){
-   const value=op.value as DraftView['basic'];const body=new URLSearchParams({title:value.title,description:value.description,taxonomy_id:String(value.taxonomy_id),shipping_profile_id:String(value.shipping_profile_id)});
+   const value=op.value as DraftView['basic'];const body=new URLSearchParams({title:value.title,description:value.description,taxonomy_id:String(value.taxonomy_id),shipping_profile_id:String(value.shipping_profile_id),who_made:value.who_made,when_made:value.when_made,is_supply:String(value.is_supply),production_partner_ids:value.production_partner_ids.join(',')});
    body.set('tags',value.tags.join(','));
    await request(base,{method:'PATCH',body});
   }else if(op.key==='questions'){

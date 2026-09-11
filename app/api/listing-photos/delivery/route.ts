@@ -10,6 +10,7 @@ import {decryptPrintifyToken} from '../../printify/token-crypto';
 import {etsyConnection,etsyFetch} from '../../etsy/client';
 import {freezeDraft,type SourceDraft} from './draft-engine';
 import {prepareEtsySkus} from '../../printify/etsy-sku-preflight';
+import {requiredPrintifyPartner} from '../../etsy/production-partner';
 const publicRow=(row:DeliveryRow)=>({id:row.id,productId:row.product_id,status:row.status,error:row.error?deliveryMessage(row.error):null,photoCount:JSON.parse(row.photos_json).length,createdAt:row.created_at,updatedAt:row.updated_at,expiresAt:row.expires_at,automaticDraft:Boolean(row.transfer_json),mode:row.draft_json?'draft':'photos',listingId:row.state_json?JSON.parse(row.state_json).listingId:null});
 async function selectionPlan(runtime:ReturnType<typeof deliveryEnv>,owner:string,productId:string,draft:{printifyImages?:string[]},indices:number[],shopId:number,draftSnapshot:ReturnType<typeof freezeDraft>|null){
   const prefix=`etsy-listing-images/${owner}/${productId}/`,objects=await runtime.ARTWORK.list({prefix,limit:100});
@@ -38,8 +39,8 @@ export async function GET(request:Request){
     const draft=await unpackDraftMedia(owned.response_json,user.userId,runtime.ARTWORK) as SourceDraft&{printifyImages?:string[]};
     const indices=JSON.parse(params.get(`images.${row.product_id}`)||'null');
     if(!Array.isArray(indices)||indices.length>20)throw Error('Selection unavailable');
-    const prepared=JSON.parse(row.draft_json) as {selected_variant_ids?:number[]};
-    const snapshot=freezeDraft({...draft,...(!prepared.selected_variant_ids?{selectedVariantIds:undefined}:{}),etsyShippingProfileId:Number(params.get(`shipping.${row.product_id}`))});
+    const prepared=JSON.parse(row.draft_json) as Pick<ReturnType<typeof freezeDraft>,'selected_variant_ids'|'production_partner_ids'>;
+    const snapshot=freezeDraft({...draft,...(!prepared.selected_variant_ids?{selectedVariantIds:undefined}:{}),etsyShippingProfileId:Number(params.get(`shipping.${row.product_id}`)),productionPartnerId:prepared.production_partner_ids?.[0]});
     const plan=await selectionPlan(runtime,user.userId,row.product_id,draft,indices,row.etsy_shop_id,snapshot);
     choicesChanged=plan.fingerprint!==row.fingerprint;
    }catch{choicesChanged=true;choiceCheckUnavailable=true;}
@@ -76,15 +77,17 @@ export async function POST(request:Request){
     try{await runtime.PHOTO_DELIVERY.create({id:`${previous.id}-check-${Date.now()}`,params:{id:previous.id,owner:user.userId}})}catch{await deliveryStatus(previous.id,user.userId,'needs_attention','Checking could not start. Try again.');throw Error('Checking could not start. Try again.')}
     return NextResponse.json({delivery:publicRow((await readDelivery(previous.id,user.userId))!)});
   }
-  const draftSnapshot=body.mode==='draft'?freezeDraft({...draft as SourceDraft,etsyShippingProfileId:body.shippingProfileId}):null;
-  if(draftSnapshot){
+  let draftSnapshot:ReturnType<typeof freezeDraft>|null=null;
+  if(body.mode==='draft'){
     const connection=await etsyConnection(user.userId);
     if(Number(connection.shopId)!==Number(shop.shop_id))throw Error('Your Etsy shop changed. Refresh before preparing this draft.');
-    const profile=await etsyFetch<{shipping_profile_id:number;is_deleted?:boolean}>(`/shops/${connection.shopId}/shipping-profiles/${draftSnapshot.shipping_profile_id}`,connection.token);
-    if(Number(profile.shipping_profile_id)!==draftSnapshot.shipping_profile_id||profile.is_deleted)throw Error('The selected shipping profile is unavailable in this Etsy shop. Choose another profile.');
-    const category=await cachedJson('etsy-taxonomy',`/nodes/${draftSnapshot.taxonomy_id}/properties`,TAXONOMY_TTL_SECONDS,()=>etsyFetch<{results?:CategoryProperty[]}>(`/seller-taxonomy/nodes/${draftSnapshot.taxonomy_id}/properties`,connection.token));
+    const productionPartnerId=await requiredPrintifyPartner(connection.shopId,()=>etsyFetch(`/shops/${connection.shopId}/production-partners`,connection.token));
+    const preparedSnapshot=freezeDraft({...draft as SourceDraft,etsyShippingProfileId:body.shippingProfileId,productionPartnerId});draftSnapshot=preparedSnapshot;
+    const profile=await etsyFetch<{shipping_profile_id:number;is_deleted?:boolean}>(`/shops/${connection.shopId}/shipping-profiles/${preparedSnapshot.shipping_profile_id}`,connection.token);
+    if(Number(profile.shipping_profile_id)!==preparedSnapshot.shipping_profile_id||profile.is_deleted)throw Error('The selected shipping profile is unavailable in this Etsy shop. Choose another profile.');
+    const category=await cachedJson('etsy-taxonomy',`/nodes/${preparedSnapshot.taxonomy_id}/properties`,TAXONOMY_TTL_SECONDS,()=>etsyFetch<{results?:CategoryProperty[]}>(`/seller-taxonomy/nodes/${preparedSnapshot.taxonomy_id}/properties`,connection.token));
     if(!Array.isArray(category.results))throw Error('Etsy category requirements could not be checked. Try again before sending this draft.');
-    checkCategoryRequirements(draftSnapshot,category.results);
+    checkCategoryRequirements(preparedSnapshot,category.results);
   }
   const {photos,fingerprint}=await selectionPlan(runtime,user.userId,productId,draft,body.printifyImageIndices,shop.shop_id,draftSnapshot);
   await runtime.DB.prepare("UPDATE photo_deliveries SET status='failed',error='Photo preparation was interrupted. Prepare delivery again.',updated_at=? WHERE user_id=? AND product_id=? AND status='preparing' AND created_at<?").bind(Date.now(),user.userId,productId,Date.now()-600000).run();

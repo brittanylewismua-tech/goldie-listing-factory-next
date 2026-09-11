@@ -11,6 +11,7 @@ import {etsyConnection,etsyApiCredential,etsyBudget,recordEtsyCall,waitForEtsyCa
 import {decryptPrintifyToken} from '../../printify/token-crypto';
 import {readPrintifyPublishState} from '../../printify/publish-state';
 import {deliveryStep,DeliveryReviewRequired,type DeliveryImage,type DeliveryPhoto,type DeliveryState} from './engine';
+import {requiredPrintifyPartner} from '../../etsy/production-partner';
 export type DeliveryEnv={DB:D1Database;ARTWORK:R2Bucket;PRINTIFY_TOKEN_KEY:string;IMAGES?:{input(stream:ReadableStream):{output(options:{format:'image/jpeg';background:string;quality:number}):Promise<{response():Response}>}};PHOTO_DELIVERY:Workflow<{id:string;owner:string}>};
 export type DeliveryRow={transfer_json?:string|null;draft_json?:string|null;draft_state_json?:string|null;id:string;user_id:string;product_id:string;printify_shop_id:number;etsy_shop_id:number;fingerprint:string;status:string;photos_json:string;state_json:string|null;candidate_listing_id:number|null;candidate_seen_at:number|null;error:string|null;created_at:number;updated_at:number;expires_at:number};
 export const printifyWaitMessage=(automatic:boolean,locked:boolean,reason:string)=>automatic&&locked?null:reason+' Automatic checking will retry.';
@@ -135,7 +136,13 @@ export async function runDeliveryTick(id:string,owner:string){
       const claim=await runtime.DB.prepare("UPDATE photo_deliveries SET status='delivering',updated_at=? WHERE id=? AND user_id=? AND status='waiting'").bind(Date.now(),id,owner).run();
       if(!claim.meta.changes)return {done:true,progress:false};
     }
-    const draftSnapshot=row.draft_json?draftWithSize(JSON.parse(row.draft_json) as DraftSnapshot,printifyProduct!):null;
+    let draftSnapshot=row.draft_json?JSON.parse(row.draft_json) as DraftSnapshot:null;
+    if(draftSnapshot&&(!draftSnapshot.production_partner_ids?.length||draftSnapshot.who_made!=='someone_else'||draftSnapshot.when_made!=='made_to_order'||draftSnapshot.is_supply!==false)){
+      const productionPartnerId=await requiredPrintifyPartner(row.etsy_shop_id,()=>request(`/shops/${row.etsy_shop_id}/production-partners`).then(response=>response.json()));
+      draftSnapshot={...draftSnapshot,who_made:'someone_else',when_made:'made_to_order',is_supply:false,production_partner_ids:[productionPartnerId]};
+      await runtime.DB.prepare('UPDATE photo_deliveries SET draft_json=?,draft_state_json=NULL,updated_at=? WHERE id=? AND user_id=?').bind(JSON.stringify(draftSnapshot),Date.now(),id,owner).run();
+    }
+    draftSnapshot=draftSnapshot?draftWithSize(draftSnapshot,printifyProduct!):null;
     if(draftSnapshot?.selected_variant_ids?.length){
       const baselineKey=`photo-delivery/${owner}/inventory-baselines/${row.etsy_shop_id}/${listingId}/${row.product_id}.json`;
       const readBaseline=async()=>{

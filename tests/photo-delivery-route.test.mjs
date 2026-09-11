@@ -25,6 +25,7 @@ let source=read('app/api/listing-photos/delivery/route.ts').replace("from './pre
  .replace(/import \{getChatGPTUser\}[^;]+;/,"const getChatGPTUser=async()=>globalThis.__photoRoute.user;")
  .replace(/import \{decryptPrintifyToken\}[^;]+;/,"const decryptPrintifyToken=async()=>'token';")
  .replace(/import \{prepareEtsySkus\}[^;]+;/,"const prepareEtsySkus=async()=>{};")
+ .replace(/import \{requiredPrintifyPartner\}[^;]+;/,"const requiredPrintifyPartner=async()=>77;")
  .replace(/import \{unpackDraftMedia\}[^;]+;/,"const unpackDraftMedia=async value=>JSON.parse(value);")
  .replace(/from '@\/app\/listing-photo-package'/,`from '${packageUrl}'`)
  .replace(/import \{deliveryEnv[^;]+;/,`const deliveryEnv=()=>globalThis.__photoRoute.runtime;
@@ -64,9 +65,9 @@ test('owner-scoped status cannot expose another sellers delivery',async()=>{
  reset();await post();globalThis.__photoRoute.user={userId:'other'};const response=await api.GET(new Request('https://goldie.test/api/listing-photos/delivery?productId=p1'));assert.deepEqual((await response.json()).deliveries,[]);
 });
 
-test('draft mode snapshots server-owned metadata, does not share legacy job identity, and includes metadata in duplicate protection',async()=>{
+test('draft mode snapshots server-owned metadata and the verified Printify production partner',async()=>{
  reset();const original=JSON.parse(db.prepare('SELECT response_json FROM printify_draft_results').get().response_json);Object.assign(original,{title:'QA',description:'Saved description',tags:['books'],selectedVariantIds:[12,11,12],etsyShippingProfileId:8,etsyDetails:{taxonomyId:9,properties:[],personalization:{enabled:false,questions:[]}}});db.prepare('UPDATE printify_draft_results SET response_json=?').run(JSON.stringify(original));
- const response=await post('p1',[0],'draft');assert.equal(response.status,200);const payload=await response.json();assert.equal(payload.delivery.mode,'draft');const row=db.prepare('SELECT * FROM photo_deliveries').get(),snapshot=JSON.parse(row.draft_json);assert.equal(snapshot.description,'Saved description');assert.deepEqual(snapshot.selected_variant_ids,[11,12]);assert.equal((await post('p1',[0],'draft')).status,200);
+ const response=await post('p1',[0],'draft');assert.equal(response.status,200);const payload=await response.json();assert.equal(payload.delivery.mode,'draft');const row=db.prepare('SELECT * FROM photo_deliveries').get(),snapshot=JSON.parse(row.draft_json);assert.equal(snapshot.description,'Saved description');assert.deepEqual(snapshot.selected_variant_ids,[11,12]);assert.deepEqual(snapshot.production_partner_ids,[77]);assert.equal(snapshot.who_made,'someone_else');assert.equal(snapshot.when_made,'made_to_order');assert.equal(snapshot.is_supply,false);assert.equal((await post('p1',[0],'draft')).status,200);
  original.description='Changed after preparation';db.prepare('UPDATE printify_draft_results SET response_json=?').run(JSON.stringify(original));assert.equal((await post('p1',[0],'draft')).status,409);assert.equal(JSON.parse(db.prepare('SELECT draft_json FROM photo_deliveries').get().draft_json).description,'Saved description');
 });
 test('missing saved metadata blocks draft mode before job or photo writes; legacy mode remains available',async()=>{reset();assert.equal((await post('p1',[0],'draft')).status,409);assert.equal(creations.length,0);assert.equal((await post()).status,200)});
