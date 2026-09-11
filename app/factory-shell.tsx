@@ -33,6 +33,11 @@ type NavKey = "factory" | "drop" | "batches" | "keywords" | "usage" | "connectio
    account itself already lives. The rail is the three places work happens. */
 const NAV: { key: NavKey; label: string; href: string }[] = [
   { key: "factory", label: "Listing Factory", href: "/listing-factory" },
+  /* Second, deliberately: it is the reason to open this on a morning nobody
+     feels like listing, so it sits on the way to the work rather than behind
+     a menu. The rail's height budget was reopened to fit it — see D835 in
+     interface-v2.css and the test that guards it. */
+  { key: "drop", label: "Today's Drop", href: "/drop" },
   { key: "batches", label: "Batch History", href: "/batches" },
   { key: "keywords", label: "Keyword Banks", href: "/keywords" },
 ];

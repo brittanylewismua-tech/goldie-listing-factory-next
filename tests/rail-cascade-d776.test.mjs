@@ -833,9 +833,14 @@ test("D835: the rail is fixed and its contents fit inside it", () => {
   const v2 = fs.readFileSync(new URL("../app/interface-v2.css", import.meta.url), "utf8");
   const shell = fs.readFileSync(new URL("../app/factory-shell.tsx", import.meta.url), "utf8");
   const navCount = (shell.match(/\{ key: "/g) || []).length;
-  assert.equal(navCount, 3, `the rail carries ${navCount} nav links; the height budget assumes 3`);
-  assert.match(v2, /\.app-shell > \.topbar\{overflow:hidden;padding-top:36px;padding-bottom:25px\}/);
-  assert.match(v2, /\.app-shell > \.topbar > \.brand-lockup\{margin-bottom:34px\}/);
+  /* Four since Today's Drop. The budget was reopened for it and re-measured on
+     the deployed rail: a link costs 46px with its gap, 53 were reclaimed. If a
+     fifth is ever wanted, measure again — do not just raise this number. */
+  assert.equal(navCount, 4, `the rail carries ${navCount} nav links; the height budget assumes 4`);
+  assert.match(v2, /\.app-shell > \.topbar\{overflow:hidden;padding-top:24px;padding-bottom:20px\}/);
+  assert.match(v2, /\.app-shell > \.topbar > \.brand-lockup\{margin-bottom:20px\}/);
+  assert.match(v2, /\.app-shell > \.topbar \.top-nav\{gap:4px\}/);
+  assert.match(v2, /\.app-shell > \.topbar \.top-nav a\{padding-top:10px;padding-bottom:10px\}/);
   assert.match(v2, /\.app-shell \.approved-sidebar-footer\{gap:9px;padding-top:16px\}/);
   assert.match(v2, /\.listing-goal-side\{\s*border-radius:14px;padding:12px 14px/);
 });

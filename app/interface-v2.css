@@ -2612,8 +2612,28 @@ html, body { background: var(--lf-paper); }
    which leaves the rail fitting at 643 with room, and still fitting near 600.
    The overflow stays hidden and D835's test asserts scrollHeight <= clientHeight
    with overflow-y neither auto nor scroll. */
-.app-shell > .topbar{overflow:hidden;padding-top:36px;padding-bottom:25px}
-.app-shell > .topbar > .brand-lockup{margin-bottom:34px}
+/* D835 · The rail is fixed — one scroller in the pane — so its contents have
+   to fit rather than scroll.
+
+   REOPENED to seat a fourth nav link, and measured on the deployed build
+   rather than guessed. A link is 40px plus the 6px grid gap, so the fourth
+   costs 46. Reclaimed 53: twelve off the top padding, five off the bottom,
+   fourteen off the lockup's margin, six from the nav gap, and sixteen from
+   the links' own vertical padding across all four. Seven to spare, so four
+   links now sit slightly better than three did.
+
+   Worth recording what the measurement also found: at a 643px rail — the
+   height this budget was originally written for — the contents ALREADY
+   overflowed by 28px with three links, and "Powered by Goldie AI" was
+   already clipped. The footer has grown since D835 and nothing noticed,
+   because this test checks that the savings are still declared and cannot
+   see that the content outgrew them. Short screens are better after this
+   change than before it, and still not right. */
+.app-shell > .topbar{overflow:hidden;padding-top:24px;padding-bottom:20px}
+.app-shell > .topbar > .brand-lockup{margin-bottom:20px}
+.app-shell .goldie-wordmark-lockup{margin-bottom:20px}
+.app-shell > .topbar .top-nav{gap:4px}
+.app-shell > .topbar .top-nav a{padding-top:10px;padding-bottom:10px}
 .app-shell .approved-sidebar-footer{gap:9px;padding-top:16px}
 .app-shell .etsy-api-disclosure{line-height:1.35}
 
