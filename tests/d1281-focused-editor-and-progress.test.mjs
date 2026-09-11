@@ -95,13 +95,14 @@ test("D1282: switching a focused photo listing cannot leave its workspace blank"
 test("D1284/D1290: focused editor rail shows compact completion marks and returns through the footer",()=>{
   const nav=app.slice(app.indexOf("function reviewListingSectionNav"),app.indexOf("function rememberReviewEditor"));
   assert.match(nav,/className=\{`review-section-state \$\{entry\.done\?"is-done":"is-incomplete"\}`\}/);
-  assert.match(nav,/entry\.done\?"✓":"×"/);
+  assert.match(nav,/entry\.done\?<svg viewBox="0 0 16 16"/);
+  assert.doesNotMatch(nav,/entry\.done\?"✓":"×"/);
   assert.match(nav,/aria-label=\{`\$\{entry\.label\}: \$\{entry\.done\?"complete":"incomplete"\}`\}/);
   assert.doesNotMatch(nav,/Needed|needed/);
   assert.doesNotMatch(nav,/className="review-listing-done"/);
   assert.match(app,/reviewEditing\?<button className="workflow-back review-return"[\s\S]{0,180}<span aria-hidden="true">←<\/span> Back to Review/);
-  assert.match(css,/\.review-section-state\.is-done\{color:#53bd7c\}/);
-  assert.match(css,/\.review-section-state\.is-incomplete\{color:#f06a6a\}/);
+  assert.match(css,/\.review-section-state\.is-done\{border-color:#90c8a7;background:#f2faf5;color:#3f8a62\}/);
+  assert.match(css,/\.review-section-state\.is-incomplete\{border-color:#e2aeb3;background:#fff5f6;color:#b64954\}/);
 });
 
 test("D1290: Review map uses boxed checks and Xs without a visible Needed label",()=>{

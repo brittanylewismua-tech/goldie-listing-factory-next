@@ -3342,7 +3342,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
           </details>
           <button type="button" aria-label="Next listing" disabled={movablePosition<0||movablePosition>=movableListings.length-1} onClick={()=>move(movableListings[movablePosition+1])}>→</button>
         </div>}
-        <nav className="review-section-switcher" aria-label="Listing sections">{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} aria-label={`${entry.label}: ${entry.done?"complete":"incomplete"}`} onClick={()=>open(entry.key)}><span className={`review-section-state ${entry.done?"is-done":"is-incomplete"}`} aria-hidden="true">{entry.done?"✓":"×"}</span><span>{entry.label}</span></button>)}</nav>
+        <nav className="review-section-switcher" aria-label="Listing sections">{entries.map(entry=><button type="button" key={entry.key} aria-current={current===entry.key?"page":undefined} aria-label={`${entry.label}: ${entry.done?"complete":"incomplete"}`} onClick={()=>open(entry.key)}><span className={`review-section-state ${entry.done?"is-done":"is-incomplete"}`} aria-hidden="true">{entry.done?<svg viewBox="0 0 16 16" focusable="false"><path d="m3.5 8.2 2.7 2.7 6.3-6.3"/></svg>:<svg viewBox="0 0 16 16" focusable="false"><path d="m4.5 4.5 7 7m0-7-7 7"/></svg>}</span><span>{entry.label}</span></button>)}</nav>
       </aside>
     </>;
   }

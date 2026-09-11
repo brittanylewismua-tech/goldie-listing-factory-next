@@ -13,6 +13,6 @@ test("D1348: the editing rail is pale blush glass with a firm boundary",async()=
 
 test("D1348: status marks stay readable on the active dark destination",async()=>{
   const css=await readFile(cssUrl,"utf8");
-  assert.match(css,/button\[aria-current="page"\] \.review-section-state\.is-done\{color:#53bd7c\}/);
-  assert.match(css,/button\[aria-current="page"\] \.review-section-state\.is-incomplete\{color:#f06a6a\}/);
+  assert.match(css,/button\[aria-current="page"\] \.review-section-state\.is-done\{border-color:#6fbd8e;background:rgba\(83,189,124,\.1\);color:#6fce96\}/);
+  assert.match(css,/button\[aria-current="page"\] \.review-section-state\.is-incomplete\{border-color:#df7d86;background:rgba\(240,106,106,\.1\);color:#ef8a92\}/);
 });
