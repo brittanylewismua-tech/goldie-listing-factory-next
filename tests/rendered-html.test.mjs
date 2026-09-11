@@ -2818,9 +2818,10 @@ test("ordinary footers can save for later; a focused editor leads back to Review
   assert.match(post,/reviewEditing\?<button className="workflow-next"[\s\S]*?\}>Back to Review/);
   assert.match(post,/:<button className="save-draft-link"/);
   const ordinary=app.slice(app.indexOf('workflow-footer-actions">'),postStart);
-  assert.match(ordinary,/workflow-back/);
+  assert.match(ordinary,/reviewEditing\?null:progressIndex>0&&<button className="workflow-back"/);
   assert.match(ordinary,/autosave-note/);
-  assert.match(ordinary,/save-draft-link/);
+  assert.match(ordinary,/reviewEditing\?<button className="workflow-next"[\s\S]*?Back to Review/);
+  assert.match(ordinary,/:<>[\s\S]*?save-draft-link/);
 });
 
 test("mockup placement is derived from the Printify preview, for any product — D433", async () => {

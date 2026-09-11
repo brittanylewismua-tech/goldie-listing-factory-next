@@ -35,7 +35,7 @@ test("D1251: the listing editor keeps every section and Review return visible",(
   }
   assert.match(app,/\?"Colors & sizes":"Product options"/);
   assert.match(app,/className="review-listing-editor-nav"/);
-  assert.match(app,/Back to Review<\/button>/);
+  assert.match(app,/Back to Review <span aria-hidden="true">→<\/span><\/button>/);
   assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
   assert.match(app,/window\.setTimeout\(scrollReviewTaskToTop,300\)/);
   assert.match(app,/function scrollReviewTaskToTop\(\)[\s\S]*?"\.review-listing-editor-nav"/);
