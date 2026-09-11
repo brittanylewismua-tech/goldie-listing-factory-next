@@ -31,6 +31,13 @@ test("D1325: collapsed Etsy details name the selected category instead of saying
   assert.doesNotMatch(source,/`\$\{completed\.length\} added · all optional`/);
 });
 
+test("D1331: Etsy help never claims unfinished details are pre-filled or asks for a nonexistent save step",()=>{
+  assert.match(source,/intro:"Check the category, attributes, and personalization for every listing\."/);
+  assert.match(source,/heading:"Complete every listing"/);
+  assert.doesNotMatch(source,/Review every pre-filled field for accuracy/);
+  assert.doesNotMatch(source,/heading:"Save all listings"/);
+});
+
 test("D1325: partial bundle review offers a direct route to the unfinished product",()=>{
   assert.match(source,/function nextBundleProductToFinish\(\)/);
   assert.match(source,/className="review-bundle-recovery-button"/);
