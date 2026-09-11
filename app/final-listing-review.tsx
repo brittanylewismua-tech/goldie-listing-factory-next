@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { printSideLabel } from "./print-sides";
+import { printSideLabel, printSideSummary } from "./print-sides";
 import { listingCoverUrl } from "./listing-cover";
 import { runBounded } from "./bounded-work";
 import { productFamily } from "./product-type-utils";
@@ -8,7 +8,7 @@ import { reviewOptionSummary } from "./review-option-summary";
 
 type Draft = { clientId:string; id?:string; name:string; title?:string; description?:string; status:string; previewUrl?:string; printifyImages?:string[]; selectedVariantIds?:number[]; editorUrl?:string; error?:string; productName?:string;artworkSummary?:Record<string,Array<{name:string;colors:string[]}>>;costReview?:{required:boolean;approved:boolean;variants:Array<{id?:number;title?:string;price:number;isEnabled:boolean}>} };
 type Design = { id:string; name:string; title:string; tags:string[]; previewUrl:string; sizeGuideName?:string;descriptionOverride?:string;etsy?:{category?:string;properties?:Array<{required?:boolean;value?:string}>} };
-type Props = { drafts:Draft[]; files:Design[]; selections:Record<string,number[]>; defaultIndices:number[]; preparedMockupCounts:Record<string,number>; batchSizeGuide:string; productName?:string; onRetry?:(clientId:string)=>void; onEdit:(phase:"details"|"title"|"description"|"etsy"|"mockups"|"pricing",draft:Draft)=>void; onEditProduct?:(stage:"artwork"|"variants"|"pricing"|"photos",draft:Draft)=>void; pricingAndShippingReady?:(draft:Draft)=>boolean; etsyDetailsIssue?:(draft:Draft)=>string; onSelectionChange?:(ids:string[])=>void; onSelectionTouched?:()=>void; handoffOnly?:boolean };
+type Props = { drafts:Draft[]; files:Design[]; selections:Record<string,number[]>; defaultIndices:number[]; preparedMockupCounts:Record<string,number>; batchSizeGuide:string; productName?:string; printSides?:string[]; onRetry?:(clientId:string)=>void; onEdit:(phase:"details"|"title"|"description"|"etsy"|"mockups"|"pricing",draft:Draft)=>void; onEditProduct?:(stage:"artwork"|"variants"|"pricing"|"photos",draft:Draft)=>void; pricingAndShippingReady?:(draft:Draft)=>boolean; etsyDetailsIssue?:(draft:Draft)=>string; onSelectionChange?:(ids:string[])=>void; onSelectionTouched?:()=>void; handoffOnly?:boolean };
 
 /* D253 · The Publish page grouped listings under the raw upload filename, so a
    seller reviewing a batch read "ChatGPT Image Aug 21, 2026, 05_32_41 PM (2).png"
@@ -23,7 +23,7 @@ function batchHasMixedProducts(drafts: Array<{ productName?: string }>): boolean
   return new Set(drafts.map((d) => d.productName || "")).size > 1;
 }
 
-export default function FinalListingReview({drafts,files,selections,defaultIndices,preparedMockupCounts,batchSizeGuide,productName,onRetry,onEdit,onEditProduct,pricingAndShippingReady,etsyDetailsIssue,onSelectionChange,onSelectionTouched,handoffOnly=false}:Props){
+export default function FinalListingReview({drafts,files,selections,defaultIndices,preparedMockupCounts,batchSizeGuide,productName,printSides,onRetry,onEdit,onEditProduct,pricingAndShippingReady,etsyDetailsIssue,onSelectionChange,onSelectionTouched,handoffOnly=false}:Props){
   const selectable=drafts.filter(draft=>draft.status==="Created"&&draft.id);
   const [covers,setCovers]=useState<Record<string,string>>({});
   const [coverRevision,setCoverRevision]=useState(0);
@@ -133,7 +133,7 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
         return <section className="recipe-product-group" key={name}>
           <header><div><small>{productGroups.length>1?`Product ${productIndex+1} of ${productGroups.length}`:"Saved product"}</small><h4>{name}</h4></div></header>
           <div className="recipe-listing-grid">{items.map(draft=>{const design=files.find(file=>file.id===draft.clientId)||files.find(file=>file.name===draft.name),selectedCount=draft.id?(selections[draft.id]??defaultIndices).length:defaultIndices.length,mockupCount=draft.id?preparedMockupCounts[draft.id]||0:0,photoCount=selectedCount+mockupCount,sizeGuideReady=Boolean(design?.sizeGuideName??batchSizeGuide),preview=covers[draft.id||""]||draft.previewUrl||design?.previewUrl,etsyIssue=etsyDetailsIssue?.(draft)??(Boolean(design?.etsy?.category?.trim())&&!(design?.etsy?.properties||[]).some(property=>property.required&&!String(property.value||"").trim())?"":"Choose a category or required details"),etsyReady=!etsyIssue,descriptionReady=Boolean(String(design?.descriptionOverride??draft.description??"").trim()),titleReady=Boolean(design?.title.trim()),tagsReady=Boolean(design?.tags.length),variants=Number(draft.selectedVariantIds?.length||draft.costReview?.variants.filter(variant=>variant.isEnabled).length||0),family=productFamily(draft.productName||productName||""),optionLabel=["tee","hoodie","crewneck","tank","longSleeve"].includes(family)?"Colors & sizes":"Product options",sections=[
-            {label:"Artwork placement",detail:draft.artworkSummary?`${Object.keys(draft.artworkSummary).length} print ${Object.keys(draft.artworkSummary).length===1?"side":"sides"}`:"Printify draft ready",ready:draft.status==="Created",run:()=>onEditProduct?.("artwork",draft)},
+            {label:"Artwork placement",detail:printSideSummary(draft.artworkSummary?Object.keys(draft.artworkSummary):printSides)||"Printify draft ready",ready:draft.status==="Created",run:()=>onEditProduct?.("artwork",draft)},
             {label:optionLabel,detail:reviewOptionSummary(optionLabel==="Colors & sizes",draft.costReview?.variants||[],draft.selectedVariantIds),ready:variants>0,run:()=>onEditProduct?.("variants",draft)},
             {label:"Pricing & shipping",detail:pricingAndShippingReady?.(draft)?"Saved":"Review prices or shipping",ready:Boolean(pricingAndShippingReady?.(draft)),run:()=>onEditProduct?.("pricing",draft)},
             {label:"Listing photos",detail:photoCount?`${photoCount} ${photoCount===1?"photo":"photos"}`:"No photo selected",ready:photoCount>0,run:()=>onEditProduct?.("photos",draft)},

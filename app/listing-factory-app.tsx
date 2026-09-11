@@ -56,9 +56,9 @@ import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
-import { productFamily } from "./product-type-utils";
+import { productFamily, productOptionAxis } from "./product-type-utils";
 import { printifyMockupDetails, printifyMockupForColor, printifyVariantIdsForColor } from "./printify-color-mockup";
-import { orderedPrintSides,primaryPrintSide,printSideLabel,productNoun } from "./print-sides";
+import { orderedPrintSides,primaryPrintSide,printSideLabel,printSideSummary,productNoun } from "./print-sides";
 import ProductColorRendering from "./product-color-rendering";
 import {completedGeneratedTags,validEtsyTags} from "./listing-title-tags";
 import {printifyVariantLimitMessage} from "./printify-variant-limit";
@@ -620,14 +620,16 @@ function DraftColorSelector({product,drafts,selected,selectedByDraft,saving,artw
 }
 
 function ProductSizeSelector({product,selected,onChange,onRemember,remembering,remembered,inCard,scope="product"}:{product:TemplateDetails;selected:number[];onChange:(ids:number[])=>void;onRemember:()=>void;remembering:boolean;remembered:boolean;inCard?:boolean;scope?:"product"|"listing"}){
-  const sizes=product.sizeOptions||[],available=sizes.filter(size=>size.available),selectedSet=new Set(selected);
+  const sizes=product.sizeOptions||[],available=sizes.filter(size=>size.available),selectedSet=new Set(selected),axis=productOptionAxis(product.blueprintTitle);
+  const selectedOptions=sizes.filter(size=>selectedSet.has(size.id)),availableToAdd=sizes.filter(size=>!selectedSet.has(size.id));
   /* A blueprint with no size axis (a mug, a sticker) renders nothing at all
      rather than an empty card. */
   if(!sizes.length)return null;
   function toggle(id:number){const next=new Set(selectedSet);if(next.has(id))next.delete(id);else next.add(id);onChange([...next])}
-  return <section className="product-size-selector" aria-label={`Choose sizes for ${product.blueprintTitle}`}>
-    {inCard?<p className="panel-help">{scope==="listing"?"Changes apply only to this listing.":"Every change saves to this product automatically."}</p>:<div className="size-selector-head"><div><p className="mini-label">SIZES FOR THIS BATCH</p><h3>Sizes</h3><span>{remembered?"From your last batch — change any.":"These changes apply to this batch unless you save them as the product default."}</span></div><b>{selected.length} selected</b></div>}
-    <div className="size-choice-grid">{sizes.map(size=><button type="button" key={size.id} disabled={!size.available} aria-pressed={selectedSet.has(size.id)} onClick={()=>toggle(size.id)} className={selectedSet.has(size.id)?"selected":""}><span>{size.title}</span>{selectedSet.has(size.id)&&<em>✓</em>}{!size.available&&<small>Unavailable</small>}</button>)}</div>
+  return <section className="product-size-selector" aria-label={axis.aria}>
+    {inCard?<p className="panel-help">{scope==="listing"?"Changes apply only to this listing.":"Every change saves to this product automatically."}</p>:<div className="size-selector-head"><div><p className="mini-label">{axis.label.toUpperCase()} FOR THIS BATCH</p><h3>{axis.label}</h3><span>{remembered?"From your last batch — change any.":"These changes apply to this batch unless you save them as the product default."}</span></div><b>{selected.length} selected</b></div>}
+    {selectedOptions.length?<><div className="size-choice-selected"><b>Selected {axis.label.toLowerCase()}</b><span>{selectedOptions.length}</span></div><div className="size-choice-grid">{selectedOptions.map(size=><button type="button" key={size.id} aria-pressed="true" onClick={()=>toggle(size.id)} className="selected"><span>{size.title}</span><em>✓</em></button>)}</div></>:null}
+    {availableToAdd.length?<details className="size-choice-more" open={!selectedOptions.length}><summary>Add more {axis.label.toLowerCase()} <span>{availableToAdd.filter(size=>size.available).length}</span></summary><div className="size-choice-grid">{availableToAdd.map(size=><button type="button" key={size.id} disabled={!size.available} aria-pressed="false" onClick={()=>toggle(size.id)}><span>{size.title}</span>{!size.available&&<small>Unavailable</small>}</button>)}</div></details>:null}
     <div className="size-selector-actions"><button type="button" onClick={()=>onChange(available.map(size=>size.id))}>Select all available</button><button type="button" onClick={()=>{const templateSizes=(product.sizeOptions||[]).filter(size=>size.available&&size.templateEnabled).map(size=>size.id);
                 /* D213 · This used to fall back to every available size when the
                    template had none enabled, so a button reading "Match Printify
@@ -635,8 +637,8 @@ function ProductSizeSelector({product,selected,onChange,onRemember,remembering,r
                    nothing to match, match nothing and let the seller choose. */
                 onChange(templateSizes)}}>Match Printify template</button><button type="button" onClick={()=>onChange([])}>Clear all</button>{/* D318 · Colours had Clear all and sizes did not. Both pickers now offer the
                   same three actions in the same order: Select all available,
-                  Match Printify template, Clear all. */}{inCard?<span className={`default-saved-state${((scope==="listing"&&!remembering)||(scope==="product"&&remembered))?" saved":""}`}>{scope==="listing"?(remembering?"Saving listing…":"✓ Saved to this listing"):(remembered?"✓ Saved as this product’s default":"Saving…")}</span>:<button type="button" className={remembered?"remembered":""} disabled={!selected.length||remembering||remembered} onClick={onRemember}>{remembering?"Saving…":remembered?"✓ Saved for this product":"Save these as this product’s default sizes"}</button>}</div>
-    {!selected.length&&<p className="size-required" role="alert">Choose at least one size before continuing.</p>}
+                  Match Printify template, Clear all. */}{inCard?<span className={`default-saved-state${((scope==="listing"&&!remembering)||(scope==="product"&&remembered))?" saved":""}`}>{scope==="listing"?(remembering?"Saving listing…":"✓ Saved to this listing"):(remembered?"✓ Saved as this product’s default":"Saving…")}</span>:<button type="button" className={remembered?"remembered":""} disabled={!selected.length||remembering||remembered} onClick={onRemember}>{remembering?"Saving…":remembered?"✓ Saved for this product":`Save these as this product’s default ${axis.choice}s`}</button>}</div>
+    {!selected.length&&<p className="size-required" role="alert">Choose at least one {axis.choice} before continuing.</p>}
   </section>
 }
 
@@ -2008,7 +2010,7 @@ export default function ListingFactoryApp() {
   function failedBundleNames(){
     return bundleRecipes.filter(recipe=>bundleLoadErrors[recipe.id]).map(recipe=>recipe.name);
   }
-  function requiredForStep(step:WorkflowStep){if(localPreview)return [];if(step!=="connect"&&(checkingConnection||checkingEtsyConnection))return ["Checking saved connections…"];const issues:string[]=[];if(step!=="connect"&&!connected)issues.push("Connect your Printify account.");if(step!=="connect"&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");if(["designs","review","finish"].includes(step)){if(!productSelected)issues.push("Save or select a product or product bundle.");if(!templateDetails?.shippingTemplateId&&!templateDetails?.shippingProfileNeedsSelection)issues.push("Choose a valid Printify product with an imported shipping profile.");if(!templateDetails?.enabledVariants)issues.push("The product needs at least one enabled size or color.");if(!templateDetails?.batchId)issues.push("Reload the Printify product before continuing.");}if(["review","finish"].includes(step)){const missingColors=Boolean(templateDetails?.colorOptions?.length&&!selectedColorIds.length);const missingSizes=Boolean(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length);if(missingColors)issues.push("Choose at least one product color for this batch.");else if(missingSizes)issues.push("Choose at least one product size for this batch.");else if(!pricedVariants.length)issues.push(`No color and size combination you picked is available for ${templateDetails?.blueprintTitle||"this product"}. Open its Colors or Sizes and choose a pairing Printify offers.`);}/* D221 · Every bundle member still needs its own keyword bank before titles can
+  function requiredForStep(step:WorkflowStep){if(localPreview)return [];if(step!=="connect"&&(checkingConnection||checkingEtsyConnection))return ["Checking saved connections…"];const issues:string[]=[];if(step!=="connect"&&!connected)issues.push("Connect your Printify account.");if(step!=="connect"&&!etsyConnected)issues.push("Connect the Etsy shop that will receive these listings.");if(["designs","review","finish"].includes(step)){if(!productSelected)issues.push("Save or select a product or product bundle.");if(!templateDetails?.shippingTemplateId&&!templateDetails?.shippingProfileNeedsSelection)issues.push("Choose a valid Printify product with an imported shipping profile.");if(!templateDetails?.enabledVariants)issues.push("The product needs at least one enabled product option.");if(!templateDetails?.batchId)issues.push("Reload the Printify product before continuing.");}if(["review","finish"].includes(step)){const missingColors=Boolean(templateDetails?.colorOptions?.length&&!selectedColorIds.length);const missingSizes=Boolean(templateDetails?.sizeOptions?.length&&!selectedSizeIds.length);const optionAxis=productOptionAxis(templateDetails?.blueprintTitle||"");if(missingColors)issues.push("Choose at least one product color for this batch.");else if(missingSizes)issues.push(`${optionAxis.choose} for this batch.`);else if(!pricedVariants.length)issues.push(`No product option combination you picked is available for ${templateDetails?.blueprintTitle||"this product"}. Open its product options and choose a combination Printify offers.`);}/* D221 · Every bundle member still needs its own keyword bank before titles can
      be generated — the D181 rule is unchanged. It moved off the Product page,
      which was blocking Continue on a choice made two pages later, and onto the
      Listing page where the bank is chosen and used. */
@@ -3089,6 +3091,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
          its saved product explicitly says colour selection is not required. */
       const rowProduct=isActive?templateDetails:bundleColorProducts[recipe.id];
       const hasColorAxis=rowProduct?Boolean(rowProduct.colorOptions?.length):recipe.requiresColorSelection!==false;
+      const optionAxis=productOptionAxis(rowProduct?.blueprintTitle||recipe.name);
       const productDrafts=isActive?drafts:(bundleMembers[recipe.id]?.drafts||[]);
       /* Review edits belong to one listing. Its colors and sizes may differ
          from every other listing on the same product, so the header must use
@@ -3113,7 +3116,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
       return [
       {label:"Artwork placement",value:focusedArtworkValue,pending,done:counts.drafts>0,task:"placement"},
       ...(hasColorAxis?[{label:"Product colors",value:rowColors.length?plural(rowColors.length,"color"):"Choose colors",pending,done:rowColors.length>0,task:"draft-colors"}]:[]),
-      {label:"Sizes",value:rowSizes.length?plural(rowSizes.length,"size"):"Choose sizes",pending,done:rowSizes.length>0,task:"draft-sizes"},
+      {label:optionAxis.label,value:rowSizes.length?plural(rowSizes.length,optionAxis.choice):optionAxis.choose,pending,done:rowSizes.length>0,task:"draft-sizes"},
       {label:"Set prices",value:priceApproved?(priceReviewRequired?"Saved":"Ready"):"Edit prices",pending,done:priceApproved,task:"draft-pricing"},
       {label:"Etsy shipping",value:shippingReady?"Selected":"Choose shipping",pending,done:shippingReady,task:"draft-shipping"},
       {label:"Listing photos",value:started?plural(listingPhotoCount,"photo"):blank,pending,done:listingPhotoCount>0,task:"photos"},
@@ -3604,8 +3607,8 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
         <ArtworkGrid items={visibleListings.filter(({draft})=>draft.status==="Created").map(({draft,design})=>{
           const displayScale=printTargetFor(templateDetails).scale;
           const quality=design?.width&&templateDetails?.maxPrintWidth&&displayScale?printifyDpi(design.width,templateDetails.maxPrintWidth,displayScale):null;
-          const printSides=Object.keys(draft.artworkSummary||{}).map(printSideLabel);
-          const artworkLabel=printSides.length?`${printSides.join(" + ")} artwork`:"Primary artwork";
+          const printSides=Object.keys(draft.artworkSummary||{});
+          const artworkLabel=printSideSummary(printSides.length?printSides:templateDetails?.printPositions,"artwork")||"Primary artwork";
           const dpi=!quality?`Check print quality in Printify · ${artworkLabel}`:`Estimated ${quality.dpi} DPI · ${artworkLabel}`;
           return {
             key:draft.clientId,
@@ -3917,6 +3920,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const stageId=visibleDraftStage(rows,effectiveTask,draftStageByProduct[recipe.id]);
     const stages=DRAFT_TASK_STAGES.filter(stage=>rows.some(row=>draftTaskStage(row.task)===stage.id));
     const stageRows=rows.filter(row=>draftTaskStage(row.task)===stageId);
+    const stageOptionLabel=productOptionAxis(product?.blueprintTitle||recipe.name).label.toLowerCase();
     const reviewTasks=reviewEditing?new Set(reviewEditing.section==="variants"?["draft-colors","draft-sizes"]:reviewEditing.section==="pricing"?["draft-pricing","draft-shipping"]:reviewEditing.section==="artwork"?["placement"]:reviewEditing.section==="photos"?["photos"]:[]):null;
     return <div className={`batch-product-rows ${grouped?"has-draft-stages":""}`}>
       {grouped&&<div className="draft-stage-rail"><nav className="draft-stage-nav" aria-label="Product setup stages">{stages.map((stage,stageIndex)=>{
@@ -3924,8 +3928,8 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         return <button type="button" key={stage.id} aria-current={stage.id===stageId?"step":undefined} disabled={Boolean(switchingProduct)||(!open&&!reachable)} onClick={()=>{
           setDraftStageByProduct(current=>({...current,[recipe.id]:stage.id}));
           const target=tasks.find(row=>!row.done)||tasks[0];if(target?.task)openGuidedDraftTask(target.task,index);
-        }}><span>{remaining?stageIndex+1:"✓"}</span><b>{draftStageLabel(stage.id,tasks.map(row=>row.task||""))}</b><small>{remaining?`${remaining} to finish`:"Ready"}</small></button>;
-      })}</nav>{effectiveTask&&<><p className="draft-stage-position">Stage {stages.findIndex(stage=>stage.id===stageId)+1} of {stages.length} · {stageRows.find(row=>row.task===effectiveTask)?.label}</p>{stageRows.length>1&&<nav className="draft-section-nav" aria-label={`${draftStageLabel(stageId,stageRows.map(row=>row.task||""))} sections`}>{stageRows.map((row,rowIndex)=><button type="button" key={row.task||row.label} aria-current={row.task===effectiveTask?"step":undefined} onClick={()=>row.task&&openGuidedDraftTask(row.task,index)}><span aria-hidden="true">{row.done?"✓":rowIndex+1}</span>{row.label}</button>)}</nav>}</>}</div>}
+        }}><span>{remaining?stageIndex+1:"✓"}</span><b>{draftStageLabel(stage.id,tasks.map(row=>row.task||""),stageOptionLabel)}</b><small>{remaining?`${remaining} to finish`:"Ready"}</small></button>;
+      })}</nav>{effectiveTask&&<><p className="draft-stage-position">Stage {stages.findIndex(stage=>stage.id===stageId)+1} of {stages.length} · {stageRows.find(row=>row.task===effectiveTask)?.label}</p>{stageRows.length>1&&<nav className="draft-section-nav" aria-label={`${draftStageLabel(stageId,stageRows.map(row=>row.task||""),stageOptionLabel)} sections`}>{stageRows.map((row,rowIndex)=><button type="button" key={row.task||row.label} aria-current={row.task===effectiveTask?"step":undefined} onClick={()=>row.task&&openGuidedDraftTask(row.task,index)}><span aria-hidden="true">{row.done?"✓":rowIndex+1}</span>{row.label}</button>)}</nav>}</>}</div>}
       {rows.map((row,rowIndex)=>{if(grouped&&row.task!==effectiveTask)return null;if(reviewTasks&&(!row.task||!reviewTasks.has(row.task)))return null;const rowOpen=Boolean(!switchingProduct&&open&&row.task&&(reviewTasks?reviewTasks.has(row.task):grouped?row.task===effectiveTask:activeTask===row.task));
       const reachableRow=!(switchingProduct||(!open&&!reachable));
       /* D767 · A reporting row has nothing of its own to open (D541), which is a
@@ -5912,7 +5916,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 place while the list scrolls. Every gate, warning, confirmation
                 and failure path below is the same code in the same order. */}
             <div className="factory-review"><div className="factory-review-list">
-            <FinalListingReview handoffOnly productName={activeBundle&&bundleRecipes.length>1?"":activeRecipe?.name||templateDetails?.blueprintTitle||""} drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={editReviewedListing} onEditProduct={editReviewedProduct} pricingAndShippingReady={reviewedPricingAndShippingReady} etsyDetailsIssue={draft=>{const design=bundlePublishFiles().find(file=>file.id===draft.clientId)||bundlePublishFiles().find(file=>file.name===draft.name);if(!etsyRequiredComplete(design?.etsy))return "Choose a category or required details";return personalizationProblem(design?.etsy)}} onSelectionChange={setSelectedPublishIds} onSelectionTouched={()=>{sellerChosePublish.current=true}}/>{/* D548 - read as someone about to spend money, this said two untrue things.
+            <FinalListingReview handoffOnly productName={activeBundle&&bundleRecipes.length>1?"":activeRecipe?.name||templateDetails?.blueprintTitle||""} printSides={activeBundle&&bundleRecipes.length>1?[]:templateDetails?.printPositions} drafts={bundlePublishDrafts()} files={bundlePublishFiles()} selections={bundlePublishSelections()} defaultIndices={printifyImageIndices} preparedMockupCounts={bundlePublishMockupCounts()} batchSizeGuide={sizeGuideName} onRetry={clientId=>{const design=files.find(file=>file.id===clientId);if(design)void runDrafts([design],true)}} onEdit={editReviewedListing} onEditProduct={editReviewedProduct} pricingAndShippingReady={reviewedPricingAndShippingReady} etsyDetailsIssue={draft=>{const design=bundlePublishFiles().find(file=>file.id===draft.clientId)||bundlePublishFiles().find(file=>file.name===draft.name);if(!etsyRequiredComplete(design?.etsy))return "Choose a category or required details";return personalizationProblem(design?.etsy)}} onSelectionChange={setSelectedPublishIds} onSelectionTouched={()=>{sellerChosePublish.current=true}}/>{/* D548 - read as someone about to spend money, this said two untrue things.
               "Only the listings selected above" - the selection covers the product
               that is open, and on a bundle the button publishes every product, so
               the sentence promised a smaller press than the one it sat under. And

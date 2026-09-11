@@ -441,7 +441,7 @@ test("matches Printify editor DPI instead of comparing against template pixel di
   assert.match(page, /maxPlacementScale:isRigidPaperProduct\(templateDetails\)\?1:undefined/);
   assert.doesNotMatch(page, /Target:\s*\{templateDetails/);
   assert.match(page, /Estimated \$\{quality.dpi\} DPI · \$\{artworkLabel\}/);
-  assert.match(page, /const artworkLabel=printSides\.length\?`\$\{printSides\.join\(" \+ "\)\} artwork`:"Primary artwork"/);
+  assert.match(page, /const artworkLabel=printSideSummary\(printSides\.length\?printSides:templateDetails\?\.printPositions,"artwork"\)\|\|"Primary artwork"/);
 });
 
 test("calculates every Printify variant price from its own cost and Etsy fee profile", async () => {
@@ -4816,7 +4816,9 @@ test("placement cards contain only the preview, identity, DPI and editor link �
   assert.doesNotMatch(placement, /name:design\?\.title|name:design\?\.name/,
     "a junk upload filename never outranks the listing number");
   assert.match(placement, /Estimated \$\{quality.dpi\} DPI · \$\{artworkLabel\}/);
-  assert.match(placement, /Object\.keys\(draft\.artworkSummary\|\|\{\}\)\.map\(printSideLabel\)/);
+  assert.match(placement, /const printSides=Object\.keys\(draft\.artworkSummary\|\|\{\}\)/);
+  assert.match(placement, /printSideSummary\(printSides\.length\?printSides:templateDetails\?\.printPositions,"artwork"\)/,
+    "older saved drafts fall back to the product template instead of hiding the print side");
   assert.doesNotMatch(placement, /DPI · good to print/);
   assert.match(placement, /openLabel:.*Adjust in Printify/);
   assert.doesNotMatch(placement, /Printify views|Unpublished Printify draft|Choose the correct shop[^\"]*\)<\/small>/);

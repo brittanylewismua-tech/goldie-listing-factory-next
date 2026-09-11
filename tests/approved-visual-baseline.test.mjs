@@ -545,10 +545,10 @@ test("sizes are chosen in Goldie, not just inherited from Printify — D123, sup
    * must not come back. */
   assert.doesNotMatch(page, /Sizes come from your Printify product/,
     "That note is obsolete: sizes are chosen here now.");
-  assert.match(page, /<p className="mini-label">SIZES FOR THIS BATCH<\/p>/,
-    "The setup step must offer sizes beside colours.");
-  assert.match(page, /Save these as this product’s default sizes/,
-    "Sizes must be savable per product, exactly like colours.");
+  assert.match(page, /<p className="mini-label">\{axis\.label\.toUpperCase\(\)\} FOR THIS BATCH<\/p>/,
+    "The setup step must offer the product's real option axis beside colours.");
+  assert.match(page, /`Save these as this product’s default \$\{axis\.choice\}s`/,
+    "The option axis must be savable per product, exactly like colours.");
 });
 
 test("shipping profiles are product-aware, searchable, and never hard-filtered — D117", async () => {

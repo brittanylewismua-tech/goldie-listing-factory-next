@@ -43,6 +43,12 @@ export function printSideLabel(position?:string|null){
   return words.charAt(0).toLocaleUpperCase()+words.slice(1);
 }
 
+export function printSideSummary(inputs:SideInput[]|null|undefined,kind:"artwork"|"print"="print"){
+  const labels=orderedPrintSides(inputs).map(printSideLabel);
+  if(!labels.length)return"";
+  return kind==="artwork"?`${labels.join(" + ")} artwork`:`${labels.join(" + ")} ${labels.length===1?"print":"prints"}`;
+}
+
 export function productNoun(...parts:Array<string|null|undefined>){
   const value=parts.filter(Boolean).join(" ").toLocaleLowerCase();
   if(/\b(?:mug|cup)s?\b/.test(value))return "mug";

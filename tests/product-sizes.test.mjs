@@ -145,7 +145,7 @@ test("the size card's promise matches what the gate actually enforces — D164",
    * size axis, and any batch saved before sizes were selectable, is never
    * blocked by a rule that cannot apply to it. */
   assert.match(app, /const missingSizes=Boolean\(templateDetails\?\.sizeOptions\?\.length&&!selectedSizeIds\.length\)/);
-  assert.match(app, /issues\.push\("Choose at least one product size for this batch\."\)/);
+  assert.match(app, /else if\(missingSizes\)issues\.push\(`\$\{optionAxis\.choose\} for this batch\.`\)/);
   /* D383 · The forward button used to relabel itself with whatever was missing
      ("Pick a keyword bank for Gildan Hoodie", "Choose product colors to
      continue"). It says "Next step" on every step now; the gate dialog names
@@ -498,8 +498,8 @@ test("D207: the dead-end variant message names the product and says what to do",
   /* "The selected colors do not contain any available variants." names no
    * product — useless in a bundle — and no action. */
   assert.doesNotMatch(code, /"The selected colors do not contain any available variants\."/);
-  assert.match(app, /No color and size combination you picked is available for \$\{templateDetails\?\.blueprintTitle\|\|"this product"\}/);
-  assert.match(app, /Open its Colors or Sizes and choose a pairing Printify offers/);
+  assert.match(app, /No product option combination you picked is available for \$\{templateDetails\?\.blueprintTitle\|\|"this product"\}/);
+  assert.match(app, /Open its product options and choose a combination Printify offers/);
 });
 
 test("D209: every readiness row that offers to open, opens in the card", async () => {

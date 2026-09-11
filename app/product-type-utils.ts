@@ -34,6 +34,15 @@ export function productFamily(blueprintTitle: string) {
   return "";
 }
 
+const APPAREL_PRODUCT_FAMILIES = new Set(["tee", "hoodie", "crewneck", "tank", "longSleeve"]);
+
+export function productOptionAxis(blueprintTitle: string) {
+  const apparel = APPAREL_PRODUCT_FAMILIES.has(productFamily(blueprintTitle));
+  return apparel
+    ? { label: "Sizes", choice: "size", choose: "Choose sizes", aria: `Choose sizes for ${blueprintTitle}` }
+    : { label: "Product options", choice: "option", choose: "Choose product options", aria: `Choose product options for ${blueprintTitle}` };
+}
+
 export function excludedProductNouns(blueprintTitle: string) {
   const family = productFamily(blueprintTitle);
   return [...new Set(Object.entries(PRODUCT_NOUN_GROUPS).filter(([name]) => name !== family).flatMap(([, nouns]) => nouns))];
