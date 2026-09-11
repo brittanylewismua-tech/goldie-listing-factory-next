@@ -4280,3 +4280,38 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-publish-box .publish-live-warning span,
 .app-shell .factory-publish-box .publish-live-warning p,
 .app-shell .factory-publish-box .publish-live-warning small{color:#6d5966}
+
+/* TODAY'S DROP.
+   The image box is sized before anything loads — D832 forbids deferring a
+   visible image, so the reserved aspect box is what stops the grid jumping
+   as thirty photographs arrive. */
+.drop-page .drop-streak{border:1px solid var(--line,rgba(0,0,0,.12));border-radius:14px;padding:12px 14px;margin:18px 0}
+.drop-page .drop-streak .streak-message{font-weight:700;margin:0}
+.drop-page .drop-streak .streak-reward{margin:4px 0 0;opacity:.75;font-size:14px}
+.drop-page .drop-stale{opacity:.7;font-size:14px;margin:0 0 12px}
+.drop-page .drop-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.drop-page .drop-tabs button{border:1px solid var(--line,rgba(0,0,0,.14));background:none;border-radius:16px;padding:6px 12px;font:inherit;font-size:14px;cursor:pointer}
+.drop-page .drop-tabs button.active{background:#0d0c0c;color:#fff;border-color:#0d0c0c}
+.drop-page .drop-tabs small{opacity:.6;margin-left:5px;font-size:12px}
+.drop-page .drop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:16px}
+.drop-page .drop-card{min-width:0}
+.drop-page .drop-card > a:first-child{display:block;aspect-ratio:1;border-radius:10px;overflow:hidden;background:rgba(0,0,0,.05)}
+.drop-page .drop-card img{width:100%;height:100%;object-fit:cover;display:block}
+.drop-page .drop-noimage{display:block;width:100%;height:100%}
+.drop-page .drop-meta{display:flex;align-items:center;gap:6px;margin:7px 0 3px}
+.drop-page .drop-rank{font-variant-numeric:tabular-nums;font-weight:800;font-size:12px;opacity:.55}
+.drop-page .drop-tag{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:8px}
+.drop-page .drop-tag.new{background:#fdeef7;color:#b02371}
+.drop-page .drop-tag.up{background:rgba(0,0,0,.06)}
+.drop-page .drop-title{display:block;font-size:14px;line-height:1.35;text-decoration:none;color:inherit;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.drop-page .drop-numbers{margin:4px 0 0;font-size:13px;opacity:.65;font-variant-numeric:tabular-nums}
+.drop-page .drop-card.locked{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border:1px dashed var(--line,rgba(0,0,0,.2));border-radius:10px;padding:14px;aspect-ratio:1}
+.drop-page .drop-card.locked p{margin:0;font-size:13px;opacity:.75}
+.drop-page .drop-note{margin-top:26px;font-size:13px;opacity:.6;max-width:66ch}
+.listing-streak{margin:18px 0}
+.listing-streak .streak-stars{display:flex;gap:5px;margin:5px 0 6px}
+.listing-streak .star{font-size:20px;line-height:1;opacity:.22}
+.listing-streak .star.on{opacity:1;color:#ee6fc0}
+.listing-streak .star.extra{font-size:13px;opacity:.6;align-self:center;font-weight:700}
+.listing-streak .streak-message{margin:0;font-weight:700}
+.listing-streak .streak-reward{margin:4px 0 0;font-size:14px;opacity:.75;max-width:60ch}

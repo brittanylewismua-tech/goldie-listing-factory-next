@@ -4,6 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { monthKey, nextReset, planFor } from "@/app/plan-limits";
 import { billingState } from "@/app/billing";
 import { isOwner } from "@/app/mastermind/access";
+import { listingStreak } from "@/app/pod-drop";
 
 export async function GET() {
   const user = await getChatGPTUser();
@@ -21,5 +22,9 @@ export async function GET() {
     env.DB.prepare("SELECT ROUND(AVG(api_calls),1) average FROM etsy_listing_usage WHERE published_at>=datetime('now','-30 days') AND api_calls>0").first<{average:number}>(),
   ]);
   const plan = planFor(planRow?.plan_key, isOwner(user));
-  return NextResponse.json({ plan, resetAt: plan.key === "mastermind_beta" ? null : nextReset(), usage: { drafts: Number(drafts?.count || 0), mockupSets: Number(sets?.count || 0), publishedToday:Number(publishedToday?.count||0), publishing:Number(publishing?.count||0) }, operations:{averageEtsyCallsPerListing:Number(callAverage?.average||0)}, billing });
+  /* Shown next to the listing goal, because they are two halves of one
+     question: the goal counts listings, the streak counts days. Twenty
+     listings dumped on a Sunday hits the goal and misses the point. */
+  const streak = await listingStreak(user.userId);
+  return NextResponse.json({ plan, resetAt: plan.key === "mastermind_beta" ? null : nextReset(), usage: { drafts: Number(drafts?.count || 0), mockupSets: Number(sets?.count || 0), publishedToday:Number(publishedToday?.count||0), publishing:Number(publishing?.count||0) }, operations:{averageEtsyCallsPerListing:Number(callAverage?.average||0)}, streak, billing });
 }

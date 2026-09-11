@@ -4,7 +4,7 @@ import "../pricing-profile.css";
 import FactoryShell from "../factory-shell";
 import { PLANS, type BillingInterval } from "../plan-limits";
 type PlanKey="trial"|"goldie"|"pro"|"scale"|"mastermind_beta"|"owner_test";
-type Data={plan:{key:PlanKey;name:string;price:number;drafts:number;dailyListings:number;mockupSets:number;mockupsPerSet:number};resetAt:string|null;usage:{drafts:number;mockupSets:number;publishedToday:number;publishing:number};billing?:{active:boolean;terms?:{amount:number;currency:string;interval:string;intervalCount:number}|null;subscription?:{status:string;currentPeriodEnd:number|null;cancelAtPeriodEnd:number}|null}};
+type Data={plan:{key:PlanKey;name:string;price:number;drafts:number;dailyListings:number;mockupSets:number;mockupsPerSet:number};resetAt:string|null;usage:{drafts:number;mockupSets:number;publishedToday:number;publishing:number};streak?:{count:number;target:number;window:number;days:string[];listedToday:boolean;hit:boolean;message:string};billing?:{active:boolean;terms?:{amount:number;currency:string;interval:string;intervalCount:number}|null;subscription?:{status:string;currentPeriodEnd:number|null;cancelAtPeriodEnd:number}|null}};
 type Fees={etsyFeePercent:number;fixedFee:number;listingFee:number};
 type Goal={enabled:boolean;period:"week"|"month";target:number};
 /* D422 · Bound straight to the number, so clearing the box made Number("") = 0,
@@ -46,6 +46,25 @@ export default function UsagePage(){
       <section className="plan-banner"><div><span>CURRENT PLAN</span><h2>{data.plan.name}</h2><p>{data.plan.key==="owner_test"?"Testing access":data.plan.price?currentPrice:data.plan.key==="mastermind_beta"?"Private beta":"Free trial"}</p></div><div><p>{data.plan.key==="mastermind_beta"?"Access stays open until Brittany closes testing. No automatic credit reset.":data.plan.key==="trial"&&data.billing?.subscription?.status==="trialing"&&data.billing.subscription.currentPeriodEnd?`Trial ends ${new Date(data.billing.subscription.currentPeriodEnd*1000).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}`:`Monthly credits reset ${new Date(data.resetAt!).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}`}</p>{data.billing?.active&&<button onClick={()=>void manageBilling()}>Manage billing</button>}{billingMessage&&<small role="status">{billingMessage}</small>}</div></section>
       <section className="usage-grid"><Meter label={data.plan.key==="mastermind_beta"?"Beta listing creations":"Monthly listing creations"} used={data.usage.drafts} limit={data.plan.drafts}/></section>
       <p className="usage-note">A credit is used only after The Listing Factory successfully creates a unique unpublished Printify draft. Failed attempts and retries do not count again.</p>
+      {data.streak&&<section className="listing-streak" aria-label="Your listing week">
+        {/* Days, not listings. The goal below counts how much; this counts how
+            often, and twenty listings dumped on one Sunday hits the goal while
+            missing the habit. A star is a day something actually published —
+            there is no button, so there is nothing to tap instead of working. */}
+        <p className="mini-label">YOUR WEEK</p>
+        <div className="streak-stars" role="img" aria-label={data.streak.message}>
+          {Array.from({length:data.streak.target},(_,i)=>
+            <span key={i} className={i<data.streak!.count?"star on":"star"} aria-hidden>★</span>)}
+          {data.streak.count>data.streak.target&&<span className="star extra" aria-hidden>+{data.streak.count-data.streak.target}</span>}
+        </div>
+        <p className="streak-message">{data.streak.message}</p>
+        {/* Never a scold, and never a countdown to failure. Below target it
+            says what is unlocked by carrying on; at target it says well done
+            and points at the reward rather than at the next obligation. */}
+        <p className="streak-reward">{data.streak.hit
+          ?<>The full drop is open — every category, all thirty, with what moved overnight. <a href="/drop">See today&apos;s drop</a></>
+          :<>Five listing days in any seven opens the full drop: every category, all thirty, and what moved overnight. <a href="/drop">See today&apos;s preview</a></>}</p>
+      </section>}
       <section id="listing-goal" className="listing-goal-settings">
       <p className="mini-label">YOUR TARGET</p>
       <h2>Listing goal</h2>

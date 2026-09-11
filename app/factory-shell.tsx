@@ -27,7 +27,7 @@ import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
-type NavKey = "factory" | "batches" | "keywords" | "usage" | "connections";
+type NavKey = "factory" | "drop" | "batches" | "keywords" | "usage" | "connections";
 
 /* D834 · Usage + Plan and Connections moved into the account menu, where the
    account itself already lives. The rail is the three places work happens. */
