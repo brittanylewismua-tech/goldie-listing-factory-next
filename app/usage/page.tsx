@@ -62,8 +62,8 @@ export default function UsagePage(){
             says what is unlocked by carrying on; at target it says well done
             and points at the reward rather than at the next obligation. */}
         <p className="streak-reward">{data.streak.hit
-          ?<>The full drop is open — every category, all thirty, with what moved overnight. <a href="/drop">See today&apos;s drop</a></>
-          :<>Five listing days in any seven opens the full drop: every category, all thirty, and what moved overnight. <a href="/drop">See today&apos;s preview</a></>}</p>
+          ?<>All 30 per category are open, with what moved overnight. <a href="/drop">See today&apos;s drop</a></>
+          :<>Five listing days in any seven opens all 30 per category and what moved overnight. <a href="/drop">See today&apos;s preview</a></>}</p>
       </section>}
       <section id="listing-goal" className="listing-goal-settings">
       <p className="mini-label">YOUR TARGET</p>

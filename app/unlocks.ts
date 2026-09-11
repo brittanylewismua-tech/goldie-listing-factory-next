@@ -86,13 +86,13 @@ export function weekStart(at: Date = new Date()): string {
  * week rather than a heroic one.
  */
 export const MILESTONES = [
-  { at: 3, key: "full-drop", name: "The full drop", blurb: "Thirty listings per category instead of ten, all week." },
-  { at: 6, key: "climbers", name: "The Climbers board", blurb: "Everything rising across every category, not just today's snapshot." },
-  { at: 12, key: "lookup", name: "Keyword lookup", blurb: "Type any phrase and see its top thirty." },
+  { at: 3, key: "full-drop", name: "All 30 per category", blurb: "Thirty listings per category instead of ten, all week." },
+  { at: 6, key: "climbers", name: "What went up since yesterday", blurb: "Everything rising across every category, not just today's snapshot." },
+  { at: 12, key: "lookup", name: "Look up any keyword", blurb: "Type any phrase and see its top thirty." },
 ] as const;
 
 /**
- * The Vault is the one tier credits cannot buy.
+ * The history tier is the one tier credits cannot buy.
  *
  * Three sets in a week — nine listings, but only if they are three designs
  * each on three products. Somebody grinding out fifteen singles does not reach

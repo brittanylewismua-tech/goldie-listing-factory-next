@@ -116,6 +116,15 @@ test("a card is only ever bonus intel, and an empty pack does not spend it", () 
     "nothing to give must not burn the card");
 });
 
+test("every reward says exactly what it opens", () => {
+  const unlocks = read("unlocks.ts");
+  const usage = read("usage/page.tsx");
+  for (const label of ["All 30 per category", "What went up since yesterday", "Look up any keyword", "30 days of history"])
+    assert.match(unlocks, new RegExp(label));
+  for (const vague of ["The full drop", "The Climbers board", "Keyword lookup", "The Vault"])
+    assert.doesNotMatch(unlocks + usage, new RegExp(vague));
+});
+
 test("nothing in the card system is scored on a sale", () => {
   const source = read("unlocks.ts") + read("unlock-cards.tsx");
   for (const forbidden of [/\bsold\b/i, /\bsales\b/i, /revenue/i, /conversion/i])
