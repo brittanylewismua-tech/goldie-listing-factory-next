@@ -165,7 +165,14 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
     const done=await database.prepare("SELECT product_id FROM etsy_publish_items WHERE user_id=? AND status='completed'").bind(user.userId).all<{product_id:string}>().catch(()=>({results:[] as Array<{product_id:string}>}));
     const publishedProductIds=new Set((done.results||[]).map(item=>String(item.product_id)));
     const children=(kids.results||[]).map(child=>{let childState:BatchListState&{activeRecipe?:{id?:string;name?:string}}={};try{childState=JSON.parse(String(child.state_json||"{}"))}catch{/* keep going */}const drafts=childState.drafts||[];return {id:String(child.id),productId:String(childState.activeRecipe?.id||""),productName:String(childState.activeRecipe?.name||""),drafts:drafts.length,expected:Math.max(Number(child.design_count)||0,drafts.length),published:drafts.filter(draft=>draft.id&&publishedProductIds.has(String(draft.id))).length,updated_at:String(child.updated_at||"")}});
-    return NextResponse.json({batch:{...row,state},children,authoritativeReceipt})}/* D871 · Batch History lists runs, not the records a run keeps for each of its
+    /* D1329 · The list endpoint derives the name the seller actually sees, but
+       the one-batch endpoint used to return the raw database row. There is no
+       display_name column on that row, so reopening a named batch always sent
+       an empty name to the editor and its header fell back to "New listing
+       batch". Use the same identity function for list and restore so the name
+       cannot change merely because the seller opened the batch. */
+    const restoredIdentity=batchListItem({...row,state_json:JSON.stringify(state)});
+    return NextResponse.json({batch:{...row,display_name:restoredIdentity.display_name,state},children,authoritativeReceipt})}/* D871 · Batch History lists runs, not the records a run keeps for each of its
      products. A parent and a single-product batch both have no parent of their
      own; a child never appears on its own. Legacy sibling rows predate the
      column, so parent_batch_id is NULL on all of them and they list exactly as
