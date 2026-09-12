@@ -51,7 +51,7 @@ export default function UnlockCards({ onlyMovers, onToggleMovers }: {
     if (!term.trim() || looking) return;
     setLooking(true); setNote(""); setFound(null);
     try {
-      const response = await fetch(`/api/whats-selling?keyword=${encodeURIComponent(term.trim())}`);
+      const response = await fetch(`/api/whats-selling?keyword=${encodeURIComponent(term.trim())}`, { cache: "no-store" });
       const result = await response.json() as { listings?: Found[]; error?: string };
       if (!response.ok) throw new Error(result.error || "Etsy did not answer.");
       setFound(result.listings ?? []);

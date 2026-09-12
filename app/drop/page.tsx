@@ -61,7 +61,7 @@ export default function DropPage() {
 
   const load = (day?: string | null) => {
     setDrop(null);
-    fetch(`/api/drop${day ? `?day=${day}` : ""}`).then(async response => {
+    fetch(`/api/drop${day ? `?day=${day}` : ""}`, { cache: "no-store" }).then(async response => {
       const result = await response.json() as Drop & { error?: string };
       if (!response.ok) throw new Error(result.error || "Today's listings could not be loaded.");
       setDrop(result);

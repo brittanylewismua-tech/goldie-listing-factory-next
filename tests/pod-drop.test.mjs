@@ -84,6 +84,10 @@ test("the selected drop category returns its shelf instead of an empty render", 
   assert.match(source, /return <section key=\{category\.taxonomyId\} className="drop-grid">/);
   assert.doesNotMatch(source, /return\s*\n\s*<section key=\{category\.taxonomyId\}/,
     "a newline after return triggers automatic semicolon insertion and hides every listing");
+  assert.match(source, /fetch\(`\/api\/drop[\s\S]*\{ cache: "no-store" \}/,
+    "an open customer tab must not reuse a shelf response from before a safety repair");
+  assert.match(read("unlock-cards.tsx"), /api\/whats-selling[\s\S]*cache: "no-store"/,
+    "keyword research must not reuse a browser-cached response");
 });
 
 test("the streak is earned from real listings and cannot be tapped", () => {
