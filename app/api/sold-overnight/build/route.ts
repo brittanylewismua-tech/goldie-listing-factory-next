@@ -21,10 +21,18 @@ export const POST = withErrorLog("sold-overnight-build", async (request: Request
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
   const url = new URL(request.url);
-  const maxCalls = Math.max(1, Math.min(2_000, Number(url.searchParams.get("calls")) || 400));
-  const discovery = url.searchParams.get("discover") !== "0";
+  /*
+    SMALL AND RESUMABLE, because a worker gets killed long before a hundred
+    thousand listings have been read. Each run does a bounded slice and
+    returns; running it again continues where it stopped. The first attempt at
+    this did discovery plus a hundred and twenty reads in one request, was cut
+    off partway, and left a claim standing over an empty corpus.
+  */
+  const maxCalls = Math.max(1, Math.min(400, Number(url.searchParams.get("calls")) || 40));
+  const pages = Math.max(0, Math.min(20, Number(url.searchParams.get("pages")) || 1));
+  const discovery = url.searchParams.get("discover") !== "0" && pages > 0;
 
-  const result = await buildNight({ maxCalls, discovery });
+  const result = await buildNight({ maxCalls, discovery, pages });
   return NextResponse.json(result);
 });
 

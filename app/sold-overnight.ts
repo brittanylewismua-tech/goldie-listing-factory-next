@@ -68,7 +68,7 @@ const SEED_QUERIES = [
 
 /** Etsy returns at most 100 per request; deeper pages cost one call each. */
 const PAGE = 100;
-const DISCOVERY_PAGES = 8;
+const DISCOVERY_PAGES = 1;
 
 /**
  * PUBLISHING OUTRANKS INTEL, ALWAYS.
@@ -81,8 +81,14 @@ const DISCOVERY_PAGES = 8;
  */
 const BUDGET_FLOOR = 6_000;
 
-/** A claim older than this is treated as abandoned by a run that died. */
-const CLAIM_MINUTES = 30;
+/**
+ * A claim older than this is treated as abandoned by a run that died.
+ *
+ * Short on purpose. A worker killed mid-sweep leaves its claim behind, and
+ * every minute the claim stands is a minute nothing else may continue the
+ * night. Five minutes is longer than any single bounded run should take.
+ */
+const CLAIM_MINUTES = 5;
 
 export type EtsyListing = {
   listing_id?: number;
@@ -372,8 +378,10 @@ export async function sweep(
  * after half an hour rather than blocking the board forever.
  */
 export async function buildNight(
-  { maxCalls = Infinity, discovery = true }: { maxCalls?: number; discovery?: boolean } = {},
-): Promise<{ built: boolean; why?: string; read?: number; sold?: number; done?: boolean }> {
+  { maxCalls = Infinity, discovery = true, pages = DISCOVERY_PAGES }:
+    { maxCalls?: number; discovery?: boolean; pages?: number } = {},
+): Promise<{ built: boolean; why?: string; read?: number; sold?: number; done?: boolean;
+             found?: number; watched?: number }> {
   await ensureTables();
   const night = nightOf();
 
@@ -392,7 +400,7 @@ export async function buildNight(
 
   try {
     await ensureTaxonomy();
-    if (discovery) await discover();
+    const found = discovery ? await discover(pages) : 0;
     const result = await sweep(night, maxCalls);
     const watched = await db().prepare("SELECT COUNT(*) n FROM sold_watch").first() as { n: number } | null;
     /*
@@ -408,7 +416,8 @@ export async function buildNight(
       `UPDATE sold_state SET last_night=COALESCE(?,last_night),building_night=NULL,
          building_since=NULL,last_error=NULL,watched=?,updated_at=CURRENT_TIMESTAMP WHERE id=1`)
       .bind(result.done ? night : null, Number(watched?.n) || 0).run();
-    return { built: true, read: result.read, sold: result.sold, done: result.done };
+    return { built: true, read: result.read, sold: result.sold, done: result.done,
+             found, watched: Number(watched?.n) || 0 };
   } catch (error) {
     await db().prepare(
       `UPDATE sold_state SET building_night=NULL,building_since=NULL,last_error=?,
