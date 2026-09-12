@@ -454,7 +454,20 @@ export async function readBoard(limit = 200, night?: string): Promise<SoldBoard>
   await ensureTables();
   const state = await db().prepare("SELECT last_night,building_night,watched FROM sold_state WHERE id=1")
     .first() as { last_night: string | null; building_night: string | null; watched: number } | null;
-  const on = night ?? state?.last_night ?? null;
+  /*
+    THE BOARD FOLLOWS THE DATA, NOT THE COMPLETION FLAG.
+
+    `last_night` only gets set when a sweep reaches the end of the corpus, and
+    a sweep in progress has not. Keying the board off it meant a night with
+    twenty-one counted sales already in the table rendered as "the first night
+    is being counted" — the numbers existed and the page refused to show them
+    because a flag had not been written yet. Ask what nights actually have
+    sales in them, and take the newest.
+  */
+  const latest = state?.last_night
+    ? { night: state.last_night }
+    : (await db().prepare("SELECT MAX(night) night FROM sold_moves").first()) as { night: string | null } | null;
+  const on = night ?? latest?.night ?? null;
   if (!on)
     return { night: null, watched: Number(state?.watched) || 0, totalSold: 0,
       building: Boolean(state?.building_night), products: [], listings: [] };

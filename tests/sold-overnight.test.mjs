@@ -157,3 +157,12 @@ test("a second pass in one night adds to the count rather than replacing it", ()
   const source = read("sold-overnight.ts");
   assert.match(source, /sold=sold\+excluded\.sold/);
 });
+
+test("a night still being swept shows the sales it has already counted", () => {
+  /* last_night is only written when a sweep reaches the end of the corpus. A
+     board keyed off that flag showed "the first night is being counted" while
+     twenty-one real sales sat in the table — the page refusing to show numbers
+     it already had. The board follows the data. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /SELECT MAX\(night\) night FROM sold_moves/);
+});
