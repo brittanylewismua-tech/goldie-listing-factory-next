@@ -4344,9 +4344,6 @@ html, body { background: var(--lf-paper); }
   color:var(--lf-rail-dim);text-decoration:none;font:650 13px/1.2 Inter,system-ui,sans-serif}
 .app-shell > .topbar .rail-drop-button:hover{background:#141414;color:#fff}
 .app-shell > .topbar .rail-drop-button.active{background:var(--lf-pink);border-color:var(--lf-pink);color:#1b0e17;font-weight:700}
-.drop-page .drop-rebuild{border:1px dashed var(--line,rgba(0,0,0,.25));background:none;border-radius:10px;
-  padding:6px 12px;font:inherit;font-size:13px;opacity:.6;cursor:pointer;margin:0 0 14px}
-.drop-page .drop-rebuild:hover:not(:disabled){opacity:1;border-style:solid}
 
 /* ONE SURFACE. The streak, the cards, the tabs and the shelf sit on a single
    panel so the page reads as one thing you opened rather than four widgets
@@ -4408,7 +4405,6 @@ html, body { background: var(--lf-paper); }
 
 /* One step back, top-left of the card. */
 .drop-page .drop-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 14px}
-.drop-page .drop-toolbar .drop-rebuild{margin:0;margin-left:auto}
 .drop-page .drop-back{border:1px solid var(--line,rgba(0,0,0,.18));background:none;border-radius:10px;
   padding:6px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
 .drop-page .drop-back:hover{border-color:#0d0c0c}
@@ -4419,22 +4415,35 @@ html, body { background: var(--lf-paper); }
    put and says what would open it. */
 .unlock-panel{border:1px solid var(--line,rgba(0,0,0,.12));border-radius:14px;
   padding:14px 16px;margin:0 0 18px;background:linear-gradient(180deg,#fdeef7,#fff)}
-.unlock-week{margin:0 0 10px;font-size:13px;color:var(--ink-2,#4b4644)}
-.unlock-week b{font-size:15px;color:#b02371;font-variant-numeric:tabular-nums}
-.unlock-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
-.unlock-search{display:flex;gap:6px;flex:1 1 280px;min-width:0}
-.unlock-search input{flex:1;min-width:0;border:1px solid var(--line,rgba(0,0,0,.18));
-  border-radius:10px;padding:8px 12px;font:inherit;font-size:13px;background:#fff}
-.unlock-search input:disabled{background:rgba(0,0,0,.03);color:var(--ink-3,#8b8380)}
-.unlock-search button,.unlock-toggle{border:1px solid #0d0c0c;background:#0d0c0c;color:#fff;
-  border-radius:10px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
-.unlock-toggle{background:none;color:#0d0c0c}
-.unlock-toggle.on{background:#ee6fc0;border-color:#ee6fc0;color:#1b0e17}
-.unlock-search button:disabled,.unlock-toggle:disabled{opacity:.4;cursor:not-allowed;
-  background:none;color:var(--ink-3,#8b8380);border-color:var(--line,rgba(0,0,0,.18))}
-.unlock-toggle small{font-weight:400;opacity:.8}
-.unlock-fact{margin:10px 0 0;font-size:13px;color:var(--ink-3,#8b8380);max-width:70ch}
 .unlock-note{margin:8px 0 0;font-size:13px;color:var(--ink-2,#4b4644)}
 .unlock-found{margin-top:16px;border-top:1px solid var(--line,rgba(0,0,0,.1));padding-top:14px}
 .unlock-found .mini-label{margin-bottom:10px}
 .drop-page .drop-none{margin:0;padding:24px 0;font-size:13px;color:var(--ink-3,#8b8380)}
+
+/* THE FOUR THINGS, AND HOW FAR AWAY EACH ONE IS. One row: each tier is its own
+   control, open ones work, locked ones carry the exact number that opens them.
+   Nothing hidden, nothing pretending to be pressable. */
+.unlock-rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:8px;margin:0 0 10px}
+.unlock-item{display:grid;gap:3px;text-align:left;padding:10px 12px;border-radius:12px;
+  border:1px solid var(--line,rgba(0,0,0,.14));background:#fff;font:inherit;min-width:0}
+.unlock-item.wide{grid-column:span 2}
+.unlock-name{font-size:13px;font-weight:700;color:var(--ink-3,#8b8380);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.unlock-state{font-size:12px;color:var(--ink-3,#8b8380)}
+.unlock-item.on{border-color:rgba(238,111,192,.55);background:#fdeef7}
+.unlock-item.on .unlock-name{color:#0d0c0c}
+.unlock-item.on .unlock-state{color:#b02371;font-weight:700}
+.unlock-item.control{cursor:pointer}
+.unlock-item.control:disabled{cursor:not-allowed}
+.unlock-item.control.on:hover{border-color:#ee6fc0}
+.unlock-item.control.active{background:#ee6fc0;border-color:#ee6fc0}
+.unlock-item.control.active .unlock-name,.unlock-item.control.active .unlock-state{color:#1b0e17}
+.unlock-panel .unlock-search{display:flex;gap:6px;margin-top:2px}
+.unlock-panel .unlock-search input{flex:1;min-width:0;border:1px solid var(--line,rgba(0,0,0,.18));
+  border-radius:9px;padding:5px 9px;font:inherit;font-size:13px;background:#fff}
+.unlock-panel .unlock-search button{border:1px solid #0d0c0c;background:#0d0c0c;color:#fff;
+  border-radius:9px;padding:5px 11px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.unlock-panel .unlock-search button:disabled{opacity:.4;cursor:not-allowed}
+.unlock-reset{color:var(--ink-3,#8b8380)}
+.unlock-week{margin:0;font-size:13px;color:var(--ink-2,#4b4644)}
+.unlock-week b{font-size:15px;color:#b02371;font-variant-numeric:tabular-nums}

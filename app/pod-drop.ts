@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyBudget, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 
 /**
- * TODAY'S DROP — WHAT MOVED IN PRINT-ON-DEMAND WHILE THEY WERE AWAY.
+ * TODAY'S HOT LIST — WHAT MOVED IN PRINT-ON-DEMAND WHILE THEY WERE AWAY.
  *
  * The reason to open the Listing Factory on a day you do not feel like
  * listing. It is built once a day for everybody, not per seller: "what is
@@ -41,15 +41,24 @@ const DAY_MS = 86_400_000;
  * without spending anything.
  */
 /*
-  ONE NUMBER, NOT TWO.
+  ETSY'S API ORDER IS NOT ETSY'S SHOP FRONT, AND THE DATA SAID SO.
 
-  A pace ranking briefly asked Etsy for a hundred and kept the best thirty.
-  When that was reverted the slice went and the hundred stayed, so every
-  category has been storing a hundred listings ranked 1..100 while the page
-  shows ten or thirty of them. That is where "climbing to number 43" came from
-  on a shelf thirty items long: the rank was real and the listing was nowhere
-  on screen. Snapshots were also three times the size they needed to be.
+  This page assumed sort_on=score returned roughly what a shopper sees, so the
+  order could be shown untouched. A live read disproved it: a twenty-three
+  month old pumpkin sweatshirt with ZERO saves sitting inside the top thirty.
+  No shopper's search ranks that. Whatever the public search endpoint sorts by,
+  it is neither the consumer ranking nor popularity.
+
+  So the order is earned here, from the one number Etsy reports honestly: how
+  many people saved a listing. Ask for a hundred, drop everything nobody has
+  ever saved, rank the rest by saves per day, keep thirty. A hundred costs the
+  same single call as thirty.
+
+  Saves per day and not raw saves, because four hundred saves on a listing from
+  2019 and four hundred on one from last month are opposite facts — and this is
+  the hot list.
 */
+const FETCH_PER_CATEGORY = 100;
 const PER_CATEGORY = 30;
 /** Below this a listing is too new for saves-per-day to mean anything. */
 const MIN_AGE_DAYS = 7;
@@ -92,8 +101,9 @@ export type DropCategory = {
   heat: number;
   /** In today's top thirty, absent from yesterday's. The breakout. */
   newToday: number[];
-  /** Ranked higher than yesterday by five places or more. */
-  climbing: number[];
+  /** Ranked higher than yesterday, with how many places it gained. A number
+   *  says something; the word "climbing" on its own says almost nothing. */
+  climbing: { id: number; places: number }[];
 };
 
 type Runtime = { DB: D1Database };
@@ -299,7 +309,7 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
       await waitForEtsyCapacity();
       const query = new URLSearchParams({
         keywords: category.query,
-        limit: String(PER_CATEGORY),
+        limit: String(FETCH_PER_CATEGORY),
         sort_on: "score",
         sort_order: "desc",
         is_safe: "true",
@@ -313,7 +323,16 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
          failed one. The rest of the shelf is still worth reading. */
       if (!response.ok) continue;
       const payload = await response.json() as { results?: EtsyRow[] };
-      const ranked = await withEtsyListingImages(shape(payload.results ?? []));
+      /* Zero saves is not a slow burner, it is a listing nobody has ever
+         wanted. Ranked by rate, trimmed, renumbered so #1 is genuinely the
+         hottest thing on this shelf. Pictures fetched only for the keepers. */
+      const pool = shape(payload.results ?? [])
+        .filter(l => l.favorites > 0)
+        .map(l => ({ listing: l, heat: l.favorites / Math.max(l.ageDays || 1, MIN_AGE_DAYS) }))
+        .sort((a, b) => b.heat - a.heat)
+        .slice(0, PER_CATEGORY)
+        .map(({ listing }, index) => ({ ...listing, rank: index + 1 }));
+      const ranked = await withEtsyListingImages(pool);
       await db().prepare(
         "INSERT INTO pod_drop_snapshots (day_taxonomy,day,taxonomy_id,label,listings_json) VALUES (?,?,?,?,?) ON CONFLICT(day_taxonomy) DO UPDATE SET listings_json=excluded.listings_json",
       ).bind(`${day}:${category.taxonomyId}`, day, category.taxonomyId, category.label, JSON.stringify(ranked)).run();
@@ -371,7 +390,11 @@ export async function readDrop(): Promise<{ day: string; categories: DropCategor
       /* Only meaningful once there IS a yesterday. On day one both are empty,
          which is honest — nothing has moved yet because nothing was watched. */
       newToday: before.length ? listings.filter(l => !beforeRank.has(l.listingId)).map(l => l.listingId) : [],
-      climbing: listings.filter(l => { const was = beforeRank.get(l.listingId); return was !== undefined && was - l.rank >= 5; }).map(l => l.listingId),
+      climbing: listings.flatMap(l => {
+        const was = beforeRank.get(l.listingId);
+        const places = was === undefined ? 0 : was - l.rank;
+        return places >= 5 ? [{ id: l.listingId, places }] : [];
+      }),
     };
   });
 

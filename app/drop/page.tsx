@@ -5,7 +5,7 @@ import FactoryShell from "../factory-shell";
 import UnlockCards from "../unlock-cards";
 
 /**
- * TODAY'S DROP.
+ * TODAY'S HOT LIST.
  *
  * What moved in print-on-demand overnight, so there is a reason to open this
  * on a morning nobody feels like listing. Everything on the page is a counted
@@ -22,11 +22,11 @@ type Listing = {
 };
 type Category = {
   taxonomyId: number; label: string; listings: Listing[]; heat: number;
-  newToday: number[]; climbing: number[]; held: number;
+  newToday: number[]; climbing: { id: number; places: number }[]; held: number;
 };
 type Drop = {
   day: string; fresh: boolean; building: boolean; unavailable: boolean; unlocked: boolean;
-  lockedCount: number; owner?: boolean; back: string | null; viewing: string | null;
+  lockedCount: number; back: string | null; viewing: string | null;
   streak: { count: number; target: number; message: string; hit: boolean };
   categories: Category[];
 };
@@ -38,26 +38,8 @@ export default function DropPage() {
   const [drop, setDrop] = useState<Drop | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState<number | null>(null);
-  const [rebuilding, setRebuilding] = useState(false);
   const [onlyMovers, setOnlyMovers] = useState(false);
 
-  /*
-    REBUILD TODAY. Owner only, and the server enforces that — a 403 simply
-    means the button is not for you and it is never drawn again.
-
-    It exists because the drop is built once a day on purpose, which also means
-    a drop built before a fix is wrong until tomorrow. The day the images
-    landed there was no way to see them without waiting.
-  */
-  async function rebuild() {
-    if (rebuilding) return;
-    setRebuilding(true);
-    try {
-      const response = await fetch("/api/drop", { method: "POST" });
-      if (response.ok) window.location.reload();
-      else setRebuilding(false);
-    } catch { setRebuilding(false); }
-  }
 
   const load = (day?: string | null) => {
     setDrop(null);
@@ -70,11 +52,11 @@ export default function DropPage() {
   };
   useEffect(() => { load(); }, []);
 
-  return <FactoryShell active="drop" title="Today's Drop"><div className="drop-page interior-page">
+  return <FactoryShell active="drop" title="Today's Hot List"><div className="drop-page interior-page">
     {/* One line. The explaining that used to live here is in the footnote,
         where somebody can go and find it if they want it. */}
     <header className="drop-head">
-      <p className="mini-label">TODAY&apos;S DROP</p>
+      <p className="mini-label">TODAY&apos;S HOT LIST</p>
       <h1>What&apos;s selling right now</h1>
       <p>Etsy&apos;s top listings across print-on-demand, read fresh this morning.</p>
     </header>
@@ -104,9 +86,6 @@ export default function DropPage() {
         {drop.viewing && <span className="drop-viewing">
           {new Date(`${drop.viewing}T00:00:00`).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}
         </span>}
-        {drop.owner && !drop.viewing && <button type="button" className="drop-rebuild" onClick={rebuild} disabled={rebuilding}>
-          {rebuilding ? "Reading Etsy…" : "Reload today's listings from Etsy"}
-        </button>}
       </div>
 
       {!drop.viewing && <UnlockCards onlyMovers={onlyMovers} onToggleMovers={setOnlyMovers} />}
@@ -147,13 +126,15 @@ export default function DropPage() {
           {drop.categories.filter(category => category.taxonomyId === open).map(category => {
             /* The switch narrows the shelf to what actually moved — the only
                reading of it that is news rather than a snapshot. */
-            const moved = new Set([...category.newToday, ...category.climbing]);
+            const moved = new Set([...category.newToday, ...category.climbing.map(c => c.id)]);
             const shown = onlyMovers ? category.listings.filter(l => moved.has(l.listingId)) : category.listings;
             return <section key={category.taxonomyId} className="drop-grid">
               {shown.map(listing => {
                 const isNew = category.newToday.includes(listing.listingId);
-                const climbing = category.climbing.includes(listing.listingId);
-                const badge = isNew ? "New today" : climbing ? "Climbing" : null;
+                /* A number, not an adjective. "Climbing" tells a seller
+                   nothing; "Up 12" tells them how hard it is climbing. */
+                const up = category.climbing.find(c => c.id === listing.listingId);
+                const badge = isNew ? "New today" : up ? `Up ${up.places}` : null;
                 return <figure key={listing.listingId} className="drop-card">
                   <a href={listing.url} target="_blank" rel="noopener noreferrer" className="drop-shot">
                     {listing.image
@@ -182,7 +163,7 @@ export default function DropPage() {
                 </figure>;
               })}
               {onlyMovers && shown.length === 0 && <p className="drop-none">
-                Nothing in {category.label} moved since yesterday.
+                Nothing in {category.label} is new or climbing since yesterday.
               </p>}
               {!onlyMovers && category.held > 0 && <article className="drop-card locked">
                 <p className="drop-numeral">+{category.held}</p>

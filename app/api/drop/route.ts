@@ -30,7 +30,7 @@ const PREVIEW = 10;
 
 async function handleGET(request: Request) {
   const user = await getChatGPTUser();
-  if (!user) return NextResponse.json({ error: "Sign in to see today's drop." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Sign in to see today's hot list." }, { status: 401 });
 
   let building = false;
   let unavailable = false;
@@ -78,14 +78,13 @@ async function handleGET(request: Request) {
     : depth;
   return NextResponse.json({
     day,
-    /* Said plainly, because "today's drop" dated yesterday would otherwise
+    /* Said plainly, because "today's hot list" dated yesterday would otherwise
        look like a bug rather than a quiet morning. */
     fresh: day === new Date().toISOString().slice(0, 10),
     building,
     unavailable: unavailable && categories.length === 0,
     unlocked,
     lockedCount: unlocked ? 0 : Math.max(0, STREAK_TARGET - streak.count),
-    owner: isOwner(user),
     streak,
     unlocks,
     /* The one step back, and which day it is. */
@@ -106,8 +105,16 @@ async function handleGET(request: Request) {
 export const GET = withErrorLog("drop", handleGET);
 
 /**
- * Rebuild today's drop. Owner only — it spends a dozen Etsy calls, so it is
- * for landing a fix on the same day rather than a refresh anybody can lean on.
+ * Rebuild today's hot list. Owner only, and no longer drawn anywhere.
+ *
+ * It existed as a button while the drop was being built and a fix otherwise
+ * had to wait a night to be seen. That is over: the drop rebuilds itself on
+ * the first visit each morning, so the button was a control with a real cost
+ * — roughly two dozen Etsy calls a press — and no everyday reason to exist.
+ *
+ * The route stays, because a build that fails halfway leaves a thin day and
+ * this is how that gets repaired without waiting for tomorrow. It is reached
+ * deliberately or not at all.
  */
 async function handlePOST() {
   const user = await owner();

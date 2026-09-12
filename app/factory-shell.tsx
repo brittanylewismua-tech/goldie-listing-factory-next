@@ -31,7 +31,7 @@ type NavKey = "factory" | "drop" | "batches" | "keywords" | "usage" | "connectio
 
 /* "drop" stays in NavKey so the page can name itself, but it is deliberately
    not in NAV. The rail's three links are workspaces — places work happens and
-   stays. Today's Drop is a destination you visit and leave, which is the same
+   stays. Today's Hot List is a destination you visit and leave, which is the same
    shape as Start a new batch, so it sits with that instead. */
 
 /* D834 · Usage + Plan and Connections moved into the account menu, where the
@@ -103,7 +103,7 @@ export default function FactoryShell({ active, title, children }:
             see what moved, then go and list. Styled quieter than Start a new
             batch so the money action keeps its weight. */}
         <a className={`rail-drop-button${active === "drop" ? " active" : ""}`} href="/drop">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v13" /><path d="m7 12 5 5 5-5" /><path d="M5 21h14" /></svg> Today&apos;s Drop</a>
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v13" /><path d="m7 12 5 5 5-5" /><path d="M5 21h14" /></svg> Today&apos;s Hot List</a>
         <a className="workflow-restart-button" href="/listing-factory">
           <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" /><path d="M3 21v-5h5" /></svg> Start a new batch</a>
       </div>

@@ -135,10 +135,14 @@ test("a locked control is visible, disabled, and says what opens it", () => {
   /* Hiding it removes the only reason to list. Making it look pressable while
      it is not is how an interface teaches somebody that it lies. */
   const panel = read("unlock-cards.tsx");
-  assert.match(panel, /disabled=\{!lookup\?\.unlocked\}/);
+  /* Every tier is drawn whether or not it is open, and a locked one carries
+     the exact number that opens it. Hiding a reward removes the reason to earn
+     it; a disabled control with no number is just a dead end. */
   assert.match(panel, /disabled=\{!movers\?\.unlocked\}/);
-  assert.match(panel, /more listings/);
-  assert.doesNotMatch(panel, /"unlocked"/, "the colour says unlocked, not the word");
+  assert.match(panel, /const togo = /, "one counter, worded the same everywhere");
+  assert.match(panel, /more listing\$\{m\.remaining === 1 \? "" : "s"\}/);
+  for (const tier of ["All 30 per category", "Only new &amp; climbing", "Look up any keyword", "30 days of history"])
+    assert.ok(panel.includes(tier), `${tier} must be on the rail whether open or not`);
 });
 
 test("nothing in the card system is scored on a sale", () => {
@@ -239,18 +243,25 @@ test("the shelf is Etsy's order, and the pictures are asked for", () => {
      there, and nothing reorders it. */
   const lib = read("pod-drop.ts");
   assert.match(lib, /sort_on: "score"/);
-  /* Tests the behaviour, not the vocabulary — an earlier version of this
-     failed because the word "pace" appeared in a comment explaining why the
-     pace ranking had been removed. What must hold is that the listings Etsy
-     returns are stored in the order Etsy returned them. */
-  assert.match(lib, /const ranked = await withEtsyListingImages\(shape\(payload\.results \?\? \[\]\)\);/,
-    "the shelf is stored exactly as Etsy ordered it");
-  /* And that one number governs how many are kept. Two numbers is how a
-     hundred listings ended up stored behind a page showing thirty. */
-  assert.match(lib, /limit: String\(PER_CATEGORY\)/);
-  assert.doesNotMatch(lib, /FETCH_PER_CATEGORY/);
+  /* THE ORDER IS EARNED HERE, NOT TAKEN FROM ETSY.
+
+     Etsy's own order was shown untouched until a live read returned a
+     twenty-three month old listing with ZERO saves inside the top thirty.
+     Whatever sort_on=score does, it is neither the consumer ranking nor
+     popularity, so it cannot be presented as either. What is left is the one
+     number Etsy reports honestly: how many people saved a listing, over how
+     long it has been up. */
+  assert.match(lib, /\.filter\(l => l\.favorites > 0\)/,
+    "a listing nobody has ever saved is not hot");
+  assert.match(lib, /\.sort\(\(a, b\) => b\.heat - a\.heat\)/);
+  assert.match(lib, /FETCH_PER_CATEGORY = 100/,
+    "a hundred costs the same call as thirty, and gives the ranking something to choose from");
+  /* Two numbers again, but on purpose this time and only one of them is
+     stored: fetch a hundred, keep thirty. The bug that made this dangerous
+     before was fetching a hundred and storing them all behind a page showing
+     thirty, so the slice is what the test actually guards. */
   assert.match(lib, /\.slice\(0, PER_CATEGORY\)/,
-    "and a day stored before that fix must still read back capped");
+    "only thirty are ever stored, and a day saved before that is capped on read");
 
   /* AND THE PICTURES. listings/active sends none, and includes=Images on it
      changed nothing — 360 listings and not one photograph, twice. The endpoint

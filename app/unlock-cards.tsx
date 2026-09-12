@@ -3,28 +3,30 @@
 import { useEffect, useState } from "react";
 
 /**
- * WHAT LISTING THIS WEEK HAS OPENED — AS CONTROLS, NOT A LIST.
+ * FOUR THINGS, AND HOW FAR AWAY EACH ONE IS.
  *
- * This was a row of four labels that read as buttons and did nothing when
- * pressed. Two of them name real actions, so they are real controls now: a
- * keyword box that searches Etsy, and a switch that filters the shelf down to
- * what moved. The third is not an action at all — seeing thirty instead of ten
- * simply happens — so it is stated as a fact rather than dressed as a button.
+ * The ladder and the controls used to be two separate ideas stacked on top of
+ * each other — a list of names that looked pressable and did nothing, and
+ * below it the actual controls. Turning the names into controls then deleted
+ * the ladder, which took the progress with it: nothing said what was locked,
+ * nothing said how far, and all that survived were two orphan sentences about
+ * scoring on a page about Etsy listings.
  *
- * A locked control stays visible and disabled, and says what would open it.
- * Hiding it would remove the only reason to list; making it look pressable
- * while it is not is how an interface teaches people it lies.
- *
- * THE REVEAL IS GONE. Every five listings used to turn over a card carrying
- * one observation from the day's drop. It dispensed trivia, repeated the same
- * category several presses running, and said things like "climbing in Tote
- * Bags, moved up to number 43" about a shelf thirty items long. One daily
- * snapshot does not hold enough real news to fill a dispenser.
+ * One row now. Each tier IS its control. An open one works; a locked one is
+ * visibly disabled and carries the exact number of listings that opens it.
+ * Nothing is hidden, because hiding a reward removes the reason to earn it,
+ * and nothing pretends to be pressable when it is not.
  */
 
 type Milestone = { key: string; name: string; unlocked: boolean; remaining: number; needsSets: number };
 type State = { listings: number; sets: number; credits: number; milestones: Milestone[] };
-type Found = { title: string; url: string; image: string | null; favorites: number; rank: number };
+type Found = { title: string; url: string; image: string | null; favorites: number };
+
+/** "3 more listings" / "2 more sets" — the counter, said the same way everywhere. */
+const togo = (m?: Milestone) =>
+  !m ? "" : m.needsSets
+    ? `${m.remaining} more set${m.remaining === 1 ? "" : "s"}`
+    : `${m.remaining} more listing${m.remaining === 1 ? "" : "s"}`;
 
 export default function UnlockCards({ onlyMovers, onToggleMovers }: {
   onlyMovers?: boolean;
@@ -41,16 +43,16 @@ export default function UnlockCards({ onlyMovers, onToggleMovers }: {
   }, []);
 
   if (!state) return null;
-  const has = (key: string) => state.milestones.find(m => m.key === key);
-  const movers = has("climbers");
-  const lookup = has("lookup");
-  const thirty = has("full-drop");
+  const at = (key: string) => state.milestones.find(m => m.key === key);
+  const thirty = at("full-drop"), movers = at("climbers"), lookup = at("lookup"), history = at("vault");
 
   async function search(event: React.FormEvent) {
     event.preventDefault();
     if (!term.trim() || looking) return;
     setLooking(true); setNote(""); setFound(null);
     try {
+      /* no-store: an open tab must not reuse a keyword answer from before a
+         safety repair. */
       const response = await fetch(`/api/whats-selling?keyword=${encodeURIComponent(term.trim())}`, { cache: "no-store" });
       const result = await response.json() as { listings?: Found[]; error?: string };
       if (!response.ok) throw new Error(result.error || "Etsy did not answer.");
@@ -62,44 +64,46 @@ export default function UnlockCards({ onlyMovers, onToggleMovers }: {
   }
 
   return <section className="unlock-panel" aria-label="What listing this week has opened">
-    <p className="unlock-week">
-      <b>{state.listings}</b> listing{state.listings === 1 ? "" : "s"} this week
-      {state.sets > 0 && <> · <b>{state.sets}</b> set{state.sets === 1 ? "" : "s"}</>}
-    </p>
-
-    <div className="unlock-tools">
-      <form className="unlock-search" onSubmit={search}>
-        <input
-          type="search"
-          value={term}
-          onChange={event => setTerm(event.target.value)}
-          disabled={!lookup?.unlocked}
-          placeholder={lookup?.unlocked ? "Look up any keyword on Etsy" : `Look up any keyword — ${lookup?.remaining} more listings`}
-          aria-label="Look up a keyword on Etsy"
-        />
-        <button type="submit" disabled={!lookup?.unlocked || !term.trim() || looking}>
-          {looking ? "Looking…" : "Search"}
-        </button>
-      </form>
+    <div className="unlock-rail">
+      {/* Status, not a control — seeing thirty instead of ten simply happens. */}
+      <div className={`unlock-item${thirty?.unlocked ? " on" : ""}`}>
+        <span className="unlock-name">All 30 per category</span>
+        <span className="unlock-state">{thirty?.unlocked ? "Open" : togo(thirty)}</span>
+      </div>
 
       <button
         type="button"
-        className={`unlock-toggle${onlyMovers ? " on" : ""}`}
+        className={`unlock-item control${movers?.unlocked ? " on" : ""}${onlyMovers ? " active" : ""}`}
         disabled={!movers?.unlocked}
         onClick={() => onToggleMovers?.(!onlyMovers)}
-        title={movers?.unlocked ? undefined : `${movers?.remaining} more listings`}
       >
-        {onlyMovers ? "Showing what moved" : "Only what moved since yesterday"}
-        {!movers?.unlocked && <small> · {movers?.remaining} more listings</small>}
+        <span className="unlock-name">Only new &amp; climbing</span>
+        <span className="unlock-state">
+          {!movers?.unlocked ? togo(movers) : onlyMovers ? "On" : "Off"}
+        </span>
       </button>
+
+      <div className={`unlock-item wide${lookup?.unlocked ? " on" : ""}`}>
+        <span className="unlock-name">Look up any keyword</span>
+        {lookup?.unlocked
+          ? <form className="unlock-search" onSubmit={search}>
+              <input type="search" value={term} onChange={e => setTerm(e.target.value)}
+                placeholder="Type a keyword" aria-label="Look up a keyword on Etsy" />
+              <button type="submit" disabled={!term.trim() || looking}>{looking ? "…" : "Search"}</button>
+            </form>
+          : <span className="unlock-state">{togo(lookup)}</span>}
+      </div>
+
+      <div className={`unlock-item${history?.unlocked ? " on" : ""}`}>
+        <span className="unlock-name">30 days of history</span>
+        <span className="unlock-state">{history?.unlocked ? "Open" : togo(history)}</span>
+      </div>
     </div>
 
-    {/* Not an action — it simply happens. Said, not dressed up as a control. */}
-    <p className="unlock-fact">
-      {thirty?.unlocked
-        ? "You are seeing all 30 in every category."
-        : `Showing the top 10 in each category — ${thirty?.remaining} more listings shows all 30.`}
-      {" One design on 3 products counts for more than 3 separate listings."}
+    <p className="unlock-week">
+      <b>{state.listings}</b> listing{state.listings === 1 ? "" : "s"} this week
+      {state.sets > 0 && <> · <b>{state.sets}</b> set{state.sets === 1 ? "" : "s"}</>}
+      <span className="unlock-reset"> · resets Monday</span>
     </p>
 
     {note && <p className="unlock-note" role="status">{note}</p>}
