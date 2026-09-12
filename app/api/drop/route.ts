@@ -95,6 +95,9 @@ async function handleGET(request: Request) {
       const visible = Math.min(available, effectiveDepth);
       return {
         ...category,
+        /* What the ranking is a ranking OF. "Top 30" is a claim, and a claim
+           needs its denominator where the reader can see it. */
+        matched: category.listings[0]?.matched ?? 0,
         listings: category.listings.slice(0, visible),
         held: Math.max(0, available - visible),
       };

@@ -4447,3 +4447,5 @@ html, body { background: var(--lf-paper); }
 .unlock-reset{color:var(--ink-3,#8b8380)}
 .unlock-week{margin:0;font-size:13px;color:var(--ink-2,#4b4644)}
 .unlock-week b{font-size:15px;color:#b02371;font-variant-numeric:tabular-nums}
+.drop-page .drop-scope{margin:0 0 12px;font-size:13px;color:var(--ink-3,#8b8380)}
+.drop-page .drop-scope b{color:var(--ink-2,#4b4644)}

@@ -22,7 +22,7 @@ type Listing = {
 };
 type Category = {
   taxonomyId: number; label: string; listings: Listing[]; heat: number;
-  newToday: number[]; climbing: { id: number; places: number }[]; held: number;
+  newToday: number[]; climbing: { id: number; places: number }[]; held: number; matched?: number;
 };
 type Drop = {
   day: string; fresh: boolean; building: boolean; unavailable: boolean; unlocked: boolean;
@@ -128,7 +128,17 @@ export default function DropPage() {
                reading of it that is news rather than a snapshot. */
             const moved = new Set([...category.newToday, ...category.climbing.map(c => c.id)]);
             const shown = onlyMovers ? category.listings.filter(l => moved.has(l.listingId)) : category.listings;
-            return <section key={category.taxonomyId} className="drop-grid">
+            return <div key={category.taxonomyId}>
+            {/* Says what this actually is. "The top 30" would be a claim the
+                data cannot support: Etsy's search cannot rank by popularity
+                and cannot be read end to end, so this is the most-saved of
+                what one request returned. Stated, not implied. */}
+            <p className="drop-scope">
+              {category.matched
+                ? <>Most-saved of the 100 Etsy returned for <b>{category.label.toLowerCase()}</b>, out of {category.matched.toLocaleString()} matching listings</>
+                : <>Most-saved of what Etsy returned for <b>{category.label.toLowerCase()}</b></>}
+            </p>
+            <section className="drop-grid">
               {shown.map(listing => {
                 const isNew = category.newToday.includes(listing.listingId);
                 /* A number, not an adjective. "Climbing" tells a seller
@@ -169,7 +179,7 @@ export default function DropPage() {
                 <p className="drop-numeral">+{category.held}</p>
                 <p>more in this category. Create 3 listings this week to see all 30.</p>
               </article>}
-            </section>;
+            </section></div>;
           })}
         </>}
 

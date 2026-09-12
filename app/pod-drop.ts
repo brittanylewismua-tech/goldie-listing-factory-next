@@ -93,6 +93,10 @@ export type DropListing = {
   /** Where Etsy put it. Kept because it is real, and it is not the same
    *  question as which of these is moving. */
   etsyRank?: number;
+  /** How many listings Etsy said matched this search. Carried so the page can
+   *  say what the ranking is a ranking OF, rather than implying it read Etsy
+   *  end to end — which it cannot, and no product using this API can. */
+  matched?: number;
 };
 export type DropCategory = {
   taxonomyId: number; label: string;
@@ -322,7 +326,11 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
       /* One category Etsy will not answer for is a thinner drop, never a
          failed one. The rest of the shelf is still worth reading. */
       if (!response.ok) continue;
-      const payload = await response.json() as { results?: EtsyRow[] };
+      /* Etsy reports how many listings matched. It is the number that decides
+         whether a hundred is a read or a rounding error, and it was never
+         being looked at. */
+      const payload = await response.json() as { results?: EtsyRow[]; count?: number };
+      const matched = Number(payload.count) || 0;
       /* Zero saves is not a slow burner, it is a listing nobody has ever
          wanted. Ranked by rate, trimmed, renumbered so #1 is genuinely the
          hottest thing on this shelf. Pictures fetched only for the keepers. */
@@ -331,7 +339,7 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
         .map(l => ({ listing: l, heat: l.favorites / Math.max(l.ageDays || 1, MIN_AGE_DAYS) }))
         .sort((a, b) => b.heat - a.heat)
         .slice(0, PER_CATEGORY)
-        .map(({ listing }, index) => ({ ...listing, rank: index + 1 }));
+        .map(({ listing }, index) => ({ ...listing, rank: index + 1, matched }));
       const ranked = await withEtsyListingImages(pool);
       await db().prepare(
         "INSERT INTO pod_drop_snapshots (day_taxonomy,day,taxonomy_id,label,listings_json) VALUES (?,?,?,?,?) ON CONFLICT(day_taxonomy) DO UPDATE SET listings_json=excluded.listings_json",
