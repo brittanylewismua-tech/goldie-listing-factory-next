@@ -24,10 +24,9 @@ type Category = {
   taxonomyId: number; label: string; listings: Listing[]; heat: number;
   newToday: number[]; climbing: number[]; held: number;
 };
-type ArchiveDay = { day: string; depth: number; categories: { label: string; listings: Listing[] }[] };
 type Drop = {
   day: string; fresh: boolean; building: boolean; unavailable: boolean; unlocked: boolean;
-  lockedCount: number; archive: ArchiveDay[]; owner?: boolean;
+  lockedCount: number; owner?: boolean; back: string | null; viewing: string | null;
   streak: { count: number; target: number; message: string; hit: boolean };
   categories: Category[];
 };
@@ -59,26 +58,35 @@ export default function DropPage() {
     } catch { setRebuilding(false); }
   }
 
-  useEffect(() => {
-    fetch("/api/drop").then(async response => {
+  const load = (day?: string | null) => {
+    setDrop(null);
+    fetch(`/api/drop${day ? `?day=${day}` : ""}`).then(async response => {
       const result = await response.json() as Drop & { error?: string };
       if (!response.ok) throw new Error(result.error || "Today's drop could not be loaded.");
       setDrop(result);
       setOpen(result.categories[0]?.taxonomyId ?? null);
     }).catch(e => setError(e instanceof Error ? e.message : "Today's drop could not be loaded."));
-  }, []);
+  };
+  useEffect(() => { load(); }, []);
 
   return <FactoryShell active="drop" title="Today's Drop"><div className="drop-page interior-page">
     {/* One line. The explaining that used to live here is in the footnote,
         where somebody can go and find it if they want it. */}
     <header className="drop-head">
       <p className="mini-label">TODAY&apos;S DROP</p>
-      <h1>What&apos;s on the shelf</h1>
+      <h1>What&apos;s selling right now</h1>
       <p>Etsy&apos;s top listings across print-on-demand, read fresh this morning.</p>
     </header>
 
-    {error && <section className="drop-error" role="alert"><h2>Not today</h2><p>{error}</p></section>}
-    {!drop && !error && <p>Reading the shelf…</p>}
+    {error && <section className="drop-error" role="alert"><h2>Today&apos;s listings could not be loaded</h2><p>{error}</p></section>}
+    {/* Centred, with a bar, and named for what is happening rather than for
+        an internal word nobody outside this file has heard. "Reading the
+        shelf" meant nothing to anyone but me. */}
+    {!drop && !error && <section className="drop-loading">
+      <p className="drop-loading-title">Preparing today&apos;s top listings</p>
+      <span className="drop-loading-track" aria-hidden><i /></span>
+      <p className="drop-loading-sub">Reading Etsy across twelve product categories</p>
+    </section>}
 
     {drop && <>
       {/* One card. Before this the streak, the cards, the tabs and the grid
@@ -86,19 +94,37 @@ export default function DropPage() {
           them together — it read as a list of unrelated widgets rather than a
           thing you had opened. */}
       <div className="drop-card-surface">
-      {drop.owner && <button type="button" className="drop-rebuild" onClick={rebuild} disabled={rebuilding}>
-        {rebuilding ? "Reading Etsy…" : "Rebuild today's drop"}
+      {/* One step back, in the same layout, so last week can be put beside
+          this week by eye. Not a library — a comparison. */}
+      <div className="drop-toolbar">
+        {drop.viewing
+          ? <button type="button" className="drop-back" onClick={() => load()}>&larr; Back to today</button>
+          : drop.back && <button type="button" className="drop-back" onClick={() => load(drop.back)}>&larr; Go to last week</button>}
+        {drop.viewing && <span className="drop-viewing">
+          {new Date(`${drop.viewing}T00:00:00`).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}
+        </span>}
+      </div>
+
+      {drop.owner && !drop.viewing && <button type="button" className="drop-rebuild" onClick={rebuild} disabled={rebuilding}>
+        {rebuilding ? "Reading Etsy…" : "Reload today's listings from Etsy"}
       </button>}
 
-      <UnlockCards />
+      {!drop.viewing && <UnlockCards />}
 
-      <section className="drop-streak">
-        <span className="drop-streak-count">{drop.streak.count}<small>/{drop.streak.target}</small></span>
-        <span className="drop-streak-label">listing days this week</span>
+      {!drop.viewing && <section className="drop-streak">
+        {/* "6/5" is a fraction nobody asked for. The number is how many days
+            they listed; the target only matters while it is unmet, and then
+            it is said as the thing it unlocks. */}
+        <span className="drop-streak-count">{drop.streak.count}</span>
+        <span className="drop-streak-label">
+          {drop.streak.count === 1 ? "day you listed this week" : "days you listed this week"}
+        </span>
         {!drop.unlocked && <span className="drop-streak-lock">
-          {drop.lockedCount === 1 ? "1 more opens every category" : `${drop.lockedCount} more opens every category`}
+          {drop.lockedCount === 1
+            ? "List on 1 more day to see all 30 in every category"
+            : `List on ${drop.lockedCount} more days to see all 30 in every category`}
         </span>}
-      </section>
+      </section>}
 
       {!drop.fresh && <p className="drop-stale">
         {/* Said out loud. A drop dated yesterday reads as a bug unless the page
@@ -110,10 +136,10 @@ export default function DropPage() {
         ? drop.unavailable
           ? <section className="drop-error" role="alert">
               <h2>Today&apos;s listings couldn&apos;t load</h2>
-              <p>Etsy did not return the shelf. Try again in a moment.</p>
+              <p>Etsy did not answer. Try again in a moment.</p>
               <button type="button" onClick={() => window.location.reload()}>Try again</button>
             </section>
-          : <p>The first read is still running. This fills in within a few minutes.</p>
+          : <p>Etsy is being read for the first time today. This fills in within a few minutes.</p>
         : <>
           <nav className="drop-tabs" aria-label="Product categories">
             {drop.categories.map(category =>
@@ -150,7 +176,7 @@ export default function DropPage() {
                         one big figure with its unit reads as a finding. */}
                     <p className="drop-figures">
                       <span className="drop-numeral">{listing.favorites.toLocaleString()}</span>
-                      <span className="drop-unit">saved</span>
+                      <span className="drop-unit">{listing.favorites === 1 ? "save" : "saves"}</span>
                       {listing.savesPerDay > 0 && <span className="drop-rate">{listing.savesPerDay}/day</span>}
                     </p>
                     <p className="drop-sub">
@@ -169,24 +195,6 @@ export default function DropPage() {
         </>}
 
       </div>
-
-      {drop.archive.length > 0 && <section className="drop-archive">
-        {/* The softening the weekly reset needs. Monday takes back the NEW
-            shelf, never a day already read — so the thing that grows as they
-            keep listing is a library, and quitting for a week costs them
-            nothing they already had. */}
-        <p className="mini-label">ARCHIVE <small>· kept, always</small></p>
-        {drop.archive.map(entry => <details key={entry.day}>
-          <summary>{new Date(`${entry.day}T00:00:00`).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}
-            <small> · {entry.categories.length} categories</small></summary>
-          {entry.categories.map(category => <div key={category.label} className="drop-archive-cat">
-            <p className="drop-archive-label">{category.label}</p>
-            <ul>{category.listings.slice(0,6).map(listing => <li key={listing.listingId}>
-              <a href={listing.url} target="_blank" rel="noopener noreferrer">{listing.title}</a>
-            </li>)}</ul>
-          </div>)}
-        </details>)}
-      </section>}
 
       <details className="drop-note">
         <summary>About these numbers</summary>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
-import { buildDrop, forgetToday, listingStreak, markSeen, readArchive, readDrop, STREAK_TARGET } from "@/app/pod-drop";
+import { buildDrop, forgetToday, lastWeek, listingStreak, markSeen, readDropFor, readDrop, STREAK_TARGET } from "@/app/pod-drop";
 import { getChatGPTUser as owner } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { unlockState } from "@/app/unlocks";
@@ -28,7 +28,7 @@ import { unlockState } from "@/app/unlocks";
 
 const PREVIEW = 10;
 
-async function handleGET() {
+async function handleGET(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to see today's drop." }, { status: 401 });
 
@@ -41,6 +41,14 @@ async function handleGET() {
        page must say the read failed instead of pretending it is still running. */
     unavailable = true;
   }
+
+  /*
+    ?day= asks for one earlier shelf, laid out exactly like today's. One step
+    back is the whole feature — a seller wants to put last week beside this
+    week, not browse a library.
+  */
+  const asked = new URL(request.url).searchParams.get("day");
+  const wants = /^\d{4}-\d{2}-\d{2}$/.test(asked ?? "") ? asked! : null;
 
   const [{ day, categories }, streak, unlocks] = await Promise.all([
     readDrop(), listingStreak(user.userId), unlockState(user.userId),
@@ -57,7 +65,12 @@ async function handleGET() {
      now on. The week's access re-locks on Monday; a day already read never
      does. You keep what you have seen and earn what is new. */
   if (categories.length) await markSeen(user.userId, day, depth);
-  const archive = await readArchive(user.userId);
+  /* Offered only when it exists, so the button is never a door onto nothing. */
+  const previousDay = lastWeek(day);
+  const previous = await readDropFor(previousDay);
+  const back = previous.length ? previousDay : null;
+
+  const showing = wants ? await readDropFor(wants) : null;
   return NextResponse.json({
     day,
     /* Said plainly, because "today's drop" dated yesterday would otherwise
@@ -70,9 +83,10 @@ async function handleGET() {
     owner: isOwner(user),
     streak,
     unlocks,
-    /* Everything they have opened before, at the depth they opened it. */
-    archive: archive.filter(entry => entry.day !== day),
-    categories: categories.map(category => ({
+    /* The one step back, and which day it is. */
+    back,
+    viewing: wants && showing?.length ? wants : null,
+    categories: (showing?.length ? showing : categories).map(category => ({
       ...category,
       listings: category.listings.slice(0, depth),
       held: unlocked ? 0 : Math.max(0, category.listings.length - PREVIEW),

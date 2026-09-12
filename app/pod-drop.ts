@@ -105,10 +105,63 @@ type EtsyRow = {
   listing_type?: string; type?: string;
 };
 
+/**
+ * Etsy sends titles HTML-escaped. Rendered raw they come out as
+ * "I&#39;m Never Sour" and "Step Brothers &amp; Talladega", which reads as a
+ * broken page rather than a listing.
+ */
+const ENTITIES: Record<string, string> = {
+  "&amp;": "&", "&#39;": "'", "&#039;": "'", "&apos;": "'", "&quot;": '"',
+  "&lt;": "<", "&gt;": ">", "&nbsp;": " ", "&rsquo;": "\u2019", "&lsquo;": "\u2018",
+  "&ldquo;": "\u201c", "&rdquo;": "\u201d", "&ndash;": "\u2013", "&mdash;": "\u2014",
+  "&hellip;": "\u2026", "&eacute;": "\u00e9",
+};
+function decode(raw: string) {
+  return raw
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&[a-z]+;|&#0?39;/gi, entity => ENTITIES[entity.toLowerCase()] ?? entity);
+}
+
+/**
+ * OTHER PEOPLE'S INTELLECTUAL PROPERTY IS NOT AN OPPORTUNITY.
+ *
+ * The first real shelf came back as Fallout, Spider-Man, Pee-wee Herman, SNL,
+ * Nike and Mazinger. Every one of them is genuinely selling, and every one of
+ * them would get a seller's shop suspended — so a page headed "what's selling"
+ * that shows them is not neutral, it is advice, and it is the worst advice
+ * this product could give. The method has always said cut franchises,
+ * characters, teams and brands; the intel feed has to say it too.
+ *
+ * A list of names cannot be complete and this one is not. It catches the
+ * heaviest repeat offenders on the print-on-demand shelf, which is most of
+ * what surfaces, and the footnote tells the seller to use their own judgement
+ * on the rest rather than pretending the filter is a guarantee.
+ */
+const PROTECTED = new RegExp(
+  "\\b(" + [
+    "disney","pixar","marvel","spider ?man","spiderverse","avengers","batman","superman","dc comics",
+    "star wars","mandalorian","yoda","harry potter","hogwarts","pokemon","pikachu","nintendo","mario",
+    "zelda","sonic","minecraft","roblox","fortnite","fallout","halo","call of duty","among us",
+    "hello kitty","sanrio","barbie","bluey","peppa","paw patrol","sesame street","looney tunes",
+    "simpsons","family guy","rick and morty","south park","spongebob","scooby",
+    "taylor swift","swiftie","eras tour","beyonce","bts","kpop demon","olivia rodrigo","sabrina carpenter",
+    "grateful dead","nirvana","metallica","ac ?dc","pink floyd","beatles","elvis",
+    "nike","adidas","supreme","gucci","louis vuitton","chanel","prada","north face","carhartt",
+    "starbucks","coca ?cola","pepsi","mcdonald","in ?n ?out",
+    "nfl","nba","mlb","nhl","super bowl","olympics","dallas cowboys","yankees","lakers",
+    "stranger things","wednesday addams","squid game","game of thrones","friends tv","the office",
+    "peewee","pee ?wee herman","snl","saturday night live","talladega nights","step brothers",
+    "mazinger","dragon ball","naruto","one piece anime","studio ghibli","totoro","sailor moon",
+    "jeep","ford","chevy","tesla","porsche","bmw","honda civic","subaru",
+    "john deere","harley davidson","jack daniels","budweiser",
+  ].join("|") + ")\\b", "i");
+
 function shape(rows: EtsyRow[]): DropListing[] {
   const now = Date.now();
   return rows.flatMap((row, i) => {
     if (row.listing_type === "download" || row.type === "download") return [];
+    /* Selling well and unsafe to copy are not in tension — see PROTECTED. */
+    if (PROTECTED.test(decode(String(row.title ?? "")))) return [];
     const listingId = Number(row.listing_id);
     if (!listingId) return [];
     const created = Number(row.original_creation_timestamp) * 1000;
@@ -117,7 +170,7 @@ function shape(rows: EtsyRow[]): DropListing[] {
     const amount = Number(row.price?.amount), divisor = Number(row.price?.divisor) || 100;
     return [{
       listingId,
-      title: String(row.title ?? "").slice(0, 200),
+      title: decode(String(row.title ?? "")).slice(0, 200),
       /* Linked back to the listing, as Etsy's API terms require. */
       url: String(row.url ?? `https://www.etsy.com/listing/${listingId}`),
       image: row.images?.[0]?.url_570xN ?? row.images?.[0]?.url_fullxfull ?? null,
@@ -342,6 +395,44 @@ export async function listingStreak(userId: string) {
         ? "List anything today to start your week."
         : `${count} of ${STREAK_TARGET} listing days this week.`,
   };
+}
+
+/**
+ * A NAMED DAY, IN THE SAME SHAPE AS TODAY.
+ *
+ * One step back rather than a growing list of accordions: a seller wants last
+ * week's shelf laid out exactly like this week's so the two can be compared by
+ * eye. Anything more than that is an archive nobody opens twice.
+ *
+ * Returns nothing at all when that day was never built, so the page can hide
+ * the button instead of offering a door onto an empty room.
+ */
+export async function readDropFor(day: string): Promise<DropCategory[]> {
+  const rows = await db().prepare(
+    "SELECT taxonomy_id,label,listings_json FROM pod_drop_snapshots WHERE day=?",
+  ).bind(day).all<{ taxonomy_id: number; label: string; listings_json: string }>();
+
+  return ((rows.results ?? []) as Row[]).flatMap(raw => {
+    const listings = (() => {
+      try { return JSON.parse(String(raw.listings_json)) as DropListing[]; } catch { return []; }
+    })();
+    if (!listings.length) return [];
+    return [{
+      taxonomyId: Number(raw.taxonomy_id),
+      label: String(raw.label),
+      listings,
+      heat: median(listings.filter(l => l.savesPerDay > 0).map(l => l.savesPerDay)),
+      /* A past day is shown as it was. Movement is a thing about today. */
+      newToday: [], climbing: [],
+    }];
+  }).sort((a, b) => b.heat - a.heat);
+}
+
+/** The same weekday, seven days back. */
+export function lastWeek(from: string = today()): string {
+  const d = new Date(`${from}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 7);
+  return d.toISOString().slice(0, 10);
 }
 
 /**

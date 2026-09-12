@@ -4349,13 +4349,6 @@ html, body { background: var(--lf-paper); }
 .unlock-history{margin-top:12px;font-size:13px}
 .unlock-history summary{cursor:pointer;opacity:.7}
 .unlock-history ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px}
-.drop-page .drop-archive{margin-top:30px;border-top:1px solid var(--line,rgba(0,0,0,.12));padding-top:18px}
-.drop-page .drop-archive details{border-bottom:1px solid var(--line,rgba(0,0,0,.1));padding:8px 0}
-.drop-page .drop-archive summary{cursor:pointer;font-size:14px;font-weight:700}
-.drop-page .drop-archive summary small{font-weight:400;opacity:.6}
-.drop-page .drop-archive-cat{margin:8px 0 0}
-.drop-page .drop-archive-label{margin:0;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.55}
-.drop-page .drop-archive ul{margin:4px 0 0;padding-left:18px;font-size:13px;display:grid;gap:3px}
 .unlock-sets{margin:6px 0 0;font-size:13px;opacity:.7;max-width:60ch}
 
 /* TODAY'S DROP — sections with edges, so the page reads as panels rather than
@@ -4367,8 +4360,6 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-streak{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
   border:0;border-radius:14px;padding:14px 16px;margin:0 0 14px;
   background:linear-gradient(180deg,#fdeef7,#fff)}
-.drop-page .drop-streak-count{font-size:29px;font-weight:800;line-height:1;color:#b02371}
-.drop-page .drop-streak-count small{font-size:15px;font-weight:700;opacity:.5}
 .drop-page .drop-streak-label{font-size:14px;font-weight:700}
 .drop-page .drop-streak-lock{margin-left:auto;font-size:13px;opacity:.7}
 
@@ -4394,7 +4385,6 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-note{margin-top:32px;border-top:1px solid var(--line,rgba(0,0,0,.1));padding-top:14px}
 .drop-page .drop-note summary{font-size:13px;opacity:.6;cursor:pointer}
 .drop-page .drop-note p{margin:8px 0 0;font-size:13px;opacity:.6;max-width:66ch}
-.drop-page .drop-archive .mini-label small{font-weight:400;opacity:.6;letter-spacing:0}
 
 /* Today's Drop sits with the actions, not the workspaces. Quieter than Start
    a new batch so the primary action keeps its weight, and lit when you are on
@@ -4416,8 +4406,6 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-card-surface > .drop-streak{margin-top:0}
 .drop-page .drop-grid{margin-top:2px}
 .drop-page .drop-note{margin-top:22px}
-.drop-page .drop-archive{margin-top:22px;border-top:0;background:#fff;
-  border:1px solid var(--line,rgba(0,0,0,.1));border-radius:16px;padding:18px 20px}
 
 /* ---------------------------------------------------------------------------
    TODAY'S DROP — the winners-wall card, ported.
@@ -4462,3 +4450,28 @@ html, body { background: var(--lf-paper); }
 .unlock-ladder li.on .rung-name{opacity:1}
 .unlock-ladder li:not(.on) .rung-name{opacity:.6}
 .unlock-open-link{display:inline-block;margin-top:6px;font-size:13px;font-weight:700}
+
+/* The wait. Centred, with a bar that moves, because a line of text alone
+   reads as a page that has stopped rather than one that is working. */
+.drop-page .drop-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:64px 20px;gap:10px}
+.drop-page .drop-loading-title{margin:0;font-size:16px;font-weight:800;letter-spacing:-.01em}
+.drop-page .drop-loading-sub{margin:0;font-size:13px;color:var(--ink-3,#8b8380)}
+.drop-page .drop-loading-track{display:block;width:200px;height:6px;border-radius:6px;
+  background:rgba(0,0,0,.08);overflow:hidden}
+.drop-page .drop-loading-track i{display:block;width:40%;height:100%;border-radius:6px;
+  background:#ee6fc0;animation:drop-sweep 1.15s ease-in-out infinite}
+@keyframes drop-sweep{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+@media (prefers-reduced-motion:reduce){.drop-page .drop-loading-track i{animation:none;width:100%}}
+
+/* An unlocked rung is said with colour, not with the word "unlocked". */
+.unlock-ladder li.on .rung-name{color:#f5a8d8}
+
+/* One step back, top-left of the card. */
+.drop-page .drop-toolbar{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+.drop-page .drop-back{border:1px solid var(--line,rgba(0,0,0,.18));background:none;border-radius:10px;
+  padding:6px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.drop-page .drop-back:hover{border-color:#0d0c0c}
+.drop-page .drop-viewing{font-size:13px;color:var(--ink-3,#8b8380)}
+.drop-page .drop-streak-count{font-size:29px;font-weight:800;line-height:1;color:#b02371;
+  font-variant-numeric:tabular-nums}

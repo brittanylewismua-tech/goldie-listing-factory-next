@@ -147,8 +147,14 @@ test("a day already read is never taken back", () => {
      the diff needs — a fortnight's retention would empty it underneath them. */
   assert.match(lib, /pod_drop_snapshots WHERE day < date\('now','-400 days'\)/);
   assert.match(read("api/drop/route.ts"), /await markSeen\(user\.userId, day, depth\)/);
-  assert.match(read("drop/page.tsx"), /kept, always/,
-    "the page has to say the archive is permanent, however briefly");
+  /* The browsable archive is one step back rather than a growing list — a
+     seller wants last week beside this week, not a library. What is still
+     guaranteed is that a day already built stays readable: 400 days of
+     snapshots, and a back button that is only offered when the day exists. */
+  assert.match(read("pod-drop.ts"), /export async function readDropFor/);
+  assert.match(read("api/drop/route.ts"), /const back = previous\.length \? previousDay : null;/,
+    "never offer a door onto a day that was never built");
+  assert.match(read("drop/page.tsx"), /Go to last week/);
 });
 
 test("a set is worth more than the listings inside it", () => {
