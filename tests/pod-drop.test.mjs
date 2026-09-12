@@ -215,8 +215,18 @@ test("the shelf is Etsy's order, and the pictures are asked for", () => {
      there, and nothing reorders it. */
   const lib = read("pod-drop.ts");
   assert.match(lib, /sort_on: "score"/);
-  assert.doesNotMatch(lib, /\bpace\b/, "nothing reorders Etsy's shelf");
-  assert.match(lib, /const ranked = await withImages\(shape\(payload\.results \?\? \[\]\)\);/);
+  /* Tests the behaviour, not the vocabulary — an earlier version of this
+     failed because the word "pace" appeared in a comment explaining why the
+     pace ranking had been removed. What must hold is that the listings Etsy
+     returns are stored in the order Etsy returned them. */
+  assert.match(lib, /const ranked = await withImages\(shape\(payload\.results \?\? \[\]\)\);/,
+    "the shelf is stored exactly as Etsy ordered it");
+  /* And that one number governs how many are kept. Two numbers is how a
+     hundred listings ended up stored behind a page showing thirty. */
+  assert.match(lib, /limit: String\(PER_CATEGORY\)/);
+  assert.doesNotMatch(lib, /FETCH_PER_CATEGORY/);
+  assert.match(lib, /\.slice\(0, PER_CATEGORY\)/,
+    "and a day stored before that fix must still read back capped");
 
   /* AND THE PICTURES. listings/active sends none, and includes=Images on it
      changed nothing — 360 listings and not one photograph, twice. The endpoint

@@ -40,7 +40,16 @@ const DAY_MS = 86_400_000;
  * saved and keep the top thirty, and the shelf becomes what it claims to be
  * without spending anything.
  */
-const FETCH_PER_CATEGORY = 100;
+/*
+  ONE NUMBER, NOT TWO.
+
+  A pace ranking briefly asked Etsy for a hundred and kept the best thirty.
+  When that was reverted the slice went and the hundred stayed, so every
+  category has been storing a hundred listings ranked 1..100 while the page
+  shows ten or thirty of them. That is where "climbing to number 43" came from
+  on a shelf thirty items long: the rank was real and the listing was nowhere
+  on screen. Snapshots were also three times the size they needed to be.
+*/
 const PER_CATEGORY = 30;
 /** Below this a listing is too new for saves-per-day to mean anything. */
 const MIN_AGE_DAYS = 7;
@@ -277,7 +286,7 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
       await waitForEtsyCapacity();
       const query = new URLSearchParams({
         keywords: category.query,
-        limit: String(FETCH_PER_CATEGORY),
+        limit: String(PER_CATEGORY),
         sort_on: "score",
         sort_order: "desc",
         is_safe: "true",
@@ -327,7 +336,8 @@ export async function readDrop(): Promise<{ day: string; categories: DropCategor
 
   const byDay = new Map<string, Map<number, DropListing[]>>();
   for (const row of ((rows.results ?? []) as Row[]).map(r => ({ day: String(r.day), taxonomy_id: Number(r.taxonomy_id), listings_json: String(r.listings_json) }))) {
-    const parsed = (() => { try { return JSON.parse(row.listings_json) as DropListing[]; } catch { return []; } })();
+    /* Capped here too — see PER_CATEGORY. */
+    const parsed = (() => { try { return (JSON.parse(row.listings_json) as DropListing[]).slice(0, PER_CATEGORY); } catch { return []; } })();
     if (!byDay.has(row.day)) byDay.set(row.day, new Map());
     byDay.get(row.day)!.set(Number(row.taxonomy_id), parsed);
   }
@@ -438,8 +448,10 @@ export async function readDropFor(day: string): Promise<DropCategory[]> {
     return [{
       taxonomyId: Number(raw.taxonomy_id),
       label: String(raw.label),
-      listings,
-      heat: median(listings.filter(l => l.savesPerDay > 0).map(l => l.savesPerDay)),
+      /* Capped on the way out as well as in: days built during the window
+         above are sitting in the table a hundred long. */
+      listings: listings.slice(0, PER_CATEGORY),
+      heat: median(listings.slice(0, PER_CATEGORY).filter(l => l.savesPerDay > 0).map(l => l.savesPerDay)),
       /* A past day is shown as it was. Movement is a thing about today. */
       newToday: [], climbing: [],
     }];

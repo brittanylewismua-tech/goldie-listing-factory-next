@@ -63,10 +63,10 @@ export default function DropPage() {
     setDrop(null);
     fetch(`/api/drop${day ? `?day=${day}` : ""}`).then(async response => {
       const result = await response.json() as Drop & { error?: string };
-      if (!response.ok) throw new Error(result.error || "Today's drop could not be loaded.");
+      if (!response.ok) throw new Error(result.error || "Today's listings could not be loaded.");
       setDrop(result);
       setOpen(result.categories[0]?.taxonomyId ?? null);
-    }).catch(e => setError(e instanceof Error ? e.message : "Today's drop could not be loaded."));
+    }).catch(e => setError(e instanceof Error ? e.message : "Today's listings could not be loaded."));
   };
   useEffect(() => { load(); }, []);
 
@@ -86,7 +86,7 @@ export default function DropPage() {
     {!drop && !error && <section className="drop-loading">
       <p className="drop-loading-title">Preparing today&apos;s top listings</p>
       <span className="drop-loading-track" aria-hidden><i /></span>
-      <p className="drop-loading-sub">Reading Etsy across twelve product categories</p>
+      <p className="drop-loading-sub">Reading Etsy across every print-on-demand category</p>
     </section>}
 
     {drop && <>
@@ -104,16 +104,15 @@ export default function DropPage() {
         {drop.viewing && <span className="drop-viewing">
           {new Date(`${drop.viewing}T00:00:00`).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}
         </span>}
+        {drop.owner && !drop.viewing && <button type="button" className="drop-rebuild" onClick={rebuild} disabled={rebuilding}>
+          {rebuilding ? "Reading Etsy…" : "Reload today's listings from Etsy"}
+        </button>}
       </div>
-
-      {drop.owner && !drop.viewing && <button type="button" className="drop-rebuild" onClick={rebuild} disabled={rebuilding}>
-        {rebuilding ? "Reading Etsy…" : "Reload today's listings from Etsy"}
-      </button>}
 
       {!drop.viewing && <UnlockCards onlyMovers={onlyMovers} onToggleMovers={setOnlyMovers} />}
 
 
-      {!drop.fresh && <p className="drop-stale">
+      {!drop.fresh && !drop.viewing && <p className="drop-stale">
         {/* Said out loud. A drop dated yesterday reads as a bug unless the page
             owns it, and it is usually just an early morning. */}
         Showing {new Date(`${drop.day}T00:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })} — today&apos;s is still being read.
@@ -122,11 +121,15 @@ export default function DropPage() {
       {drop.categories.length === 0
         ? drop.unavailable
           ? <section className="drop-error" role="alert">
-              <h2>Today&apos;s listings couldn&apos;t load</h2>
+              <h2>Today&apos;s listings could not be loaded</h2>
               <p>Etsy did not answer. Try again in a moment.</p>
               <button type="button" onClick={() => window.location.reload()}>Try again</button>
             </section>
-          : <p>Etsy is being read for the first time today. This fills in within a few minutes.</p>
+          : <section className="drop-loading">
+              <p className="drop-loading-title">Preparing today&apos;s top listings</p>
+              <span className="drop-loading-track" aria-hidden><i /></span>
+              <p className="drop-loading-sub">First read of the day. This fills in within a few minutes.</p>
+            </section>
         : <>
           <nav className="drop-tabs" aria-label="Product categories">
             {drop.categories.map(category =>

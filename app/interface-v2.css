@@ -4407,7 +4407,8 @@ html, body { background: var(--lf-paper); }
 /* An unlocked rung is said with colour, not with the word "unlocked". */
 
 /* One step back, top-left of the card. */
-.drop-page .drop-toolbar{display:flex;align-items:center;gap:12px;margin:0 0 12px}
+.drop-page .drop-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 14px}
+.drop-page .drop-toolbar .drop-rebuild{margin:0;margin-left:auto}
 .drop-page .drop-back{border:1px solid var(--line,rgba(0,0,0,.18));background:none;border-radius:10px;
   padding:6px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
 .drop-page .drop-back:hover{border-color:#0d0c0c}
