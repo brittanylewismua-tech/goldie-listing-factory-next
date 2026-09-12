@@ -91,11 +91,15 @@ async function handleGET(request: Request) {
     /* The one step back, and which day it is. */
     back,
     viewing: wants && showing?.length ? wants : null,
-    categories: (showing?.length ? showing : categories).map(category => ({
-      ...category,
-      listings: category.listings.slice(0, effectiveDepth),
-      held: Math.max(0, category.listings.length - effectiveDepth),
-    })),
+    categories: (showing?.length ? showing : categories).map(category => {
+      const available = Math.min(30, category.listings.length);
+      const visible = Math.min(available, effectiveDepth);
+      return {
+        ...category,
+        listings: category.listings.slice(0, visible),
+        held: Math.max(0, available - visible),
+      };
+    }),
   });
 }
 

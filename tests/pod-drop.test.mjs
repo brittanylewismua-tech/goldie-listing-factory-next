@@ -126,6 +126,15 @@ test("every reward says exactly what it opens", () => {
     assert.doesNotMatch(unlocks + usage, new RegExp(vague));
 });
 
+test("the thirty-listing reward never exposes or locks the search buffer", () => {
+  const route = read("api/drop/route.ts");
+  const page = read("drop/page.tsx");
+  assert.match(route, /const available = Math\.min\(30, category\.listings\.length\)/);
+  assert.match(route, /held: Math\.max\(0, available - visible\)/);
+  assert.match(page, /Create 3 listings this week to see all 30/);
+  assert.doesNotMatch(page, /List 3 designs this week/);
+});
+
 test("nothing in the card system is scored on a sale", () => {
   const source = read("unlocks.ts") + read("unlock-cards.tsx");
   for (const forbidden of [/\bsold\b/i, /\bsales\b/i, /revenue/i, /conversion/i])

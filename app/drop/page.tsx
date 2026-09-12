@@ -189,7 +189,7 @@ export default function DropPage() {
               })}
               {category.held > 0 && <article className="drop-card locked">
                 <p className="drop-numeral">+{category.held}</p>
-                <p>more in this category. List 3 designs this week to see all 30.</p>
+                <p>more in this category. Create 3 listings this week to see all 30.</p>
               </article>}
             </section>)}
         </>}
