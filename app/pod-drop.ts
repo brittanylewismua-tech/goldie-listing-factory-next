@@ -428,6 +428,14 @@ export async function readDropFor(day: string): Promise<DropCategory[]> {
   }).sort((a, b) => b.heat - a.heat);
 }
 
+/** A past day keeps the deepest view this seller had already opened. */
+export async function seenDepth(userId: string, day: string): Promise<number> {
+  const row = await db().prepare(
+    "SELECT depth FROM drop_seen WHERE user_id=? AND day=?",
+  ).bind(userId, day).first<{ depth: number }>();
+  return Math.max(0, Number(row?.depth) || 0);
+}
+
 /** The same weekday, seven days back. */
 export function lastWeek(from: string = today()): string {
   const d = new Date(`${from}T00:00:00Z`);

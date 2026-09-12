@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
-import { buildDrop, forgetToday, lastWeek, listingStreak, markSeen, readDropFor, readDrop, STREAK_TARGET } from "@/app/pod-drop";
+import { buildDrop, forgetToday, lastWeek, listingStreak, markSeen, readDropFor, readDrop, seenDepth, STREAK_TARGET } from "@/app/pod-drop";
 import { getChatGPTUser as owner } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { unlockState } from "@/app/unlocks";
@@ -71,6 +71,11 @@ async function handleGET(request: Request) {
   const back = previous.length ? previousDay : null;
 
   const showing = wants ? await readDropFor(wants) : null;
+  /* Weekly access can reset; a view already earned cannot. A seller who opened
+     all 30 last week still sees those 30 when comparing that day today. */
+  const effectiveDepth = wants && showing?.length
+    ? Math.max(depth, await seenDepth(user.userId, wants))
+    : depth;
   return NextResponse.json({
     day,
     /* Said plainly, because "today's drop" dated yesterday would otherwise
@@ -88,8 +93,8 @@ async function handleGET(request: Request) {
     viewing: wants && showing?.length ? wants : null,
     categories: (showing?.length ? showing : categories).map(category => ({
       ...category,
-      listings: category.listings.slice(0, depth),
-      held: unlocked ? 0 : Math.max(0, category.listings.length - PREVIEW),
+      listings: category.listings.slice(0, effectiveDepth),
+      held: Math.max(0, category.listings.length - effectiveDepth),
     })),
   });
 }

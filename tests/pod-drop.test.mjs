@@ -152,6 +152,9 @@ test("a day already read is never taken back", () => {
      guaranteed is that a day already built stays readable: 400 days of
      snapshots, and a back button that is only offered when the day exists. */
   assert.match(read("pod-drop.ts"), /export async function readDropFor/);
+  assert.match(read("pod-drop.ts"), /export async function seenDepth/);
+  assert.match(read("api/drop/route.ts"), /Math\.max\(depth, await seenDepth\(user\.userId, wants\)\)/,
+    "weekly relocking must not take back listings already opened on that past day");
   assert.match(read("api/drop/route.ts"), /const back = previous\.length \? previousDay : null;/,
     "never offer a door onto a day that was never built");
   assert.match(read("drop/page.tsx"), /Go to last week/);
