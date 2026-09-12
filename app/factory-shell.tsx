@@ -27,7 +27,7 @@ import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
-type NavKey = "factory" | "drop" | "batches" | "keywords" | "usage" | "connections";
+type NavKey = "factory" | "drop" | "sold" | "batches" | "keywords" | "usage" | "connections";
 
 /* "drop" stays in NavKey so the page can name itself, but it is deliberately
    not in NAV. The rail's three links are workspaces — places work happens and
@@ -102,6 +102,10 @@ export default function FactoryShell({ active, title, children }:
         {/* Above the primary action, because that is the order of the morning:
             see what moved, then go and list. Styled quieter than Start a new
             batch so the money action keeps its weight. */}
+        {/* Above the hot list, because a counted sale outranks a ranking.
+            Same quiet weight as its neighbour so the money action keeps its own. */}
+        <a className={`rail-drop-button rail-sold-button${active === "sold" ? " active" : ""}`} href="/sold-overnight">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7" /><path d="M14 7h7v7" /></svg> Sold Overnight</a>
         <a className={`rail-drop-button${active === "drop" ? " active" : ""}`} href="/drop">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v13" /><path d="m7 12 5 5 5-5" /><path d="M5 21h14" /></svg> Today&apos;s Hot List</a>
         <a className="workflow-restart-button" href="/listing-factory">

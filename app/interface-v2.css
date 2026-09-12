@@ -4449,3 +4449,40 @@ html, body { background: var(--lf-paper); }
 .unlock-week b{font-size:15px;color:#b02371;font-variant-numeric:tabular-nums}
 .drop-page .drop-scope{margin:0 0 12px;font-size:13px;color:var(--ink-3,#8b8380)}
 .drop-page .drop-scope b{color:var(--ink-2,#4b4644)}
+
+/* ---------------------------------------------------------------------------
+   SOLD OVERNIGHT
+   Inherits the whole drop-page card language — square shot, badge in the
+   corner, caption led by one big figure — because this is one more shelf in
+   the same shop, not a second design.
+
+   What it adds is the headline count. This page can state a fact the rest of
+   the app cannot ("1,284 items sold"), so that number is given the size the
+   claim deserves and the shelf it was counted across is set right underneath
+   it, small. A big number with no denominator is how you get "top 30" on a
+   shelf of thirty.
+--------------------------------------------------------------------------- */
+.sold-page .sold-headline{margin:2px 0 20px;padding-bottom:18px;
+  border-bottom:1px solid var(--line,rgba(0,0,0,.1))}
+.sold-page .sold-total{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:9px}
+.sold-page .sold-total-numeral{font-size:44px;font-weight:800;letter-spacing:-.05em;
+  font-variant-numeric:tabular-nums;line-height:1;color:#b02371}
+.sold-page .sold-total-unit{font-size:16px;font-weight:700;letter-spacing:-.01em}
+.sold-page .sold-total-sub{margin:7px 0 0;font-size:13px;color:var(--ink-3,#8b8380)}
+
+/* Sold out is the strongest thing this board can say, so it gets the one
+   colour nothing else on the page uses. */
+.sold-page .drop-badge.sold-out{background:#b02371;color:#fff}
+
+/* The count is what the tab is FOR, so it sits inside the tab rather than
+   hiding in the shelf below it. */
+.sold-page .drop-tabs button small{margin-left:6px;font-variant-numeric:tabular-nums;
+  font-weight:700;opacity:.55}
+.sold-page .drop-tabs button.active small{opacity:.75}
+
+.sold-page .drop-none{grid-column:1/-1;margin:0;padding:28px 0;text-align:center;
+  font-size:14px;color:var(--ink-3,#8b8380)}
+
+@media (max-width:640px){
+  .sold-page .sold-total-numeral{font-size:34px}
+}
