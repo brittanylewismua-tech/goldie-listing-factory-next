@@ -125,7 +125,7 @@ const ENTITIES: Record<string, string> = {
   "&ldquo;": "\u201c", "&rdquo;": "\u201d", "&ndash;": "\u2013", "&mdash;": "\u2014",
   "&hellip;": "\u2026", "&eacute;": "\u00e9",
 };
-function decode(raw: string) {
+export function decodeEtsyTitle(raw: string) {
   return raw
     .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
     .replace(/&[a-z]+;|&#0?39;/gi, entity => ENTITIES[entity.toLowerCase()] ?? entity);
@@ -167,12 +167,16 @@ const PROTECTED = new RegExp(
     "john deere","harley davidson","jack daniels","budweiser",
   ].join("|") + ")\\b", "i");
 
+export function isProtectedOpportunityTitle(raw: string) {
+  return PROTECTED.test(decodeEtsyTitle(raw));
+}
+
 function shape(rows: EtsyRow[]): DropListing[] {
   const now = Date.now();
   return rows.flatMap((row, i) => {
     if (row.listing_type === "download" || row.type === "download") return [];
     /* Selling well and unsafe to copy are not in tension — see PROTECTED. */
-    if (PROTECTED.test(decode(String(row.title ?? "")))) return [];
+    if (isProtectedOpportunityTitle(String(row.title ?? ""))) return [];
     const listingId = Number(row.listing_id);
     if (!listingId) return [];
     const created = Number(row.original_creation_timestamp) * 1000;
@@ -181,7 +185,7 @@ function shape(rows: EtsyRow[]): DropListing[] {
     const amount = Number(row.price?.amount), divisor = Number(row.price?.divisor) || 100;
     return [{
       listingId,
-      title: decode(String(row.title ?? "")).slice(0, 200),
+      title: decodeEtsyTitle(String(row.title ?? "")).slice(0, 200),
       /* Linked back to the listing, as Etsy's API terms require. */
       url: String(row.url ?? `https://www.etsy.com/listing/${listingId}`),
       image: row.images?.[0]?.url_570xN ?? row.images?.[0]?.url_fullxfull ?? null,

@@ -64,6 +64,20 @@ test("the live shelf filters the protected names found in its own results", () =
   const source = read("pod-drop.ts");
   for (const name of ["cinderella", "shaun the sheep", "myspace", "junimo", "dungeon meshi"])
     assert.match(source, new RegExp(`"${name}"`), `${name} must not be presented as an opportunity`);
+  const lookup = read("api/whats-selling/route.ts");
+  assert.match(lookup, /isProtectedOpportunityTitle/,
+    "keyword results must apply the same protected-name safeguard as Today's Drop");
+  assert.match(lookup, /decodeEtsyTitle/,
+    "keyword results must not show Etsy's HTML entities as broken text");
+  assert.match(lookup, /listing_type === "download"/,
+    "digital downloads do not belong in physical product research results");
+});
+
+test("the selected drop category returns its shelf instead of an empty render", () => {
+  const source = read("drop/page.tsx");
+  assert.match(source, /return <section key=\{category\.taxonomyId\} className="drop-grid">/);
+  assert.doesNotMatch(source, /return\s*\n\s*<section key=\{category\.taxonomyId\}/,
+    "a newline after return triggers automatic semicolon insertion and hides every listing");
 });
 
 test("the streak is earned from real listings and cannot be tapped", () => {

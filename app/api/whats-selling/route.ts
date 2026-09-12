@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
 import { etsyApiCredential, etsyBudget, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
+import { decodeEtsyTitle, isProtectedOpportunityTitle } from "@/app/pod-drop";
 
 /**
  * WHAT IS ALREADY WINNING THIS SEARCH.
@@ -64,11 +65,15 @@ type EtsyListing = {
   original_creation_timestamp?: number;
   price?: { amount?: number; divisor?: number; currency_code?: string };
   images?: { url_570xN?: string; url_fullxfull?: string }[];
+  listing_type?: string;
+  type?: string;
 };
 
 function shape(rows: EtsyListing[]): Listing[] {
   const now = Date.now();
   return rows.flatMap((row, index) => {
+    if (row.listing_type === "download" || row.type === "download") return [];
+    if (isProtectedOpportunityTitle(String(row.title ?? ""))) return [];
     const listingId = Number(row.listing_id);
     if (!listingId) return [];
     const created = Number(row.original_creation_timestamp) * 1000;
@@ -81,7 +86,7 @@ function shape(rows: EtsyListing[]): Listing[] {
     const amount = Number(row.price?.amount);
     return [{
       listingId,
-      title: String(row.title ?? "").slice(0, 200),
+      title: decodeEtsyTitle(String(row.title ?? "")).slice(0, 200),
       /* Linked back to Etsy, as their API terms require. */
       url: String(row.url ?? `https://www.etsy.com/listing/${listingId}`),
       image: row.images?.[0]?.url_570xN ?? row.images?.[0]?.url_fullxfull ?? null,

@@ -149,8 +149,7 @@ export default function DropPage() {
                reading of it that is news rather than a snapshot. */
             const moved = new Set([...category.newToday, ...category.climbing]);
             const shown = onlyMovers ? category.listings.filter(l => moved.has(l.listingId)) : category.listings;
-            return
-            <section key={category.taxonomyId} className="drop-grid">
+            return <section key={category.taxonomyId} className="drop-grid">
               {shown.map(listing => {
                 const isNew = category.newToday.includes(listing.listingId);
                 const climbing = category.climbing.includes(listing.listingId);
