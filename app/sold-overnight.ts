@@ -218,33 +218,59 @@ export async function ensureTables() {
  * happened in — and it keeps the sales already counted rather than throwing
  * them away for tidiness.
  */
-async function migrateMovesToHours() {
-  const columns = (await db().prepare("PRAGMA table_info(sold_moves)").all())
-    .results as unknown as { name: string }[];
-  if (!columns.length || columns.some(c => c.name === "bucket")) return;
+async function migrateMovesToHours(): Promise<"already-hourly" | "migrated"> {
+  /*
+    ASK THE DATABASE A QUESTION IT CANNOT ANSWER VAGUELY.
 
-  await db().batch([
-    db().prepare(
-      `CREATE TABLE IF NOT EXISTS sold_moves_hourly (
-         bucket         TEXT NOT NULL,
-         listing_id     INTEGER NOT NULL,
-         sold           INTEGER NOT NULL DEFAULT 0,
-         saves_gained   INTEGER NOT NULL DEFAULT 0,
-         views_gained   INTEGER NOT NULL DEFAULT 0,
-         quantity_after INTEGER,
-         sold_out       INTEGER NOT NULL DEFAULT 0,
-         restocked      INTEGER NOT NULL DEFAULT 0,
-         PRIMARY KEY (bucket, listing_id)
-       )`),
-    db().prepare(
-      `INSERT OR IGNORE INTO sold_moves_hourly
-         (bucket,listing_id,sold,saves_gained,views_gained,quantity_after,sold_out,restocked)
-       SELECT night || 'T00',listing_id,sold,saves_gained,views_gained,quantity_after,sold_out,restocked
-         FROM sold_moves`),
-    db().prepare("DROP TABLE sold_moves"),
-    db().prepare("ALTER TABLE sold_moves_hourly RENAME TO sold_moves"),
-    db().prepare("CREATE INDEX IF NOT EXISTS idx_sold_moves_bucket ON sold_moves (bucket, sold DESC)"),
-  ]);
+    The first attempt at this detected the old shape with
+    `PRAGMA table_info(sold_moves)`. D1 returns nothing for that, so the guard
+    read "no columns, therefore no table, therefore nothing to migrate" and
+    returned — skipping the migration on every single deploy while reporting
+    success, which is precisely the failure it was written to fix.
+
+    Selecting the column either works or throws. There is no third answer and
+    nothing to misread.
+  */
+  try {
+    await db().prepare("SELECT bucket FROM sold_moves LIMIT 1").all();
+    return "already-hourly";
+  } catch {
+    /* Old shape, keyed on `night`. */
+  }
+
+  /*
+    One statement at a time, not a batch: D1 will not run DROP and ALTER
+    inside one, and a batch that fails leaves no clue which statement did it.
+    Ordered so an interruption at any point leaves the data recoverable —
+    the copy completes before the original is dropped.
+  */
+  await db().prepare(
+    `CREATE TABLE IF NOT EXISTS sold_moves_hourly (
+       bucket         TEXT NOT NULL,
+       listing_id     INTEGER NOT NULL,
+       sold           INTEGER NOT NULL DEFAULT 0,
+       saves_gained   INTEGER NOT NULL DEFAULT 0,
+       views_gained   INTEGER NOT NULL DEFAULT 0,
+       quantity_after INTEGER,
+       sold_out       INTEGER NOT NULL DEFAULT 0,
+       restocked      INTEGER NOT NULL DEFAULT 0,
+       PRIMARY KEY (bucket, listing_id)
+     )`).run();
+
+  /* A day row becomes that day's midnight hour — the only honest conversion,
+     since the original reading never recorded which hour it happened in. The
+     sales already counted are kept rather than thrown away for tidiness. */
+  await db().prepare(
+    `INSERT OR IGNORE INTO sold_moves_hourly
+       (bucket,listing_id,sold,saves_gained,views_gained,quantity_after,sold_out,restocked)
+     SELECT night || 'T00',listing_id,sold,saves_gained,views_gained,quantity_after,sold_out,restocked
+       FROM sold_moves`).run();
+
+  await db().prepare("DROP TABLE sold_moves").run();
+  await db().prepare("ALTER TABLE sold_moves_hourly RENAME TO sold_moves").run();
+  await db().prepare(
+    "CREATE INDEX IF NOT EXISTS idx_sold_moves_bucket ON sold_moves (bucket, sold DESC)").run();
+  return "migrated";
 }
 
 /* ---------------------------------------------------------------- Etsy reads */

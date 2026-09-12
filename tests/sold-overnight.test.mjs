@@ -266,8 +266,12 @@ test("changing a table's shape is migrated, never left to CREATE IF NOT EXISTS",
      bucket" on every single sweep while the statement meant to define the new
      shape ran happily. */
   const source = read("sold-overnight.ts");
-  assert.match(source, /PRAGMA table_info\(sold_moves\)/);
-  assert.match(source, /columns\.some\(c => c\.name === "bucket"\)/);
+  /* And the detection must be a question the database cannot answer vaguely.
+     PRAGMA table_info returns nothing through D1, so a guard built on it read
+     "no columns, therefore no table, therefore nothing to do" and skipped the
+     migration on every deploy while reporting success. */
+  assert.doesNotMatch(strip(source), /PRAGMA table_info/);
+  assert.match(source, /SELECT bucket FROM sold_moves LIMIT 1/);
   assert.match(source, /ALTER TABLE sold_moves_hourly RENAME TO sold_moves/);
   /* And the sales already counted are carried over, not discarded. */
   assert.match(source, /night \|\| 'T00'/);
