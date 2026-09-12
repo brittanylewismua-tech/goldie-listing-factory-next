@@ -60,6 +60,12 @@ test("each shelf uses an explicit product search and resumes partial builds", ()
     "explicit digital downloads do not belong on the physical-product shelf");
 });
 
+test("the live shelf filters the protected names found in its own results", () => {
+  const source = read("pod-drop.ts");
+  for (const name of ["cinderella", "shaun the sheep", "myspace", "junimo", "dungeon meshi"])
+    assert.match(source, new RegExp(`"${name}"`), `${name} must not be presented as an opportunity`);
+});
+
 test("the streak is earned from real listings and cannot be tapped", () => {
   /* No check-in button. A star is a day something actually published, read out
      of the publish record — so it cannot be gamed by opening the tab, and

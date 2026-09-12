@@ -140,18 +140,20 @@ function decode(raw: string) {
 const PROTECTED = new RegExp(
   "\\b(" + [
     "disney","pixar","marvel","spider ?man","spiderverse","avengers","batman","superman","dc comics",
+    "cinderella","snow white","little mermaid","beauty and the beast","lion king","frozen","moana",
     "star wars","mandalorian","yoda","harry potter","hogwarts","pokemon","pikachu","nintendo","mario",
     "zelda","sonic","minecraft","roblox","fortnite","fallout","halo","call of duty","among us",
     "hello kitty","sanrio","barbie","bluey","peppa","paw patrol","sesame street","looney tunes",
-    "simpsons","family guy","rick and morty","south park","spongebob","scooby",
+    "simpsons","family guy","rick and morty","south park","spongebob","scooby","shaun the sheep",
     "taylor swift","swiftie","eras tour","beyonce","bts","kpop demon","olivia rodrigo","sabrina carpenter",
     "grateful dead","nirvana","metallica","ac ?dc","pink floyd","beatles","elvis",
     "nike","adidas","supreme","gucci","louis vuitton","chanel","prada","north face","carhartt",
-    "starbucks","coca ?cola","pepsi","mcdonald","in ?n ?out",
+    "starbucks","coca ?cola","pepsi","mcdonald","in ?n ?out","myspace",
     "nfl","nba","mlb","nhl","super bowl","olympics","dallas cowboys","yankees","lakers",
     "stranger things","wednesday addams","squid game","game of thrones","friends tv","the office",
     "peewee","pee ?wee herman","snl","saturday night live","talladega nights","step brothers",
     "mazinger","dragon ball","naruto","one piece anime","studio ghibli","totoro","sailor moon",
+    "junimo","stardew valley","dungeon meshi","delicious in dungeon",
     "jeep","ford","chevy","tesla","porsche","bmw","honda civic","subaru",
     "john deere","harley davidson","jack daniels","budweiser",
   ].join("|") + ")\\b", "i");
