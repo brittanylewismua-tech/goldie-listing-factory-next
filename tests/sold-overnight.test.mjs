@@ -276,3 +276,18 @@ test("changing a table's shape is migrated, never left to CREATE IF NOT EXISTS",
   /* And the sales already counted are carried over, not discarded. */
   assert.match(source, /night \|\| 'T00'/);
 });
+
+test("the bucket index is not created before the table has that column", () => {
+  /* ensureTables ran CREATE INDEX ... ON sold_moves (bucket) in its opening
+     batch. Against a table still keyed on `night` that statement fails and
+     takes the whole batch — and every sweep — with it. Three deploys of
+     migration fixes went out before it turned out the error was never the
+     migration at all, but the schema setup indexing a column that did not
+     exist yet. */
+  const source = read("sold-overnight.ts");
+  const setup = source.slice(0, source.indexOf("await migrateMovesToHours()"));
+  assert.doesNotMatch(setup, /CREATE INDEX IF NOT EXISTS idx_sold_moves_bucket/,
+    "the bucket index must be created after the migration, not before it");
+  const after = source.slice(source.indexOf("await migrateMovesToHours()"));
+  assert.match(after, /CREATE INDEX IF NOT EXISTS idx_sold_moves_bucket/);
+});

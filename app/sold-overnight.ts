@@ -164,7 +164,12 @@ export async function ensureTables() {
          restocked      INTEGER NOT NULL DEFAULT 0,
          PRIMARY KEY (bucket, listing_id)
        )`),
-    db().prepare("CREATE INDEX IF NOT EXISTS idx_sold_moves_bucket ON sold_moves (bucket, sold DESC)"),
+    /* The index on `bucket` is NOT created here. This batch runs before the
+       migration below, and against a table still keyed on `night` the
+       statement fails — taking the whole batch, and every sweep, with it.
+       That is what "no such column: bucket at offset 64" was: not the new
+       code writing, but the schema setup indexing a column that did not
+       exist yet. It is created after the migration instead. */
     /* Etsy's category names, fetched once. Without it the board can only say
        "482" where it should say "T-Shirts". */
     db().prepare(
@@ -201,6 +206,9 @@ export async function ensureTables() {
   try { await db().prepare("ALTER TABLE sold_taxonomy ADD COLUMN path TEXT NOT NULL DEFAULT ''").run(); }
   catch { /* already there */ }
   await migrateMovesToHours();
+  /* Safe now: the table definitely has the column, whichever path got us here. */
+  await db().prepare(
+    "CREATE INDEX IF NOT EXISTS idx_sold_moves_bucket ON sold_moves (bucket, sold DESC)").run();
 }
 
 /**
