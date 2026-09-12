@@ -133,34 +133,37 @@ export default function DropPage() {
               {category.listings.map(listing => {
                 const isNew = category.newToday.includes(listing.listingId);
                 const climbing = category.climbing.includes(listing.listingId);
-                return <article key={listing.listingId} className="drop-card">
-                  <a href={listing.url} target="_blank" rel="noopener noreferrer">
+                const badge = isNew ? "New today" : climbing ? "Climbing" : null;
+                return <figure key={listing.listingId} className="drop-card">
+                  <a href={listing.url} target="_blank" rel="noopener noreferrer" className="drop-shot">
                     {listing.image
+                      /* Never deferred — D832: a deferred image is an empty
+                         0x0 box until it scrolls into view. */
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      /* Never deferred — D832: a deferred image is an
-                         empty 0x0 box until it scrolls into view. The card
-                         reserves the space in CSS instead. */
-                      ? <img src={listing.image} alt="" />
-                      : <span className="drop-noimage" aria-hidden />}
+                      ? <img src={listing.image} alt={listing.title} />
+                      : <span className="drop-noshot">No picture</span>}
+                    {badge && <span className={`drop-badge${isNew ? " new" : ""}`}>{badge}</span>}
                   </a>
-                  <div className="drop-meta">
-                    <span className="drop-rank">#{listing.rank}</span>
-                    {isNew && <span className="drop-tag new">New today</span>}
-                    {climbing && !isNew && <span className="drop-tag up">Climbing</span>}
-                  </div>
-                  <a className="drop-title" href={listing.url} target="_blank" rel="noopener noreferrer">{listing.title}</a>
-                  <p className="drop-numbers">
-                    {money(listing.price, listing.currency)}
-                    {listing.favorites > 0 && <> · {listing.favorites.toLocaleString()} saves</>}
-                    {/* Suppressed under a week old: a tiny denominator makes a
-                        new listing look like the hottest thing on the shelf. */}
-                    {listing.savesPerDay > 0 && <> · {listing.savesPerDay}/day</>}
-                  </p>
-                </article>;
+                  <figcaption>
+                    {/* The number first and large, the way the winners wall
+                        does it. A row of small grey facts reads as a receipt;
+                        one big figure with its unit reads as a finding. */}
+                    <p className="drop-figures">
+                      <span className="drop-numeral">{listing.favorites.toLocaleString()}</span>
+                      <span className="drop-unit">saved</span>
+                      {listing.savesPerDay > 0 && <span className="drop-rate">{listing.savesPerDay}/day</span>}
+                    </p>
+                    <p className="drop-sub">
+                      {listing.ageDays > 0 && <>{listing.ageDays < 60 ? `${listing.ageDays} days old` : `${Math.round(listing.ageDays / 30)} months old`}</>}
+                      {listing.price !== null && <> · {money(listing.price, listing.currency)}</>}
+                    </p>
+                    <a className="drop-title" href={listing.url} target="_blank" rel="noopener noreferrer">{listing.title}</a>
+                  </figcaption>
+                </figure>;
               })}
               {category.held > 0 && <article className="drop-card locked">
-                <p><strong>{category.held} more</strong></p>
-                <p>Five listing days in any seven opens the whole category.</p>
+                <p className="drop-numeral">+{category.held}</p>
+                <p>more in this category. List 3 designs this week to see all 30.</p>
               </article>}
             </section>)}
         </>}

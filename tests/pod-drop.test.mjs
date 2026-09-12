@@ -95,7 +95,8 @@ test("the week resets the access and never the history", () => {
     "every card ever turned is still read back — history does not reset");
   assert.match(source, /COALESCE\(MAX\(ordinal\),0\) top FROM unlock_cards WHERE user_id=\?/,
     "ordinals keep climbing across weeks");
-  assert.match(read("unlock-cards.tsx"), /yours to keep/);
+  assert.match(read("unlock-cards.tsx"), /these stay yours/,
+    "the panel has to say the finds are permanent, in words a person would use");
 });
 
 test("a card is only ever bonus intel, and an empty pack does not spend it", () => {

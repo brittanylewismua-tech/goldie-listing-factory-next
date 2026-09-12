@@ -159,8 +159,8 @@ async function candidates(): Promise<Card[]> {
       const listing = byId.get(id);
       if (listing) out.push({
         ordinal: 0, kind: "climber", category: category.label,
-        title: "Climbing fast",
-        line: `Up the ${category.label.toLowerCase()} shelf to #${listing.rank} since yesterday.`,
+        title: `Climbing in ${category.label}`,
+        line: `Moved up to number ${listing.rank} since yesterday.`,
         listing: brief(listing),
       });
     }
@@ -169,8 +169,8 @@ async function candidates(): Promise<Card[]> {
       const listing = byId.get(id);
       if (listing) out.push({
         ordinal: 0, kind: "newcomer", category: category.label,
-        title: "Broke in overnight",
-        line: `Straight into the ${category.label.toLowerCase()} top thirty at #${listing.rank}. It was not there yesterday.`,
+        title: `New in the ${category.label} top 30`,
+        line: `Came in at number ${listing.rank} today. It was not there yesterday.`,
         listing: brief(listing),
       });
     }
@@ -182,15 +182,15 @@ async function candidates(): Promise<Card[]> {
       .sort((a, b) => b.savesPerDay - a.savesPerDay)[0];
     if (stayer) out.push({
       ordinal: 0, kind: "stayer", category: category.label,
-      title: "Still going",
-      line: `${Math.round(stayer.ageDays / 30)} months up and still saved ${stayer.savesPerDay} times a day.`,
+      title: `Selling ${Math.round(stayer.ageDays / 30)} months on`,
+      line: `Still being saved ${stayer.savesPerDay} times a day, ${Math.round(stayer.ageDays / 30)} months after it went up.`,
       listing: brief(stayer),
     });
 
     if (category.heat > 0) out.push({
       ordinal: 0, kind: "hot-shelf", category: category.label,
-      title: `${category.label} is moving`,
-      line: `The middle of this shelf is being saved ${category.heat} times a day. Somewhere you have not listed yet?`,
+      title: `${category.label} are moving`,
+      line: `A typical listing on this shelf is saved ${category.heat} times a day.`,
     });
   }
 

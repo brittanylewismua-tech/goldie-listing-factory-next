@@ -48,7 +48,7 @@ export default function UnlockCards() {
       if (result.card) setJust(result.card);
       /* An empty pack must not spend the card. Said plainly, because a turn
          that appears to do nothing reads as broken. */
-      else setNote("Today's drop has nothing new to put on a card yet. This one stays yours — try after tomorrow's read.");
+      else setNote("Nothing new to report yet today. This find is not spent — try again after tomorrow morning's read.");
     } catch (error) {
       setNote(error instanceof Error ? error.message : "That card would not turn.");
     } finally { setTurning(false); }
@@ -63,17 +63,17 @@ export default function UnlockCards() {
     <div className="unlock-progress">
       <div className="unlock-track"><span style={{ width: `${(state.toward / (state.toward + state.remaining)) * 100}%` }} /></div>
       <p>{state.unopened > 0
-        ? `${state.unopened} card${state.unopened > 1 ? "s" : ""} waiting`
-        : `${state.remaining} more to your next card`}</p>
+        ? `${state.unopened} find${state.unopened > 1 ? "s" : ""} ready to read`
+        : `${state.remaining} more listing${state.remaining > 1 ? "s" : ""} unlocks your next find`}</p>
     </div>
 
     {/* Face-down, and drawn as an object rather than a button, because the
         wanting is the whole feature. */}
     <button type="button" className={`unlock-card facedown${state.unopened > 0 ? " ready" : ""}`}
       onClick={crack} disabled={state.unopened === 0 || turning}
-      aria-label={state.unopened > 0 ? "Turn your card" : `${state.remaining} more listings to your next card`}>
+      aria-label={state.unopened > 0 ? "Read your next find" : `${state.remaining} more listings unlocks your next find`}>
       <span className="unlock-back" aria-hidden>✦</span>
-      <span className="unlock-cta">{turning ? "Turning…" : state.unopened > 0 ? "Turn it over" : `${state.remaining} to go`}</span>
+      <span className="unlock-cta">{turning ? "Reading…" : state.unopened > 0 ? "Read it" : `${state.remaining} listings to go`}</span>
     </button>
 
     {note && <p className="unlock-note" role="status">{note}</p>}
@@ -82,7 +82,7 @@ export default function UnlockCards() {
       <p className="unlock-kind">{just.category}</p>
       <h3>{just.title}</h3>
       <p className="unlock-line">{just.line}</p>
-      {just.listing && <a href={just.listing.url} target="_blank" rel="noopener noreferrer">{just.listing.title}</a>}
+      {just.listing && <a href={just.listing.url} target="_blank" rel="noopener noreferrer" className="unlock-open-link">View on Etsy →</a>}
     </article>}
 
     {/* The ladder as a row of chips rather than a sentence about the next one.
@@ -90,23 +90,28 @@ export default function UnlockCards() {
         describing the next rung is not. */}
     <ul className="unlock-ladder">
       {state.milestones.map(m => <li key={m.key} className={m.unlocked ? "on" : undefined}>
+        <span className="rung-mark" aria-hidden>{m.unlocked ? "\u2713" : ""}</span>
         <span className="rung-name">{m.name}</span>
-        <span className="rung-at">{m.unlocked ? "open" : m.needsSets ? `${m.remaining} sets` : `${m.remaining} to go`}</span>
+        <span className="rung-at">{m.unlocked
+          ? "unlocked"
+          : m.needsSets
+            ? `${m.remaining} more set${m.remaining > 1 ? "s" : ""}`
+            : `${m.remaining} more listing${m.remaining > 1 ? "s" : ""}`}</span>
       </li>)}
     </ul>
     {/* One line, and only the line that changes behaviour. */}
     <p className="unlock-sets">{state.sets > 0
-      ? `${state.sets} set${state.sets > 1 ? "s" : ""} this week`
-      : "A design on three products counts for more than three apart"}</p>
+      ? `${state.sets} set${state.sets > 1 ? "s" : ""} this week — one design on 3+ products`
+      : "One design on 3 products counts for more than 3 separate listings"}</p>
 
     {state.opened.length > 0 && <details className="unlock-history">
       {/* Kept forever, and said so. The week's access re-locks on Monday;
           what they turned does not go anywhere, and knowing that is what stops
           the reset feeling like a confiscation. */}
-      <summary>{state.opened.length} card{state.opened.length > 1 ? "s" : ""} turned — yours to keep</summary>
+      <summary>Everything you have read ({state.opened.length}) — these stay yours</summary>
       <ul>{state.opened.map(card => <li key={card.ordinal}>
         <strong>{card.title}</strong> — {card.line}
-        {card.listing && <> <a href={card.listing.url} target="_blank" rel="noopener noreferrer">see it</a></>}
+        {card.listing && <> <a href={card.listing.url} target="_blank" rel="noopener noreferrer">View on Etsy</a></>}
       </li>)}</ul>
     </details>}
   </section>;

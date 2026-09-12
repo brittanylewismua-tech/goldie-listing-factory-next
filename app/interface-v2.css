@@ -4317,14 +4317,7 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-card{min-width:0}
 .drop-page .drop-card > a:first-child{display:block;aspect-ratio:1;border-radius:10px;overflow:hidden;background:rgba(0,0,0,.05)}
 .drop-page .drop-card img{width:100%;height:100%;object-fit:cover;display:block}
-.drop-page .drop-noimage{display:block;width:100%;height:100%}
-.drop-page .drop-meta{display:flex;align-items:center;gap:6px;margin:7px 0 3px}
-.drop-page .drop-rank{font-variant-numeric:tabular-nums;font-weight:800;font-size:12px;opacity:.55}
-.drop-page .drop-tag{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:8px}
-.drop-page .drop-tag.new{background:#fdeef7;color:#b02371}
-.drop-page .drop-tag.up{background:rgba(0,0,0,.06)}
 .drop-page .drop-title{display:block;font-size:14px;line-height:1.35;text-decoration:none;color:inherit;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.drop-page .drop-numbers{margin:4px 0 0;font-size:13px;opacity:.65;font-variant-numeric:tabular-nums}
 .drop-page .drop-card.locked{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border:1px dashed var(--line,rgba(0,0,0,.2));border-radius:10px;padding:14px;aspect-ratio:1}
 .drop-page .drop-card.locked p{margin:0;font-size:13px;opacity:.75}
 .drop-page .drop-note{margin-top:26px;font-size:13px;opacity:.6;max-width:66ch}
@@ -4425,3 +4418,47 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-note{margin-top:22px}
 .drop-page .drop-archive{margin-top:22px;border-top:0;background:#fff;
   border:1px solid var(--line,rgba(0,0,0,.1));border-radius:16px;padding:18px 20px}
+
+/* ---------------------------------------------------------------------------
+   TODAY'S DROP — the winners-wall card, ported.
+   Square shot on a near-white ground, a badge pinned into the corner, and a
+   caption led by one big number with its unit beside it. A row of small grey
+   facts reads as a receipt; a figure that size reads as a finding.
+   Sizes are whole pixels and radii sit on the 6/7/8/9/10/12/14/16/22 scale,
+   because the design-scale test is right to insist on it.
+--------------------------------------------------------------------------- */
+.drop-page .drop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:18px}
+.drop-page .drop-card{margin:0;min-width:0;border:1px solid var(--line,rgba(0,0,0,.12));
+  border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+.drop-page .drop-shot{position:relative;display:block;background:rgba(0,0,0,.04);aspect-ratio:1}
+.drop-page .drop-shot img{width:100%;height:100%;object-fit:cover;display:block}
+.drop-page .drop-noshot{display:flex;align-items:center;justify-content:center;height:100%;
+  font-size:13px;color:var(--ink-3,#8b8380)}
+.drop-page .drop-badge{position:absolute;left:8px;top:8px;border-radius:12px;
+  background:#0d0c0c;color:#fff;padding:2px 8px;font-size:10px;font-weight:800;letter-spacing:.04em}
+.drop-page .drop-badge.new{background:#ee6fc0;color:#1b0e17}
+.drop-page .drop-card figcaption{padding:12px 12px 13px;display:grid;gap:2px}
+.drop-page .drop-figures{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
+.drop-page .drop-numeral{font-size:16px;font-weight:800;letter-spacing:-.045em;
+  font-variant-numeric:tabular-nums;line-height:1}
+.drop-page .drop-unit{font-size:13px;color:var(--ink-2,#4b4644)}
+.drop-page .drop-rate{font-size:13px;font-weight:700}
+.drop-page .drop-sub{margin:0;font-size:13px;color:var(--ink-3,#8b8380)}
+.drop-page .drop-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;margin-top:4px;font-size:13px;line-height:1.4;color:inherit;text-decoration:none}
+.drop-page .drop-title:hover{text-decoration:underline}
+.drop-page .drop-card.locked{align-items:center;justify-content:center;text-align:center;
+  padding:16px;border-style:dashed;gap:4px}
+.drop-page .drop-card.locked .drop-numeral{font-size:22px;color:#b02371}
+.drop-page .drop-card.locked p{margin:0;font-size:13px;color:var(--ink-3,#8b8380)}
+
+/* The ladder is a checklist, so it must not look pressable. */
+.unlock-ladder li{grid-template-columns:16px 1fr auto;align-items:center;gap:8px;
+  border:0;border-bottom:1px solid rgba(255,255,255,.1);border-radius:0;padding:9px 2px;display:grid}
+.unlock-ladder li:last-child{border-bottom:0}
+.unlock-ladder li.on{background:none}
+.unlock-ladder .rung-mark{font-size:13px;color:#ee6fc0;font-weight:800}
+.unlock-ladder .rung-at{font-size:12px;opacity:.55;text-align:right}
+.unlock-ladder li.on .rung-name{opacity:1}
+.unlock-ladder li:not(.on) .rung-name{opacity:.6}
+.unlock-open-link{display:inline-block;margin-top:6px;font-size:13px;font-weight:700}
