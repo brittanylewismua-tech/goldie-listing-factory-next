@@ -62,7 +62,7 @@ test("each shelf uses an explicit product search and resumes partial builds", ()
 
 test("the live shelf filters the protected names found in its own results", () => {
   const source = read("pod-drop.ts");
-  for (const name of ["cinderella", "shaun the sheep", "myspace", "junimo", "dungeon meshi", "mouse ears", "polo bear", "outer wilds", "kentucky wildcats"])
+  for (const name of ["cinderella", "shaun the sheep", "myspace", "junimo", "dungeon meshi", "mouse ears", "polo bear", "outer wilds", "kentucky wildcats", "millwall", "liverpool", "from friends l"])
     assert.match(source, new RegExp(`"${name}"`), `${name} must not be presented as an opportunity`);
   const lookup = read("api/whats-selling/route.ts");
   assert.match(lookup, /isProtectedOpportunityTitle/,

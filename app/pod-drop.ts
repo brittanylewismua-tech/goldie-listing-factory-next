@@ -167,7 +167,7 @@ const PROTECTED = new RegExp(
     "outer wilds","little prince","adventures in odyssey",
     "jeep","ford","chevy","tesla","porsche","bmw","honda civic","subaru",
     "john deere","harley davidson","jack daniels","budweiser",
-    "kentucky wildcats","millwall class of","liverpool european cup",
+    "kentucky wildcats","millwall","liverpool","from friends l",
   ].join("|") + ")\\b", "i");
 
 export function isProtectedOpportunityTitle(raw: string) {
