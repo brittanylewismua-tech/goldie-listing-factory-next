@@ -342,7 +342,12 @@ const POD_SHELVES: { top: string; leaf: string }[] = [
   { top: "Clothing", leaf: "Sweatshirts" },
   { top: "Clothing", leaf: "Tanks" },
   { top: "Clothing", leaf: "Bodysuits" },
+  /* Etsy's name for the hat shelf has moved around; all the plausible leaves
+     are listed and whichever exists wins. An entry that matches nothing costs
+     nothing, and `shelvesMissing` below says so out loud. */
   { top: "Accessories", leaf: "Baseball & Trucker Caps" },
+  { top: "Accessories", leaf: "Hats & Caps" },
+  { top: "Accessories", leaf: "Hats" },
   { top: "Bags & Purses", leaf: "Totes" },
   { top: "Home & Living", leaf: "Mugs" },
   { top: "Home & Living", leaf: "Throw Pillows" },
@@ -601,7 +606,8 @@ export async function runSweep(
   { maxCalls = Infinity, discovery = true, pages = DISCOVERY_PAGES }:
     { maxCalls?: number; discovery?: boolean; pages?: number } = {},
 ): Promise<{ ran: boolean; why?: string; read?: number; sold?: number; done?: boolean;
-             found?: number; watched?: number; spentToday?: number; shelves?: string[] }> {
+             found?: number; watched?: number; spentToday?: number;
+             shelves?: string[]; shelvesMissing?: string[] }> {
   await ensureTables();
 
   /*
@@ -638,9 +644,15 @@ export async function runSweep(
        contributes nothing and looks exactly like a shelf nobody buys from —
        so the run says which ones it actually stocked. */
     const shelves = await shelfIds();
+    const landed = new Set(shelves.map(shelf => shelf.label));
     return { ran: true, read: result.read, sold: result.sold, done: result.done,
              found, watched: Number(watched?.n) || 0, spentToday: result.spentToday,
-             shelves: shelves.map(s => s.label) };
+             shelves: [...landed],
+             /* Named, not counted. A shelf that failed to resolve looks exactly
+                like a shelf nobody buys from, and that is how eleven of them
+                went unnoticed once already. */
+             shelvesMissing: [...new Set(POD_SHELVES.map(shelf => shelf.leaf))]
+               .filter(leaf => !landed.has(leaf)) };
   } catch (error) {
     await db().prepare(
       "UPDATE sold_state SET building_since=NULL,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=1")
