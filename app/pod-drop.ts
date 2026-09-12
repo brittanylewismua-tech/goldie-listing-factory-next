@@ -158,13 +158,16 @@ const PROTECTED = new RegExp(
     "grateful dead","nirvana","metallica","ac ?dc","pink floyd","beatles","elvis",
     "nike","adidas","supreme","gucci","louis vuitton","chanel","prada","north face","carhartt",
     "starbucks","coca ?cola","pepsi","mcdonald","in ?n ?out","myspace",
+    "trader joe'?s","mouse ears","polo bear",
     "nfl","nba","mlb","nhl","super bowl","olympics","dallas cowboys","yankees","lakers",
-    "stranger things","wednesday addams","squid game","game of thrones","friends tv","the office",
+    "stranger things","wednesday addams","squid game","game of thrones","friends tv","friends 90s","the office",
     "peewee","pee ?wee herman","snl","saturday night live","talladega nights","step brothers",
     "mazinger","dragon ball","naruto","one piece anime","studio ghibli","totoro","sailor moon",
     "junimo","stardew valley","dungeon meshi","delicious in dungeon",
+    "outer wilds","little prince","adventures in odyssey",
     "jeep","ford","chevy","tesla","porsche","bmw","honda civic","subaru",
     "john deere","harley davidson","jack daniels","budweiser",
+    "kentucky wildcats","millwall class of","liverpool european cup",
   ].join("|") + ")\\b", "i");
 
 export function isProtectedOpportunityTitle(raw: string) {
@@ -236,7 +239,7 @@ function shape(rows: EtsyRow[]): DropListing[] {
  * Failing to get them does not fail the build. A shelf of titles and numbers
  * is thin but real, and better than no drop at all.
  */
-async function withImages(listings: DropListing[]): Promise<DropListing[]> {
+export async function withEtsyListingImages(listings: DropListing[]): Promise<DropListing[]> {
   const ids = listings.map(l => l.listingId).filter(Boolean);
   if (!ids.length) return listings;
   try {
@@ -304,7 +307,7 @@ export async function buildDrop(): Promise<{ built: boolean; why?: string }> {
          failed one. The rest of the shelf is still worth reading. */
       if (!response.ok) continue;
       const payload = await response.json() as { results?: EtsyRow[] };
-      const ranked = await withImages(shape(payload.results ?? []));
+      const ranked = await withEtsyListingImages(shape(payload.results ?? []));
       await db().prepare(
         "INSERT INTO pod_drop_snapshots (day_taxonomy,day,taxonomy_id,label,listings_json) VALUES (?,?,?,?,?) ON CONFLICT(day_taxonomy) DO UPDATE SET listings_json=excluded.listings_json",
       ).bind(`${day}:${category.taxonomyId}`, day, category.taxonomyId, category.label, JSON.stringify(ranked)).run();

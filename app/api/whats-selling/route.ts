@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
 import { etsyApiCredential, etsyBudget, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
-import { decodeEtsyTitle, isProtectedOpportunityTitle } from "@/app/pod-drop";
+import { decodeEtsyTitle, isProtectedOpportunityTitle, withEtsyListingImages } from "@/app/pod-drop";
 
 /**
  * WHAT IS ALREADY WINNING THIS SEARCH.
@@ -177,7 +177,7 @@ async function handleGET(request: Request) {
     );
 
   const payload = (await response.json()) as { results?: EtsyListing[] };
-  const listings = shape(payload.results ?? []);
+  const listings = await withEtsyListingImages(shape(payload.results ?? []));
 
   /* Written even when empty, so a keyword with no results does not re-ask Etsy
      on every visit for the rest of the day. */

@@ -62,7 +62,7 @@ test("each shelf uses an explicit product search and resumes partial builds", ()
 
 test("the live shelf filters the protected names found in its own results", () => {
   const source = read("pod-drop.ts");
-  for (const name of ["cinderella", "shaun the sheep", "myspace", "junimo", "dungeon meshi"])
+  for (const name of ["cinderella", "shaun the sheep", "myspace", "junimo", "dungeon meshi", "mouse ears", "polo bear", "outer wilds", "kentucky wildcats"])
     assert.match(source, new RegExp(`"${name}"`), `${name} must not be presented as an opportunity`);
   const lookup = read("api/whats-selling/route.ts");
   assert.match(lookup, /isProtectedOpportunityTitle/,
@@ -71,6 +71,8 @@ test("the live shelf filters the protected names found in its own results", () =
     "keyword results must not show Etsy's HTML entities as broken text");
   assert.match(lookup, /listing_type === "download"/,
     "digital downloads do not belong in physical product research results");
+  assert.match(lookup, /withEtsyListingImages\(shape\(payload\.results \?\? \[\]\)\)/,
+    "keyword research must include the artwork needed to compare competing designs");
 });
 
 test("the selected drop category returns its shelf instead of an empty render", () => {
@@ -233,7 +235,7 @@ test("the shelf is Etsy's order, and the pictures are asked for", () => {
      failed because the word "pace" appeared in a comment explaining why the
      pace ranking had been removed. What must hold is that the listings Etsy
      returns are stored in the order Etsy returned them. */
-  assert.match(lib, /const ranked = await withImages\(shape\(payload\.results \?\? \[\]\)\);/,
+  assert.match(lib, /const ranked = await withEtsyListingImages\(shape\(payload\.results \?\? \[\]\)\);/,
     "the shelf is stored exactly as Etsy ordered it");
   /* And that one number governs how many are kept. Two numbers is how a
      hundred listings ended up stored behind a page showing thirty. */
