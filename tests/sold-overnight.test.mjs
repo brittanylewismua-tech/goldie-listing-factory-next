@@ -83,21 +83,52 @@ test("discovery can never overwrite last night's reading", () => {
   assert.doesNotMatch(source, /INSERT OR REPLACE INTO sold_watch/);
 });
 
-test("the night is dated in UTC on both sides", () => {
+test("time is measured in UTC on both sides", () => {
   /* Mixing a UTC timestamp with a local calendar date is what once generated
      fourteen hundred phantom drop days in this codebase. */
   const source = read("sold-overnight.ts");
-  assert.match(source, /nightOf\s*=\s*\(at: Date = new Date\(\)\)\s*=>\s*at\.toISOString\(\)\.slice\(0, 10\)/);
+  assert.match(source, /hourOf\s*=\s*\(at: Date = new Date\(\)\)\s*=>\s*at\.toISOString\(\)\.slice\(0, 13\)/);
   assert.doesNotMatch(strip(source), /getFullYear\(\)|setHours\(|getDay\(\)/);
 });
 
-test("a bounded sweep does not mark the night finished", () => {
-  /* A page load advances the sweep a few calls and stops. Marking the night
-     done there would freeze the board on whatever the first slice contained
-     and skip every remaining listing until tomorrow. */
+test("the board reads a rolling window, not a calendar day", () => {
+  /* Filing by day meant the board could only answer "what sold since midnight
+     UTC" — at eight in the morning a thin arbitrary slice, at one past
+     midnight nothing at all, and always an invitation to come back later. */
   const source = read("sold-overnight.ts");
-  assert.match(source, /last_night=COALESCE\(\?,last_night\)/);
-  assert.match(source, /result\.done \? night : null/);
+  assert.match(source, /hoursBack \* 3_600_000/);
+  assert.match(source, /WHERE m\.bucket>=\?/);
+});
+
+test("the sweep has a hard daily ceiling it cannot exceed", () => {
+  /* A corpus that grows unexpectedly must not be able to quietly eat the
+     quota that publishing depends on. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /DAILY_CEILING/);
+  assert.match(source, /spentToday >= DAILY_CEILING/);
+});
+
+test("a listing is re-read on an interval, not once a day", () => {
+  const source = read("sold-overnight.ts");
+  assert.match(source, /REFRESH_HOURS \* 3_600_000/);
+});
+
+test("a shelf with almost nothing on it does not get a tab", () => {
+  /* A tab reading "Throw Pillows 1" invites a click that leads to one card
+     and a dead end. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /SHELF_MINIMUM = 30/);
+  assert.match(source, /at\.listings >= SHELF_MINIMUM/);
+});
+
+test("the scheduled sweep cannot be triggered from outside the worker", () => {
+  /* Cloudflare stamps cf-connecting-ip on everything that arrives from the
+     internet and cannot be talked out of it. A Request built inside the worker
+     has no such header, so its absence is proof of origin — no token to leak,
+     nothing to rotate, and no way for a stranger to burn the Etsy allowance. */
+  const source = read("api/sold-overnight/cron/route.ts");
+  assert.match(source, /cf-connecting-ip"\) !== null/);
+  assert.match(source, /status: 404/);
 });
 
 test("listings Etsy did not return still advance the sweep", () => {
@@ -138,7 +169,7 @@ test("the page says where its numbers come from", () => {
      doubt it has nowhere to look. */
   const page = read("sold-overnight/page.tsx");
   assert.match(page, /Where these numbers come from/);
-  assert.match(page, /compare it to the night before/);
+  assert.match(page, /compare it to the reading before/);
 });
 
 test("pages=0 really means no discovery", () => {
@@ -158,13 +189,13 @@ test("a second pass in one night adds to the count rather than replacing it", ()
   assert.match(source, /sold=sold\+excluded\.sold/);
 });
 
-test("a night still being swept shows the sales it has already counted", () => {
-  /* last_night is only written when a sweep reaches the end of the corpus. A
-     board keyed off that flag showed "the first night is being counted" while
-     twenty-one real sales sat in the table — the page refusing to show numbers
-     it already had. The board follows the data. */
+test("the board shows sales the moment they are counted", () => {
+  /* An earlier version keyed the board off a completion flag and rendered
+     "the first night is being counted" while twenty-one real sales sat in the
+     table — the page refusing to show numbers it already had. */
   const source = read("sold-overnight.ts");
-  assert.match(source, /SELECT MAX\(night\) night FROM sold_moves/);
+  assert.doesNotMatch(source, /state\?\.last_night \? \{ night/);
+  assert.match(source, /night: rows\.length \? new Date\(\)/);
 });
 
 test("the board groups by Etsy's leaf category, not its department", () => {
@@ -181,4 +212,26 @@ test("digital downloads stay off a print-on-demand board and stop costing quota"
   const source = read("sold-overnight.ts");
   assert.match(source, /COALESCE\(w\.listing_type,'physical'\)='physical'/);
   assert.match(source, /listing_type IS NULL OR listing_type = 'physical'/);
+});
+
+test("the corpus is stocked shelf by shelf, thinnest first", () => {
+  /* Seeding by keyword produced a corpus that was almost all blankets and
+     stickers with no apparel in it at all — the words pulled unevenly and
+     nothing corrected for it, so the board had a "Throw Pillows" tab with one
+     thing behind it. Etsy's search takes a taxonomy filter, so each shelf is
+     stocked directly and the emptiest is always served first. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /listings\/active\?taxonomy_id=\$\{shelf\.id\}/);
+  assert.match(source, /\(counts\.get\(a\.id\) \?\? 0\) - \(counts\.get\(b\.id\) \?\? 0\)/);
+  assert.doesNotMatch(source, /SEED_QUERIES/);
+});
+
+test("shelves are named by full path, never by a hardcoded id", () => {
+  /* Etsy's tree contains several nodes with the same name, and a hardcoded
+     number can quietly start meaning something else. This codebase has been
+     bitten by exactly that before. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /Clothing > Unisex Adult Clothing > Tops & Tees > T-shirts/);
+  const shelves = source.slice(source.indexOf("const POD_SHELVES"), source.indexOf("];", source.indexOf("const POD_SHELVES")));
+  assert.doesNotMatch(shelves, /\d{3,}/, "no raw taxonomy ids in the shelf list");
 });

@@ -2,9 +2,13 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "goldie-listing-factory-staging",
   "account_id": "81acaa875c17f523e6b248516ffac0e5",
-  "main": "./dist/server/index.js",
+  "main": "./worker-entry.mjs",
   "compatibility_date": "2026-05-15",
   "compatibility_flags": ["nodejs_compat"],
+  // Sold Overnight keeps the corpus current on its own. Every twenty minutes
+  // is a bounded slice, not a full sweep — the schedule is what makes the
+  // board current, and the feature's own daily ceiling is what keeps it cheap.
+  "triggers": { "crons": ["*/20 * * * *"] },
   "no_bundle": true,
   "workers_dev": true,
   "preview_urls": true,

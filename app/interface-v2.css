@@ -4486,3 +4486,12 @@ html, body { background: var(--lf-paper); }
 @media (max-width:640px){
   .sold-page .sold-total-numeral{font-size:34px}
 }
+
+/* The window switcher. Quieter than the product tabs, because which shelf you
+   are looking at is the decision and how far back is the framing. */
+.sold-page .sold-windows{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px}
+.sold-page .sold-windows button{border:1px solid var(--line,rgba(0,0,0,.14));background:none;
+  border-radius:14px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer;
+  color:var(--ink-2,#4b4644)}
+.sold-page .sold-windows button.active{background:rgba(176,35,113,.08);border-color:#b02371;
+  color:#b02371;font-weight:700}

@@ -1,47 +1,40 @@
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
-import { buildNight, previousNight, readBoard } from "@/app/sold-overnight";
+import { readBoard, runSweep } from "@/app/sold-overnight";
 import { unlockState } from "@/app/unlocks";
 import { listingStreak, STREAK_TARGET } from "@/app/pod-drop";
 
 /**
  * SOLD OVERNIGHT — the board, and how much of it this seller has opened.
  *
- * Reading costs no Etsy calls at all: the counting happened overnight and the
- * answer is already in the database. What a page load may do is advance the
- * sweep by a few requests, because this app has no scheduler and the first
- * people through the door each morning are what moves it along. That work is
- * strictly bounded, so nobody waits on a thousand-call read to see a page.
- *
- * A sweep that cannot run is never an error. Last night's board is a perfectly
- * good board, and somebody who came here to list should not be shown a failure
- * about a background job.
+ * Reading costs no Etsy calls: the counting already happened and the answer is
+ * in the database. A page load may nudge the sweep along by a few requests,
+ * because a cron and a doorway are better than a cron alone — but that work is
+ * bounded and nobody waits on it.
  */
 
 /** How much of the board is visible before this week has been earned. */
 const PREVIEW = 12;
 
-/** Requests a page load may spend nudging tonight's sweep along. */
+/** Requests a page load may spend nudging the sweep along. */
 const NUDGE = 4;
 
 export const GET = withErrorLog("sold-overnight", async (request: Request) => {
   const user = await getChatGPTUser();
-  if (!user) return NextResponse.json({ error: "Sign in to see what sold overnight." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Sign in to see what sold." }, { status: 401 });
 
-  let sweeping = false;
   try {
-    const run = await buildNight({ maxCalls: NUDGE, discovery: false });
-    sweeping = run.built === true && run.done === false;
+    await runSweep({ maxCalls: NUDGE, discovery: false });
   } catch {
-    /* Last night's board stands. */
+    /* The board that exists is still the board. */
   }
 
-  const asked = new URL(request.url).searchParams.get("night");
-  const wants = /^\d{4}-\d{2}-\d{2}$/.test(asked ?? "") ? asked! : undefined;
+  const hours = Number(new URL(request.url).searchParams.get("hours"));
+  const hoursBack = [24, 48, 168].includes(hours) ? hours : 24;
 
   const [board, streak, unlocks] = await Promise.all([
-    readBoard(200, wants),
+    readBoard(400, hoursBack),
     listingStreak(user.userId),
     unlockState(user.userId),
   ]);
@@ -57,11 +50,8 @@ export const GET = withErrorLog("sold-overnight", async (request: Request) => {
   return NextResponse.json({
     ...board,
     listings,
-    sweeping,
     unlocked,
     held: unlocked ? 0 : Math.max(0, board.listings.length - listings.length),
     toUnlock: unlocked ? 0 : Math.max(0, STREAK_TARGET - streak.count),
-    viewing: wants ?? null,
-    back: board.night ? await previousNight(board.night) : null,
   });
 });

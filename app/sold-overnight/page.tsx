@@ -23,27 +23,33 @@ type Listing = {
   product: string;
 };
 type Board = {
-  night: string | null; watched: number; totalSold: number;
-  building: boolean; sweeping: boolean; unlocked: boolean; held: number; toUnlock: number;
-  viewing: string | null; back: string | null;
-  products: { key: string; label: string; sold: number }[];
+  night: string | null; watched: number; totalSold: number; hoursBack: number;
+  building: boolean; unlocked: boolean; held: number; toUnlock: number;
+  products: { key: string; label: string; sold: number; listings: number }[];
   listings: Listing[];
 };
+
+/** The windows worth offering. Anything else is a settings screen. */
+const WINDOWS = [
+  { hours: 24, label: "Last 24 hours" },
+  { hours: 48, label: "Last 2 days" },
+  { hours: 168, label: "Last 7 days" },
+];
 
 const money = (value: number | null, currency: string) =>
   value === null ? "" : new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
 
-const longDate = (iso: string) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
 
 export default function SoldOvernightPage() {
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
   const [product, setProduct] = useState<string>("all");
+  const [hours, setHours] = useState(24);
 
-  const load = (night?: string | null) => {
-    setBoard(null); setError("");
-    fetch(`/api/sold-overnight${night ? `?night=${night}` : ""}`, { cache: "no-store" })
+  const load = (window = hours) => {
+    setBoard(null); setError(""); setHours(window);
+    fetch(`/api/sold-overnight?hours=${window}`, { cache: "no-store" })
       .then(async response => {
         const result = await response.json() as Board & { error?: string };
         if (!response.ok) throw new Error(result.error || "Last night's sales could not be loaded.");
@@ -52,7 +58,7 @@ export default function SoldOvernightPage() {
       })
       .catch(e => setError(e instanceof Error ? e.message : "Last night's sales could not be loaded."));
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(24); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   const shown = board
     ? product === "all" ? board.listings : board.listings.filter(l => l.product === product)
@@ -61,8 +67,8 @@ export default function SoldOvernightPage() {
   return <FactoryShell active="sold" title="Sold Overnight"><div className="drop-page sold-page interior-page">
     <header className="drop-head">
       <p className="mini-label">SOLD OVERNIGHT</p>
-      <h1>What actually sold while you slept</h1>
-      <p>Counted, not estimated. Every number is how far a listing&apos;s stock fell since last night.</p>
+      <h1>What actually sold</h1>
+      <p>Counted, not estimated. Every number is how far a listing&apos;s stock has fallen.</p>
     </header>
 
     {error && <section className="drop-error" role="alert">
@@ -76,12 +82,16 @@ export default function SoldOvernightPage() {
 
     {board && <>
       <div className="drop-card-surface">
-        <div className="drop-toolbar">
-          {board.viewing
-            ? <button type="button" className="drop-back" onClick={() => load()}>&larr; Back to last night</button>
-            : board.back && <button type="button" className="drop-back" onClick={() => load(board.back)}>&larr; The night before</button>}
-          {board.night && <span className="drop-viewing">{longDate(board.night)}</span>}
-        </div>
+        {/* The window, not a date. There is no "yesterday's edition" to go
+            back to — the count is continuous, so the only real choice is how
+            far back to look. */}
+        <nav className="sold-windows" aria-label="Time window">
+          {WINDOWS.map(w =>
+            <button key={w.hours} type="button"
+              className={hours === w.hours ? "active" : undefined}
+              aria-current={hours === w.hours ? "true" : undefined}
+              onClick={() => load(w.hours)}>{w.label}</button>)}
+        </nav>
 
         {/* The headline figure. One number, stated plainly, with the size of
             the shelf it was counted across — because "1,284 sold" means
@@ -93,24 +103,25 @@ export default function SoldOvernightPage() {
             <span className="sold-total-unit">{board.totalSold === 1 ? "item sold" : "items sold"}</span>
           </p>
           <p className="sold-total-sub">
-            across the {board.watched.toLocaleString()} Etsy listings we watch
-            {board.sweeping && <> &middot; still counting, this will rise</>}
+            {WINDOWS.find(w => w.hours === board.hoursBack)?.label.toLowerCase() ?? "recently"}
+            {" "}&middot; across the {board.watched.toLocaleString()} Etsy listings we watch
+            {board.building && <> &middot; counting now, this will rise</>}
           </p>
         </section>}
 
         {!board.night
           ? <section className="drop-loading">
-              <p className="drop-loading-title">The first night is being counted</p>
+              <p className="drop-loading-title">Counting has started</p>
               <span className="drop-loading-track" aria-hidden><i /></span>
               <p className="drop-loading-sub">
-                Stock has to be read twice before anything can be said to have sold.
-                The first full board lands after tonight.
+                Stock has to be read twice before anything can be said to have sold,
+                and the second read is under way. Sales appear here as they happen.
               </p>
             </section>
           : board.listings.length === 0
             ? <section className="drop-loading">
-                <p className="drop-loading-title">Nothing had moved yet when this was read</p>
-                <p className="drop-loading-sub">Check back after the next overnight count.</p>
+                <p className="drop-loading-title">Nothing has moved in this window yet</p>
+                <p className="drop-loading-sub">Try a longer one, or give the count a little more time.</p>
               </section>
             : <>
               {/* Etsy's own category for each listing, not a guess from the
@@ -120,6 +131,10 @@ export default function SoldOvernightPage() {
                 <button type="button" className={product === "all" ? "active" : undefined}
                   aria-current={product === "all" ? "true" : undefined}
                   onClick={() => setProduct("all")}>Everything</button>
+                {/* Only shelves with real depth get a tab. A tab reading
+                    "Throw Pillows 1" invites a click that leads to one card
+                    and a dead end. Everything is still on the board under
+                    Everything. */}
                 {board.products.map(p =>
                   <button key={p.key} type="button" className={product === p.key ? "active" : undefined}
                     aria-current={product === p.key ? "true" : undefined}
@@ -175,10 +190,11 @@ export default function SoldOvernightPage() {
         <summary>Where these numbers come from</summary>
         <p>
           Etsy publishes how many of an item are left to buy. We read that number for
-          every listing we watch, once a night, and compare it to the night before. If
-          it fell by four, four of them sold. Stock going up means the shop restocked,
-          which is not a sale and is not counted. Nothing here is a ranking, an
-          estimate, or a guess from search position.
+          every listing we watch, every few hours, and compare it to the reading before.
+          If it fell by four, four of them sold. Stock going up means the shop restocked,
+          which is not a sale and is not counted. Digital downloads are left out, since
+          they are nothing to do with printing. Nothing here is a ranking, an estimate,
+          or a guess from search position.
         </p>
       </details>
     </>}

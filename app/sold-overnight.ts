@@ -57,18 +57,38 @@ const db = () => (env as unknown as Runtime).DB;
 export const nightOf = (at: Date = new Date()) => at.toISOString().slice(0, 10);
 
 /**
- * The shelves. Etsy's own taxonomy is what finally labels a listing, but the
- * corpus has to be found before it can be labelled, and search needs words.
+ * Movement is filed by the HOUR it was seen in, not the day.
+ *
+ * Filing by day meant the board could only ever answer "what sold since
+ * midnight UTC", which at eight in the morning is a thin and arbitrary slice
+ * and at one minute past midnight is nothing at all. Hour buckets let it
+ * answer "what sold in the last twenty-four hours", which is the question
+ * somebody opening this page is actually asking, at any hour they ask it.
  */
-const SEED_QUERIES = [
-  "t shirt", "sweatshirt", "hoodie", "tank top", "mug", "tote bag",
-  "wall art print", "sticker", "phone case", "blanket", "throw pillow", "hat",
-  "baby onesie", "apron", "keychain", "poster",
-];
+export const hourOf = (at: Date = new Date()) => at.toISOString().slice(0, 13);
+
 
 /** Etsy returns at most 100 per request; deeper pages cost one call each. */
 const PAGE = 100;
 const DISCOVERY_PAGES = 1;
+
+/**
+ * HOW OFTEN A LISTING IS RE-READ, AND THE CEILING ON WHAT THAT MAY COST.
+ *
+ * A pass over the corpus costs corpus/100 calls whether it happens all at
+ * 2am or spread through the day — the total is the same either way. What
+ * spreading buys is a board that is current at ten in the morning instead of
+ * fourteen hours stale, and a more accurate count: a listing that sells three
+ * and is restocked reads as zero if it is only looked at once.
+ *
+ * Four hours is six passes a day. On a hundred thousand listings that is six
+ * thousand calls — under eight per cent of the allowance. DAILY_CEILING is the
+ * hard stop regardless: this feature may never spend more than this in a day,
+ * so a corpus that grows unexpectedly cannot quietly eat the quota that
+ * publishing depends on.
+ */
+const REFRESH_HOURS = 4;
+const DAILY_CEILING = 8_000;
 
 /**
  * PUBLISHING OUTRANKS INTEL, ALWAYS.
@@ -134,7 +154,7 @@ export async function ensureTables() {
        different thing from one that sold nine copies once. */
     db().prepare(
       `CREATE TABLE IF NOT EXISTS sold_moves (
-         night          TEXT NOT NULL,
+         bucket         TEXT NOT NULL,
          listing_id     INTEGER NOT NULL,
          sold           INTEGER NOT NULL DEFAULT 0,
          saves_gained   INTEGER NOT NULL DEFAULT 0,
@@ -142,16 +162,17 @@ export async function ensureTables() {
          quantity_after INTEGER,
          sold_out       INTEGER NOT NULL DEFAULT 0,
          restocked      INTEGER NOT NULL DEFAULT 0,
-         PRIMARY KEY (night, listing_id)
+         PRIMARY KEY (bucket, listing_id)
        )`),
-    db().prepare("CREATE INDEX IF NOT EXISTS idx_sold_moves_night ON sold_moves (night, sold DESC)"),
+    db().prepare("CREATE INDEX IF NOT EXISTS idx_sold_moves_bucket ON sold_moves (bucket, sold DESC)"),
     /* Etsy's category names, fetched once. Without it the board can only say
        "482" where it should say "T-Shirts". */
     db().prepare(
       `CREATE TABLE IF NOT EXISTS sold_taxonomy (
          taxonomy_id INTEGER PRIMARY KEY,
          name        TEXT NOT NULL,
-         top         TEXT NOT NULL
+         top         TEXT NOT NULL,
+         path        TEXT NOT NULL DEFAULT ''
        )`),
     /* One claim row, so twenty sellers arriving at seven do not each start a
        sweep. The same pattern the publish worker and the drop build use. */
@@ -166,9 +187,18 @@ export async function ensureTables() {
          updated_at     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
        )`),
     db().prepare("INSERT OR IGNORE INTO sold_state (id) VALUES (1)"),
+    /* What this feature alone has spent today, so the ceiling can be enforced
+       without guessing from the shared Etsy tally. */
+    db().prepare(
+      `CREATE TABLE IF NOT EXISTS sold_spend (
+         day   TEXT PRIMARY KEY,
+         calls INTEGER NOT NULL DEFAULT 0
+       )`),
   ]);
   /* The table shipped before this column existed. */
   try { await db().prepare("ALTER TABLE sold_watch ADD COLUMN listing_type TEXT").run(); }
+  catch { /* already there */ }
+  try { await db().prepare("ALTER TABLE sold_taxonomy ADD COLUMN path TEXT NOT NULL DEFAULT ''").run(); }
   catch { /* already there */ }
 }
 
@@ -194,31 +224,64 @@ async function etsyGet(path: string, feature: EtsyFeature = "search") {
  * a sticker of a tee. One call, cached forever, and the board can group by
  * what the thing actually is.
  */
-export async function ensureTaxonomy(): Promise<Map<number, { name: string; top: string }>> {
-  const have = await db().prepare("SELECT taxonomy_id,name,top FROM sold_taxonomy").all();
-  const rows = (have.results ?? []) as unknown as { taxonomy_id: number; name: string; top: string }[];
-  if (rows.length)
-    return new Map(rows.map(r => [Number(r.taxonomy_id), { name: r.name, top: r.top }]));
+export async function ensureTaxonomy(): Promise<void> {
+  const have = await db().prepare(
+    "SELECT COUNT(*) n FROM sold_taxonomy WHERE path<>''").first() as { n: number } | null;
+  if (Number(have?.n) > 0) return;
 
   const payload = await etsyGet("seller-taxonomy/nodes", "taxonomy");
-  const flat: { taxonomy_id: number; name: string; top: string }[] = [];
-  const walk = (nodes: unknown[], top: string | null) => {
+  const flat: { taxonomy_id: number; name: string; top: string; path: string }[] = [];
+  const walk = (nodes: unknown[], trail: string[]) => {
     for (const raw of nodes) {
       const node = raw as { id?: number; name?: string; children?: unknown[] };
       const id = Number(node.id);
       const name = String(node.name ?? "").trim();
       if (!Number.isSafeInteger(id) || !name) continue;
-      const root = top ?? name;
-      flat.push({ taxonomy_id: id, name, top: root });
-      if (Array.isArray(node.children)) walk(node.children, root);
+      const here = [...trail, name];
+      flat.push({ taxonomy_id: id, name, top: here[0], path: here.join(" > ") });
+      if (Array.isArray(node.children)) walk(node.children, here);
     }
   };
-  walk(payload?.results ?? [], null);
+  walk(payload?.results ?? [], []);
   for (let at = 0; at < flat.length; at += 100)
     await db().batch(flat.slice(at, at + 100).map(row =>
-      db().prepare("INSERT OR REPLACE INTO sold_taxonomy (taxonomy_id,name,top) VALUES (?,?,?)")
-        .bind(row.taxonomy_id, row.name, row.top)));
-  return new Map(flat.map(r => [r.taxonomy_id, { name: r.name, top: r.top }]));
+      db().prepare("INSERT OR REPLACE INTO sold_taxonomy (taxonomy_id,name,top,path) VALUES (?,?,?,?)")
+        .bind(row.taxonomy_id, row.name, row.top, row.path)));
+}
+
+/**
+ * THE SHELVES THIS TOOL IS ACTUALLY ABOUT.
+ *
+ * Named by their full path rather than by an id, because Etsy's tree contains
+ * several nodes called the same thing and a hardcoded number can quietly start
+ * meaning something else. Named by path rather than by leaf name for the same
+ * reason: "Stickers" appears in more than one department.
+ */
+const POD_SHELVES = [
+  "Clothing > Unisex Adult Clothing > Tops & Tees > T-shirts",
+  "Clothing > Unisex Adult Clothing > Hoodies & Sweatshirts > Hoodies",
+  "Clothing > Unisex Adult Clothing > Hoodies & Sweatshirts > Sweatshirts",
+  "Clothing > Unisex Adult Clothing > Tops & Tees > Tanks",
+  "Clothing > Unisex Kids' Clothing > Tops & Tees",
+  "Clothing > Baby > Baby Unisex Clothing > Bodysuits",
+  "Accessories > Hats & Caps > Baseball & Trucker Caps",
+  "Bags & Purses > Totes",
+  "Home & Living > Kitchen & Dining > Drink & Barware > Drinkware > Mugs",
+  "Home & Living > Home Decor > Pillows & Throws > Throw Pillows",
+  "Home & Living > Bedding > Blankets & Throws",
+  "Home & Living > Bedding > Baby Bedding > Baby Blankets",
+  "Art & Collectibles > Prints",
+  "Paper & Party Supplies > Paper > Stickers",
+  "Electronics & Accessories > Phone Cases",
+];
+
+/** Resolve those paths to the ids Etsy's search will filter on. */
+async function shelfIds(): Promise<{ id: number; label: string }[]> {
+  const rows = (await db().prepare(
+    `SELECT taxonomy_id,name,path FROM sold_taxonomy WHERE path IN (${POD_SHELVES.map(() => "?").join(",")})`)
+    .bind(...POD_SHELVES).all()).results as unknown as
+    { taxonomy_id: number; name: string; path: string }[];
+  return rows.map(r => ({ id: Number(r.taxonomy_id), label: r.name }));
 }
 
 /**
@@ -232,28 +295,50 @@ export async function ensureTaxonomy(): Promise<Map<number, { name: string; top:
  * ranking.
  */
 export async function discover(pages = DISCOVERY_PAGES): Promise<number> {
+  const shelves = await shelfIds();
+  if (!shelves.length) return 0;
+
+  /*
+    THINNEST SHELF FIRST.
+
+    Seeding by keyword produced a corpus that was almost all blankets and
+    stickers with no apparel in it at all — the words happened to pull unevenly
+    and nothing corrected for it, so the board had a "Throw Pillows" tab with
+    one thing behind it. Etsy's search takes a taxonomy filter, so each shelf
+    can be stocked directly, and the one with the fewest listings is always
+    served first. The corpus levels itself instead of drifting.
+  */
+  const counts = new Map<number, number>(
+    ((await db().prepare(
+      "SELECT taxonomy_id, COUNT(*) n FROM sold_watch WHERE taxonomy_id IS NOT NULL GROUP BY taxonomy_id")
+      .all()).results as unknown as { taxonomy_id: number; n: number }[])
+      .map(r => [Number(r.taxonomy_id), Number(r.n)]));
+
+  const order = [...shelves].sort(
+    (a, b) => (counts.get(a.id) ?? 0) - (counts.get(b.id) ?? 0));
+
   let added = 0;
-  for (const query of SEED_QUERIES) {
+  for (const shelf of order) {
     for (let page = 0; page < pages; page++) {
       const budget = await etsyBudget();
       if (budget.remaining < BUDGET_FLOOR) return added;
       const payload = await etsyGet(
-        `listings/active?keywords=${encodeURIComponent(query)}&limit=${PAGE}` +
+        `listings/active?taxonomy_id=${shelf.id}&limit=${PAGE}` +
         `&offset=${page * PAGE}&sort_on=score&sort_order=down`);
       const rows = (payload?.results ?? []) as EtsyListing[];
       if (!rows.length) break;
       const writes = rows
         .filter(row => Number.isSafeInteger(Number(row.listing_id)))
         .map(row => db().prepare(
-          /* IGNORE, not REPLACE: a listing already in the corpus carries last
-             night's reading, and overwriting it here would erase the very
-             number tonight's sweep needs to subtract from. */
+          /* IGNORE, not REPLACE: a listing already in the corpus carries its
+             last reading, and overwriting it here would erase the very number
+             the next sweep subtracts from. */
           `INSERT OR IGNORE INTO sold_watch (listing_id,shop_id,title,url,taxonomy_id)
            VALUES (?,?,?,?,?)`)
           .bind(
             Number(row.listing_id), Number(row.shop_id) || null,
             String(row.title ?? "").slice(0, 300), String(row.url ?? ""),
-            Number.isFinite(Number(row.taxonomy_id)) ? Number(row.taxonomy_id) : null));
+            Number.isFinite(Number(row.taxonomy_id)) ? Number(row.taxonomy_id) : shelf.id));
       for (let at = 0; at < writes.length; at += 50) await db().batch(writes.slice(at, at + 50));
       added += writes.length;
     }
@@ -271,13 +356,22 @@ export async function discover(pages = DISCOVERY_PAGES): Promise<number> {
  * opening the page triggers no Etsy traffic whatsoever.
  */
 export async function sweep(
-  night: string,
   maxCalls = Infinity,
-): Promise<{ read: number; moved: number; sold: number; done: boolean }> {
+): Promise<{ read: number; moved: number; sold: number; done: boolean; spentToday: number }> {
   let read = 0, moved = 0, sold = 0, calls = 0, done = false;
+  const day = nightOf();
+
+  /* What this feature has already spent today, against its own ceiling. */
+  const spent = await db().prepare("SELECT calls FROM sold_spend WHERE day=?").bind(day)
+    .first() as { calls: number } | null;
+  let spentToday = Number(spent?.calls) || 0;
+
+  /* Anything read more recently than this is left alone. */
+  const staleBefore = new Date(Date.now() - REFRESH_HOURS * 3_600_000).toISOString();
 
   for (;;) {
     if (calls >= maxCalls) break;
+    if (spentToday >= DAILY_CEILING) break;
     const budget = await etsyBudget();
     if (budget.remaining < BUDGET_FLOOR) break;
 
@@ -298,12 +392,12 @@ export async function sweep(
       `SELECT listing_id,quantity,favorites,views FROM sold_watch
        WHERE (last_read IS NULL OR last_read < ?)
          AND (listing_type IS NULL OR listing_type = 'physical')
-       ORDER BY last_read IS NOT NULL, last_read LIMIT ?`).bind(night, PAGE).all();
+       ORDER BY last_read IS NOT NULL, last_read LIMIT ?`).bind(staleBefore, PAGE).all();
     const batch = (due.results ?? []) as unknown as
       { listing_id: number; quantity: number | null; favorites: number; views: number }[];
-    /* Nothing left unread tonight — the corpus is fully swept. */
+    /* Nothing is stale — the whole corpus is current. */
     if (!batch.length) { done = true; break; }
-    calls++;
+    calls++; spentToday++;
 
     const before = new Map(batch.map(r => [Number(r.listing_id), r]));
     const payload = await etsyGet(
@@ -319,8 +413,9 @@ export async function sweep(
       same hundred ids forever.
     */
     if (!rows.length) {
+      const now = new Date().toISOString();
       await db().batch(batch.map(r =>
-        db().prepare("UPDATE sold_watch SET last_read=? WHERE listing_id=?").bind(night, r.listing_id)));
+        db().prepare("UPDATE sold_watch SET last_read=? WHERE listing_id=?").bind(now, r.listing_id)));
       continue;
     }
 
@@ -348,13 +443,13 @@ export async function sweep(
       if (move.record) {
         moved++; sold += units;
         writes.push(db().prepare(
-          `INSERT INTO sold_moves (night,listing_id,sold,saves_gained,views_gained,quantity_after,sold_out,restocked)
+          `INSERT INTO sold_moves (bucket,listing_id,sold,saves_gained,views_gained,quantity_after,sold_out,restocked)
            VALUES (?,?,?,?,?,?,?,?)
-           ON CONFLICT(night,listing_id) DO UPDATE SET
+           ON CONFLICT(bucket,listing_id) DO UPDATE SET
              sold=sold+excluded.sold, saves_gained=excluded.saves_gained,
              views_gained=excluded.views_gained, quantity_after=excluded.quantity_after,
              sold_out=MAX(sold_out,excluded.sold_out), restocked=MAX(restocked,excluded.restocked)`)
-          .bind(night, id, units,
+          .bind(hourOf(), id, units,
             Math.max(0, favorites - (Number(was.favorites) || 0)),
             Math.max(0, views - (Number(was.views) || 0)),
             now, soldOut, restocked));
@@ -372,7 +467,7 @@ export async function sweep(
           String(row.title ?? ""), String(row.title ?? "").slice(0, 300),
           String(row.url ?? ""), String(row.url ?? ""),
           Number.isFinite(Number(row.taxonomy_id)) ? Number(row.taxonomy_id) : null,
-          night, id));
+          new Date().toISOString(), id));
     }
 
     /* Anything the response skipped still gets stamped, or the loop repeats. */
@@ -380,12 +475,17 @@ export async function sweep(
     for (const r of batch)
       if (!answered.has(Number(r.listing_id)))
         writes.push(db().prepare("UPDATE sold_watch SET last_read=? WHERE listing_id=?")
-          .bind(night, r.listing_id));
+          .bind(new Date().toISOString(), r.listing_id));
 
     for (let at = 0; at < writes.length; at += 50) await db().batch(writes.slice(at, at + 50));
   }
 
-  return { read, moved, sold, done };
+  if (calls)
+    await db().prepare(
+      `INSERT INTO sold_spend (day,calls) VALUES (?,?)
+       ON CONFLICT(day) DO UPDATE SET calls=calls+excluded.calls`).bind(day, calls).run();
+
+  return { read, moved, sold, done, spentToday };
 }
 
 /**
@@ -394,51 +494,48 @@ export async function sweep(
  * Claimed before it starts. A claim left behind by a run that died is retaken
  * after half an hour rather than blocking the board forever.
  */
-export async function buildNight(
+export async function runSweep(
   { maxCalls = Infinity, discovery = true, pages = DISCOVERY_PAGES }:
     { maxCalls?: number; discovery?: boolean; pages?: number } = {},
-): Promise<{ built: boolean; why?: string; read?: number; sold?: number; done?: boolean;
-             found?: number; watched?: number }> {
+): Promise<{ ran: boolean; why?: string; read?: number; sold?: number; done?: boolean;
+             found?: number; watched?: number; spentToday?: number }> {
   await ensureTables();
-  const night = nightOf();
 
-  const state = await db().prepare(
-    "SELECT last_night,building_night,building_since FROM sold_state WHERE id=1").first() as
-    { last_night: string | null; building_night: string | null; building_since: string | null } | null;
+  /*
+    ONE SWEEP AT A TIME, AND NEVER A PERMANENT LOCK.
 
-  if (state?.last_night === night) return { built: false, why: "already read tonight" };
-  if (state?.building_night === night && state.building_since) {
+    There is no "night" to claim any more — the corpus is simply kept current,
+    and any number of triggers (a cron, a page load, the owner's button) may
+    ask for a slice. What must not happen is two of them reading the same
+    hundred listings at once and both writing a movement for the same sale.
+    A claim older than the abandoned window is retaken, so a worker killed
+    mid-slice costs minutes rather than blocking the board.
+  */
+  const state = await db().prepare("SELECT building_since FROM sold_state WHERE id=1")
+    .first() as { building_since: string | null } | null;
+  if (state?.building_since) {
     const age = (Date.now() - new Date(`${state.building_since.replace(" ", "T")}Z`).getTime()) / 60_000;
-    if (age < CLAIM_MINUTES) return { built: false, why: "already being read" };
+    if (age < CLAIM_MINUTES) return { ran: false, why: "a sweep is already running" };
   }
   await db().prepare(
-    "UPDATE sold_state SET building_night=?,building_since=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=1")
-    .bind(night).run();
+    "UPDATE sold_state SET building_since=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=1").run();
 
   try {
     await ensureTaxonomy();
     const found = discovery ? await discover(pages) : 0;
-    const result = await sweep(night, maxCalls);
-    const watched = await db().prepare("SELECT COUNT(*) n FROM sold_watch").first() as { n: number } | null;
-    /*
-      THE NIGHT IS ONLY FINISHED WHEN THE WHOLE CORPUS HAS BEEN READ.
-
-      A bounded run advances the sweep and stops; marking the night done at
-      that point would freeze the board at whatever the first slice happened to
-      contain and skip every remaining listing until tomorrow. So the claim is
-      released either way — another run may continue — but `last_night` is set
-      only on a sweep that reached the end.
-    */
+    const result = await sweep(maxCalls);
+    const watched = await db().prepare(
+      "SELECT COUNT(*) n FROM sold_watch WHERE listing_type IS NULL OR listing_type='physical'")
+      .first() as { n: number } | null;
     await db().prepare(
-      `UPDATE sold_state SET last_night=COALESCE(?,last_night),building_night=NULL,
-         building_since=NULL,last_error=NULL,watched=?,updated_at=CURRENT_TIMESTAMP WHERE id=1`)
-      .bind(result.done ? night : null, Number(watched?.n) || 0).run();
-    return { built: true, read: result.read, sold: result.sold, done: result.done,
-             found, watched: Number(watched?.n) || 0 };
+      `UPDATE sold_state SET building_since=NULL,last_error=NULL,watched=?,
+         last_night=?,updated_at=CURRENT_TIMESTAMP WHERE id=1`)
+      .bind(Number(watched?.n) || 0, nightOf()).run();
+    return { ran: true, read: result.read, sold: result.sold, done: result.done,
+             found, watched: Number(watched?.n) || 0, spentToday: result.spentToday };
   } catch (error) {
     await db().prepare(
-      `UPDATE sold_state SET building_night=NULL,building_since=NULL,last_error=?,
-         updated_at=CURRENT_TIMESTAMP WHERE id=1`)
+      "UPDATE sold_state SET building_since=NULL,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=1")
       .bind(error instanceof Error ? error.message : "Unknown error").run();
     throw error;
   }
@@ -457,9 +554,13 @@ export type SoldBoard = {
   watched: number;
   totalSold: number;
   building: boolean;
-  products: { key: string; label: string; sold: number }[];
+  hoursBack: number;
+  products: { key: string; label: string; sold: number; listings: number }[];
   listings: SoldListing[];
 };
+
+/** How many selling listings a category needs before it earns its own tab. */
+export const SHELF_MINIMUM = 30;
 
 /**
  * READ THE BOARD. No Etsy traffic — everything here was counted overnight.
@@ -467,66 +568,66 @@ export type SoldBoard = {
  * `product` is Etsy's own top-level category for the listing, so the shelves
  * are the real ones rather than a guess from the title.
  */
-export async function readBoard(limit = 200, night?: string): Promise<SoldBoard> {
+export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard> {
   await ensureTables();
-  const state = await db().prepare("SELECT last_night,building_night,watched FROM sold_state WHERE id=1")
-    .first() as { last_night: string | null; building_night: string | null; watched: number } | null;
-  /*
-    THE BOARD FOLLOWS THE DATA, NOT THE COMPLETION FLAG.
+  const state = await db().prepare("SELECT building_since,watched FROM sold_state WHERE id=1")
+    .first() as { building_since: string | null; watched: number } | null;
 
-    `last_night` only gets set when a sweep reaches the end of the corpus, and
-    a sweep in progress has not. Keying the board off it meant a night with
-    twenty-one counted sales already in the table rendered as "the first night
-    is being counted" — the numbers existed and the page refused to show them
-    because a flag had not been written yet. Ask what nights actually have
-    sales in them, and take the newest.
+  /*
+    A ROLLING WINDOW, NOT A CALENDAR DAY.
+
+    Filing by day meant the board could only answer "what sold since midnight
+    UTC" — at eight in the morning a thin arbitrary slice, at one minute past
+    midnight nothing at all, and always an invitation to come back later. The
+    question somebody opening this page is asking is "what has been selling",
+    and the honest answer to that is the last twenty-four hours, whenever they
+    ask it.
   */
-  const latest = state?.last_night
-    ? { night: state.last_night }
-    : (await db().prepare("SELECT MAX(night) night FROM sold_moves").first()) as { night: string | null } | null;
-  const on = night ?? latest?.night ?? null;
-  if (!on)
-    return { night: null, watched: Number(state?.watched) || 0, totalSold: 0,
-      building: Boolean(state?.building_night), products: [], listings: [] };
+  const since = new Date(Date.now() - hoursBack * 3_600_000).toISOString().slice(0, 13);
 
   const rows = (await db().prepare(
-    `SELECT m.listing_id,m.sold,m.sold_out,m.saves_gained,m.quantity_after,
+    `SELECT m.listing_id, SUM(m.sold) sold, MAX(m.sold_out) sold_out,
+            SUM(m.saves_gained) saves_gained, MIN(m.quantity_after) quantity_after,
             w.title,w.url,w.image,w.price_cents,w.currency,
             COALESCE(t.name,'Other') product
        FROM sold_moves m
        JOIN sold_watch w ON w.listing_id=m.listing_id
        LEFT JOIN sold_taxonomy t ON t.taxonomy_id=w.taxonomy_id
-      WHERE m.night=? AND m.sold>0 AND COALESCE(w.listing_type,'physical')='physical'
-      ORDER BY m.sold DESC, m.saves_gained DESC
-      LIMIT ?`).bind(on, limit).all()).results as unknown as {
+      WHERE m.bucket>=? AND m.sold>0 AND COALESCE(w.listing_type,'physical')='physical'
+      GROUP BY m.listing_id
+      ORDER BY sold DESC, saves_gained DESC
+      LIMIT ?`).bind(since, limit).all()).results as unknown as {
         listing_id: number; sold: number; sold_out: number; saves_gained: number;
         quantity_after: number | null; title: string; url: string; image: string | null;
         price_cents: number | null; currency: string | null; product: string;
       }[];
 
-  const totals = (await db().prepare(
-    /*
-      ETSY'S LEAF CATEGORY, NOT ITS DEPARTMENT.
+  /*
+    A SHELF WITH ONE THING ON IT IS NOT A SHELF.
 
-      `top` is the root of the tree — "Home & Living", "Craft Supplies &
-      Tools". True, and useless: it does not tell a seller which blank to
-      order. The leaf is "Blankets & Throws", "Stickers", "Phone Cases", which
-      is the decision this page exists to inform.
-    */
-    `SELECT COALESCE(t.name,'Other') product, SUM(m.sold) sold
-       FROM sold_moves m
-       JOIN sold_watch w ON w.listing_id=m.listing_id
-       LEFT JOIN sold_taxonomy t ON t.taxonomy_id=w.taxonomy_id
-      WHERE m.night=? AND m.sold>0 AND COALESCE(w.listing_type,'physical')='physical'
-      GROUP BY product ORDER BY sold DESC`).bind(on).all()).results as unknown as
-      { product: string; sold: number }[];
+    A tab reading "Throw Pillows 1" invites a click that leads to a single
+    card and a dead end — it makes the board look empty in exactly the place
+    it was meant to look useful. Categories below the threshold are still on
+    the board under Everything; they simply do not get a tab of their own
+    until there is something behind it.
+  */
+  const perProduct = new Map<string, { sold: number; listings: number }>();
+  for (const row of rows) {
+    const at = perProduct.get(row.product) ?? { sold: 0, listings: 0 };
+    at.sold += Number(row.sold); at.listings++;
+    perProduct.set(row.product, at);
+  }
 
   return {
-    night: on,
+    night: rows.length ? new Date().toISOString().slice(0, 10) : null,
     watched: Number(state?.watched) || 0,
-    totalSold: totals.reduce((sum, t) => sum + Number(t.sold), 0),
-    building: Boolean(state?.building_night),
-    products: totals.map(t => ({ key: t.product, label: t.product, sold: Number(t.sold) })),
+    totalSold: rows.reduce((sum, r) => sum + Number(r.sold), 0),
+    building: Boolean(state?.building_since),
+    hoursBack,
+    products: [...perProduct.entries()]
+      .filter(([, at]) => at.listings >= SHELF_MINIMUM)
+      .sort((a, b) => b[1].sold - a[1].sold)
+      .map(([key, at]) => ({ key, label: key, sold: at.sold, listings: at.listings })),
     listings: rows.map(r => ({
       listingId: Number(r.listing_id),
       title: r.title,
@@ -544,25 +645,16 @@ export async function readBoard(limit = 200, night?: string): Promise<SoldBoard>
 }
 
 /**
- * Let tonight be read a second time.
+ * Read everything again immediately, ignoring the refresh interval.
  *
- * Clears the read stamps and the claim, so a fresh pass runs against the stock
- * figures the last pass stored. Sales accumulate across passes rather than
- * replacing each other, so sampling twice in a night simply counts more of
- * what happened in it.
+ * Sales accumulate across passes rather than replacing each other, so an extra
+ * pass simply counts more of what happened. Costs a full sweep, so it is an
+ * owner control rather than something the app does on its own.
  */
-export async function resetTonight() {
+export async function refreshNow() {
   await ensureTables();
   await db().batch([
     db().prepare("UPDATE sold_watch SET last_read=NULL"),
-    db().prepare("UPDATE sold_state SET last_night=NULL,building_night=NULL,building_since=NULL WHERE id=1"),
+    db().prepare("UPDATE sold_state SET building_since=NULL WHERE id=1"),
   ]);
-}
-
-/** The night before the one being shown, for the back button. */
-export async function previousNight(before: string): Promise<string | null> {
-  const row = await db().prepare(
-    "SELECT night FROM sold_moves WHERE night<? ORDER BY night DESC LIMIT 1").bind(before).first() as
-    { night: string } | null;
-  return row?.night ?? null;
 }
