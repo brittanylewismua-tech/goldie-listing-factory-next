@@ -195,11 +195,56 @@ export async function ensureTables() {
          calls INTEGER NOT NULL DEFAULT 0
        )`),
   ]);
-  /* The table shipped before this column existed. */
+  /* Columns added after the tables first shipped. */
   try { await db().prepare("ALTER TABLE sold_watch ADD COLUMN listing_type TEXT").run(); }
   catch { /* already there */ }
   try { await db().prepare("ALTER TABLE sold_taxonomy ADD COLUMN path TEXT NOT NULL DEFAULT ''").run(); }
   catch { /* already there */ }
+  await migrateMovesToHours();
+}
+
+/**
+ * DAY ROWS BECOME HOUR ROWS.
+ *
+ * `CREATE TABLE IF NOT EXISTS` DOES NOTHING WHEN THE TABLE EXISTS WITH A
+ * DIFFERENT SHAPE, and says nothing about it. sold_moves shipped keyed on
+ * `night`; changing the code to write `bucket` produced "no such column:
+ * bucket" on every sweep, while the statement that was supposed to define the
+ * new shape ran happily and reported success. A schema change needs a
+ * migration, not a hopeful CREATE.
+ *
+ * A day row becomes that day's midnight hour. It is the only honest
+ * conversion available — the original reading did not record which hour it
+ * happened in — and it keeps the sales already counted rather than throwing
+ * them away for tidiness.
+ */
+async function migrateMovesToHours() {
+  const columns = (await db().prepare("PRAGMA table_info(sold_moves)").all())
+    .results as unknown as { name: string }[];
+  if (!columns.length || columns.some(c => c.name === "bucket")) return;
+
+  await db().batch([
+    db().prepare(
+      `CREATE TABLE IF NOT EXISTS sold_moves_hourly (
+         bucket         TEXT NOT NULL,
+         listing_id     INTEGER NOT NULL,
+         sold           INTEGER NOT NULL DEFAULT 0,
+         saves_gained   INTEGER NOT NULL DEFAULT 0,
+         views_gained   INTEGER NOT NULL DEFAULT 0,
+         quantity_after INTEGER,
+         sold_out       INTEGER NOT NULL DEFAULT 0,
+         restocked      INTEGER NOT NULL DEFAULT 0,
+         PRIMARY KEY (bucket, listing_id)
+       )`),
+    db().prepare(
+      `INSERT OR IGNORE INTO sold_moves_hourly
+         (bucket,listing_id,sold,saves_gained,views_gained,quantity_after,sold_out,restocked)
+       SELECT night || 'T00',listing_id,sold,saves_gained,views_gained,quantity_after,sold_out,restocked
+         FROM sold_moves`),
+    db().prepare("DROP TABLE sold_moves"),
+    db().prepare("ALTER TABLE sold_moves_hourly RENAME TO sold_moves"),
+    db().prepare("CREATE INDEX IF NOT EXISTS idx_sold_moves_bucket ON sold_moves (bucket, sold DESC)"),
+  ]);
 }
 
 /* ---------------------------------------------------------------- Etsy reads */

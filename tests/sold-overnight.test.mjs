@@ -258,3 +258,17 @@ test("the generated entry re-exports the workflows it must not drop", () => {
   for (const name of ["DraftCreationWorkflow", "PhotoDeliveryWorkflow"])
     assert.match(script, new RegExp(name), `the entry must re-export ${name}`);
 });
+
+test("changing a table's shape is migrated, never left to CREATE IF NOT EXISTS", () => {
+  /* CREATE TABLE IF NOT EXISTS does nothing when the table already exists with
+     a different shape, and reports success while doing it. sold_moves shipped
+     keyed on `night`; switching the code to `bucket` produced "no such column:
+     bucket" on every single sweep while the statement meant to define the new
+     shape ran happily. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /PRAGMA table_info\(sold_moves\)/);
+  assert.match(source, /columns\.some\(c => c\.name === "bucket"\)/);
+  assert.match(source, /ALTER TABLE sold_moves_hourly RENAME TO sold_moves/);
+  /* And the sales already counted are carried over, not discarded. */
+  assert.match(source, /night \|\| 'T00'/);
+});
