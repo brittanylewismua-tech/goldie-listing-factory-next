@@ -174,6 +174,12 @@ export function isProtectedOpportunityTitle(raw: string) {
   return PROTECTED.test(decodeEtsyTitle(raw));
 }
 
+export function sanitizeOpportunityListings(listings: DropListing[]) {
+  return listings
+    .filter(listing => !isProtectedOpportunityTitle(listing.title))
+    .map(listing => ({ ...listing, title: decodeEtsyTitle(listing.title) }));
+}
+
 function shape(rows: EtsyRow[]): DropListing[] {
   const now = Date.now();
   return rows.flatMap((row, i) => {
@@ -344,7 +350,7 @@ export async function readDrop(): Promise<{ day: string; categories: DropCategor
   const byDay = new Map<string, Map<number, DropListing[]>>();
   for (const row of ((rows.results ?? []) as Row[]).map(r => ({ day: String(r.day), taxonomy_id: Number(r.taxonomy_id), listings_json: String(r.listings_json) }))) {
     /* Capped here too — see PER_CATEGORY. */
-    const parsed = (() => { try { return (JSON.parse(row.listings_json) as DropListing[]).slice(0, PER_CATEGORY); } catch { return []; } })();
+    const parsed = (() => { try { return sanitizeOpportunityListings(JSON.parse(row.listings_json) as DropListing[]).slice(0, PER_CATEGORY); } catch { return []; } })();
     if (!byDay.has(row.day)) byDay.set(row.day, new Map());
     byDay.get(row.day)!.set(Number(row.taxonomy_id), parsed);
   }
@@ -449,7 +455,7 @@ export async function readDropFor(day: string): Promise<DropCategory[]> {
 
   const out = ((rows.results ?? []) as Row[]).flatMap(raw => {
     const listings = (() => {
-      try { return JSON.parse(String(raw.listings_json)) as DropListing[]; } catch { return []; }
+      try { return sanitizeOpportunityListings(JSON.parse(String(raw.listings_json)) as DropListing[]); } catch { return []; }
     })();
     if (!listings.length) return [];
     return [{
@@ -511,7 +517,7 @@ export async function readArchive(userId: string, limit = 30) {
   const byDay = new Map<string, { label: string; listings: DropListing[] }[]>();
   for (const raw of ((rows.results ?? []) as Row[])) {
     const day = String(raw.day);
-    const listings = (() => { try { return JSON.parse(String(raw.listings_json)) as DropListing[]; } catch { return []; } })();
+    const listings = (() => { try { return sanitizeOpportunityListings(JSON.parse(String(raw.listings_json)) as DropListing[]); } catch { return []; } })();
     if (!byDay.has(day)) byDay.set(day, []);
     byDay.get(day)!.push({ label: String(raw.label), listings });
   }

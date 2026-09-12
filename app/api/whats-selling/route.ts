@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
 import { etsyApiCredential, etsyBudget, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
-import { decodeEtsyTitle, isProtectedOpportunityTitle, withEtsyListingImages } from "@/app/pod-drop";
+import { decodeEtsyTitle, isProtectedOpportunityTitle, sanitizeOpportunityListings, withEtsyListingImages } from "@/app/pod-drop";
 
 /**
  * WHAT IS ALREADY WINNING THIS SEARCH.
@@ -118,7 +118,7 @@ async function handleGET(request: Request) {
     .first<{ listings_json: string }>();
   if (cached) {
     try {
-      return NextResponse.json({ keyword, day, fresh: false, listings: JSON.parse(cached.listings_json) as Listing[] });
+      return NextResponse.json({ keyword, day, fresh: false, listings: sanitizeOpportunityListings(JSON.parse(cached.listings_json) as Listing[]) });
     } catch {
       /* A corrupt row is not a reason to refuse; fall through and refetch. */
     }
@@ -150,7 +150,7 @@ async function handleGET(request: Request) {
       .bind(keyword)
       .first<{ day: string; listings_json: string }>();
     if (recent)
-      return NextResponse.json({ keyword, day: recent.day, fresh: false, stale: true, listings: JSON.parse(recent.listings_json) as Listing[] });
+      return NextResponse.json({ keyword, day: recent.day, fresh: false, stale: true, listings: sanitizeOpportunityListings(JSON.parse(recent.listings_json) as Listing[]) });
     return NextResponse.json(
       { error: "Etsy lookups are paused while listings are publishing. This comes back on its own." },
       { status: 503 },

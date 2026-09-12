@@ -73,6 +73,10 @@ test("the live shelf filters the protected names found in its own results", () =
     "digital downloads do not belong in physical product research results");
   assert.match(lookup, /withEtsyListingImages\(shape\(payload\.results \?\? \[\]\)\)/,
     "keyword research must include the artwork needed to compare competing designs");
+  assert.match(lookup, /sanitizeOpportunityListings\(JSON\.parse\(cached\.listings_json\)/,
+    "cached keyword results must receive new safety rules immediately");
+  assert.match(source, /sanitizeOpportunityListings\(JSON\.parse\(row\.listings_json\)/,
+    "saved daily shelves must receive new safety rules immediately");
 });
 
 test("the selected drop category returns its shelf instead of an empty render", () => {
