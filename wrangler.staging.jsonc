@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "goldie-listing-factory-staging",
   "account_id": "81acaa875c17f523e6b248516ffac0e5",
-  "main": "./worker-entry.mjs",
+  "main": "./dist/server/scheduled-entry.mjs",
   "compatibility_date": "2026-05-15",
   "compatibility_flags": ["nodejs_compat"],
   // Sold Overnight keeps the corpus current on its own. Every twenty minutes

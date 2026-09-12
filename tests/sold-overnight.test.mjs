@@ -235,3 +235,26 @@ test("shelves are named by full path, never by a hardcoded id", () => {
   const shelves = source.slice(source.indexOf("const POD_SHELVES"), source.indexOf("];", source.indexOf("const POD_SHELVES")));
   assert.doesNotMatch(shelves, /\d{3,}/, "no raw taxonomy ids in the shelf list");
 });
+
+test("the scheduled entry lives beside the bundle, not at the repo root", () => {
+  /* wrangler runs with no_bundle, so it resolves modules relative to the
+     directory holding `main` and uploads whatever matches the ESModule globs.
+     An entry at the repository root makes that directory the repository, so
+     **\/*.js starts matching node_modules and the deploy fails. This was not a
+     theory — it silently failed one deploy. */
+  const wrangler = readFileSync(new URL("../wrangler.staging.jsonc", import.meta.url), "utf8");
+  assert.match(wrangler, /"main":\s*"\.\/dist\/server\/scheduled-entry\.mjs"/);
+  assert.match(wrangler, /"crons"/);
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.match(pkg.scripts.build, /add-scheduled-handler/,
+    "the entry is generated, so the build must generate it");
+});
+
+test("the generated entry re-exports the workflows it must not drop", () => {
+  /* The worker's Workflows are named in wrangler config by class name. An
+     entry that forgot to re-export them would deploy and then fail at runtime
+     on the first draft creation. */
+  const script = readFileSync(new URL("../scripts/add-scheduled-handler.mjs", import.meta.url), "utf8");
+  for (const name of ["DraftCreationWorkflow", "PhotoDeliveryWorkflow"])
+    assert.match(script, new RegExp(name), `the entry must re-export ${name}`);
+});
