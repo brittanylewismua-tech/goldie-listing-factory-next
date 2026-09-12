@@ -92,6 +92,7 @@ const CLAIM_MINUTES = 5;
 
 export type EtsyListing = {
   listing_id?: number;
+  listing_type?: string;
   shop_id?: number;
   title?: string;
   url?: string;
@@ -123,6 +124,7 @@ export async function ensureTables() {
          favorites   INTEGER DEFAULT 0,
          views       INTEGER DEFAULT 0,
          state       TEXT,
+         listing_type TEXT,
          first_seen  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
          last_read   TEXT
        )`),
@@ -165,6 +167,9 @@ export async function ensureTables() {
        )`),
     db().prepare("INSERT OR IGNORE INTO sold_state (id) VALUES (1)"),
   ]);
+  /* The table shipped before this column existed. */
+  try { await db().prepare("ALTER TABLE sold_watch ADD COLUMN listing_type TEXT").run(); }
+  catch { /* already there */ }
 }
 
 /* ---------------------------------------------------------------- Etsy reads */
@@ -280,8 +285,19 @@ export async function sweep(
        most stale listings at the front of tomorrow's queue rather than
        starving the same tail every night. */
     const due = await db().prepare(
+      /*
+        A DIGITAL DOWNLOAD IS NOT WHAT THIS TOOL IS FOR.
+
+        Crochet patterns and PDF tutorials sell extremely well on Etsy and are
+        completely useless to somebody deciding which blank to print. Once a
+        listing has been read and identified as a download it is never read
+        again — which keeps it off the board AND stops it costing quota every
+        night. Unread listings still come through, because the only way to
+        learn what something is, is to read it once.
+      */
       `SELECT listing_id,quantity,favorites,views FROM sold_watch
-       WHERE last_read IS NULL OR last_read < ?
+       WHERE (last_read IS NULL OR last_read < ?)
+         AND (listing_type IS NULL OR listing_type = 'physical')
        ORDER BY last_read IS NOT NULL, last_read LIMIT ?`).bind(night, PAGE).all();
     const batch = (due.results ?? []) as unknown as
       { listing_id: number; quantity: number | null; favorites: number; views: number }[];
@@ -345,12 +361,13 @@ export async function sweep(
       }
 
       writes.push(db().prepare(
-        `UPDATE sold_watch SET quantity=?,favorites=?,views=?,state=?,image=COALESCE(?,image),
+        `UPDATE sold_watch SET quantity=?,favorites=?,views=?,state=?,listing_type=COALESCE(?,listing_type),image=COALESCE(?,image),
            price_cents=COALESCE(?,price_cents),currency=COALESCE(?,currency),
            title=CASE WHEN ?='' THEN title ELSE ? END,url=CASE WHEN ?='' THEN url ELSE ? END,
            taxonomy_id=COALESCE(?,taxonomy_id),last_read=?
          WHERE listing_id=?`)
-        .bind(now, favorites, views, String(row.state ?? ""), image, price,
+        .bind(now, favorites, views, String(row.state ?? ""),
+          row.listing_type ? String(row.listing_type) : null, image, price,
           row.price?.currency_code ?? null,
           String(row.title ?? ""), String(row.title ?? "").slice(0, 300),
           String(row.url ?? ""), String(row.url ?? ""),
@@ -475,11 +492,11 @@ export async function readBoard(limit = 200, night?: string): Promise<SoldBoard>
   const rows = (await db().prepare(
     `SELECT m.listing_id,m.sold,m.sold_out,m.saves_gained,m.quantity_after,
             w.title,w.url,w.image,w.price_cents,w.currency,
-            COALESCE(t.top,'Other') product
+            COALESCE(t.name,'Other') product
        FROM sold_moves m
        JOIN sold_watch w ON w.listing_id=m.listing_id
        LEFT JOIN sold_taxonomy t ON t.taxonomy_id=w.taxonomy_id
-      WHERE m.night=? AND m.sold>0
+      WHERE m.night=? AND m.sold>0 AND COALESCE(w.listing_type,'physical')='physical'
       ORDER BY m.sold DESC, m.saves_gained DESC
       LIMIT ?`).bind(on, limit).all()).results as unknown as {
         listing_id: number; sold: number; sold_out: number; saves_gained: number;
@@ -488,11 +505,19 @@ export async function readBoard(limit = 200, night?: string): Promise<SoldBoard>
       }[];
 
   const totals = (await db().prepare(
-    `SELECT COALESCE(t.top,'Other') product, SUM(m.sold) sold
+    /*
+      ETSY'S LEAF CATEGORY, NOT ITS DEPARTMENT.
+
+      `top` is the root of the tree — "Home & Living", "Craft Supplies &
+      Tools". True, and useless: it does not tell a seller which blank to
+      order. The leaf is "Blankets & Throws", "Stickers", "Phone Cases", which
+      is the decision this page exists to inform.
+    */
+    `SELECT COALESCE(t.name,'Other') product, SUM(m.sold) sold
        FROM sold_moves m
        JOIN sold_watch w ON w.listing_id=m.listing_id
        LEFT JOIN sold_taxonomy t ON t.taxonomy_id=w.taxonomy_id
-      WHERE m.night=? AND m.sold>0
+      WHERE m.night=? AND m.sold>0 AND COALESCE(w.listing_type,'physical')='physical'
       GROUP BY product ORDER BY sold DESC`).bind(on).all()).results as unknown as
       { product: string; sold: number }[];
 

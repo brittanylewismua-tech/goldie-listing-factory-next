@@ -166,3 +166,19 @@ test("a night still being swept shows the sales it has already counted", () => {
   const source = read("sold-overnight.ts");
   assert.match(source, /SELECT MAX\(night\) night FROM sold_moves/);
 });
+
+test("the board groups by Etsy's leaf category, not its department", () => {
+  /* "Home & Living" and "Craft Supplies & Tools" are true and useless — they
+     do not tell a seller which blank to order. "Blankets & Throws" does. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /COALESCE\(t\.name,'Other'\) product/);
+  assert.doesNotMatch(source, /COALESCE\(t\.top,'Other'\)/);
+});
+
+test("digital downloads stay off a print-on-demand board and stop costing quota", () => {
+  /* Crochet patterns and PDF tutorials sell well and are no use to somebody
+     choosing a blank. Once identified they are never read again. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /COALESCE\(w\.listing_type,'physical'\)='physical'/);
+  assert.match(source, /listing_type IS NULL OR listing_type = 'physical'/);
+});
