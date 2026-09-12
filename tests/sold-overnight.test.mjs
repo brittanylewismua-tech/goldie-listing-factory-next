@@ -226,14 +226,25 @@ test("the corpus is stocked shelf by shelf, thinnest first", () => {
   assert.doesNotMatch(source, /SEED_QUERIES/);
 });
 
-test("shelves are named by full path, never by a hardcoded id", () => {
-  /* Etsy's tree contains several nodes with the same name, and a hardcoded
-     number can quietly start meaning something else. This codebase has been
-     bitten by exactly that before. */
+test("shelves are matched on department and leaf, never a hardcoded id", () => {
+  /* Spelling out complete paths meant eleven of fifteen shelves silently
+     failed to match — guessing Etsy's middle levels exactly is a coin flip,
+     and a miss looks identical to a shelf nobody buys from. Department plus
+     leaf disambiguates the nodes that share a name without depending on
+     middle levels nobody ever sees. */
   const source = read("sold-overnight.ts");
-  assert.match(source, /Clothing > Unisex Adult Clothing > Tops & Tees > T-shirts/);
   const shelves = source.slice(source.indexOf("const POD_SHELVES"), source.indexOf("];", source.indexOf("const POD_SHELVES")));
+  assert.match(shelves, /\{ top: "Clothing", leaf: "T-shirts" \}/);
   assert.doesNotMatch(shelves, /\d{3,}/, "no raw taxonomy ids in the shelf list");
+  assert.match(source, /\(top = \? AND name = \?\)/);
+});
+
+test("a run says which shelves it actually stocked", () => {
+  /* A shelf whose lookup misses contributes nothing and looks exactly like a
+     shelf nobody buys from. Silence there is how eleven missing shelves went
+     unnoticed. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /shelves: shelves\.map\(s => s\.label\)/);
 });
 
 test("the scheduled entry lives beside the bundle, not at the repo root", () => {

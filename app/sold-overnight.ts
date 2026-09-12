@@ -336,31 +336,55 @@ export async function ensureTaxonomy(): Promise<void> {
  * meaning something else. Named by path rather than by leaf name for the same
  * reason: "Stickers" appears in more than one department.
  */
-const POD_SHELVES = [
-  "Clothing > Unisex Adult Clothing > Tops & Tees > T-shirts",
-  "Clothing > Unisex Adult Clothing > Hoodies & Sweatshirts > Hoodies",
-  "Clothing > Unisex Adult Clothing > Hoodies & Sweatshirts > Sweatshirts",
-  "Clothing > Unisex Adult Clothing > Tops & Tees > Tanks",
-  "Clothing > Unisex Kids' Clothing > Tops & Tees",
-  "Clothing > Baby > Baby Unisex Clothing > Bodysuits",
-  "Accessories > Hats & Caps > Baseball & Trucker Caps",
-  "Bags & Purses > Totes",
-  "Home & Living > Kitchen & Dining > Drink & Barware > Drinkware > Mugs",
-  "Home & Living > Home Decor > Pillows & Throws > Throw Pillows",
-  "Home & Living > Bedding > Blankets & Throws",
-  "Home & Living > Bedding > Baby Bedding > Baby Blankets",
-  "Art & Collectibles > Prints",
-  "Paper & Party Supplies > Paper > Stickers",
-  "Electronics & Accessories > Phone Cases",
+const POD_SHELVES: { top: string; leaf: string }[] = [
+  { top: "Clothing", leaf: "T-shirts" },
+  { top: "Clothing", leaf: "Hoodies" },
+  { top: "Clothing", leaf: "Sweatshirts" },
+  { top: "Clothing", leaf: "Tanks" },
+  { top: "Clothing", leaf: "Bodysuits" },
+  { top: "Accessories", leaf: "Baseball & Trucker Caps" },
+  { top: "Bags & Purses", leaf: "Totes" },
+  { top: "Home & Living", leaf: "Mugs" },
+  { top: "Home & Living", leaf: "Throw Pillows" },
+  { top: "Home & Living", leaf: "Blankets & Throws" },
+  { top: "Home & Living", leaf: "Baby Blankets" },
+  { top: "Home & Living", leaf: "Wall Decor" },
+  { top: "Art & Collectibles", leaf: "Prints" },
+  { top: "Paper & Party Supplies", leaf: "Stickers" },
+  { top: "Electronics & Accessories", leaf: "Phone Cases" },
 ];
 
-/** Resolve those paths to the ids Etsy's search will filter on. */
-async function shelfIds(): Promise<{ id: number; label: string }[]> {
+/**
+ * Resolve those to the ids Etsy's search will filter on.
+ *
+ * MATCHED ON DEPARTMENT AND LEAF, NOT THE WHOLE PATH. The first version
+ * spelled out complete paths — "Clothing > Unisex Adult Clothing > Tops & Tees
+ * > T-shirts" — and eleven of the fifteen silently failed to match, because
+ * guessing Etsy's middle levels exactly is a coin flip and a miss looks
+ * identical to a shelf that does not exist. Department plus leaf is specific
+ * enough to disambiguate the several nodes sharing a name, and does not depend
+ * on middle levels nobody sees.
+ *
+ * Still never a hardcoded id: those can quietly start meaning something else.
+ */
+export async function shelfIds(): Promise<{ id: number; label: string }[]> {
   const rows = (await db().prepare(
-    `SELECT taxonomy_id,name,path FROM sold_taxonomy WHERE path IN (${POD_SHELVES.map(() => "?").join(",")})`)
-    .bind(...POD_SHELVES).all()).results as unknown as
-    { taxonomy_id: number; name: string; path: string }[];
-  return rows.map(r => ({ id: Number(r.taxonomy_id), label: r.name }));
+    `SELECT taxonomy_id,name,top,path FROM sold_taxonomy
+      WHERE (${POD_SHELVES.map(() => "(top = ? AND name = ?)").join(" OR ")})`)
+    .bind(...POD_SHELVES.flatMap(shelf => [shelf.top, shelf.leaf])).all()).results as unknown as
+    { taxonomy_id: number; name: string; top: string; path: string }[];
+
+  /* A leaf name can still appear twice inside one department. Take the
+     shallowest — the broader shelf, which is the one a seller means. */
+  const best = new Map<string, { id: number; label: string; depth: number }>();
+  for (const row of rows) {
+    const key = `${row.top}|${row.name}`;
+    const depth = String(row.path ?? "").split(">").length;
+    const seen = best.get(key);
+    if (!seen || depth < seen.depth)
+      best.set(key, { id: Number(row.taxonomy_id), label: row.name, depth });
+  }
+  return [...best.values()].map(({ id, label }) => ({ id, label }));
 }
 
 /**
@@ -577,7 +601,7 @@ export async function runSweep(
   { maxCalls = Infinity, discovery = true, pages = DISCOVERY_PAGES }:
     { maxCalls?: number; discovery?: boolean; pages?: number } = {},
 ): Promise<{ ran: boolean; why?: string; read?: number; sold?: number; done?: boolean;
-             found?: number; watched?: number; spentToday?: number }> {
+             found?: number; watched?: number; spentToday?: number; shelves?: string[] }> {
   await ensureTables();
 
   /*
@@ -610,8 +634,13 @@ export async function runSweep(
       `UPDATE sold_state SET building_since=NULL,last_error=NULL,watched=?,
          last_night=?,updated_at=CURRENT_TIMESTAMP WHERE id=1`)
       .bind(Number(watched?.n) || 0, nightOf()).run();
+    /* How many shelves resolved, named. A shelf whose taxonomy lookup misses
+       contributes nothing and looks exactly like a shelf nobody buys from —
+       so the run says which ones it actually stocked. */
+    const shelves = await shelfIds();
     return { ran: true, read: result.read, sold: result.sold, done: result.done,
-             found, watched: Number(watched?.n) || 0, spentToday: result.spentToday };
+             found, watched: Number(watched?.n) || 0, spentToday: result.spentToday,
+             shelves: shelves.map(s => s.label) };
   } catch (error) {
     await db().prepare(
       "UPDATE sold_state SET building_since=NULL,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=1")
