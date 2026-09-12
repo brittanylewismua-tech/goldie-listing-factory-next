@@ -1,5 +1,4 @@
 import { env } from "cloudflare:workers";
-import { readDrop, type DropListing } from "@/app/pod-drop";
 
 /**
  * EVERY TEN LISTINGS CRACKS A CARD.
@@ -101,13 +100,6 @@ export const MILESTONES = [
  */
 export const VAULT_SETS = 3;
 
-export type CardKind = "climber" | "hot-shelf" | "newcomer" | "stayer";
-export type Card = {
-  ordinal: number; kind: CardKind; title: string; line: string;
-  listing?: { title: string; url: string; image: string | null };
-  category?: string; openedAt?: string;
-};
-
 type Runtime = { DB: D1Database };
 type Row = Record<string, unknown>;
 const db = () => (env as unknown as Runtime).DB;
@@ -140,99 +132,16 @@ async function weekScore(userId: string) {
   return { listings, sets, credits };
 }
 
-/**
- * Turn today's drop into the cards that could be dealt.
- *
- * Ordered most striking first, so the card that opens is the best one still
- * unseen rather than a random one. A pack that can hand you something dull is
- * a pack people stop opening.
- */
-async function candidates(): Promise<Card[]> {
-  const { categories } = await readDrop();
-  const out: Card[] = [];
-  const brief = (l: DropListing) => ({ title: l.title, url: l.url, image: l.image });
-
-  for (const category of categories) {
-    const byId = new Map(category.listings.map(l => [l.listingId, l]));
-
-    for (const id of category.climbing) {
-      const listing = byId.get(id);
-      if (listing) out.push({
-        ordinal: 0, kind: "climber", category: category.label,
-        title: `Climbing in ${category.label}`,
-        line: `Moved up to number ${listing.rank} since yesterday.`,
-        listing: brief(listing),
-      });
-    }
-
-    for (const id of category.newToday.slice(0, 2)) {
-      const listing = byId.get(id);
-      if (listing) out.push({
-        ordinal: 0, kind: "newcomer", category: category.label,
-        title: `New in the ${category.label} top 30`,
-        line: `Came in at number ${listing.rank} today. It was not there yesterday.`,
-        listing: brief(listing),
-      });
-    }
-
-    /* The quiet one that keeps winning. Old enough to have a real rate, and
-       saved often enough that the rate means something. */
-    const stayer = category.listings
-      .filter(l => l.ageDays >= 90 && l.savesPerDay > 0)
-      .sort((a, b) => b.savesPerDay - a.savesPerDay)[0];
-    if (stayer) out.push({
-      ordinal: 0, kind: "stayer", category: category.label,
-      title: `Selling ${Math.round(stayer.ageDays / 30)} months on`,
-      line: `Still being saved ${stayer.savesPerDay} times a day, ${Math.round(stayer.ageDays / 30)} months after it went up.`,
-      listing: brief(stayer),
-    });
-
-    if (category.heat > 0) out.push({
-      ordinal: 0, kind: "hot-shelf", category: category.label,
-      title: `${category.label} are moving`,
-      line: `A typical listing on this shelf is saved ${category.heat} times a day.`,
-    });
-  }
-
-  const weight: Record<CardKind, number> = { climber: 0, newcomer: 1, stayer: 2, "hot-shelf": 3 };
-  return out.sort((a, b) => weight[a.kind] - weight[b.kind]);
-}
-
 export async function unlockState(userId: string) {
-  const monday = weekStart();
-  const [score, openedRows, thisWeekRow] = await Promise.all([
-    weekScore(userId),
-    /* Every card ever turned. History does not reset. */
-    db().prepare("SELECT ordinal,kind,payload_json,opened_at FROM unlock_cards WHERE user_id=? ORDER BY ordinal DESC LIMIT 30")
-      .bind(userId).all<{ ordinal: number; kind: string; payload_json: string; opened_at: string }>(),
-    /* Only this week's decides what is still owed. */
-    db().prepare("SELECT COUNT(*) count, COALESCE(MAX(ordinal),0) top FROM unlock_cards WHERE user_id=? AND substr(opened_at,1,10) >= ?")
-      .bind(userId, monday).first<{ count: number; top: number }>(),
-  ]);
-  const openedThisWeek = Number(thisWeekRow?.count || 0);
-
-  const opened: Card[] = ((openedRows.results ?? []) as Record<string, unknown>[]).flatMap(row => {
-    try {
-      return [{ ...(JSON.parse(String(row.payload_json)) as Card), ordinal: Number(row.ordinal), openedAt: String(row.opened_at) }];
-    } catch { return []; }
-  });
-
-  const { listings, sets, credits } = score;
-  const earned = Math.floor(credits / PER_CARD);
+  const { listings, sets, credits } = await weekScore(userId);
   const toward = credits % PER_CARD;
   return {
-    weekStart: monday,
+    weekStart: weekStart(),
     listings,
     sets,
     credits,
-    earned,
-    openedThisWeek,
-    /* Cards sit unopened until they are opened, deliberately. The turn is the
-       moment; handing them four at once while they were away wastes three. */
-    unopened: Math.max(0, earned - openedThisWeek),
     toward,
     remaining: PER_CARD - toward,
-    opened,
     milestones: [
       ...MILESTONES.map(m => ({ ...m, unlocked: credits >= m.at, remaining: Math.max(0, m.at - credits), needsSets: 0 })),
       {
@@ -244,27 +153,3 @@ export async function unlockState(userId: string) {
   };
 }
 
-/** Open one. Returns null when none is owed. */
-export async function crackCard(userId: string): Promise<Card | null> {
-  const state = await unlockState(userId);
-  if (state.unopened <= 0) return null;
-
-  /* Ordinals keep climbing across weeks — card 27 is card 27 forever, even
-     though the week's counter went back to nothing on Monday. */
-  const highest = await db().prepare("SELECT COALESCE(MAX(ordinal),0) top FROM unlock_cards WHERE user_id=?")
-    .bind(userId).first<{ top: number }>();
-  const ordinal = Number(highest?.top || 0) + 1;
-  const seen = new Set(state.opened.map(c => `${c.kind}:${c.listing?.url ?? c.category}`));
-  const pool = await candidates();
-  const pick = pool.find(c => !seen.has(`${c.kind}:${c.listing?.url ?? c.category}`)) ?? pool[0];
-
-  /* Nothing to give is not an error and must not burn the card. The drop has
-     not been built yet, or today's is thin; the card stays owed. */
-  if (!pick) return null;
-
-  const card: Card = { ...pick, ordinal };
-  await db().prepare(
-    "INSERT INTO unlock_cards (id,user_id,ordinal,kind,payload_json,listings_at) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id,ordinal) DO NOTHING",
-  ).bind(crypto.randomUUID(), userId, ordinal, card.kind, JSON.stringify(card), state.listings).run();
-  return card;
-}

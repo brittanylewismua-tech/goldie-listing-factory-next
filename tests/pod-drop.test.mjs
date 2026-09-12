@@ -87,58 +87,34 @@ test("the streak copy never scolds", () => {
     assert.doesNotMatch(source.replace(/\/\*[\s\S]*?\*\//g, ""), forbidden);
 });
 
-test("the week resets the access and never the history", () => {
-  /* The commercial engine: everything re-locks on Monday so the tool is worth
-     opening in week forty. The line that keeps it from being a punishment is
-     that the cards already turned are kept — losing something earned stings
-     about twice as hard as gaining it, which is the discouragement this whole
-     design exists to avoid. */
+test("the week resets what is open, and the tiers are the reward", () => {
+  /* The commercial engine: everything re-locks on Monday, so the tool is worth
+     opening in week forty. The reveal that used to sit on top of this is gone
+     — it dispensed trivia from a single daily snapshot and repeated itself.
+     What is left is the part that always worked: list more, see more. */
   const source = read("unlocks.ts");
   assert.match(source, /substr\(COALESCE\(created_at,updated_at\),1,10\) >= \?/,
-    "the counter is scored on this week's listings");
+    "the week is scored on this week's listings");
   assert.match(source, /export function weekStart/);
-  assert.match(source, /ORDER BY ordinal DESC LIMIT 30/,
-    "every card ever turned is still read back — history does not reset");
-  assert.match(source, /COALESCE\(MAX\(ordinal\),0\) top FROM unlock_cards WHERE user_id=\?/,
-    "ordinals keep climbing across weeks");
-  assert.match(read("unlock-cards.tsx"), /these stay yours/,
-    "the panel has to say the finds are permanent, in words a person would use");
+  assert.doesNotMatch(source, /crackCard|unlock_cards/,
+    "the reveal mechanic must not come back without being designed");
 });
 
-test("a card is only ever bonus intel, and an empty pack does not spend it", () => {
+test("a tier is only ever bonus intel, never a listing capability", () => {
   const unlocks = read("unlocks.ts");
-  /* Nothing a seller needs to get work out may sit behind a card, or the game
-     becomes a paywall inside a subscription. */
-  for (const milestone of ["full-drop", "climbers", "lookup", "vault"])
-    assert.match(unlocks, new RegExp(`key: "${milestone}"`), `${milestone} is intel, not function`);
-  /* The rule is about what a milestone GATES, not about which words appear in
-     the file — an earlier version of this matched the word "published" in a
-     comment and failed for no reason. Every milestone must unlock intel, so
-     every one of them is named here; a new key has to be added deliberately
-     and somebody has to think about which kind it is. */
   const keys = [...unlocks.matchAll(/key: "([a-z-]+)"/g)].map(m => m[1]);
   assert.deepEqual(keys.sort(), ["climbers", "full-drop", "lookup", "vault"],
-    "a new milestone must be added to this list on purpose — and it must be intel, never a listing capability");
-  assert.match(unlocks, /if \(!pick\) return null;/,
-    "nothing to give must not burn the card");
+    "a new tier must be added to this list on purpose — and be intel, never a listing capability");
 });
 
-test("every reward says exactly what it opens", () => {
-  const unlocks = read("unlocks.ts");
-  const usage = read("usage/page.tsx");
-  for (const label of ["All 30 per category", "What went up since yesterday", "Look up any keyword", "30 days of history"])
-    assert.match(unlocks, new RegExp(label));
-  for (const vague of ["The full drop", "The Climbers board", "Keyword lookup", "The Vault"])
-    assert.doesNotMatch(unlocks + usage, new RegExp(vague));
-});
-
-test("the thirty-listing reward never exposes or locks the search buffer", () => {
-  const route = read("api/drop/route.ts");
-  const page = read("drop/page.tsx");
-  assert.match(route, /const available = Math\.min\(30, category\.listings\.length\)/);
-  assert.match(route, /held: Math\.max\(0, available - visible\)/);
-  assert.match(page, /Create 3 listings this week to see all 30/);
-  assert.doesNotMatch(page, /List 3 designs this week/);
+test("a locked control is visible, disabled, and says what opens it", () => {
+  /* Hiding it removes the only reason to list. Making it look pressable while
+     it is not is how an interface teaches somebody that it lies. */
+  const panel = read("unlock-cards.tsx");
+  assert.match(panel, /disabled=\{!lookup\?\.unlocked\}/);
+  assert.match(panel, /disabled=\{!movers\?\.unlocked\}/);
+  assert.match(panel, /more listings/);
+  assert.doesNotMatch(panel, /"unlocked"/, "the colour says unlocked, not the word");
 });
 
 test("nothing in the card system is scored on a sale", () => {

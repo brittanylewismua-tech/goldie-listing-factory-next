@@ -4305,9 +4305,6 @@ html, body { background: var(--lf-paper); }
    The image box is sized before anything loads — D832 forbids deferring a
    visible image, so the reserved aspect box is what stops the grid jumping
    as thirty photographs arrive. */
-.drop-page .drop-streak{border:1px solid var(--line,rgba(0,0,0,.12));border-radius:14px;padding:12px 14px;margin:18px 0}
-.drop-page .drop-streak .streak-message{font-weight:700;margin:0}
-.drop-page .drop-streak .streak-reward{margin:4px 0 0;opacity:.75;font-size:14px}
 .drop-page .drop-stale{opacity:.7;font-size:14px;margin:0 0 12px}
 .drop-page .drop-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
 .drop-page .drop-tabs button{border:1px solid var(--line,rgba(0,0,0,.14));background:none;border-radius:16px;padding:6px 12px;font:inherit;font-size:14px;cursor:pointer}
@@ -4321,63 +4318,16 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-card.locked{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border:1px dashed var(--line,rgba(0,0,0,.2));border-radius:10px;padding:14px;aspect-ratio:1}
 .drop-page .drop-card.locked p{margin:0;font-size:13px;opacity:.75}
 .drop-page .drop-note{margin-top:26px;font-size:13px;opacity:.6;max-width:66ch}
-.listing-streak{margin:18px 0}
-.listing-streak .streak-stars{display:flex;gap:5px;margin:5px 0 6px}
-.listing-streak .star{font-size:20px;line-height:1;opacity:.22}
-.listing-streak .star.on{opacity:1;color:#ee6fc0}
-.listing-streak .star.extra{font-size:13px;opacity:.6;align-self:center;font-weight:700}
-.listing-streak .streak-message{margin:0;font-weight:700}
-.listing-streak .streak-reward{margin:4px 0 0;font-size:14px;opacity:.75;max-width:60ch}
 
 /* THE CARDS. The face-down state is drawn at least as carefully as the open
    one — the wanting is the mechanic and the turn is only its release. */
-.unlock-cards{margin:18px 0}
-.unlock-progress{margin:6px 0 10px}
-.unlock-progress p{margin:5px 0 0;font-size:13px;opacity:.7}
-.unlock-track{height:6px;border-radius:6px;background:rgba(0,0,0,.1);overflow:hidden}
-.unlock-track span{display:block;height:100%;background:#ee6fc0;transition:width .4s ease}
-.unlock-card{border-radius:14px;padding:16px;text-align:left}
-.unlock-card.facedown{width:100%;display:flex;align-items:center;gap:12px;border:1px dashed var(--line,rgba(0,0,0,.25));background:none;font:inherit;cursor:not-allowed;opacity:.55}
-.unlock-card.facedown.ready{cursor:pointer;opacity:1;border-style:solid;border-color:#ee6fc0;background:#fdeef7}
-.unlock-back{font-size:20px;line-height:1}
-.unlock-cta{font-weight:700;font-size:14px}
-.unlock-card.open{border:1px solid var(--line,rgba(0,0,0,.14));margin-top:12px}
-.unlock-card.open h3{margin:2px 0 6px;font-size:16px}
-.unlock-kind{margin:0;font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.55}
-.unlock-line{margin:0 0 8px;font-size:14px}
 .unlock-note{margin:8px 0 0;font-size:13px;opacity:.7}
-.unlock-history{margin-top:12px;font-size:13px}
-.unlock-history summary{cursor:pointer;opacity:.7}
-.unlock-history ul{margin:8px 0 0;padding-left:18px;display:grid;gap:6px}
-.unlock-sets{margin:6px 0 0;font-size:13px;opacity:.7;max-width:60ch}
 
 /* TODAY'S DROP — sections with edges, so the page reads as panels rather than
    a column of paragraphs. */
 .drop-page .drop-head{margin-bottom:20px}
 .drop-page .drop-head h1{margin:6px 0 4px}
 .drop-page .drop-head p{margin:0;opacity:.65;font-size:14px}
-
-.drop-page .drop-streak{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
-  border:0;border-radius:14px;padding:14px 16px;margin:0 0 14px;
-  background:linear-gradient(180deg,#fdeef7,#fff)}
-.drop-page .drop-streak-label{font-size:14px;font-weight:700}
-.drop-page .drop-streak-lock{margin-left:auto;font-size:13px;opacity:.7}
-
-.unlock-cards{border-radius:14px;padding:16px;background:#0d0c0c;color:#fff;margin:0 0 18px}
-.unlock-cards .mini-label{color:#8e8e8e}
-.unlock-cards .unlock-track{background:rgba(255,255,255,.14)}
-.unlock-cards .unlock-progress p{color:#fff;opacity:.8}
-.unlock-card.facedown{border-color:rgba(255,255,255,.3);color:#fff}
-.unlock-card.facedown.ready{background:#ee6fc0;border-color:#ee6fc0;color:#1b0e17}
-.unlock-ladder{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:8px;margin:14px 0 0;padding:0}
-.unlock-ladder li{border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:9px 10px;display:grid;gap:2px}
-.unlock-ladder li.on{border-color:#ee6fc0;background:rgba(238,111,192,.14)}
-.unlock-ladder .rung-name{font-size:13px;font-weight:700}
-.unlock-ladder .rung-at{font-size:12px;opacity:.6}
-.unlock-ladder li.on .rung-at{color:#f5a8d8;opacity:1}
-.unlock-cards .unlock-sets{margin:12px 0 0;font-size:13px;opacity:.65;color:#fff}
-.unlock-cards .unlock-history summary,.unlock-cards .unlock-note{color:#fff;opacity:.7}
-.unlock-card.open{background:#fff;color:#0d0c0c;border:0}
 
 .drop-page .drop-tabs{gap:6px;margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid var(--line,rgba(0,0,0,.1))}
 .drop-page .drop-grid{grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:18px}
@@ -4403,7 +4353,6 @@ html, body { background: var(--lf-paper); }
    sharing a background. */
 .drop-page .drop-card-surface{background:#fff;border:1px solid var(--line,rgba(0,0,0,.1));
   border-radius:16px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.drop-page .drop-card-surface > .drop-streak{margin-top:0}
 .drop-page .drop-grid{margin-top:2px}
 .drop-page .drop-note{margin-top:22px}
 
@@ -4441,15 +4390,6 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-card.locked p{margin:0;font-size:13px;color:var(--ink-3,#8b8380)}
 
 /* The ladder is a checklist, so it must not look pressable. */
-.unlock-ladder li{grid-template-columns:16px 1fr auto;align-items:center;gap:8px;
-  border:0;border-bottom:1px solid rgba(255,255,255,.1);border-radius:0;padding:9px 2px;display:grid}
-.unlock-ladder li:last-child{border-bottom:0}
-.unlock-ladder li.on{background:none}
-.unlock-ladder .rung-mark{font-size:13px;color:#ee6fc0;font-weight:800}
-.unlock-ladder .rung-at{font-size:12px;opacity:.55;text-align:right}
-.unlock-ladder li.on .rung-name{opacity:1}
-.unlock-ladder li:not(.on) .rung-name{opacity:.6}
-.unlock-open-link{display:inline-block;margin-top:6px;font-size:13px;font-weight:700}
 
 /* The wait. Centred, with a bar that moves, because a line of text alone
    reads as a page that has stopped rather than one that is working. */
@@ -4465,7 +4405,6 @@ html, body { background: var(--lf-paper); }
 @media (prefers-reduced-motion:reduce){.drop-page .drop-loading-track i{animation:none;width:100%}}
 
 /* An unlocked rung is said with colour, not with the word "unlocked". */
-.unlock-ladder li.on .rung-name{color:#f5a8d8}
 
 /* One step back, top-left of the card. */
 .drop-page .drop-toolbar{display:flex;align-items:center;gap:12px;margin:0 0 12px}
@@ -4473,5 +4412,28 @@ html, body { background: var(--lf-paper); }
   padding:6px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
 .drop-page .drop-back:hover{border-color:#0d0c0c}
 .drop-page .drop-viewing{font-size:13px;color:var(--ink-3,#8b8380)}
-.drop-page .drop-streak-count{font-size:29px;font-weight:800;line-height:1;color:#b02371;
-  font-variant-numeric:tabular-nums}
+
+/* WHAT THIS WEEK OPENED. Real controls, spaced deliberately: a search that
+   searches, a switch that filters, one line of fact. A locked control stays
+   put and says what would open it. */
+.unlock-panel{border:1px solid var(--line,rgba(0,0,0,.12));border-radius:14px;
+  padding:14px 16px;margin:0 0 18px;background:linear-gradient(180deg,#fdeef7,#fff)}
+.unlock-week{margin:0 0 10px;font-size:13px;color:var(--ink-2,#4b4644)}
+.unlock-week b{font-size:15px;color:#b02371;font-variant-numeric:tabular-nums}
+.unlock-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.unlock-search{display:flex;gap:6px;flex:1 1 280px;min-width:0}
+.unlock-search input{flex:1;min-width:0;border:1px solid var(--line,rgba(0,0,0,.18));
+  border-radius:10px;padding:8px 12px;font:inherit;font-size:13px;background:#fff}
+.unlock-search input:disabled{background:rgba(0,0,0,.03);color:var(--ink-3,#8b8380)}
+.unlock-search button,.unlock-toggle{border:1px solid #0d0c0c;background:#0d0c0c;color:#fff;
+  border-radius:10px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.unlock-toggle{background:none;color:#0d0c0c}
+.unlock-toggle.on{background:#ee6fc0;border-color:#ee6fc0;color:#1b0e17}
+.unlock-search button:disabled,.unlock-toggle:disabled{opacity:.4;cursor:not-allowed;
+  background:none;color:var(--ink-3,#8b8380);border-color:var(--line,rgba(0,0,0,.18))}
+.unlock-toggle small{font-weight:400;opacity:.8}
+.unlock-fact{margin:10px 0 0;font-size:13px;color:var(--ink-3,#8b8380);max-width:70ch}
+.unlock-note{margin:8px 0 0;font-size:13px;color:var(--ink-2,#4b4644)}
+.unlock-found{margin-top:16px;border-top:1px solid var(--line,rgba(0,0,0,.1));padding-top:14px}
+.unlock-found .mini-label{margin-bottom:10px}
+.drop-page .drop-none{margin:0;padding:24px 0;font-size:13px;color:var(--ink-3,#8b8380)}

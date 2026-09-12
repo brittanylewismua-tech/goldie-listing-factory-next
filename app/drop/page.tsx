@@ -39,6 +39,7 @@ export default function DropPage() {
   const [error, setError] = useState("");
   const [open, setOpen] = useState<number | null>(null);
   const [rebuilding, setRebuilding] = useState(false);
+  const [onlyMovers, setOnlyMovers] = useState(false);
 
   /*
     REBUILD TODAY. Owner only, and the server enforces that — a 403 simply
@@ -109,22 +110,8 @@ export default function DropPage() {
         {rebuilding ? "Reading Etsy…" : "Reload today's listings from Etsy"}
       </button>}
 
-      {!drop.viewing && <UnlockCards />}
+      {!drop.viewing && <UnlockCards onlyMovers={onlyMovers} onToggleMovers={setOnlyMovers} />}
 
-      {!drop.viewing && <section className="drop-streak">
-        {/* "6/5" is a fraction nobody asked for. The number is how many days
-            they listed; the target only matters while it is unmet, and then
-            it is said as the thing it unlocks. */}
-        <span className="drop-streak-count">{drop.streak.count}</span>
-        <span className="drop-streak-label">
-          {drop.streak.count === 1 ? "day you listed this week" : "days you listed this week"}
-        </span>
-        {!drop.unlocked && <span className="drop-streak-lock">
-          {drop.lockedCount === 1
-            ? "List on 1 more day to see all 30 in every category"
-            : `List on ${drop.lockedCount} more days to see all 30 in every category`}
-        </span>}
-      </section>}
 
       {!drop.fresh && <p className="drop-stale">
         {/* Said out loud. A drop dated yesterday reads as a bug unless the page
@@ -154,9 +141,14 @@ export default function DropPage() {
               </button>)}
           </nav>
 
-          {drop.categories.filter(category => category.taxonomyId === open).map(category =>
+          {drop.categories.filter(category => category.taxonomyId === open).map(category => {
+            /* The switch narrows the shelf to what actually moved — the only
+               reading of it that is news rather than a snapshot. */
+            const moved = new Set([...category.newToday, ...category.climbing]);
+            const shown = onlyMovers ? category.listings.filter(l => moved.has(l.listingId)) : category.listings;
+            return
             <section key={category.taxonomyId} className="drop-grid">
-              {category.listings.map(listing => {
+              {shown.map(listing => {
                 const isNew = category.newToday.includes(listing.listingId);
                 const climbing = category.climbing.includes(listing.listingId);
                 const badge = isNew ? "New today" : climbing ? "Climbing" : null;
@@ -187,11 +179,15 @@ export default function DropPage() {
                   </figcaption>
                 </figure>;
               })}
-              {category.held > 0 && <article className="drop-card locked">
+              {onlyMovers && shown.length === 0 && <p className="drop-none">
+                Nothing in {category.label} moved since yesterday.
+              </p>}
+              {!onlyMovers && category.held > 0 && <article className="drop-card locked">
                 <p className="drop-numeral">+{category.held}</p>
                 <p>more in this category. Create 3 listings this week to see all 30.</p>
               </article>}
-            </section>)}
+            </section>;
+          })}
         </>}
 
       </div>

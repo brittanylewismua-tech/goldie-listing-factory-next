@@ -350,9 +350,9 @@ export async function readDrop(): Promise<{ day: string; categories: DropCategor
       newToday: before.length ? listings.filter(l => !beforeRank.has(l.listingId)).map(l => l.listingId) : [],
       climbing: listings.filter(l => { const was = beforeRank.get(l.listingId); return was !== undefined && was - l.rank >= 5; }).map(l => l.listingId),
     };
-  }).sort((a, b) => b.heat - a.heat);
+  });
 
-  return { day, categories };
+  return { day, categories: inOrder(categories) };
 }
 
 /**
@@ -409,12 +409,28 @@ export async function listingStreak(userId: string) {
  * Returns nothing at all when that day was never built, so the page can hide
  * the button instead of offering a door onto an empty room.
  */
+/**
+ * APPAREL FIRST, ALWAYS, IN THE ORDER THE METHOD TEACHES.
+ *
+ * These were sorted by heat, so the first tab was whichever shelf happened to
+ * be busiest that morning — stickers one day, blankets the next. A seller
+ * opening this is looking for the tee, the sweatshirt and the hoodie, in that
+ * order, because that is the set they are told to build. The order of the page
+ * should not be decided by an arithmetic mean.
+ */
+const ORDER = POD_PRODUCTS.map(p => p.label);
+const inOrder = (categories: DropCategory[]) =>
+  [...categories].sort((a, b) => {
+    const ai = ORDER.indexOf(a.label), bi = ORDER.indexOf(b.label);
+    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+  });
+
 export async function readDropFor(day: string): Promise<DropCategory[]> {
   const rows = await db().prepare(
     "SELECT taxonomy_id,label,listings_json FROM pod_drop_snapshots WHERE day=?",
   ).bind(day).all<{ taxonomy_id: number; label: string; listings_json: string }>();
 
-  return ((rows.results ?? []) as Row[]).flatMap(raw => {
+  const out = ((rows.results ?? []) as Row[]).flatMap(raw => {
     const listings = (() => {
       try { return JSON.parse(String(raw.listings_json)) as DropListing[]; } catch { return []; }
     })();
@@ -427,7 +443,8 @@ export async function readDropFor(day: string): Promise<DropCategory[]> {
       /* A past day is shown as it was. Movement is a thing about today. */
       newToday: [], climbing: [],
     }];
-  }).sort((a, b) => b.heat - a.heat);
+  });
+  return inOrder(out);
 }
 
 /** A past day keeps the deepest view this seller had already opened. */
