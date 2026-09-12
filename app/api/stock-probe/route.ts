@@ -65,17 +65,20 @@ async function ensure() {
          favorites  INTEGER,
          taxonomy_id INTEGER,
          title      TEXT,
+         cohort     TEXT,
          seen_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
        )`,
     )
     .run();
+  /* Added after the first run; the table already existed without it. */
+  try { await db().prepare("ALTER TABLE stock_probe ADD COLUMN cohort TEXT").run(); } catch { /* already there */ }
 }
 
 /** Etsy's search, for listing ids only. */
-async function searchIds(keywords: string): Promise<number[]> {
+async function searchIds(keywords: string, sortOn: "created" | "score"): Promise<number[]> {
   await waitForEtsyCapacity();
   const response = await fetch(
-    `https://openapi.etsy.com/v3/application/listings/active?keywords=${encodeURIComponent(keywords)}&limit=${PER_QUERY}`,
+    `https://openapi.etsy.com/v3/application/listings/active?keywords=${encodeURIComponent(keywords)}&limit=${PER_QUERY}&sort_on=${sortOn}&sort_order=down`,
     { headers: { "x-api-key": etsyApiCredential() }, signal: AbortSignal.timeout(20000) },
   );
   await recordEtsyCall(response, "qa");
@@ -112,9 +115,27 @@ export const GET = withErrorLog("stock-probe", async (_request: Request) => {
   await ensure();
 
   /* ---- collect ---- */
-  const ids: number[] = [];
-  for (const query of SAMPLE_QUERIES) ids.push(...(await searchIds(query)));
-  const unique = Array.from(new Set(ids));
+  /*
+    TWO COHORTS, BECAUSE THE FIRST RUN SAMPLED THE WRONG ONE.
+
+    listings/active is newest-first unless told otherwise, so the opening
+    reading was the six hundred most recently created listings on Etsy — the
+    population least likely to have sold anything, and not what the feature is
+    about either. Nobody wants to know what the newest listings are doing.
+
+    "established" is Etsy's own score order: the listings actually performing
+    for a phrase. That is both the honest test population and the right seed
+    for the corpus. "new" is kept alongside it, because the difference between
+    how the two move is itself worth seeing.
+  */
+  const cohortOf = new Map<number, string>();
+  for (const query of SAMPLE_QUERIES) {
+    for (const found of await searchIds(query, "score"))
+      if (!cohortOf.has(found)) cohortOf.set(found, "established");
+    for (const found of await searchIds(query, "created"))
+      if (!cohortOf.has(found)) cohortOf.set(found, "new");
+  }
+  const unique = [...cohortOf.keys()];
   if (!unique.length)
     return NextResponse.json({ error: "Etsy returned no listings." }, { status: 502 });
 
@@ -165,7 +186,7 @@ export const GET = withErrorLog("stock-probe", async (_request: Request) => {
   const priors = (before.results ?? []) as unknown as Prior[];
   const previous = new Map<number, Prior>(priors.map((r) => [Number(r.listing_id), r]));
 
-  const fell: { listingId: number; from: number; to: number; sold: number; title: string }[] = [];
+  const fell: { listingId: number; from: number; to: number; sold: number; cohort: string; title: string }[] = [];
   const rose: number[] = [];
   let compared = 0;
   let oldestSeen: string | null = null;
@@ -184,6 +205,7 @@ export const GET = withErrorLog("stock-probe", async (_request: Request) => {
         from: Number(was.quantity),
         to: now,
         sold: delta,
+        cohort: cohortOf.get(id) ?? "unknown",
         title: String(row.title ?? "").slice(0, 80),
       });
     else if (delta < 0) rose.push(id);
@@ -195,12 +217,12 @@ export const GET = withErrorLog("stock-probe", async (_request: Request) => {
     .map((r) =>
       db()
         .prepare(
-          `INSERT INTO stock_probe (listing_id,quantity,favorites,taxonomy_id,title,seen_at)
-           VALUES (?,?,?,?,?,CURRENT_TIMESTAMP)
+          `INSERT INTO stock_probe (listing_id,quantity,favorites,taxonomy_id,title,cohort,seen_at)
+           VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP)
            ON CONFLICT(listing_id) DO UPDATE SET
              quantity=excluded.quantity, favorites=excluded.favorites,
              taxonomy_id=excluded.taxonomy_id, title=excluded.title,
-             seen_at=CURRENT_TIMESTAMP`,
+             cohort=excluded.cohort, seen_at=CURRENT_TIMESTAMP`,
         )
         .bind(
           Number(r.listing_id),
@@ -208,6 +230,7 @@ export const GET = withErrorLog("stock-probe", async (_request: Request) => {
           Number(r.num_favorers) || 0,
           Number.isFinite(Number(r.taxonomy_id)) ? Number(r.taxonomy_id) : null,
           String(r.title ?? "").slice(0, 200),
+          cohortOf.get(Number(r.listing_id)) ?? null,
         ),
     );
   for (let at = 0; at < writes.length; at += 50) await db().batch(writes.slice(at, at + 50));
