@@ -140,3 +140,20 @@ test("the page says where its numbers come from", () => {
   assert.match(page, /Where these numbers come from/);
   assert.match(page, /compare it to the night before/);
 });
+
+test("pages=0 really means no discovery", () => {
+  /* `Number("0") || 1` is 1. The first version of the build route used that
+     pattern and ran discovery on every request that asked for none, silently,
+     while reporting sixteen hundred listings found. Zero is a legitimate value
+     for this parameter and must survive parsing. */
+  const source = read("api/sold-overnight/build/route.ts");
+  assert.doesNotMatch(source, /Number\(url\.searchParams\.get\([^)]*\)\)\s*\|\|/);
+  assert.match(source, /raw === null \|\| raw\.trim\(\) === ""/);
+});
+
+test("a second pass in one night adds to the count rather than replacing it", () => {
+  /* Sampling twice must not halve the day's total or double it — the move row
+     accumulates, and each pass subtracts from what the previous pass stored. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /sold=sold\+excluded\.sold/);
+});

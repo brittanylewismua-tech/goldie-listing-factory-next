@@ -505,6 +505,22 @@ export async function readBoard(limit = 200, night?: string): Promise<SoldBoard>
   };
 }
 
+/**
+ * Let tonight be read a second time.
+ *
+ * Clears the read stamps and the claim, so a fresh pass runs against the stock
+ * figures the last pass stored. Sales accumulate across passes rather than
+ * replacing each other, so sampling twice in a night simply counts more of
+ * what happened in it.
+ */
+export async function resetTonight() {
+  await ensureTables();
+  await db().batch([
+    db().prepare("UPDATE sold_watch SET last_read=NULL"),
+    db().prepare("UPDATE sold_state SET last_night=NULL,building_night=NULL,building_since=NULL WHERE id=1"),
+  ]);
+}
+
 /** The night before the one being shown, for the back button. */
 export async function previousNight(before: string): Promise<string | null> {
   const row = await db().prepare(

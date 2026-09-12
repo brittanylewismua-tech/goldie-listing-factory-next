@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { withErrorLog } from "@/app/error-log";
-import { buildNight } from "@/app/sold-overnight";
+import { buildNight, resetTonight } from "@/app/sold-overnight";
 
 /**
  * RUN THE NIGHT'S READ PROPERLY.
@@ -28,9 +28,36 @@ export const POST = withErrorLog("sold-overnight-build", async (request: Request
     this did discovery plus a hundred and twenty reads in one request, was cut
     off partway, and left a claim standing over an empty corpus.
   */
-  const maxCalls = Math.max(1, Math.min(400, Number(url.searchParams.get("calls")) || 40));
-  const pages = Math.max(0, Math.min(20, Number(url.searchParams.get("pages")) || 1));
+  /*
+    `|| default` CANNOT BE USED ON A NUMBER THAT IS ALLOWED TO BE ZERO.
+
+    pages=0 means "skip discovery, just read what we already watch", and
+    `Number("0") || 1` is 1 — so the first version of this ran discovery every
+    time it was told not to, silently, and reported 1,600 listings found on a
+    request that asked for none. Parse, then fall back only when absent.
+  */
+  const asNumber = (name: string, fallback: number) => {
+    const raw = url.searchParams.get(name);
+    if (raw === null || raw.trim() === "") return fallback;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : fallback;
+  };
+
+  const maxCalls = Math.max(1, Math.min(400, asNumber("calls", 40)));
+  const pages = Math.max(0, Math.min(20, asNumber("pages", 1)));
   const discovery = url.searchParams.get("discover") !== "0" && pages > 0;
+
+  /*
+    READ THE SHELF AGAIN WITHIN THE SAME NIGHT.
+
+    The sweep normally skips anything already read tonight, which is what keeps
+    the nightly bill flat. `again=1` clears that so a second pass can run — and
+    the second pass is not a duplicate: it subtracts from the reading the first
+    pass stored, so the night's total accumulates rather than resetting. More
+    frequent sampling makes the count more accurate, not less.
+  */
+  const again = url.searchParams.get("again") === "1";
+  if (again) await resetTonight();
 
   const result = await buildNight({ maxCalls, discovery, pages });
   return NextResponse.json(result);
