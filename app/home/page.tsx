@@ -48,8 +48,8 @@ const TOOLS: Tool[] = [
       <path d="M3 17l6-6 4 4 7-7" /><path d="M14 8h7v7" /></svg>,
   },
   {
-    href: null,
-    name: "Trademark Search",
+    href: "/trademark",
+    name: "Trademark Check",
     what: "Check a phrase before you print it.",
     icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
       <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>,

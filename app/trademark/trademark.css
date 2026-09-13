@@ -1,0 +1,72 @@
+/* Trademark checker.
+   Its own stylesheet, imported by its own page, so it adds nothing to the
+   shared sheet another branch is editing. Same palette as the rest of the
+   app, read off the live shell: #ff4fc3 on #1b0e17, near-black actions,
+   --ink #4b283e, --line for edges. */
+
+.tm-page .tm-form { display: flex; gap: 8px; margin: 0 0 24px; flex-wrap: wrap; }
+.tm-page .tm-form input {
+  flex: 1; min-width: 240px; background: #fff;
+  border: 1px solid var(--line, #5b354f29); border-radius: 10px;
+  padding: 12px 14px; font: inherit; font-size: 16px; color: var(--ink, #4b283e);
+}
+.tm-page .tm-form input::placeholder { color: #8b8390; }
+.tm-page .tm-form input:focus-visible { outline: 2px solid #ff4fc3; outline-offset: 1px; }
+.tm-page .tm-form button {
+  border: 1px solid #0d0d0d; background: #0d0d0d; color: #fff;
+  border-radius: 12px; padding: 12px 20px;
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.tm-page .tm-form button:disabled { opacity: .4; cursor: not-allowed; }
+
+/* The verdict. One element, and its colour is the answer — a seller should
+   know before reading a word. */
+.tm-verdict {
+  display: grid; gap: 12px; padding: 24px;
+  border-radius: 16px; border: 1px solid var(--line, #5b354f29);
+  background: var(--surface, #fbfaff); margin: 0 0 24px;
+}
+.tm-verdict.high { border-color: #b8323c; background: #fff5f5; }
+.tm-verdict.clear { border-color: #2f8f63; background: #f3fbf7; }
+.tm-verdict .tm-headline {
+  margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.015em;
+}
+.tm-verdict.high .tm-headline { color: #92222b; }
+.tm-verdict.clear .tm-headline { color: #1f6b49; }
+.tm-verdict p { margin: 0; font-size: 15px; color: var(--ink, #4b283e); line-height: 1.55; }
+
+/* The phrase with the risky words marked in it, so the seller sees exactly
+   which word is the problem rather than being told the phrase is bad. */
+.tm-phrase {
+  margin: 0; padding: 14px 16px; border-radius: 10px; background: #fff;
+  border: 1px solid var(--line, #5b354f29);
+  font-size: 17px; line-height: 1.5; color: var(--ink, #4b283e); word-break: break-word;
+}
+.tm-phrase mark {
+  background: #ffd9ef; color: #92222b; border-radius: 4px;
+  padding: 1px 3px; font-weight: 700;
+}
+
+.tm-hits { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.tm-hit {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 12px 14px; border-radius: 10px;
+  background: #fff; border: 1px solid var(--line, #5b354f29);
+}
+.tm-hit b { font-size: 15px; color: var(--ink, #4b283e); }
+.tm-hit .tm-owner { font-size: 14px; color: #8b8390; }
+.tm-hit .tm-cat {
+  margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: #92222b;
+  background: #ffe4ef; border-radius: 999px; padding: 3px 10px; white-space: nowrap;
+}
+
+.tm-note { font-size: 13px; color: #8b8390; max-width: 62ch; line-height: 1.6; }
+.tm-note strong { color: var(--ink, #4b283e); }
+
+.tm-examples { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 24px; }
+.tm-examples button {
+  border: 1px solid var(--line, #5b354f29); background: none; border-radius: 999px;
+  padding: 6px 14px; font: inherit; font-size: 13px; color: var(--ink, #4b283e); cursor: pointer;
+}
+.tm-examples button:hover { border-color: #ff4fc3; }
