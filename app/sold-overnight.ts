@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import type { EtsyFeature } from "@/app/api/etsy/client";
 import { MAX_UNITS_PER_READ, movement, usdFromCents, tradesOnRights } from "@/app/sold-overnight-math";
+import { attribute, shopDelta, type Attribution } from "@/app/sold-attribution";
 import {
   etsyApiCredential,
   etsyBudget,
