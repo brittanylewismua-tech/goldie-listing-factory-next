@@ -27,14 +27,32 @@ export type ProductBundle = { id:string;name:string;recipeIds:string[] };
  * unconfigured product reached a batch and had to be answered for there, which
  * is the thing the recipe exists to prevent. */
 export function recipeIsSetUp(recipe: Recipe) {
-  const colorsReady=recipe.requiresColorSelection===false||Boolean((recipe.defaultColorIds||[]).length);
-  const sizesReady=recipe.requiresSizeSelection===false||Boolean((recipe.defaultSizeIds||[]).length);
-  const pricingReady=Number(recipe.defaultProfitTarget)>0;
-  const shippingReady=Number(recipe.etsyShippingProfileId)>0;
-  const photosReady=Boolean((recipe.printifyImageIndices||[]).length);
-  const descriptionReady=Boolean(recipe.description?.trim());
-  const keywordsReady=Boolean(recipe.keywordListId);
-  return colorsReady&&sizesReady&&pricingReady&&shippingReady&&photosReady&&descriptionReady&&keywordsReady;
+  return recipeSetupGap(recipe) === null;
+}
+
+/**
+ * WHICH OF THE SEVEN IS MISSING.
+ *
+ * The card said "Finish setup" and nothing else, so a mug sitting one field
+ * short of ready looked identical to one that had never been touched — and the
+ * only way to find out which field was to open it and compare seven sections
+ * against a tee that worked. Both saved non-apparel products turned out to be
+ * short of exactly one thing, the keyword bank, and neither said so.
+ *
+ * Returns the first unmet requirement in the order a seller fills them in, or
+ * null when the product is ready.
+ */
+export function recipeSetupGap(recipe: Recipe): string | null {
+  if (!(recipe.requiresColorSelection===false||Boolean((recipe.defaultColorIds||[]).length)))
+    return "colors";
+  if (!(recipe.requiresSizeSelection===false||Boolean((recipe.defaultSizeIds||[]).length)))
+    return "sizes";
+  if (!(Number(recipe.defaultProfitTarget)>0)) return "pricing";
+  if (!(Number(recipe.etsyShippingProfileId)>0)) return "shipping";
+  if (!(recipe.printifyImageIndices||[]).length) return "photos";
+  if (!recipe.description?.trim()) return "a description";
+  if (!recipe.keywordListId) return "a keyword bank";
+  return null;
 }
 
 
@@ -337,7 +355,7 @@ export function SavedWorkflow(props: WorkflowProps) {
     {recipesLoaded&&reachable.length > 0 && (!activeId||showLibrary) && <>{bundleForm&&<div className="bundle-builder"><label><span>{editingBundleId?"Bundle name":"Name your bundle"}</span><input value={bundleName} onChange={event=>setBundleName(event.target.value)} placeholder="Example: Tee + sweatshirt + hoodie" autoFocus/></label><div className="bundle-builder-instruction"><b>Choose 2 to 4 products</b><span>{bundleIds.length===0?"Click the product cards below":`${bundleIds.length} selected`}</span></div></div>}{bundleForm&&<div className="recipe-library-head"><span>Products</span></div>}<div className={`recipe-grid ${bundleForm?"bundle-selection-grid":""}`}>{reachable.map((recipe) => {const selecting=pendingAction===`recipe:${recipe.id}`,inBundle=bundleIds.includes(recipe.id),bundleDisabled=bundleForm&&(!recipeIsSetUp(recipe)||(!inBundle&&bundleIds.length>=4)),bundleReason=bundleForm&&!recipeIsSetUp(recipe)?`Finish setting up ${recipe.name} before adding it to a bundle.`:bundleForm&&!inBundle&&bundleIds.length>=4?"A bundle holds up to 4 products. Remove one to add another.":"";return <article className={`recipe-tile ${bundleForm&&inBundle?"selected bundle-selected":activeId === recipe.id ? "selected" : ""} ${selecting?"selecting":""}`} aria-busy={selecting} key={recipe.id}><button className="recipe-use" title={bundleReason||(bundleForm?(inBundle?`Remove ${recipe.name} from bundle`:`Add ${recipe.name} to bundle`):`Choose ${recipe.name}`)} aria-label={bundleForm?(inBundle?`Remove ${recipe.name} from bundle`:`Add ${recipe.name} to bundle`):`Choose ${recipe.name}`} aria-pressed={bundleForm?inBundle:undefined} disabled={Boolean(pendingAction)||bundleDisabled} onClick={async () => {if(bundleForm){setBundleIds(current=>current.includes(recipe.id)?current.filter(id=>id!==recipe.id):[...current,recipe.id]);return}if(actionLock.current)return;actionLock.current=true;setPendingAction(`recipe:${recipe.id}`);setActiveId(recipe.id);setMessage("");try{if(!await props.onUseRecipe(recipe)){setActiveId(props.selectedProductId);return}setKeywordListId(recipe.keywordListId||"");setEditing(false);setShowLibrary(false)}finally{actionLock.current=false;setPendingAction("")}}}>{/* D729 · The band the prototype puts above a product's name. D197 removed
                 what used to sit in it - a "P" for Printify, identical on every card and
                 meaningless on all of them. The band stays because it is what makes the
-                tile a product card; a bundle tile still fills it with its member count. */}<span className="recipe-icon" aria-hidden="true">{recipe.previewImage?<img src={recipe.previewImage} alt="" decoding="async"/>:<span className="goldie-spinner"/>}</span><span className="recipe-copy"><b>{recipe.name}</b><small>{selecting?"Loading product details…":recipeSummary(recipe)}</small>{!selecting&&recipeShopLabel(recipe)?<small className="recipe-shop" title={`Printify store: ${recipeShopLabel(recipe)}`}>Shop: {recipeShopLabel(recipe)}</small>:null}{bundleForm&&<small className="bundle-placement-cue">{recipePlacementCue(recipe)}</small>}{bundleForm&&inBundle?<em>✓ Product {bundleIds.indexOf(recipe.id)+1}</em>:!recipeIsSetUp(recipe)?<em>Finish setup</em>:selecting?<em>Loading {recipe.name}…</em>:null}</span></button>{!bundleForm&&<><button className="edit-recipe" title="Edit this product’s saved setup" disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`edit:${recipe.id}`);setActiveId(recipe.id);try{if(!await props.onUseRecipe(recipe)){setActiveId(props.selectedProductId);return}setEditingId(recipe.id); setName(recipe.name);setKeywordListId(recipe.keywordListId||"");setEditing(true)}finally{actionLock.current=false;setPendingAction("")}}}>Edit product</button><button className="delete-recipe" disabled={Boolean(pendingAction)} aria-label={`Delete ${recipe.name}`} title="Delete saved product" onClick={() => void remove(recipe)}>Delete</button></>}</article>})}</div>{bundleForm&&duplicatePairs.length>0&&<label className="bundle-duplicate-warning"><input type="checkbox" checked={duplicateAcknowledged} onChange={event=>setDuplicateAcknowledged(event.target.checked)}/><span><b>These products appear to use the same garment and print setup.</b><small>{duplicatePairs.join("; ")}. Keep both only if that is intentional.</small></span></label>}{bundleForm&&<div className="bundle-builder-actions"><button className="secondary-action" disabled={bundleSaving} onClick={()=>setBundleForm(false)}>Cancel</button><button className="save-recipe" aria-busy={bundleSaving} disabled={bundleSaving||!bundleName.trim()||bundleIds.length<2||(duplicatePairs.length>0&&!duplicateAcknowledged)} onClick={()=>void saveBundle()}>{bundleSaving?"Saving bundle…":editingBundleId?"Update bundle":`Save bundle${bundleIds.length>=2?` · ${bundleIds.length} products`:""}`}</button></div>}</>}
+                tile a product card; a bundle tile still fills it with its member count. */}<span className="recipe-icon" aria-hidden="true">{recipe.previewImage?<img src={recipe.previewImage} alt="" decoding="async"/>:<span className="goldie-spinner"/>}</span><span className="recipe-copy"><b>{recipe.name}</b><small>{selecting?"Loading product details…":recipeSummary(recipe)}</small>{!selecting&&recipeShopLabel(recipe)?<small className="recipe-shop" title={`Printify store: ${recipeShopLabel(recipe)}`}>Shop: {recipeShopLabel(recipe)}</small>:null}{bundleForm&&<small className="bundle-placement-cue">{recipePlacementCue(recipe)}</small>}{bundleForm&&inBundle?<em>✓ Product {bundleIds.indexOf(recipe.id)+1}</em>:recipeSetupGap(recipe)?<em>Finish setup: {recipeSetupGap(recipe)}</em>:selecting?<em>Loading {recipe.name}…</em>:null}</span></button>{!bundleForm&&<><button className="edit-recipe" title="Edit this product’s saved setup" disabled={Boolean(pendingAction)} onClick={async () => {if(actionLock.current)return;actionLock.current=true;setPendingAction(`edit:${recipe.id}`);setActiveId(recipe.id);try{if(!await props.onUseRecipe(recipe)){setActiveId(props.selectedProductId);return}setEditingId(recipe.id); setName(recipe.name);setKeywordListId(recipe.keywordListId||"");setEditing(true)}finally{actionLock.current=false;setPendingAction("")}}}>Edit product</button><button className="delete-recipe" disabled={Boolean(pendingAction)} aria-label={`Delete ${recipe.name}`} title="Delete saved product" onClick={() => void remove(recipe)}>Delete</button></>}</article>})}</div>{bundleForm&&duplicatePairs.length>0&&<label className="bundle-duplicate-warning"><input type="checkbox" checked={duplicateAcknowledged} onChange={event=>setDuplicateAcknowledged(event.target.checked)}/><span><b>These products appear to use the same garment and print setup.</b><small>{duplicatePairs.join("; ")}. Keep both only if that is intentional.</small></span></label>}{bundleForm&&<div className="bundle-builder-actions"><button className="secondary-action" disabled={bundleSaving} onClick={()=>setBundleForm(false)}>Cancel</button><button className="save-recipe" aria-busy={bundleSaving} disabled={bundleSaving||!bundleName.trim()||bundleIds.length<2||(duplicatePairs.length>0&&!duplicateAcknowledged)} onClick={()=>void saveBundle()}>{bundleSaving?"Saving bundle…":editingBundleId?"Update bundle":`Save bundle${bundleIds.length>=2?` · ${bundleIds.length} products`:""}`}</button></div>}</>}
     {/* D323 · The edit form used to render after the saved-bundles section, so
         clicking Edit on a product opened the form below the bundles and the
         disclosure — far from the tile that was clicked, often off screen. It

@@ -43,7 +43,10 @@ test('D1238: listing cards expose exact readiness, price, and direct corrections
 
 test('D1238: product cards identify incomplete recipes and expose Edit product',()=>{
   for(const field of ['defaultProfitTarget','etsyShippingProfileId','printifyImageIndices','description','keywordListId'])assert.match(tools,new RegExp(`recipe\\.${field}`));
-  assert.match(tools,/>Finish setup</);
+  /* D1373 — the card names which of the seven is missing rather than saying
+     only "Finish setup", which made a product one field short look identical
+     to one never touched. */
+  assert.match(tools,/>Finish setup: \{recipeSetupGap\(recipe\)\}</);
   assert.match(tools,/>Edit product</);
   assert.match(css,/recipe-listing-sections/);
 });

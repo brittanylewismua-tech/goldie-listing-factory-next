@@ -664,8 +664,15 @@ test("D222: a product cannot join a bundle until it has been set up", async () =
   assert.match(tools, /bundleDisabled=bundleForm&&\(!recipeIsSetUp\(recipe\)\|\|/, "the card is disabled");
   assert.match(tools, /Finish setting up \$\{recipe\.name\} before adding it to a bundle/, "and the card says why in its tooltip");
 
-  const body = tools.slice(tools.indexOf("export function recipeIsSetUp"));
-  const source = body.slice(0, body.indexOf("\n}") + 2).replace("export function recipeIsSetUp(recipe: Recipe)", "function recipeIsSetUp(recipe)");
+  /* D1373 split the seven checks out into recipeSetupGap so the card can name
+     which one is missing, and the gate now delegates to it — so both functions
+     have to come across for this to run. The behaviour asserted below is
+     unchanged and is the point of the test. */
+  const from = tools.indexOf("export function recipeIsSetUp");
+  const end = tools.indexOf("return null;\n}", from);
+  const source = tools.slice(from, end + "return null;\n}".length)
+    .replace("export function recipeIsSetUp(recipe: Recipe)", "function recipeIsSetUp(recipe)")
+    .replace("export function recipeSetupGap(recipe: Recipe): string | null", "function recipeSetupGap(recipe)");
   const recipeIsSetUp = new Function(`${source}; return recipeIsSetUp;`)();
 
   assert.equal(recipeIsSetUp({ defaultColorIds: [1], defaultSizeIds: [2], defaultProfitTarget: 10, etsyShippingProfileId: 1, printifyImageIndices: [0], description: "Saved description", keywordListId: "bank" }), true);
