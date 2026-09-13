@@ -4535,8 +4535,10 @@ html, body { background: var(--lf-paper); }
    =========================================================================== */
 .hub{min-height:100vh;background:var(--lf-rail,#000);color:var(--lf-rail-ink,#fff);
   padding:64px 40px 40px;position:relative;overflow:hidden}
-.hub::before{content:"";position:absolute;right:-160px;top:-160px;width:520px;height:520px;
-  z-index:0;pointer-events:none;opacity:.55;
+/* The rail's gear, cropped by the corner, at the weight of a watermark. Any
+   heavier and it competes with the tools, which are the point of the page. */
+.hub::before{content:"";position:absolute;right:-190px;top:-190px;width:560px;height:560px;
+  z-index:0;pointer-events:none;opacity:.32;
   background:var(--lf-rail-gear) center/contain no-repeat;
   transform-origin:50% 50%;animation:84s linear infinite lf-rail-gear-turn}
 @media (prefers-reduced-motion:reduce){.hub::before{animation:none}}
@@ -4571,8 +4573,13 @@ html, body { background: var(--lf-paper); }
 .hub-soon{margin-top:4px;font-size:11px;font-weight:800;letter-spacing:.08em;
   text-transform:uppercase;color:#ff4fc3}
 
-.hub-foot{max-width:1120px;margin:48px auto 0}
-.hub-foot .etsy-api-disclosure{font-size:11px;color:#6b6b6b;margin:0}
+/* A bare `footer` rule in approved-functional.css paints every footer in the
+   app a translucent plum, which put a band across the bottom of this page.
+   Reset explicitly rather than renaming the element: the element is a footer
+   and should stay one. */
+.hub-foot{max-width:1120px;margin:48px auto 0;background:none;border:0;padding:0;
+  min-height:0;display:block;color:inherit;font:inherit;letter-spacing:normal}
+.hub-foot .etsy-api-disclosure{font-size:11px;color:#6b6b6b;margin:0;letter-spacing:normal}
 .hub-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;
   background:var(--lf-rail,#000)}
 .hub-auth a{color:#ff4fc3;font-weight:700}
