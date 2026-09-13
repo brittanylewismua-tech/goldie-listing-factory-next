@@ -545,7 +545,9 @@ export async function sweep(
          tested rather than trusted. */
       const move = movement(was.quantity ?? null, now);
       const units = move.units;
-      const restocked = move.restocked ? 1 : 0;
+      /* An inventory change is filed alongside a restock: both are the shelf
+         being rearranged rather than bought from. */
+      const restocked = move.restocked || move.inventoryChange ? 1 : 0;
       const soldOut = move.soldOut ? 1 : 0;
 
       if (move.record) {

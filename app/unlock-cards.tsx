@@ -16,6 +16,20 @@ import { useEffect, useState } from "react";
  * visibly disabled and carries the exact number of listings that opens it.
  * Nothing is hidden, because hiding a reward removes the reason to earn it,
  * and nothing pretends to be pressable when it is not.
+ *
+ * AND A TIER ONLY SPELLS OUT ITS STATE WHEN THE WORD ADDS SOMETHING.
+ *
+ * Every tile used to carry a word underneath it — "Open" beneath "All 30 per
+ * category", "On"/"Off" beneath "Only new & climbing". Neither earned its
+ * place. "Open" under a thing that is visibly open restates the colour in
+ * text, and "Off" under a tile that looks like every other tile is the app
+ * asking you to read a label to work out what a control is currently doing.
+ *
+ * So: something that is merely OPEN says nothing — it looks open. Something
+ * that is genuinely OPTIONAL is a switch, with a track that slides, which is
+ * the one control everybody already knows means on and off. The only text
+ * left is the counter on a locked tier, which is the one thing the colour
+ * cannot tell you: how much further.
  */
 
 type Milestone = { key: string; name: string; unlocked: boolean; remaining: number; needsSets: number };
@@ -28,9 +42,14 @@ const togo = (m?: Milestone) =>
     ? `${m.remaining} more set${m.remaining === 1 ? "" : "s"}`
     : `${m.remaining} more listing${m.remaining === 1 ? "" : "s"}`;
 
-export default function UnlockCards({ onlyMovers, onToggleMovers }: {
+/**
+ * The middle tier is a switch over something the host page owns. On the sold
+ * board that is the longer time windows; the rail does not need to know which.
+ */
+export default function UnlockCards({ onlyMovers, onToggleMovers, controlLabel = "Only new & climbing" }: {
   onlyMovers?: boolean;
   onToggleMovers?: (on: boolean) => void;
+  controlLabel?: string;
 }) {
   const [state, setState] = useState<State | null>(null);
   const [term, setTerm] = useState("");
@@ -65,22 +84,26 @@ export default function UnlockCards({ onlyMovers, onToggleMovers }: {
 
   return <section className="unlock-panel" aria-label="What listing this week has opened">
     <div className="unlock-rail">
-      {/* Status, not a control — seeing thirty instead of ten simply happens. */}
+      {/* Status, not a control — seeing thirty instead of ten simply happens.
+          Open states say nothing; the tile looks open. */}
       <div className={`unlock-item${thirty?.unlocked ? " on" : ""}`}>
-        <span className="unlock-name">All 30 per category</span>
-        <span className="unlock-state">{thirty?.unlocked ? "Open" : togo(thirty)}</span>
+        <span className="unlock-name">The whole board</span>
+        {!thirty?.unlocked && <span className="unlock-state">{togo(thirty)}</span>}
       </div>
 
+      {/* A real switch, because this is the one genuinely optional thing here. */}
       <button
         type="button"
+        role="switch"
+        aria-checked={Boolean(movers?.unlocked && onlyMovers)}
         className={`unlock-item control${movers?.unlocked ? " on" : ""}${onlyMovers ? " active" : ""}`}
         disabled={!movers?.unlocked}
         onClick={() => onToggleMovers?.(!onlyMovers)}
       >
-        <span className="unlock-name">Only new &amp; climbing</span>
-        <span className="unlock-state">
-          {!movers?.unlocked ? togo(movers) : onlyMovers ? "On" : "Off"}
-        </span>
+        <span className="unlock-name">{controlLabel}</span>
+        {movers?.unlocked
+          ? <span className="unlock-switch" aria-hidden="true"><i /></span>
+          : <span className="unlock-state">{togo(movers)}</span>}
       </button>
 
       <div className={`unlock-item wide${lookup?.unlocked ? " on" : ""}`}>
@@ -96,7 +119,7 @@ export default function UnlockCards({ onlyMovers, onToggleMovers }: {
 
       <div className={`unlock-item${history?.unlocked ? " on" : ""}`}>
         <span className="unlock-name">30 days of history</span>
-        <span className="unlock-state">{history?.unlocked ? "Open" : togo(history)}</span>
+        {!history?.unlocked && <span className="unlock-state">{togo(history)}</span>}
       </div>
     </div>
 

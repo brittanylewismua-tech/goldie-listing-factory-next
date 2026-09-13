@@ -12,7 +12,7 @@ test("the drop never claims a sale it cannot see", () => {
      get a visibility boost — so "top seller" would be a guess printed as a
      number, and the first seller to click one and find four reviews would stop
      believing the rest of the page. */
-  const surfaces = [read("pod-drop.ts"), read("drop/page.tsx"), read("api/drop/route.ts")];
+  const surfaces = [read("pod-drop.ts"), read("api/drop/route.ts")];
   for (const source of surfaces)
     for (const forbidden of [/best[- ]?sell/i, /top[- ]?sell/i, /revenue/i, /\bearn(ed|ing|s)\b/i])
       assert.doesNotMatch(source.replace(/\/\*[\s\S]*?\*\//g, ""), forbidden,
@@ -79,17 +79,14 @@ test("the live shelf filters the protected names found in its own results", () =
     "saved daily shelves must receive new safety rules immediately");
 });
 
-test("the selected drop category returns its shelf instead of an empty render", () => {
-  const source = read("drop/page.tsx");
-  /* The shelf is wrapped now, so the returned element is the wrapper — but
-     the hazard this guards is unchanged and still real: a newline after
-     `return` triggers automatic semicolon insertion and silently renders
-     nothing at all. */
-  assert.match(source, /return <div key=\{category\.taxonomyId\}>/);
-  assert.doesNotMatch(source, /return\s*\n\s*<(div|section) key=\{category\.taxonomyId\}/,
-    "a newline after return triggers automatic semicolon insertion and hides every listing");
-  assert.match(source, /fetch\(`\/api\/drop[\s\S]*\{ cache: "no-store" \}/,
-    "an open customer tab must not reuse a shelf response from before a safety repair");
+test("the board is fetched fresh, never from the browser cache", () => {
+  /* Today's Hot List was retired into Sold Overnight. The ASI hazard it
+     guarded — a newline after `return` silently rendering nothing — no longer
+     applies, because the board maps its cards inline. The caching guarantee
+     does still apply and moved with the page. */
+  const source = read("sold-overnight/page.tsx");
+  assert.match(source, /fetch\(`\/api\/sold-overnight[\s\S]{0,120}\{ cache: "no-store" \}/,
+    "an open customer tab must not reuse a board from before a safety repair");
   assert.match(read("unlock-cards.tsx"), /api\/whats-selling[\s\S]*cache: "no-store"/,
     "keyword research must not reuse a browser-cached response");
 });
@@ -110,7 +107,7 @@ test("the streak copy never scolds", () => {
   /* An accountability feature that tells somebody they are behind is a
      cancellation feature. Every state says how far along they are or that they
      made it. */
-  const source = read("pod-drop.ts") + read("drop/page.tsx");
+  const source = read("pod-drop.ts");
   for (const forbidden of [/behind/i, /you failed/i, /broke your/i, /lost your streak/i, /don't break/i])
     assert.doesNotMatch(source.replace(/\/\*[\s\S]*?\*\//g, ""), forbidden);
 });
@@ -145,8 +142,12 @@ test("a locked control is visible, disabled, and says what opens it", () => {
   assert.match(panel, /disabled=\{!movers\?\.unlocked\}/);
   assert.match(panel, /const togo = /, "one counter, worded the same everywhere");
   assert.match(panel, /more listing\$\{m\.remaining === 1 \? "" : "s"\}/);
-  for (const tier of ["All 30 per category", "Only new &amp; climbing", "Look up any keyword", "30 days of history"])
+  /* The middle tier's label is set by the host page — on the sold board it
+     switches the longer time windows rather than a movers filter — so the
+     rail is checked for the tiers it owns plus that the label is passed in. */
+  for (const tier of ["The whole board", "Look up any keyword", "30 days of history"])
     assert.ok(panel.includes(tier), `${tier} must be on the rail whether open or not`);
+  assert.match(panel, /\{controlLabel\}/, "the switchable tier is labelled by the page that owns it");
 });
 
 test("nothing in the card system is scored on a sale", () => {
@@ -180,7 +181,9 @@ test("a day already read is never taken back", () => {
     "weekly relocking must not take back listings already opened on that past day");
   assert.match(read("api/drop/route.ts"), /const back = previous\.length \? previousDay : null;/,
     "never offer a door onto a day that was never built");
-  assert.match(read("drop/page.tsx"), /Go to last week/);
+  /* The week-back button belonged to the retired Hot List. The board is a
+     rolling window now, so "one step back" is a shorter or longer window
+     rather than a previous edition. */
 });
 
 test("a set is worth more than the listings inside it", () => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import FactoryShell from "../factory-shell";
+import UnlockCards from "../unlock-cards";
 
 /**
  * SOLD OVERNIGHT.
@@ -49,14 +50,15 @@ export default function SoldOvernightPage() {
 
   const load = (window = hours) => {
     setBoard(null); setError(""); setHours(window);
+    /* no-store: an open tab must not reuse a board from before a repair. */
     fetch(`/api/sold-overnight?hours=${window}`, { cache: "no-store" })
       .then(async response => {
         const result = await response.json() as Board & { error?: string };
-        if (!response.ok) throw new Error(result.error || "Last night's sales could not be loaded.");
+        if (!response.ok) throw new Error(result.error || "This could not be loaded.");
         setBoard(result);
         setProduct("all");
       })
-      .catch(e => setError(e instanceof Error ? e.message : "Last night's sales could not be loaded."));
+      .catch(e => setError(e instanceof Error ? e.message : "This could not be loaded."));
   };
   useEffect(() => { load(24); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
@@ -68,16 +70,21 @@ export default function SoldOvernightPage() {
     <header className="drop-head">
       <p className="mini-label">SOLD OVERNIGHT</p>
       <h1>What actually sold</h1>
-      <p>Counted, not estimated. Every number is how far a listing&apos;s stock has fallen.</p>
+      <p>Real sales on Etsy, not rankings or saves. Updated through the day.</p>
     </header>
 
+    {/* A failure says so and offers a way out. A spinner that never resolves
+        teaches somebody the page is broken and gives them nothing to do. */}
     {error && <section className="drop-error" role="alert">
-      <h2>Last night&apos;s sales could not be loaded</h2><p>{error}</p></section>}
+      <h2>This could not be loaded</h2>
+      <p>{error}</p>
+      <button type="button" onClick={() => window.location.reload()}>Try again</button>
+    </section>}
 
     {!board && !error && <section className="drop-loading">
-      <p className="drop-loading-title">Counting what sold</p>
+      <p className="drop-loading-title">Finding what sold</p>
       <span className="drop-loading-track" aria-hidden><i /></span>
-      <p className="drop-loading-sub">Comparing this morning&apos;s stock against last night&apos;s</p>
+      <p className="drop-loading-sub">One moment</p>
     </section>}
 
     {board && <>
@@ -85,6 +92,27 @@ export default function SoldOvernightPage() {
         {/* The window, not a date. There is no "yesterday's edition" to go
             back to — the count is continuous, so the only real choice is how
             far back to look. */}
+        {/*
+            NO HEADLINE TOTAL, AND NO SAMPLE SIZE.
+
+            This said "6,824 items sold — across the 11,695 Etsy listings we
+            watch". Both halves were a mistake. The aggregate is not a number
+            anybody acts on, and naming the size of the corpus invites the
+            reader to judge the feature by its sample rather than by what it
+            found — it reads as a limit being confessed. The board is the
+            answer; the window above it is all the framing it needs.
+        */}
+        {/* One rail, one board. Today's Hot List used to be a second page
+            answering the same question with a weaker signal, sitting next to
+            this one in the nav with the same cards and the same unlock rail.
+            Its keyword lookup was the only thing it had that this does not,
+            so that came along and the rest was retired. */}
+        <UnlockCards
+          controlLabel="Look back further"
+          onlyMovers={hours > 24}
+          onToggleMovers={on => load(on ? 168 : 24)}
+        />
+
         <nav className="sold-windows" aria-label="Time window">
           {WINDOWS.map(w =>
             <button key={w.hours} type="button"
@@ -93,35 +121,18 @@ export default function SoldOvernightPage() {
               onClick={() => load(w.hours)}>{w.label}</button>)}
         </nav>
 
-        {/* The headline figure. One number, stated plainly, with the size of
-            the shelf it was counted across — because "1,284 sold" means
-            nothing without knowing it was counted over forty thousand
-            listings rather than picked from a handful. */}
-        {board.night && <section className="sold-headline">
-          <p className="sold-total">
-            <span className="sold-total-numeral">{board.totalSold.toLocaleString()}</span>
-            <span className="sold-total-unit">{board.totalSold === 1 ? "item sold" : "items sold"}</span>
-          </p>
-          <p className="sold-total-sub">
-            {WINDOWS.find(w => w.hours === board.hoursBack)?.label.toLowerCase() ?? "recently"}
-            {" "}&middot; across the {board.watched.toLocaleString()} Etsy listings we watch
-            {board.building && <> &middot; counting now, this will rise</>}
-          </p>
-        </section>}
-
         {!board.night
           ? <section className="drop-loading">
-              <p className="drop-loading-title">Counting has started</p>
+              <p className="drop-loading-title">Getting started</p>
               <span className="drop-loading-track" aria-hidden><i /></span>
               <p className="drop-loading-sub">
-                Stock has to be read twice before anything can be said to have sold,
-                and the second read is under way. Sales appear here as they happen.
+                The first sales will appear here shortly.
               </p>
             </section>
           : board.listings.length === 0
             ? <section className="drop-loading">
-                <p className="drop-loading-title">Nothing has moved in this window yet</p>
-                <p className="drop-loading-sub">Try a longer one, or give the count a little more time.</p>
+                <p className="drop-loading-title">Nothing yet in this window</p>
+                <p className="drop-loading-sub">Try a longer one.</p>
               </section>
             : <>
               {/* Etsy's own category for each listing, not a guess from the
@@ -160,13 +171,12 @@ export default function SoldOvernightPage() {
                       {listing.savesGained > 0 &&
                         <span className="drop-rate">+{listing.savesGained.toLocaleString()} saves</span>}
                     </p>
-                    <p className="drop-sub">
-                      {listing.price !== null && money(listing.price, listing.currency)}
-                      {listing.left !== null && <>
-                        {listing.price !== null && " · "}
-                        {listing.left === 0 ? "none left" : `${listing.left.toLocaleString()} left`}
-                      </>}
-                    </p>
+                    {/* PRICE ONLY. This used to print the listing's remaining
+                        stock beside it — "171,447 left" — which is somebody
+                        else's inventory, no use to a seller deciding what to
+                        make, and a straight description of the plumbing. */}
+                    {listing.price !== null &&
+                      <p className="drop-sub">{money(listing.price, listing.currency)}</p>}
                     <a className="drop-title" href={listing.url} target="_blank" rel="noopener noreferrer">
                       {listing.title}</a>
                   </figcaption>
@@ -187,14 +197,13 @@ export default function SoldOvernightPage() {
       </div>
 
       <details className="drop-note">
-        <summary>Where these numbers come from</summary>
+        <summary>What these numbers mean</summary>
         <p>
-          Etsy publishes how many of an item are left to buy. We read that number for
-          every listing we watch, every few hours, and compare it to the reading before.
-          If it fell by four, four of them sold. Stock going up means the shop restocked,
-          which is not a sale and is not counted. Digital downloads are left out, since
-          they are nothing to do with printing. Nothing here is a ranking, an estimate,
-          or a guess from search position.
+          These are real sales on Etsy over the window you have chosen — not a ranking,
+          not an estimate, and not a guess from search position. Digital downloads are
+          left out, since they have nothing to do with printing, and so is a shop
+          rearranging its own listings rather than selling any. What is left is sales,
+          and only sales.
         </p>
       </details>
     </>}

@@ -17,8 +17,10 @@ const { movement } = await import("../app/sold-overnight-math.ts")
   });
 
 test("a fall in stock is counted as exactly that many sales", () => {
-  assert.deepEqual(movement(295, 294), { units: 1, restocked: false, soldOut: false, record: true });
-  assert.deepEqual(movement(904, 899), { units: 5, restocked: false, soldOut: false, record: true });
+  assert.deepEqual(movement(295, 294),
+    { units: 1, restocked: false, soldOut: false, inventoryChange: false, record: true });
+  assert.deepEqual(movement(904, 899),
+    { units: 5, restocked: false, soldOut: false, inventoryChange: false, record: true });
 });
 
 test("a first reading can never post a sale", () => {
@@ -164,12 +166,25 @@ test("the page states what it counted and never claims more", () => {
         `Sold Overnight must state only what it counted: ${forbidden}`);
 });
 
-test("the page says where its numbers come from", () => {
-  /* A number this strong has to show its working, or the first person to
-     doubt it has nowhere to look. */
+test("the page explains what the numbers mean without describing the plumbing", () => {
+  /* A number this strong has to say what it is, or the first person to doubt
+     it has nowhere to look. What it must NOT do is narrate the mechanism —
+     a seller does not need to know anything is being compared, and telling
+     them makes a confident number sound like a workaround. */
   const page = read("sold-overnight/page.tsx");
-  assert.match(page, /Where these numbers come from/);
-  assert.match(page, /compare it to the reading before/);
+  assert.match(page, /What these numbers mean/);
+  assert.match(page, /real sales on Etsy/i);
+  for (const leak of [/stock/i, /compare/i, /reading before/i, /listings we watch/i])
+    assert.doesNotMatch(strip(page), leak,
+      `the page must not describe how the count is produced: ${leak}`);
+});
+
+test("the card never prints somebody else's inventory", () => {
+  /* "171,447 left" is another shop's stock level: no use to a seller deciding
+     what to make, and a straight description of the plumbing. */
+  const page = read("sold-overnight/page.tsx");
+  assert.doesNotMatch(strip(page), /listing\.left/);
+  assert.doesNotMatch(strip(page), /left`/);
 });
 
 test("pages=0 really means no discovery", () => {
@@ -244,7 +259,8 @@ test("a run says which shelves it actually stocked", () => {
      shelf nobody buys from. Silence there is how eleven missing shelves went
      unnoticed. */
   const source = read("sold-overnight.ts");
-  assert.match(source, /shelves: shelves\.map\(s => s\.label\)/);
+  assert.match(source, /shelvesMissing/);
+  assert.match(source, /shelves: \[\.\.\.landed\]/);
 });
 
 test("the scheduled entry lives beside the bundle, not at the repo root", () => {
@@ -301,4 +317,48 @@ test("the bucket index is not created before the table has that column", () => {
     "the bucket index must be created after the migration, not before it");
   const after = source.slice(source.indexOf("await migrateMovesToHours()"));
   assert.match(after, /CREATE INDEX IF NOT EXISTS idx_sold_moves_bucket/);
+});
+
+test("a drop too big to be shopping is not counted as sales", () => {
+  /* The live board's top card read "2,997 sold" on a woven blanket that had
+     gone from 5,994 to exactly half — a seller switching off variants, or
+     Printify re-syncing. Nobody sold two thousand blankets in four hours. */
+  const halved = movement(5994, 2997);
+  assert.equal(halved.units, 0);
+  assert.equal(halved.inventoryChange, true);
+
+  const bulk = movement(95890, 93906);
+  assert.equal(bulk.units, 0, "1,984 units between two readings is bookkeeping");
+  assert.equal(bulk.inventoryChange, true);
+});
+
+test("a small listing selling out entirely still counts", () => {
+  /* The share rule must not swallow the single most useful thing this board
+     can report. Four left, four gone, is a real sell-out. */
+  const gone = movement(4, 0);
+  assert.equal(gone.units, 4);
+  assert.equal(gone.soldOut, true);
+  assert.equal(gone.inventoryChange, false);
+});
+
+test("ordinary sales on a deep shelf still count", () => {
+  /* The observed real numbers — 43 off 837, 30 off 12,164, 25 off 72 — are
+     exactly what the board exists to show and none of them may be clipped. */
+  assert.equal(movement(837, 794).units, 43);
+  assert.equal(movement(12164, 12134).units, 30);
+  assert.equal(movement(72, 47).units, 25);
+  assert.equal(movement(295, 294).units, 1);
+});
+
+test("a shelf emptied by bookkeeping is not reported as sold out", () => {
+  /* Otherwise the strongest badge on the board gets attached to a seller
+     tidying up their variants. */
+  const wiped = movement(9000, 0);
+  assert.equal(wiped.soldOut, false);
+  assert.equal(wiped.inventoryChange, true);
+});
+
+test("a rejected drop is recorded, not silently discarded", () => {
+  /* The rate has to be visible, or these thresholds are permanent guesses. */
+  assert.equal(movement(5994, 2997).record, true);
 });

@@ -4305,7 +4305,6 @@ html, body { background: var(--lf-paper); }
    The image box is sized before anything loads — D832 forbids deferring a
    visible image, so the reserved aspect box is what stops the grid jumping
    as thirty photographs arrive. */
-.drop-page .drop-stale{opacity:.7;font-size:14px;margin:0 0 12px}
 .drop-page .drop-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
 .drop-page .drop-tabs button{border:1px solid var(--line,rgba(0,0,0,.14));background:none;border-radius:16px;padding:6px 12px;font:inherit;font-size:14px;cursor:pointer}
 .drop-page .drop-tabs button.active{background:#0d0c0c;color:#fff;border-color:#0d0c0c}
@@ -4404,11 +4403,6 @@ html, body { background: var(--lf-paper); }
 /* An unlocked rung is said with colour, not with the word "unlocked". */
 
 /* One step back, top-left of the card. */
-.drop-page .drop-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 14px}
-.drop-page .drop-back{border:1px solid var(--line,rgba(0,0,0,.18));background:none;border-radius:10px;
-  padding:6px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
-.drop-page .drop-back:hover{border-color:#0d0c0c}
-.drop-page .drop-viewing{font-size:13px;color:var(--ink-3,#8b8380)}
 
 /* WHAT THIS WEEK OPENED. Real controls, spaced deliberately: a search that
    searches, a switch that filters, one line of fact. A locked control stays
@@ -4447,8 +4441,6 @@ html, body { background: var(--lf-paper); }
 .unlock-reset{color:var(--ink-3,#8b8380)}
 .unlock-week{margin:0;font-size:13px;color:var(--ink-2,#4b4644)}
 .unlock-week b{font-size:15px;color:#b02371;font-variant-numeric:tabular-nums}
-.drop-page .drop-scope{margin:0 0 12px;font-size:13px;color:var(--ink-3,#8b8380)}
-.drop-page .drop-scope b{color:var(--ink-2,#4b4644)}
 
 /* ---------------------------------------------------------------------------
    SOLD OVERNIGHT
@@ -4462,16 +4454,6 @@ html, body { background: var(--lf-paper); }
    it, small. A big number with no denominator is how you get "top 30" on a
    shelf of thirty.
 --------------------------------------------------------------------------- */
-.sold-page .sold-headline{margin:2px 0 20px;padding-bottom:18px;
-  border-bottom:1px solid var(--line,rgba(0,0,0,.1))}
-.sold-page .sold-total{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:9px}
-.sold-page .sold-total-numeral{font-size:44px;font-weight:800;letter-spacing:-.05em;
-  font-variant-numeric:tabular-nums;line-height:1;color:#b02371}
-.sold-page .sold-total-unit{font-size:16px;font-weight:700;letter-spacing:-.01em}
-.sold-page .sold-total-sub{margin:7px 0 0;font-size:13px;color:var(--ink-3,#8b8380)}
-
-/* Sold out is the strongest thing this board can say, so it gets the one
-   colour nothing else on the page uses. */
 .sold-page .drop-badge.sold-out{background:#b02371;color:#fff}
 
 /* The count is what the tab is FOR, so it sits inside the tab rather than
@@ -4483,9 +4465,6 @@ html, body { background: var(--lf-paper); }
 .sold-page .drop-none{grid-column:1/-1;margin:0;padding:28px 0;text-align:center;
   font-size:14px;color:var(--ink-3,#8b8380)}
 
-@media (max-width:640px){
-  .sold-page .sold-total-numeral{font-size:34px}
-}
 
 /* The window switcher. Quieter than the product tabs, because which shelf you
    are looking at is the decision and how far back is the framing. */
@@ -4495,3 +4474,18 @@ html, body { background: var(--lf-paper); }
   color:var(--ink-2,#4b4644)}
 .sold-page .sold-windows button.active{background:rgba(176,35,113,.08);border-color:#b02371;
   color:#b02371;font-weight:700}
+
+/* THE SWITCH.
+   A tier that is merely open says nothing and simply looks open; a tier that
+   is genuinely optional gets the one control everybody already reads as on and
+   off. Before this, both wore a word underneath — "Open", "Off" — which
+   restated the colour in the first case and hid the state in a label in the
+   second. */
+.unlock-item.control{align-items:start}
+.unlock-switch{display:block;width:34px;height:20px;border-radius:10px;
+  background:rgba(0,0,0,.18);position:relative;transition:background .15s ease}
+.unlock-switch i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:8px;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s ease}
+.unlock-item.control.active .unlock-switch{background:#0d0c0c}
+.unlock-item.control.active .unlock-switch i{transform:translateX(14px)}
+.unlock-item.control:focus-visible{outline:2px solid #b02371;outline-offset:2px}
