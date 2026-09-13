@@ -146,8 +146,7 @@ export default function HotListPage() {
     <header className="drop-head">
       <p className="mini-label">HOT LIST</p>
       <h1>What&apos;s actually selling</h1>
-      <p>{view.hours >= 168 ? "Real sales on Etsy this week" : "Real sales on Etsy overnight"}
-        , not rankings or saves.</p>
+      <p>Real sales on Etsy {view.hours >= 168 ? "this week" : "overnight"}. Not rankings, not saves.</p>
     </header>
 
     {error && <section className="drop-error" role="alert">

@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import type { EtsyFeature } from "@/app/api/etsy/client";
 import { MAX_UNITS_PER_READ, movement, usdFromCents, tradesOnRights } from "@/app/sold-overnight-math";
 import { attribute, shopDelta, type Attribution } from "@/app/sold-attribution";
+import { printable } from "@/app/pod-fit";
 import {
   etsyApiCredential,
   etsyBudget,
@@ -646,6 +647,19 @@ export async function discover(pages = DISCOVERY_PAGES): Promise<number> {
       const writes = rows
         .filter(row => Number.isSafeInteger(Number(row.listing_id)))
         .filter(row => (Number(row.num_favorers) || 0) >= MIN_SAVES_TO_WATCH)
+        /*
+          A SLOT SPENT ON A LEATHER HANDBAG IS A SLOT NOT SPENT ON SOMETHING
+          PRINTABLE. Etsy files a $212 genuine leather tote and a merino wool
+          tank on the same shelves as their printed equivalents, and both
+          reached the live board. The shelf is right; the product is
+          unreachable for anybody reading this page.
+        */
+        .filter(row => printable({
+          title: String(row.title ?? ""),
+          product: shelf.label,
+          price: row.price?.amount != null && row.price?.divisor
+            ? Number(row.price.amount) / Number(row.price.divisor) : null,
+        }))
         .map(row => db().prepare(
           /* IGNORE, not REPLACE: a listing already in the corpus carries its
              last reading, and overwriting it here would erase the very number
@@ -1173,6 +1187,13 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
      than by Etsy's internal leaf name. */
   const onShelf = rows
     .filter(row => !gateReady || allowed.has(Number(row.listing_id)))
+    /* The corpus already holds thousands taken in before this rule existed,
+       so it is applied on the way out as well as the way in. */
+    .filter(row => printable({
+      title: row.title,
+      product: shelfOf.get(Number(row.taxonomy_id)) ?? null,
+      price: row.price_cents == null ? null : Number(row.price_cents) / 100,
+    }))
     .map(row => {
       const verified = allowed.get(Number(row.listing_id));
       return verified ? { ...row, sold: verified.sold } : row;
