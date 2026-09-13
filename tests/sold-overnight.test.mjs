@@ -420,3 +420,24 @@ test("a shelf includes everything filed beneath it", () => {
   assert.match(source, /path\.startsWith\(`\$\{root\} > `\)/);
   assert.match(source, /const shelfSet = await shelfTaxonomyIds\(\)/);
 });
+
+test("a digital branch inside a printable shelf is left out", () => {
+  /* "Monopoly GO! Instant Delivery" reached the board under Digital Prints,
+     which Etsy files beneath Prints — so taking a shelf and everything under
+     it took the digital half too. listing_type cannot catch these: plenty of
+     sellers list a digital good as physical. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /Art & Collectibles > Prints > Digital Prints/);
+  assert.match(source, /NOT_PRINTABLE\.some\(excluded => under\(path, excluded\)\)/);
+});
+
+test("every node with a shelf's name in its department counts as that shelf", () => {
+  /* Etsy has a "T-shirts" under men's, women's, unisex and kids. Keeping only
+     the shallowest put three quarters of the t-shirts on Etsy outside the
+     shelf that exists to hold them. */
+  const source = read("sold-overnight.ts");
+  const resolve = source.slice(source.indexOf("export async function shelfIds"),
+    source.indexOf("export async function shelfTaxonomyIds"));
+  assert.doesNotMatch(resolve, /depth < seen\.depth/, "no single-winner-per-name any more");
+  assert.match(resolve, /return rows\.map\(row => \(\{/);
+});

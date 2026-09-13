@@ -369,6 +369,24 @@ const POD_SHELVES: { top: string; leaf: string }[] = [
 ];
 
 /**
+ * BRANCHES INSIDE A SHELF THAT ARE NOT THE SHELF.
+ *
+ * "Monopoly GO! Instant Delivery" reached the board under Digital Prints,
+ * which Etsy files beneath Prints — so taking a shelf and everything under it
+ * took the digital half of it too. These cannot be caught by listing_type
+ * either: plenty of sellers list a digital good as physical.
+ *
+ * A short list of subtrees to leave out is the honest fix. It is short because
+ * it names branches rather than products, and it is matched as a path prefix
+ * so it also removes whatever Etsy later files underneath them.
+ */
+const NOT_PRINTABLE = [
+  "Art & Collectibles > Prints > Digital Prints",
+  "Craft Supplies & Tools",
+  "Paper & Party Supplies > Paper > Stationery > Design & Templates",
+];
+
+/**
  * Resolve those to the ids Etsy's search will filter on.
  *
  * MATCHED ON DEPARTMENT AND LEAF, NOT THE WHOLE PATH. The first version
@@ -388,17 +406,20 @@ export async function shelfIds(): Promise<{ id: number; label: string; path: str
     .bind(...POD_SHELVES.flatMap(shelf => [shelf.top, shelf.leaf])).all()).results as unknown as
     { taxonomy_id: number; name: string; top: string; path: string }[];
 
-  /* A leaf name can still appear twice inside one department. Take the
-     shallowest — the broader shelf, which is the one a seller means. */
-  const best = new Map<string, { id: number; label: string; depth: number; path: string }>();
-  for (const row of rows) {
-    const key = `${row.top}|${row.name}`;
-    const depth = String(row.path ?? "").split(">").length;
-    const seen = best.get(key);
-    if (!seen || depth < seen.depth)
-      best.set(key, { id: Number(row.taxonomy_id), label: row.name, depth, path: String(row.path ?? "") });
-  }
-  return [...best.values()].map(({ id, label, path }) => ({ id, label, path }));
+  /*
+    EVERY NODE WITH THAT NAME IN THAT DEPARTMENT, NOT JUST ONE.
+
+    Etsy has a "T-shirts" under men's, women's, unisex and kids. Keeping only
+    one of them — the shallowest — meant three quarters of the t-shirts on
+    Etsy were outside the shelf that exists to hold them. They are all
+    t-shirts; a seller choosing a blank does not care which sub-department
+    Etsy filed them in.
+  */
+  return rows.map(row => ({
+    id: Number(row.taxonomy_id),
+    label: row.name,
+    path: String(row.path ?? ""),
+  }));
 }
 
 /**
@@ -433,11 +454,15 @@ export async function shelfTaxonomyIds(): Promise<Set<number>> {
     .results as unknown as { taxonomy_id: number; path: string }[];
 
   const roots = shelves.map(shelf => shelf.path).filter(Boolean);
+  const under = (path: string, root: string) => path === root || path.startsWith(`${root} > `);
+
   const ids = new Set<number>();
   for (const row of all) {
     const path = String(row.path ?? "");
-    if (roots.some(root => path === root || path.startsWith(`${root} > `)))
-      ids.add(Number(row.taxonomy_id));
+    if (!roots.some(root => under(path, root))) continue;
+    /* A branch inside a shelf that is not the shelf. */
+    if (NOT_PRINTABLE.some(excluded => under(path, excluded))) continue;
+    ids.add(Number(row.taxonomy_id));
   }
   return ids;
 }
