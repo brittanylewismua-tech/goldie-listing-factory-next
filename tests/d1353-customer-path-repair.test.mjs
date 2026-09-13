@@ -38,5 +38,13 @@ test("D1353: resumed Review previews reject placeholders and fall through to Pri
 });
 
 test("D1353: build marker advances",()=>{
-  assert.match(read("app/build-marker.ts"),/BUILD_MARKER = "D1371"/);
+  /* PINNED TO A NUMBER, NOT TO ONE RELEASE.
+
+     This asserted the marker still read the exact release it shipped with, so
+     every later bump broke four unrelated suites and the fix was to retype the
+     number in each. The guarantee that was wanted is "the marker moved past
+     this release and never went backwards", which is a comparison, so it is
+     written as one and never needs touching again. */
+  const shipped = Number(/BUILD_MARKER = "D(\d+)"/.exec(read("app/build-marker.ts"))?.[1]);
+  assert.ok(shipped >= 1353, `build marker is D${shipped}, expected D1353 or later`);
 });
