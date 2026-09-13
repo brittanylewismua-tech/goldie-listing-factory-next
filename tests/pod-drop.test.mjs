@@ -302,3 +302,23 @@ test("a wrong drop is not stuck until tomorrow", () => {
   assert.match(route, /isOwner\(user\)/);
   assert.match(route, /status: 403/);
 });
+
+test("the two rails cannot disagree about what is on them", () => {
+  /* The workflow page renders its own inline copy of the rail instead of
+     mounting FactoryShell, so every rail change has to be made twice. It has
+     been missed twice already: once when a control added to the shared rail
+     never appeared here, and once when the Hot List button survived here for a
+     deploy after being removed from the shared one. */
+  const shell = read("factory-shell.tsx");
+  const app = read("listing-factory-app.tsx");
+  for (const label of ["Home", "New listing project", "Batch History", "Keyword Banks"]) {
+    assert.ok(shell.includes(`label: "${label}"`), `${label} missing from the shared rail`);
+    assert.ok(app.includes(`>${label}</a>`), `${label} missing from the workflow rail`);
+  }
+  /* And neither may carry a way into the Hot List: it is not part of making a
+     listing, and it is reached from Home with the other tools. */
+  for (const [name, source] of [["shared rail", shell], ["workflow rail", app]]) {
+    assert.doesNotMatch(source, /rail-drop-button/, `${name} still has the Hot List button`);
+    assert.doesNotMatch(source, /Hot List<\/a>/, `${name} still links to the Hot List`);
+  }
+});

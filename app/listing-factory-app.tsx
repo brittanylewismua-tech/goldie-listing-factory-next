@@ -5484,13 +5484,14 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             {/* D834 · Usage + Plan and Connections live in the account menu now,
                 with the account. The rail is the three places work happens. */}
           </nav>
-          {/* The workflow page carries its own copy of the rail rather than
-              using FactoryShell, so a control added there simply vanishes
-              here — which is exactly what happened to Today's Hot List. Guarded
-              like every other link out, because this page holds live batch
-              state that has to be cleared before leaving. */}
-          <a className="rail-drop-button" href="/drop" onClick={event=>guardNavigation(event,"/drop")}>
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v13"/><path d="m7 12 5 5 5-5"/><path d="M5 21h14"/></svg> Today&apos;s Hot List</a>
+          {/* THE HOT LIST BUTTON IS GONE FROM HERE ON PURPOSE.
+
+              This page carries its own copy of the rail rather than using
+              FactoryShell, so anything changed in one and not the other leaves
+              the two disagreeing — which is how a "Today's Hot List" button
+              survived here for a deploy after it had been removed from the
+              shared rail. The Hot List is not part of making a listing; it is
+              reached from Home with the other tools. */}
           <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}>{/* D362 · The glyph ↻ renders at text weight in most UI faces, so at 11px it
               read as a stray mark rather than an arrow. A drawn icon keeps its
               stroke and its arrowhead at any size. */}
