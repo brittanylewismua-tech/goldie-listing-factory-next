@@ -505,15 +505,38 @@ test("shelf depth is measured across the shelf, not across the visible board", (
   assert.match(board, /listings: shown\.map/, "only the display list is trimmed");
 });
 
-test("the board never claims a period it has no data for", () => {
-  /* It offered "This week" on its first day and wrote "sold this week" under
-     every number, claiming six days nobody was watching. */
+test("a period is only offered when it can be honoured", () => {
+  /* Two versions of this were wrong. The first offered "This week" on day one
+     and wrote "sold this week" under every number, claiming six days nobody
+     was watching. The repair was worse: it printed the true span instead —
+     "sold in 2 days" — which is our start date leaking onto the page. A seller
+     has no idea we began counting on Tuesday and no reason to care; all they
+     can read from it is that something is odd with the tool.
+
+     So a period is offered when it exists and not before, and the page never
+     mentions coverage at all. */
   const source = read("sold-overnight.ts");
-  assert.match(source, /SELECT MIN\(bucket\) b FROM sold_moves/);
-  assert.match(source, /coveredHours/);
+  assert.match(source, /SELECT MIN\(bucket\) b FROM sold_moves/,
+    "the true span still has to be known internally");
+
   const page = read("hot-list/page.tsx");
-  assert.match(page, /function periodLabel\(coveredHours: number, hoursBack: number\)/);
-  assert.match(page, /Math\.min\(coveredHours \|\| hoursBack, hoursBack\)/);
+  assert.match(page, /VIEWS\.filter\(v => \(result\.coveredHours \?\? 0\) >= v\.hours\)/,
+    "only periods with history behind them may be offered");
+  assert.match(page, /offered\.length > 1 && <nav/,
+    "a single period is not a choice and gets no switcher");
+
+  /* And nothing on the page may describe how long we have been running. */
+  const visible = strip(page);
+  for (const leak of [/sold in \$\{/, /coveredHours\}/, /we have been counting/, /since we started/])
+    assert.doesNotMatch(visible, leak, `the page must not expose its own start date: ${leak}`);
+});
+
+test("the period is stated once, not on every card", () => {
+  /* Four hundred cards each repeating the window was noise even when it was
+     accurate. The selected tab says it; the card carries the number. */
+  const page = read("hot-list/page.tsx");
+  assert.match(page, /<span className="drop-unit">sold<\/span>/);
+  assert.doesNotMatch(strip(page), /sold this week<\/span>|sold overnight<\/span>/);
 });
 
 test("the missing-shelf alarm compares like with like", () => {

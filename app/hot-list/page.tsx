@@ -35,28 +35,27 @@ type Board = {
   listings: Listing[];
 };
 
-const VIEWS = [
-  { key: "week", hours: 168, tab: "This week" },
-  { key: "overnight", hours: 24, tab: "Overnight" },
-];
-
 /**
- * SAY THE PERIOD THERE IS DATA FOR, NOT THE ONE THAT WAS ASKED FOR.
+ * ONLY OFFER A PERIOD THAT CAN BE HONOURED.
  *
- * The board offered "This week" from its first day and put "sold this week"
- * under every number, which claimed six days nobody was watching. The counting
- * has a start date; until the window is older than that, the label is however
- * long we have actually been counting.
+ * The first version of this offered "This week" from day one and wrote "sold
+ * this week" under every number, which claimed six days nobody was watching.
+ * The repair was worse than the fault: it printed the true span instead —
+ * "sold in 2 days" — which is our start date leaking onto the page. A seller
+ * has no idea we only began counting on Tuesday, and no reason to care. All
+ * they can read from it is that something is oddly wrong with the tool.
+ *
+ * So a period is offered when it exists and not before. "This week" appears
+ * the day there is a week behind it, and until then the page simply does not
+ * mention weeks. Every word stays true and none of it is about us.
+ *
+ * The period is stated ONCE, by the selected tab. Repeating it on four hundred
+ * cards was noise even when it was accurate.
  */
-function periodLabel(coveredHours: number, hoursBack: number) {
-  const hours = Math.min(coveredHours || hoursBack, hoursBack);
-  if (hours >= 144) return "sold this week";
-  if (hours >= 20) {
-    const days = Math.round(hours / 24);
-    return days <= 1 ? "sold in 24 hours" : `sold in ${days} days`;
-  }
-  return hours === 1 ? "sold in the last hour" : `sold in ${hours} hours`;
-}
+const VIEWS = [
+  { key: "overnight", hours: 24, tab: "Overnight" },
+  { key: "week", hours: 168, tab: "This week" },
+];
 
 const money = (value: number | null, currency: string) =>
   value === null ? "" : new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
@@ -66,6 +65,9 @@ export default function HotListPage() {
   const [error, setError] = useState("");
   const [product, setProduct] = useState("all");
   const [view, setView] = useState(VIEWS[0]);
+  /* Which periods there is enough history to answer. Never shown, only used
+     to decide what may be asked for. */
+  const [offered, setOffered] = useState(VIEWS.slice(0, 1));
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<Hit[] | null>(null);
   const [looking, setLooking] = useState(false);
@@ -80,6 +82,13 @@ export default function HotListPage() {
         if (!response.ok) throw new Error(result.error || "This could not be loaded.");
         setBoard(result);
         setProduct("all");
+        const can = VIEWS.filter(v => (result.coveredHours ?? 0) >= v.hours);
+        const list = can.length ? can : VIEWS.slice(0, 1);
+        setOffered(list);
+        /* The longest honourable period leads. Once a week of history exists
+           this becomes the week, on its own, with nothing to announce. */
+        const lead = list[list.length - 1];
+        if (lead.hours > next.hours) load(lead);
       })
       .catch(e => setError(e instanceof Error ? e.message : "This could not be loaded."));
   };
@@ -120,7 +129,8 @@ export default function HotListPage() {
     <header className="drop-head">
       <p className="mini-label">HOT LIST</p>
       <h1>What&apos;s actually selling</h1>
-      <p>Real sales on Etsy, not rankings or saves.</p>
+      <p>{view.hours >= 168 ? "Real sales on Etsy this week" : "Real sales on Etsy overnight"}
+        , not rankings or saves.</p>
     </header>
 
     {error && <section className="drop-error" role="alert">
@@ -163,7 +173,7 @@ export default function HotListPage() {
               <figcaption>
                 <p className="drop-figures">
                   <span className="drop-numeral">{hit.sold.toLocaleString()}</span>
-                  <span className="drop-unit">{periodLabel(board?.coveredHours ?? 168, 168)}</span>
+                  <span className="drop-unit">sold</span>
                 </p>
                 {hit.price !== null && <p className="drop-sub">{money(hit.price, hit.currency)}</p>}
                 <a className="drop-title" href={hit.url} target="_blank" rel="noopener noreferrer">
@@ -173,13 +183,15 @@ export default function HotListPage() {
           </div>
         </section>}
 
-        <nav className="sold-windows" aria-label="Period">
-          {VIEWS.map(v =>
+        {/* One period is not a choice, and a lone highlighted tab looks like
+            a control that has broken rather than the only honest option. */}
+        {offered.length > 1 && <nav className="sold-windows" aria-label="Period">
+          {offered.map(v =>
             <button key={v.key} type="button"
               className={view.key === v.key ? "active" : undefined}
               aria-current={view.key === v.key ? "true" : undefined}
               onClick={() => load(v)}>{v.tab}</button>)}
-        </nav>
+        </nav>}
 
         {!board.night
           ? <section className="drop-loading">
@@ -219,7 +231,7 @@ export default function HotListPage() {
                   <figcaption>
                     <p className="drop-figures">
                       <span className="drop-numeral">{listing.sold.toLocaleString()}</span>
-                      <span className="drop-unit">{periodLabel(board.coveredHours, view.hours)}</span>
+                      <span className="drop-unit">sold</span>
                     </p>
                     {listing.price !== null &&
                       <p className="drop-sub">{money(listing.price, listing.currency)}</p>}
@@ -237,9 +249,7 @@ export default function HotListPage() {
       <details className="drop-note">
         <summary>What these numbers mean</summary>
         <p>
-          These are counted from the drop in how many of each item are available to
-          buy, over the period you have chosen, and only for as long as we have been
-          counting. Not a ranking,
+          These are real sales on Etsy over the period shown. Not a ranking,
           not an estimate, and not a guess from search position. Digital downloads are
           left out, since they have nothing to do with printing, and so is a shop
           rearranging its own listings rather than selling any. What is left is sales,
