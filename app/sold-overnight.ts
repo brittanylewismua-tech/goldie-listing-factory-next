@@ -127,7 +127,16 @@ const BUDGET_FLOOR = 6_000;
  */
 const CLAIM_MINUTES = 5;
 
+export type EtsyShop = {
+  shop_id?: number;
+  /** Etsy's own cumulative count of completed transactions for the shop. */
+  transaction_sold_count?: number;
+  /** How many listings the shop has live — decides how tight the cap is. */
+  listing_active_count?: number;
+};
+
 export type EtsyListing = {
+  shop?: EtsyShop;
   listing_id?: number;
   listing_type?: string;
   shop_id?: number;
@@ -190,6 +199,27 @@ export async function ensureTables() {
        That is what "no such column: bucket at offset 64" was: not the new
        code writing, but the schema setup indexing a column that did not
        exist yet. It is created after the migration instead. */
+    /*
+      WHAT ETSY SAYS EACH SHOP HAS SOLD, OVER TIME.
+
+      transaction_sold_count is cumulative and exact, so the difference between
+      two observations is a real number of real purchases. It belongs to the
+      SHOP rather than the listing, which is why it can never be divided across
+      listings — but it can prove that a listing's quantity drop coincided with
+      an actual sale, and bound how large that drop is allowed to be.
+
+      One row per shop per sweep, kept rather than overwritten, because the
+      window you ask for decides which pair of observations to subtract.
+    */
+    db().prepare(
+      `CREATE TABLE IF NOT EXISTS shop_sold (
+         shop_id      INTEGER NOT NULL,
+         bucket       TEXT NOT NULL,
+         sold_count   INTEGER NOT NULL,
+         active_count INTEGER,
+         PRIMARY KEY (shop_id, bucket)
+       )`),
+    db().prepare("CREATE INDEX IF NOT EXISTS idx_shop_sold_bucket ON shop_sold (bucket)"),
     /* Etsy's category names, fetched once. Without it the board can only say
        "482" where it should say "T-Shirts". */
     db().prepare(
@@ -677,10 +707,15 @@ export async function sweep(
 
         Thirty-nine per cent of the live board came back in GBP, EUR, PHP, HKD
         and the rest, and a column reading ₱1,710.54 next to $26.97 cannot be
-        read down. Etsy converts server-side when asked, so this costs nothing
-        and no exchange table has to be kept here.
+        read down.
+
+        AND THE SHOP COMES BACK ON THE SAME CALL. `includes=Shop` attaches
+        transaction_sold_count — Etsy's own exact count of completed sales for
+        that shop — for no extra request. That number is what turns a quantity
+        drop from a guess into something corroborated: see the gate and the cap
+        where the board is read.
       */
-      `listings/batch?listing_ids=${batch.map(r => r.listing_id).join(",")}&includes=Images&currency=USD`);
+      `listings/batch?listing_ids=${batch.map(r => r.listing_id).join(",")}&includes=Images,Shop&currency=USD`);
     const rows = (payload?.results ?? []) as (EtsyListing & {
       images?: { url_570xN?: string; url_fullxfull?: string }[];
     })[];
@@ -699,6 +734,25 @@ export async function sweep(
     }
 
     const writes: D1PreparedStatement[] = [];
+    /* One row per shop per sweep, not one per listing in it. */
+    const shopsSeen = new Map<number, { sold: number; active: number | null }>();
+    for (const row of rows) {
+      const shopId = Number(row.shop?.shop_id ?? row.shop_id);
+      const soldCount = Number(row.shop?.transaction_sold_count);
+      if (Number.isSafeInteger(shopId) && Number.isFinite(soldCount))
+        shopsSeen.set(shopId, {
+          sold: soldCount,
+          active: Number.isFinite(Number(row.shop?.listing_active_count))
+            ? Number(row.shop?.listing_active_count) : null,
+        });
+    }
+    for (const [shopId, seen] of shopsSeen)
+      writes.push(db().prepare(
+        `INSERT INTO shop_sold (shop_id,bucket,sold_count,active_count) VALUES (?,?,?,?)
+         ON CONFLICT(shop_id,bucket) DO UPDATE SET
+           sold_count=excluded.sold_count, active_count=excluded.active_count`)
+        .bind(shopId, hourOf(), seen.sold, seen.active));
+
     for (const row of rows) {
       const id = Number(row.listing_id);
       const was = before.get(id);
@@ -737,13 +791,16 @@ export async function sweep(
       }
 
       writes.push(db().prepare(
-        `UPDATE sold_watch SET reads=reads+1,quantity=?,favorites=?,views=?,state=?,listing_type=COALESCE(?,listing_type),image=COALESCE(?,image),
+        `UPDATE sold_watch SET reads=reads+1,shop_id=COALESCE(?,shop_id),quantity=?,favorites=?,views=?,state=?,listing_type=COALESCE(?,listing_type),image=COALESCE(?,image),
            personalizable=?,
            price_cents=COALESCE(?,price_cents),currency=COALESCE(?,currency),
            title=CASE WHEN ?='' THEN title ELSE ? END,url=CASE WHEN ?='' THEN url ELSE ? END,
            taxonomy_id=COALESCE(?,taxonomy_id),last_read=?
          WHERE listing_id=?`)
-        .bind(now, favorites, views, String(row.state ?? ""),
+        .bind(
+          Number.isSafeInteger(Number(row.shop?.shop_id ?? row.shop_id))
+            ? Number(row.shop?.shop_id ?? row.shop_id) : null,
+          now, favorites, views, String(row.state ?? ""),
           row.listing_type ? String(row.listing_type) : null, image,
           row.is_personalizable ? 1 : 0, price,
           row.price?.currency_code ?? null,
@@ -868,7 +925,7 @@ export async function runSweep(
 export type SoldListing = {
   listingId: number; title: string; url: string; image: string | null;
   price: number | null; currency: string;
-  sold: number; soldOut: boolean; savesGained: number; left: number | null;
+  sold: number; attribution: Attribution | null; soldOut: boolean; savesGained: number; left: number | null;
   product: string;
 };
 export type SoldBoard = {
@@ -964,7 +1021,7 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
   const rows = (await db().prepare(
     `SELECT m.listing_id, SUM(m.sold) sold, MAX(m.sold_out) sold_out,
             SUM(m.saves_gained) saves_gained, MIN(m.quantity_after) quantity_after,
-            w.title,w.url,w.image,w.price_cents,w.currency,w.taxonomy_id,
+            w.title,w.url,w.image,w.price_cents,w.currency,w.taxonomy_id,w.shop_id,
             COALESCE(t.name,'Other') product
        FROM sold_moves m
        JOIN sold_watch w ON w.listing_id=m.listing_id
@@ -1000,12 +1057,82 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
     .all()).results as unknown as {
         listing_id: number; sold: number; sold_out: number; saves_gained: number;
         quantity_after: number | null; title: string; url: string; image: string | null;
-        price_cents: number | null; currency: string | null; taxonomy_id: number | null; product: string;
+        price_cents: number | null; currency: string | null; taxonomy_id: number | null;
+        shop_id: number | null; product: string;
       }[];
+
+  /*
+    THE GATE AND THE CAP, BEFORE ANYTHING IS RANKED.
+
+    A quantity drop is the only per-listing signal Etsy offers and it is not
+    trustworthy on its own. Etsy's own count of what each SHOP sold is exact,
+    and although it can never be divided across listings without inventing a
+    number, it can say whether a drop coincided with a real sale and bound how
+    big that drop is allowed to be.
+
+    Applied here rather than after ranking, because a figure capped afterwards
+    has already spent the morning at the top of the board.
+  */
+  const shopFacts = new Map<number, { soldDelta: number; activeCount: number | null; watchedCount: number }>();
+  {
+    const shopIds = [...new Set(rows.map(r => Number(r.shop_id)).filter(Number.isSafeInteger))];
+    if (shopIds.length) {
+      /* Earliest and latest reading of each shop's cumulative count inside the
+         window. Two observations, one subtraction, no modelling. */
+      const observations = (await db().prepare(
+        `SELECT shop_id,
+                MIN(sold_count) AS first_seen,
+                MAX(sold_count) AS last_seen,
+                MAX(active_count) AS active_count
+           FROM shop_sold
+          WHERE bucket>=?
+          GROUP BY shop_id`).bind(since).all()).results as unknown as {
+            shop_id: number; first_seen: number; last_seen: number; active_count: number | null;
+          }[];
+      const watched = (await db().prepare(
+        `SELECT shop_id, COUNT(*) n FROM sold_watch
+          WHERE shop_id IS NOT NULL AND (listing_type IS NULL OR listing_type='physical')
+          GROUP BY shop_id`).all()).results as unknown as { shop_id: number; n: number }[];
+      const watchedBy = new Map(watched.map(r => [Number(r.shop_id), Number(r.n)]));
+
+      for (const row of observations)
+        shopFacts.set(Number(row.shop_id), {
+          soldDelta: shopDelta(Number(row.first_seen), Number(row.last_seen)),
+          activeCount: row.active_count == null ? null : Number(row.active_count),
+          watchedCount: watchedBy.get(Number(row.shop_id)) ?? 0,
+        });
+    }
+  }
+
+  const allowed = new Map<number, { sold: number; attribution: Attribution }>();
+  for (const row of attribute(
+    rows.map(r => ({
+      listingId: Number(r.listing_id),
+      shopId: Number.isSafeInteger(Number(r.shop_id)) ? Number(r.shop_id) : null,
+      sold: Number(r.sold),
+    })),
+    shopFacts,
+  )) allowed.set(row.listingId, { sold: row.sold, attribution: row.attribution });
+
+  /*
+    UNTIL A SHOP HAS BEEN READ TWICE THERE IS NOTHING TO GATE AGAINST.
+
+    On the first sweeps after this ships, shop_sold holds one observation and
+    every delta is zero, which would empty the board completely. Rather than
+    show nothing, the gate only takes effect once there are shop readings to
+    compare — and says so, so the page can be honest about which it is.
+  */
+  const gateReady = shopFacts.size > 0 &&
+    [...shopFacts.values()].some(facts => facts.soldDelta > 0);
 
   /* Only what sits on a shelf this tool stocks, labelled by that shelf rather
      than by Etsy's internal leaf name. */
   const onShelf = rows
+    .filter(row => !gateReady || allowed.has(Number(row.listing_id)))
+    .map(row => {
+      const verified = allowed.get(Number(row.listing_id));
+      return verified ? { ...row, sold: verified.sold } : row;
+    })
     .filter(row => shelfOf.has(Number(row.taxonomy_id)))
     /*
       SOMEBODY ELSE'S TRADEMARK IS NOT A DESIGN IDEA. Filtered here, before the
@@ -1075,6 +1202,7 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
       price: usdFromCents(r.price_cents == null ? null : Number(r.price_cents), r.currency),
       currency: "USD",
       sold: Number(r.sold),
+      attribution: allowed.get(Number(r.listing_id))?.attribution ?? null,
       soldOut: Boolean(r.sold_out),
       savesGained: Number(r.saves_gained) || 0,
       left: r.quantity_after == null ? null : Number(r.quantity_after),

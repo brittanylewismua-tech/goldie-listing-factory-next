@@ -694,3 +694,43 @@ test("the board is trimmed last, after everything that can disqualify a row", ()
             board.indexOf("const perProduct = new Map"),
     "tabs are counted before the trim");
 });
+
+test("the gate and the cap run before anything is ranked", () => {
+  /* A figure capped after ranking has already spent the morning at the top of
+     the board. */
+  const source = read("sold-overnight.ts");
+  const board = source.slice(source.indexOf("export async function readBoard"));
+  const gate = board.indexOf("const allowed = new Map");
+  const trim = board.indexOf("const shown = onShelf.slice");
+  const rank = board.indexOf("ORDER BY sold DESC");
+  assert.ok(gate !== -1 && trim !== -1, "the gate has to exist");
+  assert.ok(gate < trim, "attribution must happen before the board is trimmed");
+  assert.ok(rank < gate, "the query ranks, then attribution overrides — never the reverse");
+});
+
+test("shop sales come from two observations and one subtraction", () => {
+  /* No modelling: earliest and latest reading of Etsy's cumulative count
+     inside the window. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /MIN\(sold_count\) AS first_seen/);
+  assert.match(source, /MAX\(sold_count\) AS last_seen/);
+  assert.match(source, /shopDelta\(Number\(row\.first_seen\), Number\(row\.last_seen\)\)/);
+});
+
+test("the shop rides in on the call already being made", () => {
+  /* includes=Shop costs no extra request, which is the whole reason this is
+     affordable. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /includes=Images,Shop/);
+  assert.match(source, /CREATE TABLE IF NOT EXISTS shop_sold/);
+});
+
+test("an unreadable shop empties the board rather than being ignored", () => {
+  /* On the first sweeps after this ships there is one observation per shop and
+     every delta is zero. Applying the gate then would show nothing at all, so
+     it waits until there is something to compare — deliberately, and visibly,
+     rather than by accident. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /const gateReady =/);
+  assert.match(source, /!gateReady \|\| allowed\.has/);
+});
