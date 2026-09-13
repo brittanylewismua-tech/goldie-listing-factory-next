@@ -821,8 +821,13 @@ export async function runSweep(
              /* Named, not counted. A shelf that failed to resolve looks exactly
                 like a shelf nobody buys from, and that is how eleven of them
                 went unnoticed once already. */
-             shelvesMissing: [...new Set(POD_SHELVES.map(shelf => shelf.leaf))]
-               .filter(leaf => !landed.has(leaf)) };
+             /* Compared against the SHELF names, not Etsy's leaf names. The
+                first version listed leaves against labels, which can never
+                match, so it reported ten shelves missing while every one of
+                them was resolving perfectly. A broken alarm is worse than no
+                alarm: it taught me to ignore it. */
+             shelvesMissing: [...new Set(POD_SHELVES.map(shelf => shelf.shelf))]
+               .filter(shelf => !landed.has(shelf)) };
   } catch (error) {
     await db().prepare(
       "UPDATE sold_state SET building_since=NULL,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=1")
@@ -845,6 +850,8 @@ export type SoldBoard = {
   totalSold: number;
   building: boolean;
   hoursBack: number;
+  /** How much of that window there is actually data for. */
+  coveredHours: number;
   products: { key: string; label: string; sold: number; listings: number }[];
   listings: SoldListing[];
 };
@@ -896,7 +903,7 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
   const shelfOf = await shelfByTaxonomy();
   if (!shelfOf.size)
     return { night: null, watched: 0, totalSold: 0, building: false, hoursBack,
-             products: [], listings: [] };
+             coveredHours: 0, products: [], listings: [] };
   const state = await db().prepare("SELECT building_since,watched FROM sold_state WHERE id=1")
     .first() as { building_since: string | null; watched: number } | null;
 
@@ -911,6 +918,20 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
     ask it.
   */
   const since = new Date(Date.now() - hoursBack * 3_600_000).toISOString().slice(0, 13);
+
+  /*
+    HOW FAR BACK THE COUNTING ACTUALLY GOES.
+
+    The board offered "this week" on a day and a half of history and put
+    "sold this week" under every number. Nobody sold anything over a week we
+    were not watching. The page is told the real span so it can say the true
+    thing instead.
+  */
+  const first = await db().prepare("SELECT MIN(bucket) b FROM sold_moves").first() as
+    { b: string | null } | null;
+  const firstSeen = first?.b ? new Date(`${first.b}:00:00Z`).getTime() : Date.now();
+  const coveredHours = Math.max(1, Math.round((Date.now() - Math.max(
+    firstSeen, Date.now() - hoursBack * 3_600_000)) / 3_600_000));
 
   const rows = (await db().prepare(
     `SELECT m.listing_id, SUM(m.sold) sold, MAX(m.sold_out) sold_out,
@@ -938,8 +959,26 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
      than by Etsy's internal leaf name. */
   const onShelf = rows
     .filter(row => shelfOf.has(Number(row.taxonomy_id)))
-    .map(row => ({ ...row, product: shelfOf.get(Number(row.taxonomy_id))! }))
-    .slice(0, limit);
+    .map(row => ({ ...row, product: shelfOf.get(Number(row.taxonomy_id))! }));
+
+  /*
+    THE TABS ARE COUNTED BEFORE THE BOARD IS TRIMMED.
+
+    Sweatshirts & Hoodies had twenty-seven listings against a threshold of
+    thirty and so had no tab — except twenty-seven was how many survived into
+    the top four hundred by volume, not how many were selling. A shelf full of
+    steady, modest sellers gets squeezed out of that slice by one full of loud
+    ones, then judged as though it were empty. Depth is a property of the
+    shelf, so it is measured across the shelf.
+  */
+  const perProduct = new Map<string, { sold: number; listings: number }>();
+  for (const row of onShelf) {
+    const at = perProduct.get(row.product) ?? { sold: 0, listings: 0 };
+    at.sold += Number(row.sold); at.listings++;
+    perProduct.set(row.product, at);
+  }
+
+  const shown = onShelf.slice(0, limit);
 
   /*
     A SHELF WITH ONE THING ON IT IS NOT A SHELF.
@@ -950,19 +989,13 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
     the board under Everything; they simply do not get a tab of their own
     until there is something behind it.
   */
-  const perProduct = new Map<string, { sold: number; listings: number }>();
-  for (const row of onShelf) {
-    const at = perProduct.get(row.product) ?? { sold: 0, listings: 0 };
-    at.sold += Number(row.sold); at.listings++;
-    perProduct.set(row.product, at);
-  }
-
   return {
     night: onShelf.length ? new Date().toISOString().slice(0, 10) : null,
     watched: Number(state?.watched) || 0,
     totalSold: onShelf.reduce((sum, r) => sum + Number(r.sold), 0),
     building: Boolean(state?.building_since),
     hoursBack,
+    coveredHours,
     /*
       A FIXED ROW IN A FIXED ORDER.
 
@@ -978,7 +1011,7 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
         sold: perProduct.get(shelf)!.sold,
         listings: perProduct.get(shelf)!.listings,
       })),
-    listings: onShelf.map(r => ({
+    listings: shown.map(r => ({
       listingId: Number(r.listing_id),
       title: r.title,
       url: r.url,

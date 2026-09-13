@@ -9,7 +9,7 @@ const strip = source => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\
 
 /* The subtraction is imported and run, not read. It is the only thing standing
    between "six of these sold last night" and a fabrication. */
-const { movement } = await import("../app/sold-overnight-math.ts")
+const { movement, MAX_UNITS_PER_READ } = await import("../app/sold-overnight-math.ts")
   .catch(async () => {
     /* Node cannot import .ts directly on every version; fall back to the
        compiled output the build already produced. */
@@ -342,12 +342,30 @@ test("a small listing selling out entirely still counts", () => {
 });
 
 test("ordinary sales on a deep shelf still count", () => {
-  /* The observed real numbers — 43 off 837, 30 off 12,164, 25 off 72 — are
-     exactly what the board exists to show and none of them may be clipped. */
-  assert.equal(movement(837, 794).units, 43);
-  assert.equal(movement(12164, 12134).units, 30);
-  assert.equal(movement(72, 47).units, 25);
+  /* The everyday case the board exists for: a handful of units off a listing
+     between two readings, whatever the stock behind it. */
+  assert.equal(movement(837, 831).units, 6);
+  assert.equal(movement(12164, 12154).units, 10);
+  assert.equal(movement(72, 52).units, 20);
   assert.equal(movement(295, 294).units, 1);
+});
+
+test("the per-read cap is deliberately conservative", () => {
+  /* A hundred was set to separate a 2,997 halving from real shopping, and it
+     did — but a seller trimming stock from 999 to 950 is 49, and that passed
+     as forty-nine purchases. Over four hours twenty units is already a brisk
+     listing, and bigger drops are far more likely to be somebody editing
+     their shop.
+
+     This under-counts the genuinely explosive listing on purpose. Given the
+     choice the board should miss a real sale rather than print one that never
+     happened: a number nobody can trust is worth less than a smaller one they
+     can. */
+  assert.equal(MAX_UNITS_PER_READ, 20);
+  assert.equal(movement(999, 950).units, 0, "an inventory trim is not forty-nine sales");
+  assert.equal(movement(999, 950).inventoryChange, true);
+  assert.equal(movement(500, 479).units, 0, "just over the line is still rejected");
+  assert.equal(movement(500, 480).units, 20, "and exactly on it is still counted");
 });
 
 test("a shelf emptied by bookkeeping is not reported as sold out", () => {
@@ -470,4 +488,39 @@ test("a slot that never produces anything is given up", () => {
   /* But anything that has ever sold is kept whatever its saves say — it has
      already answered the only question being asked. */
   assert.match(source, /NOT IN \(SELECT DISTINCT listing_id FROM sold_moves WHERE sold > 0\)/);
+});
+
+test("shelf depth is measured across the shelf, not across the visible board", () => {
+  /* Sweatshirts & Hoodies had twenty-seven listings against a threshold of
+     thirty and so got no tab — except twenty-seven was how many survived into
+     the top four hundred by volume, not how many were selling. A shelf of
+     steady modest sellers gets squeezed out of that slice by a shelf of loud
+     ones, then judged as though it were empty. */
+  const source = read("sold-overnight.ts");
+  const board = source.slice(source.indexOf("export async function readBoard"));
+  const counted = board.indexOf("const perProduct");
+  const trimmed = board.indexOf("const shown = onShelf.slice");
+  assert.ok(counted !== -1 && trimmed !== -1);
+  assert.ok(counted < trimmed, "the tabs must be counted before the board is trimmed");
+  assert.match(board, /listings: shown\.map/, "only the display list is trimmed");
+});
+
+test("the board never claims a period it has no data for", () => {
+  /* It offered "This week" on its first day and wrote "sold this week" under
+     every number, claiming six days nobody was watching. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /SELECT MIN\(bucket\) b FROM sold_moves/);
+  assert.match(source, /coveredHours/);
+  const page = read("hot-list/page.tsx");
+  assert.match(page, /function periodLabel\(coveredHours: number, hoursBack: number\)/);
+  assert.match(page, /Math\.min\(coveredHours \|\| hoursBack, hoursBack\)/);
+});
+
+test("the missing-shelf alarm compares like with like", () => {
+  /* It listed Etsy leaf names against shelf labels, which can never match, so
+     it reported ten shelves missing while every one was resolving perfectly. A
+     broken alarm is worse than none: it teaches you to ignore it. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /POD_SHELVES\.map\(shelf => shelf\.shelf\)/);
+  assert.doesNotMatch(source, /POD_SHELVES\.map\(shelf => shelf\.leaf\)\)\]\s*\n?\s*\.filter/);
 });

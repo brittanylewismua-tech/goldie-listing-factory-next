@@ -29,16 +29,34 @@ type Listing = {
 type Hit = { listingId: number; title: string; url: string; image: string | null;
   price: number | null; currency: string; sold: number; product: string };
 type Board = {
-  night: string | null; totalSold: number; hoursBack: number;
+  night: string | null; totalSold: number; hoursBack: number; coveredHours: number;
   building: boolean; unlocked: boolean; held: number; toUnlock: number;
   products: { key: string; label: string; sold: number; listings: number }[];
   listings: Listing[];
 };
 
 const VIEWS = [
-  { key: "week", hours: 168, tab: "This week", unit: "sold this week" },
-  { key: "overnight", hours: 24, tab: "Overnight", unit: "sold overnight" },
+  { key: "week", hours: 168, tab: "This week" },
+  { key: "overnight", hours: 24, tab: "Overnight" },
 ];
+
+/**
+ * SAY THE PERIOD THERE IS DATA FOR, NOT THE ONE THAT WAS ASKED FOR.
+ *
+ * The board offered "This week" from its first day and put "sold this week"
+ * under every number, which claimed six days nobody was watching. The counting
+ * has a start date; until the window is older than that, the label is however
+ * long we have actually been counting.
+ */
+function periodLabel(coveredHours: number, hoursBack: number) {
+  const hours = Math.min(coveredHours || hoursBack, hoursBack);
+  if (hours >= 144) return "sold this week";
+  if (hours >= 20) {
+    const days = Math.round(hours / 24);
+    return days <= 1 ? "sold in 24 hours" : `sold in ${days} days`;
+  }
+  return hours === 1 ? "sold in the last hour" : `sold in ${hours} hours`;
+}
 
 const money = (value: number | null, currency: string) =>
   value === null ? "" : new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
@@ -145,7 +163,7 @@ export default function HotListPage() {
               <figcaption>
                 <p className="drop-figures">
                   <span className="drop-numeral">{hit.sold.toLocaleString()}</span>
-                  <span className="drop-unit">sold this week</span>
+                  <span className="drop-unit">{periodLabel(board?.coveredHours ?? 168, 168)}</span>
                 </p>
                 {hit.price !== null && <p className="drop-sub">{money(hit.price, hit.currency)}</p>}
                 <a className="drop-title" href={hit.url} target="_blank" rel="noopener noreferrer">
@@ -201,7 +219,7 @@ export default function HotListPage() {
                   <figcaption>
                     <p className="drop-figures">
                       <span className="drop-numeral">{listing.sold.toLocaleString()}</span>
-                      <span className="drop-unit">{view.unit}</span>
+                      <span className="drop-unit">{periodLabel(board.coveredHours, view.hours)}</span>
                     </p>
                     {listing.price !== null &&
                       <p className="drop-sub">{money(listing.price, listing.currency)}</p>}
@@ -219,7 +237,9 @@ export default function HotListPage() {
       <details className="drop-note">
         <summary>What these numbers mean</summary>
         <p>
-          These are real sales on Etsy over the period you have chosen, not a ranking,
+          These are counted from the drop in how many of each item are available to
+          buy, over the period you have chosen, and only for as long as we have been
+          counting. Not a ranking,
           not an estimate, and not a guess from search position. Digital downloads are
           left out, since they have nothing to do with printing, and so is a shop
           rearranging its own listings rather than selling any. What is left is sales,

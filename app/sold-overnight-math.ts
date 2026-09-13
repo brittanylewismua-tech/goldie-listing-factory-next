@@ -33,7 +33,21 @@
  * the rate is visible and these thresholds can be tuned against real numbers
  * instead of judgement.
  */
-export const MAX_UNITS_PER_READ = 100;
+/*
+  A HUNDRED WAS TOO GENEROUS AND LET INVENTORY WORK THROUGH.
+
+  It was set to separate a 2,997 halving from real shopping, which it did. But
+  a seller trimming stock from 999 to 950 between two readings is 49, and that
+  passed as forty-nine purchases. Over a four-hour gap twenty units is already
+  a brisk listing — a hundred and twenty a day — and drops above it are far
+  more likely to be somebody editing their shop than a queue of buyers.
+
+  This deliberately under-counts the genuinely explosive listing. Given the
+  choice, the board should miss a real sale rather than print one that did not
+  happen, because a number nobody can trust is worth less than a smaller one
+  they can.
+*/
+export const MAX_UNITS_PER_READ = 20;
 export const SMALL_STOCK = 200;
 export const MAX_SHARE = 0.25;
 
