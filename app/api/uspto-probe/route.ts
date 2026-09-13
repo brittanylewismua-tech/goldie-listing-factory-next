@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { withErrorLog } from "@/app/error-log";
+import { env } from "cloudflare:workers";
 
 /**
  * DO WE ACTUALLY NEED A USPTO ACCOUNT?
@@ -21,6 +22,16 @@ import { withErrorLog } from "@/app/error-log";
  * what came back rather than what was hoped for.
  */
 
+/*
+  THE KEY, ONCE IT EXISTS.
+
+  Adding USPTO_API_KEY as a worker secret is the only step Brittany has to
+  take, and the moment it is there this endpoint answers the next question by
+  itself: does the key work, and can it see the trademark register. No round
+  trip through me, and no secret pasted into a conversation.
+*/
+const key = () => (env as unknown as { USPTO_API_KEY?: string }).USPTO_API_KEY?.trim() || "";
+
 const TARGETS = [
   /* The directory listing. If this is open, the files under it usually are. */
   "https://bulkdata.uspto.gov/data/trademark/dailyxml/applications/",
@@ -39,7 +50,12 @@ export const GET = withErrorLog("uspto-probe", async (_request: Request) => {
   for (const url of TARGETS) {
     try {
       const response = await fetch(url, {
-        headers: { "user-agent": "Goldie/1.0 (+https://thegoldiesuite.com)" },
+        headers: {
+          "user-agent": "Goldie/1.0 (+https://thegoldiesuite.com)",
+          /* Sent only when it exists, so the unauthenticated result stays
+             comparable to what was measured before the key arrived. */
+          ...(key() ? { "X-API-KEY": key() } : {}),
+        },
         signal: AbortSignal.timeout(20_000),
       });
       const body = await response.text();
@@ -60,7 +76,15 @@ export const GET = withErrorLog("uspto-probe", async (_request: Request) => {
   }
 
   return NextResponse.json({
-    question: "Can the worker reach USPTO bulk trademark data without an API key?",
+    question: key()
+      ? "Does the USPTO key work, and does it reach the trademark register?"
+      : "Can the worker reach USPTO bulk trademark data without an API key?",
+    keyPresent: Boolean(key()),
+    /* Never the value. Enough to confirm the right secret landed. */
+    keyLooksLike: key() ? `${key().slice(0, 4)}…${key().slice(-2)} (${key().length} chars)` : null,
+    verdict: key()
+      ? "A 200 on the last row means the register is reachable and the ingest can be built."
+      : "401 on the API and a dead origin on the old bulk host: the account is required.",
     results,
   });
 });
