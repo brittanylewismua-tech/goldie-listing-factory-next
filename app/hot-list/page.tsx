@@ -26,6 +26,8 @@ type Listing = {
   price: number | null; currency: string;
   sold: number; soldOut: boolean; product: string;
 };
+type Hit = { listingId: number; title: string; url: string; image: string | null;
+  price: number | null; currency: string; sold: number; product: string };
 type Board = {
   night: string | null; totalSold: number; hoursBack: number;
   building: boolean; unlocked: boolean; held: number; toUnlock: number;
@@ -46,6 +48,10 @@ export default function HotListPage() {
   const [error, setError] = useState("");
   const [product, setProduct] = useState("all");
   const [view, setView] = useState(VIEWS[0]);
+  const [term, setTerm] = useState("");
+  const [hits, setHits] = useState<Hit[] | null>(null);
+  const [looking, setLooking] = useState(false);
+  const [note, setNote] = useState("");
 
   const load = (next = view) => {
     setBoard(null); setError(""); setView(next);
@@ -61,11 +67,38 @@ export default function HotListPage() {
   };
   useEffect(() => { load(VIEWS[0]); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
+  /*
+    LOOK A PHRASE UP AGAINST WHAT SOLD.
+
+    Not gated. The unlock ladder is parked until the rest of the product is
+    settled, but this is a tool rather than a reward and there is no reason a
+    seller should have to earn the right to ask a question.
+  */
+  async function search(event: React.FormEvent) {
+    event.preventDefault();
+    if (!term.trim() || looking) return;
+    setLooking(true); setNote(""); setHits(null);
+    try {
+      const response = await fetch(
+        `/api/sold-overnight/search?keyword=${encodeURIComponent(term.trim())}`, { cache: "no-store" });
+      const result = await response.json() as { listings?: Hit[]; error?: string };
+      if (!response.ok) throw new Error(result.error || "That could not be looked up.");
+      setHits(result.listings ?? []);
+      if (!result.listings?.length)
+        setNote(`Nothing matching \u201c${term.trim()}\u201d has sold in the last week.`);
+    } catch (error) {
+      setNote(error instanceof Error ? error.message : "That could not be looked up.");
+    } finally { setLooking(false); }
+  }
+
   const shown = board
     ? product === "all" ? board.listings : board.listings.filter(l => l.product === product)
     : [];
 
-  return <FactoryShell active="home" title="Hot List"><div className="drop-page sold-page interior-page">
+  /* Not "home": the Hot List is reached FROM home and is not it, and lighting
+     Home while standing here says the rail cannot tell where you are. No rail
+     item matches "hotlist", so nothing is lit. */
+  return <FactoryShell active="hotlist" title="Hot List"><div className="drop-page sold-page interior-page">
     <header className="drop-head">
       <p className="mini-label">HOT LIST</p>
       <h1>What&apos;s actually selling</h1>
@@ -88,6 +121,40 @@ export default function HotListPage() {
       <div className="drop-card-surface">
         {/* The week leads. Overnight is the sharper look inside it, not a
             rival feature with its own page. */}
+        <form className="hot-search" onSubmit={search}>
+          <input type="search" value={term} onChange={e => setTerm(e.target.value)}
+            placeholder="Look up a keyword" aria-label="Look up a keyword" />
+          <button type="submit" disabled={!term.trim() || looking}>
+            {looking ? "Searching" : "Search"}</button>
+          {hits !== null && <button type="button" className="hot-search-clear"
+            onClick={() => { setHits(null); setNote(""); setTerm(""); }}>Clear</button>}
+        </form>
+
+        {note && <p className="hot-note" role="status">{note}</p>}
+
+        {hits && hits.length > 0 && <section className="hot-hits">
+          <p className="mini-label">SOLD IN THE LAST WEEK FOR &ldquo;{term.trim()}&rdquo;</p>
+          <div className="drop-grid">
+            {hits.map(hit => <figure key={hit.listingId} className="drop-card">
+              <a href={hit.url} target="_blank" rel="noopener noreferrer" className="drop-shot">
+                {hit.image
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  ? <img src={hit.image} alt={hit.title} />
+                  : <span className="drop-noshot">No picture</span>}
+              </a>
+              <figcaption>
+                <p className="drop-figures">
+                  <span className="drop-numeral">{hit.sold.toLocaleString()}</span>
+                  <span className="drop-unit">sold this week</span>
+                </p>
+                {hit.price !== null && <p className="drop-sub">{money(hit.price, hit.currency)}</p>}
+                <a className="drop-title" href={hit.url} target="_blank" rel="noopener noreferrer">
+                  {hit.title}</a>
+              </figcaption>
+            </figure>)}
+          </div>
+        </section>}
+
         <nav className="sold-windows" aria-label="Period">
           {VIEWS.map(v =>
             <button key={v.key} type="button"
