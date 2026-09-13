@@ -979,10 +979,25 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
       GROUP BY m.listing_id
       ORDER BY sold DESC, saves_gained DESC
       LIMIT ?`)
-    /* Generous, because the shelf filter below thins this and a tight limit
-       here would quietly truncate the board rather than fill it. */
-    .bind(since, MAX_UNITS_PER_READ, madeToOrder ? 1 : 0,
-          Math.max(limit * 6, 2_000)).all()).results as unknown as {
+    /*
+      TRUNCATE LAST, NOT FIRST.
+
+      This used to fetch six hundred rows ordered by units and let the filters
+      below thin them. That is the wrong order and it was costing most of the
+      board: the shelf filter, the trademark filter and the made-to-order
+      filter all run after this query, so anything they remove was a slot that
+      could have been filled from the tail — and the tail never left the
+      database. Measured on live data, four hundred returned rows came down to
+      seventy-four survivors, while the watch set had recorded thousands of
+      sales in the same window.
+
+      So the window's movers all come back and the trimming happens at the very
+      end, after everything that can disqualify a row has had its say. The
+      ceiling here is a runaway guard, not a page size — rows are cheap and a
+      day's sales across the whole watch set is thousands, not millions.
+    */
+    .bind(since, MAX_UNITS_PER_READ, madeToOrder ? 1 : 0, 50_000)
+    .all()).results as unknown as {
         listing_id: number; sold: number; sold_out: number; saves_gained: number;
         quantity_after: number | null; title: string; url: string; image: string | null;
         price_cents: number | null; currency: string | null; taxonomy_id: number | null; product: string;

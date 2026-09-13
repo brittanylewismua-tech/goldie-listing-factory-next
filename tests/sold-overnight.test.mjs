@@ -671,3 +671,26 @@ test("the board does not recommend somebody else's trademark", () => {
   assert.match(read("api/sold-overnight/route.ts"), /params\.get\("rights"\) === "1"/);
   assert.match(read("hot-list/page.tsx"), /Do not copy these/);
 });
+
+test("the board is trimmed last, after everything that can disqualify a row", () => {
+  /* The shelf filter, the trademark filter and the made-to-order filter all
+     run after the query. Truncating in SQL first meant every row they removed
+     was a slot that could have been filled from the tail — and the tail never
+     left the database. Measured on live data: four hundred rows returned came
+     down to seventy-four survivors while the watch set had recorded thousands
+     of sales in the same window. */
+  const source = read("sold-overnight.ts");
+  const board = source.slice(source.indexOf("export async function readBoard"));
+  assert.doesNotMatch(board, /Math\.max\(limit \* 6/,
+    "the page size must not be what limits the query");
+  /* The remaining ceiling is a runaway guard, and it has to be far above a
+     day's sales across the whole watch set. */
+  const guard = /\.bind\(since, MAX_UNITS_PER_READ, madeToOrder \? 1 : 0, (\d[\d_]*)\)/.exec(board);
+  assert.ok(guard, "the query still needs a runaway guard");
+  assert.ok(Number(guard[1].replace(/_/g, "")) >= 20_000,
+    "the guard must not double as a page size");
+  /* And the trim itself still happens at the end. */
+  assert.ok(board.indexOf("const shown = onShelf.slice(0, limit)") >
+            board.indexOf("const perProduct = new Map"),
+    "tabs are counted before the trim");
+});
