@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { withErrorLog } from "@/app/error-log";
-import { refreshNow, runSweep } from "@/app/sold-overnight";
+import { refreshNow, runSweep, shopObservationHealth } from "@/app/sold-overnight";
 
 /**
  * RUN A SWEEP BY HAND.
@@ -42,7 +42,18 @@ export const POST = withErrorLog("sold-overnight-build", async (request: Request
   if (url.searchParams.get("again") === "1") await refreshNow();
 
   const result = await runSweep({ maxCalls, discovery, pages });
-  return NextResponse.json(result);
+
+  /*
+    CAN THE GATE EVER ARM?
+
+    Every row on the board reads "ungated" until shops have been observed
+    twice, which is correct and expected on the first sweeps. It is also
+    exactly what a broken shop feed would look like, so the run reports
+    whether observations are actually accumulating rather than leaving the
+    two indistinguishable.
+  */
+  const shops = await shopObservationHealth();
+  return NextResponse.json({ ...result, shops });
 });
 
 /** Same thing on a GET, so it can be run from the address bar. */

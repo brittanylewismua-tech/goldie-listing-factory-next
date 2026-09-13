@@ -1365,3 +1365,46 @@ export async function searchSold(keyword: string, hoursBack = 168, limit = 24) {
       product: shelfOf.get(Number(row.taxonomy_id))!,
     }));
 }
+
+
+/**
+ * IS THE SHOP FEED ACTUALLY FILLING?
+ *
+ * Until a shop has been observed twice its sold-count delta is zero, so the
+ * gate holds off and every row reports itself ungated. That is correct on the
+ * first sweeps — and indistinguishable from a shop feed that is silently
+ * returning nothing, which is the failure this exists to tell apart.
+ */
+export async function shopObservationHealth() {
+  await ensureTables();
+  const row = await db().prepare(
+    `SELECT COUNT(*) rows,
+            COUNT(DISTINCT shop_id) shops,
+            COUNT(DISTINCT bucket) buckets,
+            MIN(bucket) first_bucket,
+            MAX(bucket) last_bucket
+       FROM shop_sold`).first() as {
+         rows: number; shops: number; buckets: number;
+         first_bucket: string | null; last_bucket: string | null } | null;
+
+  const twice = await db().prepare(
+    `SELECT COUNT(*) n FROM (
+       SELECT shop_id FROM shop_sold GROUP BY shop_id HAVING COUNT(DISTINCT bucket) > 1)`)
+    .first() as { n: number } | null;
+
+  const moved = await db().prepare(
+    `SELECT COUNT(*) n FROM (
+       SELECT shop_id FROM shop_sold GROUP BY shop_id
+        HAVING MAX(sold_count) > MIN(sold_count))`).first() as { n: number } | null;
+
+  return {
+    observations: Number(row?.rows) || 0,
+    shops: Number(row?.shops) || 0,
+    distinctHours: Number(row?.buckets) || 0,
+    firstSeen: row?.first_bucket ?? null,
+    lastSeen: row?.last_bucket ?? null,
+    seenTwice: Number(twice?.n) || 0,
+    withMovement: Number(moved?.n) || 0,
+    gateCanArm: (Number(moved?.n) || 0) > 0,
+  };
+}
