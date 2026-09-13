@@ -413,15 +413,33 @@ export async function shelfIds(): Promise<{ id: number; label: string; path: str
  *
  * Matching on the path prefix takes the shelf and everything beneath it.
  */
-export async function shelfTaxonomyIds(): Promise<number[]> {
+export async function shelfTaxonomyIds(): Promise<Set<number>> {
   const shelves = await shelfIds();
-  if (!shelves.length) return [];
-  const clauses = shelves.map(() => "path = ? OR path LIKE ?").join(" OR ");
-  const binds = shelves.flatMap(shelf => [shelf.path, `${shelf.path} > %`]);
-  const rows = (await db().prepare(
-    `SELECT taxonomy_id FROM sold_taxonomy WHERE ${clauses}`).bind(...binds).all())
-    .results as unknown as { taxonomy_id: number }[];
-  return rows.map(r => Number(r.taxonomy_id));
+  if (!shelves.length) return new Set();
+
+  /*
+    THE PREFIX MATCH HAPPENS HERE, NOT IN SQL.
+
+    Fifteen OR'd LIKE clauses on paths this long is "LIKE or GLOB pattern too
+    complex" from D1, which took the whole board down with a 500. And the
+    obvious repair — resolving the ids in SQL and passing them back in an IN
+    list — trades one limit for another, because the descendants of fifteen
+    shelves run to hundreds of bound parameters.
+    
+    The taxonomy is a few thousand rows and changes about never. Reading it and
+    matching prefixes in memory has no limit to bump into at all.
+  */
+  const all = (await db().prepare("SELECT taxonomy_id,path FROM sold_taxonomy").all())
+    .results as unknown as { taxonomy_id: number; path: string }[];
+
+  const roots = shelves.map(shelf => shelf.path).filter(Boolean);
+  const ids = new Set<number>();
+  for (const row of all) {
+    const path = String(row.path ?? "");
+    if (roots.some(root => path === root || path.startsWith(`${root} > `)))
+      ids.add(Number(row.taxonomy_id));
+  }
+  return ids;
 }
 
 /**
@@ -740,7 +758,7 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
     has no business here whatever it is.
   */
   const shelfSet = await shelfTaxonomyIds();
-  if (!shelfSet.length)
+  if (!shelfSet.size)
     return { night: null, watched: 0, totalSold: 0, building: false, hoursBack,
              products: [], listings: [] };
   const state = await db().prepare("SELECT building_since,watched FROM sold_state WHERE id=1")
@@ -761,22 +779,26 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
   const rows = (await db().prepare(
     `SELECT m.listing_id, SUM(m.sold) sold, MAX(m.sold_out) sold_out,
             SUM(m.saves_gained) saves_gained, MIN(m.quantity_after) quantity_after,
-            w.title,w.url,w.image,w.price_cents,w.currency,
+            w.title,w.url,w.image,w.price_cents,w.currency,w.taxonomy_id,
             COALESCE(t.name,'Other') product
        FROM sold_moves m
        JOIN sold_watch w ON w.listing_id=m.listing_id
        LEFT JOIN sold_taxonomy t ON t.taxonomy_id=w.taxonomy_id
       WHERE m.bucket>=? AND m.sold>0 AND m.sold<=?
         AND COALESCE(w.listing_type,'physical')='physical'
-        AND w.taxonomy_id IN (SHELVES)
       GROUP BY m.listing_id
       ORDER BY sold DESC, saves_gained DESC
-      LIMIT ?`.replace("SHELVES", shelfSet.map(() => "?").join(",")))
-    .bind(since, MAX_UNITS_PER_READ, ...shelfSet, limit).all()).results as unknown as {
+      LIMIT ?`)
+    /* Generous, because the shelf filter below thins this and a tight limit
+       here would quietly truncate the board rather than fill it. */
+    .bind(since, MAX_UNITS_PER_READ, Math.max(limit * 6, 2_000)).all()).results as unknown as {
         listing_id: number; sold: number; sold_out: number; saves_gained: number;
         quantity_after: number | null; title: string; url: string; image: string | null;
-        price_cents: number | null; currency: string | null; product: string;
+        price_cents: number | null; currency: string | null; taxonomy_id: number | null; product: string;
       }[];
+
+  /* Only what sits on a shelf this tool stocks, or beneath one. */
+  const onShelf = rows.filter(row => shelfSet.has(Number(row.taxonomy_id))).slice(0, limit);
 
   /*
     A SHELF WITH ONE THING ON IT IS NOT A SHELF.
@@ -788,23 +810,23 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
     until there is something behind it.
   */
   const perProduct = new Map<string, { sold: number; listings: number }>();
-  for (const row of rows) {
+  for (const row of onShelf) {
     const at = perProduct.get(row.product) ?? { sold: 0, listings: 0 };
     at.sold += Number(row.sold); at.listings++;
     perProduct.set(row.product, at);
   }
 
   return {
-    night: rows.length ? new Date().toISOString().slice(0, 10) : null,
+    night: onShelf.length ? new Date().toISOString().slice(0, 10) : null,
     watched: Number(state?.watched) || 0,
-    totalSold: rows.reduce((sum, r) => sum + Number(r.sold), 0),
+    totalSold: onShelf.reduce((sum, r) => sum + Number(r.sold), 0),
     building: Boolean(state?.building_since),
     hoursBack,
     products: [...perProduct.entries()]
       .filter(([, at]) => at.listings >= SHELF_MINIMUM)
       .sort((a, b) => b[1].sold - a[1].sold)
       .map(([key, at]) => ({ key, label: key, sold: at.sold, listings: at.listings })),
-    listings: rows.map(r => ({
+    listings: onShelf.map(r => ({
       listingId: Number(r.listing_id),
       title: r.title,
       url: r.url,

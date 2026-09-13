@@ -210,7 +210,7 @@ test("the board shows sales the moment they are counted", () => {
      table — the page refusing to show numbers it already had. */
   const source = read("sold-overnight.ts");
   assert.doesNotMatch(source, /state\?\.last_night \? \{ night/);
-  assert.match(source, /night: rows\.length \? new Date\(\)/);
+  assert.match(source, /night: onShelf\.length \? new Date\(\)/);
 });
 
 test("the board groups by Etsy's leaf category, not its department", () => {
@@ -383,11 +383,15 @@ test("the board only ever shows shelves this tool deliberately stocks", () => {
      and also clears out legacy rows from the old keyword seeding. */
   const source = read("sold-overnight.ts");
   const board = source.slice(source.indexOf("export async function readBoard"));
-  assert.match(board, /w\.taxonomy_id IN \(SHELVES\)/);
-  assert.match(board, /shelfSet\.map\(\(\) => "\?"\)\.join\(","\)/);
+  assert.match(board, /shelfSet\.has\(Number\(row\.taxonomy_id\)\)/);
   /* And an empty shelf list must render an empty board rather than an
-     unbounded query with no restriction at all. */
-  assert.match(board, /if \(!shelfSet\.length\)/);
+     unrestricted one. */
+  assert.match(board, /if \(!shelfSet\.size\)/);
+  /* Everything the board reports has to come from the filtered rows, or the
+     tabs promise categories the grid does not contain. */
+  for (const derived of ["perProduct", "totalSold", "listings"])
+    assert.ok(board.includes("onShelf"), `${derived} must be derived from the filtered rows`);
+  assert.doesNotMatch(board, /listings: rows\.map/);
 });
 
 test("the tabs and the grid cannot disagree", () => {
@@ -408,7 +412,11 @@ test("a shelf includes everything filed beneath it", () => {
      stopped appearing. */
   const source = read("sold-overnight.ts");
   assert.match(source, /export async function shelfTaxonomyIds/);
-  assert.match(source, /path = \? OR path LIKE \?/);
-  assert.match(source, /`\$\{shelf\.path\} > %`/);
+  /* And the prefix match must not be SQL: fifteen OR'd LIKE clauses on paths
+     this long is "LIKE or GLOB pattern too complex" from D1, which took the
+     board down with a 500. Resolving to an IN list trades one limit for
+     another, since fifteen shelves have hundreds of descendants. */
+  assert.doesNotMatch(source, /path LIKE/);
+  assert.match(source, /path\.startsWith\(`\$\{root\} > `\)/);
   assert.match(source, /const shelfSet = await shelfTaxonomyIds\(\)/);
 });
