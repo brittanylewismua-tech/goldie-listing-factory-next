@@ -833,12 +833,19 @@ test("D835: the rail is fixed and its contents fit inside it", () => {
   const v2 = fs.readFileSync(new URL("../app/interface-v2.css", import.meta.url), "utf8");
   const shell = fs.readFileSync(new URL("../app/factory-shell.tsx", import.meta.url), "utf8");
   const navCount = (shell.match(/\{ key: "/g) || []).length;
-  /* Back to three. Today's Drop moved out of the nav and in with the actions,
-     where it belongs — the links are workspaces, it is a destination. The
-     savings that were reclaimed to seat a fourth link now pay for the action
-     button instead, which costs about the same. Measure before adding either. */
-  assert.equal(navCount, 3, `the rail carries ${navCount} nav links; the height budget assumes 3`);
-  assert.match(shell, /rail-drop-button/, "Today's Drop is an action, not a nav link");
+  /* Four, and the budget still holds because a trade was made rather than a
+     line added. Sold Overnight left the rail entirely — it is not part of
+     making a listing and now lives on the home page with the other tools —
+     which removed the action button that used to sit under the nav. Home took
+     its place as a nav link, and a nav link is shorter than an icon button.
+
+     The rail is FIXED HEIGHT with one scroller in the pane, so this is not a
+     formality: add a fifth link without taking something out and the
+     powered-by line at the bottom is clipped again with nothing to catch it.
+     Measure before adding either. */
+  assert.equal(navCount, 4, `the rail carries ${navCount} nav links; the height budget assumes 4`);
+  assert.doesNotMatch(shell, /rail-drop-button/,
+    "the action button Home replaced must stay gone, or the budget is overspent");
   assert.match(v2, /\.app-shell > \.topbar\{overflow:hidden;padding-top:24px;padding-bottom:20px\}/);
   assert.match(v2, /\.app-shell > \.topbar > \.brand-lockup\{margin-bottom:20px\}/);
   assert.match(v2, /\.app-shell > \.topbar \.top-nav\{gap:4px\}/);

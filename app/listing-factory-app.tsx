@@ -5477,7 +5477,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </div>
         <div className="top-actions">
           <nav className="top-nav" aria-label="Listing Factory navigation">
-            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}>Listing Factory</a>
+            <a href="/home" onClick={event=>guardNavigation(event,"/home")}>Home</a>
+            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}>New listing project</a>
             <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}>Batch History</a>
             <a href="/keywords" target="_blank" rel="noopener noreferrer">Keyword Banks</a>
             {/* D834 · Usage + Plan and Connections live in the account menu now,

@@ -1201,7 +1201,13 @@ test("D818: one component renders the interior sidebar, and it matches the workf
      account. The rail is the three places work happens. Both destinations still
      have to exist on both surfaces - that is what this guards - they are just
      reached from the menu now. */
-  for (const label of ["Listing Factory", "Batch History", "Keyword Banks"]) {
+  /* The rail gained Home and the first item stopped being a link to where you
+     already are: standing in the Listing Factory, "Listing Factory" pointed at
+     the current page. It is the button that starts a piece of work, so it says
+     so. Both surfaces still have to carry every destination — that is what
+     this guards, and it is why the workflow's own inline rail is checked
+     alongside the shared shell. */
+  for (const label of ["Home", "New listing project", "Batch History", "Keyword Banks"]) {
     assert.ok(shell.includes(`label: "${label}"`), `${label} is on the interior rail`);
     assert.ok(app.includes(`>${label}</a>`), `${label} is on the workflow rail`);
   }

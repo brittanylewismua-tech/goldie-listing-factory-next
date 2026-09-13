@@ -15,5 +15,5 @@ import { redirect } from "next/navigation";
  * bookmarked and in the nav of older sessions.
  */
 export default function HotListRedirect() {
-  redirect("/sold-overnight");
+  redirect("/hot-list");
 }

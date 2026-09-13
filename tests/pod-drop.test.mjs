@@ -84,8 +84,8 @@ test("the board is fetched fresh, never from the browser cache", () => {
      guarded — a newline after `return` silently rendering nothing — no longer
      applies, because the board maps its cards inline. The caching guarantee
      does still apply and moved with the page. */
-  const source = read("sold-overnight/page.tsx");
-  assert.match(source, /fetch\(`\/api\/sold-overnight[\s\S]{0,120}\{ cache: "no-store" \}/,
+  const source = read("hot-list/page.tsx");
+  assert.match(source, /fetch\(`\/api\/sold-overnight[\s\S]{0,160}\{ cache: "no-store" \}/,
     "an open customer tab must not reuse a board from before a safety repair");
   assert.match(read("unlock-cards.tsx"), /api\/sold-overnight\/search[\s\S]{0,200}cache: "no-store"/,
     "keyword research must not reuse a browser-cached response");

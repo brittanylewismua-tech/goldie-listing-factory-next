@@ -27,17 +27,23 @@ import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
-type NavKey = "factory" | "sold" | "batches" | "keywords" | "usage" | "connections";
-
-/* "drop" stays in NavKey so the page can name itself, but it is deliberately
-   not in NAV. The rail's three links are workspaces — places work happens and
-   stays. Today's Hot List is a destination you visit and leave, which is the same
-   shape as Start a new batch, so it sits with that instead. */
+type NavKey = "home" | "factory" | "batches" | "keywords" | "usage" | "connections";
 
 /* D834 · Usage + Plan and Connections moved into the account menu, where the
    account itself already lives. The rail is the three places work happens. */
+/*
+  HOME FIRST, AND THE FACTORY IS NOT A PLACE INSIDE ITSELF.
+
+  The first item used to read "Listing Factory" while you were standing in the
+  Listing Factory, which is a link to where you already are. It is the button
+  that starts a piece of work, so it says so.
+
+  Sold Overnight has left this rail entirely. It is not part of making a
+  listing; it lives on the home page with the other tools.
+*/
 const NAV: { key: NavKey; label: string; href: string }[] = [
-  { key: "factory", label: "Listing Factory", href: "/listing-factory" },
+  { key: "home", label: "Home", href: "/home" },
+  { key: "factory", label: "New listing project", href: "/listing-factory" },
   { key: "batches", label: "Batch History", href: "/batches" },
   { key: "keywords", label: "Keyword Banks", href: "/keywords" },
 ];
@@ -102,10 +108,6 @@ export default function FactoryShell({ active, title, children }:
         {/* Above the primary action, because that is the order of the morning:
             see what moved, then go and list. Styled quieter than Start a new
             batch so the money action keeps its weight. */}
-        {/* Above the hot list, because a counted sale outranks a ranking.
-            Same quiet weight as its neighbour so the money action keeps its own. */}
-        <a className={`rail-drop-button rail-sold-button${active === "sold" ? " active" : ""}`} href="/sold-overnight">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 7-7" /><path d="M14 7h7v7" /></svg> Sold Overnight</a>
         <a className="workflow-restart-button" href="/listing-factory">
           <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" /><path d="M3 21v-5h5" /></svg> Start a new batch</a>
       </div>

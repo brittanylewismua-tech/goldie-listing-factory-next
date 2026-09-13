@@ -158,7 +158,7 @@ test("reading the board costs no Etsy calls", () => {
 });
 
 test("the page states what it counted and never claims more", () => {
-  const surfaces = [read("sold-overnight.ts"), read("sold-overnight/page.tsx"),
+  const surfaces = [read("sold-overnight.ts"), read("hot-list/page.tsx"),
     read("api/sold-overnight/route.ts")];
   for (const source of surfaces)
     for (const forbidden of [/best[- ]?sell/i, /top[- ]?sell/i, /trending/i, /revenue/i, /trending now/i])
@@ -171,7 +171,7 @@ test("the page explains what the numbers mean without describing the plumbing", 
      it has nowhere to look. What it must NOT do is narrate the mechanism —
      a seller does not need to know anything is being compared, and telling
      them makes a confident number sound like a workaround. */
-  const page = read("sold-overnight/page.tsx");
+  const page = read("hot-list/page.tsx");
   assert.match(page, /What these numbers mean/);
   assert.match(page, /real sales on Etsy/i);
   for (const leak of [/stock/i, /compare/i, /reading before/i, /listings we watch/i])
@@ -182,7 +182,7 @@ test("the page explains what the numbers mean without describing the plumbing", 
 test("the card never prints somebody else's inventory", () => {
   /* "171,447 left" is another shop's stock level: no use to a seller deciding
      what to make, and a straight description of the plumbing. */
-  const page = read("sold-overnight/page.tsx");
+  const page = read("hot-list/page.tsx");
   assert.doesNotMatch(strip(page), /listing\.left/);
   assert.doesNotMatch(strip(page), /left`/);
 });

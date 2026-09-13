@@ -853,6 +853,24 @@ export type SoldBoard = {
 export const SHELF_MINIMUM = 30;
 
 /**
+ * THE TWO WAYS OF ASKING THE SAME QUESTION.
+ *
+ * "What sold this week" is the one a seller plans against: a week is long
+ * enough that a single good day cannot fake it, so what rises is a design
+ * people keep buying. "What sold overnight" is the one they open the tab for:
+ * shorter, sharper, and the only view that can catch something the moment it
+ * starts moving.
+ *
+ * Same counted number underneath, two different lengths of look. That is why
+ * one lives inside the other rather than beside it as a rival feature.
+ */
+export const VIEWS = {
+  week: { hours: 168, label: "This week", unit: "sold this week" },
+  overnight: { hours: 24, label: "Overnight", unit: "sold overnight" },
+} as const;
+export type ViewKey = keyof typeof VIEWS;
+
+/**
  * READ THE BOARD. No Etsy traffic — everything here was counted overnight.
  *
  * `product` is Etsy's own top-level category for the listing, so the shelves

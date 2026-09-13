@@ -4521,3 +4521,60 @@ html, body { background: var(--lf-paper); }
 .sold-page .drop-loading-track i{background:linear-gradient(90deg,#d7a6cf,#8e4c78)}
 .sold-page .drop-head p{font-size:14px;color:#8b8390}
 .sold-page .drop-note{font-size:12px;color:#8b8390}
+
+/* ===========================================================================
+   HOME — the front door.
+
+   Built to read as the outside of the product rather than another page inside
+   it: the rail's black ground and its cropped turning gear, with the tools as
+   light cards on top. Same #ff4fc3 accent, same Manrope, so arriving at the
+   Listing Factory from here is a continuation and not a jump.
+   =========================================================================== */
+.hub{min-height:100vh;background:var(--lf-rail,#000);color:var(--lf-rail-ink,#fff);
+  padding:64px 40px 40px;position:relative;overflow:hidden}
+.hub::before{content:"";position:absolute;right:-160px;top:-160px;width:520px;height:520px;
+  z-index:0;pointer-events:none;opacity:.55;
+  background:var(--lf-rail-gear) center/contain no-repeat;
+  transform-origin:50% 50%;animation:84s linear infinite lf-rail-gear-turn}
+@media (prefers-reduced-motion:reduce){.hub::before{animation:none}}
+.hub > *{position:relative;z-index:1}
+
+.hub-head{max-width:1120px;margin:0 auto 40px}
+.hub-brand{margin-bottom:32px}
+.hub-brand img{display:block;width:196px;height:auto}
+.hub-head .mini-label{color:#ff4fc3;margin:0 0 8px}
+.hub-head h1{margin:0;font-size:32px;letter-spacing:-.02em;font-weight:800}
+
+.hub-grid{max-width:1120px;margin:0 auto;display:grid;gap:16px;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+
+.hub-tool{display:grid;gap:8px;align-content:start;padding:24px;border-radius:16px;
+  background:#fff;color:#1b0e17;text-decoration:none;border:1px solid transparent;
+  transition:transform 160ms ease,border-color 160ms ease}
+.hub-tool:hover{transform:translateY(-2px);border-color:#ff4fc3}
+.hub-tool:focus-visible{outline:2px solid #ff4fc3;outline-offset:3px}
+.hub-icon{display:flex;align-items:center;justify-content:center;width:40px;height:40px;
+  border-radius:12px;background:#ffe6f6;color:#b02371;margin-bottom:4px}
+.hub-tool b{font-size:16px;letter-spacing:-.01em}
+.hub-what{font-size:13px;line-height:1.45;color:#6b6570}
+
+/* Not ready, and visibly so. Hiding it would leave no sense of what is
+   coming; making it look live would be a lie you discover by clicking. */
+.hub-tool.soon{background:#141414;color:#8d8d8d;border:1px dashed #333;cursor:default}
+.hub-tool.soon:hover{transform:none;border-color:#333}
+.hub-tool.soon .hub-icon{background:#1f1f1f;color:#8d8d8d}
+.hub-tool.soon b{color:#cfcfcf}
+.hub-tool.soon .hub-what{color:#7d7d7d}
+.hub-soon{margin-top:4px;font-size:11px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:#ff4fc3}
+
+.hub-foot{max-width:1120px;margin:48px auto 0}
+.hub-foot .etsy-api-disclosure{font-size:11px;color:#6b6b6b;margin:0}
+.hub-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:var(--lf-rail,#000)}
+.hub-auth a{color:#ff4fc3;font-weight:700}
+
+@media (max-width:640px){
+  .hub{padding:32px 20px}
+  .hub-head h1{font-size:24px}
+}
