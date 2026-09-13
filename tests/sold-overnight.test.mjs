@@ -524,3 +524,26 @@ test("the missing-shelf alarm compares like with like", () => {
   assert.match(source, /POD_SHELVES\.map\(shelf => shelf\.shelf\)/);
   assert.doesNotMatch(source, /POD_SHELVES\.map\(shelf => shelf\.leaf\)\)\]\s*\n?\s*\.filter/);
 });
+
+test("every shelf is named for a product, not a department", () => {
+  /* "Baby & Kids" was the one category-shaped name in a list of product-shaped
+     ones, which is why it read oddly beside Mugs and Tote Bags — and it lumped
+     bodysuits in with blankets, two different blanks to order. A shelf answers
+     "what do I make", so each one is a thing you can make. */
+  const source = read("sold-overnight.ts");
+  assert.doesNotMatch(source, /"Baby & Kids"/);
+  const order = source.slice(source.indexOf("export const SHELF_ORDER"),
+    source.indexOf("];", source.indexOf("export const SHELF_ORDER")));
+  for (const shelf of ["Baby Bodysuits", "Baby Blankets", "Sweatshirts & Hoodies"])
+    assert.ok(order.includes(`"${shelf}"`), `${shelf} must be its own shelf`);
+  /* Apparel leads, because that is what most of these sellers print. */
+  assert.ok(order.indexOf('"T-shirts"') < order.indexOf('"Mugs"'));
+});
+
+test("wall decor is not a printable shelf", () => {
+  /* A $50 custom neon sign reached the board through Home & Living > Wall
+     Decor, which holds signs, mirrors and metal art. Wall Art means prints. */
+  const source = read("sold-overnight.ts");
+  assert.doesNotMatch(source, /leaf: "Wall Decor"/);
+  assert.match(source, /Home & Living > Home Decor > Wall Decor > Signs/);
+});

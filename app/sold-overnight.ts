@@ -370,7 +370,7 @@ const POD_SHELVES: { top: string; leaf: string; shelf: string }[] = [
   { top: "Clothing", leaf: "Sweatshirts", shelf: "Sweatshirts & Hoodies" },
   { top: "Clothing", leaf: "Hoodies", shelf: "Sweatshirts & Hoodies" },
   { top: "Clothing", leaf: "Tanks", shelf: "Tanks" },
-  { top: "Clothing", leaf: "Bodysuits", shelf: "Baby & Kids" },
+  { top: "Clothing", leaf: "Bodysuits", shelf: "Baby Bodysuits" },
   { top: "Accessories", leaf: "Baseball & Trucker Caps", shelf: "Hats" },
   { top: "Accessories", leaf: "Hats & Caps", shelf: "Hats" },
   { top: "Accessories", leaf: "Hats", shelf: "Hats" },
@@ -378,8 +378,7 @@ const POD_SHELVES: { top: string; leaf: string; shelf: string }[] = [
   { top: "Home & Living", leaf: "Mugs", shelf: "Mugs" },
   { top: "Home & Living", leaf: "Throw Pillows", shelf: "Throw Pillows" },
   { top: "Home & Living", leaf: "Blankets & Throws", shelf: "Blankets" },
-  { top: "Home & Living", leaf: "Baby Blankets", shelf: "Baby & Kids" },
-  { top: "Home & Living", leaf: "Wall Decor", shelf: "Wall Art" },
+  { top: "Home & Living", leaf: "Baby Blankets", shelf: "Baby Blankets" },
   { top: "Art & Collectibles", leaf: "Prints", shelf: "Wall Art" },
   { top: "Paper & Party Supplies", leaf: "Stickers", shelf: "Stickers" },
   { top: "Electronics & Accessories", leaf: "Phone Cases", shelf: "Phone Cases" },
@@ -404,15 +403,16 @@ export const SHELF_ORDER = [
   "T-shirts",
   "Sweatshirts & Hoodies",
   "Tanks",
-  "Baby & Kids",
+  "Baby Bodysuits",
+  "Hats",
   "Tote Bags",
   "Mugs",
   "Blankets",
+  "Baby Blankets",
   "Throw Pillows",
   "Wall Art",
   "Stickers",
   "Phone Cases",
-  "Hats",
 ];
 
 /**
@@ -429,6 +429,9 @@ export const SHELF_ORDER = [
  */
 const NOT_PRINTABLE = [
   "Art & Collectibles > Prints > Digital Prints",
+  /* Signs, mirrors, metal art and neon. A $50 custom neon sign reached the
+     board through Wall Decor, which is not a thing anybody prints. */
+  "Home & Living > Home Decor > Wall Decor > Signs",
   "Craft Supplies & Tools",
   "Paper & Party Supplies > Paper > Stationery > Design & Templates",
 ];
