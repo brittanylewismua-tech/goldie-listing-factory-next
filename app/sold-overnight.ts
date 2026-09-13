@@ -3,6 +3,7 @@ import type { EtsyFeature } from "@/app/api/etsy/client";
 import { MAX_UNITS_PER_READ, movement, usdFromCents, tradesOnRights } from "@/app/sold-overnight-math";
 import { attribute, shopDelta, type Attribution } from "@/app/sold-attribution";
 import { printable } from "@/app/pod-fit";
+import { mentionsAMark } from "@/app/trademark-check";
 import {
   etsyApiCredential,
   etsyBudget,
@@ -1204,7 +1205,14 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
       shelf counts and before the board is trimmed, so a hidden row cannot
       occupy a slot or inflate a tab.
     */
-    .filter(row => rights || !tradesOnRights(row.title))
+    /*
+      A "Philly Eagles Sweatshirt" reached this board. The leagues police their
+      marks harder than almost anybody, and putting one in front of a seller as
+      inspiration is handing them the listing that closes their shop. The
+      rights list did not carry the teams; the trademark checker does, so both
+      are consulted rather than the same list being maintained twice.
+    */
+    .filter(row => rights || (!tradesOnRights(row.title) && !mentionsAMark(row.title)))
     .map(row => ({ ...row, product: shelfOf.get(Number(row.taxonomy_id))! }));
 
   /*

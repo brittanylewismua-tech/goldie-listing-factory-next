@@ -192,6 +192,55 @@ export const MARKS: Mark[] = [
   { term: "budweiser", owner: "AB InBev", category: "Brand" },
 ];
 
+
+/**
+ * PROFESSIONAL TEAMS, AND WHY MOST OF THEM NEED THEIR CITY.
+ *
+ * A "Philly Eagles Sweatshirt" reached the live Hot List — an NFL mark shown
+ * to a seller as inspiration, which is the exact listing that closes a shop.
+ * The leagues police this harder than almost anybody.
+ *
+ * But nearly every team name is an ordinary English word. Flagging a bare
+ * "eagles" would condemn every "eagles wings" verse shirt, "bears" would take
+ * the whole woodland nursery niche, and "saints" would take half the Christian
+ * market. So ambiguous names are only a mark when they carry their city, and
+ * only the genuinely distinctive ones stand alone.
+ */
+const TEAMS_WITH_CITY: [string, string][] = [
+  ["arizona|phoenix", "cardinals"], ["atlanta", "falcons|hawks|braves"],
+  ["baltimore", "ravens|orioles"], ["buffalo", "bills|sabres"],
+  ["carolina", "panthers|hurricanes"], ["chicago", "bears|bulls|cubs|blackhawks|white sox"],
+  ["cincinnati", "bengals|reds"], ["cleveland", "browns|guardians|cavaliers|cavs"],
+  ["dallas", "cowboys|mavericks|mavs|stars"], ["denver", "broncos|nuggets|avalanche"],
+  ["detroit", "lions|tigers|pistons|red wings"], ["green bay", "packers"],
+  ["houston", "texans|astros|rockets"], ["indiana(polis)?", "colts|pacers"],
+  ["jacksonville", "jaguars"], ["kansas city", "chiefs|royals"],
+  ["las vegas|vegas|oakland", "raiders|golden knights"],
+  ["los angeles|la|anaheim", "rams|chargers|lakers|clippers|dodgers|angels|kings|ducks"],
+  ["miami", "dolphins|heat|marlins"], ["minnesota", "vikings|twins|wild"],
+  ["new england", "patriots"], ["new orleans", "saints|pelicans"],
+  ["new york|ny|brooklyn", "giants|jets|knicks|nets|mets|yankees|rangers|islanders"],
+  ["philadelphia|philly", "eagles|phillies|sixers|76ers|flyers"],
+  ["pittsburgh", "steelers|pirates|penguins"],
+  ["san francisco|sf", "giants|warriors"],
+  ["seattle", "seahawks|mariners|kraken"],
+  ["tampa bay|tampa", "buccaneers|bucs|rays|lightning"],
+  ["tennessee", "titans"], ["washington", "commanders|nationals|capitals|wizards"],
+  ["boston", "celtics|red sox|bruins"], ["milwaukee", "bucks|brewers"],
+  ["portland", "trail blazers|blazers"], ["utah", "jazz"],
+  ["san antonio", "spurs"], ["oklahoma city|okc", "thunder"],
+  ["sacramento", "kings"], ["orlando", "magic"], ["memphis", "grizzlies"],
+  ["toronto", "raptors|maple leafs|blue jays"], ["st louis|saint louis", "cardinals|blues"],
+];
+
+/** Distinctive enough to stand alone — nobody writes these by accident. */
+const TEAMS_ALONE = [
+  "49ers", "niners", "seahawks", "buccaneers", "bengals", "packers",
+  "steelers", "canadiens", "penguins", "blackhawks", "mavericks",
+  "timberwolves", "diamondbacks", "athletics", "phillies", "yankees",
+  "dodgers", "lakers", "celtics", "knicks", "cowboys",
+];
+
 export type Hit = {
   matched: string;
   owner: string;
@@ -219,8 +268,31 @@ export type Verdict = {
  * inside "marionette" — and a checker that cries wolf is one people learn to
  * ignore, which is worse than not having it.
  */
+/* Built once. A city and its team in either order, within a few words. */
+const TEAM_PATTERNS: RegExp[] = [
+  ...TEAMS_WITH_CITY.map(([city, names]) =>
+    new RegExp(`\\b(?:(?:${city})\\W+(?:\\w+\\W+){0,2}?(?:${names})|(?:${names})\\W+(?:\\w+\\W+){0,2}?(?:${city}))\\b`, "gi")),
+  new RegExp(`\\b(${TEAMS_ALONE.join("|")})\\b`, "gi"),
+];
+
 function findHits(phrase: string): Hit[] {
   const hits: Hit[] = [];
+
+  for (const pattern of TEAM_PATTERNS) {
+    pattern.lastIndex = 0;
+    let found: RegExpExecArray | null;
+    while ((found = pattern.exec(phrase)) !== null) {
+      hits.push({
+        matched: found[0],
+        owner: "a professional sports team",
+        category: "Sport",
+        at: found.index,
+        length: found[0].length,
+      });
+      if (pattern.lastIndex === found.index) pattern.lastIndex++;
+    }
+  }
+
   for (const mark of MARKS) {
     const pattern = new RegExp(`\\b${mark.term}\\b`, "gi");
     let found: RegExpExecArray | null;
@@ -272,4 +344,22 @@ export function check(raw: string): Verdict {
     hits,
     summary: `This phrase uses property owned by ${named}. Printing it risks the listing being removed, and repeat removals can close a shop.`,
   };
+}
+
+
+/**
+ * A CHEAP SCREEN FOR THE HOT LIST.
+ *
+ * `check` runs a hundred and fifty patterns and builds offsets, which is right
+ * for one phrase a seller typed and far too slow for every row of a board. One
+ * compiled alternation answers the only question the board asks: does this
+ * title lean on somebody's mark at all?
+ */
+const ANY_MARK = new RegExp(
+  `\\b(${MARKS.map(mark => mark.term).join("|")}|${TEAMS_ALONE.join("|")})\\b`, "i");
+
+export function mentionsAMark(title: string) {
+  const text = String(title ?? "");
+  if (ANY_MARK.test(text)) return true;
+  return TEAM_PATTERNS.some(pattern => { pattern.lastIndex = 0; return pattern.test(text); });
 }

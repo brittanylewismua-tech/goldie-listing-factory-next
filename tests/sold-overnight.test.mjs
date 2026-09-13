@@ -663,7 +663,7 @@ test("the board does not recommend somebody else's trademark", () => {
      slot on the board or inflate a tab above the minimum. */
   const source = read("sold-overnight.ts");
   const board = source.slice(source.indexOf("export async function readBoard"));
-  assert.match(board, /\.filter\(row => rights \|\| !tradesOnRights\(row\.title\)\)/);
+  assert.match(board, /!tradesOnRights\(row\.title\) && !mentionsAMark\(row\.title\)/);
   assert.ok(board.indexOf("tradesOnRights") < board.indexOf("const perProduct"),
     "filtered before the shelf counts");
 

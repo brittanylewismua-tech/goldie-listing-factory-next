@@ -90,3 +90,42 @@ test("its styles do not touch the shared stylesheet", () => {
   const page = read("trademark/page.tsx");
   assert.match(page, /import "\.\/trademark\.css"/);
 });
+
+const { mentionsAMark } = await import("../app/trademark-check.ts");
+
+test("a team name carries its city before it counts", () => {
+  /* "Philly Eagles Sweatshirt" reached the live Hot List — an NFL mark shown
+     to a seller as inspiration, which is the exact listing that closes a shop.
+     But nearly every team name is an ordinary English word, and a bare
+     "eagles" would condemn every "eagles wings" verse shirt. */
+  assert.equal(mentionsAMark("Philly Eagles Mockneck Sweatshirt"), true);
+  assert.equal(mentionsAMark("Philadelphia Eagles Crewneck"), true);
+  assert.equal(mentionsAMark("Chicago Bears Game Day Tee"), true);
+  assert.equal(mentionsAMark("Kansas City Chiefs Hoodie"), true);
+});
+
+test("the ordinary words those teams borrowed stay usable", () => {
+  /* Flagging these would take the whole verse-shirt niche, the woodland
+     nursery niche and half the Christian market with them. */
+  for (const safe of [
+    "They Will Soar On Wings Like Eagles Shirt",
+    "Woodland Bears and Pines Nursery Blanket",
+    "All The Saints Gather Faith Tee",
+    "Giants in the Garden Whimsical Print",
+    "Lucky Cardinals Backyard Birder Mug",
+  ]) assert.equal(mentionsAMark(safe), false, `${safe} must stay usable`);
+});
+
+test("distinctive team names stand alone", () => {
+  /* Nobody writes "seahawks" or "49ers" by accident. */
+  assert.equal(mentionsAMark("49ers Faithful Tee"), true);
+  assert.equal(mentionsAMark("Seahawks Gameday Crewneck"), true);
+});
+
+test("the screen is one pass, because the board runs it on thousands of rows", () => {
+  /* check() runs a hundred and fifty patterns and builds offsets — right for
+     one phrase a seller typed, far too slow for every row of a board. */
+  const source = read("trademark-check.ts");
+  assert.match(source, /const ANY_MARK = new RegExp/);
+  assert.match(source, /export function mentionsAMark/);
+});
