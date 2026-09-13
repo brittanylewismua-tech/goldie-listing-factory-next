@@ -119,6 +119,8 @@ const DAILY_CEILING = 8_000;
  * and dropping the ones that never move keeps every slot worth its quota.
  */
 const MIN_SAVES_TO_WATCH = 1;
+/** How long observations live. Must exceed the longest window on the board. */
+const RETAIN_DAYS = 30;
 /** Reads a listing gets to show something before it loses its slot. */
 const PATIENCE = 12;
 
@@ -862,6 +864,20 @@ export async function sweep(
   /* Downloads never belong here, however long they have been sitting in it. */
   await db().prepare("DELETE FROM sold_watch WHERE listing_type IS NOT NULL AND listing_type <> 'physical'").run();
 
+  /*
+    KEEP THIRTY DAYS, THEN LET GO.
+
+    A window is only real if the observations behind it survive long enough to
+    be subtracted, so nothing may be pruned inside the longest window the board
+    offers. Thirty days is comfortably past the seven-day view and leaves room
+    for a monthly one later. Past that the rows are dead weight: D1 is not
+    large, and an unbounded moves table would eventually crowd out the corpus
+    that produces it.
+  */
+  const keepFrom = new Date(Date.now() - RETAIN_DAYS * 86_400_000).toISOString().slice(0, 13);
+  await db().prepare("DELETE FROM sold_moves WHERE bucket < ?").bind(keepFrom).run();
+  await db().prepare("DELETE FROM shop_sold WHERE bucket < ?").bind(keepFrom).run();
+
   return { read, moved, sold, done, spentToday };
 }
 
@@ -940,7 +956,7 @@ export async function runSweep(
 export type SoldListing = {
   listingId: number; title: string; url: string; image: string | null;
   price: number | null; currency: string;
-  sold: number; attribution: Attribution | null; soldOut: boolean; savesGained: number; left: number | null;
+  sold: number; attribution: Attribution | null; soldOut: boolean; savesGained: number;
   product: string;
 };
 export type SoldBoard = {
@@ -1233,7 +1249,6 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
       attribution: allowed.get(Number(r.listing_id))?.attribution ?? null,
       soldOut: Boolean(r.sold_out),
       savesGained: Number(r.saves_gained) || 0,
-      left: r.quantity_after == null ? null : Number(r.quantity_after),
       product: r.product,
     })),
   };

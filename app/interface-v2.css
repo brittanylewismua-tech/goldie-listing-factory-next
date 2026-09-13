@@ -4618,3 +4618,11 @@ html, body { background: var(--lf-paper); }
 .sold-page .hot-hits{margin:0 0 24px;padding-bottom:24px;
   border-bottom:1px solid var(--line,#5b354f29)}
 .sold-page .hot-hits .mini-label{margin-bottom:12px}
+
+/* A period that has not accumulated enough history yet: visible, obviously
+   not pressable, and carrying the day it arrives. Hiding it made the feature
+   look smaller than it is. */
+.sold-page .sold-windows button:disabled{opacity:.45;cursor:not-allowed;
+  border-style:dashed;background:none;color:#8b8390}
+.sold-page .sold-windows button:disabled:hover{border-color:var(--line,#5b354f29)}
+.sold-page .sold-windows button small{font-weight:600;opacity:.8;margin-left:2px}

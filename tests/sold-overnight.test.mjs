@@ -522,8 +522,8 @@ test("a period is only offered when it can be honoured", () => {
   const page = read("hot-list/page.tsx");
   assert.match(page, /VIEWS\.filter\(v => \(result\.coveredHours \?\? 0\) >= v\.hours\)/,
     "only periods with history behind them may be offered");
-  assert.match(page, /offered\.length > 1 && <nav/,
-    "a single period is not a choice and gets no switcher");
+  assert.match(page, /disabled=\{!ready\}/,
+    "a period without history is disabled rather than offered");
 
   /* And nothing on the page may describe how long we have been running. */
   const visible = strip(page);
@@ -759,4 +759,44 @@ test("the refresh interval leaves room inside the six-hour rule", () => {
   assert.ok(refresh, "the refresh interval has to be declared");
   assert.ok(Number(refresh[1]) <= 4,
     `refresh is ${refresh[1]}h and must stay well inside the six-hour display rule`);
+});
+
+test("a period not yet available is disabled, not hidden", () => {
+  /* Dropping it from the row until there was enough history silently made the
+     feature look smaller than it is — a seller cannot want what they cannot
+     see. Greyed, with the day it arrives, says the opposite. */
+  const page = read("hot-list/page.tsx");
+  assert.match(page, /disabled=\{!ready\}/);
+  assert.match(page, /Available in \$\{days\}/);
+  assert.doesNotMatch(page, /offered\.length > 1 && <nav/,
+    "the switcher must always render");
+});
+
+test("somebody else's remaining stock is not on the wire at all", () => {
+  /* It exposed the inference method and means nothing to a seller. Removed
+     from the response, not merely hidden by the page. */
+  const source = read("sold-overnight.ts");
+  const board = source.slice(source.indexOf("export async function readBoard"));
+  assert.doesNotMatch(board, /left: r\.quantity_after/);
+  assert.doesNotMatch(read("hot-list/page.tsx"), /listing\.left/);
+});
+
+test("observations outlive the longest window on the board", () => {
+  /* A window is only real if the rows behind it survive to be subtracted, and
+     an unbounded moves table would eventually crowd out the corpus that
+     produces it. */
+  const source = read("sold-overnight.ts");
+  const retain = /const RETAIN_DAYS = (\d+)/.exec(source);
+  assert.ok(retain, "retention has to be declared");
+  assert.ok(Number(retain[1]) * 24 > 168, "retention must exceed the seven-day window");
+  assert.match(source, /DELETE FROM sold_moves WHERE bucket < \?/);
+  assert.match(source, /DELETE FROM shop_sold WHERE bucket < \?/);
+});
+
+test("an exact figure is distinguished from a corroborated one", () => {
+  /* Both are true; they are not equally certain, and the difference is said
+     rather than smoothed over. */
+  const page = read("hot-list/page.tsx");
+  assert.match(page, /attribution === "exact"/);
+  assert.match(page, /Etsy's own sales count for this shop/);
 });

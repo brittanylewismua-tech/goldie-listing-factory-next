@@ -24,7 +24,7 @@ import FactoryShell from "../factory-shell";
 type Listing = {
   listingId: number; title: string; url: string; image: string | null;
   price: number | null; currency: string;
-  sold: number; soldOut: boolean; product: string;
+  sold: number; soldOut: boolean; product: string; attribution: string | null;
 };
 type Hit = { listingId: number; title: string; url: string; image: string | null;
   price: number | null; currency: string; sold: number; product: string };
@@ -67,7 +67,7 @@ export default function HotListPage() {
   const [view, setView] = useState(VIEWS[0]);
   /* Which periods there is enough history to answer. Never shown, only used
      to decide what may be asked for. */
-  const [offered, setOffered] = useState(VIEWS.slice(0, 1));
+  const [covered, setCovered] = useState(0);
   /*
     MADE TO ORDER IS A DIFFERENT BUSINESS.
 
@@ -100,9 +100,8 @@ export default function HotListPage() {
         if (!response.ok) throw new Error(result.error || "This could not be loaded.");
         setBoard(result);
         setProduct("all");
-        const can = VIEWS.filter(v => (result.coveredHours ?? 0) >= v.hours);
-        const list = can.length ? can : VIEWS.slice(0, 1);
-        setOffered(list);
+        setCovered(result.coveredHours ?? 0);
+        const list = VIEWS.filter(v => (result.coveredHours ?? 0) >= v.hours);
         /* The longest honourable period leads. Once a week of history exists
            this becomes the week, on its own, with nothing to announce. */
         const lead = list[list.length - 1];
@@ -203,13 +202,30 @@ export default function HotListPage() {
 
         {/* One period is not a choice, and a lone highlighted tab looks like
             a control that has broken rather than the only honest option. */}
-        {offered.length > 1 && <nav className="sold-windows" aria-label="Period">
-          {offered.map(v =>
-            <button key={v.key} type="button"
+        {/*
+            DISABLED, NOT HIDDEN.
+
+            An earlier version dropped a period from the row until there was
+            enough history for it, which silently made the feature look
+            smaller than it is — a seller cannot want what they cannot see.
+            Showing it greyed with the day it arrives says the opposite: this
+            is coming, and here is when.
+        */}
+        <nav className="sold-windows" aria-label="Period">
+          {VIEWS.map(v => {
+            const ready = covered >= v.hours;
+            const days = Math.max(1, Math.ceil((v.hours - covered) / 24));
+            return <button key={v.key} type="button"
               className={view.key === v.key ? "active" : undefined}
               aria-current={view.key === v.key ? "true" : undefined}
-              onClick={() => load(v)}>{v.tab}</button>)}
-        </nav>}
+              disabled={!ready}
+              title={ready ? undefined : `Available in ${days} ${days === 1 ? "day" : "days"}`}
+              onClick={() => ready && load(v)}>
+              {v.tab}
+              {!ready && <small> · in {days}d</small>}
+            </button>;
+          })}
+        </nav>
 
         {!board.night
           ? <section className="drop-loading">
@@ -267,7 +283,19 @@ export default function HotListPage() {
                   <figcaption>
                     <p className="drop-figures">
                       <span className="drop-numeral">{listing.sold.toLocaleString()}</span>
-                      <span className="drop-unit">sold</span>
+                      {/* An exact figure is Etsy's own count, for a shop with
+                          a single listing. Everything else is this listing's
+                          own movement, confirmed against a real sale at that
+                          shop — true either way, but not equally certain, and
+                          the difference is said rather than smoothed over.
+                          The wording stays on the seller's side: what it
+                          means, never how it was worked out. */}
+                      <span className="drop-unit"
+                        title={listing.attribution === "exact"
+                          ? "Etsy's own sales count for this shop"
+                          : "Confirmed against a real sale at this shop"}>
+                        sold{listing.attribution === "exact" ? " ✓" : ""}
+                      </span>
                     </p>
                     {listing.price !== null &&
                       <p className="drop-sub">{money(listing.price, listing.currency)}</p>}
