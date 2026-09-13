@@ -87,7 +87,21 @@ const DISCOVERY_PAGES = 1;
  * so a corpus that grows unexpectedly cannot quietly eat the quota that
  * publishing depends on.
  */
+/**
+ * ETSY'S SIX-HOUR RULE, AND WHY THE REFRESH IS FOUR.
+ *
+ * The API Terms forbid displaying listing content more than six hours older
+ * than Etsy's own, and Etsy confirmed in writing on 13 September 2026 that
+ * this covers "aggregate figures derived from those listings" — so it binds
+ * every number on this board, not only the titles and pictures.
+ *
+ * Four hours leaves two spare for a sweep that runs late. It is not a
+ * preference and it may not drift upward: DISPLAY_MAX_AGE_HOURS below is the
+ * hard line, and the board drops anything past it rather than showing stale
+ * content and hoping nobody checks.
+ */
 const REFRESH_HOURS = 4;
+const DISPLAY_MAX_AGE_HOURS = 6;
 const DAILY_CEILING = 8_000;
 
 /**
@@ -1033,6 +1047,17 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
            since this column existed", not "not personalised", so it stays
            visible rather than emptying the board on the day this ships. */
         AND (?=1 OR COALESCE(w.personalizable,0)=0)
+        /*
+          ETSY'S SIX-HOUR FRESHNESS RULE, ENFORCED RATHER THAN ASSUMED.
+
+          Confirmed in writing by Etsy on 13 September 2026 as applying to
+          aggregate figures too, not just titles and images. The sweep re-reads
+          every four hours, so in normal running nothing is near this — but a
+          sweep that falls behind, or a listing Etsy stops returning, would
+          otherwise leave a row sitting on the board for days. It is dropped
+          instead. A thinner board is compliant; a stale one is not.
+        */
+        AND w.last_read IS NOT NULL AND w.last_read >= ?
       GROUP BY m.listing_id
       ORDER BY sold DESC, saves_gained DESC
       LIMIT ?`)
@@ -1053,7 +1078,9 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
       ceiling here is a runaway guard, not a page size — rows are cheap and a
       day's sales across the whole watch set is thousands, not millions.
     */
-    .bind(since, MAX_UNITS_PER_READ, madeToOrder ? 1 : 0, 50_000)
+    .bind(since, MAX_UNITS_PER_READ, madeToOrder ? 1 : 0,
+          new Date(Date.now() - DISPLAY_MAX_AGE_HOURS * 3_600_000).toISOString(),
+          50_000)
     .all()).results as unknown as {
         listing_id: number; sold: number; sold_out: number; saves_gained: number;
         quantity_after: number | null; title: string; url: string; image: string | null;
@@ -1264,11 +1291,15 @@ export async function searchSold(keyword: string, hoursBack = 168, limit = 24) {
       WHERE m.bucket>=? AND m.sold>0 AND m.sold<=?
         AND COALESCE(w.listing_type,'physical')='physical'
         AND w.favorites > 0
+        /* Same six-hour rule: this shows listing content too. */
+        AND w.last_read IS NOT NULL AND w.last_read >= ?
         AND ${where}
       GROUP BY m.listing_id
       ORDER BY sold DESC
       LIMIT ?`)
-    .bind(since, MAX_UNITS_PER_READ, ...words.map(word => `%${word}%`), limit * 4)
+    .bind(since, MAX_UNITS_PER_READ,
+          new Date(Date.now() - DISPLAY_MAX_AGE_HOURS * 3_600_000).toISOString(),
+          ...words.map(word => `%${word}%`), limit * 4)
     .all()).results as unknown as {
       listing_id: number; sold: number; title: string; url: string; image: string | null;
       price_cents: number | null; currency: string | null; taxonomy_id: number | null;

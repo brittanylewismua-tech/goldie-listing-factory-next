@@ -685,7 +685,7 @@ test("the board is trimmed last, after everything that can disqualify a row", ()
     "the page size must not be what limits the query");
   /* The remaining ceiling is a runaway guard, and it has to be far above a
      day's sales across the whole watch set. */
-  const guard = /\.bind\(since, MAX_UNITS_PER_READ, madeToOrder \? 1 : 0, (\d[\d_]*)\)/.exec(board);
+  const guard = /madeToOrder \? 1 : 0,[\s\S]{0,200}?(\d{2}[\d_]*)\)/.exec(board);
   assert.ok(guard, "the query still needs a runaway guard");
   assert.ok(Number(guard[1].replace(/_/g, "")) >= 20_000,
     "the guard must not double as a page size");
@@ -733,4 +733,30 @@ test("an unreadable shop empties the board rather than being ignored", () => {
   const source = read("sold-overnight.ts");
   assert.match(source, /const gateReady =/);
   assert.match(source, /!gateReady \|\| allowed\.has/);
+});
+
+test("nothing older than six hours is ever displayed", () => {
+  /* Etsy's API Terms forbid showing listing content more than six hours older
+     than Etsy's own, and Etsy confirmed in writing on 13 September 2026 that
+     this covers aggregate figures derived from listings — so it binds every
+     number on this board. Enforced, not assumed: a sweep that falls behind
+     would otherwise leave rows sitting there for days. A thinner board is
+     compliant; a stale one is not. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /const DISPLAY_MAX_AGE_HOURS = 6/);
+  const board = source.slice(source.indexOf("export async function readBoard"));
+  assert.match(board, /w\.last_read IS NOT NULL AND w\.last_read >= \?/);
+  const search = source.slice(source.indexOf("export async function searchSold"));
+  assert.match(search, /w\.last_read IS NOT NULL AND w\.last_read >= \?/,
+    "the keyword lookup shows listing content too");
+});
+
+test("the refresh interval leaves room inside the six-hour rule", () => {
+  /* Four hours, so a sweep running late still lands inside the limit. This may
+     not drift upward without breaking the terms. */
+  const source = read("sold-overnight.ts");
+  const refresh = /const REFRESH_HOURS = (\d+)/.exec(source);
+  assert.ok(refresh, "the refresh interval has to be declared");
+  assert.ok(Number(refresh[1]) <= 4,
+    `refresh is ${refresh[1]}h and must stay well inside the six-hour display rule`);
 });
