@@ -9,7 +9,8 @@
 /* D1373 names the missing field on a product that is not set up yet. */
 /* D1374 converts the price column to USD here, because Etsy accepts the
    conversion parameter and ignores it. */
-export const BUILD_MARKER = "D1374";
+/* D1375 stops the board recommending somebody else's trademark. */
+export const BUILD_MARKER = "D1375";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

@@ -77,15 +77,23 @@ export default function HotListPage() {
     offered rather than hidden, because for some sellers it is the whole point.
   */
   const [madeToOrder, setMadeToOrder] = useState(false);
+  /*
+    LICENSED AND TOUR MERCH. Twelve per cent of a live week's board, a third of
+    the T-shirts shelf, and eight of the top twenty. Real sales on real
+    listings, and none of it safe to copy.
+  */
+  const [rights, setRights] = useState(false);
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<Hit[] | null>(null);
   const [looking, setLooking] = useState(false);
   const [note, setNote] = useState("");
 
-  const load = (next = view, custom = madeToOrder) => {
-    setBoard(null); setError(""); setView(next); setMadeToOrder(custom);
+  const load = (next = view, custom = madeToOrder, licensed = rights) => {
+    setBoard(null); setError(""); setView(next);
+    setMadeToOrder(custom); setRights(licensed);
     /* no-store: an open tab must not reuse a board from before a repair. */
-    fetch(`/api/sold-overnight?hours=${next.hours}${custom ? "&madeToOrder=1" : ""}`,
+    fetch(`/api/sold-overnight?hours=${next.hours}`
+      + `${custom ? "&madeToOrder=1" : ""}${licensed ? "&rights=1" : ""}`,
       { cache: "no-store" })
       .then(async response => {
         const result = await response.json() as Board & { error?: string };
@@ -98,7 +106,7 @@ export default function HotListPage() {
         /* The longest honourable period leads. Once a week of history exists
            this becomes the week, on its own, with nothing to announce. */
         const lead = list[list.length - 1];
-        if (lead.hours > next.hours) load(lead, custom);
+        if (lead.hours > next.hours) load(lead, custom, licensed);
       })
       .catch(e => setError(e instanceof Error ? e.message : "This could not be loaded."));
   };
@@ -218,12 +226,19 @@ export default function HotListPage() {
               <div className="hot-made-to-order">
                 <button type="button" aria-pressed={madeToOrder}
                   className={madeToOrder ? "active" : undefined}
-                  onClick={() => load(view, !madeToOrder)}>
+                  onClick={() => load(view, !madeToOrder, rights)}>
                   {madeToOrder ? "Showing made to order" : "Show made to order"}
                 </button>
-                <small>{madeToOrder
-                  ? "Personalised and embroidered listings are included."
-                  : "Personalised and embroidered listings are hidden."}</small>
+                <button type="button" aria-pressed={rights}
+                  className={rights ? "active" : undefined}
+                  onClick={() => load(view, madeToOrder, !rights)}>
+                  {rights ? "Showing licensed & tour" : "Show licensed & tour"}
+                </button>
+                <small>{rights
+                  ? "Trademarked and tour designs are included. Do not copy these."
+                  : madeToOrder
+                    ? "Personalised listings included. Trademarked and tour designs hidden."
+                    : "Personalised, trademarked and tour designs are hidden."}</small>
               </div>
 
               <nav className="drop-tabs" aria-label="Product types">

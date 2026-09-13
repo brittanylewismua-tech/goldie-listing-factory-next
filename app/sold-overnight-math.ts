@@ -150,3 +150,64 @@ export function usdFromCents(cents: number | null, currency: string | null): num
   if (!rate) return null;
   return Math.round((Number(cents) / 100 / rate) * 100) / 100;
 }
+
+/**
+ * SOMEBODY ELSE'S TRADEMARK IS NOT A DESIGN IDEA.
+ *
+ * The board was telling print-on-demand sellers to make Backstreet Boys tour
+ * shirts, SpongeBob family sets, Gatorade cosplay tees and Elden Ring stickers.
+ * Measured across a live week: 12% of the whole board, 32% of the T-shirts
+ * shelf, and 8 of the top 20 rows — worst exactly where people look.
+ *
+ * It is not a bug in the counting. Those listings are real and they really
+ * sold. It is a bug in what the board is FOR. Licensed and tour merchandise is
+ * printed in finite runs and sells hard around a date, so its stock moves fast
+ * and a board built on stock movement finds it first. A seller who copies one
+ * loses their shop, and Etsy's original-design rule makes that worse, not
+ * better. Surfacing it as "what's selling" without a word of warning is the
+ * single most expensive thing this page could do to somebody.
+ *
+ * Hidden by default and shown behind a toggle, the same as made to order,
+ * because knowing what is moving is legitimate even when copying it is not.
+ *
+ * This list is deliberately incomplete — it cannot be otherwise. It catches
+ * what actually reached the board plus the obvious neighbours, and is meant to
+ * be added to whenever something slips through. A miss shows a seller one row
+ * they should not copy; a false positive hides one row they could have. The
+ * first is worse, so the list errs wide.
+ */
+const RIGHTS = [
+  // music acts whose tour merch reached the board
+  "backstreet boys", "bsb", "westlife", "harry styles", "dolly parton",
+  "taylor swift", "swiftie", "eras tour", "oasis", "coldplay", "bts",
+  "blackpink", "beyonce", "sabrina carpenter", "chappell roan", "olivia rodrigo",
+  // screen, game and publishing properties
+  "spongebob", "disney", "pixar", "marvel", "star wars", "harry potter",
+  "pokemon", "nintendo", "mario", "zelda", "elden ring", "final fantasy",
+  "souls borne", "soulsborne", "dark souls", "minecraft", "roblox", "fortnite",
+  "sanrio", "hello kitty", "bluey", "stitch", "grinch", "barbie",
+  "stranger things", "bridgerton", "wednesday addams", "squid game",
+  "acotar", "throne of glass", "crescent city", "dungeon crawler carl",
+  "sarah j maas", "colleen hoover", "taylor jenkins reid",
+  // consumer brands
+  "gatorade", "coca cola", "coca-cola", "pepsi", "starbucks", "stanley cup",
+  "nike", "adidas", "lululemon", "john deere", "jeep", "harley davidson",
+  // leagues
+  "nfl", "nba", "mlb", "nhl", "formula 1", "super bowl",
+  // and anything that says so itself
+  "officially licensed", "official merch",
+];
+
+const RIGHTS_RE = new RegExp(
+  `\\b(${RIGHTS.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\b`, "i");
+
+/* A dated tour shirt is unusable even when the act is not on the list above:
+   nobody can ride "Düsseldorf 2026" a week later, and printing it is somebody
+   else's trademark anyway. */
+const TOUR_RE = /\b(tour|concert|konzert|tickets?)\b[^.]{0,40}\b20\d{2}\b|\b20\d{2}\b[^.]{0,40}\b(tour|concert|konzert)\b|world tour/i;
+
+/** True when a title leans on a trademark, a licence, or a dated tour. */
+export function tradesOnRights(title: string): boolean {
+  const text = String(title || "");
+  return RIGHTS_RE.test(text) || TOUR_RE.test(text);
+}

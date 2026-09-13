@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import type { EtsyFeature } from "@/app/api/etsy/client";
-import { MAX_UNITS_PER_READ, movement, usdFromCents } from "@/app/sold-overnight-math";
+import { MAX_UNITS_PER_READ, movement, usdFromCents, tradesOnRights } from "@/app/sold-overnight-math";
 import {
   etsyApiCredential,
   etsyBudget,
@@ -910,7 +910,8 @@ export type ViewKey = keyof typeof VIEWS;
  * `product` is Etsy's own top-level category for the listing, so the shelves
  * are the real ones rather than a guess from the title.
  */
-export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false): Promise<SoldBoard> {
+export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false,
+  rights = false): Promise<SoldBoard> {
   await ensureTables();
 
   /*
@@ -991,6 +992,12 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
      than by Etsy's internal leaf name. */
   const onShelf = rows
     .filter(row => shelfOf.has(Number(row.taxonomy_id)))
+    /*
+      SOMEBODY ELSE'S TRADEMARK IS NOT A DESIGN IDEA. Filtered here, before the
+      shelf counts and before the board is trimmed, so a hidden row cannot
+      occupy a slot or inflate a tab.
+    */
+    .filter(row => rights || !tradesOnRights(row.title))
     .map(row => ({ ...row, product: shelfOf.get(Number(row.taxonomy_id))! }));
 
   /*

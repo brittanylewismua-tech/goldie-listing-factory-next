@@ -36,9 +36,12 @@ export const GET = withErrorLog("sold-overnight", async (request: Request) => {
   /* Made to order is a different business from printing a design, so it is
      off unless the seller asks for it. */
   const madeToOrder = params.get("madeToOrder") === "1";
+  /* Licensed and tour merchandise is hidden for the same reason: a seller who
+     copies it loses their shop. Shown only when deliberately asked for. */
+  const rights = params.get("rights") === "1";
 
   const [board, streak, unlocks] = await Promise.all([
-    readBoard(400, hoursBack, madeToOrder),
+    readBoard(400, hoursBack, madeToOrder, rights),
     listingStreak(user.userId),
     unlockState(user.userId),
   ]);
@@ -55,6 +58,7 @@ export const GET = withErrorLog("sold-overnight", async (request: Request) => {
     ...board,
     listings,
     madeToOrder,
+    rights,
     unlocked,
     held: unlocked ? 0 : Math.max(0, board.listings.length - listings.length),
     toUnlock: unlocked ? 0 : Math.max(0, STREAK_TARGET - streak.count),

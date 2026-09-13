@@ -619,9 +619,55 @@ test("one currency on the board, converted here because Etsy would not", () => {
   /* Both surfaces that print a price use it, and neither passes the listing's
      own currency through to the page. */
   const source = read("sold-overnight.ts");
-  assert.match(source, /import \{ MAX_UNITS_PER_READ, movement, usdFromCents \}/);
+  assert.match(source, /import \{[^}]*usdFromCents[^}]*\} from "@\/app\/sold-overnight-math"/);
   assert.equal((source.match(/usdFromCents\(/g) || []).length, 2,
     "used on both the board and the keyword lookup");
   assert.doesNotMatch(source, /currency: r\.currency \|\| "USD"/);
   assert.doesNotMatch(source, /currency: row\.currency \|\| "USD"/);
+});
+
+test("the board does not recommend somebody else's trademark", () => {
+  /* Measured across a live week: 12% of the whole board, 32% of the T-shirts
+     shelf and 8 of the top 20 rows were licensed or tour merchandise —
+     Backstreet Boys Düsseldorf 2026, SpongeBob, Gatorade, Elden Ring. Real
+     listings that really sold, and none of it safe for a print-on-demand
+     seller to copy. */
+  const math = read("sold-overnight-math.ts");
+  assert.match(math, /export function tradesOnRights/);
+
+  const fn = new Function(`${math
+    .slice(math.indexOf("const RIGHTS = ["))
+    .replace(/export function tradesOnRights\(title: string\): boolean/,
+      "function tradesOnRights(title)")
+    .replace(/const text = String\(title \|\| ""\);/, 'const text = String(title || "");')
+  }; return tradesOnRights;`)();
+
+  for (const caught of [
+    "Backstreet Boys Düsseldorf 2026 Shirt | Tell me why",
+    "SpongeBob SquarePants Family Matching Officially Licensed Shirt",
+    "Gatorade Shirt, Gatorade Drink Matching Cosplay TShirt",
+    "elden ring stickers / magnet / decal",
+    "Westlife Shirt",
+    "Some Band World Tour Tee",
+  ]) assert.equal(fn(caught), true, `should catch: ${caught}`);
+
+  /* Original work must not be swept up with it. */
+  for (const kept of [
+    "Salt Air Shirt, Coastal Shirt, Beach Lover Gift",
+    "Personalized Custom Blanket, Baby Girl Blanket",
+    "Modern Linen Throw Pillow Cover, Contrast Piping",
+    "Merino Wool Tank Top: base layer shirt women",
+  ]) assert.equal(fn(kept), false, `should keep: ${kept}`);
+
+  /* Hidden before the shelves are counted, so a hidden row cannot occupy a
+     slot on the board or inflate a tab above the minimum. */
+  const source = read("sold-overnight.ts");
+  const board = source.slice(source.indexOf("export async function readBoard"));
+  assert.match(board, /\.filter\(row => rights \|\| !tradesOnRights\(row\.title\)\)/);
+  assert.ok(board.indexOf("tradesOnRights") < board.indexOf("const perProduct"),
+    "filtered before the shelf counts");
+
+  /* Off unless deliberately asked for, and labelled when on. */
+  assert.match(read("api/sold-overnight/route.ts"), /params\.get\("rights"\) === "1"/);
+  assert.match(read("hot-list/page.tsx"), /Do not copy these/);
 });
