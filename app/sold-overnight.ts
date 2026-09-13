@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import type { EtsyFeature } from "@/app/api/etsy/client";
-import { MAX_UNITS_PER_READ, movement } from "@/app/sold-overnight-math";
+import { MAX_UNITS_PER_READ, movement, usdFromCents } from "@/app/sold-overnight-math";
 import {
   etsyApiCredential,
   etsyBudget,
@@ -1048,8 +1048,10 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
       title: r.title,
       url: r.url,
       image: r.image,
-      price: r.price_cents == null ? null : Number(r.price_cents) / 100,
-      currency: r.currency || "USD",
+      /* One column, one currency. Etsy accepts the conversion parameter and
+         ignores it, so it is done here or not at all. */
+      price: usdFromCents(r.price_cents == null ? null : Number(r.price_cents), r.currency),
+      currency: "USD",
       sold: Number(r.sold),
       soldOut: Boolean(r.sold_out),
       savesGained: Number(r.saves_gained) || 0,
@@ -1130,8 +1132,9 @@ export async function searchSold(keyword: string, hoursBack = 168, limit = 24) {
       title: row.title,
       url: row.url,
       image: row.image,
-      price: row.price_cents == null ? null : Number(row.price_cents) / 100,
-      currency: row.currency || "USD",
+      /* Same column, same currency, same reason as the board. */
+      price: usdFromCents(row.price_cents == null ? null : Number(row.price_cents), row.currency),
+      currency: "USD",
       sold: Number(row.sold),
       product: shelfOf.get(Number(row.taxonomy_id))!,
     }));

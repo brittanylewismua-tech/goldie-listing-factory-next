@@ -110,3 +110,43 @@ export function movement(had: number | null, now: number | null): Movement {
     record: units > 0 || restocked || soldOut || implausible,
   };
 }
+
+/**
+ * PRICES IN ONE CURRENCY, DONE HERE BECAUSE ETSY WOULD NOT DO IT.
+ *
+ * `listings/batch` documents a `currency` parameter — "the ISO 4217 alphabetic
+ * currency code for price conversion" — so the sweep asked for USD. It made no
+ * difference: after a full re-read of all 14,868 watched listings, 149 of the
+ * top 400 still came back in GBP, EUR, CAD and nine others. The parameter is
+ * accepted and ignored. Documentation is not evidence, and this is what it
+ * cost to find that out.
+ *
+ * So the conversion happens here, against a table. The board's price column
+ * answers "what does this kind of thing sell for" — the difference between a
+ * $15 product and a $40 one — and for that a rate a few percent stale is
+ * perfectly good. It does not need to be a live feed, and a live feed would be
+ * a second thing to keep running for no gain in the only question being asked.
+ *
+ * A currency missing from this table returns null rather than a guess, and a
+ * listing with no comparable price is left off the board rather than shown
+ * with a number nobody can read against the others.
+ *
+ * Rates are approximate, September 2026, units of currency per 1 USD. If the
+ * column starts looking wrong, this constant is the whole fix.
+ */
+export const PER_USD: Record<string, number> = {
+  USD: 1, EUR: 0.92, GBP: 0.79, CAD: 1.36, AUD: 1.52, NZD: 1.64,
+  CHF: 0.88, SEK: 10.5, NOK: 10.7, DKK: 6.9, PLN: 3.9, CZK: 23,
+  JPY: 149, CNY: 7.2, HKD: 7.8, SGD: 1.34, INR: 84, IDR: 15800,
+  PHP: 58, MYR: 4.5, THB: 34, TRY: 34, MXN: 18.5, BRL: 5.5,
+  ZAR: 18, ILS: 3.7, AED: 3.67, KRW: 1350, TWD: 32, RON: 4.6,
+  HUF: 365, BGN: 1.8, HRK: 6.9, ISK: 138, UAH: 41,
+};
+
+/** Cents in the listing's own currency to whole USD, or null if unconvertible. */
+export function usdFromCents(cents: number | null, currency: string | null): number | null {
+  if (cents == null || !Number.isFinite(Number(cents))) return null;
+  const rate = PER_USD[String(currency || "USD").toUpperCase()];
+  if (!rate) return null;
+  return Math.round((Number(cents) / 100 / rate) * 100) / 100;
+}

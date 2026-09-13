@@ -600,3 +600,28 @@ test("made to order is recorded, hidden by default, and can be asked for", () =>
   const route = read("api/sold-overnight/route.ts");
   assert.match(route, /params\.get\("madeToOrder"\) === "1"/);
 });
+
+test("one currency on the board, converted here because Etsy would not", () => {
+  /* The sweep asks Etsy for currency=USD, which the docs describe as price
+     conversion. After a full re-read of all 14,868 watched listings, 149 of
+     the top 400 still came back in GBP, EUR, CAD and nine others: the
+     parameter is accepted and ignored. So the conversion happens locally. */
+  const math = read("sold-overnight-math.ts");
+  assert.match(math, /export function usdFromCents/);
+  assert.match(math, /export const PER_USD/);
+
+  /* A currency we have no rate for returns null rather than a guess, so the
+     listing is left off the board instead of shown with a number that cannot
+     be read against the others. */
+  const fn = math.slice(math.indexOf("export function usdFromCents"));
+  assert.match(fn, /if \(!rate\) return null;/);
+
+  /* Both surfaces that print a price use it, and neither passes the listing's
+     own currency through to the page. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /import \{ MAX_UNITS_PER_READ, movement, usdFromCents \}/);
+  assert.equal((source.match(/usdFromCents\(/g) || []).length, 2,
+    "used on both the board and the keyword lookup");
+  assert.doesNotMatch(source, /currency: r\.currency \|\| "USD"/);
+  assert.doesNotMatch(source, /currency: row\.currency \|\| "USD"/);
+});
