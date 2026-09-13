@@ -138,6 +138,7 @@ export type EtsyListing = {
   num_favorers?: number;
   views?: number;
   state?: string;
+  is_personalizable?: boolean;
   price?: { amount?: number; divisor?: number; currency_code?: string };
 };
 
@@ -162,6 +163,7 @@ export async function ensureTables() {
          views       INTEGER DEFAULT 0,
          state       TEXT,
          listing_type TEXT,
+         personalizable INTEGER,
          reads       INTEGER NOT NULL DEFAULT 0,
          first_seen  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
          last_read   TEXT
@@ -224,6 +226,18 @@ export async function ensureTables() {
   try { await db().prepare("ALTER TABLE sold_watch ADD COLUMN reads INTEGER NOT NULL DEFAULT 0").run(); }
   catch { /* already there */ }
   try { await db().prepare("ALTER TABLE sold_taxonomy ADD COLUMN path TEXT NOT NULL DEFAULT ''").run(); }
+  catch { /* already there */ }
+  /*
+    MADE TO ORDER IS A DIFFERENT BUSINESS FROM PRINTING A DESIGN.
+
+    Thirty-two of the top forty were personalised — name blankets, embroidered
+    totes, custom logo tees. Sellers who manage finite made-to-order stock move
+    their quantity for operational reasons, so a board built on quantity finds
+    THEM rather than the highest sellers. NULL means not yet re-read, and is
+    shown, because hiding everything unread would empty the board on the day
+    this ships.
+  */
+  try { await db().prepare("ALTER TABLE sold_watch ADD COLUMN personalizable INTEGER").run(); }
   catch { /* already there */ }
   await migrateMovesToHours();
   /*
@@ -658,7 +672,15 @@ export async function sweep(
 
     const before = new Map(batch.map(r => [Number(r.listing_id), r]));
     const payload = await etsyGet(
-      `listings/batch?listing_ids=${batch.map(r => r.listing_id).join(",")}&includes=Images`);
+      /*
+        PRICES IN ONE CURRENCY, BECAUSE A BOARD IS A COMPARISON.
+
+        Thirty-nine per cent of the live board came back in GBP, EUR, PHP, HKD
+        and the rest, and a column reading ₱1,710.54 next to $26.97 cannot be
+        read down. Etsy converts server-side when asked, so this costs nothing
+        and no exchange table has to be kept here.
+      */
+      `listings/batch?listing_ids=${batch.map(r => r.listing_id).join(",")}&includes=Images&currency=USD`);
     const rows = (payload?.results ?? []) as (EtsyListing & {
       images?: { url_570xN?: string; url_fullxfull?: string }[];
     })[];
@@ -716,12 +738,14 @@ export async function sweep(
 
       writes.push(db().prepare(
         `UPDATE sold_watch SET reads=reads+1,quantity=?,favorites=?,views=?,state=?,listing_type=COALESCE(?,listing_type),image=COALESCE(?,image),
+           personalizable=?,
            price_cents=COALESCE(?,price_cents),currency=COALESCE(?,currency),
            title=CASE WHEN ?='' THEN title ELSE ? END,url=CASE WHEN ?='' THEN url ELSE ? END,
            taxonomy_id=COALESCE(?,taxonomy_id),last_read=?
          WHERE listing_id=?`)
         .bind(now, favorites, views, String(row.state ?? ""),
-          row.listing_type ? String(row.listing_type) : null, image, price,
+          row.listing_type ? String(row.listing_type) : null, image,
+          row.is_personalizable ? 1 : 0, price,
           row.price?.currency_code ?? null,
           String(row.title ?? ""), String(row.title ?? "").slice(0, 300),
           String(row.url ?? ""), String(row.url ?? ""),
@@ -886,7 +910,7 @@ export type ViewKey = keyof typeof VIEWS;
  * `product` is Etsy's own top-level category for the listing, so the shelves
  * are the real ones rather than a guess from the title.
  */
-export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard> {
+export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false): Promise<SoldBoard> {
   await ensureTables();
 
   /*
@@ -947,12 +971,17 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
       WHERE m.bucket>=? AND m.sold>0 AND m.sold<=?
         AND COALESCE(w.listing_type,'physical')='physical'
         AND w.favorites > 0
+        /* Made to order is hidden unless asked for. NULL means "not re-read
+           since this column existed", not "not personalised", so it stays
+           visible rather than emptying the board on the day this ships. */
+        AND (?=1 OR COALESCE(w.personalizable,0)=0)
       GROUP BY m.listing_id
       ORDER BY sold DESC, saves_gained DESC
       LIMIT ?`)
     /* Generous, because the shelf filter below thins this and a tight limit
        here would quietly truncate the board rather than fill it. */
-    .bind(since, MAX_UNITS_PER_READ, Math.max(limit * 6, 2_000)).all()).results as unknown as {
+    .bind(since, MAX_UNITS_PER_READ, madeToOrder ? 1 : 0,
+          Math.max(limit * 6, 2_000)).all()).results as unknown as {
         listing_id: number; sold: number; sold_out: number; saves_gained: number;
         quantity_after: number | null; title: string; url: string; image: string | null;
         price_cents: number | null; currency: string | null; taxonomy_id: number | null; product: string;

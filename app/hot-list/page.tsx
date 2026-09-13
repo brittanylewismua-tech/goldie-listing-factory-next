@@ -68,15 +68,25 @@ export default function HotListPage() {
   /* Which periods there is enough history to answer. Never shown, only used
      to decide what may be asked for. */
   const [offered, setOffered] = useState(VIEWS.slice(0, 1));
+  /*
+    MADE TO ORDER IS A DIFFERENT BUSINESS.
+
+    Thirty-two of the top forty were personalised — name blankets, embroidered
+    totes, custom logo tees. A seller printing a design on a blank cannot use
+    any of it, and worse, it crowds out what they CAN use. Off by default, and
+    offered rather than hidden, because for some sellers it is the whole point.
+  */
+  const [madeToOrder, setMadeToOrder] = useState(false);
   const [term, setTerm] = useState("");
   const [hits, setHits] = useState<Hit[] | null>(null);
   const [looking, setLooking] = useState(false);
   const [note, setNote] = useState("");
 
-  const load = (next = view) => {
-    setBoard(null); setError(""); setView(next);
+  const load = (next = view, custom = madeToOrder) => {
+    setBoard(null); setError(""); setView(next); setMadeToOrder(custom);
     /* no-store: an open tab must not reuse a board from before a repair. */
-    fetch(`/api/sold-overnight?hours=${next.hours}`, { cache: "no-store" })
+    fetch(`/api/sold-overnight?hours=${next.hours}${custom ? "&madeToOrder=1" : ""}`,
+      { cache: "no-store" })
       .then(async response => {
         const result = await response.json() as Board & { error?: string };
         if (!response.ok) throw new Error(result.error || "This could not be loaded.");
@@ -88,7 +98,7 @@ export default function HotListPage() {
         /* The longest honourable period leads. Once a week of history exists
            this becomes the week, on its own, with nothing to announce. */
         const lead = list[list.length - 1];
-        if (lead.hours > next.hours) load(lead);
+        if (lead.hours > next.hours) load(lead, custom);
       })
       .catch(e => setError(e instanceof Error ? e.message : "This could not be loaded."));
   };
@@ -205,6 +215,17 @@ export default function HotListPage() {
                 <p className="drop-loading-sub">Try the other one.</p>
               </section>
             : <>
+              <div className="hot-made-to-order">
+                <button type="button" aria-pressed={madeToOrder}
+                  className={madeToOrder ? "active" : undefined}
+                  onClick={() => load(view, !madeToOrder)}>
+                  {madeToOrder ? "Showing made to order" : "Show made to order"}
+                </button>
+                <small>{madeToOrder
+                  ? "Personalised and embroidered listings are included."
+                  : "Personalised and embroidered listings are hidden."}</small>
+              </div>
+
               <nav className="drop-tabs" aria-label="Product types">
                 <button type="button" className={product === "all" ? "active" : undefined}
                   aria-current={product === "all" ? "true" : undefined}

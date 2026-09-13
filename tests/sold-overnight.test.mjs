@@ -570,3 +570,33 @@ test("wall decor is not a printable shelf", () => {
   assert.doesNotMatch(source, /leaf: "Wall Decor"/);
   assert.match(source, /Home & Living > Home Decor > Wall Decor > Signs/);
 });
+
+test("prices are asked for in one currency", () => {
+  /* Thirty-nine per cent of the live board came back in GBP, EUR, PHP and HKD,
+     so a column reading ₱1,710.54 sat next to $26.97 and could not be read
+     down. Etsy converts server-side when asked; nothing is converted here. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /listings\/batch\?[^`]*currency=USD/);
+});
+
+test("made to order is recorded, hidden by default, and can be asked for", () => {
+  /* Thirty-two of the top forty were personalised. Sellers who manage finite
+     made-to-order stock move their quantity for operational reasons, so a
+     board built on quantity finds THEM rather than the highest sellers. */
+  const source = read("sold-overnight.ts");
+  /* Stored from Etsy's own flag, not guessed from the title — "Newborn Name
+     Blanket, baby name swaddle" survived a keyword filter. */
+  assert.match(source, /is_personalizable/);
+  assert.match(source, /ALTER TABLE sold_watch ADD COLUMN personalizable/);
+  const board = source.slice(source.indexOf("export async function readBoard"));
+  assert.match(board, /madeToOrder = false/);
+  assert.match(board, /COALESCE\(w\.personalizable,0\)=0/);
+
+  /* NULL is "not re-read since the column existed", not "not personalised".
+     Treating it as personalised would empty the board the day this ships. */
+  assert.match(board, /\?=1 OR COALESCE\(w\.personalizable,0\)=0/);
+
+  /* Off unless the seller asks. */
+  const route = read("api/sold-overnight/route.ts");
+  assert.match(route, /params\.get\("madeToOrder"\) === "1"/);
+});

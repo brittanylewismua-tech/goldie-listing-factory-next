@@ -30,11 +30,15 @@ export const GET = withErrorLog("sold-overnight", async (request: Request) => {
     /* The board that exists is still the board. */
   }
 
-  const hours = Number(new URL(request.url).searchParams.get("hours"));
+  const params = new URL(request.url).searchParams;
+  const hours = Number(params.get("hours"));
   const hoursBack = [24, 48, 168].includes(hours) ? hours : 24;
+  /* Made to order is a different business from printing a design, so it is
+     off unless the seller asks for it. */
+  const madeToOrder = params.get("madeToOrder") === "1";
 
   const [board, streak, unlocks] = await Promise.all([
-    readBoard(400, hoursBack),
+    readBoard(400, hoursBack, madeToOrder),
     listingStreak(user.userId),
     unlockState(user.userId),
   ]);
@@ -50,6 +54,7 @@ export const GET = withErrorLog("sold-overnight", async (request: Request) => {
   return NextResponse.json({
     ...board,
     listings,
+    madeToOrder,
     unlocked,
     held: unlocked ? 0 : Math.max(0, board.listings.length - listings.length),
     toUnlock: unlocked ? 0 : Math.max(0, STREAK_TARGET - streak.count),
