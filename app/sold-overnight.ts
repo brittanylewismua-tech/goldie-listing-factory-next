@@ -381,7 +381,7 @@ const POD_SHELVES: { top: string; leaf: string }[] = [
  *
  * Still never a hardcoded id: those can quietly start meaning something else.
  */
-export async function shelfIds(): Promise<{ id: number; label: string }[]> {
+export async function shelfIds(): Promise<{ id: number; label: string; path: string }[]> {
   const rows = (await db().prepare(
     `SELECT taxonomy_id,name,top,path FROM sold_taxonomy
       WHERE (${POD_SHELVES.map(() => "(top = ? AND name = ?)").join(" OR ")})`)
@@ -390,15 +390,38 @@ export async function shelfIds(): Promise<{ id: number; label: string }[]> {
 
   /* A leaf name can still appear twice inside one department. Take the
      shallowest — the broader shelf, which is the one a seller means. */
-  const best = new Map<string, { id: number; label: string; depth: number }>();
+  const best = new Map<string, { id: number; label: string; depth: number; path: string }>();
   for (const row of rows) {
     const key = `${row.top}|${row.name}`;
     const depth = String(row.path ?? "").split(">").length;
     const seen = best.get(key);
     if (!seen || depth < seen.depth)
-      best.set(key, { id: Number(row.taxonomy_id), label: row.name, depth });
+      best.set(key, { id: Number(row.taxonomy_id), label: row.name, depth, path: String(row.path ?? "") });
   }
-  return [...best.values()].map(({ id, label }) => ({ id, label }));
+  return [...best.values()].map(({ id, label, path }) => ({ id, label, path }));
+}
+
+/**
+ * EVERY NODE UNDER A SHELF, NOT JUST THE SHELF ITSELF.
+ *
+ * Restricting the board to the chosen shelf ids made T-shirts disappear from
+ * it entirely. Etsy files a listing on the most specific node it fits, which
+ * is frequently a child of the shelf — "T-shirts" has children, and the shirts
+ * were all sitting under them. Matching the shelf id alone therefore excluded
+ * most of the very thing the shelf exists for, silently, and the category
+ * simply stopped appearing.
+ *
+ * Matching on the path prefix takes the shelf and everything beneath it.
+ */
+export async function shelfTaxonomyIds(): Promise<number[]> {
+  const shelves = await shelfIds();
+  if (!shelves.length) return [];
+  const clauses = shelves.map(() => "path = ? OR path LIKE ?").join(" OR ");
+  const binds = shelves.flatMap(shelf => [shelf.path, `${shelf.path} > %`]);
+  const rows = (await db().prepare(
+    `SELECT taxonomy_id FROM sold_taxonomy WHERE ${clauses}`).bind(...binds).all())
+    .results as unknown as { taxonomy_id: number }[];
+  return rows.map(r => Number(r.taxonomy_id));
 }
 
 /**
@@ -716,8 +739,7 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
     anything outside them — legacy rows from the old keyword seeding included —
     has no business here whatever it is.
   */
-  const shelves = await shelfIds();
-  const shelfSet = shelves.map(shelf => shelf.id);
+  const shelfSet = await shelfTaxonomyIds();
   if (!shelfSet.length)
     return { night: null, watched: 0, totalSold: 0, building: false, hoursBack,
              products: [], listings: [] };

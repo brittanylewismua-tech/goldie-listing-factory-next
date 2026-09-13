@@ -399,3 +399,16 @@ test("the tabs and the grid cannot disagree", () => {
   assert.match(board, /const perProduct = new Map/);
   assert.doesNotMatch(board, /GROUP BY product/, "one query, one source of truth");
 });
+
+test("a shelf includes everything filed beneath it", () => {
+  /* Restricting the board to the chosen shelf ids made T-shirts disappear from
+     it entirely: Etsy files a listing on the most specific node it fits, which
+     is usually a child of the shelf, so matching the shelf id alone excluded
+     most of the very thing the shelf exists for — silently, the category just
+     stopped appearing. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /export async function shelfTaxonomyIds/);
+  assert.match(source, /path = \? OR path LIKE \?/);
+  assert.match(source, /`\$\{shelf\.path\} > %`/);
+  assert.match(source, /const shelfSet = await shelfTaxonomyIds\(\)/);
+});
