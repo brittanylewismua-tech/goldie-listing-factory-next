@@ -37,6 +37,17 @@ const WINDOWS = [
   { hours: 168, label: "Last 7 days" },
 ];
 
+/*
+  Every card says the period it is counting. Without it, "74 sold" beside a
+  switcher set to seven days still reads as overnight, which is the one thing
+  this page must never be vague about.
+*/
+const WINDOW_UNIT: Record<number, string> = {
+  24: "in 24 hours",
+  48: "in 2 days",
+  168: "in 7 days",
+};
+
 const money = (value: number | null, currency: string) =>
   value === null ? "" : new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
 
@@ -161,11 +172,13 @@ export default function SoldOvernightPage() {
                     {listing.soldOut && <span className="drop-badge sold-out">Sold out</span>}
                   </a>
                   <figcaption>
+                    {/* ONE NUMBER. "74 sold  +47 saves" put two different
+                        measurements of two different things on one line with
+                        no labels between them, and read as though both were
+                        the headline. Saves are not why anybody opens this. */}
                     <p className="drop-figures">
                       <span className="drop-numeral">{listing.sold.toLocaleString()}</span>
-                      <span className="drop-unit">sold</span>
-                      {listing.savesGained > 0 &&
-                        <span className="drop-rate">+{listing.savesGained.toLocaleString()} saves</span>}
+                      <span className="drop-unit">sold {WINDOW_UNIT[board.hoursBack] ?? "recently"}</span>
                     </p>
                     {/* PRICE ONLY. This used to print the listing's remaining
                         stock beside it — "171,447 left" — which is somebody

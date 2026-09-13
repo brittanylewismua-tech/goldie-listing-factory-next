@@ -4375,7 +4375,6 @@ html, body { background: var(--lf-paper); }
 .drop-page .drop-numeral{font-size:16px;font-weight:800;letter-spacing:-.045em;
   font-variant-numeric:tabular-nums;line-height:1}
 .drop-page .drop-unit{font-size:13px;color:var(--ink-2,#4b4644)}
-.drop-page .drop-rate{font-size:13px;font-weight:700}
 .drop-page .drop-sub{margin:0;font-size:13px;color:var(--ink-3,#8b8380)}
 .drop-page .drop-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
   overflow:hidden;margin-top:4px;font-size:13px;line-height:1.4;color:inherit;text-decoration:none}
@@ -4430,96 +4429,95 @@ html, body { background: var(--lf-paper); }
 
 
 /* ===========================================================================
-   SOLD OVERNIGHT — on the frozen design system.
+   SOLD OVERNIGHT
 
-   This page was built in hot pink (#ee6fc0, #b02371) on white, with 18px gaps
-   and 13px metadata. None of that is in the system: the palette is plum on
-   warm neutrals, the art direction says in as many words that pink is not a
-   surface colour, spacing is 4/8/12/16/24/32 only, and 12px is the floor for
-   metadata. Off-palette accent on off-scale spacing is precisely what reads as
-   cheap, however correct the numbers on the page are.
+   Built against the LIVE shell, not against DESIGN_SYSTEM.md. That file calls
+   itself a frozen checkpoint and describes a plum system that is not what
+   ships: the running app's active state is #ff4fc3 on #1b0e17, its primary
+   action is near-black, its progress tracks run #d7a6cf to #8e4c78, and its
+   type is Manrope. Following the document over the product turned this page
+   purple, which is not the Listing Factory.
+
+   Values here were read off the rendered shell — the sidebar's active item,
+   the usage meter, the new-batch button — so this page cannot drift from the
+   rest of the app without the rest of the app moving first.
    =========================================================================== */
 
 /* --- the progress strip -------------------------------------------------- */
 /* One element, not four tiles. Progress is progress; it is not a control and
    no longer dresses as one. */
 .unlock-strip{display:grid;gap:12px;margin:0 0 24px;padding:0 0 16px;
-  border-bottom:1px solid #d8d0e3}
+  border-bottom:1px solid var(--line,#5b354f29)}
 .unlock-progress{display:grid;gap:8px}
-.unlock-count{margin:0;font-size:14px;color:#211a2e}
-.unlock-count b{font-size:16px;font-weight:800;color:#8f4f78;
+.unlock-count{margin:0;font-size:14px;color:var(--ink,#4b283e)}
+.unlock-count b{font-size:16px;font-weight:800;color:#8e4c78;
   font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.unlock-track{display:block;height:6px;border-radius:8px;background:#e5dfec;overflow:hidden}
-.unlock-track i{display:block;height:100%;border-radius:8px;
-  background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b);
-  transition:width 200ms ease}
-.unlock-next{margin:0;font-size:12px;color:#6f6980}
-.unlock-reset{color:#6f6980}
+/* The same meter the sidebar uses for usage and the weekly goal. */
+.unlock-track{display:block;height:6px;border-radius:6px;
+  background:var(--line,#5b354f29);overflow:hidden}
+.unlock-track i{display:block;height:100%;border-radius:6px;
+  background:linear-gradient(90deg,#d7a6cf,#8e4c78);transition:width 200ms ease}
+.unlock-next{margin:0;font-size:12px;color:#8b8390}
+.unlock-reset{color:#8b8390}
 
-/* The one real control here: a field, per the system — white, 9px, plum ring. */
 .unlock-search{display:flex;gap:8px}
-.unlock-search input{flex:1;min-width:0;background:#fff;border:1px solid #d8d0e3;
-  border-radius:9px;padding:8px 12px;font:inherit;font-size:14px;color:#211a2e}
-.unlock-search input::placeholder{color:#6f6980}
-.unlock-search input:focus-visible{outline:2px solid #8f4f78;outline-offset:1px;border-color:#8f4f78}
-.unlock-search button{border:1px solid transparent;border-radius:10px;padding:8px 16px;
-  background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b);color:#fff;
-  font:inherit;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+.unlock-search input{flex:1;min-width:0;background:#fff;
+  border:1px solid var(--line,#5b354f29);border-radius:10px;padding:8px 12px;
+  font:inherit;font-size:14px;color:var(--ink,#4b283e)}
+.unlock-search input::placeholder{color:#8b8390}
+.unlock-search input:focus-visible{outline:2px solid #ff4fc3;outline-offset:1px}
+/* Primary action matches the shell's: near-black, not the accent. */
+.unlock-search button{border:1px solid #0d0d0d;background:#0d0d0d;color:#fff;
+  border-radius:12px;padding:8px 16px;font:inherit;font-size:13px;font-weight:700;
   cursor:pointer}
-.unlock-search button:disabled{opacity:.52;cursor:not-allowed}
-.unlock-note{margin:0;font-size:12px;color:#6f6980}
-.unlock-found{margin-top:16px;border-top:1px solid #d8d0e3;padding-top:16px}
+.unlock-search button:disabled{opacity:.4;cursor:not-allowed}
+.unlock-note{margin:0;font-size:12px;color:#8b8390}
+.unlock-found{margin-top:16px;border-top:1px solid var(--line,#5b354f29);padding-top:16px}
 .unlock-found .mini-label{margin-bottom:12px}
 
 /* --- the window switcher ------------------------------------------------- */
-/* Secondary action per the system: pale surface, plum text, 10px radius.
-   Selected takes the signature gradient, which the system reserves for
-   exactly this — the selected state of a set of choices. */
 .sold-page .sold-windows{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px}
-.sold-page .sold-windows button{border:1px solid #d8d0e3;background:#f3eff7;
-  border-radius:10px;padding:8px 16px;font:inherit;font-size:12px;font-weight:700;
-  letter-spacing:.02em;color:#8f4f78;cursor:pointer;transition:border-color 160ms ease}
-.sold-page .sold-windows button:hover{border-color:#945b9e}
-.sold-page .sold-windows button.active{border-color:transparent;color:#fff;
-  background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b)}
-.sold-page .sold-windows button:focus-visible{outline:2px solid #8f4f78;outline-offset:2px}
+.sold-page .sold-windows button{border:1px solid var(--line,#5b354f29);background:none;
+  border-radius:12px;padding:8px 16px;font:inherit;font-size:13px;font-weight:700;
+  color:var(--ink,#4b283e);cursor:pointer;transition:border-color 160ms ease}
+.sold-page .sold-windows button:hover{border-color:#ff4fc3}
+.sold-page .sold-windows button.active{background:#ff4fc3;border-color:#ff4fc3;color:#1b0e17}
+.sold-page .sold-windows button:focus-visible{outline:2px solid #ff4fc3;outline-offset:2px}
 
 /* --- the board ----------------------------------------------------------- */
-/* 16, not the 18 the written system asks for: the enforced radius scale in
-   design-scale-d745 is 0/6/7/8/9/10/12/14/16/22 and every other surface in
-   this app is built to it. One scale, and it is the one the code holds. */
-.sold-page .drop-card-surface{background:#fbfaff;border:1px solid #d8d0e3;
-  border-radius:16px;padding:24px}
-.sold-page .drop-tabs{gap:8px;margin:0 0 24px;padding-bottom:16px;border-bottom:1px solid #d8d0e3}
-.sold-page .drop-tabs button{border:1px solid #d8d0e3;background:#f3eff7;border-radius:10px;
-  padding:8px 12px;font-size:12px;font-weight:700;color:#211a2e}
+.sold-page .drop-card-surface{background:var(--surface,#fbfaff);
+  border:1px solid var(--line,#5b354f29);border-radius:16px;padding:24px}
+.sold-page .drop-tabs{gap:8px;margin:0 0 24px;padding-bottom:16px;
+  border-bottom:1px solid var(--line,#5b354f29)}
+.sold-page .drop-tabs button{border:1px solid var(--line,#5b354f29);background:none;
+  border-radius:12px;padding:8px 12px;font-size:13px;font-weight:700;
+  color:var(--ink,#4b283e)}
 .sold-page .drop-tabs button small{margin-left:8px;font-variant-numeric:tabular-nums;
-  font-weight:700;color:#6f6980}
-.sold-page .drop-tabs button.active{border-color:transparent;color:#fff;
-  background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b)}
-.sold-page .drop-tabs button.active small{color:#e5dfec}
+  font-weight:700;color:#8b8390}
+.sold-page .drop-tabs button.active{background:#ff4fc3;border-color:#ff4fc3;color:#1b0e17}
+.sold-page .drop-tabs button.active small{color:#1b0e17;opacity:.65}
 
 .sold-page .drop-grid{gap:16px}
-.sold-page .drop-card{border:1px solid #d8d0e3;border-radius:14px;background:#fff}
-.sold-page .drop-shot{background:#f3eff7}
+.sold-page .drop-card{border:1px solid var(--line,#5b354f29);border-radius:12px;background:#fff}
+.sold-page .drop-shot{background:#f6f2f6}
 .sold-page .drop-card figcaption{padding:12px 16px 16px;gap:4px}
-.sold-page .drop-numeral{font-size:20px;font-weight:800;letter-spacing:-.02em;color:#211a2e}
-.sold-page .drop-unit{font-size:12px;color:#6f6980}
-.sold-page .drop-rate{font-size:12px;font-weight:700;color:#8f4f78}
-.sold-page .drop-sub{font-size:12px;color:#6f6980}
-.sold-page .drop-title{font-size:13px;line-height:1.45;color:#211a2e}
+.sold-page .drop-numeral{font-size:20px;font-weight:800;letter-spacing:-.02em;
+  color:var(--ink,#4b283e)}
+.sold-page .drop-unit{font-size:12px;color:#8b8390}
+.sold-page .drop-sub{font-size:12px;color:#8b8390}
+.sold-page .drop-title{font-size:13px;line-height:1.45;color:var(--ink,#4b283e)}
 
-/* Sold out is the strongest thing this board can say, so it gets the
-   signature gradient rather than a second accent nobody has seen before. */
-.sold-page .drop-badge.sold-out{background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b);
-  color:#fff;border-radius:8px;padding:4px 8px;font-size:11px;letter-spacing:.06em}
+/* Sold out is the strongest thing this board says, so it takes the accent. */
+.sold-page .drop-badge.sold-out{background:#ff4fc3;color:#1b0e17;border-radius:8px;
+  padding:4px 8px;font-size:11px;font-weight:800;letter-spacing:.04em}
 
-.sold-page .drop-card.locked{border-style:dashed;border-color:#d8d0e3;background:#f3eff7}
-.sold-page .drop-card.locked .drop-numeral{font-size:24px;color:#8f4f78}
-.sold-page .drop-card.locked p{font-size:12px;color:#6f6980}
+.sold-page .drop-card.locked{border-style:dashed;border-color:var(--line,#5b354f29);
+  background:#faf7fa}
+.sold-page .drop-card.locked .drop-numeral{font-size:24px;color:#8e4c78}
+.sold-page .drop-card.locked p{font-size:12px;color:#8b8390}
 
 .sold-page .drop-none{grid-column:1/-1;margin:0;padding:32px 0;text-align:center;
-  font-size:14px;color:#6f6980}
-.sold-page .drop-loading-track i{background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b)}
-.sold-page .drop-head p{font-size:14px;color:#6f6980}
-.sold-page .drop-note{font-size:12px;color:#6f6980}
+  font-size:14px;color:#8b8390}
+.sold-page .drop-loading-track i{background:linear-gradient(90deg,#d7a6cf,#8e4c78)}
+.sold-page .drop-head p{font-size:14px;color:#8b8390}
+.sold-page .drop-note{font-size:12px;color:#8b8390}

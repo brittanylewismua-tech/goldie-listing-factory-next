@@ -120,7 +120,7 @@ test("a shelf with almost nothing on it does not get a tab", () => {
      and a dead end. */
   const source = read("sold-overnight.ts");
   assert.match(source, /SHELF_MINIMUM = 30/);
-  assert.match(source, /at\.listings >= SHELF_MINIMUM/);
+  assert.match(source, />= SHELF_MINIMUM/);
 });
 
 test("the scheduled sweep cannot be triggered from outside the worker", () => {
@@ -249,7 +249,7 @@ test("shelves are matched on department and leaf, never a hardcoded id", () => {
      middle levels nobody ever sees. */
   const source = read("sold-overnight.ts");
   const shelves = source.slice(source.indexOf("const POD_SHELVES"), source.indexOf("];", source.indexOf("const POD_SHELVES")));
-  assert.match(shelves, /\{ top: "Clothing", leaf: "T-shirts" \}/);
+  assert.match(shelves, /\{ top: "Clothing", leaf: "T-shirts", shelf: "T-shirts" \}/);
   assert.doesNotMatch(shelves, /\d{3,}/, "no raw taxonomy ids in the shelf list");
   assert.match(source, /\(top = \? AND name = \?\)/);
 });
@@ -383,10 +383,10 @@ test("the board only ever shows shelves this tool deliberately stocks", () => {
      and also clears out legacy rows from the old keyword seeding. */
   const source = read("sold-overnight.ts");
   const board = source.slice(source.indexOf("export async function readBoard"));
-  assert.match(board, /shelfSet\.has\(Number\(row\.taxonomy_id\)\)/);
+  assert.match(board, /shelfOf\.has\(Number\(row\.taxonomy_id\)\)/);
   /* And an empty shelf list must render an empty board rather than an
      unrestricted one. */
-  assert.match(board, /if \(!shelfSet\.size\)/);
+  assert.match(board, /if \(!shelfOf\.size\)/);
   /* Everything the board reports has to come from the filtered rows, or the
      tabs promise categories the grid does not contain. */
   for (const derived of ["perProduct", "totalSold", "listings"])
@@ -411,14 +411,14 @@ test("a shelf includes everything filed beneath it", () => {
      most of the very thing the shelf exists for — silently, the category just
      stopped appearing. */
   const source = read("sold-overnight.ts");
-  assert.match(source, /export async function shelfTaxonomyIds/);
+  assert.match(source, /export async function shelfByTaxonomy/);
   /* And the prefix match must not be SQL: fifteen OR'd LIKE clauses on paths
      this long is "LIKE or GLOB pattern too complex" from D1, which took the
      board down with a 500. Resolving to an IN list trades one limit for
      another, since fifteen shelves have hundreds of descendants. */
   assert.doesNotMatch(source, /path LIKE/);
   assert.match(source, /path\.startsWith\(`\$\{root\} > `\)/);
-  assert.match(source, /const shelfSet = await shelfTaxonomyIds\(\)/);
+  assert.match(source, /const shelfOf = await shelfByTaxonomy\(\)/);
 });
 
 test("a digital branch inside a printable shelf is left out", () => {

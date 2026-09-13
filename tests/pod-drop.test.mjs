@@ -87,7 +87,7 @@ test("the board is fetched fresh, never from the browser cache", () => {
   const source = read("sold-overnight/page.tsx");
   assert.match(source, /fetch\(`\/api\/sold-overnight[\s\S]{0,120}\{ cache: "no-store" \}/,
     "an open customer tab must not reuse a board from before a safety repair");
-  assert.match(read("unlock-cards.tsx"), /api\/whats-selling[\s\S]*cache: "no-store"/,
+  assert.match(read("unlock-cards.tsx"), /api\/sold-overnight\/search[\s\S]{0,200}cache: "no-store"/,
     "keyword research must not reuse a browser-cached response");
 });
 
@@ -155,10 +155,20 @@ test("progress is shown as progress, not as buttons that do nothing", () => {
 });
 
 test("nothing in the card system is scored on a sale", () => {
-  const source = read("unlocks.ts") + read("unlock-cards.tsx");
+  /* The COUNTER is the thing that must never move on a sale: a seller controls
+     what they list and not what strangers buy, and scoring them on sales would
+     be scoring them on luck. Displaying somebody else's sales is a different
+     matter entirely — that is the whole product — so this checks the scoring,
+     which lives in unlocks.ts, rather than every word on the panel. */
+  const source = read("unlocks.ts").replace(/\/\*[\s\S]*?\*\//g, "");
   for (const forbidden of [/\bsold\b/i, /\bsales\b/i, /revenue/i, /conversion/i])
-    assert.doesNotMatch(source.replace(/\/\*[\s\S]*?\*\//g, ""), forbidden,
+    assert.doesNotMatch(source, forbidden,
       "the counter moves on work going out, which is the only part a seller controls");
+  /* And the panel must not turn a sale into progress either. */
+  const panel = read("unlock-cards.tsx").replace(/\/\*[\s\S]*?\*\//g, "");
+  const progress = panel.slice(panel.indexOf("const next ="), panel.indexOf("async function search"));
+  for (const forbidden of [/\bsold\b/i, /\bsales\b/i])
+    assert.doesNotMatch(progress, forbidden, "progress is earned by listing, never by selling");
 });
 
 test("a day already read is never taken back", () => {

@@ -345,27 +345,54 @@ export async function ensureTaxonomy(): Promise<void> {
  * meaning something else. Named by path rather than by leaf name for the same
  * reason: "Stickers" appears in more than one department.
  */
-const POD_SHELVES: { top: string; leaf: string }[] = [
-  { top: "Clothing", leaf: "T-shirts" },
-  { top: "Clothing", leaf: "Hoodies" },
-  { top: "Clothing", leaf: "Sweatshirts" },
-  { top: "Clothing", leaf: "Tanks" },
-  { top: "Clothing", leaf: "Bodysuits" },
-  /* Etsy's name for the hat shelf has moved around; all the plausible leaves
-     are listed and whichever exists wins. An entry that matches nothing costs
-     nothing, and `shelvesMissing` below says so out loud. */
-  { top: "Accessories", leaf: "Baseball & Trucker Caps" },
-  { top: "Accessories", leaf: "Hats & Caps" },
-  { top: "Accessories", leaf: "Hats" },
-  { top: "Bags & Purses", leaf: "Totes" },
-  { top: "Home & Living", leaf: "Mugs" },
-  { top: "Home & Living", leaf: "Throw Pillows" },
-  { top: "Home & Living", leaf: "Blankets & Throws" },
-  { top: "Home & Living", leaf: "Baby Blankets" },
-  { top: "Home & Living", leaf: "Wall Decor" },
-  { top: "Art & Collectibles", leaf: "Prints" },
-  { top: "Paper & Party Supplies", leaf: "Stickers" },
-  { top: "Electronics & Accessories", leaf: "Phone Cases" },
+const POD_SHELVES: { top: string; leaf: string; shelf: string }[] = [
+  { top: "Clothing", leaf: "T-shirts", shelf: "T-shirts" },
+  { top: "Clothing", leaf: "Sweatshirts", shelf: "Sweatshirts & Hoodies" },
+  { top: "Clothing", leaf: "Hoodies", shelf: "Sweatshirts & Hoodies" },
+  { top: "Clothing", leaf: "Tanks", shelf: "Tanks" },
+  { top: "Clothing", leaf: "Bodysuits", shelf: "Baby & Kids" },
+  { top: "Accessories", leaf: "Baseball & Trucker Caps", shelf: "Hats" },
+  { top: "Accessories", leaf: "Hats & Caps", shelf: "Hats" },
+  { top: "Accessories", leaf: "Hats", shelf: "Hats" },
+  { top: "Bags & Purses", leaf: "Totes", shelf: "Tote Bags" },
+  { top: "Home & Living", leaf: "Mugs", shelf: "Mugs" },
+  { top: "Home & Living", leaf: "Throw Pillows", shelf: "Throw Pillows" },
+  { top: "Home & Living", leaf: "Blankets & Throws", shelf: "Blankets" },
+  { top: "Home & Living", leaf: "Baby Blankets", shelf: "Baby & Kids" },
+  { top: "Home & Living", leaf: "Wall Decor", shelf: "Wall Art" },
+  { top: "Art & Collectibles", leaf: "Prints", shelf: "Wall Art" },
+  { top: "Paper & Party Supplies", leaf: "Stickers", shelf: "Stickers" },
+  { top: "Electronics & Accessories", leaf: "Phone Cases", shelf: "Phone Cases" },
+];
+
+/**
+ * THE SHELVES A SELLER RECOGNISES, IN AN ORDER THAT DOES NOT MOVE.
+ *
+ * The board was labelled with Etsy's own leaf names, which are an internal
+ * filing system rather than a set of products anybody shops for. That gave a
+ * tab row of "Baby Blankets, Throws, Quilts, Weighted Blankets" — four names
+ * for one thing — while Sweatshirts and Hoodies sat under the depth threshold
+ * separately and neither appeared at all. It read as random because it was:
+ * the shelves were whatever Etsy's taxonomy happened to hand back that day.
+ *
+ * Mapping the leaves onto a fixed list fixes the randomness and the depth in
+ * one move, because the names that were splitting a shelf three ways now add
+ * up. Ordered deliberately, apparel first, so the row is the same every
+ * morning and a seller learns where to look.
+ */
+export const SHELF_ORDER = [
+  "T-shirts",
+  "Sweatshirts & Hoodies",
+  "Tanks",
+  "Baby & Kids",
+  "Tote Bags",
+  "Mugs",
+  "Blankets",
+  "Throw Pillows",
+  "Wall Art",
+  "Stickers",
+  "Phone Cases",
+  "Hats",
 ];
 
 /**
@@ -406,6 +433,8 @@ export async function shelfIds(): Promise<{ id: number; label: string; path: str
     .bind(...POD_SHELVES.flatMap(shelf => [shelf.top, shelf.leaf])).all()).results as unknown as
     { taxonomy_id: number; name: string; top: string; path: string }[];
 
+  const shelfOf = new Map(POD_SHELVES.map(entry => [`${entry.top}|${entry.leaf}`, entry.shelf]));
+
   /*
     EVERY NODE WITH THAT NAME IN THAT DEPARTMENT, NOT JUST ONE.
 
@@ -417,54 +446,59 @@ export async function shelfIds(): Promise<{ id: number; label: string; path: str
   */
   return rows.map(row => ({
     id: Number(row.taxonomy_id),
-    label: row.name,
+    label: shelfOf.get(`${row.top}|${row.name}`) ?? row.name,
     path: String(row.path ?? ""),
   }));
 }
 
 /**
- * EVERY NODE UNDER A SHELF, NOT JUST THE SHELF ITSELF.
+ * EVERY NODE UNDER A SHELF, MAPPED TO THE SHELF A SELLER RECOGNISES.
  *
- * Restricting the board to the chosen shelf ids made T-shirts disappear from
- * it entirely. Etsy files a listing on the most specific node it fits, which
- * is frequently a child of the shelf — "T-shirts" has children, and the shirts
- * were all sitting under them. Matching the shelf id alone therefore excluded
- * most of the very thing the shelf exists for, silently, and the category
- * simply stopped appearing.
+ * Two things at once, because they are the same walk of the tree.
  *
- * Matching on the path prefix takes the shelf and everything beneath it.
+ * FIRST, descendants. Etsy files a listing on the most specific node it fits,
+ * which is usually a child of the shelf — matching the shelf id alone made
+ * T-shirts vanish from the board entirely, silently, which is indistinguishable
+ * from nobody buying t-shirts.
+ *
+ * SECOND, the label. Etsy's leaf names are an internal filing system, not
+ * products anybody shops for: "Baby Blankets", "Throws", "Quilts" and
+ * "Weighted Blankets" are four names for one shelf. Each node resolves to the
+ * seller-facing shelf instead, so those names add up rather than splitting a
+ * category four ways and dropping all of them below the depth threshold.
+ *
+ * The DEEPEST matching shelf wins, so "Baby Blankets" lands in Baby & Kids
+ * rather than the Blankets shelf it happens to sit beneath.
  */
-export async function shelfTaxonomyIds(): Promise<Set<number>> {
+export async function shelfByTaxonomy(): Promise<Map<number, string>> {
   const shelves = await shelfIds();
-  if (!shelves.length) return new Set();
+  if (!shelves.length) return new Map();
 
   /*
-    THE PREFIX MATCH HAPPENS HERE, NOT IN SQL.
-
-    Fifteen OR'd LIKE clauses on paths this long is "LIKE or GLOB pattern too
-    complex" from D1, which took the whole board down with a 500. And the
-    obvious repair — resolving the ids in SQL and passing them back in an IN
-    list — trades one limit for another, because the descendants of fifteen
-    shelves run to hundreds of bound parameters.
-    
-    The taxonomy is a few thousand rows and changes about never. Reading it and
-    matching prefixes in memory has no limit to bump into at all.
+    THE PREFIX MATCH HAPPENS HERE, NOT IN SQL. Fifteen OR'd LIKE clauses on
+    paths this long is "LIKE or GLOB pattern too complex" from D1, which took
+    the whole board down with a 500 — and resolving to an IN list trades one
+    limit for another, since fifteen shelves have hundreds of descendants. The
+    taxonomy is a few thousand rows and changes about never.
   */
   const all = (await db().prepare("SELECT taxonomy_id,path FROM sold_taxonomy").all())
     .results as unknown as { taxonomy_id: number; path: string }[];
-
-  const roots = shelves.map(shelf => shelf.path).filter(Boolean);
   const under = (path: string, root: string) => path === root || path.startsWith(`${root} > `);
 
-  const ids = new Set<number>();
+  const out = new Map<number, string>();
   for (const row of all) {
     const path = String(row.path ?? "");
-    if (!roots.some(root => under(path, root))) continue;
     /* A branch inside a shelf that is not the shelf. */
     if (NOT_PRINTABLE.some(excluded => under(path, excluded))) continue;
-    ids.add(Number(row.taxonomy_id));
+    let best: { label: string; depth: number } | null = null;
+    for (const shelf of shelves) {
+      if (!shelf.path || !under(path, shelf.path)) continue;
+      const depth = shelf.path.split(">").length;
+      if (!best || depth > best.depth) best = { label: shelf.label, depth };
+    }
+    if (best) out.set(Number(row.taxonomy_id), best.label);
   }
-  return ids;
+  return out;
 }
 
 /**
@@ -782,8 +816,8 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
     anything outside them — legacy rows from the old keyword seeding included —
     has no business here whatever it is.
   */
-  const shelfSet = await shelfTaxonomyIds();
-  if (!shelfSet.size)
+  const shelfOf = await shelfByTaxonomy();
+  if (!shelfOf.size)
     return { night: null, watched: 0, totalSold: 0, building: false, hoursBack,
              products: [], listings: [] };
   const state = await db().prepare("SELECT building_since,watched FROM sold_state WHERE id=1")
@@ -822,8 +856,12 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
         price_cents: number | null; currency: string | null; taxonomy_id: number | null; product: string;
       }[];
 
-  /* Only what sits on a shelf this tool stocks, or beneath one. */
-  const onShelf = rows.filter(row => shelfSet.has(Number(row.taxonomy_id))).slice(0, limit);
+  /* Only what sits on a shelf this tool stocks, labelled by that shelf rather
+     than by Etsy's internal leaf name. */
+  const onShelf = rows
+    .filter(row => shelfOf.has(Number(row.taxonomy_id)))
+    .map(row => ({ ...row, product: shelfOf.get(Number(row.taxonomy_id))! }))
+    .slice(0, limit);
 
   /*
     A SHELF WITH ONE THING ON IT IS NOT A SHELF.
@@ -847,10 +885,21 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
     totalSold: onShelf.reduce((sum, r) => sum + Number(r.sold), 0),
     building: Boolean(state?.building_since),
     hoursBack,
-    products: [...perProduct.entries()]
-      .filter(([, at]) => at.listings >= SHELF_MINIMUM)
-      .sort((a, b) => b[1].sold - a[1].sold)
-      .map(([key, at]) => ({ key, label: key, sold: at.sold, listings: at.listings })),
+    /*
+      A FIXED ROW IN A FIXED ORDER.
+
+      Sorting the tabs by volume meant the row rearranged itself every morning
+      and a seller had to re-find their shelf each time. Ordered by
+      SHELF_ORDER, apparel first, so it is the same row every day; a shelf with
+      nothing in this window simply is not drawn.
+    */
+    products: SHELF_ORDER
+      .filter(shelf => (perProduct.get(shelf)?.listings ?? 0) >= SHELF_MINIMUM)
+      .map(shelf => ({
+        key: shelf, label: shelf,
+        sold: perProduct.get(shelf)!.sold,
+        listings: perProduct.get(shelf)!.listings,
+      })),
     listings: onShelf.map(r => ({
       listingId: Number(r.listing_id),
       title: r.title,
@@ -880,4 +929,66 @@ export async function refreshNow() {
     db().prepare("UPDATE sold_watch SET last_read=NULL"),
     db().prepare("UPDATE sold_state SET building_since=NULL WHERE id=1"),
   ]);
+}
+
+
+/**
+ * LOOK UP A PHRASE AGAINST WHAT ACTUALLY SOLD.
+ *
+ * This used to call Etsy's search and print the answer under the heading "TOP
+ * ON ETSY FOR ...". It was not top anything. Etsy's relevance order weighs
+ * keyword match and gives new listings a deliberate boost, so a search for
+ * "jesus shirt" came back with ten listings that between them had almost no
+ * saves, under a heading claiming they were the best on the site. It is the
+ * same false claim as "top 30", made by a different endpoint.
+ *
+ * The honest version searches the thing this page already knows: listings we
+ * have watched sell, ranked by how many actually went. It costs no Etsy calls,
+ * it says the same kind of true sentence as the rest of the board, and when a
+ * phrase has nothing behind it the answer is "nothing sold for that", which is
+ * a real answer rather than a filler list.
+ */
+export async function searchSold(keyword: string, hoursBack = 168, limit = 24) {
+  await ensureTables();
+  const shelfOf = await shelfByTaxonomy();
+  if (!shelfOf.size) return [];
+
+  /* A few words, ANDed. Not a phrase match: "jesus shirt" should find
+     "Jesus Loves You Comfort Colors Shirt". */
+  const words = keyword.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 4);
+  if (!words.length) return [];
+
+  const since = new Date(Date.now() - hoursBack * 3_600_000).toISOString().slice(0, 13);
+  const where = words.map(() => "LOWER(w.title) LIKE ?").join(" AND ");
+
+  const rows = (await db().prepare(
+    `SELECT m.listing_id, SUM(m.sold) sold, w.title, w.url, w.image,
+            w.price_cents, w.currency, w.taxonomy_id
+       FROM sold_moves m
+       JOIN sold_watch w ON w.listing_id=m.listing_id
+      WHERE m.bucket>=? AND m.sold>0 AND m.sold<=?
+        AND COALESCE(w.listing_type,'physical')='physical'
+        AND ${where}
+      GROUP BY m.listing_id
+      ORDER BY sold DESC
+      LIMIT ?`)
+    .bind(since, MAX_UNITS_PER_READ, ...words.map(word => `%${word}%`), limit * 4)
+    .all()).results as unknown as {
+      listing_id: number; sold: number; title: string; url: string; image: string | null;
+      price_cents: number | null; currency: string | null; taxonomy_id: number | null;
+    }[];
+
+  return rows
+    .filter(row => shelfOf.has(Number(row.taxonomy_id)))
+    .slice(0, limit)
+    .map(row => ({
+      listingId: Number(row.listing_id),
+      title: row.title,
+      url: row.url,
+      image: row.image,
+      price: row.price_cents == null ? null : Number(row.price_cents) / 100,
+      currency: row.currency || "USD",
+      sold: Number(row.sold),
+      product: shelfOf.get(Number(row.taxonomy_id))!,
+    }));
 }

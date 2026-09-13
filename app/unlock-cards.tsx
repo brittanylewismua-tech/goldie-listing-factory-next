@@ -26,7 +26,7 @@ import { useEffect, useState } from "react";
 
 type Milestone = { key: string; name: string; unlocked: boolean; remaining: number; needsSets: number };
 type State = { listings: number; sets: number; credits: number; milestones: Milestone[] };
-type Found = { title: string; url: string; image: string | null; favorites: number };
+type Found = { title: string; url: string; image: string | null; sold: number; product: string };
 
 /** "3 more listings" / "2 more sets" — one counter, worded the same everywhere. */
 const togo = (m?: Milestone) =>
@@ -76,13 +76,14 @@ export default function UnlockCards() {
     try {
       /* no-store: an open tab must not reuse a keyword answer from before a
          safety repair. */
-      const response = await fetch(`/api/whats-selling?keyword=${encodeURIComponent(term.trim())}`, { cache: "no-store" });
+      const response = await fetch(`/api/sold-overnight/search?keyword=${encodeURIComponent(term.trim())}`, { cache: "no-store" });
       const result = await response.json() as { listings?: Found[]; error?: string };
-      if (!response.ok) throw new Error(result.error || "Etsy did not answer.");
+      if (!response.ok) throw new Error(result.error || "That could not be looked up.");
       setFound(result.listings ?? []);
-      if (!result.listings?.length) setNote("Etsy returned nothing for that.");
+      if (!result.listings?.length)
+        setNote(`Nothing matching "${term.trim()}" has sold in the last week.`);
     } catch (error) {
-      setNote(error instanceof Error ? error.message : "Etsy did not answer.");
+      setNote(error instanceof Error ? error.message : "That could not be looked up.");
     } finally { setLooking(false); }
   }
 
@@ -110,7 +111,11 @@ export default function UnlockCards() {
     {note && <p className="unlock-note" role="status">{note}</p>}
 
     {found && found.length > 0 && <div className="unlock-found">
-      <p className="mini-label">TOP ON ETSY FOR &ldquo;{term.trim()}&rdquo;</p>
+      {/* What it is, not a claim about rank. The old heading said "TOP ON
+          ETSY FOR ..." over Etsy's relevance order, which returned listings
+          with no saves at all under a banner calling them the best on the
+          site. */}
+      <p className="mini-label">SOLD IN THE LAST WEEK FOR &ldquo;{term.trim()}&rdquo;</p>
       <div className="drop-grid">
         {found.slice(0, 10).map(item => <figure key={item.url} className="drop-card">
           <a href={item.url} target="_blank" rel="noopener noreferrer" className="drop-shot">
@@ -121,8 +126,8 @@ export default function UnlockCards() {
           </a>
           <figcaption>
             <p className="drop-figures">
-              <span className="drop-numeral">{item.favorites.toLocaleString()}</span>
-              <span className="drop-unit">{item.favorites === 1 ? "save" : "saves"}</span>
+              <span className="drop-numeral">{item.sold.toLocaleString()}</span>
+              <span className="drop-unit">sold in 7 days</span>
             </p>
             <a className="drop-title" href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
           </figcaption>
