@@ -68,13 +68,14 @@ export default async function HomePage() {
   if (!user)
     return <main className="hub-auth"><Link href={accountSignInPath("/home")}>Sign in</Link></main>;
 
-  const first = String(user.email ?? "").split("@")[0];
-
   return <main className="hub">
     <header className="hub-head">
       <div className="hub-brand"><GoldieWordmark className="approved-brand" /></div>
       <p className="mini-label">YOUR TOOLS</p>
-      <h1>Good to see you{first ? `, ${first}` : ""}</h1>
+      {/* No name. The only one available is the part of an email address
+          before the @, and "Good to see you, shesawolfclothing" is worse than
+          not trying. */}
+      <h1>Good to see you</h1>
     </header>
 
     <section className="hub-grid">
