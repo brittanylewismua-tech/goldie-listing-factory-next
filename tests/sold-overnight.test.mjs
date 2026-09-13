@@ -441,3 +441,33 @@ test("every node with a shelf's name in its department counts as that shelf", ()
   assert.doesNotMatch(resolve, /depth < seen\.depth/, "no single-winner-per-name any more");
   assert.match(resolve, /return rows\.map\(row => \(\{/);
 });
+
+test("a listing nobody has saved never enters the corpus", () => {
+  /* Accuracy here is not coverage. Etsy is far too large to watch and its
+     sales are concentrated in a small fraction of listings, so a hundred
+     thousand listings people actually want beats a million at random. A
+     listing nobody has ever saved is almost certainly not selling and costs
+     exactly as much to read as one that is. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /MIN_SAVES_TO_WATCH/);
+  assert.match(source, /\(Number\(row\.num_favorers\) \|\| 0\) >= MIN_SAVES_TO_WATCH/);
+});
+
+test("a listing nobody has saved never reaches either surface", () => {
+  const source = read("sold-overnight.ts");
+  const board = source.slice(source.indexOf("export async function readBoard"));
+  assert.match(board, /w\.favorites > 0/, "the board excludes dead listings");
+  const search = source.slice(source.indexOf("export async function searchSold"));
+  assert.match(search, /w\.favorites > 0/, "so does the keyword lookup");
+});
+
+test("a slot that never produces anything is given up", () => {
+  /* Otherwise the corpus fills with the dead and every one of them costs a
+     share of a call every four hours, forever. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /reads=reads\+1/, "reads have to be counted to be judged");
+  assert.match(source, /DELETE FROM sold_watch\s*\n?\s*WHERE reads >= \?/);
+  /* But anything that has ever sold is kept whatever its saves say — it has
+     already answered the only question being asked. */
+  assert.match(source, /NOT IN \(SELECT DISTINCT listing_id FROM sold_moves WHERE sold > 0\)/);
+});

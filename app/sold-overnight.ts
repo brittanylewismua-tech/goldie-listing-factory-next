@@ -91,6 +91,23 @@ const REFRESH_HOURS = 4;
 const DAILY_CEILING = 8_000;
 
 /**
+ * WHAT EARNS A PLACE IN THE CORPUS, AND WHAT LOSES IT.
+ *
+ * Accuracy here is not coverage. Etsy is far too large to watch and its sales
+ * are concentrated in a small fraction of listings, so a hundred thousand
+ * listings people actually want is a far better picture than a million at
+ * random — and it is what the daily ceiling affords at a hundred listings per
+ * call.
+ *
+ * A listing nobody has ever saved is almost certainly not selling, and it
+ * costs exactly as much to read as one that is. Requiring saves at the door
+ * and dropping the ones that never move keeps every slot worth its quota.
+ */
+const MIN_SAVES_TO_WATCH = 1;
+/** Reads a listing gets to show something before it loses its slot. */
+const PATIENCE = 12;
+
+/**
  * PUBLISHING OUTRANKS INTEL, ALWAYS.
  *
  * Somebody's batch going to Etsy is the thing they paid for. This board is
@@ -145,6 +162,7 @@ export async function ensureTables() {
          views       INTEGER DEFAULT 0,
          state       TEXT,
          listing_type TEXT,
+         reads       INTEGER NOT NULL DEFAULT 0,
          first_seen  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
          last_read   TEXT
        )`),
@@ -202,6 +220,8 @@ export async function ensureTables() {
   ]);
   /* Columns added after the tables first shipped. */
   try { await db().prepare("ALTER TABLE sold_watch ADD COLUMN listing_type TEXT").run(); }
+  catch { /* already there */ }
+  try { await db().prepare("ALTER TABLE sold_watch ADD COLUMN reads INTEGER NOT NULL DEFAULT 0").run(); }
   catch { /* already there */ }
   try { await db().prepare("ALTER TABLE sold_taxonomy ADD COLUMN path TEXT NOT NULL DEFAULT ''").run(); }
   catch { /* already there */ }
@@ -544,8 +564,24 @@ export async function discover(pages = DISCOVERY_PAGES): Promise<number> {
         `&offset=${page * PAGE}&sort_on=score&sort_order=down`);
       const rows = (payload?.results ?? []) as EtsyListing[];
       if (!rows.length) break;
+      /*
+        A LISTING WITH NO SAVES HAS NOT EARNED A SLOT.
+
+        The corpus was eleven thousand listings of very mixed quality, and a
+        large share of them had never been saved by anybody. Each one still
+        occupied a place in the watch list and still cost a share of a call
+        every four hours, forever, to confirm again that nothing had happened.
+
+        Sales on Etsy are heavily concentrated, so coverage is not the same
+        thing as accuracy: watching a hundred thousand listings that people
+        actually want beats watching a million at random. Saves are the
+        cheapest available proof that a listing is alive, they arrive free in
+        the search response, and requiring them turns every slot in the corpus
+        into one worth reading.
+      */
       const writes = rows
         .filter(row => Number.isSafeInteger(Number(row.listing_id)))
+        .filter(row => (Number(row.num_favorers) || 0) >= MIN_SAVES_TO_WATCH)
         .map(row => db().prepare(
           /* IGNORE, not REPLACE: a listing already in the corpus carries its
              last reading, and overwriting it here would erase the very number
@@ -555,7 +591,8 @@ export async function discover(pages = DISCOVERY_PAGES): Promise<number> {
           .bind(
             Number(row.listing_id), Number(row.shop_id) || null,
             String(row.title ?? "").slice(0, 300), String(row.url ?? ""),
-            Number.isFinite(Number(row.taxonomy_id)) ? Number(row.taxonomy_id) : shelf.id));
+            Number.isFinite(Number(row.taxonomy_id)) ? Number(row.taxonomy_id) : shelf.id,
+            Number(row.num_favorers) || 0));
       for (let at = 0; at < writes.length; at += 50) await db().batch(writes.slice(at, at + 50));
       added += writes.length;
     }
@@ -675,7 +712,7 @@ export async function sweep(
       }
 
       writes.push(db().prepare(
-        `UPDATE sold_watch SET quantity=?,favorites=?,views=?,state=?,listing_type=COALESCE(?,listing_type),image=COALESCE(?,image),
+        `UPDATE sold_watch SET reads=reads+1,quantity=?,favorites=?,views=?,state=?,listing_type=COALESCE(?,listing_type),image=COALESCE(?,image),
            price_cents=COALESCE(?,price_cents),currency=COALESCE(?,currency),
            title=CASE WHEN ?='' THEN title ELSE ? END,url=CASE WHEN ?='' THEN url ELSE ? END,
            taxonomy_id=COALESCE(?,taxonomy_id),last_read=?
@@ -703,6 +740,28 @@ export async function sweep(
     await db().prepare(
       `INSERT INTO sold_spend (day,calls) VALUES (?,?)
        ON CONFLICT(day) DO UPDATE SET calls=calls+excluded.calls`).bind(day, calls).run();
+
+  /*
+    GIVE UP ON WHAT WILL NOT MOVE, AND FREE THE SLOT.
+
+    A listing that has been looked at a dozen times without ever being bought,
+    and that nobody has saved either, is not going to start. Left in place it
+    costs a share of a call every four hours forever and contributes nothing;
+    removed, that quota goes to a listing that might. This is what lets the
+    corpus grow into the useful range instead of filling up with the dead.
+
+    Anything that has ever sold is kept regardless of its saves. A listing that
+    has proven it sells has already answered the only question being asked.
+  */
+  await db().prepare(
+    `DELETE FROM sold_watch
+      WHERE reads >= ?
+        AND favorites < ?
+        AND listing_id NOT IN (SELECT DISTINCT listing_id FROM sold_moves WHERE sold > 0)`)
+    .bind(PATIENCE, MIN_SAVES_TO_WATCH).run();
+
+  /* Downloads never belong here, however long they have been sitting in it. */
+  await db().prepare("DELETE FROM sold_watch WHERE listing_type IS NOT NULL AND listing_type <> 'physical'").run();
 
   return { read, moved, sold, done, spentToday };
 }
@@ -845,6 +904,7 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
        LEFT JOIN sold_taxonomy t ON t.taxonomy_id=w.taxonomy_id
       WHERE m.bucket>=? AND m.sold>0 AND m.sold<=?
         AND COALESCE(w.listing_type,'physical')='physical'
+        AND w.favorites > 0
       GROUP BY m.listing_id
       ORDER BY sold DESC, saves_gained DESC
       LIMIT ?`)
@@ -968,6 +1028,7 @@ export async function searchSold(keyword: string, hoursBack = 168, limit = 24) {
        JOIN sold_watch w ON w.listing_id=m.listing_id
       WHERE m.bucket>=? AND m.sold>0 AND m.sold<=?
         AND COALESCE(w.listing_type,'physical')='physical'
+        AND w.favorites > 0
         AND ${where}
       GROUP BY m.listing_id
       ORDER BY sold DESC
