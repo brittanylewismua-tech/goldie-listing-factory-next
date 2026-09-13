@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import type { EtsyFeature } from "@/app/api/etsy/client";
-import { movement } from "@/app/sold-overnight-math";
+import { MAX_UNITS_PER_READ, movement } from "@/app/sold-overnight-math";
 import {
   etsyApiCredential,
   etsyBudget,
@@ -206,6 +206,15 @@ export async function ensureTables() {
   try { await db().prepare("ALTER TABLE sold_taxonomy ADD COLUMN path TEXT NOT NULL DEFAULT ''").run(); }
   catch { /* already there */ }
   await migrateMovesToHours();
+  /*
+    ROWS WRITTEN BEFORE THE PLAUSIBILITY RULE EXISTED.
+
+    The filter only applies to readings taken after it shipped, so the board
+    kept showing "2,997 sold" from history for as long as the window held it.
+    A rule added later has to be applied backwards as well as forwards, or the
+    fix is invisible for exactly as long as anybody is still looking.
+  */
+  await db().prepare("DELETE FROM sold_moves WHERE sold > ?").bind(MAX_UNITS_PER_READ).run();
   /* Safe now: the table definitely has the column, whichever path got us here. */
   await db().prepare(
     "CREATE INDEX IF NOT EXISTS idx_sold_moves_bucket ON sold_moves (bucket, sold DESC)").run();
@@ -715,10 +724,11 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
        FROM sold_moves m
        JOIN sold_watch w ON w.listing_id=m.listing_id
        LEFT JOIN sold_taxonomy t ON t.taxonomy_id=w.taxonomy_id
-      WHERE m.bucket>=? AND m.sold>0 AND COALESCE(w.listing_type,'physical')='physical'
+      WHERE m.bucket>=? AND m.sold>0 AND m.sold<=?
+        AND COALESCE(w.listing_type,'physical')='physical'
       GROUP BY m.listing_id
       ORDER BY sold DESC, saves_gained DESC
-      LIMIT ?`).bind(since, limit).all()).results as unknown as {
+      LIMIT ?`).bind(since, MAX_UNITS_PER_READ, limit).all()).results as unknown as {
         listing_id: number; sold: number; sold_out: number; saves_gained: number;
         quantity_after: number | null; title: string; url: string; image: string | null;
         price_cents: number | null; currency: string | null; product: string;

@@ -362,3 +362,13 @@ test("a rejected drop is recorded, not silently discarded", () => {
   /* The rate has to be visible, or these thresholds are permanent guesses. */
   assert.equal(movement(5994, 2997).record, true);
 });
+
+test("an implausible row can never reach the board, whenever it was written", () => {
+  /* The plausibility rule only applies to readings taken after it shipped, so
+     "2,997 sold" stayed on the live board from history. A rule added later has
+     to work backwards too, or the fix is invisible for as long as anybody is
+     still looking. Both a read-time guard and a purge. */
+  const source = read("sold-overnight.ts");
+  assert.match(source, /m\.sold<=\?/, "the board filters implausible rows as it reads");
+  assert.match(source, /DELETE FROM sold_moves WHERE sold > \?/, "and history is cleaned");
+});
