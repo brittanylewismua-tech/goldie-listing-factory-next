@@ -372,3 +372,30 @@ test("an implausible row can never reach the board, whenever it was written", ()
   assert.match(source, /m\.sold<=\?/, "the board filters implausible rows as it reads");
   assert.match(source, /DELETE FROM sold_moves WHERE sold > \?/, "and history is cleaned");
 });
+
+test("the board only ever shows shelves this tool deliberately stocks", () => {
+  /* A "Same Day Good Weather Manifesting Letter" reached the live board under
+     a category literally called Digital. The download filter could not catch
+     it, because that filter can only judge a listing once it has been read and
+     anything unread is assumed physical so new arrivals are not hidden.
+     Blocklisting category names would be a permanent game of catch-up against
+     Etsy's whole tree; restricting to the chosen shelves needs no maintenance
+     and also clears out legacy rows from the old keyword seeding. */
+  const source = read("sold-overnight.ts");
+  const board = source.slice(source.indexOf("export async function readBoard"));
+  assert.match(board, /w\.taxonomy_id IN \(SHELVES\)/);
+  assert.match(board, /shelfSet\.map\(\(\) => "\?"\)\.join\(","\)/);
+  /* And an empty shelf list must render an empty board rather than an
+     unbounded query with no restriction at all. */
+  assert.match(board, /if \(!shelfSet\.length\)/);
+});
+
+test("the tabs and the grid cannot disagree", () => {
+  /* They were two separate SQL queries with separately maintained WHERE
+     clauses, which is how a tab comes to promise a category the grid does not
+     contain. The tabs are counted from the same rows now. */
+  const source = read("sold-overnight.ts");
+  const board = source.slice(source.indexOf("export async function readBoard"));
+  assert.match(board, /const perProduct = new Map/);
+  assert.doesNotMatch(board, /GROUP BY product/, "one query, one source of truth");
+});

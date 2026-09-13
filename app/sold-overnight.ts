@@ -701,6 +701,26 @@ export const SHELF_MINIMUM = 30;
  */
 export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard> {
   await ensureTables();
+
+  /*
+    ONLY THE SHELVES THIS TOOL DELIBERATELY STOCKS.
+
+    A "Same Day Good Weather Manifesting Letter" reached the live board under a
+    category literally called Digital. It slipped past the download filter
+    because that filter can only judge a listing once it has been read, and
+    anything unread is assumed physical so that new arrivals are not hidden.
+
+    Blocklisting category names would be a game of catch-up against Etsy's
+    whole tree. The real rule is narrower and needs no maintenance: this board
+    shows print-on-demand products, the shelves are chosen on purpose, and
+    anything outside them — legacy rows from the old keyword seeding included —
+    has no business here whatever it is.
+  */
+  const shelves = await shelfIds();
+  const shelfSet = shelves.map(shelf => shelf.id);
+  if (!shelfSet.length)
+    return { night: null, watched: 0, totalSold: 0, building: false, hoursBack,
+             products: [], listings: [] };
   const state = await db().prepare("SELECT building_since,watched FROM sold_state WHERE id=1")
     .first() as { building_since: string | null; watched: number } | null;
 
@@ -726,9 +746,11 @@ export async function readBoard(limit = 400, hoursBack = 24): Promise<SoldBoard>
        LEFT JOIN sold_taxonomy t ON t.taxonomy_id=w.taxonomy_id
       WHERE m.bucket>=? AND m.sold>0 AND m.sold<=?
         AND COALESCE(w.listing_type,'physical')='physical'
+        AND w.taxonomy_id IN (SHELVES)
       GROUP BY m.listing_id
       ORDER BY sold DESC, saves_gained DESC
-      LIMIT ?`).bind(since, MAX_UNITS_PER_READ, limit).all()).results as unknown as {
+      LIMIT ?`.replace("SHELVES", shelfSet.map(() => "?").join(",")))
+    .bind(since, MAX_UNITS_PER_READ, ...shelfSet, limit).all()).results as unknown as {
         listing_id: number; sold: number; sold_out: number; saves_gained: number;
         quantity_after: number | null; title: string; url: string; image: string | null;
         price_cents: number | null; currency: string | null; product: string;
