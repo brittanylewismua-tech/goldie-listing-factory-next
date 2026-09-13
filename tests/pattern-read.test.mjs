@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 const read = name => readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
 const strip = s => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
-const { rising, phraseSales, shelfShift, priceBands, read: readAll } =
+const { rising, phraseSales, shelfShift, priceBands, readPatterns: readAll } =
   await import("../app/pattern-read.ts");
 
 const listing = (id, title, product, price, sold) =>

@@ -216,8 +216,14 @@ export type Reading = {
   thin: boolean;
 };
 
-/** Everything the writer is allowed to talk about, and nothing it may invent. */
-export function read(now: SoldListing[], before: SoldListing[]): Reading {
+/**
+ * Everything the writer is allowed to talk about, and nothing it may invent.
+ *
+ * Named `readPatterns` rather than `read`: an export called `read` collides
+ * with a local in half the files in this app, which makes it impossible to
+ * tell a missing import from an ordinary variable.
+ */
+export function readPatterns(now: SoldListing[], before: SoldListing[]): Reading {
   const totalSold = now.reduce((sum, r) => sum + (Number(r.sold) || 0), 0);
   return {
     rising: rising(now, before),
