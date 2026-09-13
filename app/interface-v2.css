@@ -4407,40 +4407,6 @@ html, body { background: var(--lf-paper); }
 /* WHAT THIS WEEK OPENED. Real controls, spaced deliberately: a search that
    searches, a switch that filters, one line of fact. A locked control stays
    put and says what would open it. */
-.unlock-panel{border:1px solid var(--line,rgba(0,0,0,.12));border-radius:14px;
-  padding:14px 16px;margin:0 0 18px;background:linear-gradient(180deg,#fdeef7,#fff)}
-.unlock-note{margin:8px 0 0;font-size:13px;color:var(--ink-2,#4b4644)}
-.unlock-found{margin-top:16px;border-top:1px solid var(--line,rgba(0,0,0,.1));padding-top:14px}
-.unlock-found .mini-label{margin-bottom:10px}
-.drop-page .drop-none{margin:0;padding:24px 0;font-size:13px;color:var(--ink-3,#8b8380)}
-
-/* THE FOUR THINGS, AND HOW FAR AWAY EACH ONE IS. One row: each tier is its own
-   control, open ones work, locked ones carry the exact number that opens them.
-   Nothing hidden, nothing pretending to be pressable. */
-.unlock-rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:8px;margin:0 0 10px}
-.unlock-item{display:grid;gap:3px;text-align:left;padding:10px 12px;border-radius:12px;
-  border:1px solid var(--line,rgba(0,0,0,.14));background:#fff;font:inherit;min-width:0}
-.unlock-item.wide{grid-column:span 2}
-.unlock-name{font-size:13px;font-weight:700;color:var(--ink-3,#8b8380);white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
-.unlock-state{font-size:12px;color:var(--ink-3,#8b8380)}
-.unlock-item.on{border-color:rgba(238,111,192,.55);background:#fdeef7}
-.unlock-item.on .unlock-name{color:#0d0c0c}
-.unlock-item.on .unlock-state{color:#b02371;font-weight:700}
-.unlock-item.control{cursor:pointer}
-.unlock-item.control:disabled{cursor:not-allowed}
-.unlock-item.control.on:hover{border-color:#ee6fc0}
-.unlock-item.control.active{background:#ee6fc0;border-color:#ee6fc0}
-.unlock-item.control.active .unlock-name,.unlock-item.control.active .unlock-state{color:#1b0e17}
-.unlock-panel .unlock-search{display:flex;gap:6px;margin-top:2px}
-.unlock-panel .unlock-search input{flex:1;min-width:0;border:1px solid var(--line,rgba(0,0,0,.18));
-  border-radius:9px;padding:5px 9px;font:inherit;font-size:13px;background:#fff}
-.unlock-panel .unlock-search button{border:1px solid #0d0c0c;background:#0d0c0c;color:#fff;
-  border-radius:9px;padding:5px 11px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
-.unlock-panel .unlock-search button:disabled{opacity:.4;cursor:not-allowed}
-.unlock-reset{color:var(--ink-3,#8b8380)}
-.unlock-week{margin:0;font-size:13px;color:var(--ink-2,#4b4644)}
-.unlock-week b{font-size:15px;color:#b02371;font-variant-numeric:tabular-nums}
 
 /* ---------------------------------------------------------------------------
    SOLD OVERNIGHT
@@ -4454,38 +4420,106 @@ html, body { background: var(--lf-paper); }
    it, small. A big number with no denominator is how you get "top 30" on a
    shelf of thirty.
 --------------------------------------------------------------------------- */
-.sold-page .drop-badge.sold-out{background:#b02371;color:#fff}
 
-/* The count is what the tab is FOR, so it sits inside the tab rather than
-   hiding in the shelf below it. */
-.sold-page .drop-tabs button small{margin-left:6px;font-variant-numeric:tabular-nums;
-  font-weight:700;opacity:.55}
-.sold-page .drop-tabs button.active small{opacity:.75}
-
-.sold-page .drop-none{grid-column:1/-1;margin:0;padding:28px 0;text-align:center;
-  font-size:14px;color:var(--ink-3,#8b8380)}
 
 
 /* The window switcher. Quieter than the product tabs, because which shelf you
    are looking at is the decision and how far back is the framing. */
-.sold-page .sold-windows{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px}
-.sold-page .sold-windows button{border:1px solid var(--line,rgba(0,0,0,.14));background:none;
-  border-radius:14px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer;
-  color:var(--ink-2,#4b4644)}
-.sold-page .sold-windows button.active{background:rgba(176,35,113,.08);border-color:#b02371;
-  color:#b02371;font-weight:700}
 
-/* THE SWITCH.
-   A tier that is merely open says nothing and simply looks open; a tier that
-   is genuinely optional gets the one control everybody already reads as on and
-   off. Before this, both wore a word underneath — "Open", "Off" — which
-   restated the colour in the first case and hid the state in a label in the
-   second. */
-.unlock-item.control{align-items:start}
-.unlock-switch{display:block;width:34px;height:20px;border-radius:10px;
-  background:rgba(0,0,0,.18);position:relative;transition:background .15s ease}
-.unlock-switch i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:8px;
-  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s ease}
-.unlock-item.control.active .unlock-switch{background:#0d0c0c}
-.unlock-item.control.active .unlock-switch i{transform:translateX(14px)}
-.unlock-item.control:focus-visible{outline:2px solid #b02371;outline-offset:2px}
+
+
+
+/* ===========================================================================
+   SOLD OVERNIGHT — on the frozen design system.
+
+   This page was built in hot pink (#ee6fc0, #b02371) on white, with 18px gaps
+   and 13px metadata. None of that is in the system: the palette is plum on
+   warm neutrals, the art direction says in as many words that pink is not a
+   surface colour, spacing is 4/8/12/16/24/32 only, and 12px is the floor for
+   metadata. Off-palette accent on off-scale spacing is precisely what reads as
+   cheap, however correct the numbers on the page are.
+   =========================================================================== */
+
+/* --- the progress strip -------------------------------------------------- */
+/* One element, not four tiles. Progress is progress; it is not a control and
+   no longer dresses as one. */
+.unlock-strip{display:grid;gap:12px;margin:0 0 24px;padding:0 0 16px;
+  border-bottom:1px solid #d8d0e3}
+.unlock-progress{display:grid;gap:8px}
+.unlock-count{margin:0;font-size:14px;color:#211a2e}
+.unlock-count b{font-size:16px;font-weight:800;color:#8f4f78;
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.unlock-track{display:block;height:6px;border-radius:8px;background:#e5dfec;overflow:hidden}
+.unlock-track i{display:block;height:100%;border-radius:8px;
+  background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b);
+  transition:width 200ms ease}
+.unlock-next{margin:0;font-size:12px;color:#6f6980}
+.unlock-reset{color:#6f6980}
+
+/* The one real control here: a field, per the system — white, 9px, plum ring. */
+.unlock-search{display:flex;gap:8px}
+.unlock-search input{flex:1;min-width:0;background:#fff;border:1px solid #d8d0e3;
+  border-radius:9px;padding:8px 12px;font:inherit;font-size:14px;color:#211a2e}
+.unlock-search input::placeholder{color:#6f6980}
+.unlock-search input:focus-visible{outline:2px solid #8f4f78;outline-offset:1px;border-color:#8f4f78}
+.unlock-search button{border:1px solid transparent;border-radius:10px;padding:8px 16px;
+  background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b);color:#fff;
+  font:inherit;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  cursor:pointer}
+.unlock-search button:disabled{opacity:.52;cursor:not-allowed}
+.unlock-note{margin:0;font-size:12px;color:#6f6980}
+.unlock-found{margin-top:16px;border-top:1px solid #d8d0e3;padding-top:16px}
+.unlock-found .mini-label{margin-bottom:12px}
+
+/* --- the window switcher ------------------------------------------------- */
+/* Secondary action per the system: pale surface, plum text, 10px radius.
+   Selected takes the signature gradient, which the system reserves for
+   exactly this — the selected state of a set of choices. */
+.sold-page .sold-windows{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px}
+.sold-page .sold-windows button{border:1px solid #d8d0e3;background:#f3eff7;
+  border-radius:10px;padding:8px 16px;font:inherit;font-size:12px;font-weight:700;
+  letter-spacing:.02em;color:#8f4f78;cursor:pointer;transition:border-color 160ms ease}
+.sold-page .sold-windows button:hover{border-color:#945b9e}
+.sold-page .sold-windows button.active{border-color:transparent;color:#fff;
+  background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b)}
+.sold-page .sold-windows button:focus-visible{outline:2px solid #8f4f78;outline-offset:2px}
+
+/* --- the board ----------------------------------------------------------- */
+/* 16, not the 18 the written system asks for: the enforced radius scale in
+   design-scale-d745 is 0/6/7/8/9/10/12/14/16/22 and every other surface in
+   this app is built to it. One scale, and it is the one the code holds. */
+.sold-page .drop-card-surface{background:#fbfaff;border:1px solid #d8d0e3;
+  border-radius:16px;padding:24px}
+.sold-page .drop-tabs{gap:8px;margin:0 0 24px;padding-bottom:16px;border-bottom:1px solid #d8d0e3}
+.sold-page .drop-tabs button{border:1px solid #d8d0e3;background:#f3eff7;border-radius:10px;
+  padding:8px 12px;font-size:12px;font-weight:700;color:#211a2e}
+.sold-page .drop-tabs button small{margin-left:8px;font-variant-numeric:tabular-nums;
+  font-weight:700;color:#6f6980}
+.sold-page .drop-tabs button.active{border-color:transparent;color:#fff;
+  background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b)}
+.sold-page .drop-tabs button.active small{color:#e5dfec}
+
+.sold-page .drop-grid{gap:16px}
+.sold-page .drop-card{border:1px solid #d8d0e3;border-radius:14px;background:#fff}
+.sold-page .drop-shot{background:#f3eff7}
+.sold-page .drop-card figcaption{padding:12px 16px 16px;gap:4px}
+.sold-page .drop-numeral{font-size:20px;font-weight:800;letter-spacing:-.02em;color:#211a2e}
+.sold-page .drop-unit{font-size:12px;color:#6f6980}
+.sold-page .drop-rate{font-size:12px;font-weight:700;color:#8f4f78}
+.sold-page .drop-sub{font-size:12px;color:#6f6980}
+.sold-page .drop-title{font-size:13px;line-height:1.45;color:#211a2e}
+
+/* Sold out is the strongest thing this board can say, so it gets the
+   signature gradient rather than a second accent nobody has seen before. */
+.sold-page .drop-badge.sold-out{background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b);
+  color:#fff;border-radius:8px;padding:4px 8px;font-size:11px;letter-spacing:.06em}
+
+.sold-page .drop-card.locked{border-style:dashed;border-color:#d8d0e3;background:#f3eff7}
+.sold-page .drop-card.locked .drop-numeral{font-size:24px;color:#8f4f78}
+.sold-page .drop-card.locked p{font-size:12px;color:#6f6980}
+
+.sold-page .drop-none{grid-column:1/-1;margin:0;padding:32px 0;text-align:center;
+  font-size:14px;color:#6f6980}
+.sold-page .drop-loading-track i{background:linear-gradient(90deg,#70498a,#945b9e,#b66f9b)}
+.sold-page .drop-head p{font-size:14px;color:#6f6980}
+.sold-page .drop-note{font-size:12px;color:#6f6980}

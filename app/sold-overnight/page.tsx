@@ -107,11 +107,7 @@ export default function SoldOvernightPage() {
             this one in the nav with the same cards and the same unlock rail.
             Its keyword lookup was the only thing it had that this does not,
             so that came along and the rest was retired. */}
-        <UnlockCards
-          controlLabel="Look back further"
-          onlyMovers={hours > 24}
-          onToggleMovers={on => load(on ? 168 : 24)}
-        />
+        <UnlockCards />
 
         <nav className="sold-windows" aria-label="Time window">
           {WINDOWS.map(w =>

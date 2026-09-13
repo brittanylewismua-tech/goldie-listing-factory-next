@@ -132,22 +132,26 @@ test("a tier is only ever bonus intel, never a listing capability", () => {
     "a new tier must be added to this list on purpose — and be intel, never a listing capability");
 });
 
-test("a locked control is visible, disabled, and says what opens it", () => {
-  /* Hiding it removes the only reason to list. Making it look pressable while
-     it is not is how an interface teaches somebody that it lies. */
+test("progress is shown as progress, not as buttons that do nothing", () => {
+  /* This was four identical tiles of which two were controls and two were
+     labels — "The whole board" sat there looking exactly like something you
+     could press. The art direction is explicit that one decision area gets one
+     primary action and that secondary actions must not compete with it, and a
+     row of matching tiles with mixed behaviour breaks both. It is one count,
+     one track and one named next reward now. */
   const panel = read("unlock-cards.tsx");
-  /* Every tier is drawn whether or not it is open, and a locked one carries
-     the exact number that opens it. Hiding a reward removes the reason to earn
-     it; a disabled control with no number is just a dead end. */
-  assert.match(panel, /disabled=\{!movers\?\.unlocked\}/);
+  assert.doesNotMatch(panel, /className="unlock-item/, "no tiles pretending to be controls");
+  assert.doesNotMatch(panel, /unlock-switch/, "the switch went with the tiles");
+  assert.match(panel, /unlock-track/, "progress reads as progress");
   assert.match(panel, /const togo = /, "one counter, worded the same everywhere");
   assert.match(panel, /more listing\$\{m\.remaining === 1 \? "" : "s"\}/);
-  /* The middle tier's label is set by the host page — on the sold board it
-     switches the longer time windows rather than a movers filter — so the
-     rail is checked for the tiers it owns plus that the label is passed in. */
-  for (const tier of ["The whole board", "Look up any keyword", "30 days of history"])
-    assert.ok(panel.includes(tier), `${tier} must be on the rail whether open or not`);
-  assert.match(panel, /\{controlLabel\}/, "the switchable tier is labelled by the page that owns it");
+  /* The nearest locked tier is named in plain words, not by its key. */
+  assert.match(panel, /opens \{NAMES\[next\.key\]/);
+  for (const plain of ["the whole board", "keyword lookup", "30 days of history"])
+    assert.ok(panel.includes(plain), `${plain} must have a plain-English name`);
+  /* The one real control appears when it is available rather than sitting
+     greyed out in a box. */
+  assert.match(panel, /lookup\?\.unlocked && <form/);
 });
 
 test("nothing in the card system is scored on a sale", () => {
