@@ -63,7 +63,9 @@
    spacing, and a Listing Factory that says it is a desktop tool. */
 /* D1403 keeps the artwork a design was published with, so a sale two years
    from now still points at something real. */
-export const BUILD_MARKER = "D1403";
+/* D1404 gives Scan the centre of the mobile bar and names every moment worth
+   capturing a design at. */
+export const BUILD_MARKER = "D1404";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

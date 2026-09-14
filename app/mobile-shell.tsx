@@ -14,11 +14,21 @@ import { usePathname } from "next/navigation";
  * workspace, which is a desktop tool, and off the marketing and sign-in
  * pages, where a five-tab bar would be noise around a single decision.
  */
+/*
+  SCAN SITS IN THE MIDDLE, AND THAT IS THE POINT.
+
+  Uploading a design straight from the camera roll is the thing Goldie can do
+  on a phone that it cannot do better anywhere else, so it takes the centre
+  position — the easiest place on the bar to reach with a thumb. The Trademark
+  Checker moves into More with a shortcut on Home: it is a thing people do
+  occasionally and deliberately, not something they need one tap from every
+  screen.
+*/
 const TABS = [
   { href: "/home", label: "Home", glyph: "◆" },
   { href: "/hot-list", label: "Watch", glyph: "◈" },
+  { href: "/design-scanner", label: "Scan", glyph: "⊚" },
   { href: "/shop-map", label: "My Shop", glyph: "▦" },
-  { href: "/trademark", label: "Check", glyph: "✓" },
   { href: "/account", label: "More", glyph: "≡" },
 ];
 

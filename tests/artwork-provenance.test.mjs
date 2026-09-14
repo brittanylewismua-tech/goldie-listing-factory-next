@@ -64,3 +64,25 @@ test("an oversized image is refused rather than silently truncated", () => {
   assert.match(provenance, /MAX_ARTWORK_BYTES/);
   assert.match(provenance, /over the cap/);
 });
+
+test("capture is wired to more than one moment", () => {
+  /* Publishing is the richest moment but not the only one: a catalogue can be
+     deleted next month, a changed product is a different design, and a
+     deletion Goldie performs is the one it can see coming. */
+  assert.match(provenance, /THE MOMENTS WORTH CAPTURING AT/);
+  for (const reason of ["listing-factory-publish", "connected-shop-backfill",
+    "new-product-discovered", "product-changed", "order-detected",
+    "before-goldie-retires-product"])
+    assert.match(provenance, new RegExp(reason), `missing capture reason: ${reason}`);
+  assert.match(provenance, /export async function captureBeforeRetiring/);
+});
+
+test("Scan holds the centre of the mobile bar", () => {
+  const shell = read("mobile-shell.tsx");
+  const tabs = shell.slice(shell.indexOf("const TABS = ["), shell.indexOf("];", shell.indexOf("const TABS = [")));
+  const order = [...tabs.matchAll(/label: "([^"]+)"/g)].map(match => match[1]);
+  assert.deepEqual(order, ["Home", "Watch", "Scan", "My Shop", "More"]);
+  /* And the scanner is not swept up by the desktop gate. */
+  assert.match(shell, /ONE EXCEPTION, AND IT IS DELIBERATE/);
+  assert.match(shell, /!SCANNER\.test\(pathname\)/);
+});

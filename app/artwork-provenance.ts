@@ -168,6 +168,43 @@ export async function captureProductArtwork(
   }
 }
 
+/**
+ * THE MOMENTS WORTH CAPTURING AT.
+ *
+ * Publishing is the richest one, because both the product and the new listing
+ * id exist. It is not the only one: a shop connected for the first time has a
+ * whole catalogue that may be deleted next month, a product that changes is a
+ * different design from the one that sold yesterday, an order proves a design
+ * mattered, and a product Goldie is about to retire is a last chance.
+ *
+ * Every one of these is the same capture, labelled with why it happened, so
+ * the evidence can later be read in the knowledge of how it was obtained.
+ */
+export type CaptureReason =
+  | "listing-factory-publish"
+  | "connected-shop-backfill"
+  | "new-product-discovered"
+  | "product-changed"
+  | "order-detected"
+  | "before-goldie-retires-product";
+
+/**
+ * Capture before Goldie itself removes a product.
+ *
+ * Goldie deletes QA products and abandoned drafts, and a deletion it performs
+ * is the one deletion it can always see coming. Taking the copy first costs a
+ * call and preserves a design that would otherwise vanish exactly the way the
+ * historical ones did.
+ */
+export async function captureBeforeRetiring(
+  { userId, shopId, productId, token }:
+    { userId: string; shopId: number; productId: string; token: string },
+): Promise<Capture> {
+  return captureProductArtwork({
+    userId, shopId, productId, token, because: "before-goldie-retires-product",
+  });
+}
+
 /** Fill in the Etsy listing once publishing has produced one. */
 export async function linkListingToArtwork(
   userId: string, productId: string, listingId: number,
