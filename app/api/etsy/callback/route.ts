@@ -33,13 +33,35 @@ export async function GET(request:Request){
       new token over the wrong row would quietly point one shop's Shop Map at
       another shop's money.
     */
-    if(intent==="sales"&&pending.target_shop_id){
-      const intended=await env.DB.prepare("SELECT shop_name FROM etsy_connections WHERE user_id=? AND shop_id=?").bind(pending.user_id,pending.target_shop_id).first<{shop_name:string}>();
-      if(Number(shop.shop_id)!==Number(pending.target_shop_id))
+    if(intent==="sales"){
+      /*
+        A SALES AUTHORISATION NEVER FALLS THROUGH TO THE ADD PATH.
+
+        It did once, in production, and the consequences were not subtle: the
+        add path deactivates every other connection and makes the authorised
+        shop active, so a request for extra permission silently moved which
+        shop the Listing Factory publishes to. If the intended shop is somehow
+        missing from the state, the shop Etsy just authorised is updated in
+        place instead — still without touching is_active, and still never
+        inserting a row.
+      */
+      const targetShopId=Number(pending.target_shop_id||0)||Number(shop.shop_id);
+      const intended=await env.DB.prepare("SELECT shop_name,is_active FROM etsy_connections WHERE user_id=? AND shop_id=?").bind(pending.user_id,targetShopId).first<{shop_name:string;is_active:number}>();
+      if(Number(shop.shop_id)!==targetShopId)
         return fail(wrongEtsyAccountMessage(intended?.shop_name||"that shop"));
+      /*
+        THE SHOP ALREADY BEING CONNECTED IS THE POINT, NOT A PROBLEM.
+
+        The duplicate guard exists so that "add another shop" cannot silently
+        re-authorise the shop already in the browser. Adding a permission to a
+        connection that exists is the opposite case, and running that guard
+        here is what produced "already connected. Sign out of Etsy" on a flow
+        that had done exactly the right thing.
+      */
+      if(!intended)return fail("That shop is not connected to this account yet. Connect it first, then add sales access.");
       await env.DB.prepare("UPDATE etsy_connections SET encrypted_access_token=?, encrypted_refresh_token=?, expires_at=?, etsy_user_id=?, shop_name=?, scopes=?, scopes_checked_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND shop_id=?")
-        .bind(await encryptEtsy(tokens.access_token),await encryptEtsy(tokens.refresh_token),Math.floor(Date.now()/1000)+Number(tokens.expires_in||3600),etsyUserId,shop.shop_name,String(tokens.scope||""),pending.user_id,pending.target_shop_id).run();
-      return NextResponse.redirect(`${returnOrigin}/api/shop-map/capability?shop=${pending.target_shop_id}`);
+        .bind(await encryptEtsy(tokens.access_token),await encryptEtsy(tokens.refresh_token),Math.floor(Date.now()/1000)+Number(tokens.expires_in||3600),etsyUserId,shop.shop_name,String(tokens.scope||""),pending.user_id,targetShopId).run();
+      return NextResponse.redirect(`${returnOrigin}/api/shop-map/capability?shop=${targetShopId}`);
     }
 
     const existing=adding?await env.DB.prepare("SELECT shop_name,is_active FROM etsy_connections WHERE user_id=? AND shop_id=?").bind(pending.user_id,shop.shop_id).first<{shop_name:string;is_active:number}>():null;

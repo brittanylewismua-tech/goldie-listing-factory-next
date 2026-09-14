@@ -43,7 +43,9 @@
 /* D1392 stops a wrong header being recorded as a refused permission. */
 /* D1393 authorises sales access for one saved shop without moving the shop
    the Listing Factory publishes to. */
-export const BUILD_MARKER = "D1393";
+/* D1394 stops a sales authorisation falling into the add-a-shop path, where
+   it moved the active shop and then blamed the member's Etsy account. */
+export const BUILD_MARKER = "D1394";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
