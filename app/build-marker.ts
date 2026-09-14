@@ -16,7 +16,9 @@
    connection. */
 /* D1377 starts Goldie's own history: every look at a listing is a snapshot,
    every difference an event, and a shop sensor says where to look. */
-export const BUILD_MARKER = "D1377";
+/* D1378 inspects the shop that just sold something, explains what it can from
+   listing evidence, and leaves the rest honestly unresolved. */
+export const BUILD_MARKER = "D1378";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

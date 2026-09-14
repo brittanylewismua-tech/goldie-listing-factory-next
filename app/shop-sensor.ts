@@ -17,7 +17,7 @@
  */
 import { env } from "cloudflare:workers";
 import { etsyApiCredential, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
-import { ensureMarketTables, openInterval } from "@/app/market-store";
+import { claimLock, ensureMarketTables, enqueueInspection, openInterval, releaseLock } from "@/app/market-store";
 
 const db = () => (env as unknown as { DB: D1Database }).DB;
 
@@ -124,6 +124,12 @@ export type SensorPass = {
   calls: number;
   missing: number;
   firstReadings: number;
+  /** Intervals this pass created, as opposed to ones it found already there. */
+  intervalsOpened: number;
+  intervalsDuplicate: number;
+  inspectionsQueued: number;
+  ms: number;
+  skipped?: string;
 };
 
 /**
@@ -136,13 +142,45 @@ export async function sensorPass(
   { maxCalls = DEFAULT_MAX_CALLS }: { maxCalls?: number } = {},
 ): Promise<SensorPass> {
   await ensureMarketTables();
+
+  /*
+    TWO CYCLES MUST NOT OVERLAP.
+
+    A pass that runs long — a slow minute at Etsy, a retry storm — would
+    otherwise be joined by the next firing, and the two would read the same
+    shops and race on the same intervals. The lock expires by itself, so a
+    firing killed mid-pass unblocks the next one rather than wedging the
+    pipeline shut.
+  */
+  const holder = crypto.randomUUID();
+  const started = Date.now();
+  if (!(await claimLock("shop-sensor", holder, 240))) {
+    return {
+      shopsRead: 0, shopsMoved: 0, unitsSeen: 0, reviewsMoved: 0, calls: 0,
+      missing: 0, firstReadings: 0, intervalsOpened: 0, intervalsDuplicate: 0,
+      inspectionsQueued: 0, ms: 0, skipped: "A pass was already running.",
+    };
+  }
+  try {
+    return await runPass(maxCalls, started);
+  } finally {
+    await releaseLock("shop-sensor", holder);
+  }
+}
+
+async function runPass(maxCalls: number, started: number): Promise<SensorPass> {
   await assignRepresentatives();
   await replaceStaleRepresentatives();
 
   const pass: SensorPass = {
     shopsRead: 0, shopsMoved: 0, unitsSeen: 0, reviewsMoved: 0,
     calls: 0, missing: 0, firstReadings: 0,
+    intervalsOpened: 0, intervalsDuplicate: 0, inspectionsQueued: 0, ms: 0,
   };
+
+  /* One identifier for the whole pass, so an interval can be traced back to
+     the batch of readings that produced it. */
+  const batchId = crypto.randomUUID();
 
   const due = await db()
     .prepare(
@@ -204,8 +242,16 @@ export async function sensorPass(
       else if (soldDelta > 0) {
         pass.shopsMoved += 1;
         pass.unitsSeen += soldDelta;
-        await openInterval(
-          row.shop_id, row.observed_at ?? observedAt, observedAt, soldDelta);
+        const interval = await openInterval(
+          row.shop_id, row.observed_at ?? observedAt, observedAt, soldDelta,
+          { previousSold, currentSold: fact.soldCount, sensorBatch: batchId });
+        if (interval.created) pass.intervalsOpened += 1;
+        else pass.intervalsDuplicate += 1;
+        /* Enqueued immediately: the evidence on the listings is perishable,
+           and every minute between the sale and the look is a chance for the
+           seller to restock over the top of it. */
+        if (interval.id && await enqueueInspection(interval.id, row.shop_id))
+          pass.inspectionsQueued += 1;
       }
 
       if (row.review_count !== null && fact.reviewCount !== null && fact.reviewCount > row.review_count)
@@ -229,6 +275,7 @@ export async function sensorPass(
       await db().batch(writes.slice(at, at + 100));
   }
 
+  pass.ms = Date.now() - started;
   return pass;
 }
 

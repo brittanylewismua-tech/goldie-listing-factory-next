@@ -52,6 +52,15 @@ export default {
     );
 
     /*
+      And whatever the sensor found is inspected in the same firing, because
+      the evidence on a listing is perishable — a seller restocking over the
+      top of a sale erases it.
+    */
+    ctx.waitUntil(
+      app.fetch(new Request(site + "/api/market/inspect-tick"), env, ctx).catch(() => {}),
+    );
+
+    /*
       The trademark register loads itself the same way: one USPTO bulk file
       per firing, newest first, stopping on its own deadline. Separate
       waitUntil so neither job can take the other down with it.
