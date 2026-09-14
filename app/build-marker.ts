@@ -14,7 +14,6 @@
    USPTO's bulk files a piece at a time. */
 /* D1376 lets mastermind access be paused without deleting anyone's Printify
    connection. */
-export const BUILD_MARKER = "D1376";
 /* D1377 starts Goldie's own history: every look at a listing is a snapshot,
    every difference an event, and a shop sensor says where to look. */
 export const BUILD_MARKER = "D1377";
