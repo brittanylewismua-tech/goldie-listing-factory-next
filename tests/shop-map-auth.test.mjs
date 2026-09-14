@@ -130,7 +130,11 @@ test("a sales authorisation never changes the active shop", () => {
     callback.indexOf('if(intent==="sales"'),
     callback.indexOf("const existing=adding?"));
   assert.ok(branch.length > 200, "the sales branch must exist");
-  assert.doesNotMatch(branch, /is_active/);
+  /* Reading is_active is fine; writing it is not. The branch has to know
+     whether the connection exists, and must change nothing about which shop
+     is active. */
+  assert.doesNotMatch(branch, /SET is_active|is_active=0|is_active=1/);
+  assert.doesNotMatch(branch, /INSERT INTO etsy_connections/);
   assert.match(branch, /UPDATE etsy_connections SET encrypted_access_token/);
   assert.match(branch, /WHERE user_id=\? AND shop_id=\?/);
 });
@@ -139,7 +143,7 @@ test("authorising the wrong Etsy account is refused, and both connections surviv
   const branch = callback.slice(
     callback.indexOf('if(intent==="sales"'),
     callback.indexOf("const existing=adding?"));
-  assert.match(branch, /if\(Number\(shop\.shop_id\)!==Number\(pending\.target_shop_id\)\)/);
+  assert.match(branch, /if\(Number\(shop\.shop_id\)!==targetShopId\)/);
   /* The refusal must come before any write. */
   assert.ok(branch.indexOf("return fail(wrongEtsyAccountMessage") <
     branch.indexOf("UPDATE etsy_connections"),
@@ -158,7 +162,7 @@ test("the member lands back on that shop's capability state", () => {
   const branch = callback.slice(
     callback.indexOf('if(intent==="sales"'),
     callback.indexOf("const existing=adding?"));
-  assert.match(branch, /\/api\/shop-map\/capability\?shop=\$\{pending\.target_shop_id\}/);
+  assert.match(branch, /\/api\/shop-map\/capability\?shop=\$\{targetShopId\}/);
 });
 
 test("capability can be asked about one shop without activating it", () => {
