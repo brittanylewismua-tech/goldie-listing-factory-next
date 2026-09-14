@@ -26,7 +26,9 @@
    stop being unexplainable by construction. */
 /* D1382 polls the monitored listings directly every ten minutes, and uses the
    shop counter as corroboration and a cap rather than as a score. */
-export const BUILD_MARKER = "D1382";
+/* D1383 fixes the upsert SQLite would not parse, and takes the whole-shop
+   backfill off the clock. */
+export const BUILD_MARKER = "D1383";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

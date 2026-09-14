@@ -102,9 +102,17 @@ export async function ensurePollTables(): Promise<void> {
 
 /** Every discovered listing joins the polling corpus, and never leaves it. */
 export async function adoptCorpus(): Promise<number> {
+  /*
+    WHERE true IS LOAD-BEARING.
+
+    SQLite cannot tell whether the ON CONFLICT belongs to the INSERT or to the
+    SELECT when the SELECT has no WHERE, and answers `near "DO": syntax error`.
+    Measured in production, not theorised: the first call to this endpoint
+    returned a 500 for exactly this reason.
+  */
   const result = await db().prepare(
     `INSERT INTO corpus_poll_state (listing_id, shop_id)
-     SELECT listing_id, shop_id FROM sold_watch
+     SELECT listing_id, shop_id FROM sold_watch WHERE true
      ON CONFLICT(listing_id) DO NOTHING`).run();
   return Number(result.meta?.changes ?? 0);
 }

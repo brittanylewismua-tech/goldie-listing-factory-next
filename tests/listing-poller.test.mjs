@@ -8,7 +8,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { diffSnapshots, salesLinked } from "../app/market-events.ts";
 
 const read = name => readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
@@ -159,4 +159,31 @@ test("large shops are not excluded from anything", () => {
   /* Direct batch polling makes shop size irrelevant once a listing is in the
      corpus, so no size threshold may appear in the poller. */
   assert.doesNotMatch(poller, /MAX_LISTINGS_PER_SHOP|too many listings|skip.*large shop/i);
+});
+
+test("an upsert built on a SELECT carries a WHERE, or SQLite refuses it", () => {
+  /* Measured in production: `near "DO": syntax error`. SQLite cannot tell
+     whether ON CONFLICT belongs to the INSERT or the SELECT unless the SELECT
+     has a WHERE, so every INSERT-SELECT upsert in the codebase must have one. */
+  const walk = dir => readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const path = `${dir}/${entry.name}`;
+    return entry.isDirectory() ? walk(path) : path.endsWith(".ts") ? [path] : [];
+  });
+  const offenders = [];
+  for (const path of walk(new URL("../app", import.meta.url).pathname)) {
+    const source = readFileSync(path, "utf8");
+    for (const match of source.matchAll(/INSERT INTO[\s\S]{0,600}?ON CONFLICT/g)) {
+      const chunk = match[0];
+      if (/\bSELECT\b/.test(chunk) && !/\bWHERE\b/.test(chunk))
+        offenders.push(`${path.split("/app/")[1]}: ${chunk.slice(0, 80).replace(/\s+/g, " ")}`);
+    }
+  }
+  assert.deepEqual(offenders, [], "an INSERT-SELECT upsert without a WHERE will not parse");
+});
+
+test("the whole-shop backfill is not on any clock", () => {
+  /* The estimate killed it as a production path and every firing it did get
+     timed out. The endpoint stays for research; nothing schedules it. */
+  assert.doesNotMatch(handler, /baseline-tick/);
+  assert.match(handler, /Whole-shop enumeration is NOT on the clock/);
 });

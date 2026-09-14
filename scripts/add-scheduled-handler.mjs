@@ -69,8 +69,12 @@ export default {
     run("/api/sold-overnight/cron");
     /* The trademark register, one USPTO bulk file at a time. */
     run("/api/trademark/ingest-tick");
-    /* Whole-shop enumeration, kept as a research tool on leftover allowance. */
-    run("/api/market/baseline-tick");
+    /*
+      Whole-shop enumeration is NOT on the clock. The estimate killed it as a
+      production path — a median of 695 listings per shop and one with 11,202
+      — and every firing it did get timed out. The endpoint stays for research
+      and for the modified-order experiment; nothing schedules it.
+    */
   },
 };
 `);
