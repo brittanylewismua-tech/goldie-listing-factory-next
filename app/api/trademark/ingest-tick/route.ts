@@ -24,7 +24,7 @@ const key = () => (env as unknown as { USPTO_API_KEY?: string }).USPTO_API_KEY?.
 
 /* Enough recent days to cover a gap of a fortnight without a special path. */
 const DAILY_DAYS = 21;
-const DEADLINE_MS = 200_000;
+const DEADLINE_MS = 120_000;
 
 const isoDay = (offsetDays: number) =>
   new Date(Date.now() - offsetDays * 86_400_000).toISOString().slice(0, 10);
