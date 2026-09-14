@@ -59,7 +59,9 @@
    in the order metadata, and matches on it exactly. */
 /* D1401 stops the reconciliation mixing one cohort's revenue with another
    cohort's costs, and pages Printify to the start of the window. */
-export const BUILD_MARKER = "D1401";
+/* D1402 makes Goldie installable on a phone, with a bottom bar, safe-area
+   spacing, and a Listing Factory that says it is a desktop tool. */
+export const BUILD_MARKER = "D1402";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

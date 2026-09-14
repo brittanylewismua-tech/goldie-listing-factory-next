@@ -22,8 +22,19 @@ const TABS = [
   { href: "/account", label: "More", glyph: "≡" },
 ];
 
-/* Routes that are a workspace, a sign-in, or a landing page. */
-const BARE = [/^\/$/, /^\/account\/sign-in/, /^\/signup/, /^\/auth/, /^\/listing-factory/, /^\/listingfactory/, /^\/batches/];
+/* Sign-in and landing pages: a five-tab bar around one decision is noise. */
+const BARE = [/^\/$/, /^\/account\/sign-in/, /^\/signup/, /^\/auth/];
+
+/*
+  THE LISTING FACTORY IS A DESKTOP TOOL AND SAYS SO.
+
+  Bulk editing across many products, large image sets, mockup selection and
+  publishing controls do not survive being squeezed onto a phone — they become
+  a worse version of themselves that still lets somebody publish twenty wrong
+  listings. Saying so plainly is kinder than a cramped workspace, and the
+  member's saved work is untouched either way.
+*/
+const WORKSPACE = [/^\/listing-factory/, /^\/listingfactory/, /^\/batches/];
 
 export default function MobileShell() {
   const pathname = usePathname() ?? "/";
@@ -72,6 +83,16 @@ export default function MobileShell() {
   };
 
   if (BARE.some(pattern => pattern.test(pathname))) return null;
+
+  if (WORKSPACE.some(pattern => pattern.test(pathname)))
+    return <aside className="desktop-only-notice" role="note">
+      <b>Listing Factory is built for desktop.</b>
+      <p>
+        Your saved designs, batches and keyword banks are exactly where you left
+        them, and they will be ready when you are back at your computer.
+      </p>
+      <a href="/home">Back to Goldie</a>
+    </aside>;
 
   return <>
     <nav className="goldie-tabs" aria-label="Goldie">

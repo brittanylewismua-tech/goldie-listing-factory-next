@@ -75,7 +75,26 @@
   .goldie-install-actions button.quiet { background: transparent; color: #8d8090; border: 1px solid #2c2432; }
 
   /* A workspace built for a mouse should say so rather than half-work. */
-  .desktop-only-notice { display: block; }
+  .desktop-only-notice {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: #0c0a0e;
+    padding: 28px 22px calc(28px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+  }
+  .desktop-only-notice b { color: #f6f1f5; font-size: 19px; }
+  .desktop-only-notice p { margin: 0; color: #c3b6c0; font-size: 14px; line-height: 1.6; }
+  .desktop-only-notice a {
+    align-self: flex-start; margin-top: 10px; min-height: 44px;
+    display: inline-flex; align-items: center; padding: 0 18px;
+    border-radius: 10px; background: #ff4fc3; color: #0c0a0e;
+    font-weight: 700; text-decoration: none;
+  }
 }
 
 @media (min-width: 861px) { .desktop-only-notice { display: none; } }
