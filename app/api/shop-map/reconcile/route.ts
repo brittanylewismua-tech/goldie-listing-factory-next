@@ -142,7 +142,12 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
   };
   const printifyOrders: PrintifyOrder[] = [];
   let printifyRaw = "";
-  for (let page = 1; page <= 5; page += 1) {
+  let printifyPages = 0;
+  let printifyLastPage = 0;
+  let printifyTotal = 0;
+  /* Deep enough to reach the start of the Etsy window. Printify pages with
+     ?page=, reports last_page, and returns newest first. */
+  for (let page = 1; page <= 40; page += 1) {
     const response = await fetch(
       `https://api.printify.com/v1/shops/${printifyShopId}/orders.json?limit=50&page=${page}`,
       {
@@ -153,9 +158,17 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
     if (!response.ok) break;
     const text = await response.text();
     printifyRaw += text;
-    const body = JSON.parse(text) as { data?: PrintifyOrder[]; last_page?: number };
+    const body = JSON.parse(text) as { data?: PrintifyOrder[]; last_page?: number; total?: number };
+    printifyPages += 1;
+    printifyLastPage = Number(body.last_page ?? printifyLastPage);
+    printifyTotal = Number(body.total ?? printifyTotal);
     printifyOrders.push(...(body.data ?? []));
     if (!body.data?.length || page >= Number(body.last_page ?? 1)) break;
+    /* Stop once a page's oldest order predates the window: everything beyond
+       it is older still, and paging on would spend calls for nothing. */
+    const oldest = Math.min(...(body.data ?? []).map(row =>
+      Math.floor(Date.parse(String(row.created_at ?? "").replace(" ", "T")) / 1000) || Infinity));
+    if (Number.isFinite(oldest) && oldest < from) break;
   }
 
   /*
@@ -241,98 +254,220 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
 
   const result = reconcile(etsyLines, printifyLines);
 
-  /* Only costs actually tied to a sale count toward this month's production
-     spend. A Printify order with no matching sale is reported separately. */
-  const missingCost: Array<{ transactionId: number; listingId: number; sku: string }> = [];
-  for (const outcome of result.outcomes) {
-    if (outcome.state === "matched") {
-      const held = costOf.get(outcome.printify.lineItemId);
-      if (held) {
-        productionCost = addMoney(productionCost, held.cost);
-        productionShipping = addMoney(productionShipping, held.shipping);
-      }
-    } else if (outcome.state === "etsy_without_printify" || outcome.state === "ambiguous") {
-      missingCost.push({
-        transactionId: outcome.etsy.transactionId,
-        listingId: outcome.etsy.listingId,
-        sku: outcome.etsy.sku,
-      });
-    }
+  /*
+    COHORTS MUST NOT BE MIXED.
+
+    The first version of this report subtracted the production costs of
+    fourteen matched orders from the revenue of all thirty-five receipts and
+    called the difference "revenue minus matched costs". Anybody can do that
+    arithmetic and it means nothing — it flatters the figure by counting
+    revenue whose costs are simply unknown. Every number below is computed
+    over one named cohort.
+  */
+  const matchedPairs = result.outcomes.filter(
+    (outcome): outcome is Extract<typeof outcome, { state: "matched" }> =>
+      outcome.state === "matched");
+
+  /* A receipt counts as matched only when EVERY transaction on it matched.
+     One matched line and one unmatched line makes the receipt partial, and
+     its revenue belongs to neither cohort until the rest is found. */
+  const linesByReceipt = new Map<number, EtsyLine[]>();
+  for (const line of etsyLines) {
+    const held = linesByReceipt.get(line.receiptId) ?? [];
+    held.push(line);
+    linesByReceipt.set(line.receiptId, held);
+  }
+  const matchedTransactionIds = new Set(matchedPairs.map(pair => pair.etsy.transactionId));
+  const fullyMatched = new Set<number>();
+  const partiallyMatched = new Set<number>();
+  for (const [receiptId, lines] of linesByReceipt) {
+    const hits = lines.filter(line => matchedTransactionIds.has(line.transactionId)).length;
+    if (hits === lines.length) fullyMatched.add(receiptId);
+    else if (hits > 0) partiallyMatched.add(receiptId);
   }
 
-  const revenue = addMoney(productRevenue, shippingCollected);
-  const knownCosts = addMoney(productionCost, productionShipping, refunded);
-  const profitSoFar = subtractMoney(revenue, knownCosts);
+  const cohort = (keep: (receiptId: number) => boolean) => {
+    let product = minorUnits(0, currency);
+    let shipping = minorUnits(0, currency);
+    let discount = minorUnits(0, currency);
+    let refund = minorUnits(0, currency);
+    let count = 0;
+    for (const receipt of receipts) {
+      const receiptId = Number(receipt.receipt_id ?? 0);
+      if (!keep(receiptId)) continue;
+      count += 1;
+      shipping = addMoney(shipping, fromEtsy(receipt.total_shipping_cost, currency));
+      discount = addMoney(discount, fromEtsy(receipt.discount_amt, currency));
+      for (const row of receipt.refunds ?? [])
+        refund = addMoney(refund, fromEtsy(row.amount, currency));
+      for (const transaction of receipt.transactions ?? [])
+        product = addMoney(product, minorUnits(
+          fromEtsy(transaction.price, currency).minor * Number(transaction.quantity ?? 1), currency));
+    }
+    return { count, product, shipping, discount, refund };
+  };
 
-  /* Anonymous by construction: ids, SKUs, quantities and money only. */
-  const examples = result.outcomes
-    .filter(outcome => outcome.state === "matched")
-    .slice(0, 3)
-    .map(outcome => {
-      const matched = outcome as Extract<typeof outcome, { state: "matched" }>;
-      const held = costOf.get(matched.printify.lineItemId);
-      return {
-        method: matched.method,
-        etsy: {
-          receiptId: matched.etsy.receiptId,
-          transactionId: matched.etsy.transactionId,
-          listingId: matched.etsy.listingId,
-          sku: matched.etsy.sku,
-          quantity: matched.etsy.quantity,
-        },
-        printify: {
-          orderId: matched.printify.orderId,
-          lineItemId: matched.printify.lineItemId,
-          sku: matched.printify.sku,
-          quantity: matched.printify.quantity,
-        },
-        productionCost: held ? formatMoney(held.cost) : null,
-        productionShipping: held ? formatMoney(held.shipping) : null,
-      };
-    });
+  const matchedCohort = cohort(id => fullyMatched.has(id));
+  const partialCohort = cohort(id => partiallyMatched.has(id));
+  const unmatchedCohort = cohort(id => !fullyMatched.has(id) && !partiallyMatched.has(id));
+
+  let matchedProduction = minorUnits(0, currency);
+  let matchedProductionShipping = minorUnits(0, currency);
+  for (const pair of matchedPairs) {
+    if (!fullyMatched.has(pair.etsy.receiptId)) continue;
+    const held = costOf.get(pair.printify.lineItemId);
+    if (!held) continue;
+    matchedProduction = addMoney(matchedProduction, held.cost);
+    matchedProductionShipping = addMoney(matchedProductionShipping, held.shipping);
+  }
+
+  /*
+    LINE-ITEM PAIRING IS A SEPARATE CLAIM FROM RECEIPT PAIRING.
+
+    An exact receipt-to-order match proves what the ORDER cost. It proves what
+    a LISTING cost only when both sides carry exactly one line; otherwise the
+    split between lines is unproven and allocating it would be invention.
+  */
+  const printifyLinesPerReceipt = new Map<string, number>();
+  for (const row of printifyLines)
+    if (row.shopOrderId)
+      printifyLinesPerReceipt.set(row.shopOrderId,
+        (printifyLinesPerReceipt.get(row.shopOrderId) ?? 0) + 1);
+  const lineLevelProven = matchedPairs.filter(pair =>
+    (linesByReceipt.get(pair.etsy.receiptId)?.length ?? 0) === 1 &&
+    (printifyLinesPerReceipt.get(String(pair.etsy.receiptId)) ?? 0) === 1).length;
+
+  const missingCost: Array<{ receiptId: number; transactionId: number; listingId: number; sku: string }> = [];
+  for (const outcome of result.outcomes)
+    if (outcome.state === "etsy_without_printify" || outcome.state === "ambiguous")
+      missingCost.push({
+        receiptId: outcome.etsy.receiptId, transactionId: outcome.etsy.transactionId,
+        listingId: outcome.etsy.listingId, sku: outcome.etsy.sku,
+      });
+
+  /* Why a Printify record has no Etsy sale. A sample or a manual order never
+     had a buyer, which is not a matching failure. */
+  const unmatchedOrders = new Map<string, string>();
+  for (const outcome of result.outcomes)
+    if (outcome.state === "printify_without_etsy") {
+      const order = printifyOrders.find(row => String(row.id ?? "") === outcome.printify.orderId);
+      unmatchedOrders.set(outcome.printify.orderId,
+        `${String(order?.metadata?.order_type ?? "unknown")}/${String(order?.status ?? outcome.printify.status)}`);
+    }
+  const unmatchedPrintifyReasons: Record<string, number> = {};
+  for (const reason of unmatchedOrders.values())
+    unmatchedPrintifyReasons[reason] = (unmatchedPrintifyReasons[reason] ?? 0) + 1;
+
+  const matchedRevenue = addMoney(matchedCohort.product, matchedCohort.shipping);
+  const matchedCosts = addMoney(matchedProduction, matchedProductionShipping, matchedCohort.refund);
+  const allRevenue = addMoney(productRevenue, shippingCollected);
+  const oldestPrintify = printifyOrders.length
+    ? Math.min(...printifyOrders.map(row =>
+      Math.floor(Date.parse(String(row.created_at ?? "").replace(" ", "T")) / 1000) || Infinity))
+    : Infinity;
+
+  const examples = matchedPairs.slice(0, 3).map(pair => {
+    const held = costOf.get(pair.printify.lineItemId);
+    return {
+      method: pair.method,
+      etsy: {
+        receiptId: pair.etsy.receiptId, transactionId: pair.etsy.transactionId,
+        listingId: pair.etsy.listingId, sku: pair.etsy.sku, quantity: pair.etsy.quantity,
+      },
+      printify: {
+        orderId: pair.printify.orderId, lineItemId: pair.printify.lineItemId,
+        sku: pair.printify.sku, quantity: pair.printify.quantity,
+      },
+      productionCost: held ? formatMoney(held.cost) : null,
+      productionShipping: held ? formatMoney(held.shipping) : null,
+      lineLevelProven: (linesByReceipt.get(pair.etsy.receiptId)?.length ?? 0) === 1 &&
+        (printifyLinesPerReceipt.get(String(pair.etsy.receiptId)) ?? 0) === 1,
+    };
+  });
 
   return NextResponse.json({
     window: { fromUnix: from, toUnix: to },
     shops: { etsy: etsyShopId, printify: printifyShopId },
     calls,
-    etsy: {
-      receipts: receipts.length,
-      transactions: etsyLines.length,
-      productRevenue: formatMoney(productRevenue),
-      shippingCollected: formatMoney(shippingCollected),
-      discounts: formatMoney(discounts),
-      refunds: formatMoney(refunded),
-      /* Excluded from revenue on purpose. */
+
+    /* Named entities, each counted once, so no total has to be inferred from
+       a number that turns out to be line items rather than orders. */
+    entities: {
+      etsyReceipts: receipts.length,
+      etsyTransactions: etsyLines.length,
+      printifyOrders: printifyOrders.length,
+      printifyLineItems: printifyLines.length,
+      matchedReceiptToOrderPairs: matchedPairs.length,
+      fullyMatchedEtsyReceipts: fullyMatched.size,
+      partiallyMatchedEtsyReceipts: partiallyMatched.size,
+      unmatchedEtsyReceipts: unmatchedCohort.count,
+      unmatchedPrintifyOrders: unmatchedOrders.size,
+      unmatchedPrintifyLineItems: result.counts.printify_without_etsy ?? 0,
+    },
+
+    printifyPagination: {
+      pagesRead: printifyPages,
+      lastPageReported: printifyLastPage,
+      ordersReportedByPrintify: printifyTotal,
+      pageSize: 50,
+      mechanism: "?page= with last_page; newest first",
+      oldestOrderReached: Number.isFinite(oldestPrintify)
+        ? new Date(oldestPrintify * 1000).toISOString() : null,
+      reachedStartOfWindow: Number.isFinite(oldestPrintify) && oldestPrintify <= from,
+    },
+
+    identifierPaths: Object.fromEntries(identifierPaths),
+    matchMethods: result.byMethod,
+
+    matchedCohort: {
+      receipts: matchedCohort.count,
+      productRevenue: formatMoney(matchedCohort.product),
+      shippingCollected: formatMoney(matchedCohort.shipping),
+      discounts: formatMoney(matchedCohort.discount),
+      refunds: formatMoney(matchedCohort.refund),
+      productionCost: formatMoney(matchedProduction),
+      productionShipping: formatMoney(matchedProductionShipping),
+      /* NOT profit: Etsy's own fees are not in it yet. */
+      revenueMinusProductionCosts: formatMoney(subtractMoney(matchedRevenue, matchedCosts)),
+      lineLevelPairingProven: lineLevelProven,
+      lineLevelPairingUnproven: matchedPairs.length - lineLevelProven,
+    },
+
+    unmatchedCohort: {
+      receipts: unmatchedCohort.count,
+      productRevenue: formatMoney(unmatchedCohort.product),
+      shippingCollected: formatMoney(unmatchedCohort.shipping),
+      profit: null,
+      why: "No Printify order carries these receipt ids, so production cost is unknown.",
+    },
+
+    partiallyMatchedCohort: {
+      receipts: partialCohort.count,
+      productRevenue: formatMoney(partialCohort.product),
+      profit: null,
+      why: "Some transactions on these receipts matched and some did not, so the receipt cannot be split.",
+    },
+
+    unmatchedPrintifyReasons,
+
+    coverage: {
+      etsyRevenueWithKnownProductionCostPercent: allRevenue.minor > 0
+        ? Math.round((matchedRevenue.minor / allRevenue.minor) * 1000) / 10 : 0,
+      allEtsyRevenue: formatMoney(allRevenue),
+      matchedEtsyRevenue: formatMoney(matchedRevenue),
       marketplaceTaxExcluded: formatMoney(salesTax),
     },
-    printify: {
-      orders: printifyOrders.length,
-      lineItems: printifyLines.length,
-      productionCostMatched: formatMoney(productionCost),
-      productionShippingMatched: formatMoney(productionShipping),
-      taxOnAllOrders: formatMoney(printifyTax),
-    },
-    identifierHits,
-    /* The field an exact match should be built on, if one exists. */
-    identifierPaths: Object.fromEntries(identifierPaths),
-    reconciliation: { counts: result.counts, byMethod: result.byMethod },
-    ordersMissingProductionCost: missingCost.length,
-    missingCostExamples: missingCost.slice(0, 5),
-    /*
-      NOT CALLED PROFIT WHILE ANYTHING IS MISSING.
 
-      Etsy's own fees are not in this figure yet — the ledger call still has to
-      be settled — so this is revenue minus the production costs that could be
-      tied to a sale, and it is named for exactly that.
-    */
-    revenueMinusMatchedCosts: formatMoney(profitSoFar),
-    complete: missingCost.length === 0,
     stillMissing: [
-      ...(missingCost.length ? ["production cost for some sales"] : []),
+      ...(missingCost.length ? [`production cost for ${missingCost.length} Etsy transactions`] : []),
       "Etsy transaction and processing fees",
       "listing and renewal fees",
-      "Offsite Ads fees",
+      "Offsite Ads and regulatory fees",
     ],
+    missingCostExamples: missingCost.slice(0, 5),
+    /* Nothing here is profit, and the flag says so rather than relying on
+       whoever reads it to notice. */
+    profitAvailable: false,
     examples,
   });
 });

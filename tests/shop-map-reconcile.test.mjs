@@ -140,3 +140,47 @@ test("a receipt whose lines cannot be told apart stays ambiguous", () => {
      printify({ lineItemId: "li-2", sku: "", shopOrderId: "900", quantity: 1 })]);
   assert.ok(outcomes.some(row => row.state === "ambiguous"));
 });
+
+test("cohorts are never mixed, and the route computes them separately", async () => {
+  /* The first report subtracted fourteen orders' costs from thirty-five
+     receipts' revenue. Anybody can do that arithmetic; it means nothing. */
+  const { readFileSync } = await import("node:fs");
+  const route = readFileSync(
+    new URL("../app/api/shop-map/reconcile/route.ts", import.meta.url), "utf8");
+  assert.match(route, /COHORTS MUST NOT BE MIXED/);
+  assert.match(route, /matchedCohort/);
+  assert.match(route, /unmatchedCohort/);
+  assert.match(route, /partiallyMatchedCohort/);
+  /* The misleading name must be gone entirely. */
+  assert.doesNotMatch(route, /revenueMinusMatchedCosts/);
+  /* And nothing anywhere is called profit. */
+  assert.match(route, /profitAvailable: false/);
+  assert.doesNotMatch(route, /\bprofit: formatMoney/);
+});
+
+test("a receipt with one matched and one unmatched line is partial, not matched", async () => {
+  const { readFileSync } = await import("node:fs");
+  const route = readFileSync(
+    new URL("../app/api/shop-map/reconcile/route.ts", import.meta.url), "utf8");
+  assert.match(route, /if \(hits === lines\.length\) fullyMatched\.add/);
+  assert.match(route, /else if \(hits > 0\) partiallyMatched\.add/);
+});
+
+test("line-level pairing is only claimed when both sides carry one line", async () => {
+  const { readFileSync } = await import("node:fs");
+  const route = readFileSync(
+    new URL("../app/api/shop-map/reconcile/route.ts", import.meta.url), "utf8");
+  assert.match(route, /LINE-ITEM PAIRING IS A SEPARATE CLAIM FROM RECEIPT PAIRING/);
+  assert.match(route, /lineLevelPairingProven/);
+  assert.match(route, /lineLevelPairingUnproven/);
+});
+
+test("entities are named, so no count has to be inferred", async () => {
+  const { readFileSync } = await import("node:fs");
+  const route = readFileSync(
+    new URL("../app/api/shop-map/reconcile/route.ts", import.meta.url), "utf8");
+  for (const name of ["etsyReceipts", "etsyTransactions", "printifyOrders",
+    "printifyLineItems", "matchedReceiptToOrderPairs", "unmatchedEtsyReceipts",
+    "unmatchedPrintifyOrders", "unmatchedPrintifyLineItems"])
+    assert.match(route, new RegExp(name), `missing entity count: ${name}`);
+});

@@ -57,7 +57,9 @@
    missing. */
 /* D1400 finds the Etsy receipt id where Printify actually keeps it, nested
    in the order metadata, and matches on it exactly. */
-export const BUILD_MARKER = "D1400";
+/* D1401 stops the reconciliation mixing one cohort's revenue with another
+   cohort's costs, and pages Printify to the start of the window. */
+export const BUILD_MARKER = "D1401";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

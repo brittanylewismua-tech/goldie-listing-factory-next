@@ -1,0 +1,81 @@
+/*
+  GOLDIE ON A PHONE.
+
+  Everything here is scoped to small screens. The desktop product is unchanged
+  above 860px, and nothing in this file loads a different layout — it is the
+  same pages with a thumb-sized chrome around them.
+*/
+
+/* The bar and the prompt exist only on phones. */
+.goldie-tabs, .goldie-install { display: none; }
+
+@media (max-width: 860px) {
+  :root {
+    /* The home indicator on a modern iPhone sits over the bottom of the
+       viewport. Everything that must stay tappable adds this. */
+    --goldie-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --goldie-tabbar: 60px;
+  }
+
+  body {
+    /* Room for the bar, plus the gesture area underneath it. */
+    padding-bottom: calc(var(--goldie-tabbar) + var(--goldie-safe-bottom));
+  }
+
+  .goldie-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 60;
+    padding-bottom: var(--goldie-safe-bottom);
+    background: rgba(12, 10, 14, .94);
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, .08);
+  }
+
+  .goldie-tabs a {
+    /* 60px of height and the full column width: comfortably past the 44px
+       Apple asks for, which matters most for the outer two tabs where thumbs
+       are least accurate. */
+    min-height: var(--goldie-tabbar);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-decoration: none;
+    color: #8d8090;
+    font-size: 11px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .goldie-tabs a span { font-size: 17px; line-height: 1; }
+  .goldie-tabs a em { font-style: normal; letter-spacing: .01em; }
+  .goldie-tabs a.current { color: #ff4fc3; }
+  .goldie-tabs a:active { background: rgba(255, 255, 255, .05); }
+
+  .goldie-install {
+    display: block;
+    position: fixed;
+    inset: auto 12px calc(var(--goldie-tabbar) + var(--goldie-safe-bottom) + 12px) 12px;
+    z-index: 61;
+    background: #16121a;
+    border: 1px solid #2c2432;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .45);
+  }
+  .goldie-install b { display: block; color: #f6f1f5; font-size: 15px; margin-bottom: 4px; }
+  .goldie-install p { margin: 0; color: #c3b6c0; font-size: 13px; line-height: 1.5; }
+  .goldie-install-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .goldie-install-actions button {
+    flex: 1; min-height: 44px; border-radius: 10px; font-size: 14px; font-weight: 700;
+    border: 0; background: #ff4fc3; color: #0c0a0e;
+  }
+  .goldie-install-actions button.quiet { background: transparent; color: #8d8090; border: 1px solid #2c2432; }
+
+  /* A workspace built for a mouse should say so rather than half-work. */
+  .desktop-only-notice { display: block; }
+}
+
+@media (min-width: 861px) { .desktop-only-notice { display: none; } }
