@@ -25,12 +25,14 @@ import {
   claimLock, closeInterval, ensureMarketTables, fingerprint, flagHotCandidates,
   latestSnapshots, releaseLock, writeEvents, writeSalesActivity, writeSnapshots,
 } from "@/app/market-store";
+import {
+  baselineCompleteBefore, ensureBaselineTables, knownListings, markMissing,
+  readShopPage, writeShopListings, MAX_PAGES_PER_SHOP, PAGE,
+} from "@/app/shop-baseline";
 
 const db = () => (env as unknown as { DB: D1Database }).DB;
 
 const BATCH = 100;
-/** A shop with more tracked listings than this is read in several calls. */
-const MAX_LISTINGS_PER_SHOP = 300;
 const MAX_ATTEMPTS = 4;
 
 /**
@@ -114,6 +116,9 @@ export type InspectionResult = {
   unitsAttributed: number;
   unitsUnresolved: number;
   conflicted: boolean;
+  /** Whether the shop was fully known before the interval began. */
+  eligible: boolean;
+  missingResolved: number;
   calls: number;
   delayMs: number;
   ms: number;
@@ -122,6 +127,7 @@ export type InspectionResult = {
 /** Inspect one queued interval. Safe to run twice; the second run changes nothing. */
 export async function inspectInterval(intervalId: number): Promise<InspectionResult | null> {
   const started = Date.now();
+  await ensureBaselineTables();
   const interval = await db()
     .prepare(
       `SELECT id, shop_id, from_observed, to_observed, sold_delta
@@ -133,48 +139,95 @@ export async function inspectInterval(intervalId: number): Promise<InspectionRes
     }>();
   if (!interval) return null;
 
-  /* Sold-out listings are the point, not an omission: a listing that sold out
-     since the last look is the clearest evidence there is, and filtering to
-     active ones would throw exactly those away. */
-  const tracked = await db()
-    .prepare(
-      `SELECT listing_id FROM sold_watch WHERE shop_id = ?
-        ORDER BY last_read DESC LIMIT ?`)
-    .bind(interval.shop_id, MAX_LISTINGS_PER_SHOP)
-    .all<{ listing_id: number }>();
-  const listingIds = (tracked.results ?? []).map(row => Number(row.listing_id));
-  if (!listingIds.length) {
-    await closeInterval(interval.id, 0, interval.sold_delta, false);
-    return {
-      intervalId, shopId: interval.shop_id, listingsInspected: 0, baselinesEstablished: 0,
-      eventsCreated: 0, duplicatesPrevented: 0, unitsObserved: interval.sold_delta,
-      unitsAttributed: 0, unitsUnresolved: interval.sold_delta, conflicted: false,
-      calls: 0, delayMs: Date.now() - Date.parse(interval.to_observed), ms: Date.now() - started,
-    };
+  /*
+    ELIGIBILITY IS DECIDED BEFORE ANYTHING IS MEASURED.
+
+    An interval that began before Goldie knew the whole shop can never be
+    judged against it: the listing that sold may simply not have been in the
+    picture. Those units stay unresolved forever and are excluded from the
+    coverage figure that matters, rather than dragging it down as though the
+    detector had failed to find something it was never shown.
+  */
+  const eligible = await baselineCompleteBefore(interval.shop_id, interval.from_observed);
+
+  /* THE WHOLE SHOP, not the handful of listings discovery happened to find.
+     This is the fix: 2.2 listings per shop made most sales unexplainable by
+     construction. */
+  const seen: Snapshot[] = [];
+  const activeIds = new Set<number>();
+  let calls = 0;
+  const observedAt = new Date().toISOString();
+
+  for (let page = 0; page < MAX_PAGES_PER_SHOP; page += 1) {
+    const answer = await readShopPage(interval.shop_id, page * PAGE);
+    calls += 1;
+    if (!answer.ok) break;
+    await writeShopListings(answer.listings);
+    for (const listing of answer.listings) {
+      activeIds.add(listing.listingId);
+      seen.push({
+        listingId: listing.listingId,
+        shopId: listing.shopId,
+        observedAt,
+        quantity: listing.quantity,
+        state: listing.state,
+        /* The shop enumeration is deliberately thin: price, favourites and
+           views are not asked for here because detection does not need them
+           and fetching them for every listing in every selling shop would
+           cost more than the whole sensor. They are filled in later, only for
+           listings that turn out to matter. */
+        priceCents: null,
+        favorites: null,
+        views: null,
+        lastModified: listing.updated,
+        originalCreated: listing.originalCreated,
+        taxonomyId: listing.taxonomyId,
+        titleHash: fingerprint(listing.title),
+        tagsHash: "",
+        imageHash: "",
+      });
+    }
+    if (answer.listings.length < PAGE) break;
   }
 
-  const [{ listings, calls }, baselines] = await Promise.all([
-    readListings(listingIds),
-    latestSnapshots(listingIds),
-  ]);
+  /*
+    A LISTING THAT VANISHED IS A QUESTION, NOT AN ANSWER.
 
-  const observedAt = new Date().toISOString();
-  const snapshots: Snapshot[] = [];
+    Gone from the active response means sold out, deactivated, expired or
+    deleted, and those are not the same event. The known ids that did not come
+    back are resolved with a direct read, because calling a deactivation a
+    sale would be the most damaging mistake this system could make.
+  */
+  const known = await knownListings(interval.shop_id);
+  const missing = known
+    .filter(row => !activeIds.has(row.listingId) && !row.missingSince)
+    .map(row => row.listingId);
+  if (missing.length) {
+    const resolved = await readListings(missing.slice(0, 200));
+    calls += resolved.calls;
+    const answered = new Set<number>();
+    for (const listing of resolved.listings) {
+      const snapshot = toSnapshot(listing, observedAt);
+      if (!snapshot) continue;
+      answered.add(snapshot.listingId);
+      seen.push(snapshot);
+    }
+    /* Anything Etsy would not answer for at all is recorded as missing rather
+       than guessed at. */
+    await markMissing(interval.shop_id, missing.filter(id => !answered.has(id)));
+  }
+
+  const baselines = await latestSnapshots(seen.map(snapshot => snapshot.listingId));
   const events: ListingEvent[] = [];
   let baselinesEstablished = 0;
-
-  for (const listing of listings) {
-    const snapshot = toSnapshot(listing, observedAt);
-    if (!snapshot) continue;
-    snapshots.push(snapshot);
+  for (const snapshot of seen) {
     const before = baselines.get(snapshot.listingId);
     /*
       A FIRST LOOK IS A BASELINE, NEVER A MOVEMENT.
 
-      Comparing a listing against nothing has produced phantom sales in this
-      codebase before — over a thousand of them in one night. A listing with no
-      prior snapshot is recorded and left alone until there is something to
-      compare it with.
+      Comparing a listing against nothing invented over a thousand phantom
+      sales in this codebase once. A listing with no prior snapshot is
+      recorded and left alone until there is something to compare it with.
     */
     if (!before) {
       baselinesEstablished += 1;
@@ -183,26 +236,29 @@ export async function inspectInterval(intervalId: number): Promise<InspectionRes
     events.push(...diffSnapshots(before, snapshot));
   }
 
-  const outcome = salesLinked(events, interval.sold_delta, snapshots.length);
+  const outcome = salesLinked(events, interval.sold_delta, seen.length);
   for (const event of events) if (outcome.conflicted) event.conflicted = true;
 
-  await writeSnapshots(snapshots);
+  /*
+    THE BASELINE MOVES ONLY AFTER THE RESULT IS SAFE.
+
+    Writing the new snapshots first would destroy the comparison point if
+    anything after it failed, and the interval would be unrecoverable — the
+    evidence for it would have been overwritten by the reading that was
+    supposed to explain it.
+  */
   const written = await writeEvents(events, "triggered-inspection", interval.id);
-  await writeSalesActivity(
-    outcome.linked.map(row => ({ ...row })), interval.id);
-
+  await writeSalesActivity(outcome.linked.map(row => ({ ...row })), interval.id);
   const attributed = outcome.linked.reduce((sum, row) => sum + row.units, 0);
-  await closeInterval(interval.id, attributed, outcome.unresolved, outcome.conflicted);
-
-  /* The Hot Pool's hook. Flagging is all that happens here — nothing decides
-     how often a hot listing is polled, because the Hot Pool is not built. */
+  await closeInterval(interval.id, attributed, outcome.unresolved, outcome.conflicted, eligible);
   await flagHotCandidates(outcome.linked.map(row => ({
     listingId: row.listingId, shopId: row.shopId, reason: row.reason,
   })));
+  await writeSnapshots(seen);
 
   return {
     intervalId, shopId: interval.shop_id,
-    listingsInspected: snapshots.length,
+    listingsInspected: seen.length,
     baselinesEstablished,
     eventsCreated: written.written,
     duplicatesPrevented: written.duplicates,
@@ -210,6 +266,8 @@ export async function inspectInterval(intervalId: number): Promise<InspectionRes
     unitsAttributed: attributed,
     unitsUnresolved: outcome.unresolved,
     conflicted: outcome.conflicted,
+    eligible,
+    missingResolved: missing.length,
     calls,
     /* How long the evidence sat there before anybody looked. */
     delayMs: Date.now() - Date.parse(interval.to_observed),

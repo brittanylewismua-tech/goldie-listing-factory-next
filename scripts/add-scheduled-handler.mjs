@@ -61,6 +61,15 @@ export default {
     );
 
     /*
+      And the whole-shop backfill fills in behind both, on whatever allowance
+      is left after the reserve. It is the only workload here that is allowed
+      to be late.
+    */
+    ctx.waitUntil(
+      app.fetch(new Request(site + "/api/market/baseline-tick"), env, ctx).catch(() => {}),
+    );
+
+    /*
       The trademark register loads itself the same way: one USPTO bulk file
       per firing, newest first, stopping on its own deadline. Separate
       waitUntil so neither job can take the other down with it.

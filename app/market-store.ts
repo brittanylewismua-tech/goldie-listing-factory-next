@@ -129,6 +129,7 @@ export async function ensureMarketTables(): Promise<void> {
       resolved_units INTEGER NOT NULL DEFAULT 0,
       unresolved_units INTEGER NOT NULL DEFAULT 0,
       conflicted INTEGER NOT NULL DEFAULT 0,
+      eligible INTEGER NOT NULL DEFAULT 0,
       inspected_at TEXT
     )`),
     /* THE INTERVAL CANNOT BE COUNTED TWICE. A sensor pass delivered twice —
@@ -194,6 +195,9 @@ export async function ensureMarketTables(): Promise<void> {
     ["shop_sales_intervals", "current_sold INTEGER"],
     ["shop_sales_intervals", "sensor_batch TEXT NOT NULL DEFAULT ''"],
     ["shop_sales_intervals", "inspected_at TEXT"],
+    /* Whether the shop was fully enumerated before this interval began. The
+       coverage figure that means anything is computed only over these. */
+    ["shop_sales_intervals", "eligible INTEGER NOT NULL DEFAULT 0"],
   ];
   for (const [table, column] of additions) {
     try {
@@ -391,14 +395,17 @@ export async function flagHotCandidates(
 }
 
 export async function closeInterval(
-  intervalId: number, resolved: number, unresolved: number, conflicted: boolean,
+  intervalId: number, resolved: number, unresolved: number,
+  conflicted: boolean, eligible = false,
 ): Promise<void> {
   await db()
     .prepare(
       `UPDATE shop_sales_intervals
-          SET resolved_units = ?, unresolved_units = ?, conflicted = ?, inspected_at = ?
+          SET resolved_units = ?, unresolved_units = ?, conflicted = ?,
+              eligible = ?, inspected_at = ?
         WHERE id = ?`)
-    .bind(resolved, unresolved, conflicted ? 1 : 0, new Date().toISOString(), intervalId)
+    .bind(resolved, unresolved, conflicted ? 1 : 0, eligible ? 1 : 0,
+      new Date().toISOString(), intervalId)
     .run();
 }
 

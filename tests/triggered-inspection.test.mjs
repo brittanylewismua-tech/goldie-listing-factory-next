@@ -173,8 +173,13 @@ test("request telemetry reads the shared meter, not this feature's own tally", (
   assert.doesNotMatch(health, /FROM sold_spend/);
 });
 
-test("both attribution denominators are reported, not whichever reads better", () => {
+test("every attribution denominator is reported, not whichever reads best", () => {
+  /* Four now, because a wider net without clearer denominators would just be
+     a better-looking number: units observed, units from intervals where the
+     shop was fully known first, and the same two counted by shop. */
   const health = readFileSync(new URL("../app/api/market/health/route.ts", import.meta.url), "utf8");
-  assert.match(health, /unitCoveragePercent/);
+  assert.match(health, /rawCoveragePercent/);
+  assert.match(health, /eligibleCoveragePercent/);
   assert.match(health, /shopCoveragePercent/);
+  assert.match(health, /preBaselineUnresolved/);
 });

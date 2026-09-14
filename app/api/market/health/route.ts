@@ -4,6 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { ensureMarketTables } from "@/app/market-store";
+import { ensureBaselineTables } from "@/app/shop-baseline";
 import { variationInventoryEnabled } from "@/app/triggered-inspection";
 import { registerSize } from "@/app/trademark-register";
 
@@ -32,6 +33,7 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
   await ensureMarketTables();
+  await ensureBaselineTables();
   const db = (env as unknown as { DB: D1Database }).DB;
   const days = Math.min(30, Math.max(1, Number(new URL(request.url).searchParams.get("days")) || 7));
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
@@ -40,7 +42,7 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
 
   const [
     sensor, cycle, intervals, jobs, delays, events, duplicates,
-    snapshots, activity, shopsWithActivity, spend, registerFiles, register, recent,
+    snapshots, activity, shopsWithActivity, spend, registerFiles, register, baselines, recent,
   ] = await Promise.all([
     db.prepare(
       `SELECT COUNT(*) AS shops,
@@ -52,13 +54,26 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
     db.prepare(
       `SELECT MIN(observed_at) AS oldest, MAX(observed_at) AS newest
          FROM shop_sensor_state WHERE observed_at IS NOT NULL`).first<Record<string, string>>(),
+    /*
+      RAW AND ELIGIBLE, SIDE BY SIDE.
+
+      An interval that began before Goldie knew the whole shop cannot be
+      judged: the listing that sold may never have been in the picture. Those
+      units are counted, kept, and reported separately — never quietly dropped
+      to flatter the coverage figure, and never mixed in to depress it either.
+    */
     db.prepare(
       `SELECT COUNT(*) AS intervals,
               COALESCE(SUM(sold_delta),0) AS units,
               COALESCE(SUM(resolved_units),0) AS attributed,
               COALESCE(SUM(unresolved_units),0) AS unresolved,
               COALESCE(SUM(conflicted),0) AS conflicts,
-              SUM(CASE WHEN inspected_at IS NULL THEN 1 ELSE 0 END) AS uninspected
+              SUM(CASE WHEN inspected_at IS NULL THEN 1 ELSE 0 END) AS uninspected,
+              COALESCE(SUM(CASE WHEN eligible = 1 THEN sold_delta ELSE 0 END),0) AS eligible_units,
+              COALESCE(SUM(CASE WHEN eligible = 1 THEN resolved_units ELSE 0 END),0) AS eligible_attributed,
+              COALESCE(SUM(CASE WHEN eligible = 1 THEN unresolved_units ELSE 0 END),0) AS post_baseline_unresolved,
+              COALESCE(SUM(CASE WHEN eligible = 0 THEN unresolved_units ELSE 0 END),0) AS pre_baseline_unresolved,
+              SUM(CASE WHEN eligible = 1 THEN 1 ELSE 0 END) AS eligible_intervals
          FROM shop_sales_intervals WHERE to_observed >= ?`).bind(since).first<Record<string, number>>(),
     db.prepare(
       `SELECT state, COUNT(*) AS n FROM inspection_jobs GROUP BY state`).all(),
@@ -95,6 +110,15 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
       `SELECT state, COUNT(*) AS n FROM tm_ingest_files GROUP BY state`).all()
       .catch(() => ({ results: [] })),
     registerSize(db).catch(() => ({ marks: 0, files: [] })),
+    db.prepare(
+      `SELECT
+         (SELECT COUNT(DISTINCT shop_id) FROM sold_watch WHERE shop_id IS NOT NULL) AS monitored,
+         (SELECT COUNT(*) FROM shop_baselines WHERE state = 'complete') AS complete,
+         (SELECT COUNT(*) FROM shop_baselines WHERE state = 'partial') AS partial,
+         (SELECT COUNT(*) FROM shop_listings) AS known_listings,
+         (SELECT COUNT(*) FROM shop_listings WHERE missing_since IS NOT NULL) AS missing_listings,
+         (SELECT MIN(completed_at) FROM shop_baselines WHERE state = 'complete') AS oldest_baseline,
+         (SELECT SUM(truncated) FROM shop_baselines) AS truncated`).first<Record<string, number | string>>(),
     db.prepare(
       `SELECT interval_id, shop_id, listings_inspected, events_created, units_attributed,
               units_unresolved, conflicts, delay_ms, finished_at
@@ -156,12 +180,41 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
       variationInventoryFlag: variationInventoryEnabled() ? "on" : "off",
     },
 
+    baselines: {
+      monitoredShops: Number(baselines?.monitored ?? 0),
+      fullyBaselined: Number(baselines?.complete ?? 0),
+      partiallyBaselined: Number(baselines?.partial ?? 0),
+      unbaselined: Number(baselines?.monitored ?? 0)
+        - Number(baselines?.complete ?? 0) - Number(baselines?.partial ?? 0),
+      knownListings: Number(baselines?.known_listings ?? 0),
+      /* The number this whole exercise exists to move: 2.2 was the reason
+         most sales were unexplainable. */
+      knownListingsPerShop: Number(baselines?.complete ?? 0) > 0
+        ? Math.round((Number(baselines?.known_listings ?? 0)
+            / Number(baselines?.complete ?? 1)) * 10) / 10
+        : 0,
+      listingsCurrentlyMissing: Number(baselines?.missing_listings ?? 0),
+      shopsTruncatedAtPageCap: Number(baselines?.truncated ?? 0),
+      oldestBaseline: baselines?.oldest_baseline ?? null,
+    },
+
     attribution: {
       unitsObserved: units,
       unitsAttributed: attributed,
       unitsUnresolved: Number(intervals?.unresolved ?? 0),
       /* Denominator one: every unit any shop told us it sold. */
-      unitCoveragePercent: percent(attributed, units),
+      /* Everything observed, including intervals from before the shop was
+         known. Honest, but not a verdict on the detector. */
+      rawCoveragePercent: percent(attributed, units),
+      eligibleIntervals: Number(intervals?.eligible_intervals ?? 0),
+      eligibleUnitsObserved: Number(intervals?.eligible_units ?? 0),
+      eligibleUnitsAttributed: Number(intervals?.eligible_attributed ?? 0),
+      /* The only coverage figure that says anything about how well detection
+         works: intervals where the whole shop was known before it began. */
+      eligibleCoveragePercent: percent(
+        Number(intervals?.eligible_attributed ?? 0), Number(intervals?.eligible_units ?? 0)),
+      preBaselineUnresolved: Number(intervals?.pre_baseline_unresolved ?? 0),
+      postBaselineUnresolved: Number(intervals?.post_baseline_unresolved ?? 0),
       sellingShops: Number(shopsWithActivity?.selling ?? 0),
       shopsWithAnAttribution: Number(shopsWithActivity?.explained ?? 0),
       /* Denominator two: shops, not units. A shop where one of five sales was

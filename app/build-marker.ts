@@ -22,7 +22,9 @@
    scheduled sweep since favourites were added to it. */
 /* D1380 adopts the intervals that had no inspection job, and counts Etsy
    calls off the meter the whole application shares. */
-export const BUILD_MARKER = "D1380";
+/* D1381 enumerates every listing in every monitored shop, so a shop's sales
+   stop being unexplainable by construction. */
+export const BUILD_MARKER = "D1381";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
