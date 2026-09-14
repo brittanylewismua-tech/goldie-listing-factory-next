@@ -41,7 +41,9 @@
 /* D1391 gives Shop Map a link that asks Etsy for sales permission, and asks
    Printify which of its shops is the Etsy one. */
 /* D1392 stops a wrong header being recorded as a refused permission. */
-export const BUILD_MARKER = "D1392";
+/* D1393 authorises sales access for one saved shop without moving the shop
+   the Listing Factory publishes to. */
+export const BUILD_MARKER = "D1393";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

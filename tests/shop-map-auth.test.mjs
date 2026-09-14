@@ -106,3 +106,65 @@ test("a refusal is only recorded when Etsy says it is about permission", () => {
   assert.match(auth, /scope\|permission\|not authorized\|unauthorized/);
   assert.match(auth, /evidence: aboutScope \? "probed" : "legacy-unknown"/);
 });
+
+test("the browser never names the shop being authorised", () => {
+  /* A shop id in a query string is a number anybody can change. The server
+     issues an opaque handle against a connection it has already confirmed
+     belongs to the caller, and the handle is all the browser carries. */
+  const targets = read("shop-map-targets.ts");
+  const connect = read("api/shop-map/connect-sales/route.ts");
+  assert.match(targets, /crypto\.getRandomValues/);
+  assert.match(targets, /WHERE handle = \? AND user_id = \? AND expires_at > unixepoch\(\)/);
+  assert.match(connect, /readTarget\(user\.userId, handle\)/);
+  assert.doesNotMatch(connect, /searchParams\.get\("shop"\)/);
+});
+
+test("the intended shop travels server-side, not in the redirect", () => {
+  const connect = read("api/shop-map/connect-sales/route.ts");
+  assert.match(connect, /target_shop_id/);
+  assert.match(connect, /INSERT INTO etsy_oauth_states/);
+});
+
+test("a sales authorisation never changes the active shop", () => {
+  const branch = callback.slice(
+    callback.indexOf('if(intent==="sales"'),
+    callback.indexOf("const existing=adding?"));
+  assert.ok(branch.length > 200, "the sales branch must exist");
+  assert.doesNotMatch(branch, /is_active/);
+  assert.match(branch, /UPDATE etsy_connections SET encrypted_access_token/);
+  assert.match(branch, /WHERE user_id=\? AND shop_id=\?/);
+});
+
+test("authorising the wrong Etsy account is refused, and both connections survive", () => {
+  const branch = callback.slice(
+    callback.indexOf('if(intent==="sales"'),
+    callback.indexOf("const existing=adding?"));
+  assert.match(branch, /if\(Number\(shop\.shop_id\)!==Number\(pending\.target_shop_id\)\)/);
+  /* The refusal must come before any write. */
+  assert.ok(branch.indexOf("return fail(wrongEtsyAccountMessage") <
+    branch.indexOf("UPDATE etsy_connections"),
+    "the mismatch check must precede the token write");
+});
+
+test("the granted scopes are stored against the intended connection", () => {
+  const branch = callback.slice(
+    callback.indexOf('if(intent==="sales"'),
+    callback.indexOf("const existing=adding?"));
+  assert.match(branch, /scopes=\?, scopes_checked_at=CURRENT_TIMESTAMP/);
+  assert.match(branch, /String\(tokens\.scope\|\|""\)/);
+});
+
+test("the member lands back on that shop's capability state", () => {
+  const branch = callback.slice(
+    callback.indexOf('if(intent==="sales"'),
+    callback.indexOf("const existing=adding?"));
+  assert.match(branch, /\/api\/shop-map\/capability\?shop=\$\{pending\.target_shop_id\}/);
+});
+
+test("capability can be asked about one shop without activating it", () => {
+  const cap = read("api/shop-map/capability/route.ts");
+  assert.match(cap, /searchParams\.get\("shop"\)/);
+  assert.match(cap, /grants nothing and is not trusted/);
+  /* And the probe refuses to answer for a shop whose token it does not hold. */
+  assert.match(auth, /if \(shopId && shopId !== Number\(row\.shop_id\)\)/);
+});

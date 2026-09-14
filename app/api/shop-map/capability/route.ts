@@ -11,11 +11,14 @@ import { salesCapability } from "@/app/shop-map-auth";
  * demands a new permission the moment it loads is how members learn to click
  * away — it reports, and Shop Map shows one button if the answer is no.
  */
-export const GET = withErrorLog("shop-map-capability", async () => {
+export const GET = withErrorLog("shop-map-capability", async (request: Request) => {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
 
-  const capability = await salesCapability(user.userId);
+  /* A shop id here only ever selects among the caller's own connections; it
+     grants nothing and is not trusted for anything else. */
+  const asked = Number(new URL(request.url).searchParams.get("shop")) || undefined;
+  const capability = await salesCapability(user.userId, asked);
   return NextResponse.json({
     ...capability,
     /* The sentence the member reads, written here so the page cannot invent a

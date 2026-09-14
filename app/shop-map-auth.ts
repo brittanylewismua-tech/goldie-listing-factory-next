@@ -36,6 +36,13 @@ export async function ensureScopeColumn(): Promise<void> {
       if (!/duplicate column/i.test(error instanceof Error ? error.message : "")) throw error;
     }
   }
+  /* The shop a Shop Map authorisation was started for, carried server-side so
+     the callback can refuse an authorisation that came back for another. */
+  try {
+    await db().prepare(`ALTER TABLE etsy_oauth_states ADD COLUMN target_shop_id INTEGER`).run();
+  } catch (error) {
+    if (!/duplicate column/i.test(error instanceof Error ? error.message : "")) throw error;
+  }
 }
 
 export type Capability = {
@@ -55,14 +62,24 @@ export type Capability = {
  * than assume either way the question is put to Etsy once and the answer is
  * stored — a 403 on a single receipt read is cheap and unambiguous.
  */
-export async function salesCapability(userId: string): Promise<Capability> {
+export async function salesCapability(userId: string, shopId?: number): Promise<Capability> {
   await ensureScopeColumn();
-  const row = await db()
-    .prepare(
-      `SELECT shop_id, shop_name, scopes FROM etsy_connections
-        WHERE user_id = ? AND is_active = 1`)
-    .bind(userId)
-    .first<{ shop_id: number; shop_name: string; scopes: string | null }>();
+  /* A shop may be asked about by name without being the active one: Shop Map
+     is per shop, and the shop it reports on is not necessarily the shop the
+     Listing Factory publishes to. */
+  const row = shopId
+    ? await db()
+      .prepare(
+        `SELECT shop_id, shop_name, scopes FROM etsy_connections
+          WHERE user_id = ? AND shop_id = ?`)
+      .bind(userId, shopId)
+      .first<{ shop_id: number; shop_name: string; scopes: string | null }>()
+    : await db()
+      .prepare(
+        `SELECT shop_id, shop_name, scopes FROM etsy_connections
+          WHERE user_id = ? AND is_active = 1`)
+      .bind(userId)
+      .first<{ shop_id: number; shop_name: string; scopes: string | null }>();
 
   if (!row) return { connected: false, shopId: null, shopName: "", canReadSales: false, evidence: "none" };
   const base = { connected: true, shopId: Number(row.shop_id), shopName: String(row.shop_name ?? "") };
@@ -74,7 +91,10 @@ export async function salesCapability(userId: string): Promise<Capability> {
       evidence: "granted",
     };
 
-  /* No record of the grant: ask Etsy rather than guess. */
+  /* No record of the grant: ask Etsy rather than guess. Only for the active
+     connection, because the probe borrows the active token and asking it
+     about another shop proves nothing about that shop's grant. */
+  if (shopId && shopId !== Number(row.shop_id)) return { ...base, canReadSales: false, evidence: "legacy-unknown" };
   try {
     const connection = await etsyConnection(userId);
     const response = await fetch(
