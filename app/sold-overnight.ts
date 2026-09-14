@@ -665,8 +665,20 @@ export async function discover(pages = DISCOVERY_PAGES): Promise<number> {
           /* IGNORE, not REPLACE: a listing already in the corpus carries its
              last reading, and overwriting it here would erase the very number
              the next sweep subtracts from. */
-          `INSERT OR IGNORE INTO sold_watch (listing_id,shop_id,title,url,taxonomy_id)
-           VALUES (?,?,?,?,?)`)
+          /*
+            SIX VALUES WERE BOUND TO FIVE PLACEHOLDERS, AND favorites - the
+            column the sixth was meant for - was not in the list at all.
+
+            D1 rejects the whole statement, so every discovery call threw, so
+            runSweep threw before it ever reached the reading pass. The
+            scheduled sweep had been dead for every one of its firings; only
+            the page-load nudge kept the board moving, because that one passes
+            discovery:false and never reaches this line. The corpus stopped
+            growing and nothing said so except a 500 in the error log every
+            twenty minutes.
+          */
+          `INSERT OR IGNORE INTO sold_watch (listing_id,shop_id,title,url,taxonomy_id,favorites)
+           VALUES (?,?,?,?,?,?)`)
           .bind(
             Number(row.listing_id), Number(row.shop_id) || null,
             String(row.title ?? "").slice(0, 300), String(row.url ?? ""),

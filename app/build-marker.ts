@@ -18,7 +18,9 @@
    every difference an event, and a shop sensor says where to look. */
 /* D1378 inspects the shop that just sold something, explains what it can from
    listing evidence, and leaves the rest honestly unresolved. */
-export const BUILD_MARKER = "D1378";
+/* D1379 repairs the discovery insert, which had been throwing on every
+   scheduled sweep since favourites were added to it. */
+export const BUILD_MARKER = "D1379";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
