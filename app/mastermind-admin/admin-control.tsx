@@ -19,11 +19,11 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
 
-  async function toggle() {
+  async function toggle(disconnect = false) {
     setWorking(true);
     setError("");
     try {
-      const response = await fetch("/api/mastermind/admin", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ active:!active }) });
+      const response = await fetch("/api/mastermind/admin", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ active:!active, disconnect }) });
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "The access setting could not be changed.");
       setActive(!active);
@@ -40,9 +40,10 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
       <h1>Mastermind testing</h1>
       <p><b>{active ? "Access is ON" : "Access is OFF"}</b><br />{memberCount} ChatGPT account{memberCount === 1 ? "" : "s"} redeemed the code.</p>
       <a className="access-link" href="/operations">Open Etsy operations</a>
-      <button className={active ? "revoke-button" : "activate-button"} disabled={working} onClick={toggle}>{working ? "Updating…" : active ? "Revoke access for everyone" : "Turn mastermind access back on"}</button>
+      <button className={active ? "revoke-button" : "activate-button"} disabled={working} onClick={() => void toggle(false)}>{working ? "Updating…" : active ? "Pause access for everyone" : "Turn mastermind access back on"}</button>
+      {active && <button className="revoke-button revoke-hard" disabled={working} onClick={() => void toggle(true)}>Pause and disconnect Printify</button>}
       {error && <p className="access-error" role="alert">{error}</p>}
-      <p className="admin-note">Turning access off also removes saved Printify tokens for mastermind testers. Your owner test page remains available.</p>
+      <p className="admin-note">Pausing closes the door and keeps everything: nobody can get in, and every tester&apos;s saved Printify connection survives, so turning it back on needs nothing from them. Disconnecting also deletes those saved tokens, which cannot be undone from here — each tester would have to reconnect Printify themselves. Your owner test page remains available either way.</p>
     </div>
     <section className="diagnostics-card">
       <p className="mini-label">ERROR LOG</p>

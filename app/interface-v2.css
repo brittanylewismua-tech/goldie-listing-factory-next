@@ -4626,3 +4626,10 @@ html, body { background: var(--lf-paper); }
   border-style:dashed;background:none;color:#8b8390}
 .sold-page .sold-windows button:disabled:hover{border-color:var(--line,#5b354f29)}
 .sold-page .sold-windows button small{font-weight:600;opacity:.8;margin-left:2px}
+
+/* PAUSE AND DISCONNECT — the destructive half of the owner control. Quieter
+   than the pause button on purpose: deleting seven testers' Printify tokens is
+   never the thing you reach for first. */
+.admin-access-shell .revoke-hard{background:none;border:1px solid #c9505f;
+  color:#a33b49;margin-top:8px;font-size:13px}
+.admin-access-shell .revoke-hard:hover{background:#fdf3f4}

@@ -12,6 +12,8 @@
 /* D1375 stops the board recommending somebody else's trademark. */
 /* D1376 gives the trademark checker the real federal register, loaded from
    USPTO's bulk files a piece at a time. */
+/* D1376 lets mastermind access be paused without deleting anyone's Printify
+   connection. */
 export const BUILD_MARKER = "D1376";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
