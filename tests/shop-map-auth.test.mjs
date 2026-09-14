@@ -76,3 +76,16 @@ test("the scope column is added by ALTER, because IF NOT EXISTS is a no-op", () 
   assert.match(auth, /ALTER TABLE etsy_connections ADD COLUMN/);
   assert.match(auth, /duplicate column/i);
 });
+
+test("the sales authorization is a plain link, and asks for exactly one extra scope", () => {
+  /* A flow that can only be started by a POST from one screen cannot be handed
+     to somebody as a link, which is what testing and support both need. */
+  const connect = readFileSync(
+    new URL("../app/api/shop-map/connect-sales/route.ts", import.meta.url), "utf8");
+  assert.match(connect, /export const GET/);
+  assert.match(connect, /scope: SHOP_MAP_SCOPES/);
+  assert.match(connect, /code_challenge_method: "S256"/);
+  assert.match(connect, /INSERT INTO etsy_oauth_states/);
+  /* And it must not touch the existing connection on the way out. */
+  assert.doesNotMatch(connect, /etsy_connections/);
+});

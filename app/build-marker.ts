@@ -38,7 +38,9 @@
 /* D1388 stops one unreadable file blocking the whole register queue. */
 /* D1389 parks every documentation file at once instead of one a firing. */
 /* D1390 creates a new column's index after the column exists. */
-export const BUILD_MARKER = "D1390";
+/* D1391 gives Shop Map a link that asks Etsy for sales permission, and asks
+   Printify which of its shops is the Etsy one. */
+export const BUILD_MARKER = "D1391";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
