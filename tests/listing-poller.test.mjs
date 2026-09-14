@@ -155,6 +155,14 @@ test("the ten-minute clock drives the poller and nothing else", () => {
   assert.match(wrangler, /"\*\/10 \* \* \* \*", "\*\/20 \* \* \* \*"/);
 });
 
+test("the lock outlasts a full sweep", () => {
+  /* Measured at 2.8 seconds a batch across 154 batches: about seven minutes.
+     A five-minute lock would expire mid-sweep and let the next firing start
+     on top of it. */
+  assert.match(poller, /claimLock\("listing-poller", holder, 900\)/);
+  assert.match(poller, /THE LOCK HAS TO OUTLAST THE SWEEP/);
+});
+
 test("large shops are not excluded from anything", () => {
   /* Direct batch polling makes shop size irrelevant once a listing is in the
      corpus, so no size threshold may appear in the poller. */

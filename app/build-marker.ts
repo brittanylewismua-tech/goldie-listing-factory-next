@@ -28,7 +28,8 @@
    shop counter as corroboration and a cap rather than as a score. */
 /* D1383 fixes the upsert SQLite would not parse, and takes the whole-shop
    backfill off the clock. */
-export const BUILD_MARKER = "D1383";
+/* D1384 sizes the sweep and its lock against what a full pass measured. */
+export const BUILD_MARKER = "D1384";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

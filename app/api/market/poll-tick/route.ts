@@ -17,6 +17,8 @@ export const GET = withErrorLog("market-poll-tick", async (request: Request) => 
     if (!user || !isOwner(user)) return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
   const asked = Number(new URL(request.url).searchParams.get("batches"));
-  const maxBatches = Number.isFinite(asked) && asked > 0 ? Math.min(asked, 200) : 40;
+  /* The whole corpus is 154 batches; the default covers it with room for the
+     corpus to grow before anyone has to think about tiers. */
+  const maxBatches = Number.isFinite(asked) && asked > 0 ? Math.min(asked, 200) : 160;
   return NextResponse.json(await pollSweep({ maxBatches }));
 });

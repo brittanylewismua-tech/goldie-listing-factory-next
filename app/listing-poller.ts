@@ -216,7 +216,7 @@ export type SweepResult = {
  * covers everything in rotation rather than favouring the same listings.
  */
 export async function pollSweep(
-  { maxBatches = 40 }: { maxBatches?: number } = {},
+  { maxBatches = 160 }: { maxBatches?: number } = {},
 ): Promise<SweepResult> {
   await ensureMarketTables();
   await ensurePollTables();
@@ -228,7 +228,14 @@ export async function pollSweep(
   };
 
   const holder = crypto.randomUUID();
-  if (!(await claimLock("listing-poller", holder, 300)))
+  /*
+    THE LOCK HAS TO OUTLAST THE SWEEP.
+
+    Measured: 2.8 seconds a batch, 154 batches, so a full pass takes about
+    seven minutes. A five-minute lock would expire mid-sweep and let the next
+    firing start on top of it — which is the overlap the lock exists to stop.
+  */
+  if (!(await claimLock("listing-poller", holder, 900)))
     return { ...result, skipped: "A sweep was already running." };
 
   try {
