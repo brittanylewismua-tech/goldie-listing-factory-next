@@ -95,8 +95,12 @@ export const GET = withErrorLog("shop-map-artwork-coverage", async (request: Req
   let productsGone = 0;
   let productsWithPrintImage = 0;
   const productStatuses: Record<string, number> = {};
+  /* Kept per product, so a transaction can be asked whether ITS product
+     survived rather than whether any product did. */
+  const productOutcome = new Map<string, number>();
   for (const productId of historicalProductIds) {
     const answer = await printify(`/shops/${printifyShopId}/products/${productId}.json`);
+    productOutcome.set(productId, answer.status);
     productStatuses[String(answer.status)] = (productStatuses[String(answer.status)] ?? 0) + 1;
     if (answer.status !== 200) { productsGone += 1; continue; }
     productsAlive += 1;
@@ -150,22 +154,51 @@ export const GET = withErrorLog("shop-map-artwork-coverage", async (request: Req
   }
 
   /* --------------------------------------------------------- the buckets */
+
+  /*
+    THE FINDING THAT MATTERS, AND IT IS NOT THE PRINTIFY ONE.
+
+    Every transaction names a `listing_image_id`. Etsy issues image ids per
+    upload and never reassigns them, so if that id is still among the
+    listing's images, the image the buyer actually saw is still retrievable —
+    an order-time visual record, which Printify does not provide at all.
+
+    A listing whose images were replaced loses that id, and the absence is
+    itself the signal: it is how a changed listing tells on itself.
+  */
+  const imagesByListing = new Map<number, Set<number>>();
+  for (const listingId of listingIds) {
+    const answer = await etsy(`/listings/${listingId}/images`);
+    if (answer.status !== 200) continue;
+    const rows = ((answer.parsed as { results?: Array<{ listing_image_id?: number }> })?.results) ?? [];
+    imagesByListing.set(listingId, new Set(rows.map(row => Number(row.listing_image_id ?? 0))));
+  }
+  const stillHasItsImage = (row: { listingId: number; listingImageId: number }) =>
+    row.listingImageId > 0 && Boolean(imagesByListing.get(row.listingId)?.has(row.listingImageId));
+
+  const withOrderTimeImage = transactions.filter(stillHasItsImage).length;
+  const changedSinceSale = transactions.filter(row =>
+    listingsWithImages.has(row.listingId) && !stillHasItsImage(row)).length;
+
+  /* Printable artwork survives only where the product itself does. */
+  const liveProducts = new Set<string>();
+  for (const [productId, status] of productOutcome) if (status === 200) liveProducts.add(productId);
+  const receiptOfTransaction = new Map<number, number>();
+  for (const receipt of receiptRows)
+    for (const transaction of receipt.transactions ?? [])
+      receiptOfTransaction.set(Number(transaction.transaction_id ?? 0), Number(receipt.receipt_id ?? 0));
+  const productOfReceipt = new Map<string, string>();
+  for (const order of orders) {
+    const receiptId = String(order.metadata?.shop_order_id ?? "");
+    const productId = String((order.line_items ?? [])[0]?.product_id ?? "");
+    if (receiptId && productId) productOfReceipt.set(receiptId, productId);
+  }
   const withPrintable = transactions.filter(row => {
-    /* A transaction has exact printable artwork only when its order's product
-       still exists AND still carries a print image. */
-    const order = orders.find(candidate =>
-      String(candidate.metadata?.shop_order_id ?? "") ===
-      String(receiptRows.find(receipt =>
-        (receipt.transactions ?? []).some(t => Number(t.transaction_id) === row.transactionId))?.receipt_id ?? ""));
-    const productId = String((order?.line_items ?? [])[0]?.product_id ?? "");
-    return productId !== "" && productsAlive > 0 && historicalProductIds.has(productId)
-      && productStatuses["200"] > 0;
+    const productId = productOfReceipt.get(String(receiptOfTransaction.get(row.transactionId) ?? ""));
+    return Boolean(productId && liveProducts.has(productId));
   }).length;
 
-  const withListingImage = transactions.filter(row => listingsWithImages.has(row.listingId)).length;
-  const withNothing = transactions.filter(row =>
-    !listingsWithImages.has(row.listingId)).length - Math.min(withPrintable, transactions.length);
-
+  const withNothing = transactions.filter(row => !listingsWithImages.has(row.listingId)).length;
   const share = (count: number) =>
     transactions.length ? Math.round((count / transactions.length) * 1000) / 10 : 0;
 
@@ -199,10 +232,13 @@ export const GET = withErrorLog("shop-map-artwork-coverage", async (request: Req
       buyer saw.
     */
     coverage: {
-      exactPrintableArtworkPercent: share(withPrintable),
-      currentProductArtworkPercent: share(productsWithPrintImage > 0 ? withPrintable : 0),
-      etsyListingImagePercent: share(withListingImage),
-      noImageAvailablePercent: share(Math.max(0, withNothing)),
+      /* The printable file itself, from a product that still exists. */
+      exactPrintableArtwork: { transactions: withPrintable, percent: share(withPrintable) },
+      /* The image Etsy recorded for that transaction, still present. */
+      orderTimeEtsyImage: { transactions: withOrderTimeImage, percent: share(withOrderTimeImage) },
+      /* Listing has images, but not the one the sale named: changed since. */
+      changedSinceSale: { transactions: changedSinceSale, percent: share(changedSinceSale) },
+      noImageAvailable: { transactions: withNothing, percent: share(withNothing) },
     },
 
     caveat: "A current Etsy listing image is not an order-time snapshot. It is useful historical evidence only where the listing has not been visually changed since the sale, which this cannot establish.",
