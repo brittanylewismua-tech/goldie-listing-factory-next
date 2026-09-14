@@ -78,9 +78,19 @@ export const GET = withErrorLog("shop-map-financial-survey", async (request: Req
   const transactionsOf = (receipt: Record<string, unknown> | undefined) =>
     ((receipt?.transactions ?? []) as Array<Record<string, unknown>>);
 
-  const ledger = await call(
+  /*
+    The ledger refused a ninety-day window with a 400 and no explanation worth
+    repeating, so both spellings are tried and whichever answers is reported.
+    Etsy's error body is carried through verbatim: a 400 that nobody reads is
+    how a fee ends up quietly missing from a profit figure.
+  */
+  const windowed = await call(
     `/shops/${shopId}/payment-account/ledger-entries?limit=${limit}` +
     `&min_created=${Math.floor(Date.now() / 1000) - 90 * 86_400}&max_created=${Math.floor(Date.now() / 1000)}`);
+  const plain = windowed.status === 200
+    ? windowed
+    : await call(`/shops/${shopId}/payment-account/ledger-entries?limit=${limit}`);
+  const ledger = plain;
   const ledgerRows = ((ledger.parsed as { results?: Array<Record<string, unknown>> })?.results) ?? [];
 
   /*
@@ -128,11 +138,18 @@ export const GET = withErrorLog("shop-map-financial-survey", async (request: Req
     },
     payments: {
       status: payments.status,
+      /* A 404 here may mean "no payment record for this receipt" rather than
+         "wrong path", and the two need telling apart before any fee is
+         called missing. */
+      said: payments.status === 200 ? null : (payments.parsed ?? payments.text),
+      receiptTried: firstReceiptId ?? null,
       shape: ((payments.parsed as { results?: unknown[] })?.results ?? [])[0]
         ? shapeOf(((payments.parsed as { results?: unknown[] }).results ?? [])[0]) : null,
     },
     ledger: {
       status: ledger.status,
+      windowedStatus: windowed.status,
+      said: ledger.status === 200 ? null : (ledger.parsed ?? ledger.text),
       returned: ledgerRows.length,
       kinds: ledgerKinds,
       shape: ledgerRows[0] ? shapeOf(ledgerRows[0]) : null,
