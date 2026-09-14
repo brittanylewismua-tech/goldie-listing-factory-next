@@ -11,7 +11,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { reconcile, WINDOW_SECONDS } from "../app/shop-map-match.ts";
-import { add, fromEtsy, fromPrintify, money, subtract, format } from "../app/shop-map-money.ts";
+import { addMoney, fromEtsy, fromPrintify, minorUnits, subtractMoney, formatMoney } from "../app/shop-map-money.ts";
 
 const NOW = 1_789_000_000;
 const etsy = (over = {}) => ({
@@ -97,16 +97,16 @@ test("Etsy money is read through its divisor, never assumed", () => {
 test("money stays integral through a whole profit calculation", () => {
   const revenue = fromEtsy({ amount: 4200, divisor: 100, currency_code: "USD" });
   const shipping = fromEtsy({ amount: 599, divisor: 100, currency_code: "USD" });
-  const fees = money(-1_03 - 3_00, "USD");
+  const fees = minorUnits(-1_03 - 3_00, "USD");
   const cost = fromPrintify(1_842, "USD");
   const production = fromPrintify(4_99, "USD");
-  const profit = subtract(add(revenue, shipping), money(403, "USD"), cost, production);
+  const profit = subtractMoney(addMoney(revenue, shipping), minorUnits(403, "USD"), cost, production);
   assert.equal(Number.isInteger(profit.minor), true);
   assert.equal(profit.minor, 4200 + 599 - 403 - 1842 - 499);
-  assert.equal(format(profit), "20.55 USD");
+  assert.equal(formatMoney(profit), "20.55 USD");
   assert.equal(fees.currency, "USD");
 });
 
 test("two currencies are refused rather than quietly added", () => {
-  assert.throws(() => add(money(100, "USD"), money(100, "GBP")), /Cannot add GBP to USD/);
+  assert.throws(() => addMoney(minorUnits(100, "USD"), minorUnits(100, "GBP")), /Cannot add GBP to USD/);
 });

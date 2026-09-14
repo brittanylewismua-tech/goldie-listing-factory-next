@@ -14,10 +14,10 @@
 
 export type Money = { minor: number; currency: string };
 
-export const money = (minor: number, currency: string): Money =>
+export const minorUnits = (minor: number, currency: string): Money =>
   ({ minor: Math.round(minor), currency: currency.toUpperCase() });
 
-export const ZERO = (currency: string): Money => money(0, currency);
+export const zeroMoney = (currency: string): Money => minorUnits(0, currency);
 
 /**
  * An Etsy money object.
@@ -28,33 +28,33 @@ export const ZERO = (currency: string): Money => money(0, currency);
  */
 export function fromEtsy(value: unknown, fallbackCurrency = "USD"): Money {
   const row = (value ?? {}) as { amount?: number; divisor?: number; currency_code?: string };
-  if (typeof row.amount !== "number") return ZERO(fallbackCurrency);
+  if (typeof row.amount !== "number") return zeroMoney(fallbackCurrency);
   const divisor = Number(row.divisor) || 100;
   /* Minor units are the amount scaled to hundredths of the major unit when the
      divisor says otherwise, so everything downstream compares like with like. */
   const minor = divisor === 100 ? row.amount : Math.round((row.amount / divisor) * 100);
-  return money(minor, String(row.currency_code ?? fallbackCurrency));
+  return minorUnits(minor, String(row.currency_code ?? fallbackCurrency));
 }
 
 /** Printify sends integers already in minor units. */
 export const fromPrintify = (value: unknown, currency: string): Money =>
-  money(typeof value === "number" ? value : 0, currency);
+  minorUnits(typeof value === "number" ? value : 0, currency);
 
-export function add(...amounts: Money[]): Money {
+export function addMoney(...amounts: Money[]): Money {
   const present = amounts.filter(Boolean);
-  if (!present.length) return ZERO("USD");
+  if (!present.length) return zeroMoney("USD");
   const currency = present[0].currency;
   for (const amount of present)
     if (amount.currency !== currency)
       /* Refusing is the only honest option: a total that silently mixed
          currencies would look perfectly reasonable and be wrong. */
       throw new Error(`Cannot add ${amount.currency} to ${currency}`);
-  return money(present.reduce((sum, amount) => sum + amount.minor, 0), currency);
+  return minorUnits(present.reduce((sum, amount) => sum + amount.minor, 0), currency);
 }
 
-export const subtract = (from: Money, ...amounts: Money[]): Money =>
-  add(from, ...amounts.map(amount => money(-amount.minor, amount.currency)));
+export const subtractMoney = (from: Money, ...amounts: Money[]): Money =>
+  addMoney(from, ...amounts.map(amount => minorUnits(-amount.minor, amount.currency)));
 
 /** For display and reports only. Never for arithmetic. */
-export const format = (amount: Money): string =>
+export const formatMoney = (amount: Money): string =>
   `${(amount.minor / 100).toFixed(2)} ${amount.currency}`;

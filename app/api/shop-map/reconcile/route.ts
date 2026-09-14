@@ -5,7 +5,7 @@ import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
-import { add, format, fromEtsy, fromPrintify, money, subtract, type Money } from "@/app/shop-map-money";
+import { addMoney, formatMoney, fromEtsy, fromPrintify, minorUnits, subtractMoney, type Money } from "@/app/shop-map-money";
 import { reconcile, type EtsyLine, type PrintifyLine } from "@/app/shop-map-match";
 
 /**
@@ -77,28 +77,28 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
 
   const etsyLines: EtsyLine[] = [];
   const currency = "USD";
-  let productRevenue = money(0, currency);
-  let shippingCollected = money(0, currency);
-  let discounts = money(0, currency);
-  let refunded = money(0, currency);
-  let salesTax = money(0, currency);
+  let productRevenue = minorUnits(0, currency);
+  let shippingCollected = minorUnits(0, currency);
+  let discounts = minorUnits(0, currency);
+  let refunded = minorUnits(0, currency);
+  let salesTax = minorUnits(0, currency);
 
   for (const receipt of receipts) {
     const createdAt = Number(receipt.created_timestamp ?? receipt.create_timestamp ?? 0);
-    shippingCollected = add(shippingCollected, fromEtsy(receipt.total_shipping_cost, currency));
-    discounts = add(discounts, fromEtsy(receipt.discount_amt, currency));
+    shippingCollected = addMoney(shippingCollected, fromEtsy(receipt.total_shipping_cost, currency));
+    discounts = addMoney(discounts, fromEtsy(receipt.discount_amt, currency));
     /* Marketplace-collected tax is not the seller's revenue and never enters
        the total. It is reported so its absence is visible rather than
        mysterious. */
-    salesTax = add(salesTax, fromEtsy(receipt.total_tax_cost, currency),
+    salesTax = addMoney(salesTax, fromEtsy(receipt.total_tax_cost, currency),
       fromEtsy(receipt.total_vat_cost, currency));
     for (const refund of receipt.refunds ?? [])
-      refunded = add(refunded, fromEtsy(refund.amount, currency));
+      refunded = addMoney(refunded, fromEtsy(refund.amount, currency));
 
     for (const transaction of receipt.transactions ?? []) {
       const line = fromEtsy(transaction.price, currency);
-      productRevenue = add(productRevenue,
-        money(line.minor * Number(transaction.quantity ?? 1), currency));
+      productRevenue = addMoney(productRevenue,
+        minorUnits(line.minor * Number(transaction.quantity ?? 1), currency));
       etsyLines.push({
         receiptId: Number(receipt.receipt_id ?? 0),
         transactionId: Number(transaction.transaction_id ?? 0),
@@ -169,14 +169,14 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
   }
 
   const printifyLines: PrintifyLine[] = [];
-  let productionCost = money(0, currency);
-  let productionShipping = money(0, currency);
-  let printifyTax = money(0, currency);
+  let productionCost = minorUnits(0, currency);
+  let productionShipping = minorUnits(0, currency);
+  let printifyTax = minorUnits(0, currency);
   const costOf = new Map<string, { cost: Money; shipping: Money }>();
 
   for (const order of printifyOrders) {
     const createdAt = Math.floor(Date.parse(String(order.created_at ?? "").replace(" ", "T")) / 1000) || 0;
-    printifyTax = add(printifyTax, fromPrintify(order.total_tax, currency));
+    printifyTax = addMoney(printifyTax, fromPrintify(order.total_tax, currency));
     for (const item of order.line_items ?? []) {
       const cost = fromPrintify(item.cost, currency);
       const shipping = fromPrintify(item.shipping_cost, currency);
@@ -207,8 +207,8 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
     if (outcome.state === "matched") {
       const held = costOf.get(outcome.printify.lineItemId);
       if (held) {
-        productionCost = add(productionCost, held.cost);
-        productionShipping = add(productionShipping, held.shipping);
+        productionCost = addMoney(productionCost, held.cost);
+        productionShipping = addMoney(productionShipping, held.shipping);
       }
     } else if (outcome.state === "etsy_without_printify" || outcome.state === "ambiguous") {
       missingCost.push({
@@ -219,9 +219,9 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
     }
   }
 
-  const revenue = add(productRevenue, shippingCollected);
-  const knownCosts = add(productionCost, productionShipping, refunded);
-  const profitSoFar = subtract(revenue, knownCosts);
+  const revenue = addMoney(productRevenue, shippingCollected);
+  const knownCosts = addMoney(productionCost, productionShipping, refunded);
+  const profitSoFar = subtractMoney(revenue, knownCosts);
 
   /* Anonymous by construction: ids, SKUs, quantities and money only. */
   const examples = result.outcomes
@@ -245,8 +245,8 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
           sku: matched.printify.sku,
           quantity: matched.printify.quantity,
         },
-        productionCost: held ? format(held.cost) : null,
-        productionShipping: held ? format(held.shipping) : null,
+        productionCost: held ? formatMoney(held.cost) : null,
+        productionShipping: held ? formatMoney(held.shipping) : null,
       };
     });
 
@@ -257,19 +257,19 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
     etsy: {
       receipts: receipts.length,
       transactions: etsyLines.length,
-      productRevenue: format(productRevenue),
-      shippingCollected: format(shippingCollected),
-      discounts: format(discounts),
-      refunds: format(refunded),
+      productRevenue: formatMoney(productRevenue),
+      shippingCollected: formatMoney(shippingCollected),
+      discounts: formatMoney(discounts),
+      refunds: formatMoney(refunded),
       /* Excluded from revenue on purpose. */
-      marketplaceTaxExcluded: format(salesTax),
+      marketplaceTaxExcluded: formatMoney(salesTax),
     },
     printify: {
       orders: printifyOrders.length,
       lineItems: printifyLines.length,
-      productionCostMatched: format(productionCost),
-      productionShippingMatched: format(productionShipping),
-      taxOnAllOrders: format(printifyTax),
+      productionCostMatched: formatMoney(productionCost),
+      productionShippingMatched: formatMoney(productionShipping),
+      taxOnAllOrders: formatMoney(printifyTax),
     },
     identifierHits,
     reconciliation: { counts: result.counts, byMethod: result.byMethod },
@@ -282,7 +282,7 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
       be settled — so this is revenue minus the production costs that could be
       tied to a sale, and it is named for exactly that.
     */
-    revenueMinusMatchedCosts: format(profitSoFar),
+    revenueMinusMatchedCosts: formatMoney(profitSoFar),
     complete: missingCost.length === 0,
     stillMissing: [
       ...(missingCost.length ? ["production cost for some sales"] : []),
