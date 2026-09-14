@@ -81,29 +81,33 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
 
   const next = await db
     .prepare(
-      `SELECT name, product, url FROM tm_ingest_files
+      `SELECT name, product, url, done_records FROM tm_ingest_files
         WHERE state IN ('waiting', 'partial')
         ORDER BY priority ASC, name DESC
         LIMIT 1`,
     )
-    .first<{ name: string; product: string; url: string }>();
+    .first<{ name: string; product: string; url: string; done_records: number }>();
 
   if (!next) return NextResponse.json({ added, idle: true, ...(await registerSize(db)) });
 
   await db.prepare(`UPDATE tm_ingest_files SET state = 'running' WHERE name = ?`).bind(next.name).run();
 
   try {
-    const result = await ingestFile(db, next, key(), { deadline: Date.now() + DEADLINE_MS });
+    const result = await ingestFile(db, next, key(), {
+      deadline: Date.now() + DEADLINE_MS,
+      skip: Number(next.done_records ?? 0),
+    });
     await db
       .prepare(
         `UPDATE tm_ingest_files
-            SET state = ?, records = ?, kept = ?, note = '', finished = ?
+            SET state = ?, records = ?, kept = kept + ?, done_records = ?, note = '', finished = ?
           WHERE name = ?`,
       )
       .bind(
         result.complete ? "done" : "partial",
         result.records,
         result.kept,
+        result.complete ? 0 : result.records,
         new Date().toISOString(),
         next.name,
       )

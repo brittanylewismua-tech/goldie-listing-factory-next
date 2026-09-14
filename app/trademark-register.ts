@@ -45,12 +45,31 @@ export async function ensureRegisterTables(db: D1Database): Promise<void> {
       state TEXT NOT NULL DEFAULT 'waiting',
       priority INTEGER NOT NULL DEFAULT 5,
       records INTEGER NOT NULL DEFAULT 0,
+      done_records INTEGER NOT NULL DEFAULT 0,
       kept INTEGER NOT NULL DEFAULT 0,
       note TEXT NOT NULL DEFAULT '',
       finished TEXT
     )`),
     db.prepare(`CREATE INDEX IF NOT EXISTS tm_ingest_state ON tm_ingest_files (state, priority)`),
   ]);
+
+  /*
+    CREATE TABLE IF NOT EXISTS IS A NO-OP ON A TABLE THAT ALREADY EXISTS.
+
+    This codebase has lost three deploys to that fact: a column added to the
+    CREATE statement simply never appears on the live table, and the failure
+    shows up later as "no such column" in something unrelated. So every column
+    added after the first release is also stated as an ALTER, and the only
+    error tolerated is the one that means it is already there.
+  */
+  for (const column of ["done_records INTEGER NOT NULL DEFAULT 0"]) {
+    try {
+      await db.prepare(`ALTER TABLE tm_ingest_files ADD COLUMN ${column}`).run();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (!/duplicate column/i.test(message)) throw error;
+    }
+  }
 }
 
 const WRITE_BATCH = 100;
@@ -66,9 +85,15 @@ export async function ingestFile(
   db: D1Database,
   file: { name: string; url: string; product: string },
   apiKey: string,
-  options: { deadline?: number } = {},
+  options: { deadline?: number; skip?: number } = {},
 ): Promise<{ records: number; kept: number; complete: boolean }> {
   const deadline = options.deadline ?? Date.now() + 240_000;
+  /* A file too big to finish inside one firing is resumed by number of
+     records, not by byte offset: a deflate stream cannot be re-entered part
+     way, but skipping records already written costs only the inflating, and
+     that is what makes a hundred-and-thirty-megabyte file finish eventually
+     instead of restarting forever. */
+  const skip = options.skip ?? 0;
   const response = await fetch(file.url, {
     headers: { "X-API-KEY": apiKey, "user-agent": "Goldie/1.0 (+https://thegoldiesuite.com)" },
   });
@@ -100,6 +125,7 @@ export async function ingestFile(
 
   for await (const block of blocks(xml, "case-file")) {
     records += 1;
+    if (records <= skip) continue;
     const record = readRecord(block);
     if (!record.serial) continue;
     if (worthKeeping(record)) {
