@@ -42,31 +42,33 @@ export default {
       ctx.waitUntil(app.fetch(new Request(site + path), env, ctx).catch(() => {}));
 
     /*
-      TWO CLOCKS, DELIBERATELY.
+      TWO CLOCKS, AND THEY DO NOT SHARE WORK.
 
-      The listing poller is the detector and wants to run every ten minutes;
-      everything else is happy at twenty. Cloudflare fires a separate event per
-      cron expression and names it, so the ten-minute schedule drives the
-      poller and the twenty-minute one drives the rest. Both land together at
-      the hour and neither waits for the other.
+      Cloudflare fires a named event per cron expression. The ten-minute
+      schedule runs the listing poller and NOTHING else; the twenty-minute one
+      runs everything else and never touches the poller.
+
+      THAT SEPARATION IS LOAD-BEARING, and it was learned the hard way. While
+      the twenty-minute firing also started the poller, that seven-minute
+      sweep sat at the front of the queue and starved the work behind it: the
+      USPTO ingest ran its last file at 06:22 and then stopped dead for nine
+      hours with ninety-four files still waiting. Nothing failed loudly. The
+      only reason it was caught is that the ingest counters sit in the health
+      view, which is the whole argument for putting them there.
     */
-    const everyTenMinutes = event.cron === "*/10 * * * *";
+    if (event.cron === "*/10 * * * *") {
+      run("/api/market/poll-tick");
+      return;
+    }
 
-    /*
-      The poller reads the whole shared corpus in batches of a hundred. It is
-      what turns "did anything move" from a question about shops into a
-      question about the listings members actually care about.
-    */
-    run("/api/market/poll-tick");
-
-    if (everyTenMinutes) return;
-
+    /* Cheapest and most perishable first, so nothing important queues behind
+       a workload that might hang. */
     /* The cheapest question in the system: which shops sold anything. */
     run("/api/market/sensor-tick");
     /* And what the sensor found, inspected while the evidence still exists. */
     run("/api/market/inspect-tick");
-    /* The corpus sweep, which is what keeps discovery going. */
-    run("/api/sold-overnight/cron");
+    /* One USPTO bulk file. Bounded, and no longer last in the queue. */
+    run("/api/trademark/ingest-tick");
     /*
       Shop Watch keeps its evidence inside Etsy's six-hour display rule. The
       member-facing brief is generated once each morning; this only keeps the
@@ -76,13 +78,11 @@ export default {
       app.fetch(new Request(site + "/api/market/shop-watch", { method: "PUT" }), env, ctx)
         .catch(() => {}),
     );
-
-    /* The trademark register, one USPTO bulk file at a time. */
-    run("/api/trademark/ingest-tick");
+    /* The corpus sweep, which is what keeps discovery going. */
+    run("/api/sold-overnight/cron");
     /*
       Whole-shop enumeration is NOT on the clock. The estimate killed it as a
       production path — a median of 695 listings per shop and one with 11,202
-      — and every firing it did get timed out. The endpoint stays for research
       and for the modified-order experiment; nothing schedules it.
     */
   },

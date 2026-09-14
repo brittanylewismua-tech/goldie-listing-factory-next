@@ -33,7 +33,9 @@
    collected once however many members are watching it. */
 /* D1386 asks for Etsy sales permission only when Shop Map needs it, and never
    drops a working connection to get it. */
-export const BUILD_MARKER = "D1386";
+/* D1387 stops the poller starving the twenty-minute queue, and gives each
+   watched shop its own due time instead of refreshing all of them. */
+export const BUILD_MARKER = "D1387";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

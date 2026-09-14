@@ -150,7 +150,11 @@ test("polling tiers exist in the schema but no clever timing is switched on", ()
 test("the ten-minute clock drives the poller and nothing else", () => {
   assert.match(handler, /event\.cron === "\*\/10 \* \* \* \*"/);
   assert.match(handler, /run\("\/api\/market\/poll-tick"\)/);
-  assert.match(handler, /if \(everyTenMinutes\) return;/);
+  /* And the twenty-minute firing must NOT start a sweep. Measured: when it
+     did, its seven minutes starved the USPTO ingest for nine hours. */
+  const twentyMinuteBranch = handler.slice(handler.indexOf("run(\"/api/market/sensor-tick\")"));
+  assert.doesNotMatch(twentyMinuteBranch, /poll-tick/);
+  assert.match(handler, /starved/);
   const wrangler = readFileSync(new URL("../wrangler.staging.jsonc", import.meta.url), "utf8");
   assert.match(wrangler, /"\*\/10 \* \* \* \*", "\*\/20 \* \* \* \*"/);
 });

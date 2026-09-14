@@ -56,10 +56,13 @@ export async function ensureShopWatchTables(): Promise<void> {
       review_high_water INTEGER NOT NULL DEFAULT 0,
       reviews_bootstrapped INTEGER NOT NULL DEFAULT 0,
       refresh_failures INTEGER NOT NULL DEFAULT 0,
-      last_error TEXT NOT NULL DEFAULT ''
+      last_error TEXT NOT NULL DEFAULT '',
+      /* WHEN this shop is next due, rather than "whenever the cron fires".
+         Twenty minutes wakes the scheduler; it is not a refresh interval. */
+      next_refresh_at TEXT
     )`),
     db().prepare(
-      `CREATE INDEX IF NOT EXISTS watched_shops_stale ON watched_shops (last_refreshed)`),
+      `CREATE INDEX IF NOT EXISTS watched_shops_due ON watched_shops (next_refresh_at)`),
 
     /* The personal side: who watches what. The shop is not duplicated. */
     db().prepare(`CREATE TABLE IF NOT EXISTS member_shop_watches (
@@ -104,6 +107,31 @@ export async function ensureShopWatchTables(): Promise<void> {
     db().prepare(`CREATE INDEX IF NOT EXISTS shop_reviews_shop ON shop_reviews (shop_id, created_at DESC)`),
     db().prepare(`CREATE INDEX IF NOT EXISTS shop_reviews_listing ON shop_reviews (listing_id)`),
   ]);
+
+  /* CREATE TABLE IF NOT EXISTS is a no-op on a table that already exists. */
+  for (const column of ["next_refresh_at TEXT"]) {
+    try {
+      await db().prepare(`ALTER TABLE watched_shops ADD COLUMN ${column}`).run();
+    } catch (error) {
+      if (!/duplicate column/i.test(error instanceof Error ? error.message : "")) throw error;
+    }
+  }
+}
+
+/**
+ * WHEN IS THIS SHOP NEXT DUE?
+ *
+ * Inside the six-hour rule, and jittered. Every shop added on the same
+ * afternoon would otherwise come due in the same minute forever, and a spike
+ * that size would push every other Etsy workload aside four times a day for
+ * no benefit at all — nothing about a competitor's shop changes meaningfully
+ * between five and six hours.
+ */
+export function nextRefreshAt(from = Date.now()): string {
+  const base = FRESH_HOURS * 3_600_000;
+  /* Comfortably inside the window, spread across roughly an hour. */
+  const due = from + base * 0.75 + Math.floor(Math.random() * base * 0.15);
+  return new Date(due).toISOString();
 }
 
 async function etsy(path: string, feature: "search" | "qa" = "search") {
@@ -391,10 +419,11 @@ export async function refreshShop(shopId: number): Promise<ShopRefresh> {
       db().prepare(
         `UPDATE watched_shops
             SET sold_count = ?, favorers = ?, active_count = ?, review_count = ?,
-                last_refreshed = ?, refresh_failures = 0, last_error = ''
+                last_refreshed = ?, next_refresh_at = ?, refresh_failures = 0, last_error = ''
           WHERE shop_id = ?`)
         .bind(soldCount, Number(shop.num_favorers ?? 0),
-          Number(shop.listing_active_count ?? 0), reviewCount, observedAt, shopId),
+          Number(shop.listing_active_count ?? 0), reviewCount, observedAt,
+          nextRefreshAt(), shopId),
     ]);
     if (previous?.sold_count !== null && previous?.sold_count !== undefined)
       result.soldDelta = soldCount - Number(previous.sold_count);
@@ -434,21 +463,34 @@ export async function refreshShop(shopId: number): Promise<ShopRefresh> {
   }
 }
 
-/** Refresh whatever is past the freshness rule, cheapest-first, within budget. */
+/**
+ * Refresh whatever has actually come due, within budget.
+ *
+ * Called every twenty minutes and expected to do nothing most of the time.
+ */
 export async function refreshPass(
-  { maxShops = 25, maxCalls = 120 }: { maxShops?: number; maxCalls?: number } = {},
+  /* A small slice per firing, so due shops spread across the hour instead of
+     arriving as one spike. */
+  { maxShops = 8, maxCalls = 40 }: { maxShops?: number; maxCalls?: number } = {},
 ): Promise<{ shops: number; calls: number; failures: number; skipped?: string }> {
   await ensureShopWatchTables();
   const room = await shopWatchRoom();
   if (room <= 0) return { shops: 0, calls: 0, failures: 0, skipped: "No room under the reserve." };
   const budget = Math.min(maxCalls, room);
 
-  const cutoff = new Date(Date.now() - FRESH_HOURS * 3_600_000).toISOString();
+  /*
+    ONLY WHAT IS ACTUALLY DUE.
+
+    The cron wakes every twenty minutes; that is not how often a shop is
+    refreshed. A shop carries its own due time, and most firings will find
+    nothing to do — which is the point.
+  */
+  const now = new Date().toISOString();
   const due = await db().prepare(
     `SELECT shop_id FROM watched_shops
-      WHERE last_refreshed IS NULL OR last_refreshed < ?
-      ORDER BY last_refreshed IS NULL DESC, last_refreshed ASC LIMIT ?`)
-    .bind(cutoff, maxShops).all<{ shop_id: number }>();
+      WHERE next_refresh_at IS NULL OR next_refresh_at <= ?
+      ORDER BY next_refresh_at IS NULL DESC, next_refresh_at ASC LIMIT ?`)
+    .bind(now, maxShops).all<{ shop_id: number }>();
 
   let calls = 0;
   let shops = 0;
@@ -463,17 +505,38 @@ export async function refreshPass(
   return { shops, calls, failures };
 }
 
+/**
+ * OPENING SHOP WATCH REFRESHES ONLY WHAT IS STALE.
+ *
+ * Etsy's rule is about what may be displayed, so a member opening a shop
+ * whose evidence has aged past six hours has to wait for a read. A member
+ * opening one refreshed forty minutes ago must not pay for a pointless call.
+ */
+export async function refreshIfStale(shopId: number): Promise<{ refreshed: boolean; calls: number }> {
+  await ensureShopWatchTables();
+  const cutoff = new Date(Date.now() - FRESH_HOURS * 3_600_000).toISOString();
+  const row = await db()
+    .prepare(`SELECT last_refreshed FROM watched_shops WHERE shop_id = ?`)
+    .bind(shopId).first<{ last_refreshed: string | null }>();
+  if (row?.last_refreshed && row.last_refreshed >= cutoff) return { refreshed: false, calls: 0 };
+  const result = await refreshShop(shopId);
+  return { refreshed: true, calls: result.calls };
+}
+
 /** Shop Watch's own meter, kept apart from every other workload. */
 export async function shopWatchHealth(): Promise<Record<string, unknown>> {
   await ensureShopWatchTables();
   const cutoff = new Date(Date.now() - FRESH_HOURS * 3_600_000).toISOString();
+  const now = new Date().toISOString();
   const [shops, watchers, reviews] = await Promise.all([
     db().prepare(
       `SELECT COUNT(*) AS shops,
               SUM(CASE WHEN last_refreshed >= ? THEN 1 ELSE 0 END) AS fresh,
               SUM(CASE WHEN last_refreshed IS NULL OR last_refreshed < ? THEN 1 ELSE 0 END) AS stale,
-              SUM(CASE WHEN refresh_failures > 0 THEN 1 ELSE 0 END) AS failing
-         FROM watched_shops`).bind(cutoff, cutoff).first<Record<string, number>>(),
+              SUM(CASE WHEN refresh_failures > 0 THEN 1 ELSE 0 END) AS failing,
+              SUM(CASE WHEN next_refresh_at IS NULL OR next_refresh_at <= ? THEN 1 ELSE 0 END) AS due,
+              MIN(next_refresh_at) AS soonest
+         FROM watched_shops`).bind(cutoff, cutoff, now).first<Record<string, number | string>>(),
     db().prepare(
       `SELECT COUNT(*) AS watches, COUNT(DISTINCT user_id) AS members,
               COUNT(DISTINCT shop_id) AS distinct_shops
@@ -491,6 +554,10 @@ export async function shopWatchHealth(): Promise<Record<string, unknown>> {
     freshWithinSixHours: Number(shops?.fresh ?? 0),
     staleShops: Number(shops?.stale ?? 0),
     shopsFailingRefresh: Number(shops?.failing ?? 0),
+    /* Most firings should find nothing due. A number that climbs means the
+       slice per firing is too small for the number of shops being watched. */
+    dueNow: Number(shops?.due ?? 0),
+    nextDueAt: shops?.soonest ?? null,
     reviewsHeld: Number(reviews?.n ?? 0),
     watchLimitPerMember: watchLimit(),
     reserveBelowCeiling: SHOP_WATCH_RESERVE,

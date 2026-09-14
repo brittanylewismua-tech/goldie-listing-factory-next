@@ -94,7 +94,9 @@ test("a refresh does not enumerate an enormous shop", () => {
 
 test("a failed refresh leaves the previous evidence untouched", () => {
   assert.match(source, /A failed refresh must never damage what is already known/);
-  const failure = source.slice(source.indexOf("} catch (error) {"), source.indexOf("/** Refresh whatever is past"));
+  const failure = source.slice(
+    source.indexOf("A failed refresh must never damage"),
+    source.indexOf("export async function refreshPass"));
   assert.match(failure, /refresh_failures = refresh_failures \+ 1/);
   assert.doesNotMatch(failure, /DELETE|UPDATE shop_observations|UPDATE shop_reviews/);
 });
@@ -110,4 +112,36 @@ test("Shop Watch yields to every other Etsy workload", () => {
   assert.match(source, /SHOP_WATCH_RESERVE/);
   assert.match(source, /No room under the reserve/);
   assert.match(source, /FROM etsy_api_usage_buckets/);
+});
+
+test("the cron wakes every twenty minutes; a shop is not refreshed that often", () => {
+  /* Twenty minutes is when the scheduler looks, not how stale the evidence
+     is allowed to get. Each shop carries its own due time. */
+  assert.match(source, /next_refresh_at/);
+  assert.match(source, /ONLY WHAT IS ACTUALLY DUE/);
+  assert.match(source, /WHERE next_refresh_at IS NULL OR next_refresh_at <= \?/);
+  assert.doesNotMatch(source, /WHERE last_refreshed IS NULL OR last_refreshed < \?\n\s+ORDER BY/);
+});
+
+test("due times are jittered and sit inside the six-hour window", () => {
+  /* Every shop added on the same afternoon would otherwise come due in the
+     same minute forever. */
+  assert.match(source, /base \* 0\.75 \+ Math\.floor\(Math\.random\(\) \* base \* 0\.15\)/);
+  assert.match(source, /FRESH_HOURS \* 3_600_000/);
+});
+
+test("a firing takes a slice, not every due shop at once", () => {
+  assert.match(source, /maxShops = 8, maxCalls = 40/);
+  assert.match(source, /spread across the hour instead of\n     arriving as one spike/);
+});
+
+test("opening a watch refreshes only when its evidence is stale", () => {
+  assert.match(source, /export async function refreshIfStale/);
+  assert.match(source, /if \(row\?\.last_refreshed && row\.last_refreshed >= cutoff\) return \{ refreshed: false, calls: 0 \}/);
+});
+
+test("the health view shows whether the cadence is keeping up", () => {
+  assert.match(source, /dueNow/);
+  assert.match(source, /nextDueAt/);
+  assert.match(source, /Most firings should find nothing due/);
 });
