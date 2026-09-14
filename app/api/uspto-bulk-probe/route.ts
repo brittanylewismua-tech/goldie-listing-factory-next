@@ -43,7 +43,10 @@ export const GET = withErrorLog("uspto-bulk-probe", async (request: Request) => 
     const xml = await singleEntryDeflateStream(response.body);
     for await (const record of blocks(xml, "case-file")) {
       counted += 1;
-      if (samples.length < stop) samples.push(record.slice(0, 4_000));
+      if (samples.length < stop)
+        samples.push(
+          parameters.get("tail") ? record.slice(-4_000) : record.slice(0, 4_000),
+        );
       /* Stop early: this is a proof, not the ingest. */
       if (counted >= stop) break;
     }
