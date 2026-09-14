@@ -13,7 +13,7 @@
  * works; they simply do not have profit numbers.
  */
 import { env } from "cloudflare:workers";
-import { etsyConnection } from "@/app/api/etsy/client";
+import { etsyApiCredential, etsyConnection } from "@/app/api/etsy/client";
 
 const db = () => (env as unknown as { DB: D1Database }).DB;
 
@@ -81,19 +81,48 @@ export async function salesCapability(userId: string): Promise<Capability> {
       `https://openapi.etsy.com/v3/application/shops/${connection.shopId}/receipts?limit=1`,
       {
         headers: {
-          "x-api-key": (env as unknown as { ETSY_API_KEY: string }).ETSY_API_KEY,
+          /*
+            KEY AND SECRET, NOT THE KEY.
+
+            An authenticated Etsy call wants `key:secret` in x-api-key. Sending
+            the bare key answers 403 "Shared secret is required in x-api-key
+            header" — which reads exactly like a refused permission and is
+            nothing of the kind. It cost a false negative on a grant that had
+            just been made.
+          */
+          "x-api-key": etsyApiCredential(),
           authorization: `Bearer ${connection.token}`,
         },
         signal: AbortSignal.timeout(15_000),
       });
-    const allowed = response.ok;
-    await db()
-      .prepare(
-        `UPDATE etsy_connections SET scopes = ?, scopes_checked_at = ?
-          WHERE user_id = ? AND is_active = 1`)
-      .bind(allowed ? SHOP_MAP_SCOPES : BASE_SCOPES, new Date().toISOString(), userId)
-      .run();
-    return { ...base, canReadSales: allowed, evidence: "probed" };
+
+    if (response.ok) {
+      await db()
+        .prepare(
+          `UPDATE etsy_connections SET scopes = ?, scopes_checked_at = ?
+            WHERE user_id = ? AND is_active = 1`)
+        .bind(SHOP_MAP_SCOPES, new Date().toISOString(), userId)
+        .run();
+      return { ...base, canReadSales: true, evidence: "probed" };
+    }
+
+    /*
+      A REFUSAL IS ONLY RECORDED WHEN ETSY SAYS IT IS ABOUT PERMISSION.
+
+      Anything else — a bad header, a rate limit, a shop with no receipts yet —
+      would otherwise be written down as "this member cannot use the feature",
+      and the stored answer would stop the question ever being asked again.
+    */
+    const said = await response.text();
+    const aboutScope = /scope|permission|not authorized|unauthorized/i.test(said);
+    if (aboutScope)
+      await db()
+        .prepare(
+          `UPDATE etsy_connections SET scopes = ?, scopes_checked_at = ?
+            WHERE user_id = ? AND is_active = 1`)
+        .bind(BASE_SCOPES, new Date().toISOString(), userId)
+        .run();
+    return { ...base, canReadSales: false, evidence: aboutScope ? "probed" : "legacy-unknown" };
   } catch {
     /* An unreachable Etsy is not proof of a missing scope, so nothing is
        stored and the member is asked to connect rather than told they cannot. */

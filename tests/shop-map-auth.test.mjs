@@ -89,3 +89,20 @@ test("the sales authorization is a plain link, and asks for exactly one extra sc
   /* And it must not touch the existing connection on the way out. */
   assert.doesNotMatch(connect, /etsy_connections/);
 });
+
+test("an authenticated Etsy call sends key:secret, not the bare key", () => {
+  /* Measured: the bare key answers 403 "Shared secret is required in x-api-key
+     header", which reads exactly like a refused permission and cost a false
+     negative on a grant that had just been made. */
+  assert.match(auth, /"x-api-key": etsyApiCredential\(\)/);
+  assert.doesNotMatch(auth, /"x-api-key": \(env as unknown as \{ ETSY_API_KEY/);
+});
+
+test("a refusal is only recorded when Etsy says it is about permission", () => {
+  /* A bad header, a rate limit or an empty shop would otherwise be written
+     down as "cannot use this feature", and the stored answer would stop the
+     question ever being asked again. */
+  assert.match(auth, /A REFUSAL IS ONLY RECORDED WHEN ETSY SAYS IT IS ABOUT PERMISSION/);
+  assert.match(auth, /scope\|permission\|not authorized\|unauthorized/);
+  assert.match(auth, /evidence: aboutScope \? "probed" : "legacy-unknown"/);
+});

@@ -40,7 +40,8 @@
 /* D1390 creates a new column's index after the column exists. */
 /* D1391 gives Shop Map a link that asks Etsy for sales permission, and asks
    Printify which of its shops is the Etsy one. */
-export const BUILD_MARKER = "D1391";
+/* D1392 stops a wrong header being recorded as a refused permission. */
+export const BUILD_MARKER = "D1392";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

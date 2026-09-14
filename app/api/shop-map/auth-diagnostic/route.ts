@@ -3,7 +3,7 @@ import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
-import { etsyConnection } from "@/app/api/etsy/client";
+import { etsyApiCredential, etsyConnection } from "@/app/api/etsy/client";
 import { ensureScopeColumn } from "@/app/shop-map-auth";
 
 /**
@@ -42,7 +42,9 @@ export const GET = withErrorLog("shop-map-auth-diagnostic", async () => {
       `https://openapi.etsy.com/v3/application/shops/${connection.shopId}/receipts?limit=1`,
       {
         headers: {
-          "x-api-key": (env as unknown as { ETSY_API_KEY: string }).ETSY_API_KEY,
+          /* key:secret, not the bare key — the bare key answers 403 with a
+             message that reads like a refused permission. */
+          "x-api-key": etsyApiCredential(),
           authorization: `Bearer ${connection.token}`,
         },
         signal: AbortSignal.timeout(15_000),
@@ -64,6 +66,14 @@ export const GET = withErrorLog("shop-map-auth-diagnostic", async () => {
   } catch (error) {
     receipts = { attempted: true, error: error instanceof Error ? error.message : "failed" };
   }
+
+  /* Clearing a recorded refusal lets the next capability check ask again.
+     A false negative that is never re-asked is worse than no record at all. */
+  if (receipts.status === 200)
+    await db.prepare(
+      `UPDATE etsy_connections SET scopes = NULL, scopes_checked_at = NULL
+        WHERE user_id = ? AND is_active = 1 AND scopes = ?`)
+      .bind(user.userId, "listings_r listings_w shops_r shops_w").run().catch(() => undefined);
 
   return NextResponse.json({
     connections: (rows.results ?? []).map(row => ({
