@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import FactoryShell from "../factory-shell";
-import type { Verdict } from "../trademark-check";
+import type { FullVerdict } from "../trademark-check";
 import "./trademark.css";
 
 /**
@@ -32,7 +32,7 @@ const EXAMPLES = [
 
 export default function TrademarkPage() {
   const [phrase, setPhrase] = useState("");
-  const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [verdict, setVerdict] = useState<FullVerdict | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,7 +43,7 @@ export default function TrademarkPage() {
     try {
       const response = await fetch(
         `/api/trademark?phrase=${encodeURIComponent(term)}`, { cache: "no-store" });
-      const result = await response.json() as Verdict & { error?: string };
+      const result = await response.json() as FullVerdict & { error?: string };
       if (!response.ok) throw new Error(result.error || "That could not be checked.");
       setVerdict(result);
     } catch (e) {
@@ -104,7 +104,11 @@ export default function TrademarkPage() {
 
       {verdict && <section className={`tm-verdict ${verdict.risk}`} aria-live="polite">
         <p className="tm-headline">
-          {verdict.risk === "high" ? "Do not print this" : "Nothing known found"}
+          {verdict.risk === "high"
+            ? "Do not print this"
+            : verdict.risk === "caution"
+              ? "Somebody owns part of this"
+              : "Nothing found"}
         </p>
         <p className="tm-phrase">{marked()}</p>
         <p>{verdict.summary}</p>
@@ -117,14 +121,33 @@ export default function TrademarkPage() {
               <span className="tm-cat">{hit.category}</span>
             </li>)}
         </ul>}
+
+        {/* The register's own findings, kept visually separate from the
+            curated list: they are a different kind of fact and a seller
+            should be able to tell which one is talking. */}
+        {(verdict.register ?? []).length > 0 && <ul className="tm-hits tm-register">
+          {(verdict.register ?? []).map(match =>
+            <li key={match.registration || match.mark} className="tm-hit">
+              <b>{match.mark}</b>
+              {match.owner && <span className="tm-owner">registered to {match.owner}</span>}
+              <span className="tm-cat">
+                {match.registered ? "live registration" : "pending application"}
+                {match.classes.length ? ` · class ${match.classes.join(", ")}` : ""}
+              </span>
+            </li>)}
+        </ul>}
       </section>}
 
       <p className="tm-note">
-        <strong>What this checks.</strong> The brands, characters, franchises, teams and
-        artists that listings actually get removed for. It is not a search of the federal
-        trademark register and it is not legal advice, so a clean result means none of the
-        usual traps rather than nobody owns it. If you are about to build a whole product
-        line on a phrase, search the register properly first.
+        <strong>What this checks.</strong> Two things. The brands, characters, franchises,
+        teams and artists that listings actually get removed for — and live US trademark
+        registrations in the classes print-on-demand sellers sell into, taken from USPTO's
+        own published data.{" "}
+        {verdict && verdict.registerReady === false &&
+          <strong>The register is still loading, so treat a clean result as incomplete today.</strong>}
+        {" "}It is not legal advice, and a clean result means nothing was found rather than
+        nobody owns it. If you are about to build a whole product line on a phrase, have it
+        searched properly first.
       </p>
     </div>
   </FactoryShell>;

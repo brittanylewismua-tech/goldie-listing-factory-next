@@ -28,11 +28,15 @@
 }
 .tm-verdict.high { border-color: #b8323c; background: #fff5f5; }
 .tm-verdict.clear { border-color: #2f8f63; background: #f3fbf7; }
+/* Amber, not red: a registration on an ordinary word is a thing to look at,
+   not a thing to stop for, and the colour has to say which. */
+.tm-verdict.caution { border-color: #c98a1e; background: #fffaef; }
 .tm-verdict .tm-headline {
   margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.015em;
 }
 .tm-verdict.high .tm-headline { color: #92222b; }
 .tm-verdict.clear .tm-headline { color: #1f6b49; }
+.tm-verdict.caution .tm-headline { color: #8a5c05; }
 .tm-verdict p { margin: 0; font-size: 15px; color: var(--ink, #4b283e); line-height: 1.55; }
 
 /* The phrase with the risky words marked in it, so the seller sees exactly
@@ -70,3 +74,7 @@
   padding: 6px 14px; font: inherit; font-size: 13px; color: var(--ink, #4b283e); cursor: pointer;
 }
 .tm-examples button:hover { border-color: #ff4fc3; }
+
+/* The register's findings sit under the curated ones, quieter by design. */
+.tm-register { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(75, 40, 62, 0.2); }
+.tm-register .tm-cat { text-transform: none; letter-spacing: 0; }
