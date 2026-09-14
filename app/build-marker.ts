@@ -37,7 +37,8 @@
    watched shop its own due time instead of refreshing all of them. */
 /* D1388 stops one unreadable file blocking the whole register queue. */
 /* D1389 parks every documentation file at once instead of one a firing. */
-export const BUILD_MARKER = "D1389";
+/* D1390 creates a new column's index after the column exists. */
+export const BUILD_MARKER = "D1390";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

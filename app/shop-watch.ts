@@ -61,8 +61,9 @@ export async function ensureShopWatchTables(): Promise<void> {
          Twenty minutes wakes the scheduler; it is not a refresh interval. */
       next_refresh_at TEXT
     )`),
-    db().prepare(
-      `CREATE INDEX IF NOT EXISTS watched_shops_due ON watched_shops (next_refresh_at)`),
+    /* The index on next_refresh_at is created AFTER the ALTER below, because
+       on a table that already existed the column is not there yet and the
+       whole batch would fail — taking the ALTER with it, forever. */
 
     /* The personal side: who watches what. The shop is not duplicated. */
     db().prepare(`CREATE TABLE IF NOT EXISTS member_shop_watches (
@@ -108,7 +109,10 @@ export async function ensureShopWatchTables(): Promise<void> {
     db().prepare(`CREATE INDEX IF NOT EXISTS shop_reviews_listing ON shop_reviews (listing_id)`),
   ]);
 
-  /* CREATE TABLE IF NOT EXISTS is a no-op on a table that already exists. */
+  /*
+    CREATE TABLE IF NOT EXISTS is a no-op on a table that already exists, so a
+    column added after the first release has to be stated again as an ALTER.
+  */
   for (const column of ["next_refresh_at TEXT"]) {
     try {
       await db().prepare(`ALTER TABLE watched_shops ADD COLUMN ${column}`).run();
@@ -116,6 +120,12 @@ export async function ensureShopWatchTables(): Promise<void> {
       if (!/duplicate column/i.test(error instanceof Error ? error.message : "")) throw error;
     }
   }
+
+  /* Only now can an index name that column. Measured the other way round:
+     "no such column: next_refresh_at" on every scheduled refresh. */
+  await db()
+    .prepare(`CREATE INDEX IF NOT EXISTS watched_shops_due ON watched_shops (next_refresh_at)`)
+    .run();
 }
 
 /**

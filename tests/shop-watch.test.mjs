@@ -145,3 +145,13 @@ test("the health view shows whether the cadence is keeping up", () => {
   assert.match(source, /nextDueAt/);
   assert.match(source, /Most firings should find nothing due/);
 });
+
+test("an index on a new column is created after the ALTER, not inside the batch", () => {
+  /* Measured: "no such column: next_refresh_at" on every scheduled refresh.
+     The index sat in the same batch as the CREATE TABLE, which is a no-op on
+     an existing table, so the batch failed and took the ALTER with it. */
+  const alterAt = source.indexOf("ALTER TABLE watched_shops ADD COLUMN");
+  const indexAt = source.indexOf("CREATE INDEX IF NOT EXISTS watched_shops_due");
+  assert.ok(alterAt > 0 && indexAt > alterAt, "the index must come after the ALTER");
+  assert.match(source, /Only now can an index name that column/);
+});
