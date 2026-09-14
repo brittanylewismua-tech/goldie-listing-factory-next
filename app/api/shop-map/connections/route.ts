@@ -22,10 +22,11 @@ export const GET = withErrorLog("shop-map-connections", async () => {
   const db = (env as unknown as { DB: D1Database }).DB;
   const rows = await db
     .prepare(
-      `SELECT shop_id, shop_name, is_active, scopes FROM etsy_connections
-        WHERE user_id = ? ORDER BY is_active DESC, shop_name ASC`)
+      `SELECT shop_id, shop_name, is_active, scopes, encrypted_access_token <> '' AS live
+         FROM etsy_connections
+        WHERE user_id = ? ORDER BY live DESC, is_active DESC, shop_name ASC`)
     .bind(user.userId)
-    .all<{ shop_id: number; shop_name: string; is_active: number; scopes: string | null }>();
+    .all<{ shop_id: number; shop_name: string; is_active: number; scopes: string | null; live: number }>();
 
   const connections = [];
   for (const row of rows.results ?? []) {
@@ -37,6 +38,9 @@ export const GET = withErrorLog("shop-map-connections", async () => {
          does not change it, and this is here so the page can say so. */
       activeForListingFactory: row.is_active === 1,
       canReadSales: Boolean(row.scopes?.split(/\s+/).includes("transactions_r")),
+      /* A shop that was disconnected keeps its place in the list so it can be
+         reconnected rather than re-added from scratch. */
+      needsReconnect: row.live === 0,
       authorizeSalesUrl: issued
         ? `/api/shop-map/connect-sales?for=${encodeURIComponent(issued.handle)}`
         : null,

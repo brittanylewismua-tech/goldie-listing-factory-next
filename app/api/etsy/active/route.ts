@@ -15,9 +15,13 @@ export async function POST(request: Request) {
   const shopId = Number(body.shopId) || 0;
   if (!shopId) return NextResponse.json({ error: "Choose the shop to switch to." }, { status: 400 });
 
-  const owned = await env.DB.prepare("SELECT shop_name FROM etsy_connections WHERE user_id=? AND shop_id=?")
-    .bind(user.userId, shopId).first<{ shop_name: string }>();
+  /* A retired connection keeps its row so it can be reconnected, but it holds
+     no token, so switching to it would leave the seller pointed at a shop that
+     cannot publish. */
+  const owned = await env.DB.prepare("SELECT shop_name, encrypted_access_token <> '' AS live FROM etsy_connections WHERE user_id=? AND shop_id=?")
+    .bind(user.userId, shopId).first<{ shop_name: string; live: number }>();
   if (!owned) return NextResponse.json({ error: "That shop is not connected to this account." }, { status: 404 });
+  if (!owned.live) return NextResponse.json({ error: "That shop was disconnected. Reconnect it to switch to it." }, { status: 409 });
 
   await env.DB.batch([
     env.DB.prepare("UPDATE etsy_connections SET is_active=0 WHERE user_id=?").bind(user.userId),

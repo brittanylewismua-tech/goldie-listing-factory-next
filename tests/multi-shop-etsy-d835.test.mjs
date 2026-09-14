@@ -94,7 +94,7 @@ test("D835: switching moves the active shop and nothing else", () => {
   database.prepare(sqlFrom(callbackRoute, "UPDATE etsy_connections SET is_active=0")).run("u1");
   database.prepare(insert).run("u1", 222, "tok2", "ref2", 9999999999, 7, "shesawolfclothing");
 
-  const owned = sqlFrom(activeRoute, "SELECT shop_name FROM etsy_connections");
+  const owned = sqlFrom(activeRoute, "SELECT shop_name, encrypted_access_token");
   const clear = sqlFrom(activeRoute, "UPDATE etsy_connections SET is_active=0");
   const set = sqlFrom(activeRoute, "UPDATE etsy_connections SET is_active=1");
 
@@ -114,15 +114,20 @@ test("D835: disconnecting with another shop remaining promotes it and reports it
   database.prepare(sqlFrom(callbackRoute, "UPDATE etsy_connections SET is_active=0")).run("u1");
   database.prepare(sqlFrom(callbackRoute, "INSERT INTO etsy_connections")).run("u1", 222, "tok2", "ref2", 9999999999, 7, "shesawolfclothing");
 
-  const going = database.prepare(sqlFrom(etsyRoute, "SELECT shop_id FROM etsy_connections WHERE user_id=? AND is_active=1")).get("u1");
+  const going = database.prepare(sqlFrom(etsyRoute, "SELECT shop_id,shop_name FROM etsy_connections WHERE user_id=? AND is_active=1")).get("u1");
   assert.equal(going.shop_id, 222);
-  database.prepare(sqlFrom(etsyRoute, "DELETE FROM etsy_connections")).run("u1");
+  /* D1397 · Retired, not removed. The row survives with its token cleared, so
+     a disconnect can be undone by reconnecting rather than re-adding — and so
+     a vanished shop can never again be explained only by elimination. */
+  database.prepare(sqlFrom(etsyRoute, "UPDATE etsy_connections SET encrypted_access_token=''")).run("u1", going.shop_id);
   const next = database.prepare(sqlFrom(etsyRoute, "SELECT shop_id, shop_name FROM etsy_connections")).get("u1");
   assert.ok(next, "the other shop is still there");
+  assert.equal(next.shop_id, 111, "and a shop with no token is never promoted");
   database.prepare(sqlFrom(etsyRoute, "UPDATE etsy_connections SET is_active=1")).run("u1", next.shop_id);
 
-  const rows = plain(database.prepare("SELECT shop_id, is_active FROM etsy_connections WHERE user_id='u1'").all());
-  assert.deepEqual(rows, [{ shop_id: 111, is_active: 1 }], "the survivor is promoted, not left inactive");
+  const rows = plain(database.prepare("SELECT shop_id, is_active FROM etsy_connections WHERE user_id='u1' ORDER BY shop_id").all());
+  assert.deepEqual(rows, [{ shop_id: 111, is_active: 1 }, { shop_id: 222, is_active: 0 }],
+    "the survivor is promoted, and the disconnected shop is retired rather than destroyed");
   /* And the route must say so. Returning {connected:false} here made the UI
      clear Etsy while a promoted shop was live. */
   assert.match(etsyRoute, /next\?\{connected:true,shopId:next\.shop_id,shopName:next\.shop_name\}:\{connected:false\}/);
@@ -130,10 +135,14 @@ test("D835: disconnecting with another shop remaining promotes it and reports it
 
 test("D835: disconnecting the last shop genuinely disconnects", () => {
   const database = migrated();
-  database.prepare(sqlFrom(etsyRoute, "DELETE FROM etsy_connections")).run("u1");
+  const going = database.prepare(sqlFrom(etsyRoute, "SELECT shop_id,shop_name FROM etsy_connections WHERE user_id=? AND is_active=1")).get("u1");
+  database.prepare(sqlFrom(etsyRoute, "UPDATE etsy_connections SET encrypted_access_token=''")).run("u1", going.shop_id);
   const next = database.prepare(sqlFrom(etsyRoute, "SELECT shop_id, shop_name FROM etsy_connections")).get("u1");
-  assert.equal(next, undefined, "nothing remains");
-  assert.equal(database.prepare("SELECT COUNT(*) c FROM etsy_connections").get().c, 0);
+  assert.equal(next, undefined, "no shop with a token remains, so the seller is disconnected");
+  /* The row stays so reconnecting restores the shop, and the seller is told
+     they are disconnected because nothing can publish. */
+  assert.equal(database.prepare("SELECT COUNT(*) c FROM etsy_connections").get().c, 1);
+  assert.equal(database.prepare("SELECT is_active a FROM etsy_connections").get().a, 0);
 });
 
 test("D835: every read of the connection asks for the active shop", () => {

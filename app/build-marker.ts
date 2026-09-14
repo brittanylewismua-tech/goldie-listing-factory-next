@@ -48,7 +48,9 @@
 /* D1395 reads the live connection schema so a missing shop can be explained
    with evidence instead of a guess. */
 /* D1396 scopes the connection diagnostic to the account being diagnosed. */
-export const BUILD_MARKER = "D1396";
+/* D1397 retires an Etsy connection instead of deleting it, and records every
+   removal so a missing shop never has to be explained by elimination again. */
+export const BUILD_MARKER = "D1397";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

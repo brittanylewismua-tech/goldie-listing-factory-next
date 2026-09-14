@@ -13,7 +13,10 @@ export async function GET(){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({connected:false},{status:401});
   /* D835 · Several shops can be connected. The active one is the shop this
      seller is working in; the list is what the switcher offers. */
-  const rows=await env.DB.prepare("SELECT shop_id, shop_name, is_active FROM etsy_connections WHERE user_id=? ORDER BY shop_name").bind(user.userId).all<{shop_id:number;shop_name:string;is_active:number}>();
+  /* A retired connection has no token and is not a shop the seller can publish
+     to, so it stays out of the switcher. The row survives only so that
+     reconnecting restores a shop rather than rebuilding one. */
+  const rows=await env.DB.prepare("SELECT shop_id, shop_name, is_active FROM etsy_connections WHERE user_id=? AND encrypted_access_token<>'' ORDER BY shop_name").bind(user.userId).all<{shop_id:number;shop_name:string;is_active:number}>();
   const shops=(rows.results||[]).map(row=>({shopId:row.shop_id,shopName:row.shop_name,active:row.is_active===1}));
   const active=shops.find(shop=>shop.active);
   if(!active)return NextResponse.json({connected:false,shops});
@@ -52,14 +55,36 @@ export async function POST(request:Request){
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Etsy connection could not start."},{status:500})}
 }
 
-export async function DELETE(){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});/* D835 · Disconnect the shop the seller is in, and promote another if one
-  remains, so "disconnect" never leaves them connected to nothing while other
-  shops are still authorised. */
-  const going=await env.DB.prepare("SELECT shop_id FROM etsy_connections WHERE user_id=? AND is_active=1").bind(user.userId).first<{shop_id:number}>();
-  await env.DB.prepare("DELETE FROM etsy_connections WHERE user_id=? AND is_active=1").bind(user.userId).run();
-  const next=await env.DB.prepare("SELECT shop_id, shop_name FROM etsy_connections WHERE user_id=? ORDER BY updated_at DESC LIMIT 1").bind(user.userId).first<{shop_id:number;shop_name:string}>();
-  if(next)await env.DB.prepare("UPDATE etsy_connections SET is_active=1 WHERE user_id=? AND shop_id=?").bind(user.userId,next.shop_id).run();/* D661 · A pairing proof is about one Etsy shop. Disconnecting voids it. */await forgetPairings(user.userId,going?.shop_id);/* D836 · Disconnecting one shop while others remain does not disconnect the
-  seller. Saying {connected:false} made the UI clear Etsy entirely while a
-  promoted shop was live, so the next publish would have used a connection the
-  screen said did not exist. */
+export async function DELETE(){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});
+  /*
+    DISCONNECTING IS NOT DELETING ANY MORE.
+
+    This statement used to be `DELETE FROM etsy_connections WHERE user_id=?
+    AND is_active=1`, and on 14 September it removed a seller's active shop
+    during a run of failed authorisations. Reconstructing what had happened
+    was only possible by elimination — it is the sole statement in the
+    codebase that can remove a connection — because nothing recorded that it
+    ran. A destructive operation with no audit trail turns a real defect into
+    an argument about whether somebody clicked something.
+
+    So the row is retired rather than destroyed: the tokens are cleared, which
+    is what disconnecting is actually for, and the identity stays. Reconnecting
+    then restores a shop instead of rebuilding it, and every removal is
+    recorded below.
+  */
+  const going=await env.DB.prepare("SELECT shop_id,shop_name FROM etsy_connections WHERE user_id=? AND is_active=1").bind(user.userId).first<{shop_id:number;shop_name:string}>();
+  if(going){
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS etsy_connection_events (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, shop_id INTEGER NOT NULL, shop_name TEXT NOT NULL DEFAULT '', action TEXT NOT NULL, at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run().catch(()=>{});
+    await env.DB.prepare("INSERT INTO etsy_connection_events (user_id,shop_id,shop_name,action) VALUES (?,?,?,'disconnected')").bind(user.userId,going.shop_id,going.shop_name||"").run().catch(()=>{});
+    /* Retired, not removed: no token, not active, still known. */
+    await env.DB.prepare("UPDATE etsy_connections SET encrypted_access_token='', encrypted_refresh_token='', expires_at=0, is_active=0, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND shop_id=?").bind(user.userId,going.shop_id).run();
+  }
+  /* D835 · Another shop may remain; promote it so "disconnect" never leaves
+     the seller connected to nothing while other shops are still authorised. */
+  const next=await env.DB.prepare("SELECT shop_id, shop_name FROM etsy_connections WHERE user_id=? AND encrypted_access_token<>'' ORDER BY updated_at DESC LIMIT 1").bind(user.userId).first<{shop_id:number;shop_name:string}>();
+  if(next)await env.DB.prepare("UPDATE etsy_connections SET is_active=1 WHERE user_id=? AND shop_id=?").bind(user.userId,next.shop_id).run();
+  /* D661 · A pairing proof is about one Etsy shop. Disconnecting voids it. */
+  await forgetPairings(user.userId,going?.shop_id);
+  /* D836 · Disconnecting one shop while others remain does not disconnect the
+     seller, and saying {connected:false} made the UI clear Etsy entirely. */
   return NextResponse.json(next?{connected:true,shopId:next.shop_id,shopName:next.shop_name}:{connected:false})}
