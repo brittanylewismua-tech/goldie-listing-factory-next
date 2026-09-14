@@ -24,7 +24,9 @@
    calls off the meter the whole application shares. */
 /* D1381 enumerates every listing in every monitored shop, so a shop's sales
    stop being unexplainable by construction. */
-export const BUILD_MARKER = "D1381";
+/* D1382 polls the monitored listings directly every ten minutes, and uses the
+   shop counter as corroboration and a cap rather than as a score. */
+export const BUILD_MARKER = "D1382";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

@@ -38,45 +38,39 @@ export default {
   */
   async scheduled(event, env, ctx) {
     const site = (env.GOLDIE_SITE_URL || "https://thegoldiesuite.com").replace(/\\/$/, "");
-    ctx.waitUntil(
-      app.fetch(new Request(site + "/api/sold-overnight/cron"), env, ctx).catch(() => {}),
-    );
+    const run = path =>
+      ctx.waitUntil(app.fetch(new Request(site + path), env, ctx).catch(() => {}));
 
     /*
-      The shop sensor: one bounded pass per firing, asking a hundred shops at
-      a time whether they sold anything. It is the cheapest question in the
-      system and the trigger for every expensive one.
+      TWO CLOCKS, DELIBERATELY.
+
+      The listing poller is the detector and wants to run every ten minutes;
+      everything else is happy at twenty. Cloudflare fires a separate event per
+      cron expression and names it, so the ten-minute schedule drives the
+      poller and the twenty-minute one drives the rest. Both land together at
+      the hour and neither waits for the other.
     */
-    ctx.waitUntil(
-      app.fetch(new Request(site + "/api/market/sensor-tick"), env, ctx).catch(() => {}),
-    );
+    const everyTenMinutes = event.cron === "*/10 * * * *";
 
     /*
-      And whatever the sensor found is inspected in the same firing, because
-      the evidence on a listing is perishable — a seller restocking over the
-      top of a sale erases it.
+      The poller reads the whole shared corpus in batches of a hundred. It is
+      what turns "did anything move" from a question about shops into a
+      question about the listings members actually care about.
     */
-    ctx.waitUntil(
-      app.fetch(new Request(site + "/api/market/inspect-tick"), env, ctx).catch(() => {}),
-    );
+    run("/api/market/poll-tick");
 
-    /*
-      And the whole-shop backfill fills in behind both, on whatever allowance
-      is left after the reserve. It is the only workload here that is allowed
-      to be late.
-    */
-    ctx.waitUntil(
-      app.fetch(new Request(site + "/api/market/baseline-tick"), env, ctx).catch(() => {}),
-    );
+    if (everyTenMinutes) return;
 
-    /*
-      The trademark register loads itself the same way: one USPTO bulk file
-      per firing, newest first, stopping on its own deadline. Separate
-      waitUntil so neither job can take the other down with it.
-    */
-    ctx.waitUntil(
-      app.fetch(new Request(site + "/api/trademark/ingest-tick"), env, ctx).catch(() => {}),
-    );
+    /* The cheapest question in the system: which shops sold anything. */
+    run("/api/market/sensor-tick");
+    /* And what the sensor found, inspected while the evidence still exists. */
+    run("/api/market/inspect-tick");
+    /* The corpus sweep, which is what keeps discovery going. */
+    run("/api/sold-overnight/cron");
+    /* The trademark register, one USPTO bulk file at a time. */
+    run("/api/trademark/ingest-tick");
+    /* Whole-shop enumeration, kept as a research tool on leftover allowance. */
+    run("/api/market/baseline-tick");
   },
 };
 `);

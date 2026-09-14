@@ -5,6 +5,7 @@ import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { ensureMarketTables } from "@/app/market-store";
 import { ensureBaselineTables } from "@/app/shop-baseline";
+import { detectorHealth } from "@/app/listing-poller";
 import { variationInventoryEnabled } from "@/app/triggered-inspection";
 import { registerSize } from "@/app/trademark-register";
 
@@ -154,6 +155,17 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
   return NextResponse.json({
     windowDays: days,
 
+    /*
+      THE DETECTOR'S OWN SCORE.
+
+      Deliberately first, and deliberately not "percentage of all shop units
+      attributed". A shop that sold six units while Goldie monitors two of its
+      listings has not defeated anything — four of those sales were on
+      listings nobody asked about. What this measures is whether movement on
+      the monitored listings is caught.
+    */
+    detector: await detectorHealth(days),
+
     shopSensor: {
       monitoredShops: Number(sensor?.shops ?? 0),
       withRepresentative: Number(sensor?.reps ?? 0),
@@ -198,7 +210,9 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
       oldestBaseline: baselines?.oldest_baseline ?? null,
     },
 
-    attribution: {
+    /* Kept, because unresolved shop activity is a real fact worth watching.
+       Not the product's accuracy score, and not to be quoted as one. */
+    shopLevelActivity: {
       unitsObserved: units,
       unitsAttributed: attributed,
       unitsUnresolved: Number(intervals?.unresolved ?? 0),
