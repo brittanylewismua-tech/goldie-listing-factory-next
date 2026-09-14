@@ -43,6 +43,15 @@ export default {
     );
 
     /*
+      The shop sensor: one bounded pass per firing, asking a hundred shops at
+      a time whether they sold anything. It is the cheapest question in the
+      system and the trigger for every expensive one.
+    */
+    ctx.waitUntil(
+      app.fetch(new Request(site + "/api/market/sensor-tick"), env, ctx).catch(() => {}),
+    );
+
+    /*
       The trademark register loads itself the same way: one USPTO bulk file
       per firing, newest first, stopping on its own deadline. Separate
       waitUntil so neither job can take the other down with it.
