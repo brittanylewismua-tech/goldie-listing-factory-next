@@ -99,6 +99,18 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
     .bind(new Date(Date.now() - 15 * 60_000).toISOString())
     .run();
 
+  /*
+    Park every documentation file at once rather than one per firing. The seed
+    filters them out now, but rows queued before that fix are still in the
+    table, and spending a firing each to discover they are Word documents is
+    the slowest possible way to find out.
+  */
+  await db
+    .prepare(
+      `UPDATE tm_ingest_files SET state = 'skipped', note = 'Not a data file'
+        WHERE state IN ('waiting', 'partial') AND name NOT LIKE '%.zip'`)
+    .run();
+
   const next = await db
     .prepare(
       `SELECT name, product, url, done_records FROM tm_ingest_files
