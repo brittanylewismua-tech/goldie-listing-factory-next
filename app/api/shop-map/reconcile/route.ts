@@ -123,7 +123,17 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
   type PrintifyOrder = {
     id?: string; app_order_id?: string; external_id?: string; shop_order_id?: string;
     created_at?: string; status?: string; total_price?: number; total_shipping?: number;
-    total_tax?: number; metadata?: { order_type?: string };
+    total_tax?: number;
+    /*
+      THE ETSY RECEIPT ID LIVES HERE, not at the top level.
+
+      Measured: top-level external_id and shop_order_id are empty on all
+      twenty-three of this shop's orders, and a search of the raw payload found
+      fourteen Etsy receipt ids inside metadata.shop_order_id and
+      metadata.shop_order_label. Reading only the top level is what made SKU
+      look like the strongest available match; it is not.
+    */
+    metadata?: { order_type?: string; shop_order_id?: string; shop_order_label?: string };
     line_items?: Array<{
       id?: string; sku?: string; variant_id?: number; product_id?: string; quantity?: number;
       cost?: number; shipping_cost?: number; status?: string;
@@ -216,7 +226,8 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
         orderId: String(order.id ?? ""),
         appOrderId: String(order.app_order_id ?? ""),
         externalId: String(order.external_id ?? ""),
-        shopOrderId: String(order.shop_order_id ?? ""),
+        shopOrderId: String(order.shop_order_id ?? order.metadata?.shop_order_id
+          ?? order.metadata?.shop_order_label ?? ""),
         lineItemId,
         sku: String(item.metadata?.sku ?? item.sku ?? ""),
         variantId: Number(item.variant_id ?? 0),

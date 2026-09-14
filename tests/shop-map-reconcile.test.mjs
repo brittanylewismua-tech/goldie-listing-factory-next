@@ -110,3 +110,33 @@ test("money stays integral through a whole profit calculation", () => {
 test("two currencies are refused rather than quietly added", () => {
   assert.throws(() => addMoney(minorUnits(100, "USD"), minorUnits(100, "GBP")), /Cannot add GBP to USD/);
 });
+
+test("the Etsy receipt id identifies the Printify order even when nested", () => {
+  /* Measured on the live shop: top-level external_id and shop_order_id are
+     empty on every order, and the receipt id sits in metadata.shop_order_id.
+     The caller normalises it; the matcher must treat it as the exact path. */
+  const { outcomes } = reconcile(
+    [etsy({ receiptId: 4154988420 })],
+    [printify({ sku: "SOMETHING-ELSE", createdAt: NOW + 99999999, shopOrderId: "4154988420" })]);
+  const matched = outcomes.find(row => row.state === "matched");
+  assert.equal(matched.method, "shop_order_id");
+});
+
+test("one receipt covering several lines is separated by SKU, not by guessing", () => {
+  const { outcomes } = reconcile(
+    [etsy({ transactionId: 1, sku: "TEE-BLK-M" }), etsy({ transactionId: 2, sku: "MUG-11OZ" })],
+    [printify({ lineItemId: "li-1", sku: "TEE-BLK-M", shopOrderId: "900" }),
+     printify({ lineItemId: "li-2", sku: "MUG-11OZ", shopOrderId: "900" })]);
+  const matched = outcomes.filter(row => row.state === "matched");
+  assert.equal(matched.length, 2);
+  assert.deepEqual(matched.map(row => row.printify.lineItemId), ["li-1", "li-2"]);
+  assert.ok(matched.every(row => row.method === "shop_order_id"));
+});
+
+test("a receipt whose lines cannot be told apart stays ambiguous", () => {
+  const { outcomes } = reconcile(
+    [etsy({ sku: "", quantity: 1 })],
+    [printify({ lineItemId: "li-1", sku: "", shopOrderId: "900", quantity: 1 }),
+     printify({ lineItemId: "li-2", sku: "", shopOrderId: "900", quantity: 1 })]);
+  assert.ok(outcomes.some(row => row.state === "ambiguous"));
+});

@@ -71,8 +71,21 @@ function attempt(
       row.externalId === String(line.transactionId)));
   if (byExternal.length) return { method: "external_id", candidates: byExternal };
 
+  /* Printify carries the Etsy receipt id in metadata.shop_order_id on this
+     connection; the caller normalises it into shopOrderId. One receipt covers
+     several transactions, so this identifies the ORDER, and quantity then
+     separates the lines inside it. */
   const byShopOrder = available.filter(row =>
     row.shopOrderId && row.shopOrderId === String(line.receiptId));
+  if (byShopOrder.length > 1) {
+    /* Same receipt, several production lines: the SKU says which is which,
+       and only an exact single SKU match is accepted. */
+    const withSku = byShopOrder.filter(row =>
+      normalizeSku(row.sku) && normalizeSku(row.sku) === normalizeSku(line.sku));
+    if (withSku.length === 1) return { method: "shop_order_id", candidates: withSku };
+    const withQuantity = byShopOrder.filter(row => row.quantity === line.quantity);
+    if (withQuantity.length === 1) return { method: "shop_order_id", candidates: withQuantity };
+  }
   if (byShopOrder.length) return { method: "shop_order_id", candidates: byShopOrder };
 
   /* 3: the Etsy transaction id appearing anywhere Printify carries an id. */

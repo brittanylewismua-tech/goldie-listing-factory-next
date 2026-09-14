@@ -55,7 +55,9 @@
 /* D1399 matches a month of real Etsy sales to what they cost to make, in
    whole minor units, and refuses to call the result profit while anything is
    missing. */
-export const BUILD_MARKER = "D1399";
+/* D1400 finds the Etsy receipt id where Printify actually keeps it, nested
+   in the order metadata, and matches on it exactly. */
+export const BUILD_MARKER = "D1400";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
