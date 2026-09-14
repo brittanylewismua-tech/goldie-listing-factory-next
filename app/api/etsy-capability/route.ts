@@ -156,6 +156,36 @@ export const GET = withErrorLog("etsy-capability", async (request: Request) => {
     };
   }
 
+  /* 4b. Can reviews be fetched incrementally? Ingesting 181,811 reviews to
+         find the four that are new would be indefensible. Etsy documents
+         min_created on the shop reviews endpoint; this checks that it is
+         honoured rather than ignored, which is a distinction this codebase has
+         been burned by before (currency was accepted and ignored). */
+  if (busiest) {
+    const since = Math.floor(Date.now() / 1000) - 3 * 86_400;
+    const windowed = await call(
+      `shops/${busiest.shop_id}/reviews?limit=5&min_created=${since}`,
+    );
+    const rows = ((windowed.parsed as { results?: Array<{ create_timestamp?: number }> })?.results ?? []);
+    results.reviewsSinceWindow = {
+      status: windowed.status,
+      minCreated: since,
+      /* A total that shrinks is proof the filter bit. An unchanged total means
+         it was ignored and pagination has to carry the whole job. */
+      count: (windowed.parsed as { count?: number })?.count ?? null,
+      returned: rows.length,
+      oldestReturned: rows.length ? Math.min(...rows.map(row => Number(row.create_timestamp ?? 0))) : null,
+      allWithinWindow: rows.every(row => Number(row.create_timestamp ?? 0) >= since),
+    };
+    /* And what one page actually costs: the page size Etsy allows. */
+    const page = await call(`shops/${busiest.shop_id}/reviews?limit=100`);
+    results.reviewPageSize = {
+      status: page.status,
+      returned: ((page.parsed as { results?: unknown[] })?.results ?? []).length,
+      count: (page.parsed as { count?: number })?.count ?? null,
+    };
+  }
+
   const reviews = await call(`listings/${ids[0]}/reviews?limit=3`);
   const review = ((reviews.parsed as { results?: unknown[] })?.results ?? [])[0];
   results.listingReviews = {
