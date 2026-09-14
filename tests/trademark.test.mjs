@@ -43,15 +43,20 @@ test("an ordinary seller phrase comes back clear", () => {
 });
 
 test("a clear result never promises safety", () => {
-  /* The list is the common traps, not the federal register. A tool that says
-     "safe" is making a promise it cannot keep — the one somebody quotes back
-     after losing a shop over a mark it had never heard of. */
+  /* The checker now reads the federal register as well as the curated list,
+     and that is exactly when a tool starts sounding authoritative enough to
+     be quoted back after somebody loses a shop. The claim it must never make
+     is still "safe": USPTO covers live US marks in the printed classes, not
+     unregistered common-law rights, not other countries, and not judgement. */
   const verdict = check("something nobody owns");
   assert.doesNotMatch(verdict.summary, /\bsafe\b|\bclear to use\b|\byou can use\b/i);
   const page = strip(read("trademark/page.tsx"));
   assert.doesNotMatch(page, /\bis safe\b|\bsafe to (use|print)\b/i);
   assert.match(page, /not legal advice/i);
-  assert.match(page, /not a search of the federal/i);
+  assert.match(page, /nothing was found rather than\s*nobody owns it/i);
+  /* And while the register is still loading, the page has to say so rather
+     than let an incomplete search read as a clean one. */
+  assert.match(page, /registerReady === false/);
 });
 
 test("it says which word is the problem, not just that there is one", () => {

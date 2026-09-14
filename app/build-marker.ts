@@ -10,7 +10,9 @@
 /* D1374 converts the price column to USD here, because Etsy accepts the
    conversion parameter and ignores it. */
 /* D1375 stops the board recommending somebody else's trademark. */
-export const BUILD_MARKER = "D1375";
+/* D1376 gives the trademark checker the real federal register, loaded from
+   USPTO's bulk files a piece at a time. */
+export const BUILD_MARKER = "D1376";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
