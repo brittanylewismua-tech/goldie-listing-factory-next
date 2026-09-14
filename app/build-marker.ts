@@ -52,7 +52,10 @@
    removal so a missing shop never has to be explained by elimination again. */
 /* D1398 proves the connection diagnostic's ownership filter by running it,
    not by reading it. */
-export const BUILD_MARKER = "D1398";
+/* D1399 matches a month of real Etsy sales to what they cost to make, in
+   whole minor units, and refuses to call the result profit while anything is
+   missing. */
+export const BUILD_MARKER = "D1399";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
