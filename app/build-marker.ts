@@ -20,7 +20,9 @@
    listing evidence, and leaves the rest honestly unresolved. */
 /* D1379 repairs the discovery insert, which had been throwing on every
    scheduled sweep since favourites were added to it. */
-export const BUILD_MARKER = "D1379";
+/* D1380 adopts the intervals that had no inspection job, and counts Etsy
+   calls off the meter the whole application shares. */
+export const BUILD_MARKER = "D1380";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

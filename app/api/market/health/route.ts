@@ -83,8 +83,14 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
               COUNT(DISTINCT CASE WHEN i.resolved_units > 0 THEN i.shop_id END) AS explained
          FROM shop_sales_intervals i WHERE i.to_observed >= ?`)
       .bind(since).first<Record<string, number>>(),
-    db.prepare(`SELECT day, calls FROM sold_spend WHERE day = ?`).bind(dayStart)
-      .first<{ day: string; calls: number }>().catch(() => null),
+    /* The allowance belongs to the Etsy application, not to one feature, so
+       the honest figure is the shared meter every call already writes to —
+       not this feature's own private tally. */
+    db.prepare(
+      `SELECT feature, SUM(calls) AS calls FROM etsy_api_usage_buckets
+        WHERE bucket >= ? GROUP BY feature ORDER BY calls DESC`)
+      .bind(new Date(Date.now() - 24 * 3_600_000).toISOString().slice(0, 13))
+      .all<{ feature: string; calls: number }>().catch(() => ({ results: [] })),
     db.prepare(
       `SELECT state, COUNT(*) AS n FROM tm_ingest_files GROUP BY state`).all()
       .catch(() => ({ results: [] })),
@@ -106,8 +112,10 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
   const cycleMs = cycle?.oldest && cycle?.newest
     ? Date.parse(cycle.newest) - Date.parse(cycle.oldest) : null;
   const newestSnapshot = snapshots?.newest ? String(snapshots.newest) : null;
-  const callsToday = Number(registerFiles ? 0 : 0) + Number(spend?.calls ?? 0);
-  const hoursElapsed = Math.max(0.25, (Date.now() - Date.parse(`${dayStart}T00:00:00Z`)) / 3_600_000);
+  const byWorkload = ((spend as { results?: Array<{ feature: string; calls: number }> }).results) ?? [];
+  const callsToday = byWorkload.reduce((sum, row) => sum + Number(row.calls ?? 0), 0);
+  const hoursElapsed = Math.max(
+    0.25, (Date.now() - Date.parse(`${dayStart}T00:00:00Z`)) / 3_600_000);
 
   const ingest = Object.fromEntries(
     (((registerFiles as { results?: Array<{ state: string; n: number }> }).results) ?? [])
@@ -170,7 +178,10 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
     },
 
     requests: {
-      etsyCallsToday: callsToday,
+      /* A rolling day rather than since midnight, because the allowance is
+         what Etsy is counting and it does not reset when our date string does. */
+      etsyCallsLast24h: callsToday,
+      byWorkload,
       projectedDailyEtsyCalls: Math.round((callsToday / hoursElapsed) * 24),
       internalCeiling: 80_000,
     },

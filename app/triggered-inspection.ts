@@ -246,6 +246,28 @@ export async function inspectionPass(
     return { ...pass, skipped: "An inspection pass was already running." };
 
   try {
+    /*
+      ADOPT ANY INTERVAL THAT HAS NO JOB.
+
+      Measured in production: 800 intervals existed and only 278 had jobs. The
+      first version of the sensor opened intervals before the queue existed, so
+      five hundred real shop sales sat there with nothing intending to look at
+      them — the exact silent-loss failure this design is supposed to make
+      impossible. Reconciling on every pass means an interval can never be
+      stranded by a deploy, a partial write, or a future change of mind about
+      who enqueues.
+    */
+    await db()
+      .prepare(
+        `INSERT INTO inspection_jobs (interval_id, shop_id, queued_at)
+         SELECT i.id, i.shop_id, ?
+           FROM shop_sales_intervals i
+           LEFT JOIN inspection_jobs j ON j.interval_id = i.id
+          WHERE j.interval_id IS NULL AND i.inspected_at IS NULL
+          LIMIT 2000`)
+      .bind(new Date().toISOString())
+      .run();
+
     /* A job left running by a firing that died is reclaimed, for the same
        reason the ingest reclaims its files: work must never vanish. */
     await db()

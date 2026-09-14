@@ -155,3 +155,26 @@ test("the unresolved remainder is never apportioned", () => {
   assert.equal(out.unresolved, 5);
   assert.equal(out.linked.length, 1);
 });
+
+test("an interval with no job is adopted rather than stranded", () => {
+  /* Measured in production: 800 intervals, 278 jobs. Five hundred real shop
+     sales with nothing intending to look at them — the silent loss this whole
+     design exists to prevent. */
+  assert.match(inspector, /LEFT JOIN inspection_jobs j ON j\.interval_id = i\.id/);
+  assert.match(inspector, /WHERE j\.interval_id IS NULL AND i\.inspected_at IS NULL/);
+});
+
+test("request telemetry reads the shared meter, not this feature's own tally", () => {
+  /* The allowance belongs to the Etsy application; World Builder spends from
+     the same key. Counting only our own calls invents headroom. */
+  const health = readFileSync(new URL("../app/api/market/health/route.ts", import.meta.url), "utf8");
+  assert.match(health, /FROM etsy_api_usage_buckets/);
+  assert.match(health, /GROUP BY feature/);
+  assert.doesNotMatch(health, /FROM sold_spend/);
+});
+
+test("both attribution denominators are reported, not whichever reads better", () => {
+  const health = readFileSync(new URL("../app/api/market/health/route.ts", import.meta.url), "utf8");
+  assert.match(health, /unitCoveragePercent/);
+  assert.match(health, /shopCoveragePercent/);
+});
