@@ -3,7 +3,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { withErrorLog } from "@/app/error-log";
 import { env } from "cloudflare:workers";
-import { etsyApiCredential, recordEtsyCall } from "@/app/api/etsy/client";
+import { etsyApiCredential, etsyConnection, etsyFetch, recordEtsyCall } from "@/app/api/etsy/client";
 
 /**
  * WHAT ETSY ACTUALLY DOES, MEASURED.
@@ -105,7 +105,57 @@ export const GET = withErrorLog("etsy-capability", async (request: Request) => {
     results.ownInventory = { status: own.status, body: own.parsed ?? own.text };
   }
 
-  /* 4. Reviews for a listing owned by somebody else: buyer proof, or not. */
+  /* 3b. The inventory endpoint again, this time signed as the connected
+         seller. App-key access is refused outright; the question left is
+         whether an authorised token can read a listing it does not own. */
+  try {
+    const connection = await etsyConnection(user.userId);
+    const own = await etsyFetch<unknown>(
+      `/listings/batch/inventory?listing_ids=${ids.join(",")}`,
+      connection.token, undefined, undefined, "qa",
+    ).then(body => ({ status: 200, body })).catch(error => ({
+      status: 0, body: error instanceof Error ? error.message : "failed",
+    }));
+    results.competitorInventoryAsSeller = own;
+  } catch (error) {
+    results.competitorInventoryAsSeller = {
+      skipped: error instanceof Error ? error.message : "no connection",
+    };
+  }
+
+  /* 3c. What the batch listing read still calls "inventory" — the field is
+         present in the response even after July's removal, and empty is a
+         very different answer from populated. */
+  results.inventoryFieldOnBatch = first?.inventory ?? null;
+
+  /* 4. Reviews for a listing owned by somebody else: buyer proof, or not.
+        Asked of a shop with real trading history, because a brand new
+        listing answering "no reviews" proves nothing either way. */
+  const busiest = await db
+    .prepare(
+      `SELECT w.listing_id, w.shop_id
+         FROM sold_watch w
+         JOIN (SELECT shop_id, MAX(sold_count) AS sold FROM shop_sold GROUP BY shop_id) s
+           ON s.shop_id = w.shop_id
+        WHERE w.state = 'active'
+        ORDER BY s.sold DESC
+        LIMIT 1`,
+    )
+    .first<{ listing_id: number; shop_id: number }>();
+  if (busiest) {
+    const busy = await call(`shops/${busiest.shop_id}/reviews?limit=3`);
+    const busyReview = ((busy.parsed as { results?: unknown[] })?.results ?? [])[0];
+    results.busyShopReviews = {
+      shopId: busiest.shop_id,
+      status: busy.status,
+      count: (busy.parsed as { count?: number })?.count ?? null,
+      fields: shape(busyReview, [
+        "shop_id", "listing_id", "transaction_id", "rating", "review",
+        "create_timestamp", "created_timestamp", "update_timestamp", "language", "image_url_fullxfull",
+      ]),
+    };
+  }
+
   const reviews = await call(`listings/${ids[0]}/reviews?limit=3`);
   const review = ((reviews.parsed as { results?: unknown[] })?.results ?? [])[0];
   results.listingReviews = {
