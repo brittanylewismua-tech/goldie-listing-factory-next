@@ -1271,7 +1271,14 @@ test("connects Etsy with PKCE and finishes only the exact Printify-linked Etsy l
   ]);
   assert.match(page,/Connect Etsy before publishing/);
   assert.match(oauth,/code_challenge_method:"S256"/);
-  assert.match(oauth,/listings_r listings_w shops_r shops_w/);
+  /* The scope list moved into shop-map-auth so Shop Map can add
+     transactions_r without widening what everybody else is asked for. The
+     contract this test protects is unchanged: the ordinary connect flow asks
+     for exactly the four Listing Factory scopes. */
+  assert.match(oauth,/scope=body\.intent==="sales"\?SHOP_MAP_SCOPES:BASE_SCOPES/);
+  const scopes=await readFile("app/shop-map-auth.ts","utf8");
+  assert.match(scopes,/BASE_SCOPES = "listings_r listings_w shops_r shops_w"/);
+  assert.doesNotMatch(oauth,/transactions_r/);
   assert.match(oauth,/etsyRedirectUri/);
   assert.match(callback,/grant_type:"authorization_code"/);
   assert.match(callback,/goldieSiteUrl/);

@@ -31,7 +31,9 @@
 /* D1384 sizes the sweep and its lock against what a full pass measured. */
 /* D1385 lets a member watch a competitor's shop, resolved to one Etsy id and
    collected once however many members are watching it. */
-export const BUILD_MARKER = "D1385";
+/* D1386 asks for Etsy sales permission only when Shop Map needs it, and never
+   drops a working connection to get it. */
+export const BUILD_MARKER = "D1386";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
