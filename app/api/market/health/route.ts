@@ -40,7 +40,7 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
 
   const [
     sensor, cycle, intervals, jobs, delays, events, duplicates,
-    snapshots, activity, shopsWithActivity, spend, registerFiles, register,
+    snapshots, activity, shopsWithActivity, spend, registerFiles, register, recent,
   ] = await Promise.all([
     db.prepare(
       `SELECT COUNT(*) AS shops,
@@ -95,6 +95,11 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
       `SELECT state, COUNT(*) AS n FROM tm_ingest_files GROUP BY state`).all()
       .catch(() => ({ results: [] })),
     registerSize(db).catch(() => ({ marks: 0, files: [] })),
+    db.prepare(
+      `SELECT interval_id, shop_id, listings_inspected, events_created, units_attributed,
+              units_unresolved, conflicts, delay_ms, finished_at
+         FROM inspection_jobs WHERE state = 'done'
+        ORDER BY finished_at DESC LIMIT 10`).all(),
   ]);
 
   const ordered = (delays.results ?? []).map(row => Number(row.delay_ms)).sort((a, b) => a - b);
@@ -185,6 +190,10 @@ export const GET = withErrorLog("market-health", async (request: Request) => {
       projectedDailyEtsyCalls: Math.round((callsToday / hoursElapsed) * 24),
       internalCeiling: 80_000,
     },
+
+    /* The most recent completed inspections, so a run can be inspected rather
+       than inferred from totals. */
+    recentInspections: (recent as { results?: unknown[] }).results ?? [],
 
     trademarkRegister: {
       marks: register.marks,
