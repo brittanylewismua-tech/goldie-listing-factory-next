@@ -48,9 +48,27 @@ export const GET = withErrorLog("shop-map-printify-probe", async (request: Reque
     .bind(user.userId).first<{ encrypted_token: string }>();
   if (!connection) return NextResponse.json({ error: "No Printify connection." }, { status: 400 });
 
-  const token = await decryptPrintifyToken(
-    connection.encrypted_token,
-    (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
+  /*
+    The same row decrypts fine through /api/printify, so a failure here is a
+    difference in how this route reached the secret, not a damaged token.
+    Reported rather than thrown, because "could not be decrypted safely" tells
+    nobody which of the two it was.
+  */
+  const secret = (env as unknown as { PRINTIFY_TOKEN_KEY?: string }).PRINTIFY_TOKEN_KEY ?? "";
+  let token = "";
+  try {
+    token = await decryptPrintifyToken(connection.encrypted_token, secret);
+  } catch (error) {
+    return NextResponse.json({
+      step: "decrypt",
+      error: error instanceof Error ? error.message : "failed",
+      secretPresent: Boolean(secret),
+      secretLength: secret.length,
+      secretLooksHex: /^[a-f0-9]{64}$/i.test(secret),
+      storedParts: String(connection.encrypted_token ?? "").split(".").length,
+      storedLength: String(connection.encrypted_token ?? "").length,
+    }, { status: 500 });
+  }
   const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
   const call = async (path: string) => {
     const started = Date.now();
