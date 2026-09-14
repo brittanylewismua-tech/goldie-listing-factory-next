@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
+import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { filesFromProduct, productFilesUrl } from "@/app/uspto-bulk";
 import { ensureRegisterTables, ingestFile, registerSize } from "@/app/trademark-register";
@@ -61,8 +63,13 @@ async function seed(db: D1Database): Promise<number> {
 }
 
 export const GET = withErrorLog("trademark-ingest-tick", async (request: Request) => {
-  if (request.headers.get("cf-connecting-ip") !== null)
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  /* The clock reaches this with no cf-connecting-ip, which is proof of origin
+     nobody outside can forge. An owner may also run a file by hand, which is
+     what makes a stuck ingest debuggable instead of a mystery. */
+  if (request.headers.get("cf-connecting-ip") !== null) {
+    const user = await getChatGPTUser();
+    if (!user || !isOwner(user)) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
   if (!key()) return NextResponse.json({ skipped: "No USPTO key." });
 
   const db = (env as unknown as { DB: D1Database }).DB;
