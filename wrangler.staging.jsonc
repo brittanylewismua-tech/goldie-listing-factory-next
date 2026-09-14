@@ -50,5 +50,8 @@
     "STRIPE_GOLDIE_PRICE_ID": "price_1U5VndGT9xM3GmXOsLB36B4q",
     "STRIPE_SCALE_PRICE_ID": "price_1U5VnyGT9xM3GmXOdrR7D5BF"
   },
+  // Reading a USPTO bulk file is minutes of inflating and parsing in one go.
+  // The default thirty seconds would kill it halfway through every time.
+  "limits": { "cpu_ms": 300000 },
   "observability": { "enabled": true }
 }

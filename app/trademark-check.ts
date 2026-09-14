@@ -363,3 +363,73 @@ export function mentionsAMark(title: string) {
   if (ANY_MARK.test(text)) return true;
   return TEAM_PATTERNS.some(pattern => { pattern.lastIndex = 0; return pattern.test(text); });
 }
+
+/**
+ * THE FEDERAL REGISTER, FOLDED IN.
+ *
+ * The curated list above is the fast screen for the things that actually get
+ * shops closed. The register is the long tail: half a million live marks in
+ * the classes sellers print on, most of which no one has heard of. Both
+ * matter, and they are not equally alarming, so they are not said the same
+ * way.
+ *
+ * A REGISTRATION ON A COMMON WORD IS NOT A BAN. "Love" is registered for
+ * clothing by somebody. Shouting about it would train sellers to ignore this
+ * tool, which is worse than not having one. So a single ordinary word that
+ * merely appears inside the phrase is a caution with the owner named, while
+ * the whole phrase being somebody's registered mark, or a multi-word mark
+ * sitting inside it, is the real thing.
+ */
+export type RegisterMatch = {
+  mark: string;
+  owner: string;
+  registration: string;
+  classes: string[];
+  registered: boolean;
+  /** True when the phrase is the mark, rather than merely containing it. */
+  exact: boolean;
+};
+
+export type FullVerdict = Verdict & {
+  register: RegisterMatch[];
+  /** False while the register is still filling, so the page can say so. */
+  registerReady: boolean;
+};
+
+const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
+
+export function withRegister(
+  verdict: Verdict,
+  matches: RegisterMatch[],
+  registerReady: boolean,
+): FullVerdict {
+  const serious = matches.filter(
+    match => match.registered && (match.exact || words(match.mark) > 1),
+  );
+  const minor = matches.filter(match => !serious.includes(match));
+
+  if (verdict.risk === "high" || !matches.length)
+    return { ...verdict, register: matches, registerReady };
+
+  if (serious.length) {
+    const first = serious[0];
+    return {
+      ...verdict,
+      risk: "high",
+      register: matches,
+      registerReady,
+      summary: first.exact
+        ? `“${first.mark}” is a live registered trademark${first.owner ? `, owned by ${first.owner}` : ""}. Using it as the phrase on a product is what gets a listing removed.`
+        : `This phrase contains “${first.mark}”, a live registered trademark${first.owner ? ` owned by ${first.owner}` : ""}. Printing it risks the listing being removed.`,
+    };
+  }
+
+  const named = [...new Set(minor.map(match => match.mark))].slice(0, 3).join(", ");
+  return {
+    ...verdict,
+    risk: "caution",
+    register: matches,
+    registerReady,
+    summary: `No famous brands here, but ${named} ${minor.length > 1 ? "are" : "is"} registered for clothing and print by somebody else. A registration on an ordinary word does not stop you using it, and it does mean the owner can object — worth a look before you scale it.`,
+  };
+}
