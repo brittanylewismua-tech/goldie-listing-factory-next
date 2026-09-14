@@ -138,11 +138,19 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
     return NextResponse.json({ added, file: next.name, ...result, ...(await registerSize(db)) });
   } catch (error) {
     const note = error instanceof Error ? error.message : "failed";
-    /* Left waiting on purpose: a file that failed once for a network reason
-       should be tried again, and one that fails forever shows up in the note. */
+    /*
+      A RETRY IS FOR A BAD MINUTE, NOT A BAD FILE.
+
+      A file that cannot be read will fail identically forever, and because
+      the queue is ordered the same way every time, it blocks everything
+      behind it — measured: nine hours of nothing while a .doc was retried.
+      A permanent failure is parked as skipped and stays visible; only
+      transient failures go back in the queue.
+    */
+    const permanent = /Not a zip|not deflate|Truncated zip/i.test(note);
     await db
-      .prepare(`UPDATE tm_ingest_files SET state = 'waiting', note = ? WHERE name = ?`)
-      .bind(note.slice(0, 300), next.name)
+      .prepare(`UPDATE tm_ingest_files SET state = ?, note = ? WHERE name = ?`)
+      .bind(permanent ? "skipped" : "waiting", note.slice(0, 300), next.name)
       .run();
     return NextResponse.json({ added, file: next.name, error: note }, { status: 500 });
   }

@@ -43,6 +43,15 @@ type ProductResponse = {
 export function filesFromProduct(payload: unknown): BulkFile[] {
   const bag = (payload as ProductResponse)?.bulkDataProductBag?.[0]?.productFileBag?.fileDataBag ?? [];
   return bag
+    /*
+      NOT EVERYTHING IN A PRODUCT IS DATA.
+
+      USPTO ships the DTD documentation alongside the data — a .doc file sat in
+      the applications product — and the ingest queued it like any other file,
+      failed with "Not a zip", put it back in the queue, and picked it again.
+      The register stopped loading for nine hours behind one Word document.
+    */
+    .filter(file => /\.zip$/i.test(String(file.fileName ?? "")))
     .filter(file => file.fileName && file.fileDownloadURI)
     .map(file => ({
       name: String(file.fileName),

@@ -116,3 +116,22 @@ test("every class on a record is read, not just the first", () => {
   assert.deepEqual(allFields(many, "international-code"), ["025", "016"]);
   assert.deepEqual(readRecord(many).classes, ["025", "016"]);
 });
+
+test("only data files are queued, and a file that cannot be read is parked", async () => {
+  /* USPTO ships DTD documentation inside the data product. The ingest queued a
+     .doc, failed with "Not a zip", requeued it, and picked it again — the
+     register stopped loading for nine hours behind one Word document. */
+  const { filesFromProduct } = await import("../app/uspto-bulk.ts");
+  const files = filesFromProduct({
+    bulkDataProductBag: [{ productFileBag: { fileDataBag: [
+      { fileName: "apc260912.zip", fileDownloadURI: "https://example.test/a.zip" },
+      { fileName: "Trademark-Applications-Documentation-v2.3.doc", fileDownloadURI: "https://example.test/b.doc" },
+    ] } }],
+  });
+  assert.deepEqual(files.map(file => file.name), ["apc260912.zip"]);
+
+  const { readFileSync } = await import("node:fs");
+  const tick = readFileSync(new URL("../app/api/trademark/ingest-tick/route.ts", import.meta.url), "utf8");
+  assert.match(tick, /A RETRY IS FOR A BAD MINUTE, NOT A BAD FILE/);
+  assert.match(tick, /permanent \? "skipped" : "waiting"/);
+});
