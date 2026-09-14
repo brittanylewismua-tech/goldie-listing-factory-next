@@ -436,3 +436,53 @@ export async function markMissing(shopId: number, listingIds: number[]): Promise
     .bind(now, now, shopId, ...listingIds)
     .run();
 }
+
+
+/**
+ * DOES ETSY LET US ASK FOR THE MOST RECENTLY CHANGED FIRST?
+ *
+ * Enumerating a 700-listing shop costs seven calls. If the endpoint honours
+ * an ordering by update time, the listings that could possibly have moved are
+ * all at the front, and an inspection costs one call rather than seven —
+ * which is the difference between this design being affordable and not.
+ *
+ * Measured rather than assumed: this codebase has already been caught by an
+ * Etsy parameter that was accepted and then ignored.
+ */
+export async function probeSortSupport(shopId: number): Promise<{
+  shopId: number; total: number;
+  plain: number[]; sorted: number[]; differentOrder: boolean;
+  sortedDescendingByUpdate: boolean; status: number; honoured: boolean;
+}> {
+  const ask = async (query: string) => {
+    await waitForEtsyCapacity();
+    const response = await fetch(
+      `https://openapi.etsy.com/v3/application/shops/${shopId}/listings/active?limit=10${query}`,
+      { headers: { "x-api-key": etsyApiCredential() }, signal: AbortSignal.timeout(20_000) },
+    );
+    await recordEtsyCall(response, "qa");
+    if (!response.ok) return { rows: [] as ActiveListing[], total: 0, status: response.status };
+    const body = await response.json() as { count?: number; results?: ActiveListing[] };
+    return { rows: body.results ?? [], total: Number(body.count ?? 0), status: response.status };
+  };
+
+  const plain = await ask("");
+  const sorted = await ask("&sort_on=updated&sort_order=desc");
+  const updates = sorted.rows.map(row => Number(row.last_modified_timestamp ?? 0));
+  const descending = updates.every((value, index) => index === 0 || updates[index - 1] >= value);
+  const plainIds = plain.rows.map(row => Number(row.listing_id));
+  const sortedIds = sorted.rows.map(row => Number(row.listing_id));
+  const different = JSON.stringify(plainIds) !== JSON.stringify(sortedIds);
+
+  return {
+    shopId,
+    total: plain.total,
+    plain: plainIds,
+    sorted: sortedIds,
+    differentOrder: different,
+    sortedDescendingByUpdate: descending,
+    status: sorted.status,
+    /* Accepted is not honoured. Both have to be true. */
+    honoured: sorted.status === 200 && descending && different,
+  };
+}
