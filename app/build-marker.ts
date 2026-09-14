@@ -29,7 +29,9 @@
 /* D1383 fixes the upsert SQLite would not parse, and takes the whole-shop
    backfill off the clock. */
 /* D1384 sizes the sweep and its lock against what a full pass measured. */
-export const BUILD_MARKER = "D1384";
+/* D1385 lets a member watch a competitor's shop, resolved to one Etsy id and
+   collected once however many members are watching it. */
+export const BUILD_MARKER = "D1385";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

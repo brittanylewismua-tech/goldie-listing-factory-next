@@ -67,6 +67,16 @@ export default {
     run("/api/market/inspect-tick");
     /* The corpus sweep, which is what keeps discovery going. */
     run("/api/sold-overnight/cron");
+    /*
+      Shop Watch keeps its evidence inside Etsy's six-hour display rule. The
+      member-facing brief is generated once each morning; this only keeps the
+      underlying evidence fresh enough to be shown at all.
+    */
+    ctx.waitUntil(
+      app.fetch(new Request(site + "/api/market/shop-watch", { method: "PUT" }), env, ctx)
+        .catch(() => {}),
+    );
+
     /* The trademark register, one USPTO bulk file at a time. */
     run("/api/trademark/ingest-tick");
     /*
