@@ -452,7 +452,8 @@ export async function markMissing(shopId: number, listingIds: number[]): Promise
 export async function probeSortSupport(shopId: number): Promise<{
   shopId: number; total: number;
   plain: number[]; sorted: number[]; differentOrder: boolean;
-  sortedDescendingByUpdate: boolean; status: number; honoured: boolean;
+  sortedDescendingByUpdate: boolean; plainDescendingByUpdate: boolean;
+  plainUpdates: number[]; status: number; honoured: boolean;
 }> {
   const ask = async (query: string) => {
     await waitForEtsyCapacity();
@@ -468,8 +469,14 @@ export async function probeSortSupport(shopId: number): Promise<{
 
   const plain = await ask("");
   const sorted = await ask("&sort_on=updated&sort_order=desc");
-  const updates = sorted.rows.map(row => Number(row.last_modified_timestamp ?? 0));
-  const descending = updates.every((value, index) => index === 0 || updates[index - 1] >= value);
+  const isDescending = (rows: ActiveListing[]) => {
+    const updates = rows.map(row => Number(row.last_modified_timestamp ?? 0));
+    return updates.every((value, index) => index === 0 || updates[index - 1] >= value);
+  };
+  const descending = isDescending(sorted.rows);
+  /* The important half: if the DEFAULT order is already most-recently-changed
+     first, an inspection never needs more than the front of the list. */
+  const plainDescending = isDescending(plain.rows);
   const plainIds = plain.rows.map(row => Number(row.listing_id));
   const sortedIds = sorted.rows.map(row => Number(row.listing_id));
   const different = JSON.stringify(plainIds) !== JSON.stringify(sortedIds);
@@ -481,6 +488,8 @@ export async function probeSortSupport(shopId: number): Promise<{
     sorted: sortedIds,
     differentOrder: different,
     sortedDescendingByUpdate: descending,
+    plainDescendingByUpdate: plainDescending,
+    plainUpdates: plain.rows.map(row => Number(row.last_modified_timestamp ?? 0)),
     status: sorted.status,
     /* Accepted is not honoured. Both have to be true. */
     honoured: sorted.status === 200 && descending && different,
