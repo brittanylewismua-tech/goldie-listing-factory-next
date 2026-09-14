@@ -38,10 +38,29 @@ export const GET = withErrorLog("shop-map-connection-forensics", async (request:
     `SELECT name, sql FROM sqlite_master
       WHERE tbl_name = 'etsy_connections' ORDER BY type DESC`);
 
+  /*
+    SCOPED TO THE CALLER, ALWAYS.
+
+    The first version of this query had no user_id filter, and a diagnostic
+    written to investigate one account read every account's rows and printed
+    other members' shop names into a report. Owner access is not a reason to
+    widen a query — it is a reason to be more careful with one, because
+    nothing downstream will stop it.
+  */
   const rows = await ask<Record<string, unknown>>(
-    `SELECT user_id, shop_id, shop_name, is_active, etsy_user_id, updated_at,
+    `SELECT shop_id, shop_name, is_active, etsy_user_id, updated_at,
             scopes, scopes_checked_at
-       FROM etsy_connections ORDER BY updated_at DESC`);
+       FROM etsy_connections WHERE user_id = ? ORDER BY updated_at DESC`,
+    user.userId);
+
+  /* Whether this shop is connected by anyone at all, as a count and nothing
+     more — enough to tell "the row is gone" from "the row moved to another
+     account", without naming anybody. */
+  const elsewhere = missing
+    ? (await ask<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM etsy_connections WHERE shop_id = ? AND user_id <> ?`,
+      missing, user.userId)).results?.[0] ?? null
+    : null;
 
   /* Anything still pointing at the missing shop. Related records surviving
      means the connection row was deleted, not rewritten into another shop. */
@@ -72,6 +91,7 @@ export const GET = withErrorLog("shop-map-connection-forensics", async (request:
     schema: (schema.results ?? []).map(row => ({ name: row.name, sql: row.sql })),
     connections: rows.results ?? [],
     connectionCount: (rows.results ?? []).length,
+    sameShopConnectedByOtherAccounts: elsewhere,
     missingShop: missing || null,
     traces,
     recentEtsyErrors: errors.results ?? [],

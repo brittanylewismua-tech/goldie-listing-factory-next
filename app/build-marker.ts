@@ -47,7 +47,8 @@
    it moved the active shop and then blamed the member's Etsy account. */
 /* D1395 reads the live connection schema so a missing shop can be explained
    with evidence instead of a guess. */
-export const BUILD_MARKER = "D1395";
+/* D1396 scopes the connection diagnostic to the account being diagnosed. */
+export const BUILD_MARKER = "D1396";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
