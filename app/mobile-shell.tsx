@@ -36,6 +36,16 @@ const BARE = [/^\/$/, /^\/account\/sign-in/, /^\/signup/, /^\/auth/];
 */
 const WORKSPACE = [/^\/listing-factory/, /^\/listingfactory/, /^\/batches/];
 
+/*
+  ONE EXCEPTION, AND IT IS DELIBERATE.
+
+  Design Scanner belongs to the Listing Factory product — it is the preflight
+  before a design becomes listings — but uploading a design from a phone's
+  camera roll is the natural way to start. So it gets its own route and is
+  explicitly NOT swept up by the desktop gate above.
+*/
+const SCANNER = /^\/design-scanner/;
+
 export default function MobileShell() {
   const pathname = usePathname() ?? "/";
   const [installable, setInstallable] = useState<null | "ios" | "prompt">(null);
@@ -84,7 +94,7 @@ export default function MobileShell() {
 
   if (BARE.some(pattern => pattern.test(pathname))) return null;
 
-  if (WORKSPACE.some(pattern => pattern.test(pathname)))
+  if (WORKSPACE.some(pattern => pattern.test(pathname)) && !SCANNER.test(pathname))
     return <aside className="desktop-only-notice" role="note">
       <b>Listing Factory is built for desktop.</b>
       <p>
