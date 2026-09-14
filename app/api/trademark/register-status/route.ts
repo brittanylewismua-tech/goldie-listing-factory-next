@@ -12,7 +12,7 @@ import { ensureRegisterTables, registerSize } from "@/app/trademark-register";
  * shape of thing that quietly stops working. This is the window into it:
  * how many marks are held, and what the last few files did.
  */
-export const GET = withErrorLog("trademark-register-status", async () => {
+export const GET = withErrorLog("trademark-register-status", async (request: Request) => {
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
@@ -31,8 +31,15 @@ export const GET = withErrorLog("trademark-register-status", async () => {
     .prepare(`SELECT name, priority FROM tm_ingest_files WHERE state IN ('waiting','partial') ORDER BY priority, name DESC LIMIT 3`)
     .all();
 
+  /* A handful of real marks, so the lookup can be exercised against rows that
+     actually exist rather than a phrase somebody hoped would be in there. */
+  const sample = new URL(request.url).searchParams.get("sample")
+    ? (await db.prepare(`SELECT mark, owner, classes, status_code FROM tm_marks LIMIT 8`).all()).results
+    : undefined;
+
   return NextResponse.json({
     ...(await registerSize(db)),
+    sample,
     recent: recent.results ?? [],
     nextUp: waiting.results ?? [],
   });
