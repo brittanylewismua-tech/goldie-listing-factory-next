@@ -87,32 +87,58 @@ export const GET = withErrorLog("shop-map-printify-probe", async (request: Reque
   if (!shopId)
     return NextResponse.json({ shops: { status: shops.status, body: shops.parsed ?? shops.text } });
 
-  /* One page, one order. Enough to answer the question and nothing more. */
-  const firstPage = await call(`/shops/${shopId}/orders.json?limit=1`);
-  const orders = (firstPage.parsed as { data?: unknown[]; last_page?: number; total?: number } | null);
-  const sample = (orders?.data ?? [])[0] as Record<string, unknown> | undefined;
+  /*
+    SEVERAL ORDERS, NOT ONE.
+
+    The first probe read a single order from whichever shop came back first,
+    found no external identifiers, and nearly became a design decision. It was
+    reading seven samples in a shop that was not hers. Identifiers have to be
+    judged across a run of real orders, and reported as how many of them carry
+    each field rather than as a yes or no from one.
+  */
+  const wanted = Math.min(20, Math.max(1, Number(new URL(request.url).searchParams.get("orders")) || 10));
+  const page = await call(`/shops/${shopId}/orders.json?limit=${wanted}`);
+  const body = (page.parsed as { data?: Array<Record<string, unknown>>; total?: number; last_page?: number } | null);
+  const rows = body?.data ?? [];
+
+  const carrying = (field: string) =>
+    rows.filter(row => row[field] !== undefined && row[field] !== null && row[field] !== "").length;
+
+  const orderTypes: Record<string, number> = {};
+  for (const row of rows) {
+    const kind = String((row.metadata as { order_type?: string } | undefined)?.order_type ?? "unknown");
+    orderTypes[kind] = (orderTypes[kind] ?? 0) + 1;
+  }
+
+  /* One representative order's shape, with anything personal withheld. */
+  const sample = rows.find(row =>
+    String((row.metadata as { order_type?: string } | undefined)?.order_type ?? "") !== "sample") ?? rows[0];
 
   return NextResponse.json({
     shopId,
     orderAccess: {
-      status: firstPage.status,
-      /* 401 or 403 means Shop Map needs a wider Printify credential; 200
-         means the connection we already have is enough. */
-      usable: firstPage.status === 200,
-      ms: firstPage.ms,
-      totalOrders: orders?.total ?? null,
-      lastPage: orders?.last_page ?? null,
-      body: firstPage.status === 200 ? undefined : firstPage.parsed ?? firstPage.text,
+      status: page.status,
+      usable: page.status === 200,
+      ms: page.ms,
+      totalOrders: body?.total ?? null,
+      lastPage: body?.last_page ?? null,
+      inspected: rows.length,
+      body: page.status === 200 ? undefined : page.parsed ?? page.text,
     },
-    /* The identifiers reconciliation depends on, reported as present or not. */
-    matchIdentifiers: sample ? {
-      id: typeof sample.id,
-      external_id: typeof sample.external_id,
-      shop_order_id: typeof sample.shop_order_id,
-      metadata: shapeOf(sample.metadata),
-      created_at: typeof sample.created_at,
-      status: typeof sample.status,
-    } : null,
+    orderTypes,
+    /* How many of the inspected orders carry each identifier. A field that is
+       present on none of them cannot be the basis of the matcher. */
+    identifierCoverage: {
+      external_id: carrying("external_id"),
+      shop_order_id: carrying("shop_order_id"),
+      app_order_id: carrying("app_order_id"),
+      id: carrying("id"),
+      skusOnLineItems: rows.filter(row =>
+        (row.line_items as Array<{ metadata?: { sku?: string } }> | undefined)
+          ?.some(item => item.metadata?.sku)).length,
+    },
+    sampleOrderType: sample
+      ? (sample.metadata as { order_type?: string } | undefined)?.order_type ?? null : null,
     orderShape: sample ? shapeOf(sample) : null,
   });
 });
