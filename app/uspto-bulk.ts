@@ -82,21 +82,58 @@ export async function singleEntryDeflateStream(
   if (view.getUint32(0, true) !== 0x04034b50) throw new Error("Not a zip");
   const method = view.getUint16(8, true);
   if (method !== 8) throw new Error(`Zip entry is not deflate (method ${method})`);
+  /* Zero means the size was not known when the file was written and follows
+     the data instead; then the decompressor's own end is the only marker. */
+  const compressedSize = view.getUint32(18, true);
   const nameLength = view.getUint16(26, true);
   const extraLength = view.getUint16(28, true);
   const start = 30 + nameLength + extraLength;
   while (head.length < start) if (!(await grow())) throw new Error("Truncated zip header");
 
   const remainder = head.slice(start);
-  /* Hand the decompressor the bytes we over-read, then the rest of the body. */
+  let fed = 0;
+  /* Hand the decompressor the bytes we over-read, then the rest of the body,
+     and NOT ONE BYTE MORE. Past the entry sit the data descriptor and the
+     central directory; feeding those makes the decompressor throw "Trailing
+     bytes after end of compressed data" at the very end of an otherwise
+     perfect read, which is a maddening way to lose a whole file. */
+  const take = (chunk: Uint8Array): Uint8Array | null => {
+    if (!compressedSize) return chunk;
+    if (fed >= compressedSize) return null;
+    const room = compressedSize - fed;
+    const slice = chunk.length > room ? chunk.slice(0, room) : chunk;
+    fed += slice.length;
+    return slice;
+  };
+
   const compressed = new ReadableStream<Uint8Array>({
     start(controller) {
-      if (remainder.length) controller.enqueue(remainder);
+      const first = remainder.length ? take(remainder) : null;
+      if (first && first.length) controller.enqueue(first);
+      if (compressedSize && fed >= compressedSize) controller.close();
     },
     async pull(controller) {
-      const { value, done } = await reader.read();
-      if (done) controller.close();
-      else if (value) controller.enqueue(value);
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) {
+          controller.close();
+          return;
+        }
+        if (!value) continue;
+        const slice = take(value);
+        if (!slice) {
+          controller.close();
+          return reader.cancel().catch(() => undefined);
+        }
+        if (slice.length) {
+          controller.enqueue(slice);
+          if (compressedSize && fed >= compressedSize) {
+            controller.close();
+            return reader.cancel().catch(() => undefined);
+          }
+          return;
+        }
+      }
     },
     cancel(reason) {
       return reader.cancel(reason);
