@@ -156,11 +156,41 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
     If one turns up in a field nobody expected, that is the exact match path
     and the SKU fallback should never be used.
   */
+  /*
+    WHERE, EXACTLY.
+
+    Knowing an Etsy id appears somewhere in the payload is not enough to match
+    on — the field it lives in is the match path, and a substring hit could be
+    coincidence. This walks the parsed orders and reports the key path of any
+    value equal to an Etsy id, so the matcher can be built on a field rather
+    than on a text search.
+  */
+  const locate = (value: unknown, needle: string, path: string, found: string[]) => {
+    if (found.length > 4) return;
+    if (value === null || value === undefined) return;
+    if (typeof value === "object") {
+      if (Array.isArray(value)) value.forEach((item, index) => locate(item, needle, `${path}[${index}]`, found));
+      else for (const [key, inner] of Object.entries(value as Record<string, unknown>))
+        locate(inner, needle, path ? `${path}.${key}` : key, found);
+      return;
+    }
+    if (String(value) === needle) found.push(path);
+  };
+
+  const identifierPaths = new Map<string, number>();
   const identifierHits: Array<{ kind: string; id: number }> = [];
   for (const receipt of receipts) {
     const receiptId = String(receipt.receipt_id ?? "");
-    if (receiptId && printifyRaw.includes(receiptId))
+    if (receiptId && printifyRaw.includes(receiptId)) {
       identifierHits.push({ kind: "receipt_id", id: Number(receiptId) });
+      const where: string[] = [];
+      for (const order of printifyOrders) locate(order, receiptId, "", where);
+      for (const path of where)
+        identifierPaths.set(
+          /* Array indexes vary per order; the shape is what matters. */
+          path.replace(/\[\d+\]/g, "[]"),
+          (identifierPaths.get(path.replace(/\[\d+\]/g, "[]")) ?? 0) + 1);
+    }
     for (const transaction of receipt.transactions ?? []) {
       const transactionId = String(transaction.transaction_id ?? "");
       if (transactionId && printifyRaw.includes(transactionId))
@@ -272,6 +302,8 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
       taxOnAllOrders: formatMoney(printifyTax),
     },
     identifierHits,
+    /* The field an exact match should be built on, if one exists. */
+    identifierPaths: Object.fromEntries(identifierPaths),
     reconciliation: { counts: result.counts, byMethod: result.byMethod },
     ordersMissingProductionCost: missingCost.length,
     missingCostExamples: missingCost.slice(0, 5),
