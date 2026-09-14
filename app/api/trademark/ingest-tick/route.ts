@@ -79,6 +79,26 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
      file without anyone remembering to. */
   const added = await seed(db);
 
+  /*
+    RECLAIM WHAT DIED MID-FILE.
+
+    A firing that is killed — a deploy, a limit, a bad minute at Cloudflare —
+    leaves its file marked running, and nothing would ever pick it up again.
+    The queue would look busy and quietly stop. Anything running for longer
+    than a firing could possibly last goes back in the queue, keeping the
+    records it had already written.
+  */
+  await db
+    .prepare(
+      `UPDATE tm_ingest_files
+          SET state = CASE WHEN done_records > 0 THEN 'partial' ELSE 'waiting' END,
+              note = 'Reclaimed after an interrupted run'
+        WHERE state = 'running'
+          AND (started IS NULL OR started < ?)`,
+    )
+    .bind(new Date(Date.now() - 15 * 60_000).toISOString())
+    .run();
+
   const next = await db
     .prepare(
       `SELECT name, product, url, done_records FROM tm_ingest_files
@@ -90,7 +110,10 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
 
   if (!next) return NextResponse.json({ added, idle: true, ...(await registerSize(db)) });
 
-  await db.prepare(`UPDATE tm_ingest_files SET state = 'running' WHERE name = ?`).bind(next.name).run();
+  await db
+    .prepare(`UPDATE tm_ingest_files SET state = 'running', started = ? WHERE name = ?`)
+    .bind(new Date().toISOString(), next.name)
+    .run();
 
   try {
     const result = await ingestFile(db, next, key(), {
