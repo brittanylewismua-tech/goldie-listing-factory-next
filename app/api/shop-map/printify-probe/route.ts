@@ -48,7 +48,9 @@ export const GET = withErrorLog("shop-map-printify-probe", async (request: Reque
     .bind(user.userId).first<{ encrypted_token: string }>();
   if (!connection) return NextResponse.json({ error: "No Printify connection." }, { status: 400 });
 
-  const token = await decryptPrintifyToken(connection.encrypted_token);
+  const token = await decryptPrintifyToken(
+    connection.encrypted_token,
+    (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
   const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
   const call = async (path: string) => {
     const started = Date.now();
