@@ -50,7 +50,9 @@
 /* D1396 scopes the connection diagnostic to the account being diagnosed. */
 /* D1397 retires an Etsy connection instead of deleting it, and records every
    removal so a missing shop never has to be explained by elimination again. */
-export const BUILD_MARKER = "D1397";
+/* D1398 proves the connection diagnostic's ownership filter by running it,
+   not by reading it. */
+export const BUILD_MARKER = "D1398";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
