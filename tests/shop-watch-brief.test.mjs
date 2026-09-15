@@ -1,0 +1,105 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const brief = readFileSync(new URL("../app/shop-watch-brief.ts", import.meta.url), "utf8");
+const watch = readFileSync(new URL("../app/shop-watch.ts", import.meta.url), "utf8");
+const code = brief.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+test("one brief per shop per day, shared by every watcher", () => {
+  assert.match(code, /PRIMARY KEY \(shop_id, brief_day\)/);
+  /* Keyed by shop and day, never by member: that is what makes twenty
+     watchers one workload and keeps watcher identity out of it. */
+  assert.doesNotMatch(code.slice(code.indexOf("shop_watch_briefs")), /user_id/);
+});
+
+test("a stored brief is not rebuilt on every open", () => {
+  assert.match(code, /if \(!rebuild\)/);
+  assert.match(code, /regenerated: false/);
+});
+
+test("a change needs two observations, not one", () => {
+  assert.match(code, /ORDER BY observed_at DESC LIMIT 2/);
+  assert.match(code, /previous: totals\(seen\[1\]\)/);
+});
+
+test("a missing Etsy value stays absent rather than becoming zero", () => {
+  assert.match(code, /typeof row\?\.favorites === "number" \? \{ favorites: row\.favorites \} : \{\}/);
+});
+
+test("no paid provider call exists in Shop Watch yet", () => {
+  assert.match(code, /SUMMARY_ENABLED = false/);
+  /* The metering point is designed; the call is not built. */
+  assert.doesNotMatch(code, /fetch\(/);
+  assert.doesNotMatch(code, /fal\.run|anthropic/i);
+});
+
+test("the summary can never be per review or per member", () => {
+  assert.match(brief, /never one per member watching/);
+  assert.match(brief, /never be one call per review/);
+});
+
+test("the beta sits behind its own flag", () => {
+  assert.match(code, /SHOP_WATCH_FLAG = "shopWatchInternalBeta"/);
+});
+
+test("review ingestion is incremental and deduplicated", () => {
+  /* High-water mark plus a primary key on the transaction id: the same
+     review cannot be stored twice or fetched forever. */
+  assert.match(watch, /review_high_water/);
+  assert.match(watch, /transaction_id INTEGER PRIMARY KEY/);
+  assert.match(watch, /min_created/);
+});
+
+test("collection is shared across duplicate watchers", () => {
+  /* Refresh is keyed by shop, not by watcher. */
+  assert.match(watch, /export async function refreshShop\(shopId: number\)/);
+  assert.match(watch, /watched_shops/);
+});
+
+test("the member watch limit is checked before Etsy is called", () => {
+  const add = watch.slice(watch.indexOf("export async function addWatch"));
+  const limitAt = add.indexOf("watchLimit");
+  const resolveAt = add.indexOf("resolveShop");
+  assert.ok(limitAt > 0 && limitAt < resolveAt,
+    "the 25-shop limit is checked after Etsy is contacted");
+});
+
+test("health counts come from stored rows and name the sharing saving", () => {
+  assert.match(code, /duplicateWatchersShared/);
+  assert.match(code, /COUNT\(\*\) - COUNT\(DISTINCT shop_id\)/);
+});
+
+test("a member sees only their own watch list", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
+  assert.match(route, /WHERE user_id = \?/);
+  /* No parameter can name another member's watches. */
+  assert.doesNotMatch(route, /searchParams\.get\("user|targetUser/);
+});
+
+test("shared intelligence exposes no watcher identity", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
+  const present = route.slice(route.indexOf("function present"));
+  for (const leak of ["user", "watcher", "member"])
+    assert.doesNotMatch(present, new RegExp(leak, "i"), `a card exposes ${leak}`);
+});
+
+test("cards show the pattern and its weight, not the formula", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
+  const present = route.slice(route.indexOf("function present"));
+  assert.match(present, /pattern:/);
+  assert.match(present, /evidence:/);
+  assert.match(present, /etsy\.com\/listing/);
+  /* No internal scoring reaches the member. */
+  assert.doesNotMatch(present, /evidenceClass|supportingReviewIds|confidence|score/);
+});
+
+test("the interface never claims reviews are sales", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
+  assert.match(route, /They are not sales/);
+  assert.doesNotMatch(route, /salesCount|unitsSold|estimatedSales/);
+});
