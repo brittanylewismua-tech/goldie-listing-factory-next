@@ -71,3 +71,41 @@ test("no second status list contradicts the registry", () => {
   const keys = CAPABILITIES.map(entry => entry.key);
   assert.equal(new Set(keys).size, keys.length, "a capability key is duplicated");
 });
+
+test("every column the capacity view reads exists on spend_reservations", () => {
+  /* Three times in this sweep a query named a column its table does not have,
+     a catch swallowed the error, and a view rendered as empty-but-healthy.
+     This compares the SELECT against the CREATE TABLE. */
+  const guard = readFileSync(new URL("../app/spend-guard.ts", import.meta.url), "utf8");
+  const create = guard.slice(guard.indexOf("CREATE TABLE IF NOT EXISTS spend_reservations"),
+    guard.indexOf("CREATE TABLE IF NOT EXISTS spend_overrides"));
+  const columns = new Set([...create.matchAll(/^\s*([a-z_]+)\s+(TEXT|INTEGER|REAL)/gm)]
+    .map(match => match[1]));
+  assert.ok(columns.has("workload"), "spend_reservations lost its workload column");
+  assert.ok(!columns.has("workload_key"));
+
+  const route = readFileSync(new URL(
+    "../app/api/operations/capacity/route.ts", import.meta.url), "utf8");
+  const selects = route.match(/FROM spend_reservations[\s\S]{0,200}/g) ?? [];
+  assert.ok(selects.length >= 2, "the capacity view no longer reads the ledger");
+  for (const block of route.match(/SELECT[\s\S]{0,300}?FROM spend_reservations/g) ?? [])
+    for (const match of block.matchAll(/\b([a-z_]+)\s+AS\s+[a-zA-Z]/g))
+      assert.ok(columns.has(match[1]),
+        `the capacity view reads spend_reservations.${match[1]}, which does not exist`);
+});
+
+test("an unmeasured workload always keeps a request ceiling", () => {
+  /* Without one it reserves zero dollars and behaves as free. */
+  const route = readFileSync(new URL(
+    "../app/api/operations/capacity/route.ts", import.meta.url), "utf8");
+  assert.match(route, /unboundedRisk/);
+  assert.match(route, /costBasis === "unknown" && entry\.globalDailyRequests === null/);
+});
+
+test("the capacity view changes no ceiling", () => {
+  const route = readFileSync(new URL(
+    "../app/api/operations/capacity/route.ts", import.meta.url), "utf8");
+  for (const write of ["UPDATE spend_overrides", "INSERT INTO spend_overrides", "DELETE FROM"])
+    assert.ok(!route.includes(write), `the capacity view performs ${write}`);
+  assert.match(route, /NO CEILING IS CHANGED HERE/);
+});
