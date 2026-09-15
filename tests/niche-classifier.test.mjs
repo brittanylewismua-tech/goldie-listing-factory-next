@@ -216,3 +216,49 @@ test("the prompt now forbids format and recipient splits", () => {
   assert.match(CANONICAL_PROMPT, /split by who it is for/);
   assert.match(CANONICAL_PROMPT, /return only the shared subject/i);
 });
+
+test("the repair does not consume the member's daily build", () => {
+  const repair = readFileSync(new URL(
+    "../app/api/shop-map/classify/repair/route.ts", import.meta.url), "utf8");
+  assert.match(repair, /consumesAllowance: false/);
+  assert.match(repair, /DOES NOT CONSUME THE MEMBER'S DAILY BUILD/);
+  /* The counters are read, never reset. */
+  assert.doesNotMatch(repair, /DELETE FROM spend_reservations|UPDATE spend_reservations SET state = 'released'/);
+});
+
+test("the repair only spends what today's ceiling has left", () => {
+  const repair = readFileSync(new URL(
+    "../app/api/shop-map/classify/repair/route.ts", import.meta.url), "utf8");
+  assert.match(repair, /MEMBER_DAILY_DOLLARS - Number\(spentToday\?\.spend \?\? 0\)/);
+  assert.match(repair, /estimate\.dollars > remaining/);
+  assert.match(repair, /after the rolling allowance resets/);
+});
+
+test("the repair is capped at three calls and asks only for what is missing", () => {
+  const repair = readFileSync(new URL(
+    "../app/api/shop-map/classify/repair/route.ts", import.meta.url), "utf8");
+  assert.match(repair, /MAX_REPAIR_CALLS = 3/);
+  assert.match(repair, /if \(calls >= MAX_REPAIR_CALLS\)/);
+  assert.match(repair, /genuinely\s*"\s*\+\s*"missing|genuinely missing/);
+});
+
+test("the repair merges once, after everything succeeded", () => {
+  const repair = readFileSync(new URL(
+    "../app/api/shop-map/classify/repair/route.ts", import.meta.url), "utf8");
+  /* Nothing is written until the staged set exists. */
+  const stagedGuard = repair.indexOf("if (!staged.length)");
+  const firstWrite = repair.indexOf("INSERT INTO shop_map_classifications");
+  assert.ok(stagedGuard > 0 && stagedGuard < firstWrite,
+    "the repair writes before knowing it succeeded");
+  assert.match(repair, /MERGED ONCE, AFTER EVERYTHING SUCCEEDED/);
+});
+
+test("the original response and vocabulary are preserved", () => {
+  const repair = readFileSync(new URL(
+    "../app/api/shop-map/classify/repair/route.ts", import.meta.url), "utf8");
+  assert.match(repair, /shop_map_niche_repairs/);
+  assert.match(repair, /stored beside the original, not over it/);
+  /* Existing valid assignments are never touched: only unclassified rows
+     are selected in the first place. */
+  assert.match(repair, /c\.primary_niche IS NULL OR c\.primary_niche = ''/);
+});
