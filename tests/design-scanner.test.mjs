@@ -525,3 +525,22 @@ test("reopening a saved scan costs nothing", () => {
 test("reduced motion is respected", () => {
   assert.match(STYLE, /prefers-reduced-motion[\s\S]*?\.beam\s*\{\s*animation:\s*none/);
 });
+
+test("a shipping upgrade is never a design reference", () => {
+  /* Measured: 2 of 44 in the bachelorette cohort. They carry the shop's whole
+     tag set and they sell constantly, so they match perfectly and mean nothing. */
+  const terms = normalizeNiche("bachelorette").terms;
+  for (const title of ["Express Shipping Upgrade", "Add on Item",
+    "Rush Order Fee", "Upgrade - faster processing", "Shipping upgrade"]) {
+    const verdict = relates(listing({ title, tags: ["bachelorette party", "bachelorette"] }), terms);
+    assert.equal(verdict.ok, false, `"${title}" entered the cohort`);
+    assert.match(verdict.because, /not a design/);
+  }
+});
+
+test("a real design mentioning shipping in passing still qualifies", () => {
+  const terms = normalizeNiche("bachelorette").terms;
+  const real = listing({ title: "Bachelorette Party Tote — free shipping",
+    tags: ["bachelorette", "bachelorette party"] });
+  assert.equal(relates(real, terms).ok, true);
+});

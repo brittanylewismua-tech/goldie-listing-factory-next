@@ -59,6 +59,24 @@ export function normalizeNiche(phrase: string): { query: string; terms: string[]
   return { query: words.join(" ").trim(), terms };
 }
 
+/**
+ * A LISTING THAT IS NOT A DESIGN.
+ *
+ * Shops list shipping upgrades, add-on fees and rush-order slots as ordinary
+ * listings, and they carry the shop's whole tag set — so "Express Shipping
+ * Upgrade" matched bachelorette perfectly and entered the cohort as a design
+ * reference. It has no design at all. Measured: 2 of 44 in the bachelorette
+ * cohort, the only false positives in either audited niche.
+ *
+ * These also sell constantly, which makes them worse than noise: they are the
+ * listings most likely to show verified movement.
+ */
+const SERVICE_LISTING =
+  /\b(express\s+shipping|shipping\s+upgrade|rush\s+(order|fee|processing)|add[\s-]?on\s+(item|fee|charge)|upgrade\s+fee|priority\s+processing|extra\s+(fee|charge)|reserved\s+(listing|for)|custom\s+order\s+deposit|balance\s+payment)\b/i;
+
+export const isServiceListing = (title: string) =>
+  SERVICE_LISTING.test(title) || /^(add[\s-]?on|upgrade|shipping)\b/i.test(title.trim());
+
 const wordsOf = (text: string) =>
   new Set(text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
     .filter(Boolean).map(singular));
@@ -75,6 +93,9 @@ export function relates(
   candidate: Candidate, terms: string[],
 ): { ok: true; matched: string[] } | { ok: false; because: string } {
   if (!terms.length) return { ok: false, because: "the niche phrase carried no usable terms" };
+  /* Not a design, so not a design reference, however well it matches. */
+  if (isServiceListing(candidate.title))
+    return { ok: false, because: "it is a shipping or add-on listing, not a design" };
   const haystack = wordsOf(`${candidate.title} ${candidate.tags.join(" ")}`);
   const matched = terms.filter(term => haystack.has(term));
   /* A multi-word niche has to match more than one of its words, or "dog mom"
