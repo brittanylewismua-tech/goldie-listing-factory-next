@@ -181,6 +181,26 @@ export async function resolveShop(input: string): Promise<
     };
   }
 
+  /*
+    D1433 · A BARE SHOP ID IS A SHOP, NOT A NAME.
+
+    The live proof passed a numeric shop id and got back "No Etsy shop is
+    named 11779782" - it had been sent to the name search. That failure also
+    meant no watched_shops row was created, so review ingestion had no
+    high-water mark and re-fetched four hundred reviews it already held.
+  */
+  const numeric = /^\d{4,}$/.test(input.trim()) ? Number(input.trim()) : 0;
+  if (numeric) {
+    const body = await etsy(`shops/${numeric}`);
+    calls += 1;
+    const shopName = String((body as Record<string, unknown> | null)?.shop_name ?? "");
+    if (!shopName) return { ok: false, reason: `No Etsy shop has the id ${numeric}.`, calls };
+    return {
+      ok: true, calls,
+      shop: { shopId: numeric, shopName, url: `https://www.etsy.com/shop/${shopName}` },
+    };
+  }
+
   const name = shopNameFrom(input);
   if (!name) return { ok: false, reason: "That does not look like an Etsy shop.", calls };
 

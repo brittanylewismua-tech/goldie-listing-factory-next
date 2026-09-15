@@ -77,29 +77,47 @@ export async function briefForShop(
 
   /* Two most recent observations, so a change is a comparison rather than a
      reading. One observation can never produce a change. */
+  /*
+    D1433 · THE COLUMNS ARE WHAT THE TABLE ACTUALLY HAS.
+
+    This asked for `favorites` and `average_rating`; the table holds
+    `favorers` and no rating at all, so the query threw, the catch swallowed
+    it, and What Changed was permanently empty. observed_at is TEXT, and
+    reading it as epoch seconds produced "last checked 497,067 hours ago".
+
+    A rating is therefore not available from this source, and stays absent
+    rather than being computed from the reviews we happen to hold - that
+    average would be of our sample, not of the shop.
+  */
   const observed = await db.prepare(
-    `SELECT sale_count, favorites, review_count, average_rating, observed_at
+    `SELECT sold_count, favorers, review_count, observed_at
        FROM shop_observations WHERE shop_id = ? ORDER BY observed_at DESC LIMIT 2`)
     .bind(shopId)
-    .all<{ sale_count: number | null; favorites: number | null; review_count: number | null;
-      average_rating: number | null; observed_at: number }>()
+    .all<{ sold_count: number | null; favorers: number | null;
+      review_count: number | null; observed_at: string }>()
     .catch(() => ({ results: [] as Array<Record<string, never>> }));
   const seen = (observed.results ?? []) as Array<{
-    sale_count: number | null; favorites: number | null; review_count: number | null;
-    average_rating: number | null; observed_at: number }>;
+    sold_count: number | null; favorers: number | null;
+    review_count: number | null; observed_at: string }>;
   /* A null from Etsy stays absent, never becomes a zero. */
   const totals = (row?: typeof seen[number]): ShopTotals => ({
-    ...(typeof row?.sale_count === "number" ? { saleCount: row.sale_count } : {}),
-    ...(typeof row?.favorites === "number" ? { favorites: row.favorites } : {}),
+    ...(typeof row?.sold_count === "number" ? { saleCount: row.sold_count } : {}),
+    ...(typeof row?.favorers === "number" ? { favorites: row.favorers } : {}),
     ...(typeof row?.review_count === "number" ? { reviewCount: row.review_count } : {}),
-    ...(typeof row?.average_rating === "number" ? { averageRating: row.average_rating } : {}),
   });
+
+  /* observed_at is a TEXT timestamp. Parsed, not cast. */
+  const observedSeconds = (value?: string) => {
+    if (!value) return 0;
+    const parsed = Date.parse(value.includes("T") ? value : `${value.replace(" ", "T")}Z`);
+    return Number.isFinite(parsed) ? Math.floor(parsed / 1_000) : 0;
+  };
 
   const brief = buildBrief({
     reviews,
     previous: totals(seen[1]),
     current: totals(seen[0]),
-    refreshedAt: seen[0]?.observed_at ?? 0,
+    refreshedAt: observedSeconds(seen[0]?.observed_at),
     now: seconds,
   });
 

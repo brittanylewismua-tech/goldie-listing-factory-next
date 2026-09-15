@@ -24,7 +24,7 @@ test("a change needs two observations, not one", () => {
 });
 
 test("a missing Etsy value stays absent rather than becoming zero", () => {
-  assert.match(code, /typeof row\?\.favorites === "number" \? \{ favorites: row\.favorites \} : \{\}/);
+  assert.match(code, /typeof row\?\.favorers === "number" \? \{ favorites: row\.favorers \} : \{\}/);
 });
 
 test("no paid provider call exists in Shop Watch yet", () => {
@@ -102,4 +102,30 @@ test("the interface never claims reviews are sales", () => {
     "../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
   assert.match(route, /They are not sales/);
   assert.doesNotMatch(route, /salesCount|unitsSold|estimatedSales/);
+});
+
+test("D1433: the brief reads the columns the table actually has", () => {
+  /* It asked for favorites and average_rating; the table holds favorers and
+     no rating, so the query threw and What Changed was always empty. */
+  assert.match(code, /SELECT sold_count, favorers, review_count, observed_at/);
+  assert.doesNotMatch(code, /average_rating/);
+});
+
+test("D1433: observed_at is parsed as a timestamp, not cast from text", () => {
+  /* Reading TEXT as epoch seconds reported "last checked 497,067 hours ago". */
+  assert.match(code, /observedSeconds/);
+  assert.match(code, /Date\.parse/);
+});
+
+test("D1433: a rating is absent rather than averaged from our own sample", () => {
+  assert.match(brief, /average would be of our sample, not of the shop/);
+  assert.doesNotMatch(code, /averageRating:/);
+});
+
+test("D1433: a bare shop id resolves as a shop, not as a name", () => {
+  const module = readFileSync(new URL("../app/shop-watch.ts", import.meta.url), "utf8");
+  assert.match(module, /numeric = /);
+  assert.match(module, /No Etsy shop has the id/);
+  /* The id branch must come before the name search. */
+  assert.ok(module.indexOf("No Etsy shop has the id") < module.indexOf("No Etsy shop is named"));
 });

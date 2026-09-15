@@ -125,9 +125,16 @@ export const GET = withErrorLog("shop-watch-live-proof", async (request: Request
       accepted,
       bySection: Object.fromEntries(sections.map(section =>
         [section, ((first as Record<string, unknown[]>)[section] ?? []).length])),
-      /* Everything the thresholds refused. Rejection is the feature. */
-      rejectedForInsufficientEvidence:
-        Math.max(0, (listingsRepresented?.n ?? 0) - accepted),
+      /*
+        Candidates the thresholds refused. Counted as listings that carry
+        reviews but did not clear the concentration bar, which is a real
+        comparison - the earlier "listings minus patterns" mixed two
+        different units and meant nothing.
+      */
+      listingsWithReviews: listingsRepresented?.n ?? 0,
+      listingsRejectedForInsufficientEvidence:
+        Math.max(0, (listingsRepresented?.n ?? 0)
+          - ((first as Record<string, unknown[]>).attention?.length ?? 0)),
       untraceableCards: untraceable,
     },
     dailyBrief: {
