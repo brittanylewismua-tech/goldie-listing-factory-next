@@ -113,6 +113,50 @@ export const GET = withErrorLog("shop-map-listings", async (request: Request) =>
     }
   }
 
+  /*
+    SALES, FROM TRANSACTIONS AND NOTHING ELSE.
+
+    A receipt carries its transactions, and a transaction names the listing,
+    the quantity and the price. That is the only path by which anything
+    becomes a sale in Shop Map. Views and favourites are stored on the listing
+    row and can never arrive here.
+  */
+  let salesStored = 0;
+  if (parameters.get("sales") === "1") {
+    const maxReceiptPages = Math.min(40, Math.max(1, Number(parameters.get("receipts")) || 34));
+    for (let page = 0; page < maxReceiptPages; page += 1) {
+      const answer = await etsy(`/shops/${shopId}/receipts?limit=100&offset=${page * 100}`);
+      if (answer.status !== 200) break;
+      const receipts = ((answer.body as { results?: Array<Record<string, unknown>> })?.results) ?? [];
+      if (!receipts.length) break;
+      for (const receipt of receipts) {
+        const receiptId = Number(receipt.receipt_id ?? 0) || null;
+        const refunded = ((receipt.refunds ?? []) as unknown[]).length > 0 ? 1 : 0;
+        for (const line of ((receipt.transactions ?? []) as Array<Record<string, unknown>>)) {
+          const transactionId = Number(line.transaction_id ?? 0);
+          const listingId = Number(line.listing_id ?? 0);
+          if (!transactionId || !listingId) continue;
+          const price = (line.price ?? {}) as Record<string, unknown>;
+          await db.prepare(
+            `INSERT INTO shop_map_listing_sales
+               (user_id, shop_id, listing_id, transaction_id, receipt_id, quantity,
+                price_minor, currency, sold_at, refunded)
+             VALUES (?,?,?,?,?,?,?,?,?,?)
+             ON CONFLICT(user_id, shop_id, transaction_id) DO UPDATE SET
+               refunded = excluded.refunded, quantity = excluded.quantity,
+               price_minor = excluded.price_minor`)
+            .bind(user.userId, shopId, listingId, transactionId, receiptId,
+              Number(line.quantity ?? 1) || 1, Math.round(Number(price.amount ?? 0)),
+              String(price.currency_code ?? "USD"),
+              Number(line.paid_timestamp ?? line.created_timestamp ?? 0) || now, refunded)
+            .run();
+          salesStored += 1;
+        }
+      }
+      if (receipts.length < 100) break;
+    }
+  }
+
   /* Sales from the transactions already ingested. Nothing else becomes a sale. */
   const sales = await db.prepare(
     `SELECT COUNT(*) AS n FROM shop_map_listing_sales WHERE user_id = ? AND shop_id = ?`)
@@ -124,7 +168,7 @@ export const GET = withErrorLog("shop-map-listings", async (request: Request) =>
     fieldsExposed: {
       views: fieldsSeen.views, favorites: fieldsSeen.favorites, created: fieldsSeen.created,
     },
-    salesRowsHeld: sales?.n ?? 0,
+    salesStored, salesRowsHeld: sales?.n ?? 0,
     reminder: "Read only. No listing created, edited, published or deleted. No buyer data.",
   });
 });
