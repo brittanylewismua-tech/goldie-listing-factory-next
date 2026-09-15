@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   parseCanonical, parseAssignments, estimateCost, compact,
-  CANONICAL_PROMPT, ASSIGN_PROMPT, MAX_CALLS_PER_BUILD, MEMBER_DAILY_DOLLARS,
+  CANONICAL_PROMPT, ASSIGN_PROMPT, MAX_CALLS_PER_BUILD, MEMBER_DAILY_DOLLARS, collapseFacets,
 } from "../app/niche-classifier.ts";
 
 const inputs = new Map([
@@ -178,4 +178,41 @@ test("the provider's own reported charge is what gets settled", () => {
     "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
   assert.match(route, /billed \+= Number\(usage\.cost \?\? 0\)/);
   assert.match(route, /await settleSpend\(reservation\.id, billed\)/);
+});
+
+test("one subject split by design format collapses to the subject", () => {
+  /* The first live build returned five Feminist categories. */
+  const counts = new Map([["Feminist Slogans", 70], ["Girl Power", 36],
+    ["Feminist Activism", 6], ["Feminist Icons", 3], ["Feminist Identity", 1],
+    ["Feminist for Men", 6], ["Political Protest", 19]]);
+  const { kept, merged } = collapseFacets([...counts.keys()], counts);
+  assert.ok(kept.includes("Feminist"), "the shared subject was not kept");
+  for (const facet of ["Feminist Slogans", "Feminist Icons", "Feminist Activism"])
+    assert.ok(!kept.includes(facet), `${facet} survived as its own niche`);
+  assert.ok(merged.some(row => /design format/.test(row.because)));
+});
+
+test("a recipient split collapses too", () => {
+  const { kept } = collapseFacets(["Feminist", "Feminist for Men"],
+    new Map([["Feminist", 70], ["Feminist for Men", 6]]));
+  assert.deepEqual(kept, ["Feminist"]);
+});
+
+test("a category resting on one listing is dropped", () => {
+  const { kept, merged } = collapseFacets(["Horses", "Nurses"],
+    new Map([["Horses", 20], ["Nurses", 1]]));
+  assert.deepEqual(kept, ["Horses"]);
+  assert.ok(merged.some(row => /only 1 listings/.test(row.because)));
+});
+
+test("genuinely different subjects are left alone", () => {
+  const counts = new Map([["Feminist", 70], ["Girl Power", 36], ["Political Protest", 19]]);
+  const { kept } = collapseFacets([...counts.keys()], counts);
+  assert.equal(kept.length, 3);
+});
+
+test("the prompt now forbids format and recipient splits", () => {
+  assert.match(CANONICAL_PROMPT, /split by design format/);
+  assert.match(CANONICAL_PROMPT, /split by who it is for/);
+  assert.match(CANONICAL_PROMPT, /return only the shared subject/i);
 });

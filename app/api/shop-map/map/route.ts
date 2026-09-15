@@ -7,6 +7,7 @@ import { ensureListingTables, performanceFrom } from "@/app/shop-map-listings";
 import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-map-worlds";
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
 import { guidance, standout } from "@/app/shop-map-guidance";
+import { collapseFacets } from "@/app/niche-classifier";
 import { resolveCost, profitState, type CostRule } from "@/app/shop-map-cost-rules";
 import { monthWindow, monthOf } from "@/app/finance-month";
 import { shopTimezone } from "@/app/finance-store";
@@ -118,11 +119,31 @@ async function buildMap(request: Request) {
     .bind(user.userId, shopId)
     .all<{ listing_id: number; primary_niche: string }>()
     .catch(() => ({ results: [] }));
+  const rawCounts = new Map<string, number>();
+  for (const row of ((classified.results ?? []) as Array<Record<string, unknown>>))
+    if (String(row.primary_niche ?? ""))
+      rawCounts.set(String(row.primary_niche),
+        (rawCounts.get(String(row.primary_niche)) ?? 0) + 1);
+
+  /*
+    Facets collapse before anything is counted. The stored build returned
+    five Feminist categories split by design format and recipient; merging
+    them here costs nothing and does not touch the stored response, which
+    stays as the record of what the provider actually said.
+  */
+  const collapse = collapseFacets([...rawCounts.keys()], rawCounts);
+  const rename = new Map<string, string>();
+  for (const row of collapse.merged) if (row.into) rename.set(row.from, row.into);
+  const dropped = new Set(collapse.merged.filter(row => !row.into).map(row => row.from));
+
   const classifiedNiches = new Set<string>();
   for (const row of ((classified.results ?? []) as Array<Record<string, unknown>>)) {
     const listingId = Number(row.listing_id);
-    const label = String(row.primary_niche ?? "");
-    if (!label || overrides.has(listingId)) continue;
+    const stored = String(row.primary_niche ?? "");
+    if (!stored || overrides.has(listingId)) continue;
+    /* A dropped category leaves its listings unclassified, which is honest. */
+    if (dropped.has(stored)) continue;
+    const label = rename.get(stored) ?? stored;
     classifiedNiches.add(label);
     overrides.set(listingId, [`niche:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`]);
   }
@@ -317,6 +338,11 @@ async function buildMap(request: Request) {
       unclassifiedListings: unclassified,
       missingProductionCosts: costs.filter(cost => cost.confidence === "none").length,
       overbuiltWorlds: overbuilt(worldPerformance),
+    },
+    classifier: {
+      rawNiches: [...rawCounts.keys()],
+      collapsed: collapse.merged,
+      usedNiches: collapse.kept,
     },
     counts: { listings: rows.length, niches: worlds.length,
       listingsWithSales: [...performance.keys()].length },

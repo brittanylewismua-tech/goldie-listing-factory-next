@@ -39,6 +39,59 @@ export const compact = (listing: ListingInput) =>
     listing.tags.slice(0, 8).join(","), listing.shopSection]
     .filter(Boolean).join(" | ");
 
+/*
+  ONE SUBJECT, ONE NICHE.
+
+  The first live build returned "Feminist Slogans", "Feminist Icons",
+  "Feminist Activism", "Feminist Identity" and "Feminist for Men" as five
+  categories. They are one subject split by design format and by recipient -
+  exactly the mistake the product-type rule already forbids, wearing
+  different clothes. A seller cannot act on "slogans versus icons"; it tells
+  her nothing about who is buying.
+
+  Labels sharing a leading subject word collapse into it, and the shortest
+  label wins because it is the one that names the subject rather than a
+  facet of it.
+*/
+const FACET_WORDS = new Set(["slogans", "slogan", "icons", "icon", "quotes",
+  "quote", "sayings", "typography", "graphics", "designs", "art", "activism",
+  "identity", "style", "styles", "themes", "theme", "vibes", "aesthetic"]);
+
+export function collapseFacets(
+  niches: string[], counts: Map<string, number> = new Map(), minimum = 3,
+): { kept: string[]; merged: Array<{ from: string; into: string; because: string }> } {
+  const merged: Array<{ from: string; into: string; because: string }> = [];
+  const byRoot = new Map<string, string[]>();
+  for (const niche of niches) {
+    const root = niche.split(/\s+/)[0].toLowerCase();
+    byRoot.set(root, [...(byRoot.get(root) ?? []), niche]);
+  }
+
+  const kept: string[] = [];
+  for (const [root, group] of byRoot) {
+    if (group.length === 1) { kept.push(group[0]); continue; }
+    /* Prefer a label that is already just the subject; otherwise shorten to it. */
+    const bare = group.find(niche => niche.split(/\s+/).length === 1);
+    const target = bare ?? root.charAt(0).toUpperCase() + root.slice(1);
+    for (const niche of group)
+      if (niche !== target)
+        merged.push({ from: niche, into: target,
+          because: FACET_WORDS.has(niche.split(/\s+/).slice(-1)[0].toLowerCase())
+            ? "a design format, not a different buyer"
+            : "the same subject, narrowed" });
+    kept.push(target);
+  }
+
+  /* A category resting on one or two listings is not established. */
+  const final = kept.filter(niche => {
+    const held = counts.get(niche) ?? minimum;
+    if (held >= minimum) return true;
+    merged.push({ from: niche, into: "", because: `only ${held} listings` });
+    return false;
+  });
+  return { kept: [...new Set(final)], merged };
+}
+
 export const CANONICAL_PROMPT =
   "You are given every listing in one print-on-demand shop: id, title, tags, section.\n"
   + "Return the shop's canonical niche list as JSON: {\"niches\":[\"...\"]}.\n\n"
@@ -50,7 +103,10 @@ export const CANONICAL_PROMPT =
   + "- generic gift language (For Her, Gifts, Custom)\n"
   + "- incomplete phrase fragments (Women Are)\n"
   + "- duplicate synonyms: choose ONE label per idea\n"
-  + "- a niche supported by only one unclear listing\n\n"
+  + "- a niche supported by only one unclear listing\n"
+  + "- ONE subject split by design format (Slogans, Icons, Quotes, Typography)\n"
+  + "- ONE subject split by who it is for (X for Men, X for Her)\n"
+  + "  If two labels share a leading word, return only the shared subject.\n\n"
   + "Return between 3 and 20 niches, shortest useful label for each.";
 
 export const ASSIGN_PROMPT = (niches: string[]) =>
