@@ -133,8 +133,8 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
       }
       const entries = ((answer.body as { results?: Array<Record<string, unknown>> })?.results) ?? [];
       for (const entry of entries) {
-        /* Etsy has no type field; the kind lives in the description. */
-        const rawType = String(entry.description ?? entry.entry_type ?? entry.ledger_entry_type ?? "");
+        /* ledger_type is the real field. description repeats it. */
+        const rawType = String(entry.ledger_type ?? entry.description ?? "");
         const kind = classifyLedgerType(rawType);
         const amount = Number(entry.amount ?? 0);
         const divisor = Number(entry.currency_divisor ?? 100) || 100;
@@ -155,7 +155,9 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
              bucket = excluded.bucket,
              attribution = excluded.attribution`)
           .bind(user.userId, shopId, String(entry.entry_id ?? entry.ledger_entry_id ?? ""),
-            Number(entry.receipt_id ?? 0) || null, Number(entry.transaction_id ?? 0) || null,
+            /* reference_type says what reference_id points at. */
+            String(entry.reference_type ?? "") === "receipt" ? Number(entry.reference_id ?? 0) || null : null,
+            String(entry.reference_type ?? "") === "transaction" ? Number(entry.reference_id ?? 0) || null : null,
             rawType, kind.normalized, kind.bucket, kind.attribution,
             Math.round(amount), divisor, String(entry.currency ?? "USD"),
             Number(entry.create_date ?? entry.created_timestamp ?? window.window_from),

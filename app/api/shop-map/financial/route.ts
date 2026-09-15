@@ -75,13 +75,19 @@ export const GET = withErrorLog("shop-map-financial", async (request: Request) =
 
   const receiptRow = await db.prepare(
     `SELECT COUNT(*) AS receipts,
+            COALESCE(SUM(subtotal_minor), 0) AS subtotal,
+            COALESCE(SUM(shipping_minor), 0) AS shipping,
+            COALESCE(SUM(tax_minor), 0) AS tax,
+            COALESCE(SUM(seller_discount_minor), 0) AS discount,
+            COALESCE(SUM(refunded), 0) AS refunded,
             SUM(CASE WHEN match_status IN ('fully-matched','canceled','refunded') THEN 1 ELSE 0 END) AS matched,
             SUM(CASE WHEN match_status = 'ambiguous' THEN 1 ELSE 0 END) AS ambiguous,
             SUM(CASE WHEN match_status = 'unmatched' THEN 1 ELSE 0 END) AS unmatched
        FROM finance_receipts
       WHERE user_id = ? AND shop_id = ? AND source_created_at BETWEEN ? AND ?`)
     .bind(user.userId, shopId, window.from, window.to)
-    .first<{ receipts: number; matched: number; ambiguous: number; unmatched: number }>();
+    .first<{ receipts: number; matched: number; ambiguous: number; unmatched: number;
+      subtotal: number; shipping: number; tax: number; discount: number; refunded: number }>();
 
   const windowsRow = await db.prepare(
     `SELECT COUNT(*) AS incomplete FROM finance_windows

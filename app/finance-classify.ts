@@ -36,16 +36,42 @@ const LEDGER: Record<string, Classified> = {
     These are the codes the shop's own 3,856 rows contain. They are mapped
     from observation, not from documentation.
   */
-  transaction: { normalized: "product-revenue", bucket: "revenue", attribution: "transaction",
-    profitRelevant: true, why: "The item line of a sale." },
-  shipping_transaction: { normalized: "shipping-collected", bucket: "revenue",
-    attribution: "transaction", profitRelevant: true, why: "Shipping the buyer paid." },
+  /*
+    MEASURED, AND THE OPPOSITE OF WHAT THE NAME SUGGESTS.
+
+    A ledger row of type `transaction` carries amount -143 against a ~$22
+    item: that is the 6.5% transaction FEE, not the sale. Every entry in this
+    ledger is named after what it is a fee ON, and every amount is an outflow.
+
+    The payment-account ledger is a fee and cash-movement ledger. It does not
+    contain revenue at all, and reading it as revenue produced a total that
+    was negative with tax larger than revenue. REVENUE COMES FROM RECEIPTS.
+  */
+  transaction: { normalized: "etsy-transaction-fee", bucket: "cost", attribution: "transaction",
+    profitRelevant: true, why: "Etsy's percentage fee on the item. Named after what it taxes." },
+  shipping_transaction: { normalized: "etsy-transaction-fee", bucket: "cost",
+    attribution: "transaction", profitRelevant: true,
+    why: "Etsy's percentage fee on the shipping the buyer paid." },
   sales_tax: { normalized: "marketplace-tax", bucket: "tax", attribution: "receipt",
-    profitRelevant: false, why: "Collected and remitted by Etsy. Never seller revenue." },
+    profitRelevant: false,
+    why: "Tax moving out of the account for Etsy to remit. It was never seller revenue, "
+      + "so its removal is not a seller cost either." },
   sales_tax_refund: { normalized: "marketplace-tax", bucket: "tax", attribution: "receipt",
     profitRelevant: false, why: "Tax returned to the buyer. Never seller revenue." },
-  transaction_refund: { normalized: "refund", bucket: "revenue", attribution: "transaction",
-    profitRelevant: true, why: "Money returned to the buyer, reducing revenue." },
+  transaction_refund: { normalized: "fee-credit", bucket: "cost", attribution: "transaction",
+    profitRelevant: true, why: "A transaction fee returned when an order was refunded." },
+  shipping_transaction_refund: { normalized: "fee-credit", bucket: "cost",
+    attribution: "transaction", profitRelevant: true, why: "A shipping fee returned." },
+  renew_sold_auto_refund: { normalized: "fee-credit", bucket: "cost", attribution: "listing",
+    profitRelevant: true, why: "A renewal fee returned." },
+  auto_renew_expired_refund: { normalized: "fee-credit", bucket: "cost", attribution: "listing",
+    profitRelevant: true, why: "A renewal fee returned." },
+  sales_tax_refund_entry: { normalized: "marketplace-tax", bucket: "tax", attribution: "receipt",
+    profitRelevant: false, why: "Tax returned to the buyer." },
+  offsite_ads_fee: { normalized: "etsy-offsite-ads-fee", bucket: "cost", attribution: "receipt",
+    profitRelevant: true, why: "Offsite Ads, charged against a specific order." },
+  buyer_fee: { normalized: "etsy-operating-fee", bucket: "cost", attribution: "receipt",
+    profitRelevant: true, why: "A buyer-side fee appearing on the seller's ledger." },
   renew_sold_auto: { normalized: "etsy-renewal-fee", bucket: "cost", attribution: "listing",
     profitRelevant: true, why: "A listing renewed automatically after selling." },
   auto_renew_expired: { normalized: "etsy-renewal-fee", bucket: "cost", attribution: "listing",

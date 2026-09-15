@@ -116,11 +116,17 @@ export const GET = withErrorLog("shop-map-financial-reconcile", async () => {
 
     const receiptRow = await db.prepare(
       `SELECT COUNT(*) AS receipts,
+              COALESCE(SUM(subtotal_minor), 0) AS subtotal,
+              COALESCE(SUM(shipping_minor), 0) AS shipping,
+              COALESCE(SUM(tax_minor), 0) AS tax,
+              COALESCE(SUM(seller_discount_minor), 0) AS discount,
+              COALESCE(SUM(refunded), 0) AS refunded,
               SUM(CASE WHEN match_status = 'fully-matched' THEN 1 ELSE 0 END) AS matched
          FROM finance_receipts WHERE user_id = ? AND shop_id = ?
            AND source_created_at BETWEEN ? AND ?`)
       .bind(user.userId, shopId, window.from, window.to)
-      .first<{ receipts: number; matched: number }>();
+      .first<{ receipts: number; matched: number; subtotal: number; shipping: number;
+        tax: number; discount: number; refunded: number }>();
 
     const production = await db.prepare(
       `SELECT receipt_id, cost_minor, shipping_minor, currency, canceled, counts_as_etsy_cost
@@ -148,6 +154,14 @@ export const GET = withErrorLog("shop-map-financial-reconcile", async () => {
       matchedReceipts: receiptRow?.matched ?? 0,
       staleSources: [],
       incompleteWindows: 0,
+      /* Revenue comes from the receipts, never from the fee ledger. */
+      receiptTotals: {
+        subtotalMinor: Number(receiptRow?.subtotal ?? 0),
+        shippingMinor: Number(receiptRow?.shipping ?? 0),
+        taxMinor: Number(receiptRow?.tax ?? 0),
+        discountMinor: Number(receiptRow?.discount ?? 0),
+        refundedReceipts: Number(receiptRow?.refunded ?? 0),
+      },
       currencyConflict: currencies.size > 1,
       unresolvedAmbiguity: 0,
     });

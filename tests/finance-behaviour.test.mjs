@@ -20,10 +20,13 @@ import { rollUp, needsRecompute, RULE_VERSION } from "../app/finance-rollup.ts";
 import * as periods from "../app/finance-periods.ts";
 
 const LA = "America/Los_Angeles";
+/* Revenue comes from receipts; the ledger carries fees and cash movements. */
+const totals = (over = {}) => ({ subtotalMinor: 2_500, shippingMinor: 0, taxMinor: 0,
+  discountMinor: 0, refundedReceipts: 0, ...over });
 const base = (over = {}) => ({
   month: "2026-01", currency: "USD", rows: [], production: [], adjustments: [],
   receipts: 1, matchedReceipts: 1, staleSources: [], incompleteWindows: 0,
-  currencyConflict: false, unresolvedAmbiguity: 0, ...over,
+  currencyConflict: false, unresolvedAmbiguity: 0, receiptTotals: totals(), ...over,
 });
 const row = (rawType, amountMinor, over = {}) =>
   ({ sourceId: `s${Math.random()}`, rawType, amountMinor, currency: "USD",
@@ -106,13 +109,13 @@ test("10. a canceled receipt is reported as canceled", () => {
 });
 
 test("11. a full refund reduces revenue", () => {
-  const summary = rollUp(base({ rows: [row("sale", 2_500), row("refund", -2_500)] }));
+  const summary = rollUp(base({ rows: [row("refund", -2_500)] }));
   assert.equal(summary.grossSellerRevenueMinor, 0);
   assert.equal(summary.refundsMinor, -2_500);
 });
 
 test("12. a partial refund reduces revenue partly", () => {
-  const summary = rollUp(base({ rows: [row("sale", 2_500), row("refund", -1_000)] }));
+  const summary = rollUp(base({ rows: [row("refund", -1_000)] }));
   assert.equal(summary.grossSellerRevenueMinor, 1_500);
 });
 
@@ -123,7 +126,7 @@ test("13. a late refund after month close forces recomputation", () => {
 test("14. a fee reversal is a credit against cost", () => {
   const credit = classifyLedgerType("credit");
   assert.equal(credit.bucket, "cost");
-  const summary = rollUp(base({ rows: [row("sale", 2_500), row("fee", -160), row("credit", 160)] }));
+  const summary = rollUp(base({ rows: [row("fee", -160), row("credit", 160)] }));
   assert.equal(summary.etsyOtherFeesMinor, 160);
 });
 
@@ -149,13 +152,13 @@ test("18. marketplace tax is excluded from seller revenue", () => {
   const tax = classifyLedgerType("tax");
   assert.equal(tax.bucket, "tax");
   assert.equal(tax.profitRelevant, false);
-  const summary = rollUp(base({ rows: [row("sale", 2_500), row("tax", 210)] }));
+  const summary = rollUp(base({ receiptTotals: totals({ taxMinor: 210 }) }));
   assert.equal(summary.grossSellerRevenueMinor, 2_500, "tax leaked into revenue");
   assert.equal(summary.marketplaceTaxMinor, 210);
 });
 
 test("19. shipping collected is included in revenue", () => {
-  const summary = rollUp(base({ rows: [row("sale", 2_500), row("shipping", 500)] }));
+  const summary = rollUp(base({ receiptTotals: totals({ shippingMinor: 500 }) }));
   assert.equal(summary.grossSellerRevenueMinor, 3_000);
   assert.equal(summary.shippingCollectedMinor, 500);
 });
@@ -169,7 +172,7 @@ test("20. a seller-funded discount reduces revenue; a marketplace one does not",
 });
 
 test("21. mixed currencies are never summed", () => {
-  const summary = rollUp(base({ currencyConflict: true, rows: [row("sale", 2_500)] }));
+  const summary = rollUp(base({ currencyConflict: true }));
   assert.equal(summary.knownOperatingProfitMinor, null);
   assert.ok(summary.completeness.failures.some(f => /more than one currency/.test(f)));
 });
@@ -235,14 +238,13 @@ test("28. an incremental read overlaps far enough to catch late adjustments", ()
 });
 
 test("29. a stale source blocks complete profit", () => {
-  const summary = rollUp(base({ rows: [row("sale", 2_500)], production: [prod()],
-    staleSources: ["printify"] }));
+  const summary = rollUp(base({ production: [prod()], staleSources: ["printify"] }));
   assert.equal(summary.knownOperatingProfitMinor, null);
   assert.ok(summary.completeness.failures.some(f => /Stale sources/.test(f)));
 });
 
 test("30. a manual adjustment is applied", () => {
-  const summary = rollUp(base({ rows: [row("sale", 2_500), row("fee", -160)],
+  const summary = rollUp(base({ rows: [row("fee", -160)],
     production: [prod()],
     adjustments: [{ id: "a1", month: "2026-01", amountMinor: -500, currency: "USD",
       kind: "production-cost", estimated: false }] }));
@@ -251,7 +253,7 @@ test("30. a manual adjustment is applied", () => {
 });
 
 test("31. a reversed adjustment stops counting", () => {
-  const summary = rollUp(base({ rows: [row("sale", 2_500)], production: [prod()],
+  const summary = rollUp(base({ production: [prod()],
     adjustments: [{ id: "a1", month: "2026-01", amountMinor: -500, currency: "USD",
       kind: "production-cost", estimated: false, reversedBy: "a2" }] }));
   assert.equal(summary.adjustmentsMinor, 0);
@@ -287,7 +289,7 @@ test("35. buyer identity is absent from stored rows and responses", () => {
 });
 
 test("an estimated adjustment can never complete a month", () => {
-  const summary = rollUp(base({ rows: [row("sale", 2_500)], production: [prod()],
+  const summary = rollUp(base({ production: [prod()],
     adjustments: [{ id: "a1", month: "2026-01", amountMinor: -900, currency: "USD",
       kind: "production-cost", estimated: true }] }));
   assert.equal(summary.knownOperatingProfitMinor, null);
@@ -295,15 +297,15 @@ test("an estimated adjustment can never complete a month", () => {
 });
 
 test("the known-order margin is separate and carries its coverage", () => {
-  const summary = rollUp(base({ rows: [row("sale", 10_000)], production: [prod()],
-    receipts: 10, matchedReceipts: 35 / 10 }));
+  const summary = rollUp(base({ receiptTotals: totals({ subtotalMinor: 10_000 }),
+    production: [prod()], receipts: 10, matchedReceipts: 3 }));
   assert.equal(summary.knownOperatingProfitMinor, null);
   assert.ok(summary.knownOrderMargin);
   assert.match(summary.knownOrderMargin.label, /Known-order margin across \d+% of revenue/);
 });
 
 test("an unmapped ledger type is surfaced, never silently zeroed", () => {
-  const summary = rollUp(base({ rows: [row("sale", 2_500), row("brand_new_etsy_fee", -99)] }));
+  const summary = rollUp(base({ rows: [row("brand_new_etsy_fee", -99)] }));
   assert.deepEqual(summary.unmappedTypes, ["brand_new_etsy_fee"]);
   assert.equal(summary.byBucket.neither, -99);
   assert.ok(isUnmapped(classifyLedgerType("brand_new_etsy_fee")));
@@ -313,8 +315,7 @@ test("a payout is never operating profit", () => {
   const deposit = classifyLedgerType("deposit");
   assert.equal(deposit.bucket, "payout");
   assert.equal(deposit.profitRelevant, false);
-  const summary = rollUp(base({ rows: [row("sale", 2_500), row("deposit", -2_340)],
-    production: [prod()] }));
+  const summary = rollUp(base({ rows: [row("deposit", -2_340)], production: [prod()] }));
   assert.equal(summary.grossSellerRevenueMinor, 2_500, "a payout moved revenue");
 });
 
@@ -491,10 +492,13 @@ test("a shipping label is a cost, not collected shipping", () => {
 
 test("Etsy's real ledger codes classify correctly", () => {
   /* Read from the shop's own 3,856 rows, not from documentation. */
-  assert.equal(classifyLedgerType("transaction").normalized, "product-revenue");
-  assert.equal(classifyLedgerType("shipping_transaction").normalized, "shipping-collected");
+  /* Measured: a `transaction` row is the FEE on that transaction (-143 on a
+     ~$22 item is 6.5%), not the sale. The ledger holds no revenue at all. */
+  assert.equal(classifyLedgerType("transaction").normalized, "etsy-transaction-fee");
+  assert.equal(classifyLedgerType("transaction").bucket, "cost");
+  assert.equal(classifyLedgerType("shipping_transaction").normalized, "etsy-transaction-fee");
   assert.equal(classifyLedgerType("sales_tax").bucket, "tax");
-  assert.equal(classifyLedgerType("transaction_refund").normalized, "refund");
+  assert.equal(classifyLedgerType("transaction_refund").normalized, "fee-credit");
   assert.equal(classifyLedgerType("renew_sold_auto").normalized, "etsy-renewal-fee");
   assert.equal(classifyLedgerType("auto_renew_expired").normalized, "etsy-renewal-fee");
 });

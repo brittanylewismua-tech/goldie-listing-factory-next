@@ -89,14 +89,24 @@ export type Rollup = {
 
 const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 
-export function rollUp(
-  { month, currency, rows, production, adjustments, receipts, matchedReceipts,
-    staleSources, incompleteWindows, currencyConflict, unresolvedAmbiguity }:
+export function rollUp(arguments_:
   { month: string; currency: string; rows: Row[]; production: ProductionRow[];
     adjustments: Adjustment[]; receipts: number; matchedReceipts: number;
     staleSources: string[]; incompleteWindows: number;
-    currencyConflict: boolean; unresolvedAmbiguity: number },
+    currencyConflict: boolean; unresolvedAmbiguity: number;
+    /*
+      REVENUE COMES FROM RECEIPTS, NOT FROM THE LEDGER.
+
+      Measured: the payment-account ledger contains fees and cash movements
+      only - a row typed `transaction` is the fee on that transaction, not
+      the sale. Reading it as revenue produced a negative total with tax
+      larger than revenue. The receipt is where the sale actually lives.
+    */
+    receiptTotals?: { subtotalMinor: number; shippingMinor: number;
+      taxMinor: number; discountMinor: number; refundedReceipts: number } },
 ): Rollup {
+  const { month, currency, rows, production, adjustments, receipts, matchedReceipts,
+    staleSources, incompleteWindows, currencyConflict, unresolvedAmbiguity } = arguments_;
   const classified = rows.map(row => ({ row, kind: classifyLedgerType(row.rawType) }));
   const unmappedTypes = [...new Set(classified.filter(entry => isUnmapped(entry.kind))
     .map(entry => entry.row.rawType))];
@@ -108,12 +118,16 @@ export function rollUp(
   const byBucket = { revenue: 0, cost: 0, tax: 0, payout: 0, neither: 0 } as Record<Bucket, number>;
   for (const entry of classified) byBucket[entry.kind.bucket] += entry.row.amountMinor;
 
-  const productRevenue = total("product-revenue");
-  const shipping = total("shipping-collected");
+  const receiptTotals = arguments_.receiptTotals ?? {
+    subtotalMinor: 0, shippingMinor: 0, taxMinor: 0, discountMinor: 0, refundedReceipts: 0 };
+  const productRevenue = receiptTotals.subtotalMinor;
+  const shipping = receiptTotals.shippingMinor;
   const refunds = total("refund");
-  const tax = total("marketplace-tax");
+  /* Tax is reported so it can be seen to be excluded, never added. */
+  const tax = receiptTotals.taxMinor;
   /* Tax never enters seller revenue. It was Etsy's to collect and remit. */
-  const grossSellerRevenue = productRevenue + shipping + refunds;
+  const grossSellerRevenue = productRevenue + shipping
+    - Math.abs(receiptTotals.discountMinor) + refunds;
 
   const live = production.filter(entry => !entry.canceled && entry.countsAsEtsyCost);
   const productionCost = sum(live.map(entry => entry.costMinor));
@@ -173,7 +187,7 @@ export function rollUp(
     byBucket,
     productRevenueMinor: productRevenue,
     shippingCollectedMinor: shipping,
-    discountsMinor: total("seller-discount"),
+    discountsMinor: -Math.abs(receiptTotals.discountMinor),
     refundsMinor: refunds,
     marketplaceTaxMinor: tax,
     grossSellerRevenueMinor: grossSellerRevenue,
