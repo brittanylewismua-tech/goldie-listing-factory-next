@@ -37,7 +37,26 @@ export const GET = withErrorLog("shop-map-financial-audit", async (request: Requ
     return NextResponse.json({ status: response.status }, { status: 200 });
 
   const body = await response.json() as { results?: Array<Record<string, unknown>> };
-  const rows = (body.results ?? []).slice(0, 25);
+  const all = body.results ?? [];
+  /*
+    Look at one code closely rather than a sample of everything. An unmapped
+    code is only safe to classify when its own amounts and its neighbours
+    establish what it means.
+  */
+  const only = (new URL(request.url).searchParams.get("type") ?? "").trim();
+  const rows = (only
+    ? all.filter(row => String(row.ledger_type ?? "") === only)
+    : all).slice(0, 25);
+
+  /* The sibling entries written against the same order, which is what shows
+     whether a code duplicates or complements the ones beside it. */
+  const neighbours = only
+    ? all.filter(row => rows.some(pick =>
+        String(pick.reference_id ?? "") && String(row.reference_id ?? "") === String(pick.reference_id ?? "")))
+      .map(row => ({ ledger_type: row.ledger_type, amount: row.amount,
+        reference_type: row.reference_type, reference_id: row.reference_id }))
+      .slice(0, 40)
+    : [];
 
   return NextResponse.json({
     fieldsPresent: [...new Set(rows.flatMap(row => Object.keys(row)))],
@@ -51,6 +70,12 @@ export const GET = withErrorLog("shop-map-financial-audit", async (request: Requ
       entry_type: row.entry_type,
       created: row.create_date ?? row.created_timestamp,
     })),
+    typeCounts: Object.entries(all.reduce((into, row) => {
+      const key = String(row.ledger_type ?? "");
+      into[key] = (into[key] ?? 0) + 1;
+      return into;
+    }, {} as Record<string, number>)).sort((a, b) => b[1] - a[1]),
+    neighbours,
     reminder: "Amounts and types only. No buyer field requested or returned.",
   });
 });
