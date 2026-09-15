@@ -151,3 +151,22 @@ test("a real overlap keeps both niches, a distant one does not", () => {
     tags: ["feminist", "equality"], shopSection: "", productFamily: "tee" });
   assert.equal(single.secondaryNiche, "", "a passing mention became a second niche");
 });
+
+test("a plural cannot walk through a rule written in the singular", () => {
+  /* The repair returned all four of these and every one passed. */
+  assert.match(rejectAsNiche("Girls Tshirts"), /names a product/);
+  assert.match(rejectAsNiche("Feminist Jewelry"), /split by product/);
+  assert.match(rejectAsNiche("Feminist Wall Decor"), /split by product/);
+  assert.match(rejectAsNiche("Custom Orders"), /generic gift language/);
+});
+
+test("a bin with a friendly name is still a bin", () => {
+  for (const label of ["Miscellaneous", "Other", "Various", "Assorted", "Sale"])
+    assert.ok(rejectAsNiche(label), `"${label}" was accepted as a niche`);
+});
+
+test("real subjects still survive the stricter gate", () => {
+  for (const label of ["Feminist", "Girl Power", "Political Protest",
+    "Self-Love & Empowerment", "Workout & Fitness", "Nurses", "Horse girls"])
+    assert.equal(rejectAsNiche(label), "", `"${label}" was wrongly rejected`);
+});

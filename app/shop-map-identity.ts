@@ -101,9 +101,24 @@ const RECIPIENT: Array<[string, string[]]> = [
 */
 const GENERIC_GIFT = ["for her", "for him", "for them", "gift", "gifts",
   "gift idea", "gift ideas", "present", "novelty", "funny", "cute", "custom",
-  "custom order", "personalized", "personalised", "unique", "best seller"];
+  "custom order", "custom orders", "personalized", "personalised", "unique",
+  "best seller", "bestseller", "new arrivals", "sale", "clearance", "misc",
+  "miscellaneous", "other", "various", "assorted"];
 
-const PRODUCT_WORDS = ["tee", "tees", "shirt", "shirts", "tshirt", "t shirt",
+/*
+  PLURALS AND OBJECTS THE FIRST GATE MISSED.
+
+  The repair returned "Girls Tshirts", "Feminist Jewelry", "Feminist Wall
+  Decor" and "Custom Orders". Every one names a product or an aisle, and
+  every one passed because the list held the singular ("tshirt", not
+  "tshirts") or did not hold the word at all. Matching is normalised for a
+  trailing s now, so a plural cannot walk through a rule written in the
+  singular.
+*/
+const PRODUCT_WORDS = ["tee", "tees", "shirt", "shirts", "tshirt", "tshirts", "t shirt",
+  "jewelry", "jewellery", "necklace", "earring", "earrings", "pin", "pins",
+  "decor", "wall", "art", "magnet", "magnets", "keychain", "patch", "patches",
+  "hat", "hats", "cap", "beanie", "pillow", "candle", "notebook", "journal",
   "hoodie", "hoodies", "sweatshirt", "sweatshirts", "crewneck", "sweater",
   "sweaters", "mug", "mugs", "tumbler", "sticker", "stickers", "tote", "bag",
   "poster", "print", "blanket", "case", "cases", "phone case", "koozie",
@@ -117,19 +132,32 @@ const normalise = (text: string) =>
   ` ${String(text ?? "").toLowerCase().replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim()} `;
 
 /** Does this label name a subject, or a product? */
+/* A trailing s must not let a plural through a singular rule. */
+const singular = (word: string) =>
+  word.endsWith("ies") ? `${word.slice(0, -3)}y`
+    : word.endsWith("es") && word.length > 4 ? word.slice(0, -2)
+    : word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1)
+    : word;
+
+const isProductWord = (word: string) =>
+  PRODUCT_WORDS.includes(word) || PRODUCT_WORDS.includes(singular(word));
+
 export function rejectAsNiche(label: string): string {
   const clean = String(label ?? "").trim();
   if (!clean) return "empty label";
   const words = clean.toLowerCase().split(/\s+/);
   if (/&#\d|&[a-z]+;/i.test(clean)) return "contains an HTML entity";
   if (DANGLING.has(words[words.length - 1])) return "incomplete phrase";
-  if (words.every(word => PRODUCT_WORDS.includes(word)
-    || ["women", "womens", "women's", "men", "mens", "men's", "unisex", "kids", "&", "and"].includes(word)))
+  if (words.every(word => isProductWord(word)
+    || ["women", "womens", "women's", "men", "mens", "men's", "unisex", "kids",
+      "girls", "girl", "boys", "boy", "&", "and"].includes(word)))
     return "names a product, not a person";
-  if (GENERIC_GIFT.includes(clean.toLowerCase())) return "generic gift language";
+  const normalised = words.map(singular).join(" ");
+  if (GENERIC_GIFT.includes(clean.toLowerCase()) || GENERIC_GIFT.includes(normalised))
+    return "generic gift language";
   /* "Feminist Mugs" — a real identity welded to a product. The identity is
      the world; the mug belongs inside it. */
-  if (words.length > 1 && PRODUCT_WORDS.includes(words[words.length - 1]))
+  if (words.length > 1 && isProductWord(words[words.length - 1]))
     return "an identity split by product type";
   return "";
 }
