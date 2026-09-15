@@ -31,8 +31,11 @@ test("every foundational table has a deploy migration step", () => {
       owners.set(match[1], file.slice(appDir.length));
   }
   /* Tables the deploy path reaches, via the ensure functions it imports. */
-  const imported = [...MIG.matchAll(/import \{ (ensure\w+) \} from "@\/app\/([\w-]+)"/g)]
-    .map(match => `${match[2]}.ts`);
+  /* A module may export more than one ensure function, so the import list can
+     carry several names — matching only a single name missed the module
+     entirely and reported its tables as uncovered. */
+  const imported = [...MIG.matchAll(/import \{[^}]*\bensure\w+[^}]*\} from "@\/app\/([\w-]+)"/g)]
+    .map(match => `${match[1]}.ts`);
   const covered = new Set(imported);
 
   const uncovered = [...owners.entries()]
