@@ -463,3 +463,65 @@ test("the threshold is documented as a beta rule, not a standard", () => {
   assert.deepEqual({ ...THRESHOLD },
     { listings: 12, shops: 8, repeatedMovement: 5, usableImageShare: 0.8 });
 });
+
+/* ------------------------------------------------------------- interface */
+const CLIENT = readFileSync(
+  new URL("../app/design-scanner/design-scanner-client.tsx", import.meta.url), "utf8");
+const STYLE = readFileSync(
+  new URL("../app/design-scanner/design-scanner.css", import.meta.url), "utf8");
+const bare = CLIENT.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+test("the animation never holds a finished result back", () => {
+  /* No minimum duration, no sleep, no waiting on the beam before showing. */
+  assert.doesNotMatch(bare, /MIN_(DURATION|ANIMATION)|minimumDuration|await sleep|setTimeout\([^)]*resolve/);
+  /* The scan's finally block stops the timers and clears the scanning flag. */
+  const finallyBlock = bare.slice(bare.indexOf("} finally {"), bare.indexOf("setScanning(false);") + 30);
+  assert.match(finallyBlock, /clearTimeout/);
+  assert.match(finallyBlock, /setScanning\(false\)/);
+});
+
+test("no touch target is under 40 CSS pixels", () => {
+  const targets = [...STYLE.matchAll(/min-height:\s*(\d+)px/g)].map(match => Number(match[1]));
+  assert.ok(targets.length >= 4, "the interactive elements do not state a height");
+  for (const height of targets) assert.ok(height >= 40, `a ${height}px touch target`);
+});
+
+test("nothing can force the page wider than the phone", () => {
+  assert.doesNotMatch(STYLE, /min-width:\s*(4[5-9]\d|[5-9]\d\d|\d{4,})px/);
+  assert.match(STYLE, /max-width:\s*560px/);
+  assert.match(STYLE, /\.stage img\s*\{[^}]*max-width:\s*100%/);
+  /* 16px inputs, or iOS zooms the whole page on focus. */
+  assert.match(STYLE, /font-size:\s*16px/);
+});
+
+test("the result shows no score, metric or internal number", () => {
+  const view = bare.slice(bare.indexOf("function ScanResult"));
+  assert.doesNotMatch(view, /score|percent|%|confidence|rank|\bindex\b/i);
+});
+
+test("no reference listing, shop or image is ever rendered", () => {
+  for (const banned of ["listingId", "shopId", "imageUrl", "competitor", "title"])
+    assert.ok(!bare.includes(banned), `the interface renders ${banned}`);
+});
+
+test("trademark stays visually separate from the design read", () => {
+  assert.match(STYLE, /\.tm\s*\{/);
+  assert.match(CLIENT, /<h2>Trademark<\/h2>/);
+  /* And an incomplete register always says so. */
+  assert.match(CLIENT, /registerReady/);
+  assert.match(CLIENT, /not a complete\s*\n?\s*search yet/);
+});
+
+test("the remaining daily scans are shown", () => {
+  assert.match(CLIENT, /scan\{left === 1 \? "" : "s"\} left today/);
+});
+
+test("reopening a saved scan costs nothing", () => {
+  /* History rows set state from what is already loaded; no fetch on click. */
+  const historyBlock = bare.slice(bare.indexOf('className="history"'));
+  assert.doesNotMatch(historyBlock.slice(0, 600), /fetch\(/);
+});
+
+test("reduced motion is respected", () => {
+  assert.match(STYLE, /prefers-reduced-motion[\s\S]*?\.beam\s*\{\s*animation:\s*none/);
+});

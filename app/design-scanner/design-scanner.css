@@ -1,0 +1,177 @@
+/*
+  PHONE FIRST, AND QUIET.
+
+  The design is the subject. Everything else is small, calm and out of its
+  way — no dashboard, no scores, no grid of other people's listings.
+*/
+.scanner {
+  --ink: #1b1b1f;
+  --muted: #6b6b76;
+  --line: #e6e4e0;
+  --paper: #fbfaf8;
+  --gold: #c9a227;
+  --good: #2f7d59;
+  --warn: #9a6a12;
+  --risk: #a33a3a;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+  color: var(--ink);
+  font: 16px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.scanner h1 {
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+.scanner .lede { color: var(--muted); margin: 0 0 24px; font-size: 0.95rem; }
+
+/* ------------------------------------------------------------ the stage */
+.stage {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+}
+.stage img { max-width: 100%; max-height: 100%; display: block; }
+.stage .empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 24px;
+  font-size: 0.95rem;
+}
+
+/* The beam. One pass takes 1.4s and it is removed the moment the result is
+   in hand — it never holds a finished answer back. */
+.beam {
+  position: absolute;
+  inset-inline: 0;
+  height: 42%;
+  background: linear-gradient(to bottom, transparent, rgba(201,162,39,0.22), transparent);
+  animation: sweep 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes sweep {
+  0% { transform: translateY(-120%); }
+  100% { transform: translateY(240%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .beam { animation: none; opacity: 0.35; }
+}
+
+/* ------------------------------------------------------------- controls */
+.field { margin: 20px 0 0; }
+.field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+.scanner input[type="text"],
+.scanner select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  font-size: 16px; /* never smaller: iOS zooms the page below 16 */
+  color: var(--ink);
+}
+.pick {
+  display: block;
+  min-height: 48px;
+  line-height: 48px;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  margin-top: 12px;
+}
+.pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+.go {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 20px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.go[disabled] { opacity: 0.4; cursor: default; }
+
+.stages { margin: 16px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 0.9rem; }
+.stages li { padding: 3px 0; }
+.stages li[data-done="yes"] { color: var(--ink); }
+
+.left { margin-top: 12px; font-size: 0.85rem; color: var(--muted); text-align: center; }
+
+/* -------------------------------------------------------------- result */
+.result { margin-top: 28px; }
+.overall {
+  font-size: 1.15rem;
+  font-weight: 650;
+  margin: 0 0 16px;
+  line-height: 1.35;
+}
+.block { margin: 0 0 22px; }
+.block h2 {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+.block ul { margin: 0; padding-left: 18px; }
+.block li { margin-bottom: 6px; }
+.block p { margin: 0; }
+
+/* Trademark sits apart from the design read on purpose: they are different
+   kinds of risk and blending them makes both easier to ignore. */
+.tm {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #fff;
+}
+.tm[data-risk="clear"] { border-left-color: var(--good); }
+.tm[data-risk="caution"] { border-left-color: var(--warn); }
+.tm[data-risk="high"] { border-left-color: var(--risk); }
+.tm .loading { color: var(--warn); font-size: 0.85rem; margin-top: 8px; }
+
+.evidence {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.refusal {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  background: #fff;
+}
+.refusal p { margin: 0; }
+
+/* ------------------------------------------------------------- history */
+.history { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 20px; }
+.history h2 { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+.history button {
+  display: block; width: 100%; text-align: left;
+  min-height: 48px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 12px; background: #fff;
+  margin-bottom: 8px; cursor: pointer; font-size: 0.92rem; color: var(--ink);
+}
+.history .when { color: var(--muted); font-size: 0.8rem; }
+
+.error { color: var(--risk); margin-top: 14px; font-size: 0.92rem; }
