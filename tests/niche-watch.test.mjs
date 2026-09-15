@@ -59,7 +59,7 @@ test("a thin niche does not claim meaningful momentum", () => {
   const thin = summarize([evidence()], NOW);
   assert.equal(thin.meaningfulMomentum, false);
   const wide = summarize(Array.from({ length: 14 }, (unused, index) =>
-    evidence({ listingId: index, shopId: index })), NOW);
+    evidence({ listingId: index, shopId: index, intervals: index < 6 ? 2 : 1 })), NOW);
   assert.equal(wide.meaningfulMomentum, true);
 });
 
@@ -255,4 +255,20 @@ test("a stale image is not displayed as current", () => {
 test("Market Watch does not read the member's own shop", () => {
   for (const banned of ["shop-map", "shopMap", "ownShop", "myListings", "profit", "revenue"])
     assert.ok(!mwBare.includes(banned), `Market Watch reads ${banned}`);
+});
+
+test("meaningful momentum uses the same bar the scanner does", () => {
+  /* Measured: Halloween had 17 listings across 17 shops and 2 repeats. It
+     read as meaningful here and was refused by Design Scanner. */
+  const halloween = Array.from({ length: 17 }, (unused, index) =>
+    evidence({ listingId: index, shopId: index, intervals: index < 2 ? 2 : 1 }));
+  const summary = summarize(halloween, NOW);
+  assert.equal(summary.moving, 17);
+  assert.equal(summary.repeated, 2);
+  assert.equal(summary.meaningfulMomentum, false,
+    "a niche the scanner refuses was called meaningful");
+
+  const bachelorette = Array.from({ length: 20 }, (unused, index) =>
+    evidence({ listingId: index, shopId: index, intervals: index < 9 ? 2 : 1 }));
+  assert.equal(summarize(bachelorette, NOW).meaningfulMomentum, true);
 });

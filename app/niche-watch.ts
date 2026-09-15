@@ -80,8 +80,9 @@ export type NicheSummary = {
 
 export function summarize(
   listings: ListingEvidence[], now: number,
-  { since = 0, minimumListings = 12, minimumShops = 8 }:
-  { since?: number; minimumListings?: number; minimumShops?: number } = {},
+  { since = 0, minimumListings = 12, minimumShops = 8, minimumRepeated = 5 }:
+  { since?: number; minimumListings?: number; minimumShops?: number;
+    minimumRepeated?: number } = {},
 ): NicheSummary {
   const live = listings.filter(row => {
     const state = stateOf(row, now);
@@ -94,12 +95,22 @@ export function summarize(
     earliest = Math.min(earliest, row.firstConfirmedAt);
     latest = Math.max(latest, row.lastConfirmedAt);
   }
+  const repeated = live.filter(row => row.intervals >= 2).length;
   return {
-    /* "Meaningful" is the same bar the scanner compares against, so a niche
-       cannot look substantial here and refuse to support a comparison. */
-    meaningfulMomentum: live.length >= minimumListings && shops.size >= minimumShops,
+    /*
+      THE SAME BAR THE SCANNER USES, REPEATED MOVEMENT INCLUDED.
+
+      The first version checked listings and shops but not repeated movement,
+      so Halloween — 17 listings across 17 shops, but only 2 of them having
+      moved more than once — read as meaningful here and was refused by Design
+      Scanner. One feature calling a niche substantial while another calls it
+      too thin is the kind of contradiction a member notices immediately and
+      cannot explain.
+    */
+    meaningfulMomentum: live.length >= minimumListings
+      && shops.size >= minimumShops && repeated >= minimumRepeated,
     moving: live.length,
-    repeated: live.filter(row => row.intervals >= 2).length,
+    repeated,
     /* New since the member last looked, not new since the listing existed. */
     newSinceLastBrief: since ? live.filter(row => row.firstConfirmedAt > since).length : 0,
     shops: shops.size,
