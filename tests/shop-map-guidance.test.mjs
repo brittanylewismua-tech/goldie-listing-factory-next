@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { guidance, standout, MIN_ORDERS_TO_ADVISE } from "../app/shop-map-guidance.ts";
+import { readFileSync } from "node:fs";
+import { guidance, standout, MIN_ORDERS_TO_ADVISE, SHOP_MAP_MIN_RECENT_ORDERS,
+  DIRECTION_BASIS } from "../app/shop-map-guidance.ts";
 
 /* Guidance reads the last 90 days on both sides, so the fixtures carry
    recent figures and lifetime is only history. */
@@ -106,4 +108,38 @@ test("keep building no longer implies making more", () => {
     assert.match(row.advice, /Maintain/);
     assert.match(row.reason, /no leverage to act on/);
   }
+});
+
+test("the recommendation floor is a named beta setting, not buried arithmetic", () => {
+  /* Twenty is where this beta draws the line. It is not a measured Etsy
+     standard and nothing should imply that it is. */
+  assert.equal(SHOP_MAP_MIN_RECENT_ORDERS, 20);
+  const module = readFileSync(new URL("../app/shop-map-guidance.ts", import.meta.url), "utf8");
+  assert.match(module, /A BETA THRESHOLD, NOT A LAW/);
+  assert.match(module, /export const SHOP_MAP_MIN_RECENT_ORDERS/);
+  /* The comparison uses the constant, never a literal. */
+  assert.doesNotMatch(module, /recentOrders < 20/);
+});
+
+test("the basis names both periods honestly", () => {
+  assert.match(DIRECTION_BASIS, /Recent 90-day performance/);
+  assert.match(DIRECTION_BASIS, /current active catalog/);
+  const module = readFileSync(new URL("../app/shop-map-guidance.ts", import.meta.url), "utf8");
+  /* It must not claim both sides share a window. */
+  assert.doesNotMatch(module, /last 90 days on both sides/);
+});
+
+test("this shop has no direction on the merits, floor aside", () => {
+  /* Feminist 12 recent orders over 53 active; Girl Power 3 over 16. */
+  const niches = [
+    niche({ worldId: "f", label: "Feminist", activeListings: 53,
+      ordersLast90: 12, revenueLast90Minor: 27_200 }),
+    niche({ worldId: "g", label: "Girl Power", activeListings: 16,
+      ordersLast90: 3, revenueLast90Minor: 6_600 }),
+  ];
+  const advice = guidance(niches, { shop: { revenueMinor: 33_800,
+    revenueLast90Minor: 33_800, activeListings: 83, ordersLast90: 15, orders: 15 } });
+  assert.equal(advice.some(row =>
+    row.headline === "Focus here" || row.headline === "Expand this niche"), false,
+    "a niche was called a focus without a convincing recent advantage");
 });

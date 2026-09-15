@@ -6,7 +6,7 @@ import { env } from "cloudflare:workers";
 import { ensureListingTables, performanceFrom } from "@/app/shop-map-listings";
 import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-map-worlds";
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
-import { guidance, standout } from "@/app/shop-map-guidance";
+import { guidance, standout, DIRECTION_BASIS, SHOP_MAP_MIN_RECENT_ORDERS } from "@/app/shop-map-guidance";
 import { collapseFacets } from "@/app/niche-classifier";
 import { rejectAsNiche } from "@/app/shop-map-identity";
 import { resolveCost, profitState, type CostRule } from "@/app/shop-map-cost-rules";
@@ -372,8 +372,10 @@ async function buildMap(request: Request) {
       than hidden, because it makes revenue-per-listing read low for a niche
       that is being actively built.
     */
-    directionCaveat: "Active listings are counted as they stand today, while "
-      + "orders and revenue cover the last 90 days.",
+    directionBasis: DIRECTION_BASIS,
+    directionCaveat: "Orders and revenue cover the last 90 days. Active listings "
+      + "are a snapshot of your catalogue as it stands today.",
+    directionMinimumRecentOrders: SHOP_MAP_MIN_RECENT_ORDERS,
     coverage,
     unclassifiedPerformance: unclassified,
     shopTotals,

@@ -67,7 +67,7 @@ export function standout(
     defensible direction yet - not a weaker version of one.
   */
   const recentOrders = niches.reduce((sum, niche) => sum + niche.ordersLast90, 0);
-  if (recentOrders < MIN_RECENT_ORDERS_FOR_DIRECTION)
+  if (recentOrders < SHOP_MAP_MIN_RECENT_ORDERS)
     return {
       hasStandout: false,
       headline: "No clear direction yet.",
@@ -132,13 +132,32 @@ export type ShopTotals = {
   earn a third of its lifetime money from listings it has since deactivated,
   and that sentence would still read as a reason to build more of them.
 
-  The direction signal now uses the last 90 days on both sides. Active
-  listings remain a "now" measure, which is a real limitation and is stated
-  rather than hidden: a listing published last week has not had 90 days to
-  earn, so its niche's revenue-per-listing is understated.
+  What the signal actually compares is recent 90-day performance against the
+  shop's CURRENT active catalog. Those are not the same window and saying
+  they are would be its own small untruth: a listing published last week has
+  not had ninety days to earn, so its niche's revenue-per-listing reads low.
+  The limitation travels with the formula wherever it is explained.
 */
 export const DIRECTION_WINDOW_DAYS = 90;
-export const MIN_RECENT_ORDERS_FOR_DIRECTION = 20;
+export const DIRECTION_BASIS =
+  "Recent 90-day performance compared with the shop's current active catalog.";
+
+/*
+  A BETA THRESHOLD, NOT A LAW.
+
+  Twenty is where this beta draws the line, chosen so a handful of orders
+  cannot produce a confident percentage. It is not a measured Etsy standard
+  and nothing here should imply that it is, so it lives in one named place
+  that can be changed rather than inside the arithmetic.
+
+  This shop would have no clear direction without it either: Feminist has 12
+  recent orders across 53 active listings and Girl Power 3 across 16, so
+  neither shows a convincing recent advantage per active listing.
+*/
+export const SHOP_MAP_MIN_RECENT_ORDERS = Number(
+  (globalThis as { SHOP_MAP_MIN_RECENT_ORDERS?: string }).SHOP_MAP_MIN_RECENT_ORDERS
+  ?? (typeof process !== "undefined" ? process.env?.SHOP_MAP_MIN_RECENT_ORDERS : undefined)
+  ?? 20) || 20;
 
 export function guidance(
   niches: WorldPerformance[],

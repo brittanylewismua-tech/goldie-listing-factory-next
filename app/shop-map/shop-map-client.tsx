@@ -20,6 +20,7 @@ type ShopMap = {
   worlds?: Niche[];
   unclassifiedCard?: Niche;
   worldsPeriod?: string;
+  directionBasis?: string;
   directionCaveat?: string;
   coverage?: { activeListings: number; recentRevenue: number; recentOrders: number };
   unclassifiedPerformance?: { listings: number; activeListings: number; orders: number;
@@ -148,8 +149,11 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
                 <p className="shop-map-world-name">{shown.standout?.headline ?? "No clear direction yet."}</p>
                 <p className="shop-map-reason">{shown.standout?.nextStep}</p>
               </>}
-        {shown.directionCaveat
-          ? <p className="shop-map-caveat">{shown.directionCaveat}</p> : null}
+        {shown.directionBasis || shown.directionCaveat
+          ? <p className="shop-map-caveat">
+              {shown.directionBasis} {shown.directionCaveat}
+            </p>
+          : null}
       </section>
 
       {/* 3 · The niches. Recent first, lifetime as history. */}
