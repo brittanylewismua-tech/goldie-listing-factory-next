@@ -12,12 +12,17 @@ import type { Outcome } from "@/app/reference-images";
 
 export type EtsyListingRow = {
   listing_id?: number; shop_id?: number; state?: string; quantity?: number;
+  title?: string; tags?: string[];
   images?: Array<{ url_570xN?: string; url_fullxfull?: string; listing_image_id?: number }>;
 };
 
 export type Recovered = {
   listingId: number; shopId: number; imageId: number | null;
   imageUrl: string; listingState: string; outcome: Outcome;
+  /* The listing's OWN words, from the same call. Kept because a niche cohort
+     is decided by what the seller says the listing is, and fetching them
+     separately would double the calls for information already in the payload. */
+  title: string; tags: string[];
 };
 
 const ACTIVE = new Set(["active"]);
@@ -31,6 +36,7 @@ export function classify(row: EtsyListingRow): Recovered {
     listingId, shopId: Number(row.shop_id ?? 0),
     imageId: image?.listing_image_id === undefined ? null : Number(image.listing_image_id),
     imageUrl: url, listingState: state,
+    title: String(row.title ?? ""), tags: (row.tags ?? []).map(String),
   };
   if (state === "removed" || state === "unavailable")
     return { ...base, outcome: "deleted" };
@@ -59,6 +65,7 @@ export function account(
     const answer = byId.get(listingId);
     const row: Recovered = answer ?? {
       listingId, shopId: 0, imageId: null, imageUrl: "", listingState: "",
+      title: "", tags: [],
       /* Etsy answering the call but omitting the id is different from the call
          failing, and both are different from a listing that is simply gone. */
       outcome: failed.has(listingId) ? "failed" : "unavailable",

@@ -306,7 +306,7 @@ test("an unrelated search result is rejected with its reason", () => {
 });
 
 test("the cohort claim never says the marketplace has been classified", () => {
-  assert.match(COHORT_CLAIM, /returned for this niche query/);
+  assert.match(COHORT_CLAIM, /own title and tags match this niche/);
   for (const banned of ["classified", "all listings", "every listing", "marketplace"])
     assert.ok(!COHORT_CLAIM.toLowerCase().includes(banned));
 });

@@ -101,16 +101,19 @@ export const POST = withErrorLog("design-scanner-recover-images", async (request
      run is a couple of batched writes instead of hundreds of round trips. */
   const insert = db.prepare(
     `INSERT INTO reference_images
-       (listing_id, shop_id, image_id, image_url, listing_state, outcome, retrieved_at, source_endpoint)
-     VALUES (?,?,?,?,?,?,?,?)
+       (listing_id, shop_id, image_id, image_url, listing_state, outcome,
+        retrieved_at, source_endpoint, title, tags)
+     VALUES (?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(listing_id) DO UPDATE SET
        shop_id = excluded.shop_id, image_id = excluded.image_id,
        image_url = excluded.image_url, listing_state = excluded.listing_state,
        outcome = excluded.outcome, retrieved_at = excluded.retrieved_at,
-       source_endpoint = excluded.source_endpoint`);
+       source_endpoint = excluded.source_endpoint,
+       title = excluded.title, tags = excluded.tags`);
   const statements = rows.map(row => insert.bind(
     row.listingId, row.shopId, row.imageId, row.imageUrl, row.listingState,
-    row.outcome, now, "listings/batch?includes=Images"));
+    row.outcome, now, "listings/batch?includes=Images",
+    row.title, row.tags.join("|")));
   for (let index = 0; index < statements.length; index += 50)
     await db.batch(statements.slice(index, index + 50));
 

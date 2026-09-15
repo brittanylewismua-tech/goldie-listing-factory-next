@@ -2,12 +2,18 @@
  * A COHORT FOR THE NICHE THE MEMBER TYPED, NOT A CLASSIFIED MARKETPLACE.
  *
  * Goldie has not classified Etsy into customer niches and must never imply it
- * has. What it can honestly do is: take the phrase the member gives, ask Etsy
- * which active listings come back for it, and keep the ones that ALSO carry
- * verified momentum in our own evidence. The claim that supports is narrow and
- * true:
+ * has. What it can honestly do is take the phrase the member gives and ask
+ * which listings THAT ALREADY CARRY VERIFIED MOMENTUM describe themselves in
+ * those terms, using the listing's own title and tags. The claim that supports
+ * is narrow and true:
  *
- *   "Listings returned for this niche query that also showed verified momentum."
+ *   "Listings with verified momentum whose own title and tags match this niche."
+ *
+ * Searching Etsy for the phrase and intersecting the results was tried first
+ * and measured at zero across seven niches: Etsy matches hundreds of thousands
+ * of listings per phrase, a search reads a few hundred, and the corpus is under
+ * a thousand, so the overlap is arithmetically about a tenth of a listing. The
+ * corpus is the side we hold, so the corpus is the side we read.
  *
  * Etsy's product taxonomy is deliberately not used for this. Taxonomy says
  * t-shirt; it does not say who the shirt is for, and treating the two as the
@@ -120,4 +126,4 @@ export function intersect(
 
 /** What may be said about a cohort built this way. Never more than this. */
 export const COHORT_CLAIM =
-  "Listings returned for this niche query that also showed verified momentum.";
+  "Listings with verified momentum whose own title and tags match this niche.";

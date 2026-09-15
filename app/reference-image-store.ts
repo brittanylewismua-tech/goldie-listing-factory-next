@@ -17,26 +17,44 @@ export async function ensureReferenceImageTable() {
     listing_state TEXT NOT NULL DEFAULT '',
     outcome TEXT NOT NULL DEFAULT '',
     retrieved_at INTEGER NOT NULL DEFAULT 0,
-    source_endpoint TEXT NOT NULL DEFAULT '')`).run();
+    source_endpoint TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    tags TEXT NOT NULL DEFAULT '')`).run();
+
+  /*
+    CREATE TABLE IF NOT EXISTS is a no-op on a table that already exists, and
+    this codebase has lost deploys to that fact. Columns added after the table
+    shipped are stated again as ALTERs.
+  */
+  for (const addition of [
+    `ALTER TABLE reference_images ADD COLUMN title TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE reference_images ADD COLUMN tags TEXT NOT NULL DEFAULT ''`,
+  ]) await db.prepare(addition).run().catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/duplicate column/i.test(message)) throw error;
+  });
   await db.prepare(
     `CREATE INDEX IF NOT EXISTS reference_images_state ON reference_images (outcome, retrieved_at)`)
     .run();
 }
 
 export async function rememberReferenceImage(
-  row: ReferenceImage & { outcome: Outcome },
+  row: ReferenceImage & { outcome: Outcome; title?: string; tags?: string[] },
 ) {
   const db = (env as unknown as { DB: D1Database }).DB;
   await db.prepare(
     `INSERT INTO reference_images
-       (listing_id, shop_id, image_id, image_url, listing_state, outcome, retrieved_at, source_endpoint)
-     VALUES (?,?,?,?,?,?,?,?)
+       (listing_id, shop_id, image_id, image_url, listing_state, outcome,
+        retrieved_at, source_endpoint, title, tags)
+     VALUES (?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(listing_id) DO UPDATE SET
        shop_id = excluded.shop_id, image_id = excluded.image_id,
        image_url = excluded.image_url, listing_state = excluded.listing_state,
        outcome = excluded.outcome, retrieved_at = excluded.retrieved_at,
-       source_endpoint = excluded.source_endpoint`)
+       source_endpoint = excluded.source_endpoint,
+       title = excluded.title, tags = excluded.tags`)
     .bind(row.listingId, row.shopId, row.imageId, row.imageUrl, row.listingState,
-      row.outcome, row.retrievedAt, row.sourceEndpoint)
+      row.outcome, row.retrievedAt, row.sourceEndpoint,
+      row.title ?? "", (row.tags ?? []).join("|"))
     .run();
 }

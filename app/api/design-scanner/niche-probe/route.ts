@@ -3,7 +3,6 @@ import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
-import { etsyApiCredential, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import { normalizeNiche, intersect, COHORT_CLAIM, type Candidate } from "@/app/niche-cohort";
 import { EVIDENCE_FRESH_DAYS, SHOP_SHARE_CAP } from "@/app/momentum-cohort";
 import { describeWindow } from "@/app/evidence-window";
@@ -11,9 +10,27 @@ import { describeWindow } from "@/app/evidence-window";
 /**
  * CAN THIS NICHE PRODUCE A COHORT AT ALL?
  *
- * Measurement, not a product surface. It runs the real path a member scan
- * would run — normalize the phrase, ask Etsy for active listings, intersect
- * with verified momentum — and reports the distribution instead of an answer.
+ * Measurement, not a product surface.
+ *
+ * THE FIRST VERSION SEARCHED ETSY AND INTERSECTED. It returned zero for all
+ * seven test niches, and the arithmetic says it always would: Etsy reports
+ * 247,000 to 5,500,000 listings matching these phrases, a search reads the top
+ * few hundred by relevance, and the momentum corpus is under a thousand
+ * listings. The expected overlap between an arbitrary 300-row slice of a
+ * million-row result set and a specific 856-row set is about a tenth of a
+ * listing. Zero was not a shortage of evidence; it was a shortage of
+ * coincidence, and paging deeper cannot fix it.
+ *
+ * SO THE DIRECTION IS INVERTED. The corpus is the small side, and it is the
+ * side we hold. Rather than ask Etsy for a niche and hope our listings are in
+ * it, this asks whether each listing we ALREADY have verified movement for
+ * describes itself in the member's terms — using the listing's own title and
+ * tags, captured on the same call that recovered its image.
+ *
+ * The honest claim gets narrower and truer: not "listings Etsy returned for
+ * this niche", but "listings with verified momentum whose own title and tags
+ * match this niche". No Etsy search call, no marketplace classification, and
+ * the member's phrase is still what decides.
  *
  * The point is to find out whether a threshold exists that the data can
  * actually support, before one is chosen. Choosing first and measuring after
@@ -24,12 +41,6 @@ import { describeWindow } from "@/app/evidence-window";
  */
 export const maxDuration = 300;
 
-const PAGE = 100;
-
-type EtsyActive = {
-  listing_id?: number; shop_id?: number; title?: string; tags?: string[];
-};
-
 export const GET = withErrorLog("design-scanner-niche-probe", async (request: Request) => {
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
@@ -38,7 +49,6 @@ export const GET = withErrorLog("design-scanner-niche-probe", async (request: Re
   const url = new URL(request.url);
   const phrase = (url.searchParams.get("q") ?? "").trim();
   if (!phrase) return NextResponse.json({ error: "Give a niche phrase as ?q=" }, { status: 400 });
-  const pages = Math.max(1, Math.min(10, Number(url.searchParams.get("pages")) || 3));
 
   const db = (env as unknown as { DB: D1Database }).DB;
   const now = Math.floor(Date.now() / 1000);
@@ -52,55 +62,34 @@ export const GET = withErrorLog("design-scanner-niche-probe", async (request: Re
             MIN(a.observed_at) AS firstSeen, MAX(a.observed_at) AS lastSeen,
             (SELECT COUNT(*) FROM shop_reviews v WHERE v.listing_id = a.listing_id) AS reviews,
             (SELECT image_url FROM reference_images r WHERE r.listing_id = a.listing_id) AS imageUrl,
-            (SELECT outcome FROM reference_images r WHERE r.listing_id = a.listing_id) AS imageOutcome
+            (SELECT outcome FROM reference_images r WHERE r.listing_id = a.listing_id) AS imageOutcome,
+            (SELECT title FROM reference_images r WHERE r.listing_id = a.listing_id) AS title,
+            (SELECT tags FROM reference_images r WHERE r.listing_id = a.listing_id) AS tags
        FROM listing_sales_activity a
       WHERE a.interval_id IS NOT NULL AND a.observed_at >= ?
       GROUP BY a.listing_id, a.shop_id`)
     .bind(since)
     .all<{ listingId: number; shopId: number; intervals: number; units: number;
       firstSeen: string; lastSeen: string; reviews: number;
-      imageUrl: string | null; imageOutcome: string | null }>()
+      imageUrl: string | null; imageOutcome: string | null;
+      title: string | null; tags: string | null }>()
     .catch(() => ({ results: [] }));
 
   const evidence = new Map((corpus.results ?? []).map(row => [Number(row.listingId), row]));
   const qualified = new Set(evidence.keys());
 
   const { query, terms } = normalizeNiche(phrase);
-  const candidates: Candidate[] = [];
-  let calls = 0;
-  let etsyMatched = 0;
-  const failures: string[] = [];
 
-  for (let page = 0; page < pages; page += 1) {
-    await waitForEtsyCapacity();
-    const search = new URLSearchParams({
-      keywords: query, limit: String(PAGE), offset: String(page * PAGE),
-      sort_on: "score", sort_order: "desc",
-    });
-    let response: Response;
-    try {
-      response = await fetch(
-        `https://openapi.etsy.com/v3/application/listings/active?${search}`,
-        { headers: { "x-api-key": etsyApiCredential() }, signal: AbortSignal.timeout(20_000) });
-    } catch (error) {
-      failures.push(error instanceof Error ? error.message : "request failed");
-      break;
-    }
-    await recordEtsyCall(response, "search");
-    calls += 1;
-    if (!response.ok) { failures.push(`HTTP ${response.status}`); break; }
-    const body = await response.json() as { results?: EtsyActive[]; count?: number };
-    if (page === 0) etsyMatched = Number(body.count) || 0;
-    const rows = body.results ?? [];
-    for (const row of rows) {
-      if (!row.listing_id) continue;
-      candidates.push({
-        listingId: Number(row.listing_id), shopId: Number(row.shop_id ?? 0),
-        title: String(row.title ?? ""), tags: (row.tags ?? []).map(String),
-      });
-    }
-    if (rows.length < PAGE) break;
-  }
+  /* The corpus's own words. No Etsy call: these were captured by the same
+     `listings/batch` request that recovered the images. */
+  const candidates: Candidate[] = (corpus.results ?? []).map(row => ({
+    listingId: Number(row.listingId), shopId: Number(row.shopId),
+    title: String(row.title ?? ""),
+    tags: String(row.tags ?? "").split("|").filter(Boolean),
+  }));
+  const calls = 0;
+  const withoutWords = candidates.filter(row => !row.title && !row.tags.length).length;
+  const failures: string[] = [];
 
   const result = intersect(candidates, qualified, terms);
 
@@ -128,7 +117,12 @@ export const GET = withErrorLog("design-scanner-niche-probe", async (request: Re
 
   return NextResponse.json({
     phrase, normalized: { query, terms },
-    etsy: { calls, resultsExamined: result.searched, etsyReportsMatching: etsyMatched, failures },
+    source: {
+      etsyCalls: calls,
+      corpusListingsConsidered: result.searched,
+      corpusListingsMissingWords: withoutWords,
+      basis: "the momentum corpus's own titles and tags, captured during image recovery",
+    },
     cohort: {
       listings: rows.length,
       shops: shops.size,
