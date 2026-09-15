@@ -22,28 +22,45 @@ export const GET = withErrorLog("market-watch-update", async () => {
   const db = (env as unknown as { DB: D1Database }).DB;
   const saved = await watchesFor(user.userId);
 
-  /* Yesterday's reading against today's, per niche, from append-only history. */
+  /*
+    TODAY'S READING AGAINST THE LAST ONE FROM A PREVIOUS DAY.
+
+    Two things were wrong with the obvious version. Comparing the two most
+    recent rows compares two readings from this morning when the member opened
+    the page twice, so a real overnight change vanishes. And a niche with only
+    ONE reading has no baseline at all — treating the missing baseline as zero
+    announced the entire existing cohort as "newly showing momentum", which is
+    precisely the noise this update exists to avoid: the first morning would
+    have claimed 42 bachelorette listings newly moved when none had.
+
+    So: no previous day, no line. An unknown change is not a change.
+  */
+  const today = new Date(Date.now()).toISOString().slice(0, 10);
   const niches: NicheChange[] = [];
   for (const watch of saved) {
-    const rows = await db.prepare(
+    const current = await db.prepare(
       `SELECT payload_json AS payload FROM niche_watch_history
-        WHERE niche_key = ? ORDER BY observed_at DESC LIMIT 2`)
-      .bind(watch.key).all<{ payload: string }>().catch(() => ({ results: [] }));
-    const readings = (rows.results ?? []).map(row => {
-      try { return JSON.parse(row.payload) as
-        { moving?: number; repeated?: number; shops?: number }; }
-      catch { return null; }
-    }).filter(Boolean) as Array<{ moving?: number; repeated?: number; shops?: number }>;
-    if (!readings.length) continue;
-    const [current, previous] = readings;
+        WHERE niche_key = ? ORDER BY observed_at DESC LIMIT 1`)
+      .bind(watch.key).first<{ payload: string }>().catch(() => null);
+    const before = await db.prepare(
+      `SELECT payload_json AS payload FROM niche_watch_history
+        WHERE niche_key = ? AND observed_day < ? ORDER BY observed_at DESC LIMIT 1`)
+      .bind(watch.key, today).first<{ payload: string }>().catch(() => null);
+    /* A watch saved today has nothing to compare against yet, and says nothing. */
+    if (!current || !before) continue;
+    let now_: { moving?: number; repeated?: number; shops?: number };
+    let then_: { moving?: number; repeated?: number; shops?: number };
+    try {
+      now_ = JSON.parse(current.payload) as typeof now_;
+      then_ = JSON.parse(before.payload) as typeof then_;
+    } catch { continue; }
     niches.push({
       phrase: watch.phrase,
       /* A change, not a level. Never negative. */
-      newlyMoving: Math.max(0, Number(current.moving ?? 0) - Number(previous?.moving ?? 0)),
-      newlyRepeated: Math.max(0,
-        Number(current.repeated ?? 0) - Number(previous?.repeated ?? 0)),
-      moving: Number(current.moving ?? 0),
-      shops: Number(current.shops ?? 0),
+      newlyMoving: Math.max(0, Number(now_.moving ?? 0) - Number(then_.moving ?? 0)),
+      newlyRepeated: Math.max(0, Number(now_.repeated ?? 0) - Number(then_.repeated ?? 0)),
+      moving: Number(now_.moving ?? 0),
+      shops: Number(now_.shops ?? 0),
     });
   }
 

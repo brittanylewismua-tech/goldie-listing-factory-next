@@ -272,3 +272,17 @@ test("meaningful momentum uses the same bar the scanner does", () => {
     evidence({ listingId: index, shopId: index, intervals: index < 9 ? 2 : 1 }));
   assert.equal(summarize(bachelorette, NOW).meaningfulMomentum, true);
 });
+
+test("a watch with no previous day contributes nothing to the update", () => {
+  /* Measured on the first live run: with no baseline, the missing previous
+     reading was treated as zero and the update announced the entire existing
+     cohort — 42 bachelorette listings — as newly moving. */
+  const firstDay = buildUpdate([], []);
+  assert.equal(firstDay.empty, true);
+  const source = readFileSync(
+    new URL("../app/api/market-watch/update/route.ts", import.meta.url), "utf8");
+  assert.match(source, /if \(!current \|\| !before\) continue;/);
+  /* And the baseline must come from an earlier DAY, not merely an earlier row,
+     or opening the page twice this morning erases an overnight change. */
+  assert.match(source, /observed_day < \?/);
+});
