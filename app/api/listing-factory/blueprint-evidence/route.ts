@@ -27,9 +27,18 @@ const UNSUPPORTED_TITLE_CLASSES = [
   "invitation", "veil", "fan", "sash", "banner", "tapestry", "decor",
 ];
 
+/*
+  WHOLE WORDS ONLY.
+
+  A substring match reported 1,066 enamel-pin sightings that were all the
+  colour "Light Pink", and two sunglasses that were something else. Evidence
+  gathered that way would have produced a mapping table for products this
+  account has never sold.
+*/
 const classOf = (title: string) => {
-  const lower = title.toLocaleLowerCase();
-  return UNSUPPORTED_TITLE_CLASSES.find(name => lower.includes(name)) ?? "";
+  const words = title.toLocaleLowerCase().split(/[^a-z]+/).filter(Boolean);
+  const joined = ` ${words.join(" ")} `;
+  return UNSUPPORTED_TITLE_CLASSES.find(name => joined.includes(` ${name} `)) ?? "";
 };
 
 export const GET = withErrorLog("listing-factory-blueprint-evidence", async () => {
