@@ -488,3 +488,30 @@ test("a shipping label is a cost, not collected shipping", () => {
   assert.equal(classifyLedgerType("Shipping label").bucket, "cost");
   assert.equal(classifyLedgerType("Shipping").bucket, "revenue");
 });
+
+test("Etsy's real ledger codes classify correctly", () => {
+  /* Read from the shop's own 3,856 rows, not from documentation. */
+  assert.equal(classifyLedgerType("transaction").normalized, "product-revenue");
+  assert.equal(classifyLedgerType("shipping_transaction").normalized, "shipping-collected");
+  assert.equal(classifyLedgerType("sales_tax").bucket, "tax");
+  assert.equal(classifyLedgerType("transaction_refund").normalized, "refund");
+  assert.equal(classifyLedgerType("renew_sold_auto").normalized, "etsy-renewal-fee");
+  assert.equal(classifyLedgerType("auto_renew_expired").normalized, "etsy-renewal-fee");
+});
+
+test("a cash movement is never counted as income", () => {
+  /* PAYMENT_GROSS is the buyer's money arriving; the sale is already booked
+     as `transaction`. Counting both would double every month. */
+  for (const code of ["PAYMENT_GROSS", "DISBURSE2", "billing_payment"]) {
+    const entry = classifyLedgerType(code);
+    assert.equal(entry.bucket, "payout", `${code} is not a payout`);
+    assert.equal(entry.profitRelevant, false);
+  }
+});
+
+test("a code nobody has confirmed stays surfaced rather than guessed", () => {
+  /* transaction_quantity appeared live and its meaning is not established. */
+  const unknown = classifyLedgerType("transaction_quantity");
+  assert.ok(isUnmapped(unknown));
+  assert.equal(unknown.bucket, "neither");
+});

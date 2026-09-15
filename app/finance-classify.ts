@@ -31,6 +31,41 @@ export type Classified = {
 const LEDGER: Record<string, Classified> = {
   sale: { normalized: "product-revenue", bucket: "revenue", attribution: "receipt",
     profitRelevant: true, why: "Goods sold." },
+  /*
+    ETSY'S ACTUAL VOCABULARY, READ FROM THE LIVE LEDGER.
+    These are the codes the shop's own 3,856 rows contain. They are mapped
+    from observation, not from documentation.
+  */
+  transaction: { normalized: "product-revenue", bucket: "revenue", attribution: "transaction",
+    profitRelevant: true, why: "The item line of a sale." },
+  shipping_transaction: { normalized: "shipping-collected", bucket: "revenue",
+    attribution: "transaction", profitRelevant: true, why: "Shipping the buyer paid." },
+  sales_tax: { normalized: "marketplace-tax", bucket: "tax", attribution: "receipt",
+    profitRelevant: false, why: "Collected and remitted by Etsy. Never seller revenue." },
+  sales_tax_refund: { normalized: "marketplace-tax", bucket: "tax", attribution: "receipt",
+    profitRelevant: false, why: "Tax returned to the buyer. Never seller revenue." },
+  transaction_refund: { normalized: "refund", bucket: "revenue", attribution: "transaction",
+    profitRelevant: true, why: "Money returned to the buyer, reducing revenue." },
+  renew_sold_auto: { normalized: "etsy-renewal-fee", bucket: "cost", attribution: "listing",
+    profitRelevant: true, why: "A listing renewed automatically after selling." },
+  auto_renew_expired: { normalized: "etsy-renewal-fee", bucket: "cost", attribution: "listing",
+    profitRelevant: true, why: "A listing renewed automatically after expiring." },
+  renew_expired: { normalized: "etsy-renewal-fee", bucket: "cost", attribution: "listing",
+    profitRelevant: true, why: "An expired listing renewed." },
+  /*
+    PAYMENT_GROSS and DISBURSE2 are cash movements, not income.
+
+    PAYMENT_GROSS is the buyer's payment arriving in the ledger; the sale
+    itself is already booked as `transaction`. Counting both would double
+    every month's revenue. DISBURSE2 and billing_payment move money to a bank
+    and to Etsy respectively, and the fees they settle are already booked.
+  */
+  payment_gross: { normalized: "payout", bucket: "payout", attribution: "shop",
+    profitRelevant: false, why: "The buyer payment arriving. The sale is booked separately." },
+  disburse2: { normalized: "payout", bucket: "payout", attribution: "shop",
+    profitRelevant: false, why: "Money moved to the bank. Not operating profit." },
+  billing_payment: { normalized: "payout", bucket: "payout", attribution: "shop",
+    profitRelevant: false, why: "Paying Etsy's bill. The fees themselves are already booked." },
   shipping_label: { normalized: "shipping-label", bucket: "cost", attribution: "receipt",
     profitRelevant: true, why: "Postage the seller bought. A real cost of the sale." },
   shipping: { normalized: "shipping-collected", bucket: "revenue", attribution: "receipt",
