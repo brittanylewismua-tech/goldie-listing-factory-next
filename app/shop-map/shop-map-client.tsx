@@ -194,10 +194,6 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
                 {` ${map.unclassifiedPerformance.activeListings} still active`}
               </li>
             : null}
-          {false && map.needsAttention?.unclassifiedListings
-            ? <li>{map.needsAttention.unclassifiedListings}{" "}
-              {map.needsAttention.unclassifiedListings === 1 ? "listing isn’t" : "listings aren’t"}
-              {" "}in a world yet</li> : null}
           {map.needsAttention?.missingProductionCosts
             ? <li>{map.needsAttention.missingProductionCosts}{" "}
               {map.needsAttention.missingProductionCosts === 1 ? "order has" : "orders have"}
