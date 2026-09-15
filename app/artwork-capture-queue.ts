@@ -47,6 +47,15 @@ export async function ensureCaptureQueue(): Promise<void> {
     db().prepare(`CREATE INDEX IF NOT EXISTS artwork_capture_jobs_due
       ON artwork_capture_jobs (state, next_attempt_at)`),
   ]);
+
+  /* CREATE TABLE IF NOT EXISTS is a no-op on a table that already exists. */
+  for (const column of ["permanent INTEGER NOT NULL DEFAULT 0", "reopened_because TEXT"]) {
+    try {
+      await db().prepare(`ALTER TABLE artwork_capture_jobs ADD COLUMN ${column}`).run();
+    } catch (error) {
+      if (!/duplicate column/i.test(error instanceof Error ? error.message : "")) throw error;
+    }
+  }
 }
 
 /**
@@ -83,6 +92,22 @@ export async function queueCapture(
 
 /** Outcomes that will never succeed on a retry. */
 const FINAL: CaptureOutcome[] = ["no-print-image", "too-large", "already-held", "captured"];
+
+/**
+ * A FAILURE THAT WILL NEVER RESOLVE ITSELF.
+ *
+ * A deleted product is not coming back and a product with no print file will
+ * never grow one. Re-adopting those on every reconciliation run would turn a
+ * permanent failure into an endless retry loop, quietly spending calls forever
+ * on artwork that does not exist.
+ *
+ * A CDN answering 530 is the opposite: nothing about it is permanent, and it
+ * deserves its backoff. That distinction is the whole point of this list.
+ */
+const PERMANENT: CaptureOutcome[] = ["product-unavailable", "no-print-image", "too-large"];
+
+export const isPermanent = (outcome: string): boolean =>
+  PERMANENT.includes(outcome as CaptureOutcome);
 
 export type QueuePass = {
   taken: number; captured: number; alreadyHeld: number;
@@ -142,6 +167,22 @@ export async function runCaptureQueue({ maxJobs = 12 } = {}): Promise<QueuePass>
     });
 
     const attempts = job.attempts + 1;
+
+    /*
+      A deleted product is settled on the first look. Spending four attempts
+      rediscovering the same 404 is the same retry loop, only slower.
+    */
+    if (result.outcome === "product-unavailable") {
+      await db().prepare(
+        `UPDATE artwork_capture_jobs
+            SET state = 'failed', outcome = ?, attempts = ?, last_error = ?,
+                permanent = 1, completed_at = ?
+          WHERE id = ?`)
+        .bind(result.outcome, attempts, result.note ?? "", new Date().toISOString(), job.id).run();
+      pass.failed += 1;
+      continue;
+    }
+
     const settled = FINAL.includes(result.outcome);
     if (settled) {
       await db().prepare(
@@ -163,9 +204,11 @@ export async function runCaptureQueue({ maxJobs = 12 } = {}): Promise<QueuePass>
       */
       await db().prepare(
         `UPDATE artwork_capture_jobs
-            SET state = 'failed', outcome = ?, attempts = ?, last_error = ?, completed_at = ?
+            SET state = 'failed', outcome = ?, attempts = ?, last_error = ?,
+                permanent = ?, completed_at = ?
           WHERE id = ?`)
-        .bind(result.outcome, attempts, result.note ?? "", new Date().toISOString(), job.id).run();
+        .bind(result.outcome, attempts, result.note ?? "",
+          isPermanent(result.outcome) ? 1 : 0, new Date().toISOString(), job.id).run();
       pass.failed += 1;
       continue;
     }
@@ -215,16 +258,43 @@ export async function adoptPublishedWithoutCapture({ limit = 200 } = {}): Promis
           SELECT 1 FROM artwork_provenance p
            WHERE p.user_id = links.user_id
              AND p.printify_product_id = links.printify_product_id)
+        /*
+          Any job at all, including a failed one. A capture that ended in a
+          deleted product must not be recreated on every run — that is an
+          endless loop, not a repair. Reopening one is an explicit act with a
+          recorded reason; see reopenCapture below.
+        */
         AND NOT EXISTS (
           SELECT 1 FROM artwork_capture_jobs j
            WHERE j.user_id = links.user_id
-             AND j.printify_product_id = links.printify_product_id
-             AND j.state IN ('queued', 'retrying', 'done'))
+             AND j.printify_product_id = links.printify_product_id)
       LIMIT ?
      ON CONFLICT(user_id, printify_product_id, because) DO NOTHING`)
     .bind(new Date().toISOString(), new Date().toISOString(), limit)
     .run();
   return Number(result.meta?.changes ?? 0);
+}
+
+/**
+ * Try again, on purpose, and say why.
+ *
+ * A permanent failure stops being permanent when something changes — the
+ * seller republishes the product, or a new evidence source appears. That is a
+ * decision somebody makes, not something a cron loop discovers, so it is an
+ * explicit call that records its own reason.
+ */
+export async function reopenCapture(
+  userId: string, productId: string, because: string,
+): Promise<boolean> {
+  await ensureCaptureQueue();
+  const result = await db().prepare(
+    `UPDATE artwork_capture_jobs
+        SET state = 'queued', attempts = 0, permanent = 0, completed_at = NULL,
+            next_attempt_at = ?, reopened_because = ?
+      WHERE user_id = ? AND printify_product_id = ? AND state = 'failed'`)
+    .bind(new Date().toISOString(), because, userId, productId)
+    .run();
+  return Number(result.meta?.changes ?? 0) > 0;
 }
 
 /** What the queue is doing, and what it has given up on. */
@@ -238,8 +308,15 @@ export async function captureQueueHealth(): Promise<Record<string, unknown>> {
       WHERE outcome <> '' GROUP BY outcome ORDER BY n DESC`)
     .all<{ outcome: string; n: number }>();
   const stuck = await db().prepare(
-    `SELECT printify_product_id, last_error, attempts FROM artwork_capture_jobs
+    `SELECT printify_product_id, outcome, last_error, attempts, permanent
+       FROM artwork_capture_jobs
       WHERE state = 'failed' ORDER BY completed_at DESC LIMIT 8`).all();
+  const permanentCount = await db().prepare(
+    `SELECT COUNT(*) AS n FROM artwork_capture_jobs WHERE state = 'failed' AND permanent = 1`)
+    .first<{ n: number }>().catch(() => null);
+  const transientCount = await db().prepare(
+    `SELECT COUNT(*) AS n FROM artwork_capture_jobs WHERE state = 'failed' AND permanent = 0`)
+    .first<{ n: number }>().catch(() => null);
   /*
     The figure that would have hidden the gap: published listings with nothing
     holding their design. It is computed from the publish records rather than
@@ -277,7 +354,10 @@ export async function captureQueueHealth(): Promise<Record<string, unknown>> {
     missingCaptureJob: Number(withoutJob?.n ?? 0),
     captureBacklog: Number(byState.queued ?? 0) + Number(byState.retrying ?? 0),
     oldestMissingSince: orphans?.oldest ?? null,
-    /* The alert that matters: artwork Goldie tried and failed to keep. */
+    /* The alert that matters: artwork Goldie tried and failed to keep. Split,
+       because a deleted product is a closed question and a CDN outage is not. */
+    permanentlyMissingCount: Number(permanentCount?.n ?? 0),
+    failedButNotPermanentCount: Number(transientCount?.n ?? 0),
     permanentlyMissing: stuck.results ?? [],
   };
 }

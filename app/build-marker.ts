@@ -70,7 +70,9 @@
    failure state, accounts for every product, and keeps the original file. */
 /* D1407 lets no successful publish leave the evidence pipeline, and links a
    captured design to its listing only on evidence that can carry a claim. */
-export const BUILD_MARKER = "D1407";
+/* D1408 stops a permanent capture failure becoming an endless retry, and
+   links captured designs to listings only on evidence that carries a claim. */
+export const BUILD_MARKER = "D1408";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

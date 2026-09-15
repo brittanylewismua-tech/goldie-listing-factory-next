@@ -42,6 +42,7 @@ function database() {
       outcome TEXT NOT NULL DEFAULT '', attempts INTEGER NOT NULL DEFAULT 0,
       next_attempt_at TEXT NOT NULL, last_error TEXT NOT NULL DEFAULT '',
       queued_at TEXT NOT NULL, completed_at TEXT,
+      permanent INTEGER NOT NULL DEFAULT 0, reopened_because TEXT,
       UNIQUE (user_id, printify_product_id, because));
   `);
   db.prepare(`INSERT INTO etsy_connections VALUES (?,?,?)`).run("u1", 16538900, 1);
@@ -49,6 +50,7 @@ function database() {
 }
 
 const adopt = sqlFrom("reconciled-published-without-capture");
+const reopen = sqlFrom("reopened_because = ?");
 const orphanCount = sqlFrom("MIN(links.updated_at) AS oldest");
 
 test("a publish whose enqueue failed is adopted into the queue", () => {
@@ -106,19 +108,58 @@ test("a publish with a job already waiting is not queued twice", () => {
   assert.equal(db.prepare(`SELECT COUNT(*) c FROM artwork_capture_jobs`).get().c, 1);
 });
 
-test("a job that permanently failed is re-adopted rather than abandoned", () => {
-  /* 'failed' is not in the states that block adoption: artwork Goldie could
-     not keep is exactly what must come back around. */
+test("a permanently failed capture is never re-adopted automatically", () => {
+  /* A deleted product is not coming back. Re-adopting it every run turns a
+     permanent failure into an endless retry loop that spends calls forever on
+     artwork that does not exist. */
   const db = database();
   db.prepare(`INSERT INTO etsy_listing_links VALUES (?,?,?,?,?,?,?)`)
     .run("prod-1", "u1", "batch-1", 991, "finished", null, "2026-09-14 10:00:00");
   const now = new Date().toISOString();
   db.prepare(`INSERT INTO artwork_capture_jobs
-      (user_id, printify_shop_id, printify_product_id, because, state, next_attempt_at, queued_at)
-      VALUES (?,?,?,?,?,?,?)`)
-    .run("u1", 16538900, "prod-1", "listing-factory-publish", "failed", now, now);
+      (user_id, printify_shop_id, printify_product_id, because, state, outcome,
+       permanent, next_attempt_at, queued_at)
+      VALUES (?,?,?,?,?,?,?,?,?)`)
+    .run("u1", 16538900, "prod-1", "listing-factory-publish", "failed",
+      "product-unavailable", 1, now, now);
+
   db.prepare(adopt).run(now, now, 200);
-  assert.equal(db.prepare(`SELECT COUNT(*) c FROM artwork_capture_jobs`).get().c, 2);
+  db.prepare(adopt).run(now, now, 200);
+  assert.equal(db.prepare(`SELECT COUNT(*) c FROM artwork_capture_jobs`).get().c, 1,
+    "no second job, however many times reconciliation runs");
+});
+
+test("reopening a permanent failure is explicit and records why", () => {
+  const db = database();
+  const now = new Date().toISOString();
+  db.prepare(`INSERT INTO artwork_capture_jobs
+      (user_id, printify_shop_id, printify_product_id, because, state, outcome,
+       permanent, next_attempt_at, queued_at)
+      VALUES (?,?,?,?,?,?,?,?,?)`)
+    .run("u1", 16538900, "prod-1", "listing-factory-publish", "failed",
+      "product-unavailable", 1, now, now);
+
+  db.prepare(reopen).run(now, "seller republished the product", "u1", "prod-1");
+  const job = db.prepare(`SELECT * FROM artwork_capture_jobs`).get();
+  assert.equal(job.state, "queued");
+  assert.equal(job.attempts, 0);
+  assert.equal(job.permanent, 0);
+  assert.equal(job.reopened_because, "seller republished the product");
+});
+
+test("a transient failure and a permanent one are told apart", () => {
+  /* A CDN answering 530 is nothing like a deleted product, and the queue must
+     not treat them the same way. */
+  assert.match(source, /const PERMANENT: CaptureOutcome\[\] = \["product-unavailable", "no-print-image", "too-large"\]/);
+  assert.doesNotMatch(source.slice(source.indexOf("const PERMANENT"), source.indexOf("const PERMANENT") + 200),
+    /artwork-unreachable/);
+  assert.match(source, /permanentlyMissingCount/);
+  assert.match(source, /failedButNotPermanentCount/);
+});
+
+test("a deleted product settles on the first look, not the fourth", () => {
+  assert.match(source, /A deleted product is settled on the first look/);
+  assert.match(source, /if \(result\.outcome === "product-unavailable"\)/);
 });
 
 test("the health view reports the gap from the publish records, not the queue", () => {
