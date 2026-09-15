@@ -319,3 +319,28 @@ test("a broken watch query is reported, never shown as watching nothing", () => 
   assert.match(route, /queryFailed/);
   assert.match(route, /\.\.\.\(queryFailed \? \{ error: queryFailed \} : \{\}\)/);
 });
+
+test("a second watcher of an existing shop starts no new collection", () => {
+  /* `shared` was inferred from the upsert's changed-row count, but the
+     DO UPDATE clause reports a change on both paths, so it was always false
+     and the shared-collection saving was invisible. It is now asked before
+     the write. */
+  const store = readFileSync(new URL("../app/shop-watch.ts", import.meta.url), "utf8");
+  const addWatch = store.slice(store.indexOf("export async function addWatch"),
+    store.indexOf("export async function removeWatch"));
+  assert.match(addWatch, /SELECT 1 AS found FROM watched_shops WHERE shop_id = \?/);
+  assert.match(addWatch, /const shared = Boolean\(collected\);/);
+  /* And the existence check comes before the upsert that would mask it. */
+  assert.ok(addWatch.indexOf("SELECT 1 AS found") < addWatch.indexOf("INSERT INTO watched_shops"),
+    "the existence check runs after the write that makes it meaningless");
+});
+
+test("removing a personal watch keeps the shared shop and its history", () => {
+  const store = readFileSync(new URL("../app/shop-watch.ts", import.meta.url), "utf8");
+  const removeWatch = store.slice(store.indexOf("export async function removeWatch"),
+    store.indexOf("export async function watchesFor"));
+  assert.match(removeWatch, /DELETE FROM member_shop_watches/);
+  for (const table of ["watched_shops", "shop_reviews", "shop_observations"])
+    assert.ok(!new RegExp(`DELETE FROM ${table}`).test(removeWatch),
+      `removing a personal watch deletes ${table}`);
+});

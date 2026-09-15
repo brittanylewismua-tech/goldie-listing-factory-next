@@ -248,16 +248,26 @@ export async function addWatch(userId: string, input: string): Promise<
   const { shop } = resolved;
   const now = new Date().toISOString();
 
-  const shopWrite = await db()
+  /*
+    WAS THIS SHOP ALREADY BEING COLLECTED?
+
+    Asked before the write, not inferred from it. The upsert carries a
+    DO UPDATE clause, so D1 reports a changed row whether it inserted or
+    updated — which made `shared` permanently false and hid the fact that a
+    second member watching an existing shop starts no new collection at all.
+  */
+  const collected = await db()
+    .prepare(`SELECT 1 AS found FROM watched_shops WHERE shop_id = ?`)
+    .bind(shop.shopId).first<{ found: number }>();
+  const shared = Boolean(collected);
+
+  await db()
     .prepare(
       `INSERT INTO watched_shops (shop_id, shop_name, url, added_at)
        VALUES (?,?,?,?)
        ON CONFLICT(shop_id) DO UPDATE SET shop_name = excluded.shop_name, url = excluded.url`)
     .bind(shop.shopId, shop.shopName, shop.url, now)
     .run();
-  /* No new row means somebody already watches this shop, and its collection
-     is already running. The second member costs nothing. */
-  const shared = Number(shopWrite.meta?.changes ?? 0) === 0;
 
   const watchWrite = await db()
     .prepare(
