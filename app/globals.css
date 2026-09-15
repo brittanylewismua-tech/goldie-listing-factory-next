@@ -121,14 +121,3 @@
 .goldie-wait-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}.goldie-wait-actions a{display:flex;min-height:44px;align-items:center;justify-content:center;padding:10px 14px;border:2px solid #111;border-radius:8px;background:#111;color:#fff;font-weight:800;text-align:center;text-decoration:none}.goldie-wait-actions a+ a{background:#fffaf5;color:#111}.goldie-wait-actions a:focus-visible{outline:3px solid #f52fb2;outline-offset:3px}@media(max-width:520px){.goldie-wait-actions{grid-template-columns:1fr}}
 .goldie-wait-reminder{position:fixed;z-index:90;left:20px;top:20px;width:min(340px,calc(100vw - 40px));padding:16px;background:#fffaf5;color:#111;border:2px solid #111;border-radius:12px;box-shadow:4px 4px 0 #111;font-size:14px}.goldie-wait-reminder p{margin:8px 0;line-height:1.4}
 
-/* D1452 · Two Printify stores with the same name is the condition that made a
-   member's drafts look missing. The warning has to be readable before she
-   builds, so it sits in flow rather than as a dismissible toast. Styled from
-   the existing title-match-warning pattern rather than a new palette. */
-.printify-store-warning{display:block;margin:10px 0;padding:10px 12px;
-  border:1px solid rgba(163,58,72,.34);border-radius:10px;background:#fffafc;
-  color:#a33a48;font-size:12px;line-height:1.45}
-.printify-store-warning strong{display:block;margin-bottom:3px;font-weight:750}
-.printify-store-warning-duplicate{border-color:rgba(163,58,72,.55)}
-.printify-open-hint{display:block;margin-top:6px;font-size:12px;line-height:1.45;color:#704d75}
-.printify-open-hint strong{font-weight:750}

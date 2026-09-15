@@ -24,17 +24,6 @@ test("the store name is carried from the template match to the draft", () => {
   assert.match(job, /printifyShopCount: shop\.count/);
 });
 
-test("the draft tells the member which store it is in", () => {
-  assert.match(ui, /printifyStoreNote/);
-  assert.match(ui, /Printify store/);
-});
-
-test("a member with several stores is told to switch", () => {
-  assert.match(ui, /more than one store/);
-  /* The warning only appears when it applies; one store needs no switching. */
-  assert.match(ui, /\(created\.printifyShopCount\?\?1\)>1/);
-});
-
 test("the store is carried without a schema migration", () => {
   /* It rides in the template blob that is already stored. */
   assert.match(job, /session\.template_json/);
@@ -45,4 +34,20 @@ test("Goldie still builds in whichever store holds the template", () => {
   /* The search across stores was always correct and must stay. */
   assert.match(template, /attempts\.find/);
   assert.match(template, /found\.shop\.id/);
+});
+
+test("the member is not told to do what Goldie now does for them", () => {
+  /*
+    D1449 named the store in the interface because Goldie could not control
+    where Printify opened. D1453 can: it switches the store first. Leaving the
+    old copy in place would instruct a member to perform a step that has
+    already happened, which reads as the fix not working.
+  */
+  assert.doesNotMatch(ui, /set Printify to that store first/);
+  assert.doesNotMatch(ui, /switch to that one at the top of Printify/);
+});
+
+test("the store still travels with the draft, for the support lookup", () => {
+  /* The data stays even though the interface stopped mentioning it. */
+  assert.match(job, /printifyShopName: shop\.title/);
 });

@@ -54,20 +54,6 @@ test("an unknown build store produces no confident claim", () => {
   assert.equal(warning.buildingIn, null);
 });
 
-test("the warning is wired into the template response and shown before building", () => {
-  const route = readFileSync(new URL("../app/api/printify/route.ts", import.meta.url), "utf8");
-  assert.match(route, /storeWarning: storeWarning\(/);
-  assert.match(route, /sales_channel/);
-  const ui = readFileSync(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-  assert.match(ui, /setPrintifyStoreWarning/);
-  assert.match(ui, /printifyStoreBanner/);
-  /* It has to appear at template time, not only once drafts exist. */
-  const setAt = ui.indexOf("setPrintifyStoreWarning(");
-  const draftsAt = ui.indexOf("bundlePublishDrafts().some");
-  assert.ok(setAt > 0 && setAt < draftsAt,
-    "the warning is only set after drafts are built");
-});
-
 test("the mechanism is explained for differently-named stores too", () => {
   /* The failure is 'more than one store', not 'two stores with one name'.
      The names only decide how hard it is to notice. */
@@ -77,12 +63,17 @@ test("the mechanism is explained for differently-named stores too", () => {
   assert.match(warning.detail, /isn't available/);
 });
 
-test("every control that opens Printify names the store", () => {
+test("the store warning is no longer shown to members", () => {
+  /*
+    D1453 switches the store automatically, so telling a member to "set
+    Printify to that store first" instructs them to do something Goldie has
+    already done. A false instruction is worse than no instruction.
+
+    The module is kept: it is what the owner support lookup uses to explain
+    an account, and it is still returned by the template endpoint for that
+    purpose. It simply does not render to the member any more.
+  */
   const ui = readFileSync(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
-  /* A warning at setup is forgotten by the time a draft is opened days
-     later, and the failure happens at the click. */
-  assert.match(ui, /printifyOpenHint/);
-  assert.match(ui, /printifyStoreLabel/);
-  assert.match(ui, /Adjust in Printify \(\$\{printifyStoreLabel\(\)\}\)/);
-  assert.match(ui, /set Printify to that store first/);
+  assert.doesNotMatch(ui, /set Printify to that store first/);
+  assert.doesNotMatch(ui, /printifyStoreBanner|printifyOpenHint|printifyStoreNote/);
 });

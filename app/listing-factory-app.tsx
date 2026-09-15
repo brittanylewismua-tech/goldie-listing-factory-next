@@ -619,7 +619,7 @@ function DraftColorSelector({product,drafts,selected,selectedByDraft,saving,artw
     <div className="draft-color-heading"><div><h3>Choose product colors</h3><p>{createdDrafts.length>1?`Listing ${activeDraftIndex+1} of ${createdDrafts.length}. `:""}Choose colors instantly. Open Preview only when you want to see the finished Printify mockup.</p></div></div>
     <div className="draft-color-bulk-actions" role="group" aria-label="Color selection actions"><button type="button" onClick={selectAll}>Select all available</button><button type="button" onClick={matchTemplate}>Match Printify template</button><button type="button" onClick={()=>onChange(draft!,[])}>Clear all</button>{saving?<span role="status">Saving choices…</span>:null}</div>
     <div className="draft-color-workspace"><div className="draft-color-main">{showRealPreview&&realPreview?<img src={realPreview} alt={`${focused.title} finished Printify preview`}/>:<ProductColorRendering color={focused.swatch} artworkUrl={mainArtwork} productRenderingUrl={productRendering} placement={draft.placement} side={renderingSide} printWidth={product.maxPrintWidth} printHeight={product.maxPrintHeight}/>}<b>{focused.title}</b><span>{override?"Using alternate artwork":"Using the main design"}</span><button type="button" className="draft-color-preview" aria-busy={previewLoading} disabled={previewLoading} onClick={()=>void openPreview()}>{showRealPreview?"Back to edit view":previewLoading?"Loading preview…":"Preview"}</button>{previewError?<p className="field-error" role="alert">{previewError}</p>:null}<div className="draft-color-artwork-action"><label role="button" tabIndex={0} aria-disabled={saving} onKeyDown={event=>{if(saving)return;if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}}>{override?`Change artwork for ${focused.title}`:`Use different artwork for ${focused.title}`}<input className="hidden-picker" ref={artworkPickerRef} type="file" accept=".png,.jpg,.jpeg" disabled={saving} onChange={event=>{const locked=artworkUploadColor.current||focused;onArtworkChange(draft,locked,event.target.files);artworkUploadColor.current=null;event.target.value=""}}/></label>{override?<button type="button" disabled={saving} onClick={()=>{onArtworkChange(draft,focused,null,true);artworkUploadColor.current=null}}>Use main design</button>:null}</div></div><div className="draft-color-choices"><div className="draft-color-selected"><b>Selected colors</b><span>{includedColors.length}</span></div><div className="draft-color-grid">{includedColors.map(color=><button type="button" key={color.id} aria-pressed="true" className="selected" onMouseMove={event=>{if(event.movementX||event.movementY)focusColor(color.id)}} onFocus={()=>focusColor(color.id)} onClick={()=>toggle(color)}><i className="draft-color-swatch" style={{background:color.swatch||"#ddd"}} aria-hidden="true"/><span>{color.title}</span><em>✓ Included</em></button>)}</div><details className="draft-color-more" open={!includedColors.length}><summary>Add more colors <span>{availableToAdd.length}</span></summary><div className="draft-color-grid">{availableToAdd.map(color=><button type="button" key={color.id} aria-pressed="false" onMouseMove={event=>{if(event.movementX||event.movementY)focusColor(color.id)}} onFocus={()=>focusColor(color.id)} onClick={()=>toggle(color)}><i className="draft-color-swatch" style={{background:color.swatch||"#ddd"}} aria-hidden="true"/><span>{color.title}</span><em>Add</em></button>)}</div></details></div></div>
-    {override&&draft.editorUrl?<div className="draft-color-adjust"><a href={draft.editorUrl} target="_blank" rel="noreferrer">Adjust this artwork in Printify ↗</a><span>{draft.printifyShopName?`Opens in ${draft.printifyShopName} — set Printify to that store first. Resize or reposition this colour's artwork if needed.`:"Resize or reposition this colour's artwork if needed."}</span></div>:null}
+    {override&&draft.editorUrl?<div className="draft-color-adjust"><a href={draft.editorUrl} target="_blank" rel="noreferrer">Adjust this artwork in Printify ↗</a><span>Resize or reposition this color’s artwork if needed.</span></div>:null}
     {createdDrafts.length>1?<nav className="factory-listing-next draft-color-next" aria-label="Move between product-color listings"><button type="button" disabled={activeDraftIndex===0} onClick={()=>showDraft(createdDrafts[activeDraftIndex-1].id!)}>← Previous listing</button><span>Listing {activeDraftIndex+1} of {createdDrafts.length}</span><button type="button" disabled={activeDraftIndex===createdDrafts.length-1} onClick={()=>showDraft(createdDrafts[activeDraftIndex+1].id!)}>Next listing →</button></nav>:null}
   </section>;
 }
@@ -1177,8 +1177,6 @@ export default function ListingFactoryApp() {
   const [bundleLoadErrors,setBundleLoadErrors]=useState<Record<string,string>>({});
   /* D835 · The Etsy shops this seller has connected, and which one is active. */
   const [etsyShops,setEtsyShops]=useState<{shopId:number;shopName:string;active:boolean}[]>([]);
-  /* D1452 - what Goldie knows about the member's Printify stores, said up front. */
-  const [printifyStoreWarning,setPrintifyStoreWarning]=useState<{warn:boolean;duplicateName:boolean;headline:string;detail:string;buildingIn?:{id:number;title:string;salesChannel:string}|null}|null>(null);
   const [shopSwitchError,setShopSwitchError]=useState("");
   const [connectAnotherOpen,setConnectAnotherOpen]=useState(false);
   const connectAnotherOpener=useRef<HTMLElement|null>(null);
@@ -2371,38 +2369,9 @@ export default function ListingFactoryApp() {
       window.setTimeout(()=>{try{opened.location.href=plan.second!}catch{/* the member is already in the right store */}},SWITCH_SETTLE_MS);
   }
 
-  function printifyStoreLabel(){
-    const store=printifyStoreWarning?.buildingIn;
-    if(!printifyStoreWarning?.warn||!store)return "";
-    const channel=store.salesChannel==="etsy"?"Etsy store"
-      :store.salesChannel==="storefront"?"Printify storefront"
-      :store.salesChannel?`${store.salesChannel} store`:"store";
-    return `${store.title} · ${channel}`;
-  }
 
-  function printifyOpenHint(){
-    const label=printifyStoreLabel();
-    if(!label)return null;
-    return <span className="printify-open-hint">Opens in <strong>{label}</strong> — set Printify to that store first.</span>;
-  }
 
-  function printifyStoreBanner(){
-    if(!printifyStoreWarning?.warn)return null;
-    return <div className={printifyStoreWarning.duplicateName?"printify-store-warning printify-store-warning-duplicate":"printify-store-warning"} role="status">
-      <strong>{printifyStoreWarning.headline}</strong>
-      <span>{printifyStoreWarning.detail}</span>
-    </div>;
-  }
 
-  function printifyStoreNote(){
-    const created=drafts.find(draft=>draft.status==="Created"&&draft.printifyShopName);
-    if(!created?.printifyShopName)return null;
-    const several=(created.printifyShopCount??1)>1;
-    return <p className="review-printify-store">
-      These drafts are in your <strong>{created.printifyShopName}</strong> Printify store.
-      {several?" You have more than one store, so switch to that one at the top of Printify - otherwise it will say the listing isn't available.":null}
-    </p>;
-  }
   function announceShop(recipeId:string,title:string,shopId:number){
     window.dispatchEvent(new CustomEvent("goldie-recipe-shop",{detail:{recipeId,title,shopId}}));
   }
@@ -3731,8 +3700,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
           show and they must still offer retry and help. */}
       <div className="task-panel-body placement-review-grid">
         <p className="placement-printify-note">Printify may ask you to sign in and choose the matching shop before editing.</p>
-        {printifyStoreBanner()}
-    {!reviewEditing&&selectedPlacementDrafts.length?<div className="placement-selection-actions"><button type="button" onClick={()=>setSelectedPlacementDrafts(listings.filter(({draft})=>draft.status==="Created"&&draft.id).map(({draft})=>draft.id!))}>Select all</button><button type="button" onClick={()=>requestDraftTabs(drafts.filter(draft=>draft.id&&selectedPlacementDrafts.includes(draft.id)&&draft.editorUrl))}>Open selected listings in Printify ↗</button>{printifyOpenHint()}</div>:null}
+        {!reviewEditing&&selectedPlacementDrafts.length?<div className="placement-selection-actions"><button type="button" onClick={()=>setSelectedPlacementDrafts(listings.filter(({draft})=>draft.status==="Created"&&draft.id).map(({draft})=>draft.id!))}>Select all</button><button type="button" onClick={()=>requestDraftTabs(drafts.filter(draft=>draft.id&&selectedPlacementDrafts.includes(draft.id)&&draft.editorUrl))}>Open selected listings in Printify ↗</button></div>:null}
         {visibleListings.filter(({draft})=>draft.status!=="Created").map(({draft,design})=>
           <div className="task-listing failed" key={draft.clientId}>
             <div className="task-listing-ident"><span className="task-listing-index">Listing {listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
@@ -3752,7 +3720,7 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
             name:`Listing ${listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1} of ${listings.length}`,
             meta:dpi,
             onOpen:draft.editorUrl&&draft.id?()=>openDraft(draft):(draft.previewUrl?()=>window.open(draft.previewUrl,"_blank","noopener,noreferrer"):undefined),
-            openLabel:draft.editorUrl&&draft.id?(printifyStoreLabel()?`Adjust in Printify (${printifyStoreLabel()})`:"Adjust in Printify"):"View full size",
+            openLabel:draft.editorUrl&&draft.id?"Adjust in Printify":"View full size",
             metaClassName:"placement-dpi",
             linkClassName:"placement-printify-link",
             selected:!reviewEditing&&Boolean(draft.id&&selectedPlacementDrafts.includes(draft.id)),
@@ -4732,8 +4700,6 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         setActiveRecipe(current=>current&&current.id===recipeForShop.id?{...current,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:current);
         announceShop(recipeForShop.id,result.shop.title,result.shop.id);
       }
-      /* D1452 - warn about the store before the member builds anything. */
-      setPrintifyStoreWarning((result as {storeWarning?:{warn:boolean;duplicateName:boolean;headline:string;detail:string;buildingIn?:{id:number;title:string;salesChannel:string}|null}}).storeWarning??null);
       setTemplateDetails(result.product);setDescription(normalizeProductDescription(result.product.description));if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:0}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),variant.templatePrice])));/* D472 - loading the Printify template used to clear the pricing approval
    unconditionally. Choosing a saved product loads its template, so every batch
    began un-approved no matter what the product had saved - and the control to
@@ -5473,7 +5439,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       a batch of good drafts all read "not available in the selected store".
     */
     const shopId=Number(editableDrafts.find(draft=>draft.shopId)?.shopId??0);
-    if(shopId&&printifyStoreWarning?.warn){
+    if(shopId){
       window.open(storeSwitchUrl(shopId),"_blank","noopener,noreferrer");
       window.setTimeout(open,SWITCH_SETTLE_MS);
     } else open();
@@ -6157,7 +6123,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   the final screen looked broken during that check. Put the wait
                   on the control the seller is trying to use. */}
               {etsyDraftTransferState!=='complete'&&<button type="button" className="review-etsy-draft-button" data-inline-progress="true" aria-busy={creatingEtsyDrafts||etsyDraftTransferState==='working'} disabled={creatingEtsyDrafts||etsyDraftTransferState==='working'||!photoDeliveryStatusReady||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":etsyDraftTransferState==='working'?"Creating Etsy drafts…":etsyDraftTransferState==='attention'?"Check saved progress above":!photoDeliveryStatusReady?"Checking saved Etsy drafts…":"Save to Etsy Drafts"}</button>}
-              {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<><a className="review-printify-link" href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open drafts in Printify ↗</a>{printifyStoreNote()}{printifyStoreBanner()}</>}
+              {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<><a className="review-printify-link" href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open drafts in Printify ↗</a></>}
               {false&&<><div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
               const total=publishTargets().length||bundleListingsToPublish();

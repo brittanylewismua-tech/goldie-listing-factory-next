@@ -50,6 +50,10 @@ test("the app switches the store before opening drafts", () => {
   assert.doesNotMatch(ui, /window\.open\(draft\.editorUrl, "_blank"/);
   /* The bulk path switches once, because the store is per session. */
   assert.match(ui, /storeSwitchUrl\(shopId\)/);
+  /* The switch is unconditional once the store is known: a single-store
+     account loses nothing by it, and it removes a reason for the fix not
+     to run. */
+  assert.match(ui, /if\(shopId\)\{/);
   assert.match(ui, /selected store is per session, not per tab/);
 });
 

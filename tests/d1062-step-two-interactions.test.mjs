@@ -6,7 +6,7 @@ const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.u
 const css=fs.readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
 
 test("D1062 keeps Printify actions truthful and explains the required account context",()=>{
-  assert.match(app,/openLabel:draft\.editorUrl&&draft\.id\?\(printifyStoreLabel\(\)/);
+  assert.match(app,/openLabel:draft\.editorUrl&&draft\.id\?"Adjust in Printify"/);
   assert.doesNotMatch(app,/openLabel:[^\n]*"Printify opened"/);
   assert.match(app,/className="placement-printify-note"[^>]*>Printify may ask you to sign in and choose the matching shop before editing\./);
 });
