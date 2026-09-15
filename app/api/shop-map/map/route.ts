@@ -119,6 +119,26 @@ async function buildMap(request: Request) {
   const activeIds = new Set(rows.filter(row => String(row.state) === "active")
     .map(row => Number(row.listing_id)));
 
+  /* ------------------------------------------------------- review evidence */
+  /*
+    Reviews are joined by exact listing id. A review says somebody reviewed:
+    it is never a sale and never a sale date.
+  */
+  const reviewRows = await db.prepare(
+    `SELECT listing_id, rating, review, created_at FROM shop_reviews
+      WHERE listing_id IN (SELECT listing_id FROM shop_map_listings
+                            WHERE user_id = ? AND shop_id = ?)`)
+    .bind(user.userId, shopId)
+    .all<{ listing_id: number; rating: number | null; review: string; created_at: number }>()
+    .catch(() => ({ results: [] }));
+  const reviewsByListing = new Map<number, Array<{ rating: number | null; review: string; createdAt: number }>>();
+  for (const row of ((reviewRows.results ?? []) as Array<Record<string, unknown>>)) {
+    const id = Number(row.listing_id);
+    reviewsByListing.set(id, [...(reviewsByListing.get(id) ?? []),
+      { rating: row.rating === null ? null : Number(row.rating),
+        review: String(row.review ?? ""), createdAt: Number(row.created_at) }]);
+  }
+
   const worldPerformance: WorldPerformance[] = worlds.map(world => {
     const members = world.listingIds.map(id => performance.get(id))
       .filter((row): row is NonNullable<typeof row> => Boolean(row));
@@ -140,26 +160,6 @@ async function buildMap(request: Request) {
       refundedOrders: sum(row => row.refundedOrders),
     };
   });
-
-  /* ------------------------------------------------------- review evidence */
-  /*
-    Reviews are joined by exact listing id. A review says somebody reviewed:
-    it is never a sale and never a sale date.
-  */
-  const reviewRows = await db.prepare(
-    `SELECT listing_id, rating, review, created_at FROM shop_reviews
-      WHERE listing_id IN (SELECT listing_id FROM shop_map_listings
-                            WHERE user_id = ? AND shop_id = ?)`)
-    .bind(user.userId, shopId)
-    .all<{ listing_id: number; rating: number | null; review: string; created_at: number }>()
-    .catch(() => ({ results: [] }));
-  const reviewsByListing = new Map<number, Array<{ rating: number | null; review: string; createdAt: number }>>();
-  for (const row of ((reviewRows.results ?? []) as Array<Record<string, unknown>>)) {
-    const id = Number(row.listing_id);
-    reviewsByListing.set(id, [...(reviewsByListing.get(id) ?? []),
-      { rating: row.rating === null ? null : Number(row.rating),
-        review: String(row.review ?? ""), createdAt: Number(row.created_at) }]);
-  }
 
   /* --------------------------------------------------------- this month's money */
   const receiptTotals = window ? await db.prepare(
