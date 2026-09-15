@@ -123,3 +123,31 @@ test("dimensions are stored apart and never concatenated", () => {
   assert.equal(rejectAsNiche(nicheFor(dimensions)), "");
   assert.doesNotMatch(dimensions.niche, /mug|tee|case/i);
 });
+
+test("the strongest identity wins, not the first one listed", () => {
+  /* 206 of 293 listings landed in one Feminist niche because anti-Trump,
+     dachshund and Halloween designs all carry a feminist word somewhere. */
+  const dog = dimensionsFor({ listingId: 1,
+    title: "Dachshund Dog Mom Weiner Dog Lover Shirt",
+    tags: ["dog mom", "dachshund", "equality"], shopSection: "", productFamily: "tee" });
+  assert.equal(dog.niche, "Dog people");
+
+  const political = dimensionsFor({ listingId: 2,
+    title: "Anti Trump Resist Vote Democracy Protest Tee",
+    tags: ["resist", "vote", "women"], shopSection: "", productFamily: "tee" });
+  assert.equal(political.niche, "Political resistance");
+});
+
+test("a real overlap keeps both niches, a distant one does not", () => {
+  const both = dimensionsFor({ listingId: 3,
+    title: "Feminist Witch Coven Tarot Smash The Patriarchy",
+    tags: ["witchy", "feminist", "coven"], shopSection: "", productFamily: "tee" });
+  assert.ok(both.niche && both.secondaryNiche,
+    "a genuine overlap lost its second niche");
+  assert.notEqual(both.niche, both.secondaryNiche);
+
+  const single = dimensionsFor({ listingId: 4,
+    title: "Feminist Smash The Patriarchy Equality Womens Rights",
+    tags: ["feminist", "equality"], shopSection: "", productFamily: "tee" });
+  assert.equal(single.secondaryNiche, "", "a passing mention became a second niche");
+});

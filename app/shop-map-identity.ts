@@ -25,6 +25,9 @@
 export type Dimensions = {
   listingId: number;
   niche: string;
+  /* Kept only when the overlap is real: a clear second identity, not a
+     near-tie with everything else. */
+  secondaryNiche: string;
   productFamily: string;
   messageTheme: string;
   recipient: string;
@@ -131,13 +134,39 @@ export function rejectAsNiche(label: string): string {
   return "";
 }
 
-const matchFrom = (source: Array<[string, string[]]>, haystack: string) => {
-  for (const [label, terms] of source)
+/*
+  THE STRONGEST MATCH, NOT THE FIRST.
+
+  Taking the first hit in list order put 206 of 293 listings into one
+  "Feminist" niche: anti-Trump designs, dachshund designs and Halloween
+  designs all carry a feminist word somewhere in their tags, and Feminist
+  happened to be first in the list.
+
+  Every candidate is scored instead, on how many DISTINCT terms it matched
+  and how specific those terms are - a two-word term like "dog mom" says far
+  more about the buyer than "vote" does. The best score wins the primary
+  niche; a clear second becomes the secondary, which is how a listing that
+  genuinely sits in two places keeps both.
+*/
+const scoreMatches = (source: Array<[string, string[]]>, haystack: string) => {
+  const scored: Array<{ label: string; term: string; score: number }> = [];
+  for (const [label, terms] of source) {
+    let score = 0;
+    let best = "";
     for (const term of terms)
-      if (haystack.includes(` ${term} `) || haystack.includes(` ${term}s `))
-        return { label, term };
-  return null;
+      if (haystack.includes(` ${term} `) || haystack.includes(` ${term}s `)) {
+        /* Multi-word terms are worth more: they are harder to hit by accident. */
+        const weight = 1 + term.split(" ").length;
+        score += weight;
+        if (!best || term.split(" ").length > best.split(" ").length) best = term;
+      }
+    if (score > 0) scored.push({ label, term: best, score });
+  }
+  return scored.sort((a, b) => b.score - a.score);
 };
+
+const matchFrom = (source: Array<[string, string[]]>, haystack: string) =>
+  scoreMatches(source, haystack)[0] ?? null;
 
 /**
  * Read one listing's dimensions.
@@ -153,8 +182,16 @@ export function dimensionsFor(
   const haystack = normalise(`${title} ${tags.join(" ")} ${shopSection}`);
   const evidence: string[] = [];
 
-  const identity = matchFrom(IDENTITY, haystack);
+  const identities = scoreMatches(IDENTITY, haystack);
+  const identity = identities[0] ?? null;
   if (identity) evidence.push(`"${identity.term}" in the listing`);
+  /* A second identity counts only when it is close to the first. A distant
+     runner-up is noise, and putting a listing in a niche it barely touches
+     is how the map stops meaning anything. */
+  const runnerUp = identities[1];
+  const secondary = runnerUp && runnerUp.score >= identity!.score * 0.6
+    ? runnerUp.label : "";
+  if (secondary) evidence.push(`also "${runnerUp!.term}"`);
   const occasion = matchFrom(OCCASION, haystack);
   if (occasion) evidence.push(`occasion "${occasion.term}"`);
   const recipient = matchFrom(RECIPIENT, haystack);
@@ -165,6 +202,7 @@ export function dimensionsFor(
     /* Subject first. An occasion is a niche in its own right when no subject
        is present, because the buyer is defined by the moment. */
     niche: identity?.label ?? occasion?.label ?? "",
+    secondaryNiche: secondary,
     productFamily,
     messageTheme: identity?.term ?? occasion?.term ?? "",
     recipient: recipient?.label ?? "",

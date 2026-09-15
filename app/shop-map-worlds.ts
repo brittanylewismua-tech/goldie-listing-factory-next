@@ -140,11 +140,13 @@ export function buildWorlds(
   /* Group by customer identity. Product family rides along as evidence. */
   const grouped = new Map<string, typeof read>();
   for (const row of read) {
-    const label = nicheFor(row.dimensions);
-    if (!label) continue;
-    /* The gate applies to automatic labels too, not only to the output. */
-    if (rejectAsNiche(label)) continue;
-    grouped.set(label, [...(grouped.get(label) ?? []), row]);
+    /* Primary niche, plus a secondary when the overlap is real. */
+    for (const label of [nicheFor(row.dimensions), row.dimensions.secondaryNiche]) {
+      if (!label) continue;
+      /* The gate applies to automatic labels too, not only to the output. */
+      if (rejectAsNiche(label)) continue;
+      grouped.set(label, [...(grouped.get(label) ?? []), row]);
+    }
   }
 
   const worlds: World[] = [];
