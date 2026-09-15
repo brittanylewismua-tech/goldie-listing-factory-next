@@ -36,8 +36,10 @@ export const ACCESS: Record<string, Rule> = {
   "/auth/callback": { kind: "public" },
   "/api/client-errors": { kind: "public" },
   "/api/version": { kind: "public" },
-  "/trademark": { kind: "public" },
-  "/api/trademark": { kind: "public" },
+  /* Measured, not assumed: /api/trademark answers 401 to a signed-out caller,
+     so it is `open` — any signed-in account, no plan — rather than public.
+     The matrix has to say what the route does, or it is a second status list
+     that disagrees with the first. */
   "/api/trademark/register-status": { kind: "public" },
 
   /* ------------------------------------------------------------------ open */
@@ -54,6 +56,8 @@ export const ACCESS: Record<string, Rule> = {
   "/api/access/status": { kind: "open" },
   "/api/usage": { kind: "open" },
   "/api/connections/printify": { kind: "open" },
+  "/trademark": { kind: "open" },
+  "/api/trademark": { kind: "open" },
   "/api/shop-map/connections": { kind: "open" },
   "/api/shop-map/connect-sales": { kind: "open" },
   "/api/etsy": { kind: "open" },

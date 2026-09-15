@@ -72,6 +72,12 @@ test("OAuth return and sign-in need no entitlement", () => {
     assert.equal(ruleFor(route).kind, "public", `${route} is gated`);
 });
 
+test("the Trademark Checker needs a sign-in but never a plan", () => {
+  /* Measured against production: a signed-out caller gets 401. */
+  for (const route of ["/trademark", "/api/trademark"])
+    assert.equal(ruleFor(route).kind, "open", `${route} is gated by a plan`);
+});
+
 /* --------------------------------------------------- plan separation */
 
 const NOW = 1_800_000_000;
