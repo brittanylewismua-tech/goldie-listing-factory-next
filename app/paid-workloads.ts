@@ -37,7 +37,7 @@ export type Workload = {
                    capped by request count instead of dollars.
   */
   unitCost: number;
-  costBasis: "documented" | "estimated" | "measured" | "settled" | "unknown";
+  costBasis: "documented" | "calculated" | "estimated" | "measured" | "settled" | "unknown";
   customerFacing: boolean;
   memberDailyLimit: number | null;
   globalDailyCeiling: number;
@@ -90,6 +90,20 @@ export const PAID_WORKLOADS: Workload[] = [
     cachePolicy: "Deduplicated by authorized content hash before the call. An image already analyzed is never analyzed again, for any member.",
     priority: 9,
     expectedBehaviour: "Steady trickle following new sales. Bounded at 100 images per day.",
+  },
+  {
+    key: "nicheClassifier",
+    what: "One canonical niche list for a shop, then batched assignment against it.",
+    provider: "anthropic", model: "claude-haiku-4-5-20251001",
+    /* Calculated: 4 calls, ~14,900 in and ~8,600 out for 293 listings. */
+    unitCost: 0.0579, costBasis: "calculated",
+    customerFacing: true,
+    memberDailyLimit: 1, memberDailyAttempts: 2,
+    globalDailyCeiling: 1, globalDailyRequests: 40, limitStatus: "approved",
+    retries: 1,
+    cachePolicy: "Cached per listing until its title, tags or section change. An unchanged listing is never reclassified, and an incremental build sends only changed or new listings.",
+    priority: 3,
+    expectedBehaviour: "At most one build per member per day. Internal beta: one account only.",
   },
   {
     key: "listingFamilyCopy",

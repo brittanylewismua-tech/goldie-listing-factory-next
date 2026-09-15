@@ -14,7 +14,9 @@ test("nothing else claims to be approved", () => {
   /* Limits nobody signed off on must not quietly start enforcing. */
   const approved = PAID_WORKLOADS
     .filter(entry => entry.limitStatus === "approved").map(entry => entry.key).sort();
-  assert.deepEqual(approved, ["designScannerVision", "referenceIngestion"]);
+  /* nicheClassifier joined them when its limits were approved. */
+  assert.deepEqual(approved,
+    ["designScannerVision", "nicheClassifier", "referenceIngestion"]);
   /* Temporary limits are in force but are holding numbers, not approvals. */
   assert.ok(enforcedWorkloads().length > approved.length);
 });
@@ -52,7 +54,7 @@ test("every workload declares a ceiling, a retry policy and a cache policy", () 
     assert.ok(Number.isInteger(entry.retries), `${entry.key} has no retry policy`);
     assert.ok(entry.cachePolicy.length > 10, `${entry.key} has no cache policy`);
     assert.ok(entry.expectedBehaviour.length > 10, `${entry.key} has no expected behaviour`);
-    assert.ok(["documented", "estimated", "measured", "settled", "unknown"]
+    assert.ok(["documented", "calculated", "estimated", "measured", "settled", "unknown"]
       .includes(entry.costBasis), `${entry.key} has an unrecognised cost basis`);
   }
 });
@@ -157,4 +159,20 @@ test("fal usage is stored, not logged to a console nobody can query", () => {
   /* Cost and size only. Never the artwork, the prompt or the member. */
   assert.doesNotMatch(store, /prompt|image|user_id/i);
   assert.match(store, /enoughToQuote/);
+});
+
+test("the niche classifier carries the approved limits", () => {
+  const entry = workload("nicheClassifier");
+  assert.equal(entry.limitStatus, "approved");
+  assert.equal(entry.memberDailyLimit, 1, "more than one build per day");
+  assert.equal(entry.globalDailyCeiling, 1, "the global beta ceiling is not $1");
+  assert.equal(entry.retries, 1, "more than one retry is more paid calls");
+  /* A full build must fit under the per-member dollar limit. */
+  assert.ok(entry.unitCost < 0.10, `a build costs ${entry.unitCost}, over the $0.10 member cap`);
+});
+
+test("an unchanged listing is never reclassified", () => {
+  const entry = workload("nicheClassifier");
+  assert.match(entry.cachePolicy, /until its title, tags or section change/);
+  assert.match(entry.cachePolicy, /only changed or new listings/);
 });
