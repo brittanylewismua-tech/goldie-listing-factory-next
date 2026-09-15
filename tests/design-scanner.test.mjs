@@ -636,3 +636,29 @@ test("a real risk still reports as a risk whatever the register state", () => {
     assert.equal(loading.summary, known.summary);
   }
 });
+
+test("a curated high-risk match never asserts legal ownership", () => {
+  /* The checker matches a list of names that get listings removed. It does
+     not determine who owns what, and saying "owned by" is a legal claim it
+     cannot stand behind. A federal REGISTRATION is different: that is a
+     recorded fact, and naming its registrant is reporting the register. */
+  const known = tmCheck("Mickey Mouse");
+  if (known.risk === "high") {
+    assert.match(known.summary, /is associated with .+ and presents a high intellectual-property risk/);
+    assert.match(known.summary, /screening information, not legal clearance/);
+    assert.doesNotMatch(known.summary, /uses property owned by/);
+  }
+});
+
+test("the register-backed wording still reports what the register says", () => {
+  const text = readFileSync(new URL("../app/trademark-check.ts", import.meta.url), "utf8");
+  /* Reporting a registration and its registrant is reporting a record. */
+  assert.match(text, /is a live registered trademark/);
+  /* But the curated list never claims ownership. */
+  /* And the curated summary never claims ownership. Comments explaining the
+     old wording are stripped so the check reads code, not history. */
+  const code = text.replace(/\/\*[\s\S]*?\*\//g, "");
+  const curated = code.slice(code.indexOf("const owners ="),
+    code.indexOf("export function mentionsAMark"));
+  assert.doesNotMatch(curated, /property owned by/);
+});

@@ -349,7 +349,20 @@ export function check(raw: string): Verdict {
     phrase,
     risk: "high",
     hits,
-    summary: `This phrase uses property owned by ${named}. Printing it risks the listing being removed, and repeat removals can close a shop.`,
+    /*
+      ASSOCIATED WITH, NOT OWNED BY.
+
+      The old wording — "uses property owned by Disney" — asserted a legal
+      fact this code has not established. It matched a curated list of names
+      that get listings removed; it did not determine who owns what, and a
+      screening tool that states ownership is making a claim it cannot stand
+      behind. What it can honestly say is that the phrase is associated with
+      that party and carries high commercial risk.
+    */
+    summary: `This phrase is associated with ${named} and presents a high `
+      + `intellectual-property risk for commercial use. Listings using it are `
+      + `frequently removed, and repeat removals can close a shop. This is `
+      + `screening information, not legal clearance.`,
   };
 }
 
