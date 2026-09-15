@@ -78,16 +78,31 @@ export const GET = withErrorLog("design-scanner-corpus", async () => {
   const totals = await db.prepare(
     `SELECT (SELECT COUNT(*) FROM listing_sales_activity) AS activity,
             (SELECT COUNT(*) FROM listing_sales_activity WHERE interval_id IS NOT NULL) AS corroborated,
+            (SELECT MIN(observed_at) FROM listing_sales_activity) AS oldestActivity,
+            (SELECT MAX(observed_at) FROM listing_sales_activity) AS newestActivity,
             (SELECT COUNT(*) FROM shop_listings) AS listings,
             (SELECT COUNT(*) FROM listing_snapshots) AS snapshots,
             (SELECT COUNT(*) FROM shop_reviews) AS reviews,
+            (SELECT COUNT(DISTINCT listing_id) FROM shop_reviews WHERE listing_id IS NOT NULL) AS reviewedListings,
             (SELECT COUNT(*) FROM shop_sales_intervals) AS intervals`)
+    .first<Record<string, number | string>>()
+    .catch(() => null);
+
+  /*
+    Whether ANY image identity has ever been captured. `withUsableImage: 0`
+    could mean the corpus has no images or that this query is wrong, and those
+    are very different problems.
+  */
+  const images = await db.prepare(
+    `SELECT COUNT(*) AS snapshotsWithImage,
+            COUNT(DISTINCT listing_id) AS listingsWithImage
+       FROM listing_snapshots WHERE image_hash <> ''`)
     .first<Record<string, number>>()
     .catch(() => null);
 
   return NextResponse.json({
     window: { freshDays: EVIDENCE_FRESH_DAYS, capPerShop: SHOP_SHARE_CAP, minimumCohort: MIN_COHORT },
-    corpus: totals, measurement, readiness: readiness(measurement, { minimum: MIN_COHORT }),
+    corpus: totals, images, measurement, readiness: readiness(measurement, { minimum: MIN_COHORT }),
     since,
   });
 });
