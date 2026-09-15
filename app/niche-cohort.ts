@@ -98,9 +98,20 @@ export function relates(
     return { ok: false, because: "it is a shipping or add-on listing, not a design" };
   const haystack = wordsOf(`${candidate.title} ${candidate.tags.join(" ")}`);
   const matched = terms.filter(term => haystack.has(term));
-  /* A multi-word niche has to match more than one of its words, or "dog mom"
-     keeps every listing that says "dog". */
-  const required = terms.length >= 2 ? 2 : 1;
+  /*
+    EVERY MEANINGFUL TERM, NOT JUST TWO OF THEM.
+
+    Requiring two was fine for "dog mom" — two terms, both needed — and quietly
+    wrong for anything longer. Measured: an 80-character niche phrase matched
+    49 listings across 46 shops, MORE than the single word "bachelorette"
+    matched, because any two of its twelve words were enough. A longer, more
+    specific phrase producing a larger, vaguer cohort is the opposite of what
+    the member asked for.
+
+    Stop words and product words are already stripped, so what remains is what
+    the member actually meant, and all of it has to be there.
+  */
+  const required = terms.length;
   if (matched.length < required)
     return { ok: false, because: matched.length
       ? `only "${matched.join(", ")}" of the niche terms appears in its title or tags`

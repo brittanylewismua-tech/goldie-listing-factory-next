@@ -275,12 +275,21 @@ test("product words are not treated as the niche", () => {
   assert.deepEqual(normalizeNiche("feminist shirt").terms, ["feminist"]);
 });
 
-test("a multi-word niche needs more than one of its words", () => {
+test("a multi-word niche needs every one of its words", () => {
   const terms = normalizeNiche("dog mom").terms;
   assert.equal(relates(listing(), terms).ok, true);
   const justDog = listing({ title: "Dog Bandana", tags: ["dog"] });
   assert.equal(relates(justDog, terms).ok, false);
   assert.match(relates(justDog, terms).because, /only "dog"/);
+
+  /* And a long phrase must not become LOOSER than a short one: every term
+     counts, so a three-term niche needs all three. */
+  const three = normalizeNiche("bachelorette party weekend").terms;
+  assert.equal(three.length, 3);
+  assert.equal(relates(listing({ title: "Bachelorette Weekend Tote",
+    tags: ["bachelorette", "weekend"] }), three).ok, false);
+  assert.equal(relates(listing({ title: "Bachelorette Party Weekend Tote",
+    tags: ["bachelorette party", "weekend trip"] }), three).ok, true);
 });
 
 test("the cohort is the overlap, and says why each listing entered", () => {
