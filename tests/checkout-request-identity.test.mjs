@@ -1,3 +1,6 @@
+/* Checkout is closed by default since D1448. These tests exercise the
+   logic behind the gate, so they open it explicitly. */
+process.env.CHECKOUT_OPEN='open';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -16,7 +19,7 @@ test('customer, price, trial and date changes cannot reuse an incompatible key',
 const src=readFileSync(new URL('../app/api/billing/checkout/route.ts',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
 const compiled=ts.transpileModule(src,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 function route(overrides={}){
-  const requests=[],seen=new Map(),env={NextResponse:{json:(body,options)=>({body,status:options?.status??200})},getChatGPTUser:async()=>({userId:'member-one'}),billingState:async()=>({active:false}),customerFor:async()=> 'customer-one',priceForPlan:()=> 'price-one',siteOrigin:()=> 'https://www.thegoldiesuite.com',trialAvailable:async()=>true,PLANS,planAmount,checkoutRequestIdentity,stripeRequest:async(path,input)=>{if(path.startsWith('prices/'))return {active:true,currency:'usd',unit_amount:1499,recurring:{interval:'month',interval_count:1}};const body=input.body.toString();if(seen.has(input.idempotencyKey))assert.equal(body,seen.get(input.idempotencyKey),'Stripe rejects different parameters with the same key');seen.set(input.idempotencyKey,body);requests.push(input);return {url:'https://checkout.stripe.com/example'};}};
+  const requests=[],seen=new Map(),env={checkoutOpen:()=>true,NextResponse:{json:(body,options)=>({body,status:options?.status??200})},getChatGPTUser:async()=>({userId:'member-one'}),billingState:async()=>({active:false}),customerFor:async()=> 'customer-one',priceForPlan:()=> 'price-one',siteOrigin:()=> 'https://www.thegoldiesuite.com',trialAvailable:async()=>true,PLANS,planAmount,checkoutRequestIdentity,stripeRequest:async(path,input)=>{if(path.startsWith('prices/'))return {active:true,currency:'usd',unit_amount:1499,recurring:{interval:'month',interval_count:1}};const body=input.body.toString();if(seen.has(input.idempotencyKey))assert.equal(body,seen.get(input.idempotencyKey),'Stripe rejects different parameters with the same key');seen.set(input.idempotencyKey,body);requests.push(input);return {url:'https://checkout.stripe.com/example'};}};
   Object.assign(env,overrides);
   const out={};new Function('exports',...Object.keys(env),compiled)(out,...Object.values(env));return {post:out.POST,requests,seen};
 }

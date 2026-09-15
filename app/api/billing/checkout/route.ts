@@ -3,9 +3,30 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { billingState, customerFor, priceForPlan, siteOrigin, stripeRequest, trialAvailable } from "@/app/billing";
 import { PLANS, planAmount, type PlanKey, type BillingInterval } from "@/app/plan-limits";
 import { checkoutRequestIdentity } from "@/app/checkout-request-identity";
+import { checkoutOpen } from "@/app/checkout-gate";
 
+/*
+  D1448 - CHECKOUT IS CLOSED.
+
+  A real member was charged $14.99 for the Starter plan before Goldie was
+  meant to be on sale. The gate below is the first thing this route does, it
+  runs before Stripe is contacted, and it is CLOSED UNLESS EXPLICITLY OPENED:
+  a missing or misspelled variable leaves it shut rather than open.
+
+  To reopen, set CHECKOUT_OPEN to exactly "open" in the Worker's variables.
+  Nothing else in this file needs to change.
+
+  The webhook is deliberately left running. Existing subscription state must
+  stay consistent, and a cancellation or refund processed in Stripe still has
+  to reach the database - closing that would make the situation worse.
+*/
 export async function POST(request:Request) {
   try {
+    if (!checkoutOpen())
+      return NextResponse.json(
+        { error: "Goldie is not open for new subscriptions yet. No charge was made." },
+        { status: 503 });
+
     const user = await getChatGPTUser();
     if(!user)return NextResponse.json({error:"Sign in before choosing a Listing Factory plan."},{status:401});
     const body = await request.json().catch(()=>({})) as {plan?:string; interval?:string};

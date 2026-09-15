@@ -1,3 +1,6 @@
+/* Checkout is closed by default since D1448. These tests exercise the
+   logic behind the gate, so they open it explicitly. */
+process.env.CHECKOUT_OPEN='open';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -17,7 +20,7 @@ const runtime={STRIPE_STARTER_MONTHLY_PRICE_ID:'starter-month',STRIPE_STARTER_YE
 const billing=load('../app/billing.ts',{env:runtime});
 function checkout(plan,interval,override={}){
   const sessions=[];let customers=0;
-  const deps={...billing,PLANS,planAmount,checkoutRequestIdentity,NextResponse:{json:(body,options)=>({body,status:options?.status??200})},getChatGPTUser:async()=>({userId:'test-user'}),billingState:async()=>({active:false}),customerFor:async()=>{customers++;return 'test-customer';},siteOrigin:()=> 'https://thegoldiesuite.com',trialAvailable:async()=>true,stripeRequest:async(path,input)=>{
+  const deps={...billing,PLANS,planAmount,checkoutRequestIdentity,checkoutOpen:()=>true,NextResponse:{json:(body,options)=>({body,status:options?.status??200})},getChatGPTUser:async()=>({userId:'test-user'}),billingState:async()=>({active:false}),customerFor:async()=>{customers++;return 'test-customer';},siteOrigin:()=> 'https://thegoldiesuite.com',trialAvailable:async()=>true,stripeRequest:async(path,input)=>{
     if(path.startsWith('prices/'))return {active:true,currency:'usd',unit_amount:planAmount(plan,interval),recurring:{interval,interval_count:1}};
     assert.equal(path,'checkout/sessions');sessions.push(input);return {url:'https://checkout.stripe.com/test'};
   },...override};

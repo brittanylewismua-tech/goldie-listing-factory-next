@@ -80,13 +80,25 @@ async function render(path = "/") {
   }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("serves pricing at home while retaining the canonical Listing Factory path", async () => {
+test("serves the closed notice at home, with no prices anywhere in the payload", async () => {
+  /*
+    D1448 - the homepage IS the signup page, so it was showing plans and
+    prices while Goldie was meant to be in private testing. A member was
+    charged $14.99 before it was on sale.
+
+    Checking that the buttons are gone is not enough: this renders on the
+    server, so the amounts would still sit in the HTML for anyone who looked.
+    The assertion is that no price reaches the payload at all.
+  */
   const response = await render();
   assert.equal(response.status, 200);
   const homepage = await response.text();
-  assert.match(homepage, /Main navigation/);
-  assert.match(homepage, /Start for free/);
-  assert.match(homepage, /Choose your plan/);
+  assert.match(homepage, /isn't open yet|not open yet/i);
+  assert.doesNotMatch(homepage, /Choose your plan/);
+  for (const amount of ["14.99", "24.99", "39.99", "149", "249", "399"])
+    assert.ok(!homepage.includes(amount), `the homepage still ships the price ${amount}`);
+  for (const plan of ["Starter", "Scale"])
+    assert.ok(!homepage.includes(plan), `the homepage still names the ${plan} plan`);
   assert.equal((await render("/listing-factory")).status, 200);
   const pageSource = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   const globalCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
