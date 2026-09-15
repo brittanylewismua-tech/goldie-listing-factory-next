@@ -1,4 +1,4 @@
-import { requireChatGPTUser } from "@/app/chatgpt-auth";
+import { requireFeaturePage } from "@/app/require-feature";
 import ShopMapClient from "./shop-map-client";
 import "./shop-map.css";
 
@@ -9,6 +9,6 @@ import "./shop-map.css";
   pointed, and what is it made of.
 */
 export default async function ShopMapPage() {
-  const user = await requireChatGPTUser("/shop-map");
+  const user = await requireFeaturePage("shopMap", "/shop-map");
   return <ShopMapClient signedInEmail={user.email} />;
 }

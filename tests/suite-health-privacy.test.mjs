@@ -95,6 +95,11 @@ test("every member-owned table read is scoped by user_id", () => {
   const allowed = new Set([
     "api/operations/capabilities/route.ts: FROM etsy_connections",
     "api/design-scanner/review-audit/route.ts: FROM etsy_connections",
+    /* Owner-only beta administration looks an account UP by its identifier
+       (LOWER(user_id) = ?), which is scoping by a different spelling. It is
+       listed rather than pattern-matched so a new cross-member read cannot
+       appear without this line changing. */
+    "api/operations/beta/route.ts: FROM etsy_connections",
   ]);
   assert.deepEqual(offences.filter(row => !allowed.has(row)), []);
 });
@@ -210,4 +215,73 @@ test("a failed connection lookup is never shown as disconnected", () => {
     "../app/api/connections/printify/route.ts", import.meta.url), "utf8");
   assert.match(route, /connected: null, error: failed/);
   assert.match(route, /A failed lookup is reported, never rendered as "not connected"/);
+});
+
+/* --------------------------------------------------- deletion execution */
+import { DELETION_PLAN, KEPT, stepsFor, mayDelete, CONFIRMATION_PHRASE,
+  RECENT_AUTH_SECONDS } from "../app/deletion-plan.ts";
+
+test("every step is scoped to one member and to one table", () => {
+  for (const step of DELETION_PLAN) {
+    assert.match(step.sql, /WHERE user_id = \?/, `${step.table} is not member-scoped`);
+    /* One bound parameter, so nothing can widen the blast radius. */
+    assert.equal((step.sql.match(/\?/g) ?? []).length, 1, `${step.table} binds more than the member`);
+    assert.ok(step.say.length > 15, `${step.table} has no explanation`);
+  }
+});
+
+test("no step touches shared public market data", () => {
+  const shared = ["listing_sales_activity", "listing_snapshots", "shop_observations",
+    "watched_shops", "shop_reviews", "reference_images", "reference_analysis",
+    "niche_watch_history", "shop_sales_intervals", "tm_marks"];
+  for (const step of DELETION_PLAN)
+    for (const table of shared)
+      assert.ok(!step.sql.includes(table),
+        `deleting an account would touch shared ${table}`);
+});
+
+test("connections are retired, never dropped, with their keys destroyed", () => {
+  const retired = stepsFor("retire").map(step => step.table);
+  assert.ok(retired.includes("etsy_connections"));
+  assert.ok(retired.includes("printify_connections"));
+  for (const step of stepsFor("retire"))
+    assert.match(step.sql, /^UPDATE/, `${step.table} is deleted rather than retired`);
+  const etsy = DELETION_PLAN.find(step => step.table === "etsy_connections");
+  assert.match(etsy.sql, /encrypted_access_token = ''/);
+  assert.match(etsy.sql, /encrypted_refresh_token = ''/);
+  assert.match(etsy.sql, /is_active = 0/);
+});
+
+test("what is kept is explained rather than left to be noticed", () => {
+  assert.ok(KEPT.length >= 3);
+  for (const row of KEPT) assert.ok(row.why.length > 40, `${row.what} has no reason`);
+  assert.ok(KEPT.some(row => /public marketplace evidence/.test(row.why)));
+});
+
+test("deletion needs the exact phrase and a recent sign-in", () => {
+  const now = 2_000_000;
+  assert.equal(mayDelete({ phrase: CONFIRMATION_PHRASE, authenticatedAt: now - 60, now }).ok, true);
+  assert.equal(mayDelete({ phrase: "delete my goldie data", authenticatedAt: now - 60, now }).ok,
+    false, "a near-miss phrase was accepted");
+  assert.equal(mayDelete({ phrase: CONFIRMATION_PHRASE, authenticatedAt: 0, now }).ok, false);
+  const stale = mayDelete({ phrase: CONFIRMATION_PHRASE,
+    authenticatedAt: now - RECENT_AUTH_SECONDS - 10, now });
+  assert.equal(stale.ok, false);
+  assert.match(stale.because, /Sign in again/);
+});
+
+test("an artwork object is removed only when nothing else of the member's uses it", () => {
+  const plan = readFileSync(new URL("../app/deletion-plan.ts", import.meta.url), "utf8");
+  assert.match(plan, /an object is removed only when the last row referencing it\s*\n?\s*\* goes with it/);
+  /* The plan does not blind-delete R2 per provenance row. */
+  for (const step of DELETION_PLAN)
+    assert.ok(!/ARTWORK|R2/.test(step.sql));
+});
+
+test("the plan covers every member-owned table the beta view counts", () => {
+  const counted = ["scan_history", "niche_watches", "member_shop_watches",
+    "artwork_provenance", "publish_identity"];
+  const tables = new Set(DELETION_PLAN.map(step => step.table));
+  for (const table of counted)
+    assert.ok(tables.has(table), `${table} is counted but never deleted`);
 });

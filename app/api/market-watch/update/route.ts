@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { isOwner } from "@/app/mastermind/access";
+import { requireFeatureApi } from "@/app/require-feature";
 import { env } from "cloudflare:workers";
 import { buildUpdate, NOTHING_NEW, type NicheChange, type ShopChange } from "@/app/market-update";
 import { watchesFor } from "@/app/niche-watch-store";
@@ -15,9 +15,11 @@ import { briefForShop } from "@/app/shop-watch-brief";
  * answers.
  */
 export const GET = withErrorLog("market-watch-update", async () => {
-  const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
-    return NextResponse.json({ error: "Market Watch is in internal testing." }, { status: 403 });
+  /* The entitlement decides, not the owner flag: a complimentary beta
+     member reaches this and a Listing Factory member does not. */
+  const access = await requireFeatureApi("marketWatch");
+  if (!access.ok) return access.response;
+  const user = access.user;
 
   const db = (env as unknown as { DB: D1Database }).DB;
   const saved = await watchesFor(user.userId);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { isOwner } from "@/app/mastermind/access";
+import { requireFeatureApi } from "@/app/require-feature";
 import { env } from "cloudflare:workers";
 import { normalizeNiche, intersect, type Candidate } from "@/app/niche-cohort";
 import {
@@ -133,9 +133,11 @@ async function readNiche(userId: string, terms: string[], key: string, now: numb
 }
 
 export const GET = withErrorLog("market-watch-niches", async (request: Request) => {
-  const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
-    return NextResponse.json({ error: "Market Watch is in internal testing." }, { status: 403 });
+  /* The entitlement decides, not the owner flag: a complimentary beta
+     member reaches this and a Listing Factory member does not. */
+  const access = await requireFeatureApi("marketWatch");
+  if (!access.ok) return access.response;
+  const user = access.user;
 
   const now = Math.floor(Date.now() / 1000);
   const key = new URL(request.url).searchParams.get("key");
@@ -184,9 +186,11 @@ export const GET = withErrorLog("market-watch-niches", async (request: Request) 
 });
 
 export const POST = withErrorLog("market-watch-save-niche", async (request: Request) => {
-  const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
-    return NextResponse.json({ error: "Market Watch is in internal testing." }, { status: 403 });
+  /* The entitlement decides, not the owner flag: a complimentary beta
+     member reaches this and a Listing Factory member does not. */
+  const access = await requireFeatureApi("marketWatch");
+  if (!access.ok) return access.response;
+  const user = access.user;
   const body = await request.json().catch(() => null) as
     { phrase?: string; remove?: string } | null;
   const now = Math.floor(Date.now() / 1000);

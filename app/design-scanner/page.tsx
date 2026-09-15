@@ -1,4 +1,4 @@
-import { requireChatGPTUser } from "@/app/chatgpt-auth";
+import { requireFeaturePage } from "@/app/require-feature";
 import DesignScannerClient from "./design-scanner-client";
 import "./design-scanner.css";
 
@@ -8,6 +8,6 @@ import "./design-scanner.css";
   the design itself stays the biggest thing on screen the whole way through.
 */
 export default async function DesignScannerPage() {
-  const user = await requireChatGPTUser("/design-scanner");
+  const user = await requireFeaturePage("designScanner", "/design-scanner");
   return <DesignScannerClient signedInEmail={user.email} />;
 }

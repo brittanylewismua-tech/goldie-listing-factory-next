@@ -61,6 +61,21 @@ export default {
       return;
     }
 
+    /*
+      SCHEMA FIRST, AND ONLY ON THE SLOW CLOCK.
+
+      Foundational tables used to be created by whichever member happened to
+      touch a feature first, which meant their first click carried a
+      migration and the capability registry could not tell a broken feature
+      from an unused one. This runs every schema owner once; it is idempotent,
+      so firing it every twenty minutes is harmless and means a fresh deploy
+      is migrated within one cron rather than on first use.
+    */
+    ctx.waitUntil(
+      app.fetch(new Request(site + "/api/operations/migrate", { method: "POST" }), env, ctx)
+        .catch(() => {}),
+    );
+
     /* Cheapest and most perishable first, so nothing important queues behind
        a workload that might hang. */
     /* The cheapest question in the system: which shops sold anything. */

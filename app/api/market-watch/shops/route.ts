@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { isOwner } from "@/app/mastermind/access";
+import { requireFeatureApi } from "@/app/require-feature";
 import { addWatch, removeWatch, watchLimit } from "@/app/shop-watch";
 
 /**
@@ -15,9 +15,11 @@ import { addWatch, removeWatch, watchLimit } from "@/app/shop-watch";
  * is shared and `addWatch` reports whether collection was already running.
  */
 export const POST = withErrorLog("market-watch-add-shop", async (request: Request) => {
-  const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
-    return NextResponse.json({ error: "Market Watch is in internal testing." }, { status: 403 });
+  /* The entitlement decides, not the owner flag: a complimentary beta
+     member reaches this and a Listing Factory member does not. */
+  const access = await requireFeatureApi("marketWatch");
+  if (!access.ok) return access.response;
+  const user = access.user;
 
   const body = await request.json().catch(() => null) as
     { input?: string; remove?: number } | null;

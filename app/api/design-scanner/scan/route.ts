@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { isOwner } from "@/app/mastermind/access";
+import { requireFeatureApi } from "@/app/require-feature";
 import { env } from "cloudflare:workers";
 import {
   ANALYSIS_MODEL, ANALYSIS_PROMPT, ANALYSIS_VERSION, parseAnalysis,
@@ -44,9 +44,11 @@ const WORKLOAD = "designScannerVision";
 type Stored = { payload: string };
 
 export const POST = withErrorLog("design-scanner-scan", async (request: Request) => {
-  const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
-    return NextResponse.json({ error: "Design Scanner is in internal testing." }, { status: 403 });
+  /* The entitlement decides, not the owner flag: a complimentary beta
+     member reaches this and a Listing Factory member does not. */
+  const access = await requireFeatureApi("designScanner");
+  if (!access.ok) return access.response;
+  const user = access.user;
 
   const db = (env as unknown as { DB: D1Database }).DB;
   const body = await request.json().catch(() => null) as
@@ -363,9 +365,11 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
 
 /** A member's own scan history. Reopening a saved result is free. */
 export const GET = withErrorLog("design-scanner-history", async () => {
-  const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
-    return NextResponse.json({ error: "Design Scanner is in internal testing." }, { status: 403 });
+  /* The entitlement decides, not the owner flag: a complimentary beta
+     member reaches this and a Listing Factory member does not. */
+  const access = await requireFeatureApi("designScanner");
+  if (!access.ok) return access.response;
+  const user = access.user;
   const db = (env as unknown as { DB: D1Database }).DB;
   const rows = await db.prepare(
     `SELECT id, niche, result_json AS result, created_at AS createdAt, artwork_hash AS artworkHash

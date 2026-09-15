@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { isOwner } from "@/app/mastermind/access";
+import { requireFeatureApi } from "@/app/require-feature";
 import { env } from "cloudflare:workers";
 import { ensureListingTables, performanceFrom } from "@/app/shop-map-listings";
 import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-map-worlds";
@@ -36,9 +36,9 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
 });
 
 async function buildMap(request: Request) {
-  const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
-    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const access = await requireFeatureApi("shopMap");
+  if (!access.ok) return access.response;
+  const user = access.user;
 
   await ensureListingTables();
   const db = (env as unknown as { DB: D1Database }).DB;

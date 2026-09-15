@@ -1,4 +1,4 @@
-import { requireChatGPTUser } from "@/app/chatgpt-auth";
+import { requireFeaturePage } from "@/app/require-feature";
 import MarketWatchClient from "./market-watch-client";
 import "./market-watch.css";
 
@@ -8,6 +8,6 @@ import "./market-watch.css";
   of the way. It does not tell the seller what to do next.
 */
 export default async function MarketWatchPage() {
-  const user = await requireChatGPTUser("/market-watch");
+  const user = await requireFeaturePage("marketWatch", "/market-watch");
   return <MarketWatchClient signedInEmail={user.email} />;
 }

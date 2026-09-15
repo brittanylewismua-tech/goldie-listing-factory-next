@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { isOwner } from "@/app/mastermind/access";
+import { requireFeatureApi } from "@/app/require-feature";
 import { env } from "cloudflare:workers";
 import { briefForShop, shopWatchBetaHealth, SHOP_WATCH_FLAG } from "@/app/shop-watch-brief";
 
@@ -18,12 +18,10 @@ import { briefForShop, shopWatchBetaHealth, SHOP_WATCH_FLAG } from "@/app/shop-w
  * parameter that names another member.
  */
 export const GET = withErrorLog("shop-watch-brief", async (request: Request) => {
-  const user = await getChatGPTUser();
-  if (!user) return NextResponse.json({ error: "Not authorized." }, { status: 403 });
-  /* Internal beta: behind the flag, owner only, until the beta is done. */
-  if (!isOwner(user))
-    return NextResponse.json({ error: "Shop Watch is in internal beta.", flag: SHOP_WATCH_FLAG },
-      { status: 403 });
+  /* Market Watch, not the owner flag. */
+  const access = await requireFeatureApi("marketWatch");
+  if (!access.ok) return access.response;
+  const user = access.user;
 
   const db = (env as unknown as { DB: D1Database }).DB;
   /*
