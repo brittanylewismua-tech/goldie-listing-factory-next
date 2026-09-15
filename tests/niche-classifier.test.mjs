@@ -7,6 +7,7 @@
 */
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   parseCanonical, parseAssignments, estimateCost, compact,
   CANONICAL_PROMPT, ASSIGN_PROMPT, MAX_CALLS_PER_BUILD, MEMBER_DAILY_DOLLARS,
@@ -87,4 +88,53 @@ test("listings are sent compactly, with no images", () => {
   assert.match(compact(inputs.get(1)), /Feminist Smash/);
   const module = compact(inputs.get(1));
   assert.doesNotMatch(module, /http|image|png|jpg/i);
+});
+
+test("nothing reaches the provider before the spend guard agrees", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
+  const reserveAt = route.indexOf("await reserveSpend(");
+  const fetchAt = route.indexOf("api.anthropic.com");
+  assert.ok(reserveAt > 0 && reserveAt < fetchAt,
+    "a provider call is made before the reservation");
+  /* A half-finished build leaves a shop with half a vocabulary. */
+  assert.match(route, /Reservation first/);
+});
+
+test("an unchanged listing is never sent", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
+  assert.match(route, /cached\.get\(listing\.listingId\) !== hashOf\(listing\)/);
+  assert.match(route, /Every listing is already classified/);
+});
+
+test("the call budget is enforced inside the loop, not just planned", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
+  assert.match(route, /if \(calls >= MAX_CALLS_PER_BUILD\) throw new Error/);
+  assert.match(route, /if \(calls >= MAX_CALLS_PER_BUILD\) break;/);
+});
+
+test("a billed failure pays the ledger and keeps the member's build", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
+  assert.match(route, /await failSpend\(reservation\.id, \{ billed \}\)/);
+  assert.match(route, /the member keeps their build/);
+});
+
+test("no image is ever sent", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
+  /* The comment says so; the code must not contradict it. */
+  const code = route.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(code, /image|media_type|base64/i);
+  assert.match(route, /TEXT ONLY/);
+});
+
+test("a missing key stops before any spend", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
+  const keyAt = route.indexOf("No provider key is configured");
+  const reserveAt = route.indexOf("await reserveSpend(");
+  assert.ok(keyAt > 0 && keyAt < reserveAt);
 });
