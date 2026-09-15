@@ -26,9 +26,13 @@ test("it creates its own draft and never names an existing listing", () => {
   /* Every listing-scoped call uses the id this route created. */
   assert.match(source, /state: "draft"/);
   assert.match(source, /GOLDIE INTERNAL — image id test, do not publish/);
+  /* Every listing-scoped call names either the draft this route created or
+     the id passed to the cleanup route, which is verified to be a Goldie test
+     draft before anything is deleted. */
   const listingCalls = [...source.matchAll(/listings\/\$\{([a-zA-Z]+)\}/g)].map(match => match[1]);
   for (const name of listingCalls)
-    assert.equal(name, "listingId", `a listing call used ${name} rather than the created draft`);
+    assert.ok(["listingId", "cleanup"].includes(name),
+      `a listing call used ${name} rather than the created draft`);
 });
 
 test("nothing is published, and the state is read back rather than assumed", () => {
@@ -63,7 +67,30 @@ test("bytes are compared by hash, not by trusting the id", () => {
 });
 
 test("the test images are Goldie's own, not the seller's", () => {
-  assert.match(source, /\$\{site\}\/icon-512\.png/);
-  assert.match(source, /\$\{site\}\/apple-touch-icon\.png/);
   assert.match(source, /nothing of the seller's is involved/);
+  assert.match(source, /async function solidPng/);
+});
+
+test("the draft is deleted at the endpoint Etsy actually deletes from", () => {
+  /* The shop-scoped path answers 404 and leaves the draft sitting in the
+     seller's shop — which is what happened on the first run. */
+  assert.match(source, /await call\(`\/listings\/\$\{listingId\}`, \{ method: "DELETE" \}\)/);
+  assert.doesNotMatch(source, /`\/shops\/\$\{shopId\}\/listings\/\$\{listingId\}`, \{ method: "DELETE" \}/);
+});
+
+test("there is a way to remove a draft a failed run left behind", () => {
+  assert.match(source, /parameters\.get\("cleanup"\)/);
+  /* And it refuses to delete anything that is not a Goldie test draft. */
+  assert.match(source, /!title\.startsWith\("GOLDIE INTERNAL"\)/);
+  assert.match(source, /That listing is not a Goldie test draft\. Nothing was deleted\./);
+});
+
+test("the test images are built, not fetched from our own origin", () => {
+  /* Fetching the worker's own origin returned sixteen identical bytes and the
+     uploads failed, so the test proved nothing. */
+  assert.match(source, /async function solidPng/);
+  assert.match(source, /CompressionStream\("deflate"\)/);
+  assert.match(source, /solidPng\(600, \[255, 79, 195\]\)/);
+  assert.match(source, /solidPng\(600, \[12, 10, 14\]\)/);
+  assert.doesNotMatch(source, /goldieSiteUrl/);
 });

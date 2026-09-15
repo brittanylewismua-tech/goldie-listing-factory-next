@@ -76,7 +76,9 @@
    making that it deletes afterwards. */
 /* D1410 makes the image-id test a download draft, so it needs nothing of the
    seller's shipping setup. */
-export const BUILD_MARKER = "D1410";
+/* D1411 deletes the test draft at the endpoint Etsy deletes from, and builds
+   its own test images instead of fetching itself. */
+export const BUILD_MARKER = "D1411";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

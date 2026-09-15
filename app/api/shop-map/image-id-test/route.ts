@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
-import { etsyApiCredential, etsyConnection, goldieSiteUrl, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
+import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 
 /**
  * WHAT DOES AN ETSY IMAGE ID ACTUALLY MEAN?
@@ -22,6 +22,72 @@ import { etsyApiCredential, etsyConnection, goldieSiteUrl, recordEtsyCall, waitF
  * every step — and it is deleted at the end. It refuses to run without an
  * explicit confirmation in the URL, so it cannot fire by accident.
  */
+/* CRC32, which PNG requires on every chunk. */
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let index = 0; index < 256; index += 1) {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1)
+      value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    table[index] = value >>> 0;
+  }
+  return table;
+})();
+
+const crc32 = (bytes: Uint8Array) => {
+  let crc = 0xffffffff;
+  for (const byte of bytes) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+};
+
+const chunk = (type: string, data: Uint8Array) => {
+  const name = new TextEncoder().encode(type);
+  const body = new Uint8Array(name.length + data.length);
+  body.set(name);
+  body.set(data, name.length);
+  const out = new Uint8Array(8 + data.length + 4);
+  new DataView(out.buffer).setUint32(0, data.length);
+  out.set(body, 4);
+  new DataView(out.buffer).setUint32(out.length - 4, crc32(body));
+  return out;
+};
+
+/**
+ * A real PNG of one colour, built here so the test depends on nothing.
+ *
+ * Etsy rejects tiny images, so it is 600 square — small enough to be quick,
+ * large enough to be accepted.
+ */
+async function solidPng(size: number, [red, green, blue]: [number, number, number]) {
+  const raw = new Uint8Array(size * (size * 3 + 1));
+  for (let row = 0; row < size; row += 1) {
+    const start = row * (size * 3 + 1);
+    raw[start] = 0;
+    for (let column = 0; column < size; column += 1) {
+      const at = start + 1 + column * 3;
+      raw[at] = red; raw[at + 1] = green; raw[at + 2] = blue;
+    }
+  }
+  /* PNG's IDAT is zlib, which is exactly what deflate gives us. */
+  const compressed = new Uint8Array(await new Response(
+    new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer());
+
+  const header = new Uint8Array(13);
+  const view = new DataView(header.buffer);
+  view.setUint32(0, size);
+  view.setUint32(4, size);
+  header[8] = 8;   /* bit depth */
+  header[9] = 2;   /* truecolour */
+
+  const signature = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const parts = [signature, chunk("IHDR", header), chunk("IDAT", compressed), chunk("IEND", new Uint8Array(0))];
+  const total = parts.reduce((sum, part) => sum + part.length, 0);
+  const png = new Uint8Array(total);
+  let at = 0;
+  for (const part of parts) { png.set(part, at); at += part.length; }
+  return png.buffer;
+}
+
 const sha256 = async (bytes: ArrayBuffer) => {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
@@ -33,6 +99,53 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
   const parameters = new URL(request.url).searchParams;
+
+  /*
+    A way to remove a draft this route left behind. The first run created one
+    and failed to delete it, and a test that litters somebody's shop needs its
+    own broom rather than an apology.
+  */
+  const cleanup = Number(parameters.get("cleanup"));
+  if (cleanup > 0) {
+    const connection = await etsyConnection(user.userId);
+    const remove = async (path: string, init?: RequestInit) => {
+      await waitForEtsyCapacity();
+      const response = await fetch(`https://openapi.etsy.com/v3/application${path}`, {
+        ...init,
+        headers: {
+          "x-api-key": etsyApiCredential(),
+          authorization: `Bearer ${connection.token}`,
+          ...(init?.headers ?? {}),
+        },
+        signal: AbortSignal.timeout(20_000),
+      });
+      await recordEtsyCall(response, "qa");
+      const text = await response.text();
+      let parsed: unknown = null;
+      try { parsed = JSON.parse(text); } catch { /* status carries it */ }
+      return { status: response.status, parsed, text: parsed ? "" : text.slice(0, 200) };
+    };
+    /* Only ever a draft, and only ever one this route would have made. */
+    const listing = await remove(`/listings/${cleanup}`);
+    const title = String((listing.parsed as { title?: string })?.title ?? "");
+    const state = String((listing.parsed as { state?: string })?.state ?? "");
+    if (listing.status === 404)
+      return NextResponse.json({ listingId: cleanup, alreadyGone: true });
+    if (!title.startsWith("GOLDIE INTERNAL"))
+      return NextResponse.json({
+        error: "That listing is not a Goldie test draft. Nothing was deleted.",
+        title, state,
+      }, { status: 400 });
+    const deleted = await remove(`/listings/${cleanup}`, { method: "DELETE" });
+    const readBack = await remove(`/listings/${cleanup}`);
+    return NextResponse.json({
+      listingId: cleanup, title, state,
+      deleteStatus: deleted.status,
+      confirmedGone: readBack.status === 404,
+      said: deleted.status === 204 || deleted.status === 200 ? null : deleted.parsed ?? deleted.text,
+    });
+  }
+
   if (parameters.get("confirm") !== "create-and-delete-test-draft")
     return NextResponse.json({
       error: "This creates a draft listing on the connected shop. Add ?confirm=create-and-delete-test-draft to run it.",
@@ -62,11 +175,16 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
   };
 
   try {
-    /* Two genuinely different images, taken from Goldie's own public assets so
-       nothing of the seller's is involved. */
-    const site = goldieSiteUrl();
-    const imageA = await fetch(`${site}/icon-512.png`).then(response => response.arrayBuffer());
-    const imageB = await fetch(`${site}/apple-touch-icon.png`).then(response => response.arrayBuffer());
+    /*
+      Two images built here, rather than fetched.
+
+      The first run pulled them from Goldie's own origin and got sixteen
+      identical bytes back — the worker fetching itself — so both uploads
+      failed and the test proved nothing. Generating them removes the
+      dependency entirely, and nothing of the seller's is involved either way.
+    */
+    const imageA = await solidPng(600, [255, 79, 195]);
+    const imageB = await solidPng(600, [12, 10, 14]);
     const hashA = await sha256(imageA);
     const hashB = await sha256(imageB);
     steps.push({ step: "prepared images", hashA, bytesA: imageA.byteLength, hashB, bytesB: imageB.byteLength });
@@ -205,7 +323,10 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     steps.push({ step: "state before deletion", state });
 
     /* ------------------------------------------------------------- clean up */
-    const removed = await call(`/shops/${shopId}/listings/${listingId}`, { method: "DELETE" });
+    /* Etsy deletes a listing at /listings/{id}, NOT under the shop. The
+       shop-scoped path answers 404 and leaves the draft sitting there, which
+       is exactly what happened the first time this ran. */
+    const removed = await call(`/listings/${listingId}`, { method: "DELETE" });
     const gone = await call(`/listings/${listingId}`);
     steps.push({
       step: "deleted the draft", deleteStatus: removed.status,
