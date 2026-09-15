@@ -390,3 +390,21 @@ test("the grid snaps backwards, never forwards past unread time", () => {
   assert.ok(snapped <= 45 * 86_400);
   assert.equal(snapped % (30 * 86_400), 0);
 });
+
+test("a superseded window does not count as incomplete forever", () => {
+  /* Measured: outstanding grew 43 -> 74 -> 100 across runs while nothing
+     failed, because old-grid rows could never be revisited. */
+  for (const file of ["../app/finance-store.ts", "../app/api/shop-map/financial/route.ts",
+    "../app/api/shop-map/financial/ingest/route.ts"]) {
+    const source = readFileSync(new URL(file, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /state <> 'complete'/,
+      `${file} still counts superseded windows as incomplete`);
+  }
+  const ingest = readFileSync(new URL(
+    "../app/api/shop-map/financial/ingest/route.ts", import.meta.url), "utf8");
+  /* Superseded, not deleted: what was attempted is worth keeping. */
+  assert.match(ingest, /state = 'superseded'/);
+  assert.doesNotMatch(ingest, /DELETE FROM finance_windows/);
+  /* And a completed window is never touched. */
+  assert.match(ingest, /AND state IN \('pending','failed'\)/);
+});

@@ -85,7 +85,7 @@ export const GET = withErrorLog("shop-map-financial", async (request: Request) =
 
   const windowsRow = await db.prepare(
     `SELECT COUNT(*) AS incomplete FROM finance_windows
-      WHERE user_id = ? AND shop_id = ? AND state <> 'complete'
+      WHERE user_id = ? AND shop_id = ? AND state IN ('pending', 'failed')
         AND window_from <= ? AND window_to >= ?`)
     .bind(user.userId, shopId, window.to, window.from)
     .first<{ incomplete: number }>();

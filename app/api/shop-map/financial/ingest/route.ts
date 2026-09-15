@@ -6,7 +6,7 @@ import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { classifyLedgerType } from "@/app/finance-classify";
-import { windowsFor, incrementalFrom, outstanding } from "@/app/finance-windows";
+import { windowsFor, incrementalFrom, outstanding, WINDOW_SECONDS } from "@/app/finance-windows";
 import { classifyOrphan } from "@/app/finance-reconcile";
 import { ensureFinanceTables } from "@/app/finance-store";
 
@@ -70,9 +70,35 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
        ON CONFLICT(user_id, shop_id, window_from, window_to) DO NOTHING`)
       .bind(user.userId, shopId, window.from, window.to, now).run();
 
+  /*
+    WINDOWS FROM AN OLDER GRID CAN NEVER BE COMPLETED.
+
+    Earlier runs planned boundaries from a moving start, so the table holds
+    rows no current plan will ever revisit. They are marked superseded rather
+    than deleted - the record of what was attempted is worth keeping, and
+    nothing that actually completed is touched - otherwise they would count
+    as incomplete forever and block complete profit permanently.
+  */
+  const aligned = new Set(planned.map(window => window.from));
+  const stale = await db.prepare(
+    `SELECT window_from FROM finance_windows
+      WHERE user_id = ? AND shop_id = ? AND state IN ('pending', 'failed')`)
+    .bind(user.userId, shopId).all<{ window_from: number }>();
+  let superseded = 0;
+  for (const row of (stale.results ?? [])) {
+    if (aligned.has(Number(row.window_from))) continue;
+    /* Only if it sits off the current grid AND never completed. */
+    if (Number(row.window_from) % WINDOW_SECONDS === EARLIEST % WINDOW_SECONDS) continue;
+    await db.prepare(
+      `UPDATE finance_windows SET state = 'superseded', updated_at = ?
+        WHERE user_id = ? AND shop_id = ? AND window_from = ? AND state IN ('pending','failed')`)
+      .bind(now, user.userId, shopId, row.window_from).run();
+    superseded += 1;
+  }
+
   const pending = await db.prepare(
     `SELECT window_from, window_to, state FROM finance_windows
-      WHERE user_id = ? AND shop_id = ? AND state <> 'complete'
+      WHERE user_id = ? AND shop_id = ? AND state IN ('pending', 'failed')
       ORDER BY window_from ASC LIMIT ?`)
     .bind(user.userId, shopId, maxWindows)
     .all<{ window_from: number; window_to: number; state: string }>();
@@ -212,12 +238,13 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
 
   const remaining = await db.prepare(
     `SELECT window_from, window_to, state FROM finance_windows
-      WHERE user_id = ? AND shop_id = ? AND state <> 'complete'`)
+      WHERE user_id = ? AND shop_id = ? AND state IN ('pending', 'failed')`)
     .bind(user.userId, shopId).all<{ window_from: number; window_to: number; state: string }>();
 
   return NextResponse.json({
     etsyCalls: calls,
-    ledger: { windowsPlanned: planned.length, windowsCompletedThisRun: windowsDone,
+    ledger: { windowsPlanned: planned.length, staleWindowsSuperseded: superseded,
+      windowsCompletedThisRun: windowsDone,
       rowsIngested: ledgerRows, errors: windowErrors,
       windowsOutstanding: outstanding((remaining.results ?? []).map(row =>
         ({ from: row.window_from, to: row.window_to, state: row.state as never }))).length },

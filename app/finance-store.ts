@@ -168,7 +168,7 @@ export async function financialHealth(userId: string, shopId: number) {
     unmatchedReceipts: await one(`SELECT COUNT(*) AS n FROM finance_receipts WHERE user_id = ? AND shop_id = ? AND match_status = 'unmatched'`),
     ambiguousMatches: await one(`SELECT COUNT(*) AS n FROM finance_receipts WHERE user_id = ? AND shop_id = ? AND match_status = 'ambiguous'`),
     unmatchedPrintifyOrders: await one(`SELECT COUNT(*) AS n FROM finance_production WHERE user_id = ? AND shop_id = ? AND receipt_id IS NULL`),
-    incompleteWindows: await one(`SELECT COUNT(*) AS n FROM finance_windows WHERE user_id = ? AND shop_id = ? AND state <> 'complete'`),
+    incompleteWindows: await one(`SELECT COUNT(*) AS n FROM finance_windows WHERE user_id = ? AND shop_id = ? AND state IN ('pending', 'failed')`),
     failedWindows: await one(`SELECT COUNT(*) AS n FROM finance_windows WHERE user_id = ? AND shop_id = ? AND state = 'failed'`),
     adjustments: await one(`SELECT COUNT(*) AS n FROM finance_adjustments WHERE user_id = ? AND shop_id = ? AND reversed_by IS NULL`),
     rollupsStored: await one(`SELECT COUNT(*) AS n FROM finance_rollups WHERE user_id = ? AND shop_id = ?`),
