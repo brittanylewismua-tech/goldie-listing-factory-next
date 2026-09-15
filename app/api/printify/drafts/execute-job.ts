@@ -104,7 +104,9 @@ export async function executeDraftJob(input:DraftJobInput,idempotencyKey:string,
   async function saveUploads(){const uploadKey=await writeJobObject(bindings.ARTWORK,user.userId,checkpoint.workflowId,"uploads.json",{ids:uploadedImageIds,previews:uploadedArtworkPreviewUrls});await saveCheckpoint({phase:"uploaded",uploadKey});}
 
     const productId = session.product_id;
-    const shop = { id: session.shop_id };
+    const templateForShop = JSON.parse(session.template_json) as { shop_title?: string; shop_count?: number };
+    const shop = { id: session.shop_id, title: String(templateForShop.shop_title ?? ""),
+      count: Number(templateForShop.shop_count ?? 1) };
     const template = JSON.parse(session.template_json) as TemplateProduct;
     await db.prepare("UPDATE printify_batch_sessions SET expires_at = unixepoch() + 21600 WHERE id = ? AND user_id = ?").bind(body.batchId, user.userId).run();
 
@@ -299,7 +301,8 @@ export async function executeDraftJob(input:DraftJobInput,idempotencyKey:string,
        This is required for every new draft, not only back prints, so a future
        Printify surcharge or provider change cannot bypass the same safeguard. */
     const costReview=actualCostReview(costVariants,body.variantCosts,body.variantPrices);
-    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, sourceTemplateId:session.product_id, blueprintId:template.blueprint_id, providerId:template.print_provider_id, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", selectedVariantIds:finalVariantIds, previewUrl, artworkPreviewUrls:uploadedArtworkPreviewUrls, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), colorPreviewImageDetails:colorPreviewImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
+    const draft = { id: created.id, placement, placementDebug, batchId:body.batchId, sourceTemplateId:session.product_id, blueprintId:template.blueprint_id, providerId:template.print_provider_id, clientId: body.clientId ?? body.fileName, name: body.fileName, title, tags: body.tags ?? [], description:body.description??template.description??"", selectedVariantIds:finalVariantIds, previewUrl, artworkPreviewUrls:uploadedArtworkPreviewUrls, printifyImages: productImages.map((image) => image.src).filter(Boolean), printifyImageDetails:productImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), colorPreviewImageDetails:colorPreviewImages.filter(image=>image.src).map(image=>({src:image.src!,variantIds:image.variant_ids||[],position:image.position||""})), shopId: shop.id, printifyShopName: shop.title, printifyShopCount: shop.count,
+      editorUrl: `https://printify.com/app/editor/${created.id}`, status: "Created",costReview };
     // A successfully created product must still be recorded if optional media
     // compaction is temporarily unavailable. A later edit can compact it.
     const packedDraft=await packDraftMedia(draft,user.userId,runtimeEnv().ARTWORK!).catch(()=>draft);

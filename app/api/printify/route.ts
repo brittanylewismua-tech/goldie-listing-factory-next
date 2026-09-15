@@ -325,6 +325,20 @@ export async function POST(request: Request) {
     const batchId = crypto.randomUUID();
     const expiresAt = Math.floor(Date.now() / 1000) + 6 * 60 * 60;
     const safeTemplate = {
+      /*
+        D1449 - WHICH PRINTIFY STORE THE DRAFTS LAND IN.
+
+        Goldie searches every store the member has and builds in whichever one
+        holds the template, which is right. But Printify's own links carry no
+        store, so its interface opens whatever store the member last selected
+        - and a member with more than one store gets "This listing isn't
+        available in the selected store" on a draft that exists perfectly well.
+
+        The name rides along in the template blob so the draft can say where
+        it is. No migration, no extra Printify call.
+      */
+      shop_title: found.shop.title ?? "",
+      shop_count: shops.length,
       id: found.product.id,
       blueprint_id: found.product.blueprint_id,
       print_provider_id: found.product.print_provider_id,
