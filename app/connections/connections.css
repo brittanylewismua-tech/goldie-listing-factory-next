@@ -1,0 +1,38 @@
+.conn {
+  --ink: #1b1b1f; --muted: #6b6b76; --line: #e6e4e0; --paper: #fbfaf8;
+  --good: #2f7d59; --warn: #9a6a12; --risk: #a33a3a;
+  max-width: 620px; margin: 0 auto; padding: 24px 20px 72px; color: var(--ink);
+  font: 16px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.conn h1 { font-size: 1.4rem; margin: 0 0 4px; }
+.conn .lede { color: var(--muted); margin: 0 0 22px; font-size: 0.95rem; }
+.conn h2 {
+  font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 26px 0 10px; font-weight: 600;
+}
+.shop {
+  border: 1px solid var(--line); border-radius: 14px; background: #fff;
+  padding: 16px; margin-bottom: 12px;
+}
+.shop .name { font-weight: 650; overflow-wrap: anywhere; display: block; }
+.shop .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+.badge {
+  font-size: 0.76rem; padding: 3px 9px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted);
+}
+.badge[data-on="yes"] { color: var(--good); border-color: var(--good); }
+.badge[data-on="warn"] { color: var(--warn); border-color: var(--warn); }
+.shop .fact { color: var(--muted); font-size: 0.86rem; margin: 2px 0; }
+.shop .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.shop a, .shop button {
+  min-height: 44px; line-height: 44px; padding: 0 16px;
+  border: 1px solid var(--line); border-radius: 12px; background: #fff;
+  color: var(--ink); text-decoration: none; font-size: 0.9rem; cursor: pointer;
+}
+.shop button.quiet { color: var(--muted); }
+.effect {
+  border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px;
+  margin-top: 10px; color: var(--muted); font-size: 0.88rem; background: var(--paper);
+}
+.empty { border: 1px dashed var(--line); border-radius: 14px; padding: 18px; color: var(--muted); background: #fff; }
+.conn .error { color: var(--risk); font-size: 0.92rem; }

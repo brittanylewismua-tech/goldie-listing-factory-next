@@ -4557,13 +4557,20 @@ html, body { background: var(--lf-paper); }
 
 /* Not ready, and visibly so. Hiding it would leave no sense of what is
    coming; making it look live would be a lie you discover by clicking. */
-.hub-tool.soon{background:#141414;color:#8d8d8d;border:1px dashed #333;cursor:default}
-.hub-tool.soon:hover{transform:none;border-color:#333}
-.hub-tool.soon .hub-icon{background:#1f1f1f;color:#8d8d8d}
-.hub-tool.soon b{color:#cfcfcf}
-.hub-tool.soon .hub-what{color:#7d7d7d}
-.hub-soon{margin-top:4px;font-size:11px;font-weight:800;letter-spacing:.08em;
-  text-transform:uppercase;color:#ff4fc3}
+/* The coming-soon tile is gone with the tools it advertised. A permanent
+   "coming soon" is a promise nobody made, and the two tools it named — Hot
+   List and a customer-service bot — are not part of Goldie. */
+.hub-desktop{margin-top:4px;font-size:11px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:#8d8d8d}
+
+/* The status strip above the doors. Every line is a link to the thing it is
+   about, and the whole strip is absent when it has nothing to say. */
+.status-strip{display:grid;gap:8px;margin:0 0 28px}
+.status-line{display:block;padding:12px 14px;min-height:44px;border-radius:12px;
+  border:1px solid #2a2a2a;background:#141414;color:#e8e8e8;text-decoration:none;
+  font-size:14px;line-height:1.45}
+.status-line.act{border-color:#ff4fc3;color:#fff}
+.status-line.quiet{color:#9a9a9a;border-style:dashed}
 
 /* A bare `footer` rule in approved-functional.css paints every footer in the
    app a translucent plum, which put a band across the bottom of this page.

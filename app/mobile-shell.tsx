@@ -26,10 +26,10 @@ import { usePathname } from "next/navigation";
 */
 const TABS = [
   { href: "/home", label: "Home", glyph: "◆" },
-  { href: "/hot-list", label: "Watch", glyph: "◈" },
+  { href: "/market-watch", label: "Watch", glyph: "◈" },
   { href: "/design-scanner", label: "Scan", glyph: "⊚" },
   { href: "/shop-map", label: "My Shop", glyph: "▦" },
-  { href: "/account", label: "More", glyph: "≡" },
+  { href: "/more", label: "More", glyph: "≡" },
 ];
 
 /* Sign-in and landing pages: a five-tab bar around one decision is noise. */

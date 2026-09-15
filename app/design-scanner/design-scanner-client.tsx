@@ -100,15 +100,22 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
   useEffect(() => { void loadHistory(); }, [loadHistory]);
 
   useEffect(() => {
-    /* Saved Market Watch niches, offered as a shortcut. Choosing one does not
-       subscribe the member to anything. */
+    /*
+      Saved MARKET WATCH niches, not Shop Map worlds.
+
+      This read Shop Map, which is the member's OWN shop — the wrong source
+      entirely: Design Scanner compares against the marketplace, and a niche
+      the member has been watching already has a normalized definition and a
+      live cohort behind it. Picking one here reuses that definition exactly,
+      and does not subscribe them to anything new.
+    */
     (async () => {
       try {
-        const response = await fetch("/api/shop-map/map");
+        const response = await fetch("/api/market-watch/niches");
         if (!response.ok) return;
-        const body = await response.json() as { worlds?: Array<{ name?: string }> };
-        setSavedNiches((body.worlds ?? []).map(world => String(world.name ?? ""))
-          .filter(name => name && name !== "Unclassified"));
+        const body = await response.json() as { watches?: Array<{ phrase?: string }> };
+        setSavedNiches((body.watches ?? []).map(watch => String(watch.phrase ?? ""))
+          .filter(Boolean));
       } catch { /* the field still accepts anything typed */ }
     })();
   }, []);
@@ -187,10 +194,10 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
         <input id="niche" type="text" value={niche} placeholder="bachelorette, dog mom, teacher…"
           onChange={event => setNiche(event.target.value)} />
         {savedNiches.length > 0 && (
-          <select aria-label="Use a saved niche" value=""
+          <select aria-label="Use a niche you are watching" value=""
             onChange={event => event.target.value && setNiche(event.target.value)}
             style={{ marginTop: 10 }}>
-            <option value="">Or use one of your niches…</option>
+            <option value="">Or use a niche you are watching…</option>
             {savedNiches.map(name => <option key={name} value={name}>{name}</option>)}
           </select>
         )}
