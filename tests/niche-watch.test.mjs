@@ -123,3 +123,59 @@ test("no inferred sales count and no bestseller language anywhere", () => {
   for (const line of Object.values(LABELS))
     assert.doesNotMatch(line, /sold|sales|bestseller/i);
 });
+
+/* -------------------------------------------------------- morning update */
+import { buildUpdate, NOISE, NOTHING_NEW } from "../app/market-update.ts";
+
+const niche = (over = {}) => ({ phrase: "bachelorette", newlyMoving: 0,
+  newlyRepeated: 0, moving: 40, shops: 30, ...over });
+const shop = (over = {}) => ({ shopName: "a shop", shopId: 1,
+  headline: "Buyers keep mentioning slow delivery.", support: 6, ...over });
+
+test("an update with nothing in it is not produced", () => {
+  const update = buildUpdate([niche()], []);
+  assert.equal(update.empty, true);
+  assert.equal(update.lines.length, 0);
+  assert.match(NOTHING_NEW, /Nothing new in your watches/);
+});
+
+test("a healthy but unchanged niche is not news", () => {
+  /* 40 listings moving is good. It is not a reason to wake anybody. */
+  assert.equal(buildUpdate([niche({ moving: 40 })], []).empty, true);
+});
+
+test("a niche earns a line only when something newly qualified", () => {
+  const update = buildUpdate([niche({ newlyMoving: 3, newlyRepeated: 1 })], []);
+  assert.equal(update.empty, false);
+  assert.match(update.lines[0], /3 listings newly showing momentum/);
+  assert.match(update.lines[0], /1 listing now showing repeated momentum/);
+});
+
+test("a level that fell never becomes a negative line", () => {
+  const update = buildUpdate([niche({ newlyMoving: -4 })], []);
+  assert.equal(update.empty, true);
+});
+
+test("one review is never a shop pattern", () => {
+  assert.equal(buildUpdate([], [shop({ support: 1 })]).empty, true);
+  assert.equal(buildUpdate([], [shop({ support: 6 })]).empty, false);
+});
+
+test("no noise line can reach the update", () => {
+  const update = buildUpdate([niche({ newlyMoving: 2 })], [shop()]);
+  const text = update.lines.join(" ").toLowerCase();
+  for (const noise of NOISE)
+    assert.ok(!text.includes(noise), `the update said "${noise}"`);
+});
+
+test("the update never infers sales or says bestseller", () => {
+  const update = buildUpdate([niche({ newlyMoving: 5 })], [shop()]);
+  const text = update.lines.join(" ").toLowerCase();
+  for (const banned of ["bestseller", "sold", "sales", "units"])
+    assert.ok(!text.includes(banned), `the update said "${banned}"`);
+});
+
+test("the update needs no paid call", () => {
+  const code = readFileSync(new URL("../app/market-update.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(code, /fal\.run|anthropic|openai|fetch\(/i);
+});
