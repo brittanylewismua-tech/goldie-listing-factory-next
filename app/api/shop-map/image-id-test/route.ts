@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
+import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 
 /**
@@ -150,6 +151,27 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     return NextResponse.json({
       error: "This creates a draft listing on the connected shop. Add ?confirm=create-and-delete-test-draft to run it.",
     }, { status: 400 });
+
+  /*
+    DO NOT CREATE WHAT YOU CANNOT REMOVE.
+
+    The first run created a draft and then discovered that deleting a listing
+    needs `listings_d`, which this connection does not have — so a test that
+    promised to clean up after itself left a draft in somebody's shop instead.
+    The capability is checked before anything is created now, and the run is
+    refused rather than started.
+  */
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const grant = await db
+    .prepare(`SELECT scopes FROM etsy_connections WHERE user_id = ? AND is_active = 1`)
+    .bind(user.userId).first<{ scopes: string | null }>();
+  const canDelete = Boolean(grant?.scopes?.split(/\s+/).includes("listings_d"));
+  if (!canDelete)
+    return NextResponse.json({
+      refused: "This test creates a draft listing, and deleting one needs Etsy's listings_d permission, which this connection does not have. Nothing was created.",
+      grantedScopes: grant?.scopes ?? null,
+      whatWouldBeNeeded: "listings_d",
+    }, { status: 412 });
 
   const connection = await etsyConnection(user.userId);
   const shopId = connection.shopId;

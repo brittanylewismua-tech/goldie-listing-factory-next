@@ -94,3 +94,14 @@ test("the test images are built, not fetched from our own origin", () => {
   assert.match(source, /solidPng\(600, \[12, 10, 14\]\)/);
   assert.doesNotMatch(source, /goldieSiteUrl/);
 });
+
+test("it refuses to create a draft it would not be able to delete", () => {
+  /* The first run created one and then discovered deleting needs listings_d,
+     leaving a draft in the seller's shop. Capability is checked first now. */
+  assert.match(source, /DO NOT CREATE WHAT YOU CANNOT REMOVE/);
+  assert.match(source, /includes\("listings_d"\)/);
+  assert.match(source, /Nothing was created\./);
+  /* And the check sits before the creation. */
+  assert.ok(source.indexOf("listings_d") < source.indexOf("state: \"draft\""),
+    "the capability check must precede creating the draft");
+});
