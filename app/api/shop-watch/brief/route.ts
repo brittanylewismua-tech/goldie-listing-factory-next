@@ -26,11 +26,33 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
       { status: 403 });
 
   const db = (env as unknown as { DB: D1Database }).DB;
+  /*
+    THE NAME LIVES ON THE SHARED SHOP ROW, NOT THE MEMBER'S WATCH.
+
+    This asked `member_shop_watches` for `shop_name`. That table has `label`;
+    the name is on `watched_shops`. D1 threw, the catch below swallowed it, and
+    Shop Watch rendered an empty list for every member — the same failure shape
+    as D1433, where a query for columns the table did not have made What
+    Changed permanently blank.
+
+    So the name is joined from the table that holds it, `label` is the
+    fallback, and a query failure is now REPORTED rather than returned as "you
+    are watching nothing".
+  */
+  let queryFailed = "";
   const watched = await db.prepare(
-    `SELECT shop_id, shop_name FROM member_shop_watches WHERE user_id = ? ORDER BY added_at DESC LIMIT 25`)
+    `SELECT m.shop_id AS shop_id,
+            COALESCE(NULLIF(w.shop_name, ''), NULLIF(m.label, ''), '') AS shop_name
+       FROM member_shop_watches m
+       LEFT JOIN watched_shops w ON w.shop_id = m.shop_id
+      WHERE m.user_id = ? AND m.paused = 0
+      ORDER BY m.added_at DESC LIMIT 25`)
     .bind(user.userId)
     .all<{ shop_id: number; shop_name: string }>()
-    .catch(() => ({ results: [] as Array<{ shop_id: number; shop_name: string }> }));
+    .catch(error => {
+      queryFailed = error instanceof Error ? error.message : "watch list unavailable";
+      return { results: [] as Array<{ shop_id: number; shop_name: string }> };
+    });
 
   const shops = [];
   for (const row of watched.results ?? []) {
@@ -53,6 +75,9 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
 
   return NextResponse.json({
     flag: SHOP_WATCH_FLAG,
+    /* An empty list because nothing is watched and an empty list because the
+       query broke are different, and the member is told which. */
+    ...(queryFailed ? { error: queryFailed } : {}),
     shops,
     health: await shopWatchBetaHealth(),
     reminder: "Reviews are evidence that somebody reviewed. They are not sales, and no listing sale count is derived from them.",

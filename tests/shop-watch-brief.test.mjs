@@ -73,7 +73,8 @@ test("health counts come from stored rows and name the sharing saving", () => {
 test("a member sees only their own watch list", () => {
   const route = readFileSync(new URL(
     "../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
-  assert.match(route, /WHERE user_id = \?/);
+  /* Qualified or not, the watch list is filtered by the signed-in member. */
+  assert.match(route, /WHERE (?:[a-z]+\.)?user_id = \?/);
   /* No parameter can name another member's watches. */
   assert.doesNotMatch(route, /searchParams\.get\("user|targetUser/);
 });

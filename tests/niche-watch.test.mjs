@@ -286,3 +286,36 @@ test("a watch with no previous day contributes nothing to the update", () => {
      or opening the page twice this morning erases an overnight change. */
   assert.match(source, /observed_day < \?/);
 });
+
+test("every column Shop Watch reads exists on the table it reads from", () => {
+  /* Twice now a query has asked for a column the table does not have, the
+     catch has swallowed the error, and a section has rendered permanently
+     empty. This compares the SELECTed columns against the CREATE TABLE. */
+  const store = readFileSync(new URL("../app/shop-watch.ts", import.meta.url), "utf8");
+  const route = readFileSync(
+    new URL("../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
+
+  const columnsOf = name => {
+    const start = store.indexOf(`CREATE TABLE IF NOT EXISTS ${name} (`);
+    if (start < 0) return null;
+    const body = store.slice(start, store.indexOf(")`", start));
+    return new Set([...body.matchAll(/^\s*([a-z_]+)\s+(INTEGER|TEXT|REAL)/gm)]
+      .map(match => match[1]));
+  };
+  const member = columnsOf("member_shop_watches");
+  assert.ok(member, "member_shop_watches is not defined where expected");
+
+  /* Columns the brief route reads with an m. prefix must be on that table. */
+  for (const match of route.matchAll(/\bm\.([a-z_]+)\b/g))
+    assert.ok(member.has(match[1]),
+      `the brief reads member_shop_watches.${match[1]}, which does not exist`);
+  assert.ok(!member.has("shop_name"),
+    "member_shop_watches gained shop_name; the join can be simplified");
+});
+
+test("a broken watch query is reported, never shown as watching nothing", () => {
+  const route = readFileSync(
+    new URL("../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
+  assert.match(route, /queryFailed/);
+  assert.match(route, /\.\.\.\(queryFailed \? \{ error: queryFailed \} : \{\}\)/);
+});
