@@ -26,9 +26,16 @@ export const GET = withErrorLog("support-printify-store", async (request: Reques
   if (!caller || !isOwner(caller))
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
-  const email = (new URL(request.url).searchParams.get("email") ?? "").trim().toLowerCase();
-  if (!email) return NextResponse.json({ error: "Pass ?email= the member's sign-in email." },
-    { status: 400 });
+  const parameters = new URL(request.url).searchParams;
+  const email = (parameters.get("email") ?? "").trim().toLowerCase();
+  /*
+    Support arrives with a name, not a sign-in address. A partial search over
+    the addresses already recorded against builds finds the account without
+    anyone having to know how the member signs in.
+  */
+  const search = (parameters.get("q") ?? "").trim().toLowerCase();
+  if (!email && !search)
+    return NextResponse.json({ error: "Pass ?email= or ?q= a name fragment." }, { status: 400 });
 
   const db = (env as unknown as { DB: D1Database }).DB;
   /*
@@ -42,10 +49,28 @@ export const GET = withErrorLog("support-printify-store", async (request: Reques
     `SELECT user_id FROM billing_customers WHERE LOWER(email) = ? LIMIT 1`,
   ];
   let userId = "";
-  for (const sql of lookups) {
-    if (userId) break;
-    const row = await db.prepare(sql).bind(email).first<{ user_id: string }>().catch(() => null);
-    userId = row?.user_id ?? "";
+  let matchedEmail = email;
+  if (email)
+    for (const sql of lookups) {
+      if (userId) break;
+      const row = await db.prepare(sql).bind(email).first<{ user_id: string }>().catch(() => null);
+      userId = row?.user_id ?? "";
+    }
+
+  /* Searching by name returns the candidates rather than picking one: two
+     members could share a first name, and acting on the wrong account is
+     worse than asking which. */
+  if (!userId && search) {
+    const candidates = await db.prepare(
+      `SELECT DISTINCT user_id, user_email FROM printify_diagnostics
+        WHERE LOWER(user_email) LIKE ? ORDER BY rowid DESC LIMIT 10`)
+      .bind(`%${search}%`).all<{ user_id: string; user_email: string }>()
+      .catch(() => ({ results: [] }));
+    const rows = (candidates.results ?? []) as Array<{ user_id: string; user_email: string }>;
+    if (rows.length === 1) { userId = rows[0].user_id; matchedEmail = rows[0].user_email; }
+    else if (rows.length > 1)
+      return NextResponse.json({ found: false, matches: rows.map(row => row.user_email),
+        note: "More than one account matches. Re-run with ?email= one of these." });
   }
 
   if (!userId)
@@ -110,6 +135,7 @@ export const GET = withErrorLog("support-printify-store", async (request: Reques
 
   return NextResponse.json({
     found: true,
+    account: matchedEmail,
     buildsByStore: ((diagnosed.results ?? []) as Array<{ shop_id: number; builds: number }>)
       .map(row => ({ storeId: Number(row.shop_id), builds: Number(row.builds),
         storeName: stores.find(store => store.id === Number(row.shop_id))?.title
