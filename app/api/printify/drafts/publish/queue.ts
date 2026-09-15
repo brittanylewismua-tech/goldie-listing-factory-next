@@ -1,3 +1,9 @@
+import { canaryFor, productGate } from "@/app/listing-flow-canary";
+import { recordSelection, recordPublished } from "@/app/publish-identity";
+import { MAPPING_VERSION } from "@/app/blueprint-registry";
+import { productFamily } from "@/app/product-type-utils";
+import { EXTRACTION_SCHEMA_VERSION, DESIGN_MODEL_VERSION } from "@/app/design-intelligence";
+import { COPY_PROMPT_VERSION, COPY_MODEL_VERSION } from "@/app/family-copy";
 import { env } from "cloudflare:workers";
 import { decryptPrintifyToken } from "../../token-crypto";
 import { etsyBudget } from "../../../etsy/client";
@@ -16,7 +22,7 @@ import { unpackDraftMedia, type MediaBucket } from "@/app/draft-media-storage";
    fields stay as the fallback so jobs queued before this still drain. */
 type ProductSettings={indices?:number[];selections?:number[];shippingProfileId?:number};
 type Settings={printifyImageIndices:number[];printifyImageSelections:Record<string,number[]>;etsyShippingProfileId:number;byProduct?:Record<string,ProductSettings>};
-type Draft={id:string;batchId?:string;shopId:number;title?:string;tags?:string[];description?:string;etsyDetails?:unknown};
+type Draft={id:string;batchId?:string;shopId:number;title?:string;tags?:string[];description?:string;etsyDetails?:unknown;blueprint_id?:number};
 type Runtime={DB:D1Database;PRINTIFY_TOKEN_KEY?:string;ARTWORK:MediaBucket};
 const runtime=()=>env as unknown as Runtime;
 const MAX_CONCURRENT_LISTINGS=4;
@@ -87,6 +93,38 @@ export async function processNextPublishItem(userId:string,jobId:string){
        again: The Listing Factory's own link record first, then Printify's external Etsy id.
        Either one means the listing exists and must not be created a second
        time - which is what makes retrying an interrupted item safe. */
+    /*
+      D1430 · THE GATE RUNS BEFORE ETSY SEES ANYTHING.
+
+      Identity is recorded at selection, and the mapping is checked before a
+      single paid call or a single Etsy request. A blueprint nobody has
+      verified is queued by id and routed by the canary's configured
+      behaviour - it never reaches Etsy carrying a guessed category.
+
+      Awaited, not fire-and-forget: this is the listing's audit trail, and
+      the reason the historical scan recovered nothing was that none of it
+      was ever written.
+    */
+    const blueprintId=Number(draft.blueprint_id??0)||null;
+    const blueprintTitle=String(draft.title??"");
+    const identityId=`${userId}:${draft.id}`;
+    const decision=await canaryFor(userId);
+    const gate=await productGate(decision,{blueprintId,blueprintTitle});
+    await recordSelection({id:identityId,userId,batchId:draft.batchId||"",identity:{
+      printifyBlueprintId:blueprintId,
+      printifyBlueprintTitleSnapshot:blueprintTitle,
+      printifyProductId:draft.id,
+      productFamily:productFamily(blueprintTitle),
+      taxonomyMappingVersion:MAPPING_VERSION,
+      etsyTaxonomyNodeId:gate.flow==="new"?gate.mapping.etsyTaxonomyNodeId:null,
+      requiredPropertyPayload:{},
+      designIntelligenceVersion:`${EXTRACTION_SCHEMA_VERSION}:${DESIGN_MODEL_VERSION}`,
+      familyCopyVersion:`${COPY_PROMPT_VERSION}:${COPY_MODEL_VERSION}`,
+      unresolvedReason:blueprintId?"":"draft carried no blueprint id",
+    }});
+    /* Stops here, before any Etsy call. The member is told plainly. */
+    if(gate.flow==="stop")throw new Error(gate.status);
+
     const linked=await runtime().DB.prepare("SELECT etsy_listing_id FROM etsy_listing_links WHERE printify_product_id=? AND user_id=? AND etsy_listing_id>0").bind(draft.id,userId).first<{etsy_listing_id:number}>();
     let listingId=Number(linked?.etsy_listing_id)||0;
     if(!listingId){
@@ -155,6 +193,8 @@ export async function processNextPublishItem(userId:string,jobId:string){
     const selection=clean(forProduct.selections)||clean(settings.printifyImageSelections[draft.id])||clean(forProduct.indices)||settings.printifyImageIndices;
     const shippingProfileId=Number(forProduct.shippingProfileId)||settings.etsyShippingProfileId;
     const result=await finishEtsyListing(userId,{...draft,etsyShippingProfileId:shippingProfileId,etsyDetails:draft.etsyDetails as {category?:string;attributes?:Record<string,string>;optional?:Record<string,string>}},listingId,selection),apiCalls=result.apiCalls,resultJson=JSON.stringify({printifyProductId:draft.id,etsyListingId:listingId,url:result.url});
+    /* The identity follows the listing id into the completed record. */
+    await recordPublished({id:identityId,etsyListingId:String(listingId),requiredPropertyPayload:{},etsyTaxonomyNodeId:gate.flow==="new"?gate.mapping.etsyTaxonomyNodeId:null});
     await runtime().DB.batch([runtime().DB.prepare("UPDATE etsy_publish_items SET status='completed',result_json=?,last_error=NULL,locked_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(resultJson,item.id),runtime().DB.prepare("INSERT INTO etsy_listing_usage (user_product,user_id,product_id,job_id,etsy_listing_id,api_calls,published_at) VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(user_product) DO UPDATE SET job_id=excluded.job_id,etsy_listing_id=excluded.etsy_listing_id,api_calls=excluded.api_calls").bind(`${userId}:${draft.id}`,userId,draft.id,jobId,listingId,apiCalls)]);
   }catch(error){const message=error instanceof Error?error.message:"The Listing Factory could not finish this listing.",attempt=item.attempts+1,retryable=attempt<5&&!/different shop|missing|required listing field|Choose an Etsy shipping profile/i.test(message),delay=Math.min(900,30*2**Math.max(0,attempt-1));await runtime().DB.prepare("UPDATE etsy_publish_items SET status=?,available_at=?,last_error=?,locked_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(retryable?"queued":"failed",retryable?now+delay:0,message,item.id).run();if(!retryable)await runtime().DB.prepare("UPDATE etsy_publish_jobs SET last_error=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(message,jobId).run();
     /* D475 - publishing is the one step that costs money and the one step that

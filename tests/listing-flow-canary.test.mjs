@@ -38,3 +38,27 @@ test("a member gate and a product gate must both say yes", () => {
   assert.match(module, /queueUnknownBlueprint\(blueprintId, blueprintTitle\)/);
   assert.match(module, /guessed category/);
 });
+
+test("the live publish path gates before Etsy and records identity", () => {
+  const queue = readFileSync(new URL(
+    "../app/api/printify/drafts/publish/queue.ts", import.meta.url), "utf8");
+  /* The gate and the identity write must both precede the publish call. */
+  const gateAt = queue.indexOf("await productGate(");
+  const selectionAt = queue.indexOf("await recordSelection(");
+  /* The call inside the item loop, not the helper defined above it. */
+  const publishAt = queue.indexOf("readPrintifyPublishState(fetch,token,draft.shopId");
+  assert.ok(gateAt > 0 && selectionAt > 0, "the publish path does not gate or record");
+  assert.ok(gateAt < publishAt, "the gate runs after Etsy is contacted");
+  assert.ok(selectionAt < publishAt, "identity is recorded after publishing");
+  /* A stop must throw before anything reaches Etsy. */
+  assert.match(queue, /if\(gate\.flow==="stop"\)throw new Error\(gate\.status\)/);
+  /* And the identity follows the listing id into the completed record. */
+  assert.match(queue, /recordPublished\(\{id:identityId/);
+});
+
+test("identity capture is awaited, not fire-and-forget", () => {
+  const queue = readFileSync(new URL(
+    "../app/api/printify/drafts/publish/queue.ts", import.meta.url), "utf8");
+  assert.match(queue, /await recordSelection\(/);
+  assert.match(queue, /await recordPublished\(/);
+});
