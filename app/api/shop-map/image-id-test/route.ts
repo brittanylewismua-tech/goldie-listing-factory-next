@@ -147,11 +147,6 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     });
   }
 
-  if (parameters.get("confirm") !== "create-and-delete-test-draft")
-    return NextResponse.json({
-      error: "This creates a draft listing on the connected shop. Add ?confirm=create-and-delete-test-draft to run it.",
-    }, { status: 400 });
-
   /*
     RUNNING AGAINST A DRAFT THAT ALREADY EXISTS.
 
@@ -163,6 +158,15 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     a single byte is uploaded.
   */
   const existing = Number(parameters.get("existing"));
+
+  /* The confirmation exists because creating a listing is a real change to
+     somebody's shop. Measuring a draft that is already there creates nothing,
+     so it does not need the same gate — only the proof that the draft is ours
+     and unpublished, which happens below. */
+  if (!existing && parameters.get("confirm") !== "create-and-delete-test-draft")
+    return NextResponse.json({
+      error: "This creates a draft listing on the connected shop. Add ?confirm=create-and-delete-test-draft to run it.",
+    }, { status: 400 });
 
   /*
     DO NOT CREATE WHAT YOU CANNOT REMOVE.

@@ -81,7 +81,8 @@
 /* D1412 refuses to create a test draft it would not be able to delete. */
 /* D1413 measures image identity against a draft that already exists, creating
    and deleting nothing. */
-export const BUILD_MARKER = "D1413";
+/* D1414 lets the existing draft be measured without the creation gate. */
+export const BUILD_MARKER = "D1414";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
