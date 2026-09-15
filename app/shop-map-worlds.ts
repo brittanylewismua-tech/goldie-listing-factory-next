@@ -50,6 +50,23 @@ export type World = {
 };
 
 /* Words that repeat across any shop and describe nothing about it. */
+/*
+  GARMENT WORDS DESCRIBE THE BLANK, NOT THE CUSTOMER.
+
+  The first live run produced worlds called "Unisex Heavy Cotton", "Hooded
+  Sweatshirt", "Short Sleeve Unisex" and "One Piece Swimsuit". Those are
+  product descriptions. A seller reading them learns nothing about who buys
+  from her, and they crowd out the worlds that mean something.
+
+  A phrase is only a world when it survives with a non-garment word in it.
+*/
+const GARMENT = new Set(["unisex", "heavy", "cotton", "blend", "hooded", "hoodie",
+  "sweatshirt", "crewneck", "sleeve", "sleeves", "short", "long", "piece",
+  "swimsuit", "tank", "top", "tops", "case", "cases", "iphone", "samsung",
+  "mug", "tumbler", "sticker", "stickers", "tote", "bag", "poster", "blanket",
+  "shirt", "shirts", "tee", "tees", "garment", "dyed", "jersey", "premium",
+  "classic", "soft", "style", "fit", "colors", "color", "colour"]);
+
 const STOP = new Set(["the", "and", "for", "with", "you", "your", "our", "this",
   "that", "from", "shirt", "tee", "t", "gift", "gifts", "women", "womens", "men",
   "mens", "unisex", "funny", "cute", "best", "new", "custom", "personalized",
@@ -70,6 +87,8 @@ export function repeatedPhrases(listings: Listing[], minimumListings = 3) {
         const phrase = parts.slice(index, index + size);
         /* A phrase made only of filler is filler. */
         if (phrase.every(word => STOP.has(word))) continue;
+        /* Every word describing the blank means the phrase describes the blank. */
+        if (phrase.every(word => GARMENT.has(word) || STOP.has(word))) continue;
         if (phrase.some(word => word.length < 2)) continue;
         local.add(phrase.join(" "));
       }
@@ -173,7 +192,15 @@ export function buildWorlds(
       .filter(row => row.worldIds.includes(world.id))
       .map(row => row.listingId);
 
-  return { worlds: worlds.filter(world => world.listingIds.length > 0), assignments };
+  /*
+    A world with nothing in it is not a world. Phrase and tag worlds that
+    caught a couple of dead listings and no sales are noise on a small screen,
+    so they are dropped rather than shown at zero.
+  */
+  return {
+    worlds: worlds.filter(world => world.listingIds.length > 0),
+    assignments,
+  };
 }
 
 /** Member controls, applied over the automatic grouping without touching source data. */

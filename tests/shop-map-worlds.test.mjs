@@ -275,3 +275,22 @@ test("a measure nobody scored on cannot corroborate a direction", () => {
     "a tied-at-zero measure was counted as a lead");
   assert.equal(result.leadingMeasures.includes("recent 90 days"), false);
 });
+
+test("a garment description never becomes a world", () => {
+  /* Live, the first run produced "Unisex Heavy Cotton" and "Hooded
+     Sweatshirt" as worlds. They describe the blank, not the customer. */
+  const listings = [1, 2, 3, 4].map(id =>
+    listing(id, { title: `Unisex Heavy Cotton Tee Hooded Sweatshirt ${id}` }));
+  const { worlds } = buildWorlds(listings);
+  for (const world of worlds)
+    assert.doesNotMatch(world.label, /unisex heavy|hooded sweatshirt|short sleeve/i,
+      `"${world.label}" describes the product, not the customer`);
+});
+
+test("a real customer phrase still survives beside garment words", () => {
+  const listings = [1, 2, 3].map(id =>
+    listing(id, { title: `Trail Running Unisex Heavy Cotton Tee ${id}` }));
+  const { worlds } = buildWorlds(listings);
+  assert.ok(worlds.some(world => /trail running/i.test(world.label)),
+    "the meaningful phrase was dropped along with the garment words");
+});

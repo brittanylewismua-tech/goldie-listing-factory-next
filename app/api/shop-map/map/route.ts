@@ -204,6 +204,10 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
     } : { label: "No clear direction yet", finding: found.finding,
       reason: found.reason || "Not enough evidence across the worlds yet." },
     worlds: worldPerformance
+      /* A world with no sales AND no active listings is dead weight on a
+         phone screen: it cannot be acted on and it pushes down the ones that
+         can. It stays in the data, it just is not shown. */
+      .filter(world => world.orders > 0 || world.activeListings > 0)
       .sort((a, b) => b.revenueMinor - a.revenueMinor)
       .map(world => ({
         worldId: world.worldId, label: world.label,

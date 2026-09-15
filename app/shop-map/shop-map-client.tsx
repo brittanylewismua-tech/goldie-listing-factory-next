@@ -79,7 +79,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
                   <span className="shop-map-world-label">{world.label}</span>
                   <span className="shop-map-world-figure">{money(world.revenueMinor)}</span>
                   <span className="shop-map-world-meta">
-                    {world.activeListings} active · {world.orders} orders ·
+                    {world.activeListings} active · {world.orders}
+                    {world.orders === 1 ? " order" : " orders"} ·
                     {` ${Math.round(shareOfRevenue * 100)}% of revenue`}
                   </span>
                   <span className="shop-map-bar" aria-hidden="true">
@@ -100,9 +101,13 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         <h2>Needs attention</h2>
         <ul>
           {map.needsAttention?.unclassifiedListings
-            ? <li>{map.needsAttention.unclassifiedListings} listings aren’t in a world yet</li> : null}
+            ? <li>{map.needsAttention.unclassifiedListings}{" "}
+              {map.needsAttention.unclassifiedListings === 1 ? "listing isn’t" : "listings aren’t"}
+              {" "}in a world yet</li> : null}
           {map.needsAttention?.missingProductionCosts
-            ? <li>{map.needsAttention.missingProductionCosts} orders have no production cost</li> : null}
+            ? <li>{map.needsAttention.missingProductionCosts}{" "}
+              {map.needsAttention.missingProductionCosts === 1 ? "order has" : "orders have"}
+              {" "}no production cost</li> : null}
           {(map.needsAttention?.overbuiltWorlds ?? []).map(world =>
             <li key={world.label}>{world.reason}</li>)}
           {!map.needsAttention?.unclassifiedListings
