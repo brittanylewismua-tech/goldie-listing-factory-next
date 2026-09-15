@@ -8,6 +8,7 @@ import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
 import { guidance, standout } from "@/app/shop-map-guidance";
 import { collapseFacets } from "@/app/niche-classifier";
+import { rejectAsNiche } from "@/app/shop-map-identity";
 import { resolveCost, profitState, type CostRule } from "@/app/shop-map-cost-rules";
 import { monthWindow, monthOf } from "@/app/finance-month";
 import { shopTimezone } from "@/app/finance-store";
@@ -144,6 +145,14 @@ async function buildMap(request: Request) {
     /* A dropped category leaves its listings unclassified, which is honest. */
     if (dropped.has(stored)) continue;
     const label = rename.get(stored) ?? stored;
+    /*
+      A label the gate refuses gets no override at all.
+
+      Pointing a listing at a niche that is never created left it neither in
+      a niche nor unclassified: 235 + 38 came to 273 against 293, and twenty
+      listings simply disappeared from the map's own arithmetic.
+    */
+    if (rejectAsNiche(label)) continue;
     classifiedNiches.add(label);
     overrides.set(listingId, [`niche:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`]);
   }

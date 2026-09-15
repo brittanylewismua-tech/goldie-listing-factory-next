@@ -215,10 +215,19 @@ export function buildWorlds(
       productFamilies: [] });
   }
 
-  /* A member's own move outranks every rule above. */
-  for (const [listingId, worldIds] of overrides)
-    claimed.set(listingId, { ids: [...worldIds],
+  /*
+    A member's own move outranks every rule above - but only to a niche that
+    exists. An override pointing at a niche nothing created left the listing
+    in neither state: not in a niche, and not counted as unclassified either,
+    so it vanished from the arithmetic entirely.
+  */
+  const existing = new Set(worlds.map(world => world.id));
+  for (const [listingId, worldIds] of overrides) {
+    const real = worldIds.filter(id => existing.has(id));
+    if (!real.length) { claimed.delete(listingId); continue; }
+    claimed.set(listingId, { ids: real,
       evidence: [classifiedNiches.size ? "grouped from this listing's wording" : "moved here by you"] });
+  }
 
   const secondaryBy = new Map<number, string[]>();
   for (const row of read) {

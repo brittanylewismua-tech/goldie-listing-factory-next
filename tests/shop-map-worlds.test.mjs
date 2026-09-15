@@ -28,12 +28,19 @@ test("a listing with no customer logic is left unclassified, not binned", () => 
 });
 
 test("a member's move overrides the automatic grouping", () => {
-  const listings = [1, 2, 3].map(id => listing(id, { title: `Dog Mom Dachshund ${id}` }));
-  const { assignments } = buildWorlds(listings, {
-    overrides: new Map([[2, ["section:custom"]]]) });
-  const moved = assignments.find(row => row.listingId === 2);
-  assert.deepEqual(moved.worldIds, ["section:custom"]);
+  const listings = [
+    ...[1, 2, 3].map(id => listing(id, { title: `Dog Mom Dachshund ${id}` })),
+    ...[4, 5, 6].map(id => listing(id, { title: `Nurse Life Shift ${id}` })),
+  ];
+  const { worlds, assignments } = buildWorlds(listings);
+  /* Move a listing into a niche that actually exists - an override to a
+     niche nothing created would leave it in neither state. */
+  const target = worlds.find(world => !world.listingIds.includes(2)).id;
+  const after = buildWorlds(listings, { overrides: new Map([[2, [target]]]) });
+  const moved = after.assignments.find(row => row.listingId === 2);
+  assert.deepEqual(moved.worldIds, [target]);
   assert.match(moved.evidence[0], /moved here by you/);
+  assert.equal(assignments.length, listings.length);
 });
 
 const world = (over = {}) => ({

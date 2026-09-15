@@ -243,3 +243,21 @@ test("classified plus unclassified equals the shop, on every measure", () => {
     assert.equal(parts, whole, `${name}: ${parts} != ${whole}`);
   }
 });
+
+test("a listing can never be neither classified nor unclassified", () => {
+  /* An override pointing at a niche the gate refuses left 20 listings in
+     neither state: 235 + 38 came to 273 against 293. */
+  const { worlds, assignments } = buildWorlds(shop, {
+    /* "Girls Tshirts" is refused, so no niche is created for it. */
+    overrides: new Map([[1, ["niche:girls-tshirts"]]]),
+    classifiedNiches: new Set(["Girls Tshirts", "Political Protest"]),
+  });
+  const inNiches = new Set(worlds.flatMap(world => world.listingIds));
+  for (const row of assignments) {
+    const placed = inNiches.has(row.listingId);
+    assert.ok(placed !== row.unclassified,
+      `listing ${row.listingId} is ${placed ? "in a niche AND" : "in no niche and NOT"} unclassified`);
+  }
+  const unclassified = assignments.filter(row => row.unclassified).length;
+  assert.equal(inNiches.size + unclassified, shop.length);
+});
