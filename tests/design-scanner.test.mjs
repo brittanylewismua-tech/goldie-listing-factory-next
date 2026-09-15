@@ -393,3 +393,73 @@ test("no field in the schema can carry content", () => {
       || field === "wordCount",
       `${field} could carry the design's content`);
 });
+
+/* -------------------------------------------------- upload and threshold */
+import { constructionOnly, meetsThreshold, THRESHOLD } from "../app/scan-record.ts";
+
+const upload = (over = {}) => ({ typography: "bold sans", textHierarchy: "single line",
+  composition: "centered", illustration: "none", textToArt: 0.9,
+  colorStrategy: "two colour", contrast: "high", density: "medium",
+  printCoverage: 0.45, thumbnailReadability: "readable", mechanism: "bold slogan",
+  wordCount: 4, visibleWording: "BRIDE SQUAD", ...over });
+
+test("the member's wording never reaches the comparison layer", () => {
+  const forComparison = constructionOnly(upload());
+  assert.ok(!("visibleWording" in forComparison));
+  assert.ok(!JSON.stringify(forComparison).toLowerCase().includes("bride"));
+});
+
+test("the comparison function has no field that can carry wording", () => {
+  const code = readFileSync(new URL("../app/design-compare.ts", import.meta.url), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  /* It never reads a wording field off either side. "bold slogan" is a
+     construction CATEGORY and "your wording is about as long" is a length
+     remark, so the ban is on the access, not on the English word. */
+  assert.doesNotMatch(code, /\.\s*(visibleWording|wording|slogan|phrase|subject|title)\b/);
+  assert.doesNotMatch(code, /visibleWording/);
+  /* And the Ingredients type it accepts declares no such field. */
+  const shape = code.slice(code.indexOf("export type Ingredients"),
+    code.indexOf("export type Alignment"));
+  assert.doesNotMatch(shape, /wording|slogan|phrase|subject|title|text:/i);
+});
+
+const shape = (over = {}) => ({ listings: 45, shops: 41, repeatedMovement: 24,
+  withUsableImage: 44, ...over });
+
+test("a cohort that clears every gate is allowed", () => {
+  assert.equal(meetsThreshold(shape()).ok, true);
+});
+
+test("each gate refuses with its own reason, in the member's language", () => {
+  const small = meetsThreshold(shape({ listings: 6, shops: 6, repeatedMovement: 1, withUsableImage: 6 }));
+  assert.equal(small.refusal.kind, "cohort-too-small");
+  assert.match(small.refusal.because, /at least 12/);
+
+  const narrow = meetsThreshold(shape({ listings: 20, shops: 3, withUsableImage: 20 }));
+  assert.equal(narrow.refusal.kind, "no-shop-diversity");
+  assert.match(narrow.refusal.because, /only 3 shops/);
+
+  const once = meetsThreshold(shape({ repeatedMovement: 2 }));
+  assert.equal(once.refusal.kind, "no-repeated-movement");
+  assert.match(once.refusal.because, /not yet a pattern/);
+
+  const blind = meetsThreshold(shape({ withUsableImage: 10 }));
+  assert.equal(blind.refusal.kind, "images-unusable");
+});
+
+test("no refusal promises sales or blames the member's design", () => {
+  for (const bad of [shape({ listings: 3 }), shape({ shops: 2 }),
+    shape({ repeatedMovement: 0 }), shape({ withUsableImage: 1 })]) {
+    const verdict = meetsThreshold(bad);
+    const text = verdict.refusal.because.toLowerCase();
+    for (const banned of ["your design", "will sell", "bestseller", "bad", "poor"])
+      assert.ok(!text.includes(banned), `a refusal said "${banned}"`);
+  }
+});
+
+test("the threshold is documented as a beta rule, not a standard", () => {
+  const text = readFileSync(new URL("../app/scan-record.ts", import.meta.url), "utf8");
+  assert.match(text, /INTERNAL BETA RULE, NOT A STATISTICAL STANDARD/);
+  assert.deepEqual({ ...THRESHOLD },
+    { listings: 12, shops: 8, repeatedMovement: 5, usableImageShare: 0.8 });
+});
