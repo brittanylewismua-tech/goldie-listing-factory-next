@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { guidance, MIN_ORDERS_TO_ADVISE } from "../app/shop-map-guidance.ts";
+import { guidance, standout, MIN_ORDERS_TO_ADVISE } from "../app/shop-map-guidance.ts";
 
 const niche = (over = {}) => ({
   worldId: "n", label: "N", activeListings: 10, orders: 20, units: 20,
@@ -67,4 +67,41 @@ test("an emerging niche is recognised from recent share", () => {
       orders: 40, ordersLast90: 1 }),
   ]);
   assert.equal(found.find(row => row.nicheId === "a").headline, "Emerging");
+});
+
+test("nothing outperforming is said plainly, not dressed as advice", () => {
+  /* Two niches each earning roughly their shelf share is the absence of
+     evidence, not a reason to make more. */
+  const niches = [
+    niche({ worldId: "a", label: "Feminist", activeListings: 70, revenueMinor: 73_000, orders: 40, ordersLast90: 8 }),
+    niche({ worldId: "b", label: "Political", activeListings: 30, revenueMinor: 27_000, orders: 20, ordersLast90: 4 }),
+  ];
+  const advice = guidance(niches);
+  const result = standout(niches, advice);
+  assert.equal(result.hasStandout, false);
+  assert.match(result.headline, /No standout opportunity yet/);
+  assert.ok(result.nextStep.length > 0, "no next step was offered");
+  /* And it does not tell her to make more without leverage. */
+  assert.doesNotMatch(result.headline, /create more|add listings/i);
+});
+
+test("real leverage is surfaced as the standout", () => {
+  const niches = [
+    niche({ worldId: "a", label: "Horses", activeListings: 3, revenueMinor: 80_000, orders: 40 }),
+    niche({ worldId: "b", label: "Other", activeListings: 60, revenueMinor: 10_000, orders: 10 }),
+  ];
+  const result = standout(niches, guidance(niches));
+  assert.equal(result.hasStandout, true);
+  assert.match(result.nextStep, /\d+% of revenue/);
+});
+
+test("keep building no longer implies making more", () => {
+  const niches = [
+    niche({ worldId: "a", activeListings: 50, revenueMinor: 50_000, orders: 20, ordersLast90: 5 }),
+    niche({ worldId: "b", activeListings: 50, revenueMinor: 50_000, orders: 20, ordersLast90: 5 }),
+  ];
+  for (const row of guidance(niches).filter(entry => entry.headline === "Keep building")) {
+    assert.match(row.advice, /Maintain/);
+    assert.match(row.reason, /no leverage to act on/);
+  }
 });

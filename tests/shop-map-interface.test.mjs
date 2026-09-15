@@ -150,3 +150,11 @@ test("review evidence is shown as reviews, never as sales", () => {
   const block = client.slice(client.indexOf("world.reviews"));
   assert.doesNotMatch(block.slice(0, 300), /sale|sold/i);
 });
+
+test("no standout is stated before any per-niche advice", () => {
+  const block = client.slice(client.indexOf("Where to focus"));
+  assert.match(block, /shop-map-standout/);
+  assert.match(block, /map\.standout && !map\.standout\.hasStandout/);
+  /* It appears above the list, not buried under it. */
+  assert.ok(block.indexOf("shop-map-standout") < block.indexOf("shop-map-focus"));
+});

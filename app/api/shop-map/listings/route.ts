@@ -161,6 +161,75 @@ export const GET = withErrorLog("shop-map-listings", async (request: Request) =>
     }
   }
 
+  /*
+    THE SELLER'S OWN REVIEWS, KEPT APART FROM THE WATCHED SHOPS'.
+
+    shop_reviews holds competitor evidence gathered by Shop Watch. Mixing the
+    seller's own reviews into it would blur whose evidence is whose, so they
+    live in their own table with their own freshness and high-water mark.
+
+    A review time is when somebody wrote a review. It is never a sale time.
+  */
+  let reviewsStored = 0;
+  if (parameters.get("reviews") === "1") {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS shop_map_own_reviews (
+      user_id TEXT NOT NULL,
+      shop_id INTEGER NOT NULL,
+      transaction_id INTEGER NOT NULL,
+      listing_id INTEGER,
+      rating INTEGER,
+      review TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL,
+      ingested_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, shop_id, transaction_id))`).run();
+    await db.prepare(
+      `CREATE INDEX IF NOT EXISTS shop_map_own_reviews_listing
+         ON shop_map_own_reviews (user_id, shop_id, listing_id)`).run();
+
+    const state = await db.prepare(
+      `SELECT high_water FROM finance_sources
+        WHERE user_id = ? AND shop_id = ? AND source = 'own-reviews'`)
+      .bind(user.userId, shopId).first<{ high_water: number }>().catch(() => null);
+    /* Overlap a little: a review can be edited after it was written. */
+    const since = Math.max(0, Number(state?.high_water ?? 0) - 7 * 86_400);
+    let newest = Number(state?.high_water ?? 0);
+
+    for (let page = 0; page < 12; page += 1) {
+      const answer = await etsy(
+        `/shops/${shopId}/reviews?limit=100&offset=${page * 100}`
+        + (since ? `&min_created=${since}` : ""));
+      if (answer.status !== 200) break;
+      const results = ((answer.body as { results?: Array<Record<string, unknown>> })?.results) ?? [];
+      if (!results.length) break;
+      for (const row of results) {
+        const transactionId = Number(row.transaction_id ?? 0);
+        if (!transactionId) continue;
+        const created = Number(row.create_timestamp ?? row.created_timestamp ?? 0);
+        if (created > newest) newest = created;
+        await db.prepare(
+          `INSERT INTO shop_map_own_reviews
+             (user_id, shop_id, transaction_id, listing_id, rating, review, created_at, ingested_at)
+           VALUES (?,?,?,?,?,?,?,?)
+           ON CONFLICT(user_id, shop_id, transaction_id) DO UPDATE SET
+             rating = excluded.rating, review = excluded.review`)
+          .bind(user.userId, shopId, transactionId,
+            Number(row.listing_id ?? 0) || null,
+            row.rating === null || row.rating === undefined ? null : Number(row.rating),
+            String(row.review ?? ""), created, now)
+          .run();
+        reviewsStored += 1;
+      }
+      if (results.length < 100) break;
+    }
+
+    await db.prepare(
+      `INSERT INTO finance_sources (user_id, shop_id, source, refreshed_at, high_water)
+       VALUES (?,?,'own-reviews',?,?)
+       ON CONFLICT(user_id, shop_id, source) DO UPDATE SET
+         refreshed_at = excluded.refreshed_at, high_water = excluded.high_water`)
+      .bind(user.userId, shopId, now, newest).run();
+  }
+
   /* Sales from the transactions already ingested. Nothing else becomes a sale. */
   const sales = await db.prepare(
     `SELECT COUNT(*) AS n FROM shop_map_listing_sales WHERE user_id = ? AND shop_id = ?`)
@@ -172,7 +241,7 @@ export const GET = withErrorLog("shop-map-listings", async (request: Request) =>
     fieldsExposed: {
       views: fieldsSeen.views, favorites: fieldsSeen.favorites, created: fieldsSeen.created,
     },
-    salesStored, salesRowsHeld: sales?.n ?? 0,
+    salesStored, reviewsStored, salesRowsHeld: sales?.n ?? 0,
     nextSalesFrom: parameters.get("sales") === "1"
       ? Math.max(0, Number(parameters.get("salesFrom")) || 0)
         + Math.min(8, Math.max(1, Number(parameters.get("receipts")) || 4)) : null,

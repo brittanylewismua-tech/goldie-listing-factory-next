@@ -37,7 +37,10 @@ export type Listing = {
 
 export type Assignment = {
   listingId: number;
+  /* Exactly one, or none. Everything financial is summed from this. */
   worldIds: string[];
+  /* Browsing context only. Carries no orders, revenue, profit or reviews. */
+  secondaryWorldIds: string[];
   evidence: string[];
   unclassified: boolean;
 };
@@ -140,13 +143,19 @@ export function buildWorlds(
   /* Group by customer identity. Product family rides along as evidence. */
   const grouped = new Map<string, typeof read>();
   for (const row of read) {
-    /* Primary niche, plus a secondary when the overlap is real. */
-    for (const label of [nicheFor(row.dimensions), row.dimensions.secondaryNiche]) {
-      if (!label) continue;
-      /* The gate applies to automatic labels too, not only to the output. */
-      if (rejectAsNiche(label)) continue;
-      grouped.set(label, [...(grouped.get(label) ?? []), row]);
-    }
+    /*
+      ONE PRIMARY NICHE PER LISTING. THE ARITHMETIC DEPENDS ON IT.
+
+      Adding a listing to its secondary niche as well made the counts total
+      385 against 293 listings, which meant its orders and revenue were
+      counted twice in the shop's own totals. A secondary niche is browsing
+      context; it never receives money.
+    */
+    const primary = nicheFor(row.dimensions);
+    if (!primary) continue;
+    /* The gate applies to automatic labels too, not only to the output. */
+    if (rejectAsNiche(primary)) continue;
+    grouped.set(primary, [...(grouped.get(primary) ?? []), row]);
   }
 
   const worlds: World[] = [];
@@ -183,11 +192,23 @@ export function buildWorlds(
   for (const [listingId, worldIds] of overrides)
     claimed.set(listingId, { ids: [...worldIds], evidence: ["moved here by you"] });
 
+  const secondaryBy = new Map<number, string[]>();
+  for (const row of read) {
+    const second = row.dimensions.secondaryNiche;
+    if (!second || rejectAsNiche(second)) continue;
+    const id = `niche:${second.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    /* Only to a niche that actually exists, and never to its own primary. */
+    if (!worlds.some(world => world.id === id)) continue;
+    if (claimed.get(row.listing.listingId)?.ids.includes(id)) continue;
+    secondaryBy.set(row.listing.listingId, [id]);
+  }
+
   const assignments: Assignment[] = listings.map(listing => {
     const held = claimed.get(listing.listingId);
     return {
       listingId: listing.listingId,
-      worldIds: held?.ids ?? [],
+      worldIds: held?.ids.slice(0, 1) ?? [],
+      secondaryWorldIds: secondaryBy.get(listing.listingId) ?? [],
       evidence: held?.evidence ?? [],
       /* Said plainly rather than filed under a friendly-sounding bin. */
       unclassified: !held || held.ids.length === 0,

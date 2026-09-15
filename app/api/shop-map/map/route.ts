@@ -6,7 +6,7 @@ import { env } from "cloudflare:workers";
 import { ensureListingTables, performanceFrom } from "@/app/shop-map-listings";
 import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-map-worlds";
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
-import { guidance } from "@/app/shop-map-guidance";
+import { guidance, standout } from "@/app/shop-map-guidance";
 import { resolveCost, profitState, type CostRule } from "@/app/shop-map-cost-rules";
 import { monthWindow, monthOf } from "@/app/finance-month";
 import { shopTimezone } from "@/app/finance-store";
@@ -125,9 +125,9 @@ async function buildMap(request: Request) {
     it is never a sale and never a sale date.
   */
   const reviewRows = await db.prepare(
-    `SELECT listing_id, rating, review, created_at FROM shop_reviews
-      WHERE listing_id IN (SELECT listing_id FROM shop_map_listings
-                            WHERE user_id = ? AND shop_id = ?)`)
+    /* The seller's OWN reviews. shop_reviews holds watched competitors. */
+    `SELECT listing_id, rating, review, created_at FROM shop_map_own_reviews
+      WHERE user_id = ? AND shop_id = ?`)
     .bind(user.userId, shopId)
     .all<{ listing_id: number; rating: number | null; review: string; created_at: number }>()
     .catch(() => ({ results: [] }));
@@ -248,6 +248,8 @@ async function buildMap(request: Request) {
       orders: receiptTotals?.receipts ?? 0,
     },
     /* Where to Focus: the instruction, and the arithmetic behind it. */
+    standout: standout(worldPerformance,
+      guidance(worldPerformance, { period: recentEnough ? "the last 90 days" : "all time" })),
     whereToFocus: guidance(worldPerformance,
       { period: recentEnough ? "the last 90 days" : "all time" }).slice(0, 5),
     pointingHere: found.worldId ? {

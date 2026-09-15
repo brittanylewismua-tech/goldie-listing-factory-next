@@ -13,6 +13,7 @@ type Map = {
   thisMonth?: { revenueMinor: number; etsyFeesMinor: number; productionCostMinor: number;
     headline: string; profitMinor: number | null; accuracy: string; orders: number };
   whereToFocus?: Focus[];
+  standout?: { hasStandout: boolean; headline: string; nextStep: string };
   worlds?: World[];
   worldsPeriod?: string;
   needsAttention?: { unclassifiedListings: number; missingProductionCosts: number;
@@ -152,6 +153,13 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       {/* 3 · What to do next, each with the arithmetic that produced it. */}
       <section className="shop-map-card">
         <h2>Where to focus</h2>
+        {/* When nothing outperforms its shelf share, say so first. */}
+        {map.standout && !map.standout.hasStandout
+          ? <div className="shop-map-standout">
+              <p className="shop-map-standout-head">{map.standout.headline}</p>
+              <p className="shop-map-standout-next">{map.standout.nextStep}</p>
+            </div>
+          : null}
         <ul className="shop-map-focus">
           {(map.whereToFocus ?? []).map(row => (
             <li key={row.nicheId}>

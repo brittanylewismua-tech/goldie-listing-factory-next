@@ -29,6 +29,37 @@ const percent = (value: number) => `${Math.round(value * 100)}%`;
 
 export const MIN_ORDERS_TO_ADVISE = 5;
 
+export type Standout = { hasStandout: boolean; headline: string; nextStep: string };
+
+/**
+ * Is anything actually outperforming its shelf space?
+ *
+ * Said plainly when nothing is, rather than dressed up as advice. The next
+ * step then comes from the evidence that DOES exist - more data, a niche
+ * with too little coverage to read, or an overbuilt one to pull back from.
+ */
+export function standout(niches: WorldPerformance[], advice: Guidance[]): Standout {
+  const leveraged = advice.find(row =>
+    row.headline === "Focus here" || row.headline === "Expand this niche");
+  if (leveraged)
+    return { hasStandout: true, headline: leveraged.advice, nextStep: leveraged.reason };
+
+  const emerging = advice.find(row => row.headline === "Emerging");
+  const overbuilt = advice.find(row =>
+    row.headline === "Overbuilt" || row.headline === "Reconsider this category");
+  const thin = advice.find(row => row.headline === "Needs more data");
+
+  return {
+    hasStandout: false,
+    headline: "No standout opportunity yet. Your strongest niches are performing "
+      + "roughly in proportion to how many listings they contain.",
+    nextStep: emerging ? emerging.advice
+      : overbuilt ? overbuilt.advice
+      : thin ? thin.advice
+      : "Maintain the current mix and collect more recent data before committing further.",
+  };
+}
+
 export function guidance(
   niches: WorldPerformance[], { period = "the last 90 days" }: { period?: string } = {},
 ): Guidance[] {
@@ -106,12 +137,19 @@ export function guidance(
       continue;
     }
 
+    /*
+      "Keep building" was being said whenever a niche's revenue share merely
+      resembled its listing share. That is not evidence of anything - it is
+      the absence of evidence, and it reads as encouragement to make more of
+      something that has shown no leverage at all.
+    */
     out.push({ nicheId: niche.worldId, label: niche.label, headline: "Keep building",
-      advice: `${niche.label} is performing steadily.`,
+      advice: `Maintain ${niche.label} at its current mix.`,
       reason: `${percent(revenueShare)} of revenue from ${percent(listingShare)} of `
-        + `active listings — roughly in step`
+        + `active listings — in proportion, so there is no leverage to act on`
         + `${averagePerListing > 0 && perListing > averagePerListing
-          ? ", slightly above the shop average per listing" : ""}.`, rank: 50 });
+          ? ", though it earns slightly above the shop average per listing" : ""}.`,
+      rank: 50 });
   }
 
   return out.sort((a, b) => a.rank - b.rank

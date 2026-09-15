@@ -42,3 +42,6 @@
 .shop-map-confirm{margin-top:10px;min-height:44px;padding:10px 16px;border-radius:10px;
   border:1px solid #a33a48;background:#a33a48;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .shop-map-confirm:disabled{opacity:.6}
+.shop-map-standout{margin:0 0 14px;padding:12px;border-radius:10px;background:#faf7f9}
+.shop-map-standout-head{margin:0 0 4px;font-size:15px;line-height:1.45;font-weight:700}
+.shop-map-standout-next{margin:0;font-size:13px;line-height:1.5;opacity:.8}
