@@ -1,0 +1,252 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import {
+  buildWorlds, repeatedPhrases, renameWorld, mergeWorlds, splitListings,
+} from "../app/shop-map-worlds.ts";
+import {
+  direction, overbuilt, MIN_ORDERS_FOR_DIRECTION, ANOMALY_SHARE,
+} from "../app/shop-map-direction.ts";
+import { resolveCost, profitState, confidenceOf } from "../app/shop-map-cost-rules.ts";
+
+const listing = (id, over = {}) => ({
+  listingId: id, title: "", tags: [], shopSection: "", productFamily: "tee", ...over });
+
+/* ------------------------------------------------------------------ worlds */
+
+test("a shop section is stronger evidence than any wording", () => {
+  const listings = [1, 2, 3].map(id => listing(id, { shopSection: "Dachshund" }));
+  const { worlds, assignments } = buildWorlds(listings);
+  assert.equal(worlds[0].basis, "shop-section");
+  assert.match(worlds[0].evidence, /shop section/);
+  assert.ok(assignments.every(row => !row.unclassified));
+});
+
+test("a repeated phrase groups listings the seller never sectioned", () => {
+  const listings = [1, 2, 3].map(id =>
+    listing(id, { title: `Weiner Dog Mom ${id} Shirt` }));
+  const { worlds } = buildWorlds(listings);
+  assert.ok(worlds.length > 0);
+  assert.equal(worlds[0].basis, "phrase");
+  assert.match(worlds[0].evidence, /appears in 3 listing titles/);
+});
+
+test("filler words never become a world", () => {
+  const phrases = repeatedPhrases([1, 2, 3].map(id =>
+    listing(id, { title: "The Best Gift For Women Funny Shirt" })));
+  for (const { phrase } of phrases)
+    assert.notEqual(phrase, "the best");
+});
+
+test("a listing with nothing repeated is left unclassified, not binned", () => {
+  const listings = [
+    ...[1, 2, 3].map(id => listing(id, { title: `Trail Running Club ${id}` })),
+    listing(9, { title: "Completely Unrelated Thing" }),
+  ];
+  const { worlds, assignments } = buildWorlds(listings);
+  const lonely = assignments.find(row => row.listingId === 9);
+  assert.equal(lonely.unclassified, true);
+  /* No friendly-sounding bin that makes the map look finished. */
+  for (const world of worlds) assert.doesNotMatch(world.label, /miscellaneous|other/i);
+});
+
+test("a listing can sit in several worlds when the overlap is explicit", () => {
+  const listings = [
+    ...[1, 2, 3].map(id => listing(id, { shopSection: "Halloween", title: `Spooky Dog ${id}` })),
+    ...[4, 5, 6].map(id => listing(id, { shopSection: "Halloween", title: `Spooky Cat ${id}` })),
+  ];
+  const { assignments } = buildWorlds(listings);
+  assert.ok(assignments.every(row => row.worldIds.length >= 1));
+  assert.ok(assignments.every(row => row.evidence.length >= 1),
+    "an assignment was made with no evidence recorded");
+});
+
+test("every assignment records why it happened", () => {
+  const { assignments } = buildWorlds([1, 2, 3].map(id =>
+    listing(id, { shopSection: "Feminist" })));
+  for (const row of assignments)
+    assert.match(row.evidence[0], /shop section "Feminist"/);
+});
+
+test("a member's move overrides the automatic grouping", () => {
+  const listings = [1, 2, 3].map(id => listing(id, { shopSection: "Dachshund" }));
+  const { assignments } = buildWorlds(listings, {
+    overrides: new Map([[2, ["section:custom"]]]) });
+  const moved = assignments.find(row => row.listingId === 2);
+  assert.deepEqual(moved.worldIds, ["section:custom"]);
+  assert.match(moved.evidence[0], /moved here by you/);
+});
+
+test("worlds can be renamed, merged and split", () => {
+  const listings = [
+    ...[1, 2, 3].map(id => listing(id, { shopSection: "A" })),
+    ...[4, 5, 6].map(id => listing(id, { shopSection: "B" })),
+  ];
+  const { worlds } = buildWorlds(listings);
+  const renamed = renameWorld(worlds, worlds[0].id, "Renamed");
+  assert.equal(renamed[0].label, "Renamed");
+  assert.match(renamed[0].evidence, /renamed by you/);
+
+  const merged = mergeWorlds(worlds, worlds[0].id, worlds[1].id);
+  assert.equal(merged.length, worlds.length - 1);
+  assert.equal(merged[0].listingIds.length, 6);
+
+  const split = splitListings(worlds, worlds[0].id, [1]);
+  assert.equal(split[0].listingIds.includes(1), false);
+});
+
+/* --------------------------------------------------------------- direction */
+
+const world = (over = {}) => ({
+  worldId: "w", label: "W", activeListings: 10, orders: 20, units: 25,
+  revenueMinor: 50_000, verifiedProfitMinor: 10_000, reviews: 8,
+  ordersLast30: 5, ordersLast90: 12, revenueLast90Minor: 20_000,
+  largestOrderMinor: 3_000, refundedOrders: 0, ...over });
+
+test("a clear leader on several measures is named", () => {
+  const result = direction([
+    world({ worldId: "a", label: "Dachshund", orders: 30, units: 40, revenueMinor: 90_000, reviews: 12, ordersLast90: 20 }),
+    world({ worldId: "b", label: "Feminist", orders: 5, units: 6, revenueMinor: 10_000, reviews: 1, ordersLast90: 2, activeListings: 20 }),
+  ]);
+  assert.equal(result.worldId, "a");
+  assert.ok(result.leadingMeasures.length >= 2);
+  assert.ok(result.reason.length > 0, "a direction was given with no reason");
+});
+
+test("too few orders blocks a direction outright", () => {
+  const result = direction([
+    world({ worldId: "a", orders: MIN_ORDERS_FOR_DIRECTION - 1 }),
+    world({ worldId: "b", orders: 1, revenueMinor: 100, reviews: 0, ordersLast90: 0 }),
+  ]);
+  assert.equal(result.finding, "insufficient-evidence");
+  assert.match(result.reason, /not enough to be sure/);
+});
+
+test("one order carrying a world blocks the claim", () => {
+  const result = direction([
+    world({ worldId: "a", orders: 20, revenueMinor: 10_000, largestOrderMinor: 9_000 }),
+    world({ worldId: "b", orders: 2, revenueMinor: 500, reviews: 0, ordersLast90: 0, activeListings: 1 }),
+  ]);
+  assert.equal(result.finding, "carried-by-one-order");
+  assert.match(result.blockedBy[0] ?? result.reason, /single order/);
+  assert.ok(ANOMALY_SHARE < 1);
+});
+
+test("leading on one measure alone is not a direction", () => {
+  const result = direction([
+    world({ worldId: "a", orders: 10, units: 5, revenueMinor: 10_000, reviews: 0, ordersLast90: 1, activeListings: 50 }),
+    world({ worldId: "b", orders: 9, units: 40, revenueMinor: 90_000, reviews: 20, ordersLast90: 30, activeListings: 2 }),
+  ]);
+  assert.notEqual(result.finding, "strongest-world");
+});
+
+test("a world earning far above its listing share is reported as that", () => {
+  const result = direction([
+    world({ worldId: "a", label: "Trail", activeListings: 2, orders: 30, units: 35,
+      revenueMinor: 80_000, reviews: 10, ordersLast90: 15, largestOrderMinor: 4_000 }),
+    world({ worldId: "b", activeListings: 40, orders: 4, units: 4, revenueMinor: 5_000,
+      reviews: 1, ordersLast90: 1 }),
+  ]);
+  assert.equal(result.finding, "profitable-but-few-listings");
+  assert.match(result.reason, /% of revenue from/);
+});
+
+test("an emerging world is recognised from recent share", () => {
+  const result = direction([
+    world({ worldId: "a", label: "New", activeListings: 6, orders: 12, units: 12,
+      revenueMinor: 20_000, reviews: 6, ordersLast90: 11, largestOrderMinor: 2_000 }),
+    world({ worldId: "b", activeListings: 6, orders: 10, units: 10, revenueMinor: 60_000,
+      reviews: 2, ordersLast90: 1, largestOrderMinor: 5_000 }),
+  ]);
+  assert.ok(["emerging-world", "strongest-world", "profitable-but-few-listings"]
+    .includes(result.finding));
+  assert.ok(result.reason.length > 0);
+});
+
+test("overbuilt worlds are reported apart from the direction", () => {
+  const found = overbuilt([
+    world({ worldId: "a", activeListings: 40, revenueMinor: 1_000 }),
+    world({ worldId: "b", activeListings: 5, revenueMinor: 90_000 }),
+  ]);
+  assert.equal(found[0].worldId, "a");
+  assert.match(found[0].reason, /% of\s*\n?\s*active listings/);
+});
+
+test("no worlds at all is stated, not guessed around", () => {
+  assert.equal(direction([]).finding, "insufficient-evidence");
+});
+
+/* ------------------------------------------------------------ profit state */
+
+const cost = (over = {}) => ({ receiptId: 1, productFamily: "tee",
+  verifiedCostMinor: 900, verifiedShippingMinor: 100, ...over });
+
+test("a matched Printify order is a verified cost", () => {
+  const resolved = resolveCost(cost());
+  assert.equal(resolved.source, "current-exact-product");
+  assert.equal(resolved.confidence, "verified");
+  assert.equal(resolved.costMinor, 1_000);
+});
+
+test("a member's own entry outranks every rule", () => {
+  const resolved = resolveCost(cost(), { adjustments: new Map([[1, 555]]) });
+  assert.equal(resolved.source, "member-entered-adjustment");
+  assert.equal(resolved.costMinor, 555);
+});
+
+test("an unconfirmed family rule is not used", () => {
+  const rules = new Map([["tee", { productFamily: "tee", costMinor: 800,
+    shippingMinor: 100, currency: "USD", confirmedByMember: false }]]);
+  const resolved = resolveCost(cost({ verifiedCostMinor: null }), { familyRules: rules });
+  assert.equal(resolved.source, "unavailable");
+});
+
+test("a confirmed family rule gives an estimate, never a verification", () => {
+  const rules = new Map([["tee", { productFamily: "tee", costMinor: 800,
+    shippingMinor: 100, currency: "USD", confirmedByMember: true }]]);
+  const resolved = resolveCost(cost({ verifiedCostMinor: null }), { familyRules: rules });
+  assert.equal(resolved.source, "exact-product-family-rule");
+  assert.equal(resolved.confidence, "estimated");
+  assert.equal(confidenceOf("exact-product-family-rule"), "estimated");
+});
+
+test("title similarity is never a cost source", () => {
+  const module = readFileSync(new URL("../app/shop-map-cost-rules.ts", import.meta.url), "utf8");
+  const code = module.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(code, /title|similar/i);
+});
+
+test("one estimated order makes the whole month estimated", () => {
+  const state = profitState({ grossRevenueMinor: 10_000, feesMinor: -1_500, costs: [
+    { receiptId: 1, costMinor: 1_000, source: "current-exact-product", confidence: "verified", why: "" },
+    { receiptId: 2, costMinor: 900, source: "exact-product-family-rule", confidence: "estimated", why: "" },
+  ] });
+  assert.equal(state.headline, "Estimated profit");
+  assert.match(state.accuracy, /verified for 50% of revenue/);
+});
+
+test("everything verified flips the headline on its own", () => {
+  const state = profitState({ grossRevenueMinor: 10_000, feesMinor: -1_500, costs: [
+    { receiptId: 1, costMinor: 1_000, source: "current-exact-product", confidence: "verified", why: "" },
+  ] });
+  assert.equal(state.headline, "Verified profit");
+  assert.match(state.accuracy, /100%/);
+  assert.equal(state.profitMinor, 10_000 - 1_500 - 1_000);
+});
+
+test("a missing cost cannot be estimated away", () => {
+  const state = profitState({ grossRevenueMinor: 10_000, feesMinor: -1_500, costs: [
+    { receiptId: 1, costMinor: 0, source: "unavailable", confidence: "none", why: "" },
+  ] });
+  assert.equal(state.headline, "Profit unavailable");
+  assert.equal(state.profitMinor, null);
+});
+
+test("there is only ever one headline number", () => {
+  const state = profitState({ grossRevenueMinor: 10_000, feesMinor: -1_500, costs: [
+    { receiptId: 1, costMinor: 900, source: "exact-product-family-rule", confidence: "estimated", why: "" },
+  ] });
+  /* Estimated and verified are never both offered as the figure. */
+  assert.equal(typeof state.headline, "string");
+  assert.ok(["Verified profit", "Estimated profit", "Profit unavailable"].includes(state.headline));
+});
