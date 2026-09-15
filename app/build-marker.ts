@@ -68,7 +68,9 @@
 /* D1405 asks whether the image Etsy says a buyer saw is still there. */
 /* D1406 makes artwork capture a durable job with retries and a visible
    failure state, accounts for every product, and keeps the original file. */
-export const BUILD_MARKER = "D1406";
+/* D1407 lets no successful publish leave the evidence pipeline, and links a
+   captured design to its listing only on evidence that can carry a claim. */
+export const BUILD_MARKER = "D1407";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

@@ -184,6 +184,49 @@ export async function runCaptureQueue({ maxJobs = 12 } = {}): Promise<QueuePass>
   return pass;
 }
 
+/**
+ * NOTHING PUBLISHED MAY LEAVE THE EVIDENCE PIPELINE.
+ *
+ * The queue is durable once a row exists, but the insert that creates it can
+ * fail — and its failure is deliberately swallowed so a publish never breaks.
+ * That leaves one gap: a listing published successfully with no job and no
+ * capture, invisible forever.
+ *
+ * So the publish record itself is the source of truth. Anything Goldie
+ * published that has neither a completed capture nor a live job is adopted
+ * into the queue here. A swallowed error becomes a delay rather than a hole.
+ */
+export async function adoptPublishedWithoutCapture({ limit = 200 } = {}): Promise<number> {
+  await ensureCaptureQueue();
+  const result = await db().prepare(
+    `INSERT INTO artwork_capture_jobs
+       (user_id, printify_shop_id, printify_product_id, etsy_listing_id, because,
+        next_attempt_at, queued_at)
+     SELECT links.user_id,
+            COALESCE((SELECT shop_id FROM etsy_connections c
+                       WHERE c.user_id = links.user_id AND c.is_active = 1), 0),
+            links.printify_product_id,
+            links.etsy_listing_id,
+            'reconciled-published-without-capture',
+            ?, ?
+       FROM etsy_listing_links links
+      WHERE links.etsy_listing_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM artwork_provenance p
+           WHERE p.user_id = links.user_id
+             AND p.printify_product_id = links.printify_product_id)
+        AND NOT EXISTS (
+          SELECT 1 FROM artwork_capture_jobs j
+           WHERE j.user_id = links.user_id
+             AND j.printify_product_id = links.printify_product_id
+             AND j.state IN ('queued', 'retrying', 'done'))
+      LIMIT ?
+     ON CONFLICT(user_id, printify_product_id, because) DO NOTHING`)
+    .bind(new Date().toISOString(), new Date().toISOString(), limit)
+    .run();
+  return Number(result.meta?.changes ?? 0);
+}
+
 /** What the queue is doing, and what it has given up on. */
 export async function captureQueueHealth(): Promise<Record<string, unknown>> {
   await ensureCaptureQueue();
@@ -197,9 +240,43 @@ export async function captureQueueHealth(): Promise<Record<string, unknown>> {
   const stuck = await db().prepare(
     `SELECT printify_product_id, last_error, attempts FROM artwork_capture_jobs
       WHERE state = 'failed' ORDER BY completed_at DESC LIMIT 8`).all();
+  /*
+    The figure that would have hidden the gap: published listings with nothing
+    holding their design. It is computed from the publish records rather than
+    from the queue, because a queue that lost a row cannot report its own loss.
+  */
+  const orphans = await db().prepare(
+    `SELECT COUNT(*) AS n,
+            MIN(links.updated_at) AS oldest
+       FROM etsy_listing_links links
+      WHERE links.etsy_listing_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM artwork_provenance p
+           WHERE p.user_id = links.user_id
+             AND p.printify_product_id = links.printify_product_id)`)
+    .first<{ n: number; oldest: string | null }>().catch(() => null);
+  const withoutJob = await db().prepare(
+    `SELECT COUNT(*) AS n FROM etsy_listing_links links
+      WHERE links.etsy_listing_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM artwork_provenance p
+           WHERE p.user_id = links.user_id
+             AND p.printify_product_id = links.printify_product_id)
+        AND NOT EXISTS (
+          SELECT 1 FROM artwork_capture_jobs j
+           WHERE j.user_id = links.user_id
+             AND j.printify_product_id = links.printify_product_id)`)
+    .first<{ n: number }>().catch(() => null);
+  const byState = Object.fromEntries(
+    (states.results ?? []).map(row => [row.state, Number(row.n)]));
+
   return {
-    byState: Object.fromEntries((states.results ?? []).map(row => [row.state, Number(row.n)])),
+    byState,
     byOutcome: Object.fromEntries((outcomes.results ?? []).map(row => [row.outcome, Number(row.n)])),
+    publishedWithoutCapture: Number(orphans?.n ?? 0),
+    missingCaptureJob: Number(withoutJob?.n ?? 0),
+    captureBacklog: Number(byState.queued ?? 0) + Number(byState.retrying ?? 0),
+    oldestMissingSince: orphans?.oldest ?? null,
     /* The alert that matters: artwork Goldie tried and failed to keep. */
     permanentlyMissing: stuck.results ?? [],
   };

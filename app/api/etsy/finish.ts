@@ -119,7 +119,18 @@ export async function finishEtsyListing(userId:string,draft:DraftData,listingId:
 
     Still cannot block the publish, and still cannot throw into it.
   */
-  await queueArtworkCapture(userId,draft,listingId).catch(()=>{});
+  await queueArtworkCapture(userId,draft,listingId).catch(async error=>{
+    /*
+      The publish continues, but the failure is written down with everything
+      needed to find it again. A swallowed error with no record is how an
+      evidence gap becomes permanent and invisible; the reconciliation worker
+      will adopt this product anyway, and this row is how anybody knows why.
+    */
+    await env.DB.prepare("INSERT INTO error_log (area,message,path,user_id,created_at) VALUES (?,?,?,?,CURRENT_TIMESTAMP)")
+      .bind("artwork-capture-enqueue",
+        `product ${String(draft.id||"")} listing ${listingId}: ${error instanceof Error?error.message:"failed"}`,
+        "/api/etsy/finish",userId).run().catch(()=>{});
+  });
   await env.DB.prepare("INSERT INTO etsy_listing_links (printify_product_id,user_id,batch_id,etsy_listing_id,status,last_error,updated_at) VALUES (?,?,?,?, 'finished',NULL,CURRENT_TIMESTAMP) ON CONFLICT(printify_product_id) DO UPDATE SET etsy_listing_id=excluded.etsy_listing_id,status='finished',last_error=NULL,updated_at=CURRENT_TIMESTAMP").bind(draft.id,userId,draft.batchId||"",listingId).run();
   return {listingId,shopId:connection.shopId,url:`https://www.etsy.com/listing/${listingId}`,apiCalls:meter.calls};
 }

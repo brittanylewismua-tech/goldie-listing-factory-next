@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
-import { runCaptureQueue } from "@/app/artwork-capture-queue";
+import { adoptPublishedWithoutCapture, runCaptureQueue } from "@/app/artwork-capture-queue";
 
 /**
  * Work the artwork capture queue for one firing.
@@ -17,5 +17,8 @@ export const GET = withErrorLog("artwork-capture-tick", async (request: Request)
   }
   const asked = Number(new URL(request.url).searchParams.get("jobs"));
   const maxJobs = Number.isFinite(asked) && asked > 0 ? Math.min(asked, 60) : 12;
-  return NextResponse.json(await runCaptureQueue({ maxJobs }));
+  /* Reconcile first: a publish whose enqueue failed is adopted before the
+     queue is worked, so the gap closes on the same firing. */
+  const adopted = await adoptPublishedWithoutCapture();
+  return NextResponse.json({ adopted, ...(await runCaptureQueue({ maxJobs })) });
 });
