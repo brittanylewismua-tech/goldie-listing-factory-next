@@ -147,12 +147,19 @@ export const GET = withErrorLog("operations-health", async () => {
   });
 
   await probe("shopMapFinance", async () => {
+    /*
+      The rollup timestamp column is `computed_at`, an integer. An earlier
+      version asked for `built_at`, which belongs to shop_watch_briefs — and
+      this view reported it as BROKEN with the error rather than rendering a
+      healthy empty. That is the rule in this file working as intended, on its
+      own author.
+    */
     const row = await db.prepare(
       `SELECT (SELECT COUNT(*) FROM finance_receipts) AS receipts,
               (SELECT COUNT(*) FROM finance_ledger) AS ledger,
               (SELECT COUNT(*) FROM finance_production) AS production,
               (SELECT COUNT(*) FROM finance_rollups) AS rollups,
-              (SELECT MAX(built_at) FROM finance_rollups) AS builtAt`)
+              (SELECT MAX(computed_at) FROM finance_rollups) AS builtAt`)
       .first<Record<string, string | number>>();
     const at = seconds(row?.builtAt as string);
     return { state: Number(row?.rollups ?? 0) ? ageState(at, 48 * 3_600) : "empty",

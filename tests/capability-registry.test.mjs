@@ -109,3 +109,28 @@ test("the capacity view changes no ceiling", () => {
     assert.ok(!route.includes(write), `the capacity view performs ${write}`);
   assert.match(route, /NO CEILING IS CHANGED HERE/);
 });
+
+test("capacity models against the quota Etsy reports, not the local fallback", () => {
+  /* The fallback is 5,000; Etsy's reported limit for this key is 100,000.
+     Modelling against the fallback understated headroom twentyfold. */
+  const route = readFileSync(new URL(
+    "../app/api/operations/capacity/route.ts", import.meta.url), "utf8");
+  assert.match(route, /const quota = Number\(\(etsy as \{ limit\?: number \} \| null\)\?\.limit\) \|\| etsyQpdLimit\(\);/);
+  assert.match(route, /ceiling: "Etsy calls\/day", at: etsyCalls, limit: quota/);
+  assert.match(route, /quotaSource/);
+});
+
+test("the health view reads finance_rollups columns that exist", () => {
+  const store = readFileSync(new URL("../app/finance-store.ts", import.meta.url), "utf8");
+  const create = store.slice(store.indexOf("CREATE TABLE IF NOT EXISTS finance_rollups"));
+  const columns = new Set([...create.slice(0, 500)
+    .matchAll(/^\s*([a-z_]+)\s+(TEXT|INTEGER|REAL)/gm)].map(match => match[1]));
+  assert.ok(columns.has("computed_at"));
+  assert.ok(!columns.has("built_at"), "finance_rollups gained built_at");
+  const health = readFileSync(new URL(
+    "../app/api/operations/health/route.ts", import.meta.url), "utf8");
+  const block = health.slice(health.indexOf("FROM finance_rollups"));
+  assert.ok(!/MAX\(built_at\) FROM finance_rollups/.test(health),
+    "the health view reads finance_rollups.built_at, which does not exist");
+  void block;
+});

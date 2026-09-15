@@ -32,6 +32,16 @@ export const GET = withErrorLog("operations-capacity", async () => {
 
   const report = await spendReport().catch(() => null);
   const etsy = await etsyBudget().catch(() => null);
+  /*
+    THE REAL QUOTA, NOT THE FALLBACK.
+
+    `etsyQpdLimit()` returns an env default of 5,000 when ETSY_QPD_LIMIT is
+    unset. Etsy's own reported limit for this key is 100,000, and the budget
+    carries it. Modelling capacity against the fallback understated headroom
+    by twenty times — in the one view whose entire job is to answer how much
+    room there is.
+  */
+  const quota = Number((etsy as { limit?: number } | null)?.limit) || etsyQpdLimit();
 
   /* Per-workload truth from the reservation ledger. */
   const since = new Date((now - 86_400) * 1000).toISOString();
@@ -144,7 +154,7 @@ export const GET = withErrorLog("operations-capacity", async () => {
     if (reference?.globalDailyRequests)
       binds.push({ ceiling: "referenceIngestion images/day", at: 100,
         limit: reference.globalDailyRequests });
-    binds.push({ ceiling: "Etsy calls/day", at: etsyCalls, limit: etsyQpdLimit() });
+    binds.push({ ceiling: "Etsy calls/day", at: etsyCalls, limit: quota });
     const first = [...binds].sort((a, b) => (b.at / b.limit) - (a.at / a.limit))[0];
 
     return {
@@ -162,7 +172,8 @@ export const GET = withErrorLog("operations-capacity", async () => {
 
   return NextResponse.json({
     at: now,
-    etsy: { ...etsy, quota: etsyQpdLimit() },
+    etsy: { ...etsy, quota, quotaSource: (etsy as { limit?: number } | null)?.limit
+      ? "reported by Etsy" : "local fallback" },
     spend: report,
     workloads,
     unbounded: workloads.filter(row => row.unboundedRisk).map(row => row.key),
