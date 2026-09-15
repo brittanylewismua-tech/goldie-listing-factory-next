@@ -31,6 +31,8 @@ export type Classified = {
 const LEDGER: Record<string, Classified> = {
   sale: { normalized: "product-revenue", bucket: "revenue", attribution: "receipt",
     profitRelevant: true, why: "Goods sold." },
+  shipping_label: { normalized: "shipping-label", bucket: "cost", attribution: "receipt",
+    profitRelevant: true, why: "Postage the seller bought. A real cost of the sale." },
   shipping: { normalized: "shipping-collected", bucket: "revenue", attribution: "receipt",
     profitRelevant: true, why: "Shipping the buyer paid is money the seller received." },
   tax: { normalized: "marketplace-tax", bucket: "tax", attribution: "receipt",
@@ -76,10 +78,48 @@ const LEDGER: Record<string, Classified> = {
     profitRelevant: true, why: "A credit or fee reversal, reducing cost." },
 };
 
+/*
+  MEASURED: ETSY'S LEDGER HAS NO TYPE FIELD.
+
+  The first pass read entry_type and ledger_entry_type; neither exists, so
+  every one of 3,856 rows classified as unmapped with an empty type and every
+  revenue and fee total came out as zero. Etsy carries the kind of entry in
+  the human-readable `description` - "Transaction fee: ...", "Listing fee",
+  "Sale", "Refund", "Deposit" - so that is what has to be read.
+
+  Matching is on whole phrases anchored to the start where possible, because
+  a description contains the listing title too, and a shirt called "Deposit
+  Day" must not be classified as a bank transfer.
+*/
+const DESCRIPTION_PATTERNS: Array<[RegExp, string]> = [
+  [/^offsite ads?\b|offsite ad fee/i, "offsite_ads"],
+  [/^etsy ads?\b|^advertising\b/i, "advertising"],
+  [/^transaction fee/i, "transaction_fee"],
+  [/^processing fee|^payment processing/i, "processing_fee"],
+  [/^listing fee/i, "listing_fee"],
+  [/^(auto[- ]?)?renew(al)? (fee|sold)/i, "renewal_fee"],
+  [/^regulatory operating fee|^operating fee/i, "regulatory_operating_fee"],
+  [/^shipping label|^postage/i, "shipping_label"],
+  [/^refund/i, "refund"],
+  [/^credit\b|fee refund|fee reversal/i, "credit"],
+  [/^deposit\b|^payout\b/i, "deposit"],
+  [/^tax\b|sales tax|^vat\b/i, "tax"],
+  [/^shipping\b/i, "shipping"],
+  [/^sale\b|^order\b/i, "sale"],
+];
+
 export function classifyLedgerType(rawType: string): Classified {
-  const key = String(rawType ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const text = String(rawType ?? "").trim();
+  const key = text.toLowerCase().replace(/[\s-]+/g, "_");
   const found = LEDGER[key];
   if (found) return found;
+
+  /* Fall back to Etsy's description wording. */
+  for (const [pattern, mapped] of DESCRIPTION_PATTERNS)
+    if (pattern.test(text)) {
+      const entry = LEDGER[mapped];
+      if (entry) return entry;
+    }
   /*
     AN UNKNOWN TYPE IS NOT A ZERO.
 

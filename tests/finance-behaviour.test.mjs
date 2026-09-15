@@ -461,3 +461,30 @@ test("an exact match requires the receipt to exist on our side", () => {
   /* And reconciliation creates no adjustments while testing. */
   assert.doesNotMatch(route, /INSERT INTO finance_adjustments/);
 });
+
+test("Etsy ledger descriptions classify, because there is no type field", () => {
+  /* Measured: 3,856 rows classified as unmapped with an empty type, and
+     every revenue and fee total came out as zero. */
+  assert.equal(classifyLedgerType("Transaction fee: Mama Needs Coffee Tee").normalized,
+    "etsy-transaction-fee");
+  assert.equal(classifyLedgerType("Listing fee").normalized, "etsy-listing-fee");
+  assert.equal(classifyLedgerType("Processing fee").normalized, "etsy-processing-fee");
+  assert.equal(classifyLedgerType("Offsite Ads Fee").normalized, "etsy-offsite-ads-fee");
+  assert.equal(classifyLedgerType("Etsy Ads").normalized, "etsy-advertising-fee");
+  assert.equal(classifyLedgerType("Deposit").normalized, "payout");
+  assert.equal(classifyLedgerType("Refund for order 123").normalized, "refund");
+  assert.equal(classifyLedgerType("Sale").normalized, "product-revenue");
+});
+
+test("a listing title cannot masquerade as a ledger type", () => {
+  /* A shirt called "Deposit Day" is not a bank transfer. Patterns anchor to
+     the start of the description. */
+  const shirt = classifyLedgerType("Transaction fee: Deposit Day Tee");
+  assert.equal(shirt.normalized, "etsy-transaction-fee");
+  assert.notEqual(shirt.bucket, "payout");
+});
+
+test("a shipping label is a cost, not collected shipping", () => {
+  assert.equal(classifyLedgerType("Shipping label").bucket, "cost");
+  assert.equal(classifyLedgerType("Shipping").bucket, "revenue");
+});

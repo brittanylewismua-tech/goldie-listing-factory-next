@@ -122,7 +122,8 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
       }
       const entries = ((answer.body as { results?: Array<Record<string, unknown>> })?.results) ?? [];
       for (const entry of entries) {
-        const rawType = String(entry.entry_type ?? entry.ledger_entry_type ?? "");
+        /* Etsy has no type field; the kind lives in the description. */
+        const rawType = String(entry.description ?? entry.entry_type ?? entry.ledger_entry_type ?? "");
         const kind = classifyLedgerType(rawType);
         const amount = Number(entry.amount ?? 0);
         const divisor = Number(entry.currency_divisor ?? 100) || 100;
