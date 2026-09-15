@@ -162,3 +162,46 @@ export const POST = withErrorLog("design-scanner-analyze-references", async (req
     analysisVersion: ANALYSIS_VERSION,
   });
 });
+
+/**
+ * What is actually stored, so the no-content guarantee can be inspected rather
+ * than trusted. Counts and category distributions only.
+ */
+export const GET = withErrorLog("design-scanner-analysis-read", async () => {
+  const user = await getChatGPTUser();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const rows = await db.prepare(
+    `SELECT payload_json AS payload, provider_cost AS cost FROM reference_analysis
+      WHERE analysis_version = ?`)
+    .bind(ANALYSIS_VERSION).all<{ payload: string; cost: number }>()
+    .catch(() => ({ results: [] as Array<{ payload: string; cost: number }> }));
+
+  const spread = new Map<string, Map<string, number>>();
+  let cost = 0;
+  let longest = 0;
+  for (const row of rows.results ?? []) {
+    cost += Number(row.cost) || 0;
+    let parsed: Record<string, unknown>;
+    try { parsed = JSON.parse(row.payload) as Record<string, unknown>; } catch { continue; }
+    for (const [field, value] of Object.entries(parsed)) {
+      if (typeof value === "string") longest = Math.max(longest, value.length);
+      const bucket = spread.get(field) ?? new Map<string, number>();
+      const key = typeof value === "number" ? "(number)" : String(value);
+      bucket.set(key, (bucket.get(key) ?? 0) + 1);
+      spread.set(field, bucket);
+    }
+  }
+  return NextResponse.json({
+    analyses: (rows.results ?? []).length,
+    measuredCost: Number(cost.toFixed(5)),
+    /* If any stored value were a phrase rather than a category, it would show
+       up here as a long string and as a distribution with no repeats. */
+    longestStoredValue: longest,
+    distribution: [...spread.entries()].map(([field, values]) => ({
+      field, distinct: values.size,
+      values: [...values.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6),
+    })),
+  });
+});

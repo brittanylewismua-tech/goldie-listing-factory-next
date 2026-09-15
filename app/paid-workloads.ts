@@ -80,14 +80,19 @@ export const PAID_WORKLOADS: Workload[] = [
   {
     key: "referenceIngestion",
     what: "One extraction per unique sales-backed reference image, batched.",
-    provider: "anthropic", model: "claude-haiku-4-5-20251001",
-    /* Batch halves it; this is the cache-miss figure after that discount. */
-    unitCost: 0.0020, costBasis: "estimated",
+    provider: "fal / openrouter", model: "google/gemini-2.5-flash",
+    /*
+      MEASURED, not estimated. 44 reference images analysed in one run on
+      2026-09-15 billed $0.03298 — $0.00075 each, against an estimate of
+      $0.0020. The whole 860-listing corpus is therefore about $0.65, or three
+      days inside the approved ceiling.
+    */
+    unitCost: 0.00075, costBasis: "measured",
     customerFacing: false,
     memberDailyLimit: null, memberDailyAttempts: null,
     globalDailyCeiling: 0.25, globalDailyRequests: 100, limitStatus: "approved",
     retries: 1,
-    cachePolicy: "Deduplicated by authorized content hash before the call. An image already analyzed is never analyzed again, for any member.",
+    cachePolicy: "Keyed on the Etsy image identity and the analysis version. An image already analysed at the current version is never analysed again, for any member. A listing that swaps its photo is a new image; a version bump writes a new row and keeps the old one.",
     priority: 9,
     expectedBehaviour: "Steady trickle following new sales. Bounded at 100 images per day.",
   },
