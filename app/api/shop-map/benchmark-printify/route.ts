@@ -174,6 +174,8 @@ export const GET = withErrorLog("shop-map-benchmark-printify", async (request: R
 
   /* ------------------------------------------------------------ the result */
   const byKind = (kind: Scored["kind"]) => scored.filter(pair => pair.kind === kind).map(pair => pair.score);
+  const median = (values: number[]) => values.length
+    ? Number([...values].sort((a, b) => a - b)[Math.floor(values.length / 2)].toFixed(3)) : null;
   const summarise = (values: number[]) => {
     if (!values.length) return null;
     const sorted = [...values].sort((a, b) => a - b);
@@ -253,6 +255,14 @@ export const GET = withErrorLog("shop-map-benchmark-printify", async (request: R
       top3Rate: withTruth.length ? Number((top3 / withTruth.length).toFixed(3)) : null,
       falseConfidenceCases: falseConfidence.length,
       falseConfidenceDesigns: falseConfidence.map(row => row.designHash),
+    },
+    /* Whether the nested pass actually reached the print, or stopped at the
+       garment. A coverage near one means it stopped at the garment. */
+    printRegionsFound: {
+      designs: designs.filter(design => design.region.found).length,
+      designMedianCoverage: median(designs.map(design => design.region.coverage)),
+      mockups: mockups.filter(mockup => mockup.region.found).length,
+      mockupMedianCoverage: median(mockups.map(mockup => mockup.region.coverage)),
     },
     byMockupPosition: Object.entries(
       scored.filter(pair => pair.kind === "positive").reduce((into, pair) => {

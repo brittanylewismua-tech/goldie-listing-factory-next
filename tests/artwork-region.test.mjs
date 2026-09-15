@@ -116,3 +116,42 @@ test("the benchmark writes nothing and reads only the caller", () => {
   for (const statement of route.match(/FROM artwork_provenance[\s\S]*?`/g) ?? [])
     assert.match(statement, /user_id = \?/, "a query reached artwork_provenance unscoped");
 });
+
+test("a design on a garment is found inside the garment, not as the garment", () => {
+  /* A navy shirt filling a white studio frame, with a small white print on
+     it. The first measured run returned coverage 0.78 here — the shirt — and
+     scored true pairs below hard negatives. */
+  const mockup = picture(200, 200, WHITE, [
+    { left: 30, top: 20, right: 170, bottom: 190, colour: NAVY },
+    { left: 85, top: 70, right: 115, bottom: 120, colour: WHITE },
+  ]);
+  const region = printRegion(mockup);
+  assert.ok(region.found);
+  assert.ok(region.coverage < 0.25,
+    `coverage ${region.coverage.toFixed(3)} means the garment was returned as the print`);
+});
+
+test("two shirts of different colours carrying the same print still match", () => {
+  /* A design with internal structure, because a solid block carries no
+     information beyond its outline and would tie with any other block. */
+  const mark = (dx, dy, colour) => [
+    { left: dx + 0, top: dy + 0, right: dx + 40, bottom: dy + 8, colour },
+    { left: dx + 0, top: dy + 16, right: dx + 12, bottom: dy + 44, colour },
+    { left: dx + 28, top: dy + 24, right: dx + 40, bottom: dy + 44, colour },
+  ];
+  const shirt = colour => ({ left: 30, top: 20, right: 170, bottom: 190, colour });
+
+  const onNavy = picture(200, 200, WHITE, [shirt(NAVY), ...mark(80, 60, WHITE)]);
+  const onGrey = picture(200, 200, WHITE, [shirt([130, 130, 130]), ...mark(80, 60, BLACK)]);
+  /* Same shirt, different design — the hard negative. */
+  const elsewhere = picture(200, 200, WHITE, [
+    shirt(NAVY),
+    { left: 80, top: 60, right: 92, bottom: 104, colour: WHITE },
+    { left: 108, top: 60, right: 120, bottom: 104, colour: WHITE },
+  ]);
+
+  const same = compareRegions(printRegion(onNavy), printRegion(onGrey));
+  const different = compareRegions(printRegion(onNavy), printRegion(elsewhere));
+  assert.ok(same.score > different.score,
+    `same print ${same.score.toFixed(3)} did not beat a different print ${different.score.toFixed(3)}`);
+});

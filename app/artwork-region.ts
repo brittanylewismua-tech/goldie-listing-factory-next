@@ -88,7 +88,7 @@ const distance = (a: number[], b: number[]) =>
  */
 export function printRegion(
   source: { width: number; height: number; rgb: Uint8Array },
-  { size = 48, margin = 0.06 }: { size?: number; margin?: number } = {},
+  { size = 48, margin = 0.06, depth = 0 }: { size?: number; margin?: number; depth?: number } = {},
 ): Region {
   const ground = borderColour(source);
   const insetX = Math.floor(source.width * margin);
@@ -127,6 +127,65 @@ export function printRegion(
   const box = found
     ? { left, top, right: right + 1, bottom: bottom + 1 }
     : { left: 0, top: 0, right: source.width, bottom: source.height };
+
+  /*
+    WHAT FILLS THE FRAME IS THE SUBSTRATE, NOT THE PRINT.
+
+    The first run of this measured a print coverage of 0.78 on four of six
+    designs and scored true pairs BELOW hard negatives — worse than the
+    baseline it replaced. The reason is that a mockup's border is the studio
+    backdrop, so "everything unlike the border" is the entire garment, and the
+    comparison went straight back to comparing shirts.
+
+    A garment is one flat colour across most of its area. A design is not. So
+    when the region we just found is dominated by a single colour, that colour
+    is the thing the design was printed ON, and the design is whatever differs
+    from it — one level further in.
+  */
+  /* A print's own bounding box is a small part of the frame; a substrate
+     fills it. Recursing into a tight box would mistake the ink for the cloth
+     and return the gaps between the letters as the design. */
+  const fillsTheFrame = ((box.right - box.left) * (box.bottom - box.top)) / area > 0.35;
+  if (found && fillsTheFrame && depth < 2) {
+    const inside = { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+    const sample = resample(source, inside, 32);
+    const tally = new Map<number, number>();
+    for (let index = 0; index < 32 * 32; index += 1) {
+      const key = ((sample.rgb[index * 3] >> 4) << 8)
+        | ((sample.rgb[index * 3 + 1] >> 4) << 4) | (sample.rgb[index * 3 + 2] >> 4);
+      tally.set(key, (tally.get(key) ?? 0) + 1);
+    }
+    let dominant = 0;
+    for (const count of tally.values()) if (count > dominant) dominant = count;
+    if (dominant / (32 * 32) > 0.55) {
+      const cropped = { width: inside.right - inside.left, height: inside.bottom - inside.top,
+        rgb: new Uint8Array((inside.right - inside.left) * (inside.bottom - inside.top) * 3) };
+      for (let y = 0; y < cropped.height; y += 1)
+        for (let x = 0; x < cropped.width; x += 1) {
+          const from = at(source.rgb, source.width, inside.left + x, inside.top + y);
+          const to = (y * cropped.width + x) * 3;
+          cropped.rgb[to] = source.rgb[from];
+          cropped.rgb[to + 1] = source.rgb[from + 1];
+          cropped.rgb[to + 2] = source.rgb[from + 2];
+        }
+      const deeper = printRegion(cropped, { size, margin: 0.02, depth: depth + 1 });
+      if (deeper.found && deeper.coverage < 0.6) {
+        /* Report the box against the original frame, not against the crop. */
+        const scaleX = (box.right - box.left) / source.width;
+        const scaleY = (box.bottom - box.top) / source.height;
+        return {
+          ...deeper,
+          box: {
+            left: box.left / source.width + deeper.box.left * scaleX,
+            top: box.top / source.height + deeper.box.top * scaleY,
+            right: box.left / source.width + deeper.box.right * scaleX,
+            bottom: box.top / source.height + deeper.box.bottom * scaleY,
+          },
+          coverage: deeper.coverage * ((box.right - box.left) * (box.bottom - box.top)) / area,
+        };
+      }
+    }
+  }
 
   const grid = resample(source, box, size);
   const ink = new Uint8Array(size * size);
