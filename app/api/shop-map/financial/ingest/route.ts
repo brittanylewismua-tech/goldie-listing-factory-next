@@ -96,6 +96,17 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
     superseded += 1;
   }
 
+  /*
+    Re-read completed windows once, to correct rows stored under a misparse.
+    The windows themselves are bookkeeping, not financial source data, and
+    nothing about an Etsy row changes except how Goldie labels it.
+  */
+  if (parameters.get("reparse") === "1")
+    await db.prepare(
+      `UPDATE finance_windows SET state = 'pending', updated_at = ?
+        WHERE user_id = ? AND shop_id = ? AND state = 'complete'`)
+      .bind(now, user.userId, shopId).run();
+
   const pending = await db.prepare(
     `SELECT window_from, window_to, state FROM finance_windows
       WHERE user_id = ? AND shop_id = ? AND state IN ('pending', 'failed')
@@ -135,7 +146,14 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(user_id, shop_id, source_id) DO UPDATE SET
              amount_minor = excluded.amount_minor,
-             source_updated_at = excluded.source_updated_at`)
+             source_updated_at = excluded.source_updated_at,
+             /* Classification is derived from the source, so re-reading the
+                source is allowed to correct a misparse. The amounts and
+                identifiers still come only from Etsy. */
+             raw_type = excluded.raw_type,
+             normalized_type = excluded.normalized_type,
+             bucket = excluded.bucket,
+             attribution = excluded.attribution`)
           .bind(user.userId, shopId, String(entry.entry_id ?? entry.ledger_entry_id ?? ""),
             Number(entry.receipt_id ?? 0) || null, Number(entry.transaction_id ?? 0) || null,
             rawType, kind.normalized, kind.bucket, kind.attribution,
