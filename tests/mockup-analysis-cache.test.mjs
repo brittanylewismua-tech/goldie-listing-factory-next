@@ -30,20 +30,35 @@ test("members never share a cached analysis", () => {
 });
 
 test("simultaneous identical requests reserve exactly one provider job", () => {
-  /* The insert is the lock: one caller gets changes > 0, the other is told
-     to wait rather than starting a second paid job. */
-  assert.match(code, /Number\(claim\.meta\.changes\) > 0/);
-  assert.match(code, /claimed: false/);
-  assert.match(code, /lease_expires <= \?/);
+  /* The conditional write is the lock: one caller changes a row, the other
+     is told to poll rather than starting a second paid job. The behaviour
+     itself is exercised in tests/mockup-analysis-policy.test.mjs. */
+  assert.match(code, /Number\(claimed\.meta\.changes\) > 0/);
+  assert.match(code, /action: "pending"/);
 });
 
 test("a failure is never served back as a valid result", () => {
   const fail = code.slice(code.indexOf("export async function failAnalysis"));
-  assert.match(fail, /state = 'failed', payload_json = NULL/);
-  /* Only a ready row with a payload is ever returned as a hit. */
-  assert.match(code, /existing\?\.state === "ready" && existing\.payload_json/);
-  /* And a failed row can be retaken immediately. */
-  assert.match(code, /state = 'failed'/);
+  assert.match(fail, /payload_json = NULL/);
+  /* Spaced by backoff and counted, never retried on the next request. */
+  assert.match(fail, /next_attempt_at = \?/);
+  assert.match(fail, /nextAttemptAt\(/);
+  assert.match(fail, /settleFailure/);
+});
+
+test("every write is fenced by the generation the worker claimed", () => {
+  for (const name of ["storeAnalysis", "failAnalysis", "reopenAnalysis"]) {
+    const body = code.slice(code.indexOf(`export async function ${name}`));
+    assert.match(body.slice(0, 1200), /AND generation = \?/,
+      `${name} can write without owning the claim`);
+  }
+});
+
+test("the claim is conditioned on the generation that was read", () => {
+  const claim = code.slice(code.indexOf("export async function claimAnalysis"));
+  assert.match(claim, /WHERE \$\{WHERE_KEY\} AND generation = \?/);
+  assert.match(claim, /DO NOTHING/);
+  assert.match(claim, /action: "pending"/);
 });
 
 test("a configuration or model change creates a new entry rather than overwriting", () => {
@@ -54,6 +69,7 @@ test("a configuration or model change creates a new entry rather than overwritin
 });
 
 test("a dead worker cannot hold a mockup forever", () => {
-  assert.match(code, /LEASE_SECONDS/);
-  assert.match(code, /lease_expires > now/);
+  /* The lease lives in the policy module, which the behavioural tests drive
+     end to end; here it only has to be the thing the cache consults. */
+  assert.match(code, /decide\(row, now\)/);
 });

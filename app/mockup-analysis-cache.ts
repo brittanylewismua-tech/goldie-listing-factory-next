@@ -1,4 +1,8 @@
 import { env } from "cloudflare:workers";
+import {
+  decide, stillOwns, settleFailure, nextAttemptAt, reopen,
+  type Row, type Decision,
+} from "@/app/mockup-analysis-policy";
 
 /**
  * THE SAME BYTES ARE NEVER ANALYZED TWICE.
@@ -30,6 +34,12 @@ export async function ensureMockupAnalysisTable() {
     state TEXT NOT NULL DEFAULT 'running',
     payload_json TEXT,
     lease_expires INTEGER NOT NULL DEFAULT 0,
+    /* Fencing token. A worker finishes only the claim it still owns. */
+    generation INTEGER NOT NULL DEFAULT 0,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at INTEGER NOT NULL DEFAULT 0,
+    last_failure TEXT NOT NULL DEFAULT '',
+    reopened_by TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, source_image_hash, operation, configuration_version, model_version))`).run();
 }
@@ -39,98 +49,123 @@ export async function hashBytes(bytes: ArrayBuffer) {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export type Claim =
-  | { hit: true; payload: unknown }
-  | { hit: false; claimed: true }
-  | { hit: false; claimed: false; because: "another request is already running this" };
+export type Key = {
+  userId: string; imageHash: string; operation: Operation;
+  configurationVersion: number; modelVersion: string;
+};
 
-const LEASE_SECONDS = 180;
+const bindKey = (key: Key) =>
+  [key.userId, key.imageHash, key.operation, key.configurationVersion, key.modelVersion];
 
-/**
- * Claim the work, or discover somebody already has it.
- *
- * Two identical requests arriving together must produce ONE provider job.
- * The insert is the lock: whoever writes the row runs the call, and the
- * other waits for the result rather than buying a second copy of it.
- *
- * A lease expiry covers a worker that died mid-call, so one crash cannot
- * block that mockup forever.
- */
-export async function claimAnalysis(
-  { userId, imageHash, operation, configurationVersion, modelVersion }:
-  { userId: string; imageHash: string; operation: Operation;
-    configurationVersion: number; modelVersion: string },
-): Promise<Claim> {
+const WHERE_KEY = `user_id = ? AND source_image_hash = ? AND operation = ?
+        AND configuration_version = ? AND model_version = ?`;
+
+async function readRow(key: Key): Promise<Row | null> {
   await ensureMockupAnalysisTable();
   const db = (env as unknown as { DB: D1Database }).DB;
-  const now = Math.floor(Date.now() / 1000);
-
-  const existing = await db.prepare(
-    `SELECT state, payload_json, lease_expires FROM mockup_analysis_cache
-      WHERE user_id = ? AND source_image_hash = ? AND operation = ?
-        AND configuration_version = ? AND model_version = ?`)
-    .bind(userId, imageHash, operation, configurationVersion, modelVersion)
-    .first<{ state: string; payload_json: string | null; lease_expires: number }>();
-
-  if (existing?.state === "ready" && existing.payload_json) {
-    try { return { hit: true, payload: JSON.parse(existing.payload_json) }; }
-    catch { /* a corrupt row is re-run below */ }
-  }
-  if (existing?.state === "running" && existing.lease_expires > now)
-    return { hit: false, claimed: false, because: "another request is already running this" };
-
-  /* Taking the row - by insert, or by taking over an expired lease - is
-     taking the job. Only one caller can succeed. */
-  const claim = await db.prepare(
-    `INSERT INTO mockup_analysis_cache
-       (user_id, source_image_hash, operation, configuration_version, model_version,
-        state, lease_expires)
-     VALUES (?,?,?,?,?,'running',?)
-     ON CONFLICT(user_id, source_image_hash, operation, configuration_version, model_version)
-       DO UPDATE SET state = 'running', lease_expires = excluded.lease_expires
-       WHERE mockup_analysis_cache.lease_expires <= ?
-          OR mockup_analysis_cache.state = 'failed'`)
-    .bind(userId, imageHash, operation, configurationVersion, modelVersion,
-      now + LEASE_SECONDS, now)
-    .run();
-
-  return Number(claim.meta.changes) > 0
-    ? { hit: false, claimed: true }
-    : { hit: false, claimed: false, because: "another request is already running this" };
-}
-
-export async function storeAnalysis(
-  key: { userId: string; imageHash: string; operation: Operation;
-    configurationVersion: number; modelVersion: string },
-  payload: unknown,
-) {
-  const db = (env as unknown as { DB: D1Database }).DB;
-  await db.prepare(
-    `UPDATE mockup_analysis_cache SET state = 'ready', payload_json = ?, lease_expires = 0
-      WHERE user_id = ? AND source_image_hash = ? AND operation = ?
-        AND configuration_version = ? AND model_version = ?`)
-    .bind(JSON.stringify(payload), key.userId, key.imageHash, key.operation,
-      key.configurationVersion, key.modelVersion)
-    .run();
+  const row = await db.prepare(
+    `SELECT state, payload_json, generation, lease_expires, attempts,
+            next_attempt_at, last_failure, reopened_by
+       FROM mockup_analysis_cache WHERE ${WHERE_KEY}`)
+    .bind(...bindKey(key))
+    .first<{
+      state: string; payload_json: string | null; generation: number;
+      lease_expires: number; attempts: number; next_attempt_at: number;
+      last_failure: string; reopened_by: string;
+    }>();
+  if (!row) return null;
+  let payload: unknown = null;
+  try { payload = row.payload_json ? JSON.parse(row.payload_json) : null; } catch { /* re-run */ }
+  return {
+    state: row.state as Row["state"], payload, generation: row.generation,
+    leaseExpires: row.lease_expires, attempts: row.attempts,
+    nextAttemptAt: row.next_attempt_at, lastFailure: row.last_failure,
+    reopenedBy: row.reopened_by,
+  };
 }
 
 /**
- * A FAILURE NEVER BECOMES A CACHE ENTRY.
+ * Decide, then claim atomically.
  *
- * Storing a failed result would serve the failure back forever without ever
- * paying to find out whether it was transient. The row is marked failed so
- * the next request re-runs it, and the lease is dropped so that can happen
- * immediately.
+ * The UPDATE is conditioned on the generation that was read, so of two
+ * requests arriving together exactly one wins and the other is told to poll.
+ * Nothing here starts a second provider call.
+ */
+export async function claimAnalysis(key: Key): Promise<Decision> {
+  const now = Math.floor(Date.now() / 1000);
+  const row = await readRow(key);
+  const decision = decide(row, now);
+  if (decision.action !== "call") return decision;
+
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const claimed = row
+    ? await db.prepare(
+        `UPDATE mockup_analysis_cache
+            SET state = 'running', generation = ?, lease_expires = ?, attempts = ?
+          WHERE ${WHERE_KEY} AND generation = ?`)
+        .bind(decision.generation, decision.leaseExpires, decision.attempt,
+          ...bindKey(key), row.generation).run()
+    : await db.prepare(
+        `INSERT INTO mockup_analysis_cache
+           (user_id, source_image_hash, operation, configuration_version, model_version,
+            state, generation, lease_expires, attempts)
+         VALUES (?,?,?,?,?,'running',?,?,?)
+         ON CONFLICT(user_id, source_image_hash, operation, configuration_version, model_version)
+           DO NOTHING`)
+        .bind(...bindKey(key), decision.generation, decision.leaseExpires, decision.attempt).run();
+
+  return Number(claimed.meta.changes) > 0
+    ? decision
+    : { action: "pending", because: "This image is already being analyzed." };
+}
+
+/** Store a result, but only while this worker still owns the claim. */
+export async function storeAnalysis(key: Key, generation: number, payload: unknown) {
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const written = await db.prepare(
+    `UPDATE mockup_analysis_cache
+        SET state = 'ready', payload_json = ?, lease_expires = 0
+      WHERE ${WHERE_KEY} AND generation = ?`)
+    .bind(JSON.stringify(payload), ...bindKey(key), generation).run();
+  /* A late worker whose lease was taken over writes nothing. */
+  return Number(written.meta.changes) > 0;
+}
+
+/**
+ * A FAILURE NEVER BECOMES A CACHE ENTRY, AND NEVER RETRIES IMMEDIATELY.
+ *
+ * It is spaced by jittered backoff, counted against the attempt ceiling, and
+ * becomes a visible terminal state rather than an endless paid loop.
  */
 export async function failAnalysis(
-  key: { userId: string; imageHash: string; operation: Operation;
-    configurationVersion: number; modelVersion: string },
+  key: Key, generation: number, { billed = 0, because = "" }: { billed?: number; because?: string } = {},
 ) {
+  const now = Math.floor(Date.now() / 1000);
+  const row = await readRow(key);
+  if (!stillOwns(row, generation)) return null;
+  const settlement = settleFailure({ attempts: row!.attempts, billed });
+  const retryAt = settlement.nextState === "failed" ? nextAttemptAt(row!.attempts, now) : 0;
   const db = (env as unknown as { DB: D1Database }).DB;
   await db.prepare(
-    `UPDATE mockup_analysis_cache SET state = 'failed', payload_json = NULL, lease_expires = 0
-      WHERE user_id = ? AND source_image_hash = ? AND operation = ?
-        AND configuration_version = ? AND model_version = ?`)
-    .bind(key.userId, key.imageHash, key.operation, key.configurationVersion, key.modelVersion)
-    .run();
+    `UPDATE mockup_analysis_cache
+        SET state = ?, payload_json = NULL, lease_expires = 0,
+            next_attempt_at = ?, last_failure = ?
+      WHERE ${WHERE_KEY} AND generation = ?`)
+    .bind(settlement.nextState, retryAt, because, ...bindKey(key), generation).run();
+  return { ...settlement, retryAt };
+}
+
+/** Deliberately reopen a terminal failure. Grants exactly one more attempt. */
+export async function reopenAnalysis(key: Key, by: string) {
+  const now = Math.floor(Date.now() / 1000);
+  const row = await readRow(key);
+  if (!row || row.state !== "terminal") return false;
+  const next = reopen(row, by, now);
+  const db = (env as unknown as { DB: D1Database }).DB;
+  await db.prepare(
+    `UPDATE mockup_analysis_cache
+        SET state = 'failed', attempts = ?, next_attempt_at = ?, reopened_by = ?
+      WHERE ${WHERE_KEY} AND generation = ?`)
+    .bind(next.attempts, next.nextAttemptAt, by, ...bindKey(key), row.generation).run();
+  return true;
 }
