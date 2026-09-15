@@ -21,6 +21,19 @@ import { shopTimezone } from "@/app/finance-store";
  * NO PAID CALL. Every grouping and every finding is deterministic.
  */
 export const GET = withErrorLog("shop-map-map", async (request: Request) => {
+  try {
+    return await buildMap(request);
+  } catch (error) {
+    /* Owner-only surface: a generic 500 tells nobody what broke, and this
+       route reads a dozen tables that may not all exist yet on a shop. */
+    return NextResponse.json({
+      error: error instanceof Error ? error.message : "unknown",
+      where: error instanceof Error ? String(error.stack ?? "").split("\n")[1] ?? "" : "",
+    }, { status: 500 });
+  }
+});
+
+async function buildMap(request: Request) {
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
@@ -283,4 +296,4 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
       listingsWithSales: [...performance.keys()].length },
     paidProviderCost: 0,
   });
-});
+}
