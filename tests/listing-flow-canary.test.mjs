@@ -28,3 +28,13 @@ test("the two pipelines are never billed side by side on real traffic", () => {
   const module = readFileSync(new URL("../app/listing-flow-canary.ts", import.meta.url), "utf8");
   assert.match(module, /never run together on ordinary traffic/);
 });
+
+test("a member gate and a product gate must both say yes", () => {
+  const module = readFileSync(new URL("../app/listing-flow-canary.ts", import.meta.url), "utf8");
+  /* An allowlisted member can still reach for an unmapped blank. */
+  assert.match(module, /if \(!decision\.useNewFlow\)/);
+  assert.match(module, /mayUseNewFlow\(mapping\.status\)/);
+  /* An unknown blueprint is queued by identity, never guessed. */
+  assert.match(module, /queueUnknownBlueprint\(blueprintId, blueprintTitle\)/);
+  assert.match(module, /guessed category/);
+});
