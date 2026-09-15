@@ -176,6 +176,29 @@ export async function ensureMarketTables(): Promise<void> {
 
     /* The hook the Hot Pool will read. Nothing consumes it yet, and nothing
        here decides how often a hot listing is polled. */
+    /*
+      THE RECONCILIATION SCAN NEEDS AN INDEX.
+
+      Every inspection pass begins by adopting intervals that have no job:
+      a LEFT JOIN of shop_sales_intervals against inspection_jobs. With 32,000
+      intervals and 31,000 jobs that scan is the most expensive thing in the
+      pass, and it runs before any inspection happens — so the pass spends its
+      budget re-deciding what it already knew and holds the lock while it does.
+
+      Measured before this index: five consecutive manual passes all returned
+      "An inspection pass was already running", and the backlog grew by 129
+      while two intervals completed.
+    */
+    db().prepare(
+      `CREATE INDEX IF NOT EXISTS shop_sales_intervals_uninspected
+         ON shop_sales_intervals (inspected_at, id)`),
+    db().prepare(
+      `CREATE INDEX IF NOT EXISTS inspection_jobs_interval
+         ON inspection_jobs (interval_id)`),
+    db().prepare(
+      `CREATE INDEX IF NOT EXISTS inspection_jobs_state
+         ON inspection_jobs (state, queued_at)`),
+
     db().prepare(`CREATE TABLE IF NOT EXISTS hot_pool_candidates (
       listing_id INTEGER PRIMARY KEY,
       shop_id INTEGER NOT NULL,
