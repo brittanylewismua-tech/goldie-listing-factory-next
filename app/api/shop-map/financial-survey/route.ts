@@ -91,7 +91,16 @@ export const GET = withErrorLog("shop-map-financial-survey", async (request: Req
     window, so it is gone. The windowed call's own status and body are
     reported instead, whatever they say.
   */
-  const from = Math.floor(Date.now() / 1000) - 90 * 86_400;
+  /*
+    ETSY CAPS THE LEDGER WINDOW AT 31 DAYS.
+
+    Measured: a 90-day request answers 400 with "Time window between
+    min_created and max_created must be no more than 2678400 seconds (31
+    days)." Any ingest covering a longer period has to walk 30-day chunks —
+    a year of fees is thirteen calls, not one.
+  */
+  const LEDGER_WINDOW_DAYS = 30;
+  const from = Math.floor(Date.now() / 1000) - LEDGER_WINDOW_DAYS * 86_400;
   const until = Math.floor(Date.now() / 1000);
   const ledgerPath =
     `/shops/${shopId}/payment-account/ledger-entries`
@@ -155,7 +164,7 @@ export const GET = withErrorLog("shop-map-financial-survey", async (request: Req
     },
     ledger: {
       status: ledger.status,
-      requestedWindowDays: 90,
+      requestedWindowDays: LEDGER_WINDOW_DAYS,
       /* The path is reported so a parameter argument can be settled by
          looking rather than by guessing. It carries no secret. */
       requested: ledgerPath,
