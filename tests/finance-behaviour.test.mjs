@@ -17,6 +17,7 @@ import {
 import { monthWindow, monthOf, offsetSeconds, isKnownTimezone, MISSING_TIMEZONE } from "../app/finance-month.ts";
 import { pairLines, classifyReceipt, classifyOrphan } from "../app/finance-reconcile.ts";
 import { rollUp, needsRecompute, RULE_VERSION } from "../app/finance-rollup.ts";
+import * as periods from "../app/finance-periods.ts";
 
 const LA = "America/Los_Angeles";
 const base = (over = {}) => ({
@@ -407,4 +408,56 @@ test("a superseded window does not count as incomplete forever", () => {
   assert.doesNotMatch(ingest, /DELETE FROM finance_windows/);
   /* And a completed window is never touched. */
   assert.match(ingest, /AND state IN \('pending','failed'\)/);
+});
+
+test("coverage is only quoted where both sources could agree", () => {
+  const { periodsFor, periodOf, GOLDIE_FINANCIAL_EPOCH } = periods;
+  const earliest = Math.floor(Date.parse("2025-04-29T00:00:00Z") / 1_000);
+  const now = Math.floor(Date.parse("2026-09-14T12:00:00Z") / 1_000);
+  const built = periodsFor({ earliestPrintifyOrder: earliest, now });
+  const before = built.find(p => p.kind === "before-printify");
+  assert.equal(before.productionCostPossible, false,
+    "a period with no Printify history claimed production cost was possible");
+  assert.match(before.why, /limit of the source, not a gap in matching/);
+  /* A 2024 sale falls outside the coverage period entirely. */
+  const old = Math.floor(Date.parse("2024-06-01T00:00:00Z") / 1_000);
+  assert.equal(periodOf(old, built).kind, "before-printify");
+  assert.ok(GOLDIE_FINANCIAL_EPOCH > earliest);
+});
+
+test("a month that has not finished stays partial", () => {
+  const { partialReason } = periods;
+  const now = 1_000;
+  assert.match(partialReason({ month: "2026-09", monthFrom: 900, monthTo: 2_000,
+    now, periodFrom: 0 }), /has not finished/);
+  assert.match(partialReason({ month: "2025-04", monthFrom: 100, monthTo: 500,
+    now, periodFrom: 300 }), /began before this period's data exists/);
+  assert.equal(partialReason({ month: "2025-05", monthFrom: 400, monthTo: 500,
+    now, periodFrom: 300 }), "");
+});
+
+test("receipts carry their own freshness, separate from the ledger", () => {
+  const ingest = readFileSync(new URL(
+    "../app/api/shop-map/financial/ingest/route.ts", import.meta.url), "utf8");
+  assert.match(ingest, /LEDGER COMPLETENESS IS NOT RECEIPT COMPLETENESS/);
+  assert.match(ingest, /source = 'receipts'/);
+  for (const source of ["transactions", "payments", "refunds"])
+    assert.match(ingest, new RegExp(source));
+});
+
+test("receipt ingestion reads money and status, never the buyer", () => {
+  const ingest = readFileSync(new URL(
+    "../app/api/shop-map/financial/ingest/route.ts", import.meta.url), "utf8");
+  for (const forbidden of ["buyer_email", "buyer_user_id", "formatted_address",
+    "first_line", "name:", "message_from_buyer"])
+    assert.doesNotMatch(ingest, new RegExp(forbidden, "i"), `ingest reads ${forbidden}`);
+});
+
+test("an exact match requires the receipt to exist on our side", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/financial/reconcile/route.ts", import.meta.url), "utf8");
+  assert.match(route, /SELECT receipt_id FROM finance_receipts/);
+  assert.match(route, /match_method = 'exact-receipt-id'/);
+  /* And reconciliation creates no adjustments while testing. */
+  assert.doesNotMatch(route, /INSERT INTO finance_adjustments/);
 });

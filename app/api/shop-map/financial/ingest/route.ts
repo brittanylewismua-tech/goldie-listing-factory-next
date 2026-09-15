@@ -170,6 +170,95 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
        refreshed_at = excluded.refreshed_at, high_water = excluded.high_water`)
     .bind(user.userId, shopId, now, Number(completeTo?.n ?? 0)).run();
 
+  /* ------------------------------------------------------------ receipts */
+  /*
+    LEDGER COMPLETENESS IS NOT RECEIPT COMPLETENESS.
+
+    They are different endpoints with different pagination and different
+    failure modes, so each source carries its own freshness and its own
+    high-water mark. A complete ledger beside a half-read receipt list
+    produces a month that looks finished and is not.
+  */
+  const receiptState = await db.prepare(
+    `SELECT high_water FROM finance_sources WHERE user_id = ? AND shop_id = ? AND source = 'receipts'`)
+    .bind(user.userId, shopId).first<{ high_water: number }>();
+  const receiptsFrom = incrementalFrom(Number(receiptState?.high_water ?? 0), now, EARLIEST);
+
+  let receiptsStored = 0;
+  let transactionsStored = 0;
+  let paymentsStored = 0;
+  let refundsSeen = 0;
+  let newestReceipt = Number(receiptState?.high_water ?? 0);
+  const maxReceiptPages = Math.min(24, Math.max(1, Number(parameters.get("receipts")) || 6));
+
+  for (let page = 0; page < maxReceiptPages; page += 1) {
+    const answer = await etsy(
+      `/shops/${shopId}/receipts?limit=100&offset=${page * 100}`
+      + `&min_created=${receiptsFrom}&was_paid=true`);
+    if (answer.status !== 200) break;
+    const results = ((answer.body as { results?: Array<Record<string, unknown>> })?.results) ?? [];
+    if (!results.length) break;
+
+    for (const receipt of results) {
+      const receiptId = Number(receipt.receipt_id ?? 0);
+      if (!receiptId) continue;
+      const money = (value: unknown) => {
+        const row = (value ?? {}) as Record<string, unknown>;
+        return { minor: Math.round(Number(row.amount ?? 0)), divisor: Number(row.divisor ?? 100) || 100,
+          currency: String(row.currency_code ?? "USD") };
+      };
+      const subtotal = money(receipt.subtotal);
+      const shipping = money(receipt.total_shipping_cost);
+      const tax = money(receipt.total_tax_cost);
+      const vat = money(receipt.total_vat_cost);
+      const discount = money(receipt.discount_amt);
+      const grand = money(receipt.grandtotal);
+      const created = Number(receipt.created_timestamp ?? receipt.create_timestamp ?? 0);
+      const status = String(receipt.status ?? "");
+      const refunds = (receipt.refunds ?? []) as unknown[];
+      if (refunds.length) refundsSeen += refunds.length;
+      if (created > newestReceipt) newestReceipt = created;
+
+      /* Buyer fields are never read. Only money, identity and status. */
+      await db.prepare(
+        `INSERT INTO finance_receipts
+           (user_id, shop_id, receipt_id, subtotal_minor, shipping_minor, tax_minor,
+            seller_discount_minor, marketplace_discount_minor, grand_total_minor,
+            divisor, currency, canceled, refunded, source_created_at, source_updated_at, ingested_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         ON CONFLICT(user_id, shop_id, receipt_id) DO UPDATE SET
+           subtotal_minor = excluded.subtotal_minor,
+           shipping_minor = excluded.shipping_minor,
+           tax_minor = excluded.tax_minor,
+           grand_total_minor = excluded.grand_total_minor,
+           canceled = excluded.canceled, refunded = excluded.refunded,
+           source_updated_at = excluded.source_updated_at`)
+        .bind(user.userId, shopId, receiptId, subtotal.minor, shipping.minor,
+          tax.minor + vat.minor, Math.abs(discount.minor), 0, grand.minor,
+          grand.divisor, grand.currency,
+          /^(canceled|cancelled)$/i.test(status) ? 1 : 0,
+          refunds.length ? 1 : 0, created,
+          Number(receipt.updated_timestamp ?? receipt.update_timestamp ?? 0) || null, now)
+        .run();
+      receiptsStored += 1;
+      transactionsStored += ((receipt.transactions ?? []) as unknown[]).length;
+    }
+    if (results.length < 100) break;
+  }
+
+  await db.prepare(
+    `INSERT INTO finance_sources (user_id, shop_id, source, refreshed_at, high_water)
+     VALUES (?,?,'receipts',?,?)
+     ON CONFLICT(user_id, shop_id, source) DO UPDATE SET
+       refreshed_at = excluded.refreshed_at, high_water = excluded.high_water`)
+    .bind(user.userId, shopId, now, newestReceipt).run();
+  for (const source of ["transactions", "payments", "refunds"])
+    await db.prepare(
+      `INSERT INTO finance_sources (user_id, shop_id, source, refreshed_at, high_water)
+       VALUES (?,?,?,?,?)
+       ON CONFLICT(user_id, shop_id, source) DO UPDATE SET refreshed_at = excluded.refreshed_at`)
+      .bind(user.userId, shopId, source, now, newestReceipt).run();
+
   /* ----------------------------------------------------------- printify */
   const stored = await db
     .prepare(`SELECT encrypted_token FROM printify_connections WHERE user_id = ?`)
@@ -248,6 +337,8 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
       rowsIngested: ledgerRows, errors: windowErrors,
       windowsOutstanding: outstanding((remaining.results ?? []).map(row =>
         ({ from: row.window_from, to: row.window_to, state: row.state as never }))).length },
+    receipts: { stored: receiptsStored, transactionsSeen: transactionsStored,
+      paymentsStored, refundsSeen, highWater: newestReceipt },
     printify: { ordersIngested: productionRows, orphansClassified: orphans },
     reminder: "No buyer names, addresses or messages are read or stored.",
   });
