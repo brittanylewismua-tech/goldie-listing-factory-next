@@ -514,8 +514,24 @@ test("a cash movement is never counted as income", () => {
 });
 
 test("a code nobody has confirmed stays surfaced rather than guessed", () => {
-  /* transaction_quantity appeared live and its meaning is not established. */
-  const unknown = classifyLedgerType("transaction_quantity");
+  /* transaction_quantity has since been established from its own amounts.
+     The rule it demonstrated still holds for anything genuinely new. */
+  const unknown = classifyLedgerType("etsy_invented_this_yesterday");
   assert.ok(isUnmapped(unknown));
   assert.equal(unknown.bucket, "neither");
+  assert.equal(unknown.profitRelevant, false);
+});
+
+test("the additional-unit listing fee is classified from its own amounts", () => {
+  /* Measured: -40, -40, -20, -20 across the history, and +40 for the
+     refund. Exact multiples of Etsy's $0.20 listing fee. */
+  const fee = classifyLedgerType("transaction_quantity");
+  assert.equal(fee.normalized, "etsy-listing-fee");
+  assert.equal(fee.bucket, "cost");
+  assert.equal(fee.attribution, "listing");
+  const credit = classifyLedgerType("transaction_quantity_refund");
+  assert.equal(credit.normalized, "fee-credit");
+  /* Neither is left unmapped, which would silently understate fees. */
+  assert.equal(isUnmapped(fee), false);
+  assert.equal(isUnmapped(credit), false);
 });

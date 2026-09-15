@@ -197,8 +197,36 @@ export const GET = withErrorLog("shop-map-financial-reconcile", async () => {
     });
   }
 
+  /*
+    Does every exactly-matched order actually reach a month's production
+    cost, and does the manual order stay out? The rollup already refuses a
+    sample; this proves it against the real rows rather than the rule.
+  */
+  const costAudit = await db.prepare(
+    `SELECT
+       SUM(CASE WHEN receipt_id IS NOT NULL AND counts_as_etsy_cost = 1 AND canceled = 0
+                THEN 1 ELSE 0 END) AS matchedCounted,
+       SUM(CASE WHEN receipt_id IS NOT NULL AND counts_as_etsy_cost = 1 AND canceled = 0
+                THEN cost_minor + shipping_minor ELSE 0 END) AS matchedCostMinor,
+       SUM(CASE WHEN receipt_id IS NULL THEN 1 ELSE 0 END) AS orphanRows,
+       SUM(CASE WHEN receipt_id IS NULL AND counts_as_etsy_cost = 1 THEN 1 ELSE 0 END) AS orphansWronglyCounted,
+       SUM(CASE WHEN receipt_id IS NULL THEN cost_minor + shipping_minor ELSE 0 END) AS orphanCostExcludedMinor
+     FROM finance_production WHERE user_id = ? AND shop_id = ?`)
+    .bind(user.userId, shopId)
+    .first<{ matchedCounted: number; matchedCostMinor: number; orphanRows: number;
+      orphansWronglyCounted: number; orphanCostExcludedMinor: number }>();
+
   return NextResponse.json({
     timezone,
+    productionCostAudit: {
+      matchedOrdersCountedAsCost: costAudit?.matchedCounted ?? 0,
+      matchedCostMinor: costAudit?.matchedCostMinor ?? 0,
+      ordersWithNoReceipt: costAudit?.orphanRows ?? 0,
+      excludedCostMinor: costAudit?.orphanCostExcludedMinor ?? 0,
+      /* Must be zero. An order with no Etsy receipt is never an Etsy cost. */
+      orphansWronglyCounted: costAudit?.orphansWronglyCounted ?? 0,
+      correct: (costAudit?.orphansWronglyCounted ?? 0) === 0,
+    },
     periods: periods.map(period => ({ ...period,
       fromISO: new Date(period.from * 1_000).toISOString().slice(0, 10),
       toISO: new Date(period.to * 1_000).toISOString().slice(0, 10) })),

@@ -72,6 +72,29 @@ const LEDGER: Record<string, Classified> = {
     profitRelevant: true, why: "Offsite Ads, charged against a specific order." },
   buyer_fee: { normalized: "etsy-operating-fee", bucket: "cost", attribution: "receipt",
     profitRelevant: true, why: "A buyer-side fee appearing on the seller's ledger." },
+  /*
+    MEASURED, FROM THE SHOP'S OWN HISTORY.
+
+    transaction_quantity appears four times across years, at -40, -40, -20
+    and -20 minor units, and transaction_quantity_refund once at +40. Those
+    are exact multiples of Etsy's $0.20 listing fee, negative for the charge
+    and positive for its return, carrying no receipt or transaction
+    reference - which is what a listing-level fee looks like.
+
+    Read together with renew_sold_auto (the $0.20 auto-renew after a sale),
+    this is the listing fee for the ADDITIONAL units when one transaction
+    sells more than one of an item.
+
+    Total exposure across the entire history is $1.20, so the cost of being
+    wrong is negligible either way - but leaving it unmapped understates fees
+    rather than being neutral, and the evidence is good enough to place it.
+  */
+  transaction_quantity: { normalized: "etsy-listing-fee", bucket: "cost",
+    attribution: "listing", profitRelevant: true,
+    why: "Listing fee for additional units in one transaction." },
+  transaction_quantity_refund: { normalized: "fee-credit", bucket: "cost",
+    attribution: "listing", profitRelevant: true,
+    why: "That additional-unit listing fee returned." },
   renew_sold_auto: { normalized: "etsy-renewal-fee", bucket: "cost", attribution: "listing",
     profitRelevant: true, why: "A listing renewed automatically after selling." },
   auto_renew_expired: { normalized: "etsy-renewal-fee", bucket: "cost", attribution: "listing",
