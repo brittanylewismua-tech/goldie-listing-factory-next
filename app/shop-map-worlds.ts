@@ -142,9 +142,20 @@ export function buildWorlds(
       shopSection: listing.shopSection, productFamily: listing.productFamily }),
   }));
 
+  /*
+    WHEN A CLASSIFIER BUILD EXISTS, IT OWNS THE VOCABULARY.
+
+    Running the lexicon alongside it produced "Political resistance" and
+    "Political Protest" as two categories for one subject - a duplicate
+    synonym, split only by which system happened to name it. A listing the
+    classifier did not place stays unclassified, which is honest and keeps
+    one vocabulary rather than two competing ones.
+  */
+  const classifierOwnsVocabulary = classifiedNiches.size > 0;
+
   /* Group by customer identity. Product family rides along as evidence. */
   const grouped = new Map<string, typeof read>();
-  for (const row of read) {
+  for (const row of classifierOwnsVocabulary ? [] : read) {
     /*
       ONE PRIMARY NICHE PER LISTING. THE ARITHMETIC DEPENDS ON IT.
 

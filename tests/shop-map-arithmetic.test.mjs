@@ -122,3 +122,33 @@ test("classifier assignments still reconcile to the listing count", () => {
   assert.equal(new Set(membership).size, membership.length,
     "a listing landed in two niches");
 });
+
+test("one vocabulary at a time, so synonyms cannot both exist", () => {
+  /* Live: "Political resistance" from the lexicon sat beside "Political
+     Protest" from the classifier - one subject, two categories. */
+  const { worlds } = buildWorlds(shop, {
+    overrides: new Map([[1, ["niche:political-protest"]]]),
+    classifiedNiches: new Set(["Political Protest"]),
+  });
+  const labels = worlds.map(world => world.label);
+  assert.ok(labels.includes("Political Protest"));
+  assert.ok(!labels.includes("Political resistance"),
+    "both vocabularies produced a category for the same subject");
+});
+
+test("a listing the classifier did not place is unclassified, not lexicon-grouped", () => {
+  const { assignments } = buildWorlds(shop, {
+    overrides: new Map([[1, ["niche:political-protest"]]]),
+    classifiedNiches: new Set(["Political Protest"]),
+  });
+  const untouched = assignments.find(row => row.listingId === 5);
+  assert.equal(untouched.unclassified, true);
+  /* And the reconciliation still holds. */
+  const { worlds } = buildWorlds(shop, {
+    overrides: new Map([[1, ["niche:political-protest"]]]),
+    classifiedNiches: new Set(["Political Protest"]),
+  });
+  const inNiches = worlds.reduce((sum, world) => sum + world.listingIds.length, 0);
+  const unclassified = assignments.filter(row => row.unclassified).length;
+  assert.equal(inNiches + unclassified, shop.length);
+});
