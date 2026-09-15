@@ -243,10 +243,26 @@ export function buildWorlds(
     };
   });
 
-  for (const world of worlds)
+  const familyOf = new Map(listings.map(listing =>
+    [listing.listingId, listing.productFamily]));
+  for (const world of worlds) {
     world.listingIds = assignments
       .filter(row => row.worldIds.includes(world.id))
       .map(row => row.listingId);
+    /*
+      Product families are counted from the niche's FINAL membership, so they
+      survive whichever vocabulary named it. Computing them during grouping
+      lost them entirely once the classifier took over.
+    */
+    const families = new Map<string, number>();
+    for (const id of world.listingIds) {
+      const family = familyOf.get(id);
+      if (family) families.set(family, (families.get(family) ?? 0) + 1);
+    }
+    world.productFamilies = [...families.entries()]
+      .map(([family, count]) => ({ family, listings: count }))
+      .sort((a, b) => b.listings - a.listings);
+  }
 
   return { worlds: worlds.filter(world => world.listingIds.length > 0), assignments };
 }

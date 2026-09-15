@@ -152,3 +152,21 @@ test("a listing the classifier did not place is unclassified, not lexicon-groupe
   const unclassified = assignments.filter(row => row.unclassified).length;
   assert.equal(inNiches + unclassified, shop.length);
 });
+
+test("product families survive whichever vocabulary named the niche", () => {
+  /* They were computed during grouping and vanished the moment the
+     classifier took over that step. */
+  const mixed = [
+    { listingId: 1, title: "A", tags: [], shopSection: "", productFamily: "tee" },
+    { listingId: 2, title: "B", tags: [], shopSection: "", productFamily: "mug" },
+    { listingId: 3, title: "C", tags: [], shopSection: "", productFamily: "tee" },
+  ];
+  const { worlds } = buildWorlds(mixed, {
+    overrides: new Map(mixed.map(listing => [listing.listingId, ["niche:bachelorette"]])),
+    classifiedNiches: new Set(["Bachelorette"]),
+  });
+  const niche = worlds.find(world => world.id === "niche:bachelorette");
+  assert.ok(niche.productFamilies.length > 0, "the niche lost its product types");
+  assert.deepEqual(niche.productFamilies,
+    [{ family: "tee", listings: 2 }, { family: "mug", listings: 1 }]);
+});
