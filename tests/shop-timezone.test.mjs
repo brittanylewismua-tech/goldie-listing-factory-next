@@ -87,3 +87,10 @@ test("an existing hand-typed timezone counts as confirmed, per row", () => {
   /* Only rows that already hold a value, and each row is one member's shop. */
   assert.doesNotMatch(store, /UPDATE finance_shop_settings SET timezone =/);
 });
+
+test("reading the timezone runs its own migration first", () => {
+  /* It reads a column an older table does not have, and the map route does
+     not call ensureFinanceTables for any other reason. */
+  const reader = store.slice(store.indexOf("export async function shopTimezone"));
+  assert.match(reader.slice(0, 500), /await ensureFinanceTables\(\)/);
+});

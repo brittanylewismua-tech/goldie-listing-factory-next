@@ -173,6 +173,10 @@ export async function ensureFinanceTables() {
 
 /** Only a CONFIRMED timezone counts. An unconfirmed guess is not an answer. */
 export async function shopTimezone(userId: string, shopId: number): Promise<string> {
+  /* This reads a column that an older table does not have, so the migration
+     has to have run before the read - not only on the paths that happen to
+     call ensureFinanceTables for another reason. */
+  await ensureFinanceTables();
   const row = await db().prepare(
     `SELECT timezone, confirmed FROM finance_shop_settings
       WHERE user_id = ? AND shop_id = ?`)
