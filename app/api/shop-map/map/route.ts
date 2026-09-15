@@ -270,11 +270,71 @@ async function buildMap(request: Request) {
   const state = profitState({ grossRevenueMinor: revenue,
     feesMinor: Number(feeRow?.fees ?? 0), costs });
 
+  /*
+    THE UNCLASSIFIED PART OF THE SHOP, COUNTED.
+
+    Not a remainder to be inferred: its orders, revenue and reviews are
+    summed the same way a niche's are, so the two halves can be added and
+    checked against the shop's own totals.
+  */
+  const unclassifiedIds = assignments.filter(row => row.unclassified)
+    .map(row => row.listingId);
+  const unclassifiedSet = new Set(unclassifiedIds);
+  const sumOver = (ids: number[], pick: (row: NonNullable<ReturnType<typeof performance.get>>) => number) =>
+    ids.reduce((total, id) => {
+      const row = performance.get(id);
+      return total + (row ? pick(row) : 0);
+    }, 0);
+  const stateOf = new Map<number, string>(
+    rows.map(row => [Number(row.listing_id), String(row.state)]));
+  const unclassifiedByState: Record<string, number> = {};
+  for (const id of unclassifiedIds) {
+    const state = stateOf.get(id) ?? "unknown";
+    unclassifiedByState[state] = (unclassifiedByState[state] ?? 0) + 1;
+  }
+  const unclassified = {
+    listings: unclassifiedIds.length,
+    byState: unclassifiedByState,
+    activeListings: unclassifiedIds.filter(id => activeIds.has(id)).length,
+    orders: sumOver(unclassifiedIds, row => row.lifetimeOrders),
+    units: sumOver(unclassifiedIds, row => row.lifetimeUnits),
+    revenueMinor: sumOver(unclassifiedIds, row => row.lifetimeRevenueMinor),
+    refundedOrders: sumOver(unclassifiedIds, row => row.refundedOrders),
+    refundedMinor: sumOver(unclassifiedIds, row => row.refundedMinor),
+    reviews: unclassifiedIds.reduce((total, id) =>
+      total + (reviewsByListing.get(id)?.length ?? 0), 0),
+    ordersLast30: sumOver(unclassifiedIds, row => row.last30Orders),
+    revenueLast30Minor: sumOver(unclassifiedIds, row => row.last30RevenueMinor),
+    ordersLast90: sumOver(unclassifiedIds, row => row.last90Orders),
+    revenueLast90Minor: sumOver(unclassifiedIds, row => row.last90RevenueMinor),
+  };
+
+  /* The whole shop: every listing, classified or not. */
+  const everyId = rows.map(row => Number(row.listing_id));
+  const shopTotals = {
+    listings: everyId.length,
+    activeListings: everyId.filter(id => activeIds.has(id)).length,
+    orders: sumOver(everyId, row => row.lifetimeOrders),
+    revenueMinor: sumOver(everyId, row => row.lifetimeRevenueMinor),
+    ordersLast90: sumOver(everyId, row => row.last90Orders),
+    revenueLast90Minor: sumOver(everyId, row => row.last90RevenueMinor),
+    reviews: everyId.reduce((total, id) =>
+      total + (reviewsByListing.get(id)?.length ?? 0), 0),
+  };
+
+  const coverage = {
+    activeListings: shopTotals.activeListings
+      ? 1 - unclassified.activeListings / shopTotals.activeListings : 1,
+    recentRevenue: shopTotals.revenueLast90Minor
+      ? 1 - unclassified.revenueLast90Minor / shopTotals.revenueLast90Minor : 1,
+    recentOrders: shopTotals.ordersLast90
+      ? 1 - unclassified.ordersLast90 / shopTotals.ordersLast90 : 1,
+  };
+
   /* Enough recent trade to make a 90-day view meaningful? */
   const recentOrders = worldPerformance.reduce((sum, world) => sum + world.ordersLast90, 0);
   const recentEnough = recentOrders >= 10;
   const found = direction(worldPerformance);
-  const unclassified = assignments.filter(row => row.unclassified).length;
 
   return NextResponse.json({
     shop: { shopId, shopName: shopRow.shop_name, timezone },
@@ -294,9 +354,13 @@ async function buildMap(request: Request) {
     },
     /* Where to Focus: the instruction, and the arithmetic behind it. */
     standout: standout(worldPerformance,
-      guidance(worldPerformance, { period: recentEnough ? "the last 90 days" : "all time" })),
+      guidance(worldPerformance, { period: recentEnough ? "the last 90 days" : "all time",
+        shop: shopTotals }), coverage),
+    coverage,
+    unclassifiedPerformance: unclassified,
+    shopTotals,
     whereToFocus: guidance(worldPerformance,
-      { period: recentEnough ? "the last 90 days" : "all time" }).slice(0, 5),
+      { period: recentEnough ? "the last 90 days" : "all time", shop: shopTotals }).slice(0, 5),
     pointingHere: found.worldId ? {
       label: found.label, finding: found.finding, reason: found.reason,
     } : { label: "No clear direction yet", finding: found.finding,
@@ -335,7 +399,11 @@ async function buildMap(request: Request) {
         };
       }),
     needsAttention: {
-      unclassifiedListings: unclassified,
+      unclassifiedListings: unclassified.listings,
+      unclassifiedPerformance: {
+        orders: unclassified.orders, revenueMinor: unclassified.revenueMinor,
+        reviews: unclassified.reviews, activeListings: unclassified.activeListings,
+      },
       missingProductionCosts: costs.filter(cost => cost.confidence === "none").length,
       overbuiltWorlds: overbuilt(worldPerformance),
     },

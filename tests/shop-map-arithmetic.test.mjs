@@ -9,6 +9,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildWorlds } from "../app/shop-map-worlds.ts";
+import { guidance, standout, COVERAGE_REQUIRED, coverageMet } from "../app/shop-map-guidance.ts";
 import { performanceFrom } from "../app/shop-map-performance.ts";
 
 const listing = (id, over = {}) => ({
@@ -169,4 +170,76 @@ test("product families survive whichever vocabulary named the niche", () => {
   assert.ok(niche.productFamilies.length > 0, "the niche lost its product types");
   assert.deepEqual(niche.productFamilies,
     [{ family: "tee", listings: 2 }, { family: "mug", listings: 1 }]);
+});
+
+test("shares divide by the whole shop, not by the classified part", () => {
+  /* A niche holding 44% of classified revenue was reported as 44% of the
+     shop while $19,950 sat outside the map. */
+  const niches = [
+    { worldId: "a", label: "A", activeListings: 10, orders: 100, units: 100,
+      revenueMinor: 40_000, verifiedProfitMinor: null, reviews: 0,
+      ordersLast30: 0, ordersLast90: 10, revenueLast90Minor: 4_000,
+      largestOrderMinor: 500, refundedOrders: 0 },
+  ];
+  /* The shop is twice the size of its one classified niche. */
+  const shop = { revenueMinor: 80_000, activeListings: 20, ordersLast90: 20, orders: 200 };
+  const withShop = guidance(niches, { shop });
+  const withoutShop = guidance(niches);
+  assert.match(withShop[0].reason, /50% of revenue/);
+  assert.match(withoutShop[0].reason, /100% of revenue/);
+});
+
+test("a focus recommendation is gated on coverage", () => {
+  const niches = [
+    { worldId: "a", label: "A", activeListings: 3, orders: 40, units: 40,
+      revenueMinor: 80_000, verifiedProfitMinor: null, reviews: 0,
+      ordersLast30: 0, ordersLast90: 20, revenueLast90Minor: 40_000,
+      largestOrderMinor: 2_000, refundedOrders: 0 },
+  ];
+  const thin = standout(niches, guidance(niches),
+    { activeListings: 0.55, recentRevenue: 0.6, recentOrders: 0.6 });
+  assert.equal(thin.hasStandout, false);
+  assert.match(thin.headline, /still organizing enough of your shop/);
+  assert.match(thin.nextStep, /% of active listings/);
+
+  const covered = standout(niches, guidance(niches),
+    { activeListings: 0.95, recentRevenue: 0.95, recentOrders: 0.95 });
+  assert.doesNotMatch(covered.headline, /still organizing/);
+});
+
+test("the coverage thresholds are the ones agreed", () => {
+  assert.equal(COVERAGE_REQUIRED.activeListings, 0.8);
+  assert.equal(COVERAGE_REQUIRED.recentRevenue, 0.9);
+  assert.equal(COVERAGE_REQUIRED.recentOrders, 0.9);
+  assert.equal(coverageMet({ activeListings: 0.8, recentRevenue: 0.9, recentOrders: 0.9 }), true);
+  assert.equal(coverageMet({ activeListings: 0.79, recentRevenue: 1, recentOrders: 1 }), false);
+});
+
+test("classified plus unclassified equals the shop, on every measure", () => {
+  const sales = [
+    { listingId: 1, quantity: 1, priceMinor: 2_500, soldAt: 1_000, refunded: false },
+    { listingId: 5, quantity: 2, priceMinor: 2_000, soldAt: 1_000, refunded: false },
+    { listingId: 11, quantity: 1, priceMinor: 9_000, soldAt: 1_000, refunded: true },
+  ];
+  const performance = performanceFrom(sales,
+    { now: 2_000, monthFrom: 0, monthTo: 2_000, yearFrom: 0 });
+  const { worlds, assignments } = buildWorlds(shop);
+  const classifiedIds = new Set(worlds.flatMap(world => world.listingIds));
+  const unclassifiedIds = assignments.filter(row => row.unclassified).map(row => row.listingId);
+
+  const sum = (ids, pick) => ids.reduce((total, id) => {
+    const row = performance.get(id);
+    return total + (row ? pick(row) : 0);
+  }, 0);
+  const everyId = shop.map(listing => listing.listingId);
+
+  for (const [name, pick] of [
+    ["orders", row => row.lifetimeOrders],
+    ["revenue", row => row.lifetimeRevenueMinor],
+    ["refunds", row => row.refundedOrders],
+  ]) {
+    const whole = sum(everyId, pick);
+    const parts = sum([...classifiedIds], pick) + sum(unclassifiedIds, pick);
+    assert.equal(parts, whole, `${name}: ${parts} != ${whole}`);
+  }
 });

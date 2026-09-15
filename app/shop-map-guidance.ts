@@ -38,7 +38,42 @@ export type Standout = { hasStandout: boolean; headline: string; nextStep: strin
  * step then comes from the evidence that DOES exist - more data, a niche
  * with too little coverage to read, or an overbuilt one to pull back from.
  */
-export function standout(niches: WorldPerformance[], advice: Guidance[]): Standout {
+/*
+  COVERAGE GATES THE RECOMMENDATION.
+
+  A focus recommendation made while a third of the shop's revenue is
+  unclassified is a statement about the part Goldie happens to understand,
+  presented as a statement about the shop.
+*/
+export const COVERAGE_REQUIRED = {
+  activeListings: 0.8, recentRevenue: 0.9, recentOrders: 0.9,
+};
+
+export type Coverage = {
+  activeListings: number; recentRevenue: number; recentOrders: number;
+};
+
+export const coverageMet = (coverage: Coverage) =>
+  coverage.activeListings >= COVERAGE_REQUIRED.activeListings
+  && coverage.recentRevenue >= COVERAGE_REQUIRED.recentRevenue
+  && coverage.recentOrders >= COVERAGE_REQUIRED.recentOrders;
+
+export function standout(
+  niches: WorldPerformance[], advice: Guidance[], coverage?: Coverage,
+): Standout {
+  if (coverage && !coverageMet(coverage))
+    return {
+      hasStandout: false,
+      headline: "Shop Map is still organizing enough of your shop to make a "
+        + "reliable focus recommendation.",
+      nextStep: `Classified so far: ${Math.round(coverage.activeListings * 100)}% of `
+        + `active listings, ${Math.round(coverage.recentRevenue * 100)}% of recent revenue, `
+        + `${Math.round(coverage.recentOrders * 100)}% of recent orders.`,
+    };
+  return standoutFrom(niches, advice);
+}
+
+function standoutFrom(niches: WorldPerformance[], advice: Guidance[]): Standout {
   const leveraged = advice.find(row =>
     row.headline === "Focus here" || row.headline === "Expand this niche");
   if (leveraged)
@@ -60,10 +95,28 @@ export function standout(niches: WorldPerformance[], advice: Guidance[]): Stando
   };
 }
 
+/*
+  THE DENOMINATOR IS THE WHOLE SHOP.
+
+  Shares were being taken across the classified niches alone, so a niche
+  holding 44% of classified revenue was reported as 44% of the shop while
+  $19,950 and 856 orders sat outside the map entirely. Every share now
+  divides by the shop's own totals, and unclassified performance is part of
+  that denominator rather than quietly excluded from it.
+*/
+export type ShopTotals = {
+  revenueMinor: number; activeListings: number; ordersLast90: number; orders: number;
+};
+
 export function guidance(
-  niches: WorldPerformance[], { period = "the last 90 days" }: { period?: string } = {},
+  niches: WorldPerformance[],
+  { period = "the last 90 days", shop }:
+  { period?: string; shop?: ShopTotals } = {},
 ): Guidance[] {
-  const totals = {
+  const totals = shop ? {
+    revenue: shop.revenueMinor, listings: shop.activeListings,
+    recent: shop.ordersLast90, orders: shop.orders,
+  } : {
     revenue: niches.reduce((sum, niche) => sum + niche.revenueMinor, 0),
     listings: niches.reduce((sum, niche) => sum + niche.activeListings, 0),
     recent: niches.reduce((sum, niche) => sum + niche.ordersLast90, 0),

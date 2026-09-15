@@ -19,6 +19,9 @@ type Map = {
   needsAttention?: { unclassifiedListings: number; missingProductionCosts: number;
     overbuiltWorlds: Array<{ label: string; reason: string }> };
   timezoneNeeded?: boolean;
+  coverage?: { activeListings: number; recentRevenue: number; recentOrders: number };
+  unclassifiedPerformance?: { listings: number; activeListings: number; orders: number;
+    revenueMinor: number; reviews: number; ordersLast90: number; revenueLast90Minor: number };
   error?: string;
 };
 
@@ -101,8 +104,13 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       {/* 2 · The map itself. Size shows strength at a glance. */}
       <section className="shop-map-card">
         <h2>Your shop map</h2>
-        {/* Never a figure without its period. */}
-        <p className="shop-map-period">{map.worldsPeriod}</p>
+        {/* Never a figure without its period, and never without coverage. */}
+        <p className="shop-map-period">
+          {map.worldsPeriod}
+          {map.coverage
+            ? ` · ${Math.round(map.coverage.activeListings * 100)}% of active listings organized`
+            : ""}
+        </p>
         <ul className="shop-map-worlds">
           {(map.worlds ?? []).map(world => {
         const shareOfRevenue = totalRevenue ? world.revenueMinor / totalRevenue : 0;
@@ -177,7 +185,16 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       <section className="shop-map-card shop-map-attention">
         <h2>Needs attention</h2>
         <ul>
-          {map.needsAttention?.unclassifiedListings
+          {/* What sits outside the map, in the same terms as a niche. */}
+          {map.unclassifiedPerformance?.listings
+            ? <li>
+                {map.unclassifiedPerformance.listings} listings aren’t in a niche yet —
+                {` ${map.unclassifiedPerformance.orders.toLocaleString()} lifetime orders`},
+                {` ${money(map.unclassifiedPerformance.revenueMinor)}`},
+                {` ${map.unclassifiedPerformance.activeListings} still active`}
+              </li>
+            : null}
+          {false && map.needsAttention?.unclassifiedListings
             ? <li>{map.needsAttention.unclassifiedListings}{" "}
               {map.needsAttention.unclassifiedListings === 1 ? "listing isn’t" : "listings aren’t"}
               {" "}in a world yet</li> : null}

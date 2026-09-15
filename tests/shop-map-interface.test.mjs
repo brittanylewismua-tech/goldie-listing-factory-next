@@ -158,3 +158,17 @@ test("no standout is stated before any per-niche advice", () => {
   /* It appears above the list, not buried under it. */
   assert.ok(block.indexOf("shop-map-standout") < block.indexOf("shop-map-focus"));
 });
+
+test("unclassified performance is shown, not just a count", () => {
+  /* 132 listings holding 856 orders and ~$19,950 were reported as a bare
+     number, which reads as tidying rather than as missing map. */
+  const block = client.slice(client.indexOf("Needs attention"));
+  assert.match(block, /unclassifiedPerformance/);
+  assert.match(block, /lifetime orders/);
+  assert.match(block, /still active/);
+});
+
+test("coverage is shown beside the map", () => {
+  assert.match(client, /% of active listings organized/);
+  assert.match(client, /map\.coverage/);
+});
