@@ -112,7 +112,16 @@ export async function recordPublished(
  * queue answers "which blanks need a mapping and how urgently", and that
  * question needs nothing about who was using them.
  */
-export async function queueUnknownBlueprint(blueprintId: number, blueprintTitle: string) {
+/**
+ * The mapping queue's schema, stated once.
+ *
+ * It used to be created inside `queueUnknownBlueprint`, which meant the table
+ * existed only after somebody published a product on an unmapped blueprint —
+ * so the capability registry reported Listing Factory as not ready on a
+ * perfectly healthy deployment, because it could not tell an unused feature
+ * from a broken one.
+ */
+export async function ensureBlueprintQueue() {
   const db = (env as unknown as { DB: D1Database }).DB;
   await db.prepare(`CREATE TABLE IF NOT EXISTS blueprint_mapping_queue (
     blueprint_id INTEGER PRIMARY KEY,
@@ -120,6 +129,11 @@ export async function queueUnknownBlueprint(blueprintId: number, blueprintTitle:
     occurrences INTEGER NOT NULL DEFAULT 0,
     first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)`).run();
+}
+
+export async function queueUnknownBlueprint(blueprintId: number, blueprintTitle: string) {
+  const db = (env as unknown as { DB: D1Database }).DB;
+  await ensureBlueprintQueue();
   await db.prepare(
     `INSERT INTO blueprint_mapping_queue (blueprint_id, blueprint_title_snapshot, occurrences)
      VALUES (?,?,1)

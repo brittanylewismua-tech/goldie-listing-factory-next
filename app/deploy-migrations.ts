@@ -32,7 +32,7 @@ import { ensureBillingTables } from "@/app/billing";
 import { ensureSpendTables } from "@/app/spend-guard";
 import { ensureVisionTables } from "@/app/vision-telemetry";
 import { ensureFalUsageTable } from "@/app/fal-usage";
-import { ensurePublishIdentityTable } from "@/app/publish-identity";
+import { ensurePublishIdentityTable, ensureBlueprintQueue } from "@/app/publish-identity";
 import { ensureProvenanceTables } from "@/app/artwork-provenance";
 import { ensureCaptureQueue } from "@/app/artwork-capture-queue";
 import { ensureMockupAnalysisTable } from "@/app/mockup-analysis-cache";
@@ -76,6 +76,7 @@ export const MIGRATIONS: Step[] = [
      the same owner, and both were previously created by a member's first
      batch. */
   { name: "publish_identity", run: ensurePublishIdentityTable },
+  { name: "blueprint_mapping_queue", run: ensureBlueprintQueue },
   { name: "artwork_provenance", run: ensureProvenanceTables },
   { name: "artwork_capture_jobs", run: ensureCaptureQueue },
   { name: "mockup_analysis_cache", run: ensureMockupAnalysisTable },
