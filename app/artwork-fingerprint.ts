@@ -13,18 +13,37 @@
  * Everything is deterministic and free: no model, no per-comparison cost.
  */
 
-/** Decode a small PNG to raw RGB. Only what Cloudflare Images hands back. */
-export async function decodeTinyPng(bytes: ArrayBuffer): Promise<{
-  width: number; height: number; rgb: Uint8Array;
-} | null> {
+/**
+ * DECODE FAILURE IS A RESULT, NOT A SHRUG.
+ *
+ * The first pass lost thirteen of thirty-three artworks and ten of sixty
+ * mockups to "could not be decoded", and a benchmark missing forty per cent of
+ * its subjects measures nothing. The cause was a decoder that only understood
+ * two of PNG's six colour types.
+ *
+ * All of them are handled now — greyscale, truecolour, palette, and each with
+ * alpha, at one, two, four, eight and sixteen bits — and anything still
+ * unreadable returns the exact reason rather than null.
+ */
+export type Decoded = { width: number; height: number; rgb: Uint8Array };
+export type DecodeResult =
+  | { ok: true; image: Decoded; note: string }
+  | { ok: false; reason: string };
+
+export async function decodeTinyPng(bytes: ArrayBuffer): Promise<DecodeResult> {
   const data = new Uint8Array(bytes);
+  if (data.length < 8 || data[0] !== 137 || data[1] !== 80 || data[2] !== 78 || data[3] !== 71)
+    return { ok: false, reason: "not a PNG" };
   const view = new DataView(bytes);
-  if (data.length < 8 || data[0] !== 137 || data[1] !== 80) return null;
 
   let at = 8;
   let width = 0;
   let height = 0;
+  let bitDepth = 8;
   let colourType = 0;
+  let interlace = 0;
+  let palette: Uint8Array | null = null;
+  let paletteAlpha: Uint8Array | null = null;
   const idat: Uint8Array[] = [];
   while (at + 8 <= data.length) {
     const length = view.getUint32(at);
@@ -33,39 +52,69 @@ export async function decodeTinyPng(bytes: ArrayBuffer): Promise<{
     if (type === "IHDR") {
       width = view.getUint32(at + 8);
       height = view.getUint32(at + 12);
-      colourType = data[at + 8 + 9];
-    } else if (type === "IDAT") idat.push(body);
+      bitDepth = data[at + 16];
+      colourType = data[at + 17];
+      interlace = data[at + 20];
+    } else if (type === "PLTE") palette = new Uint8Array(body);
+    else if (type === "tRNS") paletteAlpha = new Uint8Array(body);
+    else if (type === "IDAT") idat.push(new Uint8Array(body));
     else if (type === "IEND") break;
     at += 12 + length;
   }
-  if (!width || !height || !idat.length) return null;
+  if (!width || !height) return { ok: false, reason: "no IHDR" };
+  if (!idat.length) return { ok: false, reason: "no image data" };
+  /* Interlaced PNGs store seven passes; nothing we generate or request is
+     interlaced, and guessing at one would produce scrambled pixels. */
+  if (interlace) return { ok: false, reason: "interlaced PNG" };
 
   const joined = new Uint8Array(idat.reduce((sum, part) => sum + part.length, 0));
   let offset = 0;
   for (const part of idat) { joined.set(part, offset); offset += part.length; }
-  const inflated = new Uint8Array(await new Response(
-    new Blob([joined]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
+  let inflated: Uint8Array;
+  try {
+    inflated = new Uint8Array(await new Response(
+      new Blob([joined]).stream().pipeThrough(new DecompressionStream("deflate"))).arrayBuffer());
+  } catch (error) {
+    return { ok: false, reason: `inflate failed: ${error instanceof Error ? error.message : "unknown"}` };
+  }
 
-  /* Cloudflare returns 8-bit RGB or RGBA; both are handled, nothing else is. */
-  const channels = colourType === 6 ? 4 : colourType === 2 ? 3 : 0;
-  if (!channels) return null;
+  const samplesPer = colourType === 0 ? 1 : colourType === 2 ? 3
+    : colourType === 3 ? 1 : colourType === 4 ? 2 : colourType === 6 ? 4 : 0;
+  if (!samplesPer) return { ok: false, reason: `unsupported colour type ${colourType}` };
+  if (colourType === 3 && !palette) return { ok: false, reason: "palette image with no PLTE" };
 
-  const stride = width * channels;
+  const bitsPerPixel = samplesPer * bitDepth;
+  const stride = Math.ceil((width * bitsPerPixel) / 8);
+  /* Filtering works on whole bytes regardless of bit depth. */
+  const filterStep = Math.max(1, Math.ceil(bitsPerPixel / 8));
+  if (inflated.length < height * (stride + 1))
+    return { ok: false, reason: "truncated image data" };
+
   const rgb = new Uint8Array(width * height * 3);
   const row = new Uint8Array(stride);
   const previous = new Uint8Array(stride);
   let read = 0;
+
+  /* Read one sample, whatever the bit depth, and scale it to 0-255. */
+  const sampleAt = (index: number): number => {
+    if (bitDepth === 8) return row[index];
+    if (bitDepth === 16) return row[index * 2];
+    const perByte = 8 / bitDepth;
+    const byte = row[Math.floor(index / perByte)];
+    const shift = (perByte - 1 - (index % perByte)) * bitDepth;
+    const value = (byte >> shift) & ((1 << bitDepth) - 1);
+    return colourType === 3 ? value : Math.round((value * 255) / ((1 << bitDepth) - 1));
+  };
+
   for (let y = 0; y < height; y += 1) {
     const filter = inflated[read];
     read += 1;
     row.set(inflated.subarray(read, read + stride));
     read += stride;
-    /* PNG's five filters, undone. Skipping this gives noise that looks like
-       data, which is worse than failing. */
     for (let index = 0; index < stride; index += 1) {
-      const left = index >= channels ? row[index - channels] : 0;
+      const left = index >= filterStep ? row[index - filterStep] : 0;
       const up = previous[index];
-      const upLeft = index >= channels ? previous[index - channels] : 0;
+      const upLeft = index >= filterStep ? previous[index - filterStep] : 0;
       if (filter === 1) row[index] = (row[index] + left) & 0xff;
       else if (filter === 2) row[index] = (row[index] + up) & 0xff;
       else if (filter === 3) row[index] = (row[index] + ((left + up) >> 1)) & 0xff;
@@ -76,25 +125,49 @@ export async function decodeTinyPng(bytes: ArrayBuffer): Promise<{
         const dUpLeft = Math.abs(estimate - upLeft);
         const best = dLeft <= dUp && dLeft <= dUpLeft ? left : dUp <= dUpLeft ? up : upLeft;
         row[index] = (row[index] + best) & 0xff;
-      }
+      } else if (filter > 4) return { ok: false, reason: `unknown filter ${filter}` };
     }
     previous.set(row);
+
     for (let x = 0; x < width; x += 1) {
-      const from = x * channels;
       const to = (y * width + x) * 3;
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+      let alpha = 1;
+      if (colourType === 3) {
+        const index = sampleAt(x);
+        red = palette![index * 3] ?? 0;
+        green = palette![index * 3 + 1] ?? 0;
+        blue = palette![index * 3 + 2] ?? 0;
+        if (paletteAlpha && index < paletteAlpha.length) alpha = paletteAlpha[index] / 255;
+      } else if (colourType === 0 || colourType === 4) {
+        red = green = blue = sampleAt(x * samplesPer);
+        if (colourType === 4) alpha = sampleAt(x * samplesPer + 1) / 255;
+      } else {
+        red = sampleAt(x * samplesPer);
+        green = sampleAt(x * samplesPer + 1);
+        blue = sampleAt(x * samplesPer + 2);
+        if (colourType === 6) alpha = sampleAt(x * samplesPer + 3) / 255;
+      }
       /*
         Transparency is the whole difference between a print file and a
-        photograph, so a transparent pixel is flattened to white — the ground
-        it will be compared against — rather than left as black, which would
-        invent a dark shape that is not in the design.
+        photograph, so a transparent pixel becomes white — the ground it will
+        be compared against — rather than black, which would invent a dark
+        shape that is not in the design.
       */
-      const alpha = channels === 4 ? row[from + 3] / 255 : 1;
-      rgb[to] = Math.round(row[from] * alpha + 255 * (1 - alpha));
-      rgb[to + 1] = Math.round(row[from + 1] * alpha + 255 * (1 - alpha));
-      rgb[to + 2] = Math.round(row[from + 2] * alpha + 255 * (1 - alpha));
+      rgb[to] = Math.round(red * alpha + 255 * (1 - alpha));
+      rgb[to + 1] = Math.round(green * alpha + 255 * (1 - alpha));
+      rgb[to + 2] = Math.round(blue * alpha + 255 * (1 - alpha));
     }
   }
-  return { width, height, rgb };
+
+  return {
+    ok: true,
+    image: { width, height, rgb },
+    /* What was normalised on the way in, so an odd result can be attributed. */
+    note: `colourType ${colourType}, ${bitDepth}-bit${bitDepth === 16 ? ", down-converted" : ""}${colourType === 3 ? ", palette expanded" : ""}`,
+  };
 }
 
 export type Fingerprint = {

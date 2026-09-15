@@ -41,18 +41,21 @@ export const GET = withErrorLog("shop-map-benchmark-candidates", async (request:
 
   /* Shrink anything to a fixed tiny square so two very different pictures can
      be compared at all. Cloudflare does the decoding; we only read pixels. */
-  const shrink = async (bytes: ArrayBuffer): Promise<Fingerprint | null> => {
+  const shrink = async (bytes: ArrayBuffer): Promise<{ print: Fingerprint } | { failed: string }> => {
+    let small: ArrayBuffer;
     try {
       const response = await images
         .input(new Blob([bytes]).stream())
         .transform({ width: IMAGE_SIZE, height: IMAGE_SIZE, fit: "contain", background: "#ffffff" })
         .output({ format: "image/png" });
-      const small = await new Response(response.image()).arrayBuffer();
-      const decoded = await decodeTinyPng(small);
-      return decoded ? fingerprint(decoded) : null;
-    } catch {
-      return null;
+      small = await new Response(response.image()).arrayBuffer();
+    } catch (error) {
+      return { failed: `resize failed: ${error instanceof Error ? error.message : "unknown"}` };
     }
+    const decoded = await decodeTinyPng(small);
+    /* The exact reason, never a generic decode failure. */
+    if (!decoded.ok) return { failed: decoded.reason };
+    return { print: fingerprint(decoded.image) };
   };
 
   /* ------------------------------------------------ the captured artworks */
@@ -68,9 +71,9 @@ export const GET = withErrorLog("shop-map-benchmark-candidates", async (request:
   for (const row of artworkRows) {
     const object = await bucket.get(row.artwork_key);
     if (!object) { artworkFailures.push(`${row.artwork_hash}: not in storage`); continue; }
-    const print = await shrink(await object.arrayBuffer());
-    if (!print) { artworkFailures.push(`${row.artwork_hash}: could not be decoded`); continue; }
-    artworks.push({ hash: row.artwork_hash, productId: row.printify_product_id, print });
+    const result = await shrink(await object.arrayBuffer());
+    if ("failed" in result) { artworkFailures.push(`${row.artwork_hash}: ${result.failed}`); continue; }
+    artworks.push({ hash: row.artwork_hash, productId: row.printify_product_id, print: result.print });
   }
 
   /* ------------------------------------------- current listings and images */
@@ -113,8 +116,9 @@ export const GET = withErrorLog("shop-map-benchmark-candidates", async (request:
     imagesSeen += 1;
     const bytes = await fetch(primary.url_570xN).then(response => response.arrayBuffer()).catch(() => null);
     if (!bytes) { mockupFailures.push(`${listingId}: image unreachable`); continue; }
-    const look = await shrink(bytes);
-    if (!look) { mockupFailures.push(`${listingId}: could not be decoded`); continue; }
+    const looked = await shrink(bytes);
+    if ("failed" in looked) { mockupFailures.push(`${listingId}: ${looked.failed}`); continue; }
+    const look = looked.print;
     mockups.push({
       listingId, title: String(listing.title ?? ""),
       imageId: Number(primary.listing_image_id ?? 0), look,
