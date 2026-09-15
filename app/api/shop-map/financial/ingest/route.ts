@@ -34,7 +34,7 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
 
   await ensureFinanceTables();
   const parameters = new URL(request.url).searchParams;
-  const maxWindows = Math.min(12, Math.max(1, Number(parameters.get("windows")) || 3));
+  const maxWindows = Math.min(25, Math.max(1, Number(parameters.get("windows")) || 3));
   const maxOrderPages = Math.min(10, Math.max(1, Number(parameters.get("orders")) || 3));
   const db = (env as unknown as { DB: D1Database }).DB;
   const now = Math.floor(Date.now() / 1_000);
