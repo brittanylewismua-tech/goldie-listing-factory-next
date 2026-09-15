@@ -190,7 +190,8 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
   let refundsSeen = 0;
   let newestReceipt = Number(receiptState?.high_water ?? 0);
   let oldestSeen = Number.MAX_SAFE_INTEGER;
-  const maxReceiptPages = Math.min(24, Math.max(1, Number(parameters.get("receipts")) || 6));
+  const maxReceiptPages = Math.min(40, Math.max(1, Number(parameters.get("receipts")) || 6));
+  const backfill = parameters.get("backfill") === "1";
 
   for (let page = 0; page < maxReceiptPages; page += 1) {
     /*
@@ -251,8 +252,12 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
       transactionsStored += ((receipt.transactions ?? []) as unknown[]).length;
     }
     if (results.length < 100) break;
-    /* Everything from here back is already held, plus the overlap. */
-    if (receiptsFrom > 0 && oldestSeen < receiptsFrom) break;
+    /*
+      Everything from here back is already held, plus the overlap - unless a
+      backfill was asked for, which walks the whole history once. The
+      incremental stop is right for every later run and wrong for the first.
+    */
+    if (!backfill && receiptsFrom > 0 && oldestSeen < receiptsFrom) break;
   }
 
   await db.prepare(
