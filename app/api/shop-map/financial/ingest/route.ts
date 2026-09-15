@@ -189,12 +189,18 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
   let paymentsStored = 0;
   let refundsSeen = 0;
   let newestReceipt = Number(receiptState?.high_water ?? 0);
+  let oldestSeen = Number.MAX_SAFE_INTEGER;
   const maxReceiptPages = Math.min(24, Math.max(1, Number(parameters.get("receipts")) || 6));
 
   for (let page = 0; page < maxReceiptPages; page += 1) {
-    const answer = await etsy(
-      `/shops/${shopId}/receipts?limit=100&offset=${page * 100}`
-      + `&min_created=${receiptsFrom}&was_paid=true`);
+    /*
+      MEASURED: min_created on the receipts endpoint does not behave like the
+      ledger's. Asking for three years of receipts with it returned a single
+      row while the shop holds thousands. So receipts are paginated plainly,
+      newest first, and the walk stops once it is comfortably behind the
+      high-water mark - which is what the mark is actually for.
+    */
+    const answer = await etsy(`/shops/${shopId}/receipts?limit=100&offset=${page * 100}`);
     if (answer.status !== 200) break;
     const results = ((answer.body as { results?: Array<Record<string, unknown>> })?.results) ?? [];
     if (!results.length) break;
@@ -218,6 +224,7 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
       const refunds = (receipt.refunds ?? []) as unknown[];
       if (refunds.length) refundsSeen += refunds.length;
       if (created > newestReceipt) newestReceipt = created;
+      if (created < oldestSeen) oldestSeen = created;
 
       /* Buyer fields are never read. Only money, identity and status. */
       await db.prepare(
@@ -244,6 +251,8 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
       transactionsStored += ((receipt.transactions ?? []) as unknown[]).length;
     }
     if (results.length < 100) break;
+    /* Everything from here back is already held, plus the overlap. */
+    if (receiptsFrom > 0 && oldestSeen < receiptsFrom) break;
   }
 
   await db.prepare(
