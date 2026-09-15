@@ -78,6 +78,12 @@ export default {
       app.fetch(new Request(site + "/api/market/shop-watch", { method: "PUT" }), env, ctx)
         .catch(() => {}),
     );
+    /*
+      The artwork capture queue. A design Goldie fails to keep is one it can
+      never prove anything about later, so the work is durable and retried
+      rather than attached to whatever request happened to start it.
+    */
+    run("/api/shop-map/capture-tick");
     /* The corpus sweep, which is what keeps discovery going. */
     run("/api/sold-overnight/cron");
     /*

@@ -66,7 +66,9 @@
 /* D1404 gives Scan the centre of the mobile bar and names every moment worth
    capturing a design at. */
 /* D1405 asks whether the image Etsy says a buyer saw is still there. */
-export const BUILD_MARKER = "D1405";
+/* D1406 makes artwork capture a durable job with retries and a visible
+   failure state, accounts for every product, and keeps the original file. */
+export const BUILD_MARKER = "D1406";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

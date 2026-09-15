@@ -22,8 +22,16 @@ import { env } from "cloudflare:workers";
 const db = () => (env as unknown as { DB: D1Database }).DB;
 const bucket = () => (env as unknown as { ARTWORK: R2Bucket }).ARTWORK;
 
-/** One print image per product. Enough to identify the design, bounded in cost. */
-export const MAX_ARTWORK_BYTES = 12 * 1024 * 1024;
+/**
+ * THE ORIGINAL FILE, NOT A CONVENIENT VERSION OF IT.
+ *
+ * The first cap was 12MB and it refused two real designs at 24MB and 28MB.
+ * High resolution is normal for print-on-demand — it is the whole point of the
+ * file — so the cap now sits well above what a print file plausibly weighs,
+ * and the bytes are stored exactly as Printify served them. A smaller copy for
+ * visual analysis is a separate job that can be redone; the original cannot.
+ */
+export const MAX_ARTWORK_BYTES = 64 * 1024 * 1024;
 
 export async function ensureProvenanceTables(): Promise<void> {
   await db().batch([
@@ -79,8 +87,26 @@ type PrintifyProduct = {
   }>;
 };
 
+/**
+ * EVERY PRODUCT GETS AN OUTCOME.
+ *
+ * An earlier backfill reported "50 found, 23 captured, 2 skipped" and left
+ * twenty-five products unaccounted for. A product that was silently skipped is
+ * indistinguishable from one that was never tried, which is exactly the shape
+ * of a gap nobody notices until the evidence is needed.
+ */
+export type CaptureOutcome =
+  | "captured"
+  | "already-held"
+  | "no-print-image"
+  | "too-large"
+  | "product-unavailable"
+  | "artwork-unreachable"
+  | "error";
+
 export type Capture = {
   captured: boolean;
+  outcome: CaptureOutcome;
   reason: string;
   productId: string;
   hash?: string;
@@ -105,7 +131,7 @@ export async function captureProductArtwork(
   },
 ): Promise<Capture> {
   await ensureProvenanceTables();
-  const base: Capture = { captured: false, reason: because, productId };
+  const base: Capture = { captured: false, outcome: "error", reason: because, productId };
 
   try {
     const response = await fetch(
@@ -114,7 +140,8 @@ export async function captureProductArtwork(
         headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
         signal: AbortSignal.timeout(20_000),
       });
-    if (!response.ok) return { ...base, note: `Printify answered ${response.status}` };
+    if (!response.ok)
+      return { ...base, outcome: "product-unavailable", note: `Printify answered ${response.status}` };
     const product = await response.json() as PrintifyProduct;
 
     /* The first placeholder that actually carries an image. A product with no
@@ -123,15 +150,35 @@ export async function captureProductArtwork(
       (row.placeholders ?? []).some(place => (place.images ?? []).length));
     const placeholder = (area?.placeholders ?? []).find(place => (place.images ?? []).length);
     const image = (placeholder?.images ?? [])[0];
-    if (!image?.src) return { ...base, note: "The product carries no print image." };
+    if (!image?.src)
+      return { ...base, outcome: "no-print-image", note: "The product carries no print image." };
 
     const artwork = await fetch(image.src, { signal: AbortSignal.timeout(30_000) });
-    if (!artwork.ok) return { ...base, note: `Artwork fetch answered ${artwork.status}` };
+    if (!artwork.ok)
+      return { ...base, outcome: "artwork-unreachable", note: `Artwork fetch answered ${artwork.status}` };
     const bytes = await artwork.arrayBuffer();
     if (bytes.byteLength > MAX_ARTWORK_BYTES)
-      return { ...base, note: `Artwork is ${Math.round(bytes.byteLength / 1_048_576)}MB, over the cap.` };
+      return { ...base, outcome: "too-large", bytes: bytes.byteLength,
+        note: `Artwork is ${Math.round(bytes.byteLength / 1_048_576)}MB, over the ${MAX_ARTWORK_BYTES / 1_048_576}MB cap.` };
 
     const hash = await hashOf(bytes);
+    /*
+      THE KEY IS SCOPED TO THE MEMBER, AND THAT IS DELIBERATE.
+
+      Deduplicating globally by content hash would mean two members who
+      happened to use the same file shared one object — and then one member's
+      deletion, or one member's access, would reach the other's evidence. The
+      member id in the key makes that structurally impossible: identical
+      artwork held by two members is two objects, and neither can name the
+      other's.
+
+      Within one member, the hash still collapses the same design across ten
+      products into one stored object, which is where the saving actually is.
+
+      The bucket itself is a private binding — it is reachable only through
+      this worker, has no public r2.dev origin, and every route that serves a
+      byte of it checks ownership first.
+    */
     const key = `provenance/${userId}/${hash}.png`;
     /* Keyed by content, so the same design across ten products is stored once. */
     const already = await bucket().head(key).catch(() => null);
@@ -160,11 +207,17 @@ export async function captureProductArtwork(
         key, hash, bytes.byteLength, "", new Date().toISOString(), because)
       .run();
 
-    return { ...base, captured: true, hash, bytes: bytes.byteLength };
+    return {
+      ...base, captured: true,
+      /* Already held is a success with nothing to do, and saying so is what
+         makes a backfill's numbers add up on a second run. */
+      outcome: already ? "already-held" : "captured",
+      hash, bytes: bytes.byteLength,
+    };
   } catch (error) {
     /* Recorded, never thrown: evidence capture must not be able to break a
        publish the seller is waiting on. */
-    return { ...base, note: error instanceof Error ? error.message : "failed" };
+    return { ...base, outcome: "error", note: error instanceof Error ? error.message : "failed" };
   }
 }
 
@@ -217,6 +270,52 @@ export async function linkListingToArtwork(
 }
 
 /** What Goldie can now prove about a design, for the audit view. */
+/**
+ * Stop tracking one member's design, without touching anyone else's bytes.
+ *
+ * The row goes; the object goes only when no other row of THIS member's still
+ * references it. Cross-member safety is structural rather than checked here —
+ * the key contains the member id, so another member's object cannot be named
+ * by this code at all.
+ */
+export async function forgetArtwork(userId: string, productId: string): Promise<{ removedRows: number; removedObjects: number }> {
+  await ensureProvenanceTables();
+  const rows = await db().prepare(
+    `SELECT artwork_key, artwork_hash FROM artwork_provenance
+      WHERE user_id = ? AND printify_product_id = ?`)
+    .bind(userId, productId).all<{ artwork_key: string; artwork_hash: string }>();
+
+  let removedObjects = 0;
+  const result = await db().prepare(
+    `DELETE FROM artwork_provenance WHERE user_id = ? AND printify_product_id = ?`)
+    .bind(userId, productId).run();
+
+  for (const row of rows.results ?? []) {
+    const stillUsed = await db().prepare(
+      `SELECT COUNT(*) AS n FROM artwork_provenance WHERE user_id = ? AND artwork_hash = ?`)
+      .bind(userId, row.artwork_hash).first<{ n: number }>();
+    if (Number(stillUsed?.n ?? 0) === 0 && row.artwork_key) {
+      await bucket().delete(row.artwork_key);
+      removedObjects += 1;
+    }
+  }
+  return { removedRows: Number(result.meta?.changes ?? 0), removedObjects };
+}
+
+/**
+ * Read one member's stored artwork, and only ever their own.
+ *
+ * Every caller goes through here rather than composing a key, so there is one
+ * place where ownership is enforced instead of one per feature.
+ */
+export async function readArtwork(userId: string, hash: string): Promise<R2ObjectBody | null> {
+  const owns = await db().prepare(
+    `SELECT 1 AS ok FROM artwork_provenance WHERE user_id = ? AND artwork_hash = ? LIMIT 1`)
+    .bind(userId, hash).first<{ ok: number }>();
+  if (!owns) return null;
+  return bucket().get(`provenance/${userId}/${hash}.png`);
+}
+
 export async function provenanceHealth(userId?: string): Promise<Record<string, unknown>> {
   await ensureProvenanceTables();
   const scope = userId ? `WHERE user_id = ?` : "";

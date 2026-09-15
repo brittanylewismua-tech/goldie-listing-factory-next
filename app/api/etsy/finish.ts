@@ -1,6 +1,5 @@
 import { env } from "cloudflare:workers";
-import { captureProductArtwork } from "@/app/artwork-provenance";
-import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
+import { queueCapture } from "@/app/artwork-capture-queue";
 import { etsyApiCredential, etsyConnection, etsyFetch, recordEtsyCall } from "./client";
 
 type Listing={listing_id:number;shop_id:number;title?:string};
@@ -85,15 +84,11 @@ async function applyListingImages(userId:string,token:string,shopId:number,listi
  * Separated so the publish path reads as publishing, and so the capture can be
  * tested without driving an entire Etsy publish.
  */
-async function captureArtworkForPublish(userId:string,draft:DraftData,listingId:number){
+async function queueArtworkCapture(userId:string,draft:DraftData,listingId:number){
   const productId=String(draft.id||"");
-  if(!productId)return;
-  const stored=await env.DB.prepare("SELECT encrypted_token FROM printify_connections WHERE user_id = ?").bind(userId).first<{encrypted_token:string}>();
-  if(!stored)return;
-  const token=await decryptPrintifyToken(stored.encrypted_token,(env as unknown as {PRINTIFY_TOKEN_KEY:string}).PRINTIFY_TOKEN_KEY);
   const shopId=Number((draft as unknown as {shopId?:number}).shopId||0);
-  if(!shopId)return;
-  await captureProductArtwork({userId,shopId,productId,token,because:"listing-factory-publish",listingId});
+  if(!productId||!shopId)return;
+  await queueCapture({userId,shopId,productId,listingId,because:"listing-factory-publish"});
 }
 
 export async function finishEtsyListing(userId:string,draft:DraftData,listingId:number,printifyImageIndices:number[]){
@@ -109,16 +104,22 @@ export async function finishEtsyListing(userId:string,draft:DraftData,listingId:
     THE DESIGN THAT WILL ONE DAY REPORT A SALE.
 
     Right now the Printify product exists and still carries its print areas.
-    Measured on real history: once it is deleted, nothing recovers what was
-    printed — zero per cent of past sold units could be tied to their artwork.
-    So the copy is taken here, at the one moment both the product and the new
+    Once it is deleted, nothing recovers what was printed — measured on real
+    history, 22 of 23 past products are already gone. So the intention to keep
+    a copy is recorded here, at the one moment both the product and the new
     Etsy listing id are in hand.
 
-    Deliberately not awaited into the publish result and deliberately unable to
-    throw: a seller waiting on a publish must never be made to wait on, or
-    fail because of, evidence collection.
+    A DURABLE JOB, NOT A BACKGROUND PROMISE. The first version fired the
+    capture without awaiting it, which on a worker means a publish could return
+    successfully while the fetch was torn down mid-flight — the listing
+    published, the seller saw success, and the one piece of evidence that
+    cannot be recreated later was silently gone. This writes a row and returns;
+    a worker on the clock does the fetching, with attempts and a visible
+    failure state.
+
+    Still cannot block the publish, and still cannot throw into it.
   */
-  void captureArtworkForPublish(userId,draft,listingId).catch(()=>{});
+  await queueArtworkCapture(userId,draft,listingId).catch(()=>{});
   await env.DB.prepare("INSERT INTO etsy_listing_links (printify_product_id,user_id,batch_id,etsy_listing_id,status,last_error,updated_at) VALUES (?,?,?,?, 'finished',NULL,CURRENT_TIMESTAMP) ON CONFLICT(printify_product_id) DO UPDATE SET etsy_listing_id=excluded.etsy_listing_id,status='finished',last_error=NULL,updated_at=CURRENT_TIMESTAMP").bind(draft.id,userId,draft.batchId||"",listingId).run();
   return {listingId,shopId:connection.shopId,url:`https://www.etsy.com/listing/${listingId}`,apiCalls:meter.calls};
 }
