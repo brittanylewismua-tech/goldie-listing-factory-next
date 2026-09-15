@@ -82,7 +82,9 @@
 /* D1413 measures image identity against a draft that already exists, creating
    and deleting nothing. */
 /* D1414 lets the existing draft be measured without the creation gate. */
-export const BUILD_MARKER = "D1414";
+/* D1415 ranks captured print files against current listing mockups on free
+   signals alone, so a paid vision pass only looks at what is worth looking at. */
+export const BUILD_MARKER = "D1415";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
