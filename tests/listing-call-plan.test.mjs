@@ -32,11 +32,40 @@ test("no image call is made to categorize a product", () => {
   assert.equal(facts.attributes["Sleeve length"], "Short sleeve");
 });
 
-test("a blurb is not regenerated twenty times for one design", () => {
+test("twenty products across five families cost two paid calls", () => {
   const plan = planBatch(twentyApparel);
-  /* Five families among twenty products: five text calls, not twenty. */
-  assert.equal(plan.listingTextCalls.length, 5);
-  assert.ok(plan.totalPaidCalls < 10, `plan still makes ${plan.totalPaidCalls} paid calls`);
+  /* One vision call for the design, one text call covering all five
+     families. Not five text calls, and certainly not forty. */
+  assert.equal(plan.designCalls.length, 1);
+  assert.equal(plan.familyCopyCalls.length, 1);
+  assert.equal(plan.familyCopyCalls[0].families.length, 5);
+  assert.equal(plan.totalPaidCalls, 2, `plan makes ${plan.totalPaidCalls} paid calls`);
+});
+
+test("twenty products in ONE family also cost two", () => {
+  const oneFamily = Array.from({ length: 20 }, () =>
+    ({ artworkHash: "design-a", blueprintTitle: "Unisex Heavy Cotton Tee" }));
+  const plan = planBatch(oneFamily);
+  assert.equal(plan.totalPaidCalls, 2);
+  assert.deepEqual(plan.familyCopyCalls[0].families, ["tee"]);
+});
+
+test("a fully warm cache costs nothing to run again", () => {
+  const warm = planBatch(twentyApparel, {
+    alreadyExtracted: new Set(["design-a"]),
+    cachedCopy: new Set(["tee", "hoodie", "crewneck", "tank", "longSleeve"]
+      .map(family => `design-a:${family}`)),
+  });
+  assert.equal(warm.totalPaidCalls, 0, "a warm repeat run still paid for something");
+});
+
+test("two new families later ask only for those two", () => {
+  const plan = planBatch(twentyApparel, {
+    alreadyExtracted: new Set(["design-a"]),
+    cachedCopy: new Set(["tee", "hoodie", "crewneck"].map(family => `design-a:${family}`)),
+  });
+  assert.equal(plan.totalPaidCalls, 1);
+  assert.deepEqual(plan.familyCopyCalls[0].families, ["longSleeve", "tank"]);
 });
 
 test("products that differ still get different facts", () => {
@@ -59,6 +88,8 @@ test("two designs are two calls, not one and not forty", () => {
     ...twentyApparel.map(item => ({ ...item, artworkHash: "design-b" }))];
   const plan = planBatch(mixed);
   assert.equal(plan.designCalls.length, 2);
+  /* Two designs, two copy calls - one each, not one per family. */
+  assert.equal(plan.familyCopyCalls.length, 2);
   assert.equal(plan.legacyPaidCalls, 80);
 });
 
