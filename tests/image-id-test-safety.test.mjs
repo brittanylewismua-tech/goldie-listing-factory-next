@@ -31,8 +31,8 @@ test("it creates its own draft and never names an existing listing", () => {
      draft before anything is deleted. */
   const listingCalls = [...source.matchAll(/listings\/\$\{([a-zA-Z]+)\}/g)].map(match => match[1]);
   for (const name of listingCalls)
-    assert.ok(["listingId", "cleanup"].includes(name),
-      `a listing call used ${name} rather than the created draft`);
+    assert.ok(["listingId", "cleanup", "existing"].includes(name),
+      `a listing call used ${name} rather than a verified Goldie draft`);
 });
 
 test("nothing is published, and the state is read back rather than assumed", () => {
@@ -41,10 +41,12 @@ test("nothing is published, and the state is read back rather than assumed", () 
   assert.match(source, /neverPublished/);
 });
 
-test("the draft is deleted and the deletion is verified", () => {
+test("a draft this run created is deleted, and the deletion is verified", () => {
   assert.match(source, /method: "DELETE"/);
   assert.match(source, /confirmedGone: gone\.status === 404/);
-  assert.match(source, /draftRemoved: gone\.status === 404/);
+  /* A pre-existing draft is reported for manual removal instead, because the
+     connection holds no delete permission and should not be given one. */
+  assert.match(source, /draftRemoved: existing \? false : gone\.status === 404/);
 });
 
 test("a failure still reports what exists so it can be cleaned up", () => {
@@ -113,7 +115,9 @@ test("an existing draft can be measured without creating or deleting anything", 
   assert.match(source, /parameters\.get\("existing"\)/);
   assert.match(source, /if \(!canDelete && !existing\)/);
   /* No delete is attempted on a draft this run did not create. */
-  assert.match(source, /if \(!existing\) \{\s*\n\s*removed = await call/);
+  const cleanupBlock = source.slice(source.indexOf("--------------------------------------------------------- clean up"));
+  assert.match(cleanupBlock, /if \(!existing\) \{/);
+  assert.match(cleanupBlock, /left the draft in place/);
   assert.match(source, /manualDeletionRequired: Boolean\(existing\)/);
 });
 
