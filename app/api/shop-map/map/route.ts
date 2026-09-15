@@ -109,7 +109,8 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
       revenueMinor: sum(row => row.lifetimeRevenueMinor),
       /* Null until production-cost coverage supports a profit for this world. */
       verifiedProfitMinor: null,
-      reviews: 0,
+      reviews: world.listingIds.reduce((total, id) =>
+        total + (reviewsByListing.get(id)?.length ?? 0), 0),
       ordersLast30: sum(row => row.last30Orders), ordersLast90: sum(row => row.last90Orders),
       revenueLast90Minor: sum(row => row.last90RevenueMinor),
       largestOrderMinor: members.reduce((most, row) =>
@@ -117,6 +118,26 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
       refundedOrders: sum(row => row.refundedOrders),
     };
   });
+
+  /* ------------------------------------------------------- review evidence */
+  /*
+    Reviews are joined by exact listing id. A review says somebody reviewed:
+    it is never a sale and never a sale date.
+  */
+  const reviewRows = await db.prepare(
+    `SELECT listing_id, rating, review, created_at FROM shop_reviews
+      WHERE listing_id IN (SELECT listing_id FROM shop_map_listings
+                            WHERE user_id = ? AND shop_id = ?)`)
+    .bind(user.userId, shopId)
+    .all<{ listing_id: number; rating: number | null; review: string; created_at: number }>()
+    .catch(() => ({ results: [] }));
+  const reviewsByListing = new Map<number, Array<{ rating: number | null; review: string; createdAt: number }>>();
+  for (const row of ((reviewRows.results ?? []) as Array<Record<string, unknown>>)) {
+    const id = Number(row.listing_id);
+    reviewsByListing.set(id, [...(reviewsByListing.get(id) ?? []),
+      { rating: row.rating === null ? null : Number(row.rating),
+        review: String(row.review ?? ""), createdAt: Number(row.created_at) }]);
+  }
 
   /* --------------------------------------------------------- this month's money */
   const receiptTotals = window ? await db.prepare(
@@ -182,6 +203,9 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
   const state = profitState({ grossRevenueMinor: revenue,
     feesMinor: Number(feeRow?.fees ?? 0), costs });
 
+  /* Enough recent trade to make a 90-day view meaningful? */
+  const recentOrders = worldPerformance.reduce((sum, world) => sum + world.ordersLast90, 0);
+  const recentEnough = recentOrders >= 10;
   const found = direction(worldPerformance);
   const unclassified = assignments.filter(row => row.unclassified).length;
 
@@ -203,20 +227,40 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
       label: found.label, finding: found.finding, reason: found.reason,
     } : { label: "No clear direction yet", finding: found.finding,
       reason: found.reason || "Not enough evidence across the worlds yet." },
+    /*
+      ONE PERIOD, SAID OUT LOUD.
+
+      The cards showed lifetime revenue on a page headed "This month", so
+      $59,960 read as a monthly figure. The default is the last 90 days when
+      there is enough recent trade to mean something, and lifetime otherwise -
+      labelled either way.
+    */
+    worldsPeriod: recentEnough ? "Last 90 days" : "Lifetime",
     worlds: worldPerformance
-      /* A world with no sales AND no active listings is dead weight on a
-         phone screen: it cannot be acted on and it pushes down the ones that
-         can. It stays in the data, it just is not shown. */
       .filter(world => world.orders > 0 || world.activeListings > 0)
-      .sort((a, b) => b.revenueMinor - a.revenueMinor)
-      .map(world => ({
-        worldId: world.worldId, label: world.label,
-        listings: worlds.find(row => row.id === world.worldId)?.listingIds.length ?? 0,
-        activeListings: world.activeListings,
-        orders: world.orders, units: world.units, revenueMinor: world.revenueMinor,
-        recentOrders90: world.ordersLast90,
-        evidence: worlds.find(row => row.id === world.worldId)?.evidence ?? "",
-      })),
+      .sort((a, b) => (recentEnough ? b.revenueLast90Minor - a.revenueLast90Minor
+        : b.revenueMinor - a.revenueMinor))
+      .map(world => {
+        const built = worlds.find(row => row.id === world.worldId);
+        const members = built?.listingIds ?? [];
+        const reviews = members.flatMap(id => reviewsByListing.get(id) ?? []);
+        const recent = reviews.filter(row => row.createdAt >= now - 90 * 86_400);
+        return {
+          worldId: world.worldId, label: world.label,
+          listings: members.length,
+          activeListings: world.activeListings,
+          period: recentEnough ? "Last 90 days" : "Lifetime",
+          orders: recentEnough ? world.ordersLast90 : world.orders,
+          revenueMinor: recentEnough ? world.revenueLast90Minor : world.revenueMinor,
+          lifetimeOrders: world.orders,
+          lifetimeRevenueMinor: world.revenueMinor,
+          /* Product families live inside the world as supporting evidence. */
+          productFamilies: built?.productFamilies ?? [],
+          subWorlds: built?.subWorlds ?? [],
+          reviews: { recent: recent.length, lifetimeHeld: reviews.length },
+          evidence: built?.evidence ?? "",
+        };
+      }),
     needsAttention: {
       unclassifiedListings: unclassified,
       missingProductionCosts: costs.filter(cost => cost.confidence === "none").length,

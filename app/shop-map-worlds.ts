@@ -1,3 +1,4 @@
+import { dimensionsFor, worldFor, rejectAsWorld } from "./shop-map-identity.ts";
 /**
  * GROUPING A SHOP'S LISTINGS FROM WHAT IT ALREADY SAYS.
  *
@@ -44,9 +45,13 @@ export type Assignment = {
 export type World = {
   id: string;
   label: string;
-  basis: "shop-section" | "phrase" | "tag" | "product-family";
+  /* Always the customer. A product family can never be the basis. */
+  basis: "customer-identity";
   evidence: string;
   listingIds: number[];
+  subWorlds: Array<{ label: string; listings: number }>;
+  /* Counted inside the world, as supporting evidence. */
+  productFamilies: Array<{ family: string; listings: number }>;
 };
 
 /* Words that repeat across any shop and describe nothing about it. */
@@ -110,70 +115,82 @@ const titleCase = (text: string) =>
   text.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 
 /**
- * Build worlds, strongest evidence first.
+ * BUILD WORLDS BOTTOM UP, FROM CUSTOMER LOGIC.
  *
- * Shop sections win when they exist: the seller made them deliberately, which
- * is better evidence than anything inferred from wording.
+ * 1. Read each listing's dimensions: identity, occasion, recipient, product.
+ * 2. Group by the customer identity, never by the product.
+ * 3. Sub-worlds are narrower territories INSIDE a world.
+ * 4. Product families are counted within a world, never promoted to one.
+ * 5. A listing whose customer logic is unclear stays unclassified.
+ *
+ * Coverage is deliberately not the goal. A smaller accurate map beats a full
+ * one made of product names, because a seller acts on what it says.
  */
 export function buildWorlds(
   listings: Listing[],
   { minimumListings = 3, overrides = new Map<number, string[]>() }:
   { minimumListings?: number; overrides?: Map<number, string[]> } = {},
 ): { worlds: World[]; assignments: Assignment[] } {
+  const read = listings.map(listing => ({
+    listing,
+    dimensions: dimensionsFor({
+      listingId: listing.listingId, title: listing.title, tags: listing.tags,
+      shopSection: listing.shopSection, productFamily: listing.productFamily }),
+  }));
+
+  /* Group by customer identity. Product family rides along as evidence. */
+  const grouped = new Map<string, typeof read>();
+  for (const row of read) {
+    const label = worldFor(row.dimensions);
+    if (!label) continue;
+    /* The gate applies to automatic labels too, not only to the output. */
+    if (rejectAsWorld(label)) continue;
+    grouped.set(label, [...(grouped.get(label) ?? []), row]);
+  }
+
   const worlds: World[] = [];
   const claimed = new Map<number, { ids: string[]; evidence: string[] }>();
 
-  const claim = (listingId: number, worldId: string, why: string) => {
-    const held = claimed.get(listingId) ?? { ids: [], evidence: [] };
-    if (!held.ids.includes(worldId)) { held.ids.push(worldId); held.evidence.push(why); }
-    claimed.set(listingId, held);
-  };
+  for (const [label, rows] of [...grouped.entries()]
+    .sort((a, b) => b[1].length - a[1].length)) {
+    if (rows.length < minimumListings) continue;
+    const id = `world:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
-  /* 1. Shop sections. */
-  const sections = new Map<string, number[]>();
-  for (const listing of listings)
-    if (listing.shopSection.trim()) {
-      const key = listing.shopSection.trim();
-      sections.set(key, [...(sections.get(key) ?? []), listing.listingId]);
-    }
-  for (const [section, ids] of sections)
-    if (ids.length >= minimumListings) {
-      const id = `section:${section.toLowerCase().replace(/\s+/g, "-")}`;
-      worlds.push({ id, label: section, basis: "shop-section",
-        evidence: `${ids.length} listings in the shop section "${section}"`, listingIds: ids });
-      for (const listingId of ids) claim(listingId, id, `shop section "${section}"`);
-    }
+    /* Which product families carry this world - evidence, not identity. */
+    const families = new Map<string, number>();
+    for (const row of rows)
+      if (row.listing.productFamily)
+        families.set(row.listing.productFamily,
+          (families.get(row.listing.productFamily) ?? 0) + 1);
+    const familyNote = [...families.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([family, count]) => `${family} ${count}`)
+      .join(", ");
 
-  /* 2. Repeated title phrases, for whatever a section did not already cover. */
-  for (const { phrase, listingIds } of repeatedPhrases(listings, minimumListings)) {
-    const loose = listingIds.filter(id => !claimed.has(id));
-    if (loose.length < minimumListings) continue;
-    const id = `phrase:${phrase.replace(/\s+/g, "-")}`;
-    if (worlds.some(world => world.id === id)) continue;
-    worlds.push({ id, label: titleCase(phrase), basis: "phrase",
-      evidence: `"${phrase}" appears in ${loose.length} listing titles`, listingIds: loose });
-    for (const listingId of loose) claim(listingId, id, `repeated phrase "${phrase}"`);
+    /* Sub-worlds: narrower territories that recur inside this world. */
+    const subCounts = new Map<string, number>();
+    for (const row of rows)
+      if (row.dimensions.subWorld)
+        subCounts.set(row.dimensions.subWorld, (subCounts.get(row.dimensions.subWorld) ?? 0) + 1);
+    const subWorlds = [...subCounts.entries()]
+      .filter(([, count]) => count >= minimumListings)
+      .map(([name, count]) => ({ label: name, listings: count }));
+
+    worlds.push({
+      id, label, basis: "customer-identity",
+      evidence: `${rows.length} listings share this customer${familyNote ? ` · across ${familyNote}` : ""}`,
+      listingIds: rows.map(row => row.listing.listingId),
+      subWorlds,
+      productFamilies: [...families.entries()].map(([family, listings]) => ({ family, listings })),
+    });
+    for (const row of rows)
+      claim(claimed, row.listing.listingId, id,
+        row.dimensions.evidence[0] ?? `customer identity "${label}"`);
   }
 
-  /* 3. Repeated tags. */
-  const tagCounts = new Map<string, number[]>();
-  for (const listing of listings)
-    for (const tag of new Set(listing.tags.map(value => value.trim().toLowerCase())))
-      if (tag && !STOP.has(tag))
-        tagCounts.set(tag, [...(tagCounts.get(tag) ?? []), listing.listingId]);
-  for (const [tag, ids] of [...tagCounts.entries()].sort((a, b) => b[1].length - a[1].length)) {
-    const loose = ids.filter(id => !claimed.has(id));
-    if (loose.length < minimumListings) continue;
-    const id = `tag:${tag.replace(/\s+/g, "-")}`;
-    worlds.push({ id, label: titleCase(tag), basis: "tag",
-      evidence: `tagged "${tag}" on ${loose.length} listings`, listingIds: loose });
-    for (const listingId of loose) claim(listingId, id, `tag "${tag}"`);
-  }
-
-  /* A member's own correction outranks every rule above. */
+  /* A member's own move outranks every rule above. */
   for (const [listingId, worldIds] of overrides)
-    claimed.set(listingId, { ids: [...worldIds],
-      evidence: ["moved here by you"] });
+    claimed.set(listingId, { ids: [...worldIds], evidence: ["moved here by you"] });
 
   const assignments: Assignment[] = listings.map(listing => {
     const held = claimed.get(listing.listingId);
@@ -186,21 +203,21 @@ export function buildWorlds(
     };
   });
 
-  /* Rebuild membership so overrides are reflected in the worlds themselves. */
   for (const world of worlds)
     world.listingIds = assignments
       .filter(row => row.worldIds.includes(world.id))
       .map(row => row.listingId);
 
-  /*
-    A world with nothing in it is not a world. Phrase and tag worlds that
-    caught a couple of dead listings and no sales are noise on a small screen,
-    so they are dropped rather than shown at zero.
-  */
-  return {
-    worlds: worlds.filter(world => world.listingIds.length > 0),
-    assignments,
-  };
+  return { worlds: worlds.filter(world => world.listingIds.length > 0), assignments };
+}
+
+function claim(
+  into: Map<number, { ids: string[]; evidence: string[] }>,
+  listingId: number, worldId: string, why: string,
+) {
+  const held = into.get(listingId) ?? { ids: [], evidence: [] };
+  if (!held.ids.includes(worldId)) { held.ids.push(worldId); held.evidence.push(why); }
+  into.set(listingId, held);
 }
 
 /** Member controls, applied over the automatic grouping without touching source data. */

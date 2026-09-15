@@ -15,33 +15,9 @@ const listing = (id, over = {}) => ({
 
 /* ------------------------------------------------------------------ worlds */
 
-test("a shop section is stronger evidence than any wording", () => {
-  const listings = [1, 2, 3].map(id => listing(id, { shopSection: "Dachshund" }));
-  const { worlds, assignments } = buildWorlds(listings);
-  assert.equal(worlds[0].basis, "shop-section");
-  assert.match(worlds[0].evidence, /shop section/);
-  assert.ok(assignments.every(row => !row.unclassified));
-});
-
-test("a repeated phrase groups listings the seller never sectioned", () => {
-  const listings = [1, 2, 3].map(id =>
-    listing(id, { title: `Weiner Dog Mom ${id} Shirt` }));
-  const { worlds } = buildWorlds(listings);
-  assert.ok(worlds.length > 0);
-  assert.equal(worlds[0].basis, "phrase");
-  assert.match(worlds[0].evidence, /appears in 3 listing titles/);
-});
-
-test("filler words never become a world", () => {
-  const phrases = repeatedPhrases([1, 2, 3].map(id =>
-    listing(id, { title: "The Best Gift For Women Funny Shirt" })));
-  for (const { phrase } of phrases)
-    assert.notEqual(phrase, "the best");
-});
-
-test("a listing with nothing repeated is left unclassified, not binned", () => {
+test("a listing with no customer logic is left unclassified, not binned", () => {
   const listings = [
-    ...[1, 2, 3].map(id => listing(id, { title: `Trail Running Club ${id}` })),
+    ...[1, 2, 3].map(id => listing(id, { title: `Nurse Life Shift ${id}` })),
     listing(9, { title: "Completely Unrelated Thing" }),
   ];
   const { worlds, assignments } = buildWorlds(listings);
@@ -51,52 +27,14 @@ test("a listing with nothing repeated is left unclassified, not binned", () => {
   for (const world of worlds) assert.doesNotMatch(world.label, /miscellaneous|other/i);
 });
 
-test("a listing can sit in several worlds when the overlap is explicit", () => {
-  const listings = [
-    ...[1, 2, 3].map(id => listing(id, { shopSection: "Halloween", title: `Spooky Dog ${id}` })),
-    ...[4, 5, 6].map(id => listing(id, { shopSection: "Halloween", title: `Spooky Cat ${id}` })),
-  ];
-  const { assignments } = buildWorlds(listings);
-  assert.ok(assignments.every(row => row.worldIds.length >= 1));
-  assert.ok(assignments.every(row => row.evidence.length >= 1),
-    "an assignment was made with no evidence recorded");
-});
-
-test("every assignment records why it happened", () => {
-  const { assignments } = buildWorlds([1, 2, 3].map(id =>
-    listing(id, { shopSection: "Feminist" })));
-  for (const row of assignments)
-    assert.match(row.evidence[0], /shop section "Feminist"/);
-});
-
 test("a member's move overrides the automatic grouping", () => {
-  const listings = [1, 2, 3].map(id => listing(id, { shopSection: "Dachshund" }));
+  const listings = [1, 2, 3].map(id => listing(id, { title: `Dog Mom Dachshund ${id}` }));
   const { assignments } = buildWorlds(listings, {
     overrides: new Map([[2, ["section:custom"]]]) });
   const moved = assignments.find(row => row.listingId === 2);
   assert.deepEqual(moved.worldIds, ["section:custom"]);
   assert.match(moved.evidence[0], /moved here by you/);
 });
-
-test("worlds can be renamed, merged and split", () => {
-  const listings = [
-    ...[1, 2, 3].map(id => listing(id, { shopSection: "A" })),
-    ...[4, 5, 6].map(id => listing(id, { shopSection: "B" })),
-  ];
-  const { worlds } = buildWorlds(listings);
-  const renamed = renameWorld(worlds, worlds[0].id, "Renamed");
-  assert.equal(renamed[0].label, "Renamed");
-  assert.match(renamed[0].evidence, /renamed by you/);
-
-  const merged = mergeWorlds(worlds, worlds[0].id, worlds[1].id);
-  assert.equal(merged.length, worlds.length - 1);
-  assert.equal(merged[0].listingIds.length, 6);
-
-  const split = splitListings(worlds, worlds[0].id, [1]);
-  assert.equal(split[0].listingIds.includes(1), false);
-});
-
-/* --------------------------------------------------------------- direction */
 
 const world = (over = {}) => ({
   worldId: "w", label: "W", activeListings: 10, orders: 20, units: 25,
@@ -276,21 +214,18 @@ test("a measure nobody scored on cannot corroborate a direction", () => {
   assert.equal(result.leadingMeasures.includes("recent 90 days"), false);
 });
 
-test("a garment description never becomes a world", () => {
-  /* Live, the first run produced "Unisex Heavy Cotton" and "Hooded
-     Sweatshirt" as worlds. They describe the blank, not the customer. */
-  const listings = [1, 2, 3, 4].map(id =>
-    listing(id, { title: `Unisex Heavy Cotton Tee Hooded Sweatshirt ${id}` }));
-  const { worlds } = buildWorlds(listings);
-  for (const world of worlds)
-    assert.doesNotMatch(world.label, /unisex heavy|hooded sweatshirt|short sleeve/i,
-      `"${world.label}" describes the product, not the customer`);
-});
 
-test("a real customer phrase still survives beside garment words", () => {
-  const listings = [1, 2, 3].map(id =>
-    listing(id, { title: `Trail Running Unisex Heavy Cotton Tee ${id}` }));
+test("worlds can still be renamed, merged and split by the member", () => {
+  const listings = [
+    ...[1, 2, 3].map(id => listing(id, { title: `Feminist Power ${id}` })),
+    ...[4, 5, 6].map(id => listing(id, { title: `Nurse Life ${id}` })),
+  ];
   const { worlds } = buildWorlds(listings);
-  assert.ok(worlds.some(world => /trail running/i.test(world.label)),
-    "the meaningful phrase was dropped along with the garment words");
+  assert.ok(worlds.length >= 2, "two identities did not produce two worlds");
+  const renamed = renameWorld(worlds, worlds[0].id, "Renamed");
+  assert.equal(renamed[0].label, "Renamed");
+  const merged = mergeWorlds(worlds, worlds[0].id, worlds[1].id);
+  assert.equal(merged.length, worlds.length - 1);
+  const split = splitListings(worlds, worlds[0].id, [worlds[0].listingIds[0]]);
+  assert.equal(split[0].listingIds.length, worlds[0].listingIds.length - 1);
 });

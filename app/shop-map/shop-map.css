@@ -27,3 +27,5 @@
 .shop-map-attention ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px;line-height:1.5}
 .shop-map-clear{opacity:.65}
 @media (min-width:700px){.shop-map{padding:28px 20px 64px}}
+.shop-map-period{margin:-6px 0 10px;font-size:12px;opacity:.7}
+.shop-map-evidence p{margin:0 0 6px}

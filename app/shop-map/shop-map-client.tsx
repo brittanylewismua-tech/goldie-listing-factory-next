@@ -2,7 +2,11 @@
 import { useEffect, useState } from "react";
 
 type World = { worldId: string; label: string; listings: number; activeListings: number;
-  orders: number; units: number; revenueMinor: number; recentOrders90: number; evidence: string };
+  period: string; orders: number; revenueMinor: number; lifetimeOrders: number;
+  lifetimeRevenueMinor: number; evidence: string;
+  productFamilies: Array<{ family: string; listings: number }>;
+  subWorlds: Array<{ label: string; listings: number }>;
+  reviews: { recent: number; lifetimeHeld: number } };
 type Map = {
   shop?: { shopName: string };
   month?: string;
@@ -10,6 +14,7 @@ type Map = {
     headline: string; profitMinor: number | null; accuracy: string; orders: number };
   pointingHere?: { label: string; finding: string; reason: string };
   worlds?: World[];
+  worldsPeriod?: string;
   needsAttention?: { unclassifiedListings: number; missingProductionCosts: number;
     overbuiltWorlds: Array<{ label: string; reason: string }> };
   error?: string;
@@ -68,9 +73,11 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       {/* 3 · The worlds, stacked for a phone. Tap for the evidence. */}
       <section className="shop-map-card">
         <h2>Your worlds</h2>
+        {/* Never a figure without its period. */}
+        <p className="shop-map-period">{map.worldsPeriod}</p>
         <ul className="shop-map-worlds">
           {(map.worlds ?? []).map(world => {
-            const shareOfRevenue = totalRevenue ? world.revenueMinor / totalRevenue : 0;
+        const shareOfRevenue = totalRevenue ? world.revenueMinor / totalRevenue : 0;
             return (
               <li key={world.worldId}>
                 <button type="button" className="shop-map-world"
@@ -88,7 +95,23 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
                   </span>
                 </button>
                 {open === world.worldId
-                  ? <p className="shop-map-evidence">{world.evidence}</p>
+                  ? <div className="shop-map-evidence">
+                      <p>{world.evidence}</p>
+                      {world.productFamilies.length
+                        ? <p>Products: {world.productFamilies
+                            .map(row => `${row.family} (${row.listings})`).join(", ")}</p>
+                        : null}
+                      {world.subWorlds.length
+                        ? <p>Inside it: {world.subWorlds
+                            .map(row => `${row.label} (${row.listings})`).join(", ")}</p>
+                        : null}
+                      {world.reviews.lifetimeHeld
+                        ? <p>{world.reviews.recent} reviews in the last 90 days,
+                            {` ${world.reviews.lifetimeHeld}`} held in total</p>
+                        : null}
+                      <p>Lifetime: {money(world.lifetimeRevenueMinor)} from
+                        {` ${world.lifetimeOrders}`} orders</p>
+                    </div>
                   : null}
               </li>
             );

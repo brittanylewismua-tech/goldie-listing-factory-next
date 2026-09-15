@@ -49,7 +49,7 @@ test("worlds stack vertically and have large touch targets", () => {
 
 test("evidence is behind a tap, not on the face of the card", () => {
   assert.match(client, /aria-expanded=\{open === world\.worldId\}/);
-  assert.match(client, /open === world\.worldId\s*\n?\s*\? <p className="shop-map-evidence"/);
+  assert.match(client, /open === world\.worldId\s*\n?\s*\? <div className="shop-map-evidence"/);
 });
 
 test("nothing overflows a phone sideways", () => {
@@ -118,4 +118,26 @@ test("a correction can only ever touch the caller's own shop", () => {
     "../app/api/shop-map/correct/route.ts", import.meta.url), "utf8");
   for (const statement of route.match(/(INSERT INTO|UPDATE|DELETE FROM)[\s\S]{0,400}?`/g) ?? [])
     assert.ok(/user_id/.test(statement), "a correction ran without scoping to the member");
+});
+
+test("no world figure is shown without its period", () => {
+  /* The cards showed lifetime revenue under a heading that said This month,
+     so $59,960 read as a monthly figure. */
+  assert.match(client, /shop-map-period/);
+  assert.match(client, /\{map\.worldsPeriod\}/);
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/map/route.ts", import.meta.url), "utf8");
+  assert.match(route, /worldsPeriod: recentEnough \? "Last 90 days" : "Lifetime"/);
+  assert.match(route, /ONE PERIOD, SAID OUT LOUD/);
+});
+
+test("product families appear inside a world, never as one", () => {
+  assert.match(client, /Products: \{world\.productFamilies/);
+  assert.match(client, /Inside it: \{world\.subWorlds/);
+});
+
+test("review evidence is shown as reviews, never as sales", () => {
+  assert.match(client, /reviews in the last 90 days/);
+  const block = client.slice(client.indexOf("world.reviews"));
+  assert.doesNotMatch(block.slice(0, 300), /sale|sold/i);
 });
