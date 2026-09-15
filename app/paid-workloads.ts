@@ -94,9 +94,13 @@ export const PAID_WORKLOADS: Workload[] = [
   {
     key: "nicheClassifier",
     what: "One canonical niche list for a shop, then batched assignment against it.",
-    provider: "anthropic", model: "claude-haiku-4-5-20251001",
-    /* Calculated: 4 calls, ~14,900 in and ~8,600 out for 293 listings. */
-    unitCost: 0.0579, costBasis: "calculated",
+    provider: "fal / openrouter", model: "google/gemini-2.5-flash",
+    /*
+      Unknown until Gemini has actually billed, so it stays 0 like every
+      other unmeasured workload. The reservation is handled separately, at
+      the full member ceiling, by CONSERVATIVE_RESERVATION.
+    */
+    unitCost: 0, costBasis: "unknown",
     customerFacing: true,
     memberDailyLimit: 1, memberDailyAttempts: 2,
     globalDailyCeiling: 1, globalDailyRequests: 40, limitStatus: "approved",

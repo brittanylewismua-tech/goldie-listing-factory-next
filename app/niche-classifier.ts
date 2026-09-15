@@ -13,7 +13,12 @@
  */
 import { rejectAsNiche } from "./shop-map-identity.ts";
 
-export const CLASSIFIER_MODEL = "claude-haiku-4-5-20251001";
+/*
+  The model already metered in this application. The Anthropic adapter is
+  kept below, disabled, so it can be switched on without rebuilding anything.
+*/
+export const CLASSIFIER_MODEL = "google/gemini-2.5-flash";
+export const ANTHROPIC_ADAPTER = { model: "claude-haiku-4-5-20251001", enabled: false };
 export const MAX_CALLS_PER_BUILD = 4;
 export const BATCH_SIZE = 100;
 export const MEMBER_DAILY_BUILDS = 1;
@@ -155,7 +160,17 @@ export function parseAssignments(
   return { assigned, rejected };
 }
 
-/** Tokens in, tokens out, priced. Haiku 4.5 at $1/MTok in, $5/MTok out. */
+/*
+  RESERVE THE WHOLE MEMBER CEILING UNTIL GEMINI IS MEASURED.
+
+  fal reports its charge after the fact, so the honest reservation before a
+  first run is the most it could cost: the entire $0.10. It is reconciled
+  against the provider's own figure the moment the build finishes, and the
+  estimate below only decides whether a build is worth starting.
+*/
+export const CONSERVATIVE_RESERVATION = MEMBER_DAILY_DOLLARS;
+
+/** Tokens in, tokens out. Sized on Haiku rates as an upper bound. */
 export function estimateCost(listings: number) {
   const perListing = 22;
   const canonicalIn = 700 + listings * perListing;

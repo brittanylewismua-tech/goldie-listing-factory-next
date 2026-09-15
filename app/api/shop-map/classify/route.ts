@@ -5,10 +5,10 @@ import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { ensureListingTables } from "@/app/shop-map-listings";
 import { reserveSpend, settleSpend, failSpend } from "@/app/spend-guard";
-import { costOf } from "@/app/vision-extraction";
 import { recordVisionCall } from "@/app/vision-telemetry";
 import {
   CLASSIFIER_MODEL, BATCH_SIZE, MAX_CALLS_PER_BUILD, MEMBER_DAILY_DOLLARS,
+  CONSERVATIVE_RESERVATION,
   CANONICAL_PROMPT, ASSIGN_PROMPT, compact, parseCanonical, parseAssignments,
   estimateCost, type ListingInput,
 } from "@/app/niche-classifier";
@@ -30,7 +30,15 @@ export const POST = withErrorLog("shop-map-classify", async (request: Request) =
 
   await ensureListingTables();
   const db = (env as unknown as { DB: D1Database }).DB;
-  const key = (env as unknown as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY ?? "";
+  /*
+    THE PROVIDER ALREADY IN THE APPLICATION.
+
+    FAL_KEY is configured and metered; ANTHROPIC_API_KEY is not, and waiting
+    for one would have blocked the feature on a credential nobody was going
+    to add. The Anthropic adapter stays in the codebase, disabled, so it can
+    be switched on later without rebuilding any of this.
+  */
+  const key = process.env.FAL_KEY ?? "";
   if (!key)
     return NextResponse.json({ error: "No provider key is configured.", spent: 0 },
       { status: 503 });
@@ -85,8 +93,9 @@ export const POST = withErrorLog("shop-map-classify", async (request: Request) =
       + `estimated at $${estimate.dollars}, over the $${MEMBER_DAILY_DOLLARS} member limit.` },
       { status: 400 });
 
+  /* The whole ceiling is held until Gemini's real cost is known. */
   const reservation = await reserveSpend({ workloadKey: "nicheClassifier",
-    userId: user.userId, fingerprint: `${shopId}:${changed.length}` });
+    userId: user.userId, fingerprint: `${shopId}:${changed.length}:${CONSERVATIVE_RESERVATION}` });
   if (!reservation.allowed)
     return NextResponse.json({ error: reservation.message, reason: reservation.reason },
       { status: 429 });
@@ -97,23 +106,35 @@ export const POST = withErrorLog("shop-map-classify", async (request: Request) =
     if (calls >= MAX_CALLS_PER_BUILD) throw new Error("call budget exhausted");
     calls += 1;
     const began = Date.now();
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    /*
+      The same endpoint Listing Factory already uses, with no image_urls.
+      Text-only is simply the absence of that field, so no new pathway and
+      no new credential are involved.
+    */
+    const response = await fetch("https://fal.run/openrouter/router/vision", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": key,
-        "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: CLASSIFIER_MODEL, max_tokens: maxTokens,
-        system: prompt, messages: [{ role: "user", content: body }] }),
+      headers: { Authorization: `Key ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: CLASSIFIER_MODEL, temperature: 0, max_tokens: maxTokens,
+        system_prompt: prompt, prompt: body,
+      }),
       signal: AbortSignal.timeout(120_000),
     });
     const payload = await response.json() as {
-      content?: Array<{ text?: string }>; usage?: Record<string, number>; error?: { message?: string } };
+      output?: string; usage?: { cost?: number; prompt_tokens?: number; completion_tokens?: number };
+      detail?: string; error?: { message?: string } };
     const usage = payload.usage ?? {};
-    billed += costOf(usage);
+    /* fal reports the charge directly; there is no token arithmetic to do. */
+    billed += Number(usage.cost ?? 0);
     await recordVisionCall({ userId: user.userId, purpose: "classify",
-      model: CLASSIFIER_MODEL, usage, milliseconds: Date.now() - began,
-      attempts: 1, validJson: response.ok, failure: payload.error?.message ?? "" });
-    if (!response.ok) throw new Error(payload.error?.message ?? `provider ${response.status}`);
-    return String(payload.content?.[0]?.text ?? "");
+      model: CLASSIFIER_MODEL,
+      usage: { input_tokens: Number(usage.prompt_tokens ?? 0),
+        output_tokens: Number(usage.completion_tokens ?? 0) },
+      milliseconds: Date.now() - began, attempts: 1, validJson: response.ok,
+      failure: payload.error?.message ?? payload.detail ?? "" });
+    if (!response.ok)
+      throw new Error(payload.error?.message ?? payload.detail ?? `provider ${response.status}`);
+    return String(payload.output ?? "");
   };
 
   try {
@@ -132,13 +153,6 @@ export const POST = withErrorLog("shop-map-classify", async (request: Request) =
       return NextResponse.json({ error: `Canonical list unusable: ${canonical.why}`,
         calls, spent: Number(billed.toFixed(5)) }, { status: 502 });
     }
-
-    await db.prepare(
-      `INSERT INTO shop_map_niche_list (user_id, shop_id, niches_json, built_at)
-       VALUES (?,?,?,?)
-       ON CONFLICT(user_id, shop_id) DO UPDATE SET
-         niches_json = excluded.niches_json, built_at = excluded.built_at`)
-      .bind(user.userId, shopId, JSON.stringify(canonical.niches), now).run();
 
     /* Step 2 — assignment, against that fixed list only. */
     const byId = new Map(changed.map(listing => [listing.listingId, listing]));
@@ -169,6 +183,31 @@ export const POST = withErrorLog("shop-map-classify", async (request: Request) =
         stored += 1;
       }
     }
+
+    /*
+      NO PARTIAL VOCABULARY.
+
+      The niche list is written only once assignment has actually produced
+      something. A vocabulary stored beside a failed assignment would leave
+      the shop with category names and no listings in them, which reads as a
+      map that lost its contents rather than a build that did not finish.
+    */
+    if (!stored) {
+      await failSpend(reservation.id, { billed });
+      return NextResponse.json({
+        error: "No listing could be assigned, so no niche list was stored.",
+        calls, spent: Number(billed.toFixed(5)),
+        canonicalProposed: canonical.niches,
+        refusedAssignments: refused.slice(0, 20),
+      }, { status: 502 });
+    }
+
+    await db.prepare(
+      `INSERT INTO shop_map_niche_list (user_id, shop_id, niches_json, built_at)
+       VALUES (?,?,?,?)
+       ON CONFLICT(user_id, shop_id) DO UPDATE SET
+         niches_json = excluded.niches_json, built_at = excluded.built_at`)
+      .bind(user.userId, shopId, JSON.stringify(canonical.niches), now).run();
 
     await settleSpend(reservation.id, billed);
     return NextResponse.json({

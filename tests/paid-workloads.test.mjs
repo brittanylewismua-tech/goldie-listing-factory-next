@@ -167,8 +167,10 @@ test("the niche classifier carries the approved limits", () => {
   assert.equal(entry.memberDailyLimit, 1, "more than one build per day");
   assert.equal(entry.globalDailyCeiling, 1, "the global beta ceiling is not $1");
   assert.equal(entry.retries, 1, "more than one retry is more paid calls");
-  /* A full build must fit under the per-member dollar limit. */
-  assert.ok(entry.unitCost < 0.10, `a build costs ${entry.unitCost}, over the $0.10 member cap`);
+  /* Cost is unmeasured until Gemini bills, so the reservation - not a
+     guessed unit cost - is what protects the ceiling. */
+  assert.equal(entry.costBasis, "unknown");
+  assert.equal(entry.unitCost, 0);
 });
 
 test("an unchanged listing is never reclassified", () => {

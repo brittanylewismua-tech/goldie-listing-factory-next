@@ -94,7 +94,7 @@ test("nothing reaches the provider before the spend guard agrees", () => {
   const route = readFileSync(new URL(
     "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
   const reserveAt = route.indexOf("await reserveSpend(");
-  const fetchAt = route.indexOf("api.anthropic.com");
+  const fetchAt = route.indexOf("https://fal.run/");
   assert.ok(reserveAt > 0 && reserveAt < fetchAt,
     "a provider call is made before the reservation");
   /* A half-finished build leaves a shop with half a vocabulary. */
@@ -137,4 +137,45 @@ test("a missing key stops before any spend", () => {
   const keyAt = route.indexOf("No provider key is configured");
   const reserveAt = route.indexOf("await reserveSpend(");
   assert.ok(keyAt > 0 && keyAt < reserveAt);
+});
+
+test("the classifier uses the provider already configured", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
+  assert.match(route, /process\.env\.FAL_KEY/);
+  assert.match(route, /fal\.run/);
+  /* And carries no image_urls, which is what makes it text-only. */
+  const code = route.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(code, /image_urls/);
+});
+
+test("the Anthropic adapter stays available but disabled", () => {
+  const module = readFileSync(new URL("../app/niche-classifier.ts", import.meta.url), "utf8");
+  assert.match(module, /ANTHROPIC_ADAPTER = \{ model: "claude-haiku-4-5-20251001", enabled: false \}/);
+});
+
+test("the whole member ceiling is reserved until the cost is measured", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
+  assert.match(route, /CONSERVATIVE_RESERVATION/);
+  const module = readFileSync(new URL("../app/niche-classifier.ts", import.meta.url), "utf8");
+  assert.match(module, /CONSERVATIVE_RESERVATION = MEMBER_DAILY_DOLLARS/);
+});
+
+test("a failed build stores no partial niche vocabulary", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
+  /* The list is written only after assignment produced something. */
+  const storeAt = route.indexOf("INSERT INTO shop_map_niche_list");
+  const guardAt = route.indexOf("if (!stored) {");
+  assert.ok(guardAt > 0 && guardAt < storeAt,
+    "the niche list is stored before assignment is known to have worked");
+  assert.match(route, /NO PARTIAL VOCABULARY/);
+});
+
+test("the provider's own reported charge is what gets settled", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/classify/route.ts", import.meta.url), "utf8");
+  assert.match(route, /billed \+= Number\(usage\.cost \?\? 0\)/);
+  assert.match(route, /await settleSpend\(reservation\.id, billed\)/);
 });
