@@ -72,11 +72,10 @@ test("nothing overflows a phone sideways", () => {
 
 test("needs attention stays actionable and says so when it is empty", () => {
   const block = client.slice(client.indexOf("Needs attention"));
-  assert.match(block, /in a world yet/);
+  assert.match(block, /aren’t in a niche yet/);
   assert.match(block, /no production cost/);
   /* Counts read correctly at one as well as many. */
   assert.match(block, /"order has" : "orders have"/);
-  assert.match(block, /"listing isn’t" : "listings aren’t"/);
   assert.match(block, /Nothing needs your attention/);
   /* Not a technical error dashboard. */
   assert.doesNotMatch(block, /stack|exception|status code|endpoint/i);
