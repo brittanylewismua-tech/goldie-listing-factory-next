@@ -174,3 +174,23 @@ test("no screen calls the checker a tracker or promises alerts", () => {
       assert.ok(!text.includes(banned), `${file} says "${banned}"`);
   }
 });
+
+test("the service worker never caches an API response or a page", () => {
+  const worker = readFileSync(new URL("../public/service-worker.js", import.meta.url), "utf8");
+  const handler = worker.slice(worker.indexOf('addEventListener("fetch"'));
+  /* Both bail out BEFORE respondWith, so neither can be served from cache. */
+  const bail = handler.slice(0, handler.indexOf("event.respondWith"));
+  assert.match(bail, /url\.pathname\.startsWith\("\/api\/"\)\) return;/);
+  assert.match(bail, /request\.mode === "navigate"\) return;/);
+  assert.match(bail, /request\.method !== "GET"\) return;/);
+  /* And only content-hashed static assets are eligible. */
+  assert.match(bail, /cacheable = \/\\\.\(\?:png/);
+});
+
+test("the manifest opens the suite, standalone, at Home", () => {
+  const manifest = JSON.parse(readFileSync(
+    new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
+  assert.equal(manifest.display, "standalone");
+  assert.match(manifest.start_url, /^\/home/);
+  assert.ok((manifest.icons ?? []).some(icon => icon.sizes === "512x512"));
+});
