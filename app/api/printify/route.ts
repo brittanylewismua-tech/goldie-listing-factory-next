@@ -1,3 +1,4 @@
+import { storeWarning } from "@/app/printify-store-warning";
 import { env } from "cloudflare:workers";
 import { DELETE_UNUSED_TEMPLATE_SESSIONS } from "./retention";
 import { NextResponse } from "next/server";
@@ -339,6 +340,7 @@ export async function POST(request: Request) {
       */
       shop_title: found.shop.title ?? "",
       shop_count: shops.length,
+      shop_channel: (found.shop as { sales_channel?: string }).sales_channel ?? "",
       id: found.product.id,
       blueprint_id: found.product.blueprint_id,
       print_provider_id: found.product.print_provider_id,
@@ -401,7 +403,12 @@ export async function POST(request: Request) {
     const groupedColors=groupedColorOptions.map(color=>({...color,variantIds:productColorVariantIds(color,selectableVariants,colorAxisIndex)}));
     const canonicalColorIds=canonicalProductColorIds(groupedColors);
     const productRenderings=(found.product.views||[]).flatMap(view=>(view.files||[]).filter(file=>file.src).map(file=>({src:file.src!,variantIds:file.variant_ids||[],position:view.position||""}))).slice(0,100);
-    return NextResponse.json({ timings, cache: cacheReport, shop: { id: found.shop.id, title: found.shop.title, count: shops.length }, product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, previewImage:productMockups[0]||"", previewImages:productMockups, productRenderings, enabledVariants: enabledVariants.length, colorOptions:groupedColors, sizeOptions:(sizeOption?.values||[]).map(value=>({id:value.id,title:value.title||`Size ${value.id}`,available:availableSizeIds.has(value.id),templateEnabled:templateSizeIds.has(value.id)})), variants:selectableVariants.map(variant=>{const rawColorId=(variant.options||[]).find(id=>colorIds.has(id))||null;return {id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[],colorId:rawColorId==null?null:canonicalColorIds.get(rawColorId)??rawColorId,sizeId:(variant.options||[]).find(id=>sizeIds.has(id))||null,templateEnabled:Boolean(variant.is_enabled)}}),printPositions, shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,shippingProfileNeedsSelection,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale, placement,
+    return NextResponse.json({ timings, cache: cacheReport, shop: { id: found.shop.id, title: found.shop.title, count: shops.length },
+      /* Said BEFORE anything is built, not after the member is confused. */
+      storeWarning: storeWarning(
+        shops.map(store => ({ id: Number(store.id), title: String(store.title ?? ""),
+          salesChannel: String((store as { sales_channel?: string }).sales_channel ?? "") })),
+        Number(found.shop.id)), product: { id: found.product.id, batchId, title: found.product.title, description:found.product.description??"", blueprintId:found.product.blueprint_id, blueprintTitle:blueprint.title||found.product.title, brand:blueprint.brand||"", model:blueprint.model||"", provider, previewImage:productMockups[0]||"", previewImages:productMockups, productRenderings, enabledVariants: enabledVariants.length, colorOptions:groupedColors, sizeOptions:(sizeOption?.values||[]).map(value=>({id:value.id,title:value.title||`Size ${value.id}`,available:availableSizeIds.has(value.id),templateEnabled:templateSizeIds.has(value.id)})), variants:selectableVariants.map(variant=>{const rawColorId=(variant.options||[]).find(id=>colorIds.has(id))||null;return {id:variant.id,title:variant.title||`Variant ${variant.id}`,cost:Number(variant.cost??variant.price),templatePrice:Number(variant.price),shipping:shippingByVariant[variant.id]??standardShipping,options:variant.options||[],colorId:rawColorId==null?null:canonicalColorIds.get(rawColorId)??rawColorId,sizeId:(variant.options||[]).find(id=>sizeIds.has(id))||null,templateEnabled:Boolean(variant.is_enabled)}}),printPositions, shop: found.shop.title, standardShipping,shippingCurrency,shippingTemplateId,shippingProfileNeedsSelection,freeShipping:Boolean(found.product.sales_channel_properties?.free_shipping),maxPrintWidth, maxPrintHeight, placementScale, placement,
       /* D614 - the saved product carries artwork in an internal label placeholder.
          Those are left out of new products, and the seller is told so plainly
          rather than finding out from a Printify preview. */

@@ -1176,6 +1176,8 @@ export default function ListingFactoryApp() {
   const [bundleLoadErrors,setBundleLoadErrors]=useState<Record<string,string>>({});
   /* D835 · The Etsy shops this seller has connected, and which one is active. */
   const [etsyShops,setEtsyShops]=useState<{shopId:number;shopName:string;active:boolean}[]>([]);
+  /* D1452 - what Goldie knows about the member's Printify stores, said up front. */
+  const [printifyStoreWarning,setPrintifyStoreWarning]=useState<{warn:boolean;duplicateName:boolean;headline:string;detail:string}|null>(null);
   const [shopSwitchError,setShopSwitchError]=useState("");
   const [connectAnotherOpen,setConnectAnotherOpen]=useState(false);
   const connectAnotherOpener=useRef<HTMLElement|null>(null);
@@ -2341,6 +2343,14 @@ export default function ListingFactoryApp() {
 
     Goldie knows the answer and was simply not saying it.
   */
+  function printifyStoreBanner(){
+    if(!printifyStoreWarning?.warn)return null;
+    return <div className={printifyStoreWarning.duplicateName?"printify-store-warning printify-store-warning-duplicate":"printify-store-warning"} role="status">
+      <strong>{printifyStoreWarning.headline}</strong>
+      <span>{printifyStoreWarning.detail}</span>
+    </div>;
+  }
+
   function printifyStoreNote(){
     const created=drafts.find(draft=>draft.status==="Created"&&draft.printifyShopName);
     if(!created?.printifyShopName)return null;
@@ -3678,7 +3688,8 @@ setSavedRevision(current=>current+1);}catch(error){/* Automatic defaults are a c
           show and they must still offer retry and help. */}
       <div className="task-panel-body placement-review-grid">
         <p className="placement-printify-note">Printify may ask you to sign in and choose the matching shop before editing.</p>
-        {!reviewEditing&&selectedPlacementDrafts.length?<div className="placement-selection-actions"><button type="button" onClick={()=>setSelectedPlacementDrafts(listings.filter(({draft})=>draft.status==="Created"&&draft.id).map(({draft})=>draft.id!))}>Select all</button><button type="button" onClick={()=>requestDraftTabs(drafts.filter(draft=>draft.id&&selectedPlacementDrafts.includes(draft.id)&&draft.editorUrl))}>Open selected listings in Printify ↗</button></div>:null}
+        {printifyStoreBanner()}
+    {!reviewEditing&&selectedPlacementDrafts.length?<div className="placement-selection-actions"><button type="button" onClick={()=>setSelectedPlacementDrafts(listings.filter(({draft})=>draft.status==="Created"&&draft.id).map(({draft})=>draft.id!))}>Select all</button><button type="button" onClick={()=>requestDraftTabs(drafts.filter(draft=>draft.id&&selectedPlacementDrafts.includes(draft.id)&&draft.editorUrl))}>Open selected listings in Printify ↗</button></div>:null}
         {visibleListings.filter(({draft})=>draft.status!=="Created").map(({draft,design})=>
           <div className="task-listing failed" key={draft.clientId}>
             <div className="task-listing-ident"><span className="task-listing-index">Listing {listings.findIndex(entry=>entry.draft.clientId===draft.clientId)+1} of {listings.length}</span><p className="task-listing-name">{listingLabel(design)}</p></div>
@@ -4678,6 +4689,8 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
         setActiveRecipe(current=>current&&current.id===recipeForShop.id?{...current,printifyShopTitle:result.shop!.title,printifyShopId:result.shop!.id}:current);
         announceShop(recipeForShop.id,result.shop.title,result.shop.id);
       }
+      /* D1452 - warn about the store before the member builds anything. */
+      setPrintifyStoreWarning((result as {storeWarning?:{warn:boolean;duplicateName:boolean;headline:string;detail:string}}).storeWarning??null);
       setTemplateDetails(result.product);setDescription(normalizeProductDescription(result.product.description));if(result.product.standardShipping!=null)setPricing(current=>({...current,shippingCost:result.product!.standardShipping!,shippingCharged:0}));setVariantPrices(Object.fromEntries((result.product.variants||[]).map(variant=>[String(variant.id),variant.templatePrice])));/* D472 - loading the Printify template used to clear the pricing approval
    unconditionally. Choosing a saved product loads its template, so every batch
    began un-approved no matter what the product had saved - and the control to
@@ -6090,7 +6103,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   the final screen looked broken during that check. Put the wait
                   on the control the seller is trying to use. */}
               {etsyDraftTransferState!=='complete'&&<button type="button" className="review-etsy-draft-button" data-inline-progress="true" aria-busy={creatingEtsyDrafts||etsyDraftTransferState==='working'} disabled={creatingEtsyDrafts||etsyDraftTransferState==='working'||!photoDeliveryStatusReady||Boolean(handoffBlockers().length)} onClick={async()=>{setCreatingEtsyDrafts(true);try{await photoDeliveryRef.current?.prepare()}finally{setCreatingEtsyDrafts(false)}}}>{creatingEtsyDrafts?"Saving your draft request…":etsyDraftTransferState==='working'?"Creating Etsy drafts…":etsyDraftTransferState==='attention'?"Check saved progress above":!photoDeliveryStatusReady?"Checking saved Etsy drafts…":"Save to Etsy Drafts"}</button>}
-              {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<><a className="review-printify-link" href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open drafts in Printify ↗</a>{printifyStoreNote()}</>}
+              {bundlePublishDrafts().some(draft=>draft.status==="Created")&&<><a className="review-printify-link" href="https://printify.com/app/store/products" target="_blank" rel="noopener noreferrer">Open drafts in Printify ↗</a>{printifyStoreNote()}{printifyStoreBanner()}</>}
               {false&&<><div className="publish-live-warning">{(()=>{
               /* D560 - the count follows her ticks now that they govern every listing. */
               const total=publishTargets().length||bundleListingsToPublish();
