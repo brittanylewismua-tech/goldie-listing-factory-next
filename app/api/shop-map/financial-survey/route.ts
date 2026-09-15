@@ -79,18 +79,25 @@ export const GET = withErrorLog("shop-map-financial-survey", async (request: Req
     ((receipt?.transactions ?? []) as Array<Record<string, unknown>>);
 
   /*
-    The ledger refused a ninety-day window with a 400 and no explanation worth
-    repeating, so both spellings are tried and whichever answers is reported.
-    Etsy's error body is carried through verbatim: a 400 that nobody reads is
-    how a fee ends up quietly missing from a profit figure.
+    THE FALLBACK WAS REPORTING THE WRONG ERROR.
+
+    A second call without min_created was made whenever the windowed call
+    failed, and its answer — "Missing input parameter: [min_created]" — was
+    the one reported. That message describes the fallback, not the real
+    request, and it sent us looking for a missing parameter that was being
+    sent all along.
+
+    A parameterless call cannot succeed against a endpoint that requires the
+    window, so it is gone. The windowed call's own status and body are
+    reported instead, whatever they say.
   */
-  const windowed = await call(
-    `/shops/${shopId}/payment-account/ledger-entries?limit=${limit}` +
-    `&min_created=${Math.floor(Date.now() / 1000) - 90 * 86_400}&max_created=${Math.floor(Date.now() / 1000)}`);
-  const plain = windowed.status === 200
-    ? windowed
-    : await call(`/shops/${shopId}/payment-account/ledger-entries?limit=${limit}`);
-  const ledger = plain;
+  const from = Math.floor(Date.now() / 1000) - 90 * 86_400;
+  const until = Math.floor(Date.now() / 1000);
+  const ledgerPath =
+    `/shops/${shopId}/payment-account/ledger-entries`
+    + `?limit=${limit}&min_created=${from}&max_created=${until}`;
+  const ledger = await call(ledgerPath);
+
   const ledgerRows = ((ledger.parsed as { results?: Array<Record<string, unknown>> })?.results) ?? [];
 
   /*
@@ -148,7 +155,10 @@ export const GET = withErrorLog("shop-map-financial-survey", async (request: Req
     },
     ledger: {
       status: ledger.status,
-      windowedStatus: windowed.status,
+      requestedWindowDays: 90,
+      /* The path is reported so a parameter argument can be settled by
+         looking rather than by guessing. It carries no secret. */
+      requested: ledgerPath,
       said: ledger.status === 200 ? null : (ledger.parsed ?? ledger.text),
       returned: ledgerRows.length,
       kinds: ledgerKinds,
