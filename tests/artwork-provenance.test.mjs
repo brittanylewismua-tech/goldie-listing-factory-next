@@ -38,9 +38,11 @@ test("capture can never break a publish the seller is waiting on", () => {
      of evidence collection is a broken product. */
   assert.match(provenance, /Recorded, never thrown/);
   assert.match(provenance, /return \{ \.\.\.base, outcome: "error", note: error instanceof Error/);
-  /* Queuing is awaited — it is one insert — but its failure is swallowed, so
-     evidence collection can never fail a publish. */
-  assert.match(finish, /await queueArtworkCapture\(userId,draft,listingId\)\.catch\(\(\)=>\{\}\)/);
+  /* Queuing is awaited — it is one insert — but its failure is caught and
+     recorded rather than thrown, so evidence collection can never fail a
+     publish while a swallowed error still leaves a trail. */
+  assert.match(finish, /await queueArtworkCapture\(userId,draft,listingId\)\.catch\(async error=>/);
+  assert.match(finish, /artwork-capture-enqueue/);
 });
 
 test("capture happens where both the product and the listing id exist", () => {
