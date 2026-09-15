@@ -340,3 +340,56 @@ test("the fixed sixty-day line is gone from the cohort module", () => {
   const code = readFileSync(new URL("../app/momentum-cohort.ts", import.meta.url), "utf8");
   assert.doesNotMatch(code.split("EVIDENCE_FRESH_DAYS")[0], /in the last \$\{/);
 });
+
+/* ----------------------------------------------------- reference analysis */
+import { parseAnalysis, ANALYSIS_PROMPT, INGREDIENT_FIELDS } from "../app/reference-analysis.ts";
+
+const good = JSON.stringify({ typography: "bold sans", textHierarchy: "single line",
+  composition: "centered", illustration: "none", textToArt: 0.9,
+  colorStrategy: "two colour", contrast: "high", density: "medium",
+  printCoverage: 0.45, thumbnailReadability: "readable", mechanism: "bold slogan",
+  wordCount: 4 });
+
+test("the prompt forbids returning the design's words", () => {
+  assert.match(ANALYSIS_PROMPT, /Do NOT return the words, phrases, names or subject matter/);
+  assert.match(ANALYSIS_PROMPT, /wordCount is a COUNT/);
+});
+
+test("nothing outside the declared fields is ever stored", () => {
+  const smuggled = JSON.parse(good);
+  smuggled.slogan = "The Future Is Female";
+  smuggled.subject = "a cat wearing sunglasses";
+  const parsed = parseAnalysis(JSON.stringify(smuggled));
+  assert.equal(parsed.ok, true);
+  const stored = JSON.stringify(parsed.ingredients).toLowerCase();
+  assert.ok(!stored.includes("female"), "a slogan survived into storage");
+  assert.ok(!stored.includes("cat"), "subject matter survived into storage");
+  assert.deepEqual(Object.keys(parsed.ingredients).sort(), [...INGREDIENT_FIELDS].sort());
+});
+
+test("a prose answer is refused rather than stored as a category", () => {
+  const prose = JSON.parse(good);
+  prose.mechanism = "a bold slogan reading The Future Is Female across the chest";
+  const parsed = parseAnalysis(JSON.stringify(prose));
+  assert.equal(parsed.ok, false);
+  assert.match(parsed.why, /prose, not a category/);
+});
+
+test("a missing field fails the analysis rather than defaulting it", () => {
+  const short = JSON.parse(good);
+  delete short.thumbnailReadability;
+  assert.equal(parseAnalysis(JSON.stringify(short)).ok, false);
+});
+
+test("word count is a number, never words", () => {
+  const parsed = parseAnalysis(good);
+  assert.equal(typeof parsed.ingredients.wordCount, "number");
+  assert.equal(parsed.ingredients.wordCount, 4);
+});
+
+test("no field in the schema can carry content", () => {
+  for (const field of INGREDIENT_FIELDS)
+    assert.ok(!/word(ing)?$|phrase|slogan|text$|subject|motif|character/i.test(field)
+      || field === "wordCount",
+      `${field} could carry the design's content`);
+});
