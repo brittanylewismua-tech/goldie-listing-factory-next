@@ -63,7 +63,14 @@ export function storeWarning(stores: StoreSummary[], buildShopId: number): Store
         + `Printify's store switcher looks identical either way — check the store `
         + `is set to the ${channelLabel(buildingIn.salesChannel)} before opening a draft, `
         + `or Printify will say the listing isn't available.`
-      : `Goldie builds into ${label}. Switch to it in Printify before opening a `
-        + `draft, or Printify will say the listing isn't available.`,
+      /*
+        The same failure happens with differently-named stores. Printify
+        resolves a draft link against whichever store the session has
+        selected, so having more than one store is the whole condition - the
+        names only decide how hard it is to notice.
+      */
+      : `Goldie builds into ${label}. Printify opens drafts in whichever store `
+        + `you last had selected, so set it to ${label} before opening one, or `
+        + `Printify will say the listing isn't available.`,
   };
 }

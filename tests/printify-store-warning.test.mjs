@@ -67,3 +67,22 @@ test("the warning is wired into the template response and shown before building"
   assert.ok(setAt > 0 && setAt < draftsAt,
     "the warning is only set after drafts are built");
 });
+
+test("the mechanism is explained for differently-named stores too", () => {
+  /* The failure is 'more than one store', not 'two stores with one name'.
+     The names only decide how hard it is to notice. */
+  const warning = storeWarning([
+    HOUSE[0], { id: 999, title: "Side Project", salesChannel: "storefront" }], 4143645);
+  assert.match(warning.detail, /whichever store you last had selected/);
+  assert.match(warning.detail, /isn't available/);
+});
+
+test("every control that opens Printify names the store", () => {
+  const ui = readFileSync(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
+  /* A warning at setup is forgotten by the time a draft is opened days
+     later, and the failure happens at the click. */
+  assert.match(ui, /printifyOpenHint/);
+  assert.match(ui, /printifyStoreLabel/);
+  assert.match(ui, /Adjust in Printify \(\$\{printifyStoreLabel\(\)\}\)/);
+  assert.match(ui, /set Printify to that store first/);
+});

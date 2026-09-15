@@ -130,3 +130,5 @@
   color:#a33a48;font-size:12px;line-height:1.45}
 .printify-store-warning strong{display:block;margin-bottom:3px;font-weight:750}
 .printify-store-warning-duplicate{border-color:rgba(163,58,72,.55)}
+.printify-open-hint{display:block;margin-top:6px;font-size:12px;line-height:1.45;color:#704d75}
+.printify-open-hint strong{font-weight:750}
