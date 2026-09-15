@@ -62,14 +62,6 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
   };
 
   try {
-    /* A shipping profile is required to create a listing at all. */
-    const profiles = await call(`/shops/${shopId}/shipping-profiles`);
-    const profileId = Number(
-      ((profiles.parsed as { results?: Array<{ shipping_profile_id?: number }> })?.results ?? [])[0]
-        ?.shipping_profile_id ?? 0);
-    if (!profileId)
-      return NextResponse.json({ step: "shipping-profile", said: profiles.parsed ?? profiles.text }, { status: 502 });
-
     /* Two genuinely different images, taken from Goldie's own public assets so
        nothing of the seller's is involved. */
     const site = goldieSiteUrl();
@@ -80,7 +72,17 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     steps.push({ step: "prepared images", hashA, bytesA: imageA.byteLength, hashB, bytesB: imageB.byteLength });
 
     /* ------------------------------------------------- create the draft */
-    const body = new URLSearchParams({
+    /*
+      A DIGITAL DRAFT, DELIBERATELY.
+
+      A physical listing now needs a shipping profile AND a readiness state —
+      Etsy answered "A readiness_state_id is required for physical listings" —
+      which means reaching into the seller's real shipping configuration for a
+      throwaway test. A download listing needs neither, touches nothing the
+      seller has set up, and uploads images through exactly the same endpoint,
+      which is the only part under test.
+    */
+    const fields = {
       quantity: "1",
       title: "GOLDIE INTERNAL — image id test, do not publish",
       description: "Internal Goldie test listing. Created and deleted automatically. Never published.",
@@ -88,14 +90,41 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
       who_made: "i_did",
       when_made: "made_to_order",
       taxonomy_id: "1855",
-      shipping_profile_id: String(profileId),
+      type: "download",
       state: "draft",
-    });
-    const draft = await call(`/shops/${shopId}/listings`, {
+    };
+    let draft = await call(`/shops/${shopId}/listings`, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
-      body,
+      body: new URLSearchParams(fields),
     });
+
+    /* If Etsy will not take a download listing, fall back to a physical one
+       with a readiness state it names itself. */
+    if (draft.status !== 201 && draft.status !== 200) {
+      const profiles = await call(`/shops/${shopId}/shipping-profiles`);
+      const profileId = Number(
+        ((profiles.parsed as { results?: Array<{ shipping_profile_id?: number }> })?.results ?? [])[0]
+          ?.shipping_profile_id ?? 0);
+      const readiness = await call(`/shops/${shopId}/readiness-states`);
+      const readinessId = Number(
+        ((readiness.parsed as { results?: Array<{ readiness_state_id?: number }> })?.results ?? [])[0]
+          ?.readiness_state_id ?? 0);
+      steps.push({
+        step: "download listing refused, trying physical",
+        said: draft.parsed ?? draft.text, profileId, readinessId,
+      });
+      if (profileId && readinessId)
+        draft = await call(`/shops/${shopId}/listings`, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            ...fields, type: "physical",
+            shipping_profile_id: String(profileId),
+            readiness_state_id: String(readinessId),
+          }),
+        });
+    }
     const listingId = Number((draft.parsed as { listing_id?: number })?.listing_id ?? 0);
     if (!listingId)
       return NextResponse.json({ step: "create-draft", said: draft.parsed ?? draft.text }, { status: 502 });

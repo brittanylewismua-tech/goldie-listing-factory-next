@@ -74,7 +74,9 @@
    links captured designs to listings only on evidence that carries a claim. */
 /* D1409 asks Etsy what an image id actually means, on a draft of its own
    making that it deletes afterwards. */
-export const BUILD_MARKER = "D1409";
+/* D1410 makes the image-id test a download draft, so it needs nothing of the
+   seller's shipping setup. */
+export const BUILD_MARKER = "D1410";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
