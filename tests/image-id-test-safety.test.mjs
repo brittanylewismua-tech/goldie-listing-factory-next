@@ -105,3 +105,19 @@ test("it refuses to create a draft it would not be able to delete", () => {
   assert.ok(source.indexOf("listings_d") < source.indexOf("state: \"draft\""),
     "the capability check must precede creating the draft");
 });
+
+test("an existing draft can be measured without creating or deleting anything", () => {
+  /* A draft already sitting there costs nothing new to use, and listings_w
+     already covers the image work. */
+  assert.match(source, /RUNNING AGAINST A DRAFT THAT ALREADY EXISTS/);
+  assert.match(source, /parameters\.get\("existing"\)/);
+  assert.match(source, /if \(!canDelete && !existing\)/);
+  /* No delete is attempted on a draft this run did not create. */
+  assert.match(source, /if \(!existing\) \{\s*\n\s*removed = await call/);
+  assert.match(source, /manualDeletionRequired: Boolean\(existing\)/);
+});
+
+test("a listing reached by id must prove it is an unpublished Goldie draft", () => {
+  assert.match(source, /!title\.startsWith\("GOLDIE INTERNAL"\) \|\| state !== "draft"/);
+  assert.match(source, /Nothing was touched\./);
+});

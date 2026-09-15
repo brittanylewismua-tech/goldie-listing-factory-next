@@ -79,7 +79,9 @@
 /* D1411 deletes the test draft at the endpoint Etsy deletes from, and builds
    its own test images instead of fetching itself. */
 /* D1412 refuses to create a test draft it would not be able to delete. */
-export const BUILD_MARKER = "D1412";
+/* D1413 measures image identity against a draft that already exists, creating
+   and deleting nothing. */
+export const BUILD_MARKER = "D1413";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

@@ -153,6 +153,18 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     }, { status: 400 });
 
   /*
+    RUNNING AGAINST A DRAFT THAT ALREADY EXISTS.
+
+    A draft this route created earlier is still there, unpublished and
+    invisible to buyers, and it cannot be deleted without a permission nobody
+    should grant for a test. Using it costs nothing new: no listing is
+    created, none is deleted, and `listings_w` already covers the image
+    operations. It is verified to be a Goldie test draft in draft state before
+    a single byte is uploaded.
+  */
+  const existing = Number(parameters.get("existing"));
+
+  /*
     DO NOT CREATE WHAT YOU CANNOT REMOVE.
 
     The first run created a draft and then discovered that deleting a listing
@@ -166,7 +178,7 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     .prepare(`SELECT scopes FROM etsy_connections WHERE user_id = ? AND is_active = 1`)
     .bind(user.userId).first<{ scopes: string | null }>();
   const canDelete = Boolean(grant?.scopes?.split(/\s+/).includes("listings_d"));
-  if (!canDelete)
+  if (!canDelete && !existing)
     return NextResponse.json({
       refused: "This test creates a draft listing, and deleting one needs Etsy's listings_d permission, which this connection does not have. Nothing was created.",
       grantedScopes: grant?.scopes ?? null,
@@ -211,7 +223,7 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     const hashB = await sha256(imageB);
     steps.push({ step: "prepared images", hashA, bytesA: imageA.byteLength, hashB, bytesB: imageB.byteLength });
 
-    /* ------------------------------------------------- create the draft */
+    /* ------------------------------------------------- the draft to use */
     /*
       A DIGITAL DRAFT, DELIBERATELY.
 
@@ -233,15 +245,29 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
       type: "download",
       state: "draft",
     };
-    let draft = await call(`/shops/${shopId}/listings`, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(fields),
-    });
+    let draft = existing
+      ? await call(`/listings/${existing}`)
+      : await call(`/shops/${shopId}/listings`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(fields),
+      });
+
+    /* Anything reached by id has to prove it is ours and still a draft. */
+    if (existing) {
+      const title = String((draft.parsed as { title?: string })?.title ?? "");
+      const state = String((draft.parsed as { state?: string })?.state ?? "");
+      if (!title.startsWith("GOLDIE INTERNAL") || state !== "draft")
+        return NextResponse.json({
+          error: "That listing is not an unpublished Goldie test draft. Nothing was touched.",
+          title, state,
+        }, { status: 400 });
+      steps.push({ step: "using the existing test draft", listingId: existing, state });
+    }
 
     /* If Etsy will not take a download listing, fall back to a physical one
        with a readiness state it names itself. */
-    if (draft.status !== 201 && draft.status !== 200) {
+    if (!existing && draft.status !== 201 && draft.status !== 200) {
       const profiles = await call(`/shops/${shopId}/shipping-profiles`);
       const profileId = Number(
         ((profiles.parsed as { results?: Array<{ shipping_profile_id?: number }> })?.results ?? [])[0]
@@ -268,11 +294,12 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     const listingId = Number((draft.parsed as { listing_id?: number })?.listing_id ?? 0);
     if (!listingId)
       return NextResponse.json({ step: "create-draft", said: draft.parsed ?? draft.text }, { status: 502 });
-    created.listingId = listingId;
-    steps.push({
-      step: "created draft", listingId,
-      state: (draft.parsed as { state?: string })?.state ?? null,
-    });
+    created.listingId = existing ? null : listingId;
+    if (!existing)
+      steps.push({
+        step: "created draft", listingId,
+        state: (draft.parsed as { state?: string })?.state ?? null,
+      });
 
     const upload = async (bytes: ArrayBuffer, rank: number, overwrite?: number) => {
       const form = new FormData();
@@ -373,7 +400,9 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
       shopId,
       created,
       neverPublished: state === "draft" || state === "removed" || state === null,
-      draftRemoved: gone.status === 404,
+      draftRemoved: existing ? false : gone.status === 404,
+      manualDeletionRequired: Boolean(existing),
+      listingToDeleteByHand: existing || null,
       verdict,
       /* What the verdict licenses us to say on a screen. */
       language: verdict === "new-id-old-bytes-preserved"
