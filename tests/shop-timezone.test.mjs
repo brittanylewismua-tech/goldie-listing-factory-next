@@ -31,7 +31,9 @@ test("it is keyed by member and shop, and defaults to nothing", () => {
 
 test("an unconfirmed timezone is not an answer", () => {
   const reader = store.slice(store.indexOf("export async function shopTimezone"));
-  assert.match(reader.slice(0, 400), /row\?\.confirmed \? String\(row\.timezone/);
+  /* Sliced generously: the migration call sits between the signature and the
+     read, and a tight window turned a passing rule into a failing test. */
+  assert.match(reader.slice(0, 900), /row\?\.confirmed \? String\(row\.timezone/);
   assert.match(settings, /monthlyFiguresAvailable: state\.confirmed/);
 });
 
