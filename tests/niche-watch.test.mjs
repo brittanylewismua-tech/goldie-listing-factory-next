@@ -179,3 +179,80 @@ test("the update needs no paid call", () => {
   const code = readFileSync(new URL("../app/market-update.ts", import.meta.url), "utf8");
   assert.doesNotMatch(code, /fal\.run|anthropic|openai|fetch\(/i);
 });
+
+/* ------------------------------------------------------------- interface */
+const MW = readFileSync(
+  new URL("../app/market-watch/market-watch-client.tsx", import.meta.url), "utf8");
+const MWCSS = readFileSync(
+  new URL("../app/market-watch/market-watch.css", import.meta.url), "utf8");
+const mwBare = MW.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+test("no touch target is under 40 CSS pixels", () => {
+  const heights = [...MWCSS.matchAll(/min-height:\s*(\d+)px/g)].map(m => Number(m[1]));
+  assert.ok(heights.length >= 5);
+  for (const height of heights) assert.ok(height >= 40, `a ${height}px target`);
+});
+
+test("a long niche or shop name cannot widen the page", () => {
+  /* The add-row input is the classic culprit: flex items default to
+     min-width:auto and refuse to shrink below their content. */
+  assert.match(MWCSS, /\.add input\s*\{[^}]*min-width:\s*0/);
+  for (const selector of [".watch .name", ".card .title", ".pattern p"])
+    assert.ok(new RegExp(`\\${selector}\\s*\\{[^}]*overflow-wrap:\\s*anywhere`).test(MWCSS),
+      `${selector} does not wrap long words`);
+  /* Media queries legitimately name widths; declarations must not. */
+  const declarations = MWCSS.replace(/@media[^{]*\{/g, "{");
+  assert.doesNotMatch(declarations, /min-width:\s*(4[5-9]\d|[5-9]\d\d|\d{4,})px/);
+});
+
+test("listing images cannot overflow their card", () => {
+  assert.match(MWCSS, /\.card img\s*\{[^}]*max-width:\s*100%/);
+  assert.match(MWCSS, /\.card img\s*\{[^}]*aspect-ratio/);
+});
+
+test("every listing card offers a direct Etsy link", () => {
+  assert.match(MW, /href=\{listing\.etsyUrl\}/);
+  assert.match(MW, /etsy\.com\/listing\/\$\{card\.listingId\}/);
+  assert.match(MW, /rel="noreferrer noopener"/);
+});
+
+test("the four Shop Watch sections are exactly the four", () => {
+  const names = [...MW.matchAll(/\["(Getting attention|What buyers love|What buyers dislike|What changed)",/g)]
+    .map(match => match[1]);
+  assert.deepEqual(names,
+    ["Getting attention", "What buyers love", "What buyers dislike", "What changed"]);
+});
+
+test("the interface never shows a sale count, score or raw review feed", () => {
+  for (const banned of ["soldCount", "estimatedSales", "score", "quantity",
+    "evidenceClass", "attribution", "reviewText", "review.review"])
+    assert.ok(!mwBare.includes(banned), `the interface shows ${banned}`);
+});
+
+test("a stale watch is labelled, not emptied", () => {
+  assert.match(MW, /last confirmed reading/);
+  assert.match(MW, /data-stale=/);
+});
+
+test("empty and thin states say what is happening", () => {
+  assert.match(MW, /Not enough verified evidence in this niche yet/);
+  assert.match(MW, /has not confirmed enough movement in this niche yet/);
+  assert.match(MW, /Nothing confirmed for this shop yet/);
+});
+
+test("patterns are never presented as instructions", () => {
+  const block = MW.slice(MW.indexOf("What the moving listings have in common"));
+  for (const banned of ["you should", "try", "copy", "next move", "recommend"])
+    assert.ok(!block.slice(0, 400).toLowerCase().includes(banned));
+});
+
+test("a stale image is not displayed as current", () => {
+  /* Past Etsy's six-hour display window the picture is withheld rather than
+     shown as though it were current. */
+  assert.match(MW, /listing\.imageUrl && listing\.displayFresh/);
+});
+
+test("Market Watch does not read the member's own shop", () => {
+  for (const banned of ["shop-map", "shopMap", "ownShop", "myListings", "profit", "revenue"])
+    assert.ok(!mwBare.includes(banned), `Market Watch reads ${banned}`);
+});

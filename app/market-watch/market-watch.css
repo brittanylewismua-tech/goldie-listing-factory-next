@@ -1,0 +1,197 @@
+/*
+  PHONE FIRST. A member reads this over coffee, not at a desk.
+
+  Listings are the subject of Niche Watch, so the cards are the biggest thing
+  on the page. Shops are evidence sources and read as text.
+*/
+.mw {
+  --ink: #1b1b1f;
+  --muted: #6b6b76;
+  --line: #e6e4e0;
+  --paper: #fbfaf8;
+  --gold: #c9a227;
+  --live: #2f7d59;
+  --stale: #9a6a12;
+  --gone: #8a8a93;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 24px 20px 72px;
+  color: var(--ink);
+  font: 16px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.mw h1 { font-size: 1.4rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+.mw .lede { color: var(--muted); margin: 0 0 20px; font-size: 0.95rem; }
+
+/* --------------------------------------------------------------- tabs */
+.tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+.tabs button {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.tabs button[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* ------------------------------------------------------ daily update */
+.update {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: 14px;
+  background: #fff;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+}
+.update h2 {
+  font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 8px; font-weight: 600;
+}
+.update ul { margin: 0; padding-left: 18px; }
+.update li { margin-bottom: 5px; }
+.update p { margin: 0; color: var(--muted); }
+
+/* ----------------------------------------------------------- add watch */
+.add { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.add input {
+  flex: 1 1 200px;
+  min-width: 0; /* or a long value pushes the row wider than the phone */
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 16px;
+  background: #fff;
+  color: var(--ink);
+}
+.add button {
+  min-height: 48px; min-width: 88px; padding: 0 18px;
+  border: 0; border-radius: 12px; background: var(--ink); color: #fff;
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+}
+.add button[disabled] { opacity: 0.4; }
+
+/* ---------------------------------------------------------- watch list */
+.watch {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  min-height: 48px;
+  cursor: pointer;
+  color: var(--ink);
+  display: block;
+}
+.watch .name {
+  font-weight: 600;
+  /* A very long niche or shop name wraps instead of widening the page. */
+  overflow-wrap: anywhere;
+  display: block;
+}
+.watch .meta { color: var(--muted); font-size: 0.85rem; }
+.watch[data-stale="yes"] .meta { color: var(--stale); }
+
+/* -------------------------------------------------------- listing cards */
+.cards { display: grid; gap: 12px; margin-top: 4px; }
+@media (min-width: 520px) { .cards { grid-template-columns: 1fr 1fr; } }
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.card img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  max-width: 100%;
+  display: block;
+  background: var(--paper);
+}
+.card .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; }
+.card .title {
+  font-size: 0.92rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.tag {
+  align-self: flex-start;
+  font-size: 0.76rem;
+  letter-spacing: 0.03em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.tag[data-state="repeated-momentum"] { color: var(--live); border-color: var(--live); }
+.tag[data-state="momentum"] { color: var(--ink); }
+.tag[data-state="stale"] { color: var(--stale); border-color: var(--stale); }
+.tag[data-state="no-longer-qualifies"] { color: var(--gone); }
+.card .when { color: var(--muted); font-size: 0.8rem; }
+.card a {
+  min-height: 44px;
+  line-height: 44px;
+  text-align: center;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 0.9rem;
+  margin-top: auto;
+}
+
+/* ------------------------------------------------------------ patterns */
+.patterns {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  padding: 14px 16px;
+  margin: 18px 0;
+}
+.patterns h2 {
+  font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 8px; font-weight: 600;
+}
+.patterns ul { margin: 0; padding-left: 18px; }
+.patterns li { margin-bottom: 4px; }
+
+/* -------------------------------------------------------- shop sections */
+.section { margin-bottom: 24px; }
+.section h3 {
+  font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 10px; font-weight: 600;
+}
+.pattern {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.pattern p { margin: 0 0 4px; overflow-wrap: anywhere; }
+.pattern .support { color: var(--muted); font-size: 0.82rem; }
+.pattern a { display: inline-block; min-height: 44px; line-height: 44px; color: var(--ink); font-size: 0.88rem; }
+
+.empty, .note {
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  color: var(--muted);
+  background: #fff;
+}
+.stale-flag { color: var(--stale); font-size: 0.85rem; margin: 10px 0 0; }
+.summary { color: var(--muted); font-size: 0.9rem; margin: 0 0 14px; }
+.back { min-height: 44px; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0; font-size: 0.9rem; }
+.error { color: #a33a3a; font-size: 0.92rem; }
