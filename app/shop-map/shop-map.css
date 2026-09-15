@@ -1,0 +1,29 @@
+/* Phone first. No table, no horizontal scroll, large touch targets. */
+.shop-map{max-width:640px;margin:0 auto;padding:16px 16px 48px}
+.shop-map-head h1{font-size:20px;margin:0 0 2px;line-height:1.25}
+.shop-map-head p{margin:0 0 16px;font-size:13px;opacity:.7}
+.shop-map-loading{padding:32px 0;font-size:14px;opacity:.75}
+.shop-map-card{border:1px solid #e6dfe4;border-radius:14px;padding:16px;margin-bottom:14px;background:#fff}
+.shop-map-card h2{font-size:13px;margin:0 0 10px;letter-spacing:.02em;text-transform:uppercase;opacity:.65}
+.shop-map-headline-label{margin:0;font-size:13px;opacity:.75}
+.shop-map-figure{margin:2px 0 4px;font-size:34px;line-height:1.1;font-weight:750}
+.shop-map-accuracy{margin:0 0 12px;font-size:12px;opacity:.7;line-height:1.45}
+.shop-map-rows{margin:0;display:grid;gap:8px}
+.shop-map-rows>div{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.shop-map-rows dt{opacity:.7;margin:0}
+.shop-map-rows dd{margin:0;font-variant-numeric:tabular-nums}
+.shop-map-world-name{margin:0 0 4px;font-size:22px;font-weight:750;line-height:1.2}
+.shop-map-reason{margin:0;font-size:14px;line-height:1.5;opacity:.85}
+.shop-map-worlds{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.shop-map-world{display:grid;gap:4px;width:100%;text-align:left;background:none;border:0;
+  padding:12px;border-radius:12px;min-height:64px;cursor:pointer}
+.shop-map-world:hover{background:#faf7f9}
+.shop-map-world-label{font-size:16px;font-weight:700}
+.shop-map-world-figure{font-size:15px;font-variant-numeric:tabular-nums}
+.shop-map-world-meta{font-size:12px;opacity:.7;line-height:1.45}
+.shop-map-bar{display:block;height:6px;border-radius:3px;background:#efe7ec;overflow:hidden}
+.shop-map-bar>span{display:block;height:100%;background:#a33a48}
+.shop-map-evidence{margin:0 12px 8px;font-size:12px;line-height:1.5;opacity:.75}
+.shop-map-attention ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px;line-height:1.5}
+.shop-map-clear{opacity:.65}
+@media (min-width:700px){.shop-map{padding:28px 20px 64px}}
