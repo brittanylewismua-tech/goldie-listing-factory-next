@@ -64,10 +64,25 @@ async function spentToday(workloadKey: string) {
   const row = await db.prepare(
     `SELECT COALESCE(SUM(COALESCE(actual_cost, reserved_cost)), 0) AS spend
        FROM spend_reservations
-      WHERE workload = ? AND state IN ('held', 'settled')
+      WHERE workload = ? AND state IN ('held', 'settled', 'failed-billed')
         AND created_at >= datetime('now', '-1 day')`)
     .bind(workloadKey).first<{ spend: number }>();
   return row?.spend ?? 0;
+}
+
+/*
+  How many times the provider was reached, whatever the outcome. This is the
+  cap that protects an unmeasured workload: reserving zero dollars would let
+  the dollar guard treat it as free and pass an unlimited number.
+*/
+async function requestsToday(workloadKey: string) {
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const row = await db.prepare(
+    `SELECT COUNT(*) AS requests FROM spend_reservations
+      WHERE workload = ? AND state IN ('held', 'settled', 'failed-billed')
+        AND created_at >= datetime('now', '-1 day')`)
+    .bind(workloadKey).first<{ requests: number }>();
+  return row?.requests ?? 0;
 }
 
 /**
@@ -87,12 +102,28 @@ export async function memberUsage(userId: string, workloadKey: string) {
       ORDER BY created_at ASC`)
     .bind(userId, workloadKey).all<{ created_at: string }>();
   const used = (rows.results ?? []).length;
+  /*
+    Attempts count every time the provider was reached, successful or not.
+    Successes are refunded on failure; attempts never are, because the
+    attempt is exactly what cost money.
+  */
+  const attemptRow = await db.prepare(
+    `SELECT COUNT(*) AS attempts FROM spend_reservations
+      WHERE user_id = ? AND workload = ?
+        AND state IN ('settled', 'failed-billed')
+        AND created_at >= datetime('now', '-1 day')`)
+    .bind(userId, workloadKey).first<{ attempts: number }>();
+  const attempts = attemptRow?.attempts ?? 0;
   const entry = workload(workloadKey);
   const limits = entry ? await limitsFor(entry) : { memberLimit: null as number | null };
   const limit = limits.memberLimit;
   const oldest = (rows.results ?? [])[0]?.created_at ?? null;
   return {
     used,
+    attempts,
+    attemptLimit: entry?.memberDailyAttempts ?? null,
+    attemptsRemaining: entry?.memberDailyAttempts == null
+      ? null : Math.max(0, entry.memberDailyAttempts - attempts),
     limit,
     remaining: limit === null ? null : Math.max(0, limit - used),
     /* When the oldest consumed scan ages out, one comes back. */
@@ -102,7 +133,10 @@ export async function memberUsage(userId: string, workloadKey: string) {
 
 export type Reservation =
   | { allowed: true; id: string; reservedCost: number }
-  | { allowed: false; reason: "paused" | "global-ceiling" | "member-limit" | "unregistered"; message: string };
+  | { allowed: false;
+      reason: "paused" | "global-ceiling" | "global-requests" | "member-limit"
+        | "member-attempts" | "unregistered";
+      message: string };
 
 /**
  * THE ONLY DOOR TO A PAID CALL.
@@ -125,14 +159,33 @@ export async function reserveSpend(
   if (limits.paused)
     return { allowed: false, reason: "paused", message: capacityMessage(entry) };
 
-  if (entry.memberDailyLimit !== null && consumesAllowance) {
+  /*
+    Two member gates, read from one usage query: successful actions, and
+    provider attempts. The attempt gate applies even to a call that will not
+    consume a success, because an attempt is what costs money.
+  */
+  if (entry.memberDailyLimit !== null || entry.memberDailyAttempts !== null) {
     const usage = await memberUsage(userId, workloadKey);
-    if (usage.remaining !== null && usage.remaining <= 0)
+    if (consumesAllowance && usage.remaining !== null && usage.remaining <= 0)
       return { allowed: false, reason: "member-limit",
         message: `You have used all ${usage.limit} scans for today. `
           + `One becomes available again at ${usage.oldestLeavesWindowAt ?? "shortly"}. `
           + `Your saved results stay open and reopening them is free.` };
+    if (usage.attemptsRemaining !== null && usage.attemptsRemaining <= 0)
+      return { allowed: false, reason: "member-attempts",
+        message: `Today's analysis attempts are used up. This can happen when `
+          + `analyses fail repeatedly. Your saved results stay open, and the `
+          + `limit resets over the next 24 hours.` };
   }
+
+  /*
+    THE DOLLAR CEILING WINS WHEN THE TWO DISAGREE.
+    A request allowance is a proxy for cost; the cost is the thing being
+    capped, so it is checked last and it is decisive.
+  */
+  if (entry.globalDailyRequests !== null
+      && await requestsToday(workloadKey) + 1 > entry.globalDailyRequests)
+    return { allowed: false, reason: "global-requests", message: capacityMessage(entry) };
 
   if (await spentToday(workloadKey) + entry.unitCost > limits.ceiling)
     return { allowed: false, reason: "global-ceiling", message: capacityMessage(entry) };
@@ -158,19 +211,37 @@ export async function settleSpend(id: string, actualCost: number) {
 }
 
 /**
- * The call failed, or came back unusable.
+ * THE CALL FAILED, BUT THE TOKENS WERE STILL BURNED.
  *
- * The reservation is released so the budget returns, and the row is marked
- * released rather than settled so it never counts against the member's
- * allowance. A failure on our side is not a scan the member spent.
+ * A model that returns unparseable JSON has read the image and written a
+ * response, and the provider bills for both. Treating that as "released"
+ * would hand the member their allowance back — correct — while also
+ * pretending the money was never spent, which is not. A member hitting a
+ * broken prompt in a loop would then run up a real bill against a ceiling
+ * that never moved.
+ *
+ * So the two ledgers part company on failure:
+ *   the member is refunded, always;
+ *   the dollar ledger is settled whenever the provider reported billable
+ *   usage, and released only when nothing was billed.
+ *
+ * Either way the attempt is recorded, because the attempt limit is what
+ * stops a repeated failure from billing forever.
  */
-export async function releaseSpend(id: string, { billed = 0 }: { billed?: number } = {}) {
+export async function failSpend(id: string, { billed = 0 }: { billed?: number } = {}) {
   const db = (env as unknown as { DB: D1Database }).DB;
+  /* Billable usage on a failed call is real money and stays on the ledger. */
+  const state = billed > 0 ? "failed-billed" : "released";
   await db.prepare(
-    `UPDATE spend_reservations SET state = 'released', actual_cost = ?,
+    `UPDATE spend_reservations SET state = ?, actual_cost = ?,
             consumes_allowance = 0, settled_at = CURRENT_TIMESTAMP
       WHERE id = ? AND state = 'held'`)
-    .bind(billed, id).run();
+    .bind(state, billed, id).run();
+}
+
+/** The request never reached the provider. Nothing was billed. */
+export async function releaseSpend(id: string) {
+  await failSpend(id, { billed: 0 });
 }
 
 /*

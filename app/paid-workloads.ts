@@ -23,14 +23,36 @@ export type Workload = {
   what: string;
   provider: string;
   model: string;
-  /* Dollars per call. `measured` means observed from a provider usage block;
-     `estimated` means arithmetic that has not yet been checked against a bill. */
+  /*
+    Dollars per call, and where the number came from. These are four
+    different kinds of claim and conflating them is how a published price
+    ends up quoted as our cost:
+
+      documented - the provider's published list price. True about the price
+                   list, not about us; we may be inside an included tier.
+      estimated  - our own arithmetic from token counts. Never billed yet.
+      measured   - observed from a provider usage block on a real call.
+      settled    - reconciled against what the provider actually charged.
+      unknown    - not yet observed. unitCost stays 0 and the workload is
+                   capped by request count instead of dollars.
+  */
   unitCost: number;
-  costBasis: "measured" | "estimated" | "unknown";
+  costBasis: "documented" | "estimated" | "measured" | "settled" | "unknown";
   customerFacing: boolean;
   memberDailyLimit: number | null;
   globalDailyCeiling: number;
-  limitStatus: "approved" | "proposed";
+  /*
+    A request-count ceiling for workloads whose cost is unknown. Without it
+    an unmeasured workload reserves zero dollars and so behaves as free —
+    the dollar guard would wave through an unlimited number of them.
+  */
+  globalDailyRequests: number | null;
+  /* Where a member's allowance is spent: successful actions, and a separate,
+     higher cap on provider attempts so repeated failures cannot bill forever. */
+  memberDailyAttempts: number | null;
+  /* temporary = in force now to stop unmetered spend, but a holding number
+     awaiting real measurement, not an approved permanent limit. */
+  limitStatus: "approved" | "temporary" | "proposed";
   retries: number;
   cachePolicy: string;
   /* Lower runs first when the budget is tight. Customer-facing work outranks
@@ -44,9 +66,12 @@ export const PAID_WORKLOADS: Workload[] = [
     key: "designScannerVision",
     what: "One structured extraction per uploaded design.",
     provider: "anthropic", model: "claude-haiku-4-5-20251001",
+    /* Cache-miss arithmetic, which is the conservative figure: the prompt is
+       written to cache at 2x rather than read at 0.1x. Reservations use it. */
     unitCost: 0.0039, costBasis: "estimated",
     customerFacing: true,
-    memberDailyLimit: 10, globalDailyCeiling: 25, limitStatus: "approved",
+    memberDailyLimit: 10, memberDailyAttempts: 15,
+    globalDailyCeiling: 2, globalDailyRequests: null, limitStatus: "approved",
     retries: 1,
     cachePolicy: "By normalized content hash per member. A repeat file returns the stored fingerprint and costs nothing. Changing only the niche reuses the fingerprint.",
     priority: 1,
@@ -56,9 +81,11 @@ export const PAID_WORKLOADS: Workload[] = [
     key: "referenceIngestion",
     what: "One extraction per unique sales-backed reference image, batched.",
     provider: "anthropic", model: "claude-haiku-4-5-20251001",
+    /* Batch halves it; this is the cache-miss figure after that discount. */
     unitCost: 0.0020, costBasis: "estimated",
     customerFacing: false,
-    memberDailyLimit: null, globalDailyCeiling: 0.50, limitStatus: "approved",
+    memberDailyLimit: null, memberDailyAttempts: null,
+    globalDailyCeiling: 0.25, globalDailyRequests: 100, limitStatus: "approved",
     retries: 1,
     cachePolicy: "Deduplicated by authorized content hash before the call. An image already analyzed is never analyzed again, for any member.",
     priority: 9,
@@ -70,9 +97,10 @@ export const PAID_WORKLOADS: Workload[] = [
     provider: "fal / openrouter", model: "google/gemini-2.5-flash",
     unitCost: 0, costBasis: "unknown",
     customerFacing: true,
-    memberDailyLimit: 40, globalDailyCeiling: 15, limitStatus: "proposed",
+    memberDailyLimit: 50, memberDailyAttempts: 75,
+    globalDailyCeiling: 15, globalDailyRequests: 2_000, limitStatus: "temporary",
     retries: 1,
-    cachePolicy: "None today. A resubmitted image is billed again.",
+    cachePolicy: "AUDITED AND WASTEFUL. The title call is excluded from the cache entirely, and the details call keys on the whole request body - product facts, title and tags included - so one design across twenty products misses twenty times. Design-level understanding must key on the artwork hash alone.",
     priority: 2,
     expectedBehaviour: "One to two calls per listing published. A member doing a batch drop may publish twenty in an evening.",
   },
@@ -82,7 +110,8 @@ export const PAID_WORKLOADS: Workload[] = [
     provider: "fal / openrouter", model: "google/gemini-2.5-flash",
     unitCost: 0, costBasis: "unknown",
     customerFacing: true,
-    memberDailyLimit: 40, globalDailyCeiling: 10, limitStatus: "proposed",
+    memberDailyLimit: 40, memberDailyAttempts: 60,
+    globalDailyCeiling: 10, globalDailyRequests: 500, limitStatus: "temporary",
     retries: 1,
     cachePolicy: "Per prepared mockup. Re-preparing the same mockup repeats the call.",
     priority: 3,
@@ -94,7 +123,8 @@ export const PAID_WORKLOADS: Workload[] = [
     provider: "fal", model: "fal-ai/sam-3",
     unitCost: 0, costBasis: "unknown",
     customerFacing: true,
-    memberDailyLimit: 40, globalDailyCeiling: 10, limitStatus: "proposed",
+    memberDailyLimit: 40, memberDailyAttempts: 60,
+    globalDailyCeiling: 10, globalDailyRequests: 500, limitStatus: "temporary",
     retries: 1,
     cachePolicy: "Per mockup image.",
     priority: 4,
@@ -104,9 +134,12 @@ export const PAID_WORKLOADS: Workload[] = [
     key: "imageTransformation",
     what: "Cloudflare Images transformations beyond the included 5,000 per month.",
     provider: "cloudflare", model: "images",
-    unitCost: 0.0005, costBasis: "measured",
+    /* Cloudflare's published marginal price after the included 5,000 per
+       month. It is documented, not something we have measured about Goldie. */
+    unitCost: 0.0005, costBasis: "documented",
     customerFacing: true,
-    memberDailyLimit: null, globalDailyCeiling: 5, limitStatus: "proposed",
+    memberDailyLimit: null, memberDailyAttempts: null,
+    globalDailyCeiling: 5, globalDailyRequests: null, limitStatus: "proposed",
     retries: 0,
     cachePolicy: "Cloudflare bills a unique input-and-flags combination once per calendar month. The customer scan path uses none: the browser normalizes.",
     priority: 5,
@@ -118,7 +151,8 @@ export const PAID_WORKLOADS: Workload[] = [
     provider: "resend", model: "email",
     unitCost: 0.0004, costBasis: "estimated",
     customerFacing: false,
-    memberDailyLimit: null, globalDailyCeiling: 2, limitStatus: "proposed",
+    memberDailyLimit: null, memberDailyAttempts: null,
+    globalDailyCeiling: 2, globalDailyRequests: null, limitStatus: "proposed",
     retries: 1,
     cachePolicy: "Send-once per member per reminder stage.",
     priority: 8,
@@ -130,7 +164,8 @@ export const PAID_WORKLOADS: Workload[] = [
     provider: "anthropic", model: "claude-haiku-4-5-20251001",
     unitCost: 0.0008, costBasis: "estimated",
     customerFacing: true,
-    memberDailyLimit: 1, globalDailyCeiling: 5, limitStatus: "proposed",
+    memberDailyLimit: 1, memberDailyAttempts: null,
+    globalDailyCeiling: 5, globalDailyRequests: null, limitStatus: "proposed",
     retries: 1,
     cachePolicy: "One brief per member per morning, generated once and reread freely.",
     priority: 6,
@@ -142,7 +177,8 @@ export const PAID_WORKLOADS: Workload[] = [
     provider: "anthropic", model: "claude-haiku-4-5-20251001",
     unitCost: 0.0006, costBasis: "estimated",
     customerFacing: true,
-    memberDailyLimit: 5, globalDailyCeiling: 5, limitStatus: "proposed",
+    memberDailyLimit: 5, memberDailyAttempts: null,
+    globalDailyCeiling: 5, globalDailyRequests: null, limitStatus: "proposed",
     retries: 1,
     cachePolicy: "Per event, shared across every member watching it. Never per member per event.",
     priority: 7,
@@ -154,7 +190,7 @@ export const workload = (key: string) => PAID_WORKLOADS.find(entry => entry.key 
 
 /** Ceilings that are actually in force. A proposed limit is advisory. */
 export const enforcedWorkloads = () =>
-  PAID_WORKLOADS.filter(entry => entry.limitStatus === "approved");
+  PAID_WORKLOADS.filter(entry => entry.limitStatus !== "proposed");
 
 /** When the budget is tight, customer work runs and background work waits. */
 export const byPriority = () =>

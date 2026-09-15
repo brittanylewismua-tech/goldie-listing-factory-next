@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
-import { boundedVisionFetch, MAX_VISION_OUTPUT_TOKENS } from '../app/paid-vision.ts';
+import { boundedVisionFetch, MAX_VISION_OUTPUT_TOKENS, setFalUsageRecorder } from '../app/paid-vision.ts';
 
 test('vision output is bounded and paid web search cannot be enabled',async()=>{
   let calls=0;
@@ -14,12 +14,25 @@ test('vision output is bounded and paid web search cannot be enabled',async()=>{
 });
 
 test('paid model telemetry contains only usage, not private request/response content',async()=>{
-  const logs=[];const previous=console.info;console.info=value=>logs.push(value);
+  /* Usage is stored now rather than logged, so the recorder is what gets
+     inspected. The privacy rule is unchanged: cost and size, never content. */
+  const recorded=[];
+  setFalUsageRecorder(async entry=>{recorded.push(entry);});
+  const result=await boundedVisionFetch('https://fal.run/openrouter/router/vision',{body:JSON.stringify({prompt:'PRIVATE PROMPT',image_urls:['PRIVATE IMAGE']})},async()=>Response.json({output:'PRIVATE OUTPUT',usage:{cost:0.001,prompt_tokens:10,completion_tokens:20}}));
+  assert.equal((await result.json()).output,'PRIVATE OUTPUT');
+  assert.equal(recorded.length,1);
+  assert.equal(recorded[0].cost,0.001);
+  assert.equal(recorded[0].inputTokens,10);
+  assert.doesNotMatch(JSON.stringify(recorded),/PRIVATE/);
+});
+
+test('an unwired recorder is reported, never silently dropped',async()=>{
+  setFalUsageRecorder(undefined);
+  const errors=[];const previous=console.error;console.error=value=>errors.push(value);
   try {
-    const result=await boundedVisionFetch('https://fal.run/openrouter/router/vision',{body:JSON.stringify({prompt:'PRIVATE PROMPT',image_urls:['PRIVATE IMAGE']})},async()=>Response.json({output:'PRIVATE OUTPUT',usage:{cost:0.001,prompt_tokens:10,completion_tokens:20}}));
-    assert.equal((await result.json()).output,'PRIVATE OUTPUT');
-    assert.equal(JSON.parse(logs[0]).cost_usd,0.001);assert.doesNotMatch(logs.join(''),/PRIVATE/);
-  } finally { console.info=previous; }
+    await boundedVisionFetch('https://fal.run/openrouter/router/vision',{body:'{}'},async()=>Response.json({output:'ok',usage:{cost:0.002,prompt_tokens:1,completion_tokens:1}}));
+    assert.match(errors.join(''),/fal_usage_recorder_not_wired/);
+  } finally { console.error=previous; }
 });
 
 // Execute the actual route, replacing only its infrastructure imports.

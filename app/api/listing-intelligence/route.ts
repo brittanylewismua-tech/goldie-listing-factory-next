@@ -6,6 +6,12 @@ import { excludedProductNouns, namesExcludedProduct } from "@/app/product-type-u
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
 import { boundedVisionFetch } from "@/app/paid-vision";
 import { cachedVisionFetch } from "@/app/vision-request-cache";
+import { setFalUsageRecorder } from "@/app/paid-vision";
+import { recordFalUsage } from "@/app/fal-usage";
+
+/* Wire the usage store into the injectable recorder. Paid vision cannot
+   import it directly: the test runner loads that module on its own. */
+setFalUsageRecorder(recordFalUsage);
 import { env } from "cloudflare:workers";
 
 type Details={category:string;attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review"};
