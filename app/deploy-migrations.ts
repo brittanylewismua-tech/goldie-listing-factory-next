@@ -26,6 +26,7 @@
  * runs it — so each `ensure*` uses IF NOT EXISTS and tolerates a duplicate
  * column error and nothing else.
  */
+import { env } from "cloudflare:workers";
 import { ensureErrorLog } from "@/app/error-log";
 import { ensureBillingTables } from "@/app/billing";
 import { ensureSpendTables } from "@/app/spend-guard";
@@ -53,13 +54,18 @@ import { ensureScannerTables } from "@/app/scanner-store";
 
 export type Step = { name: string; run: () => Promise<unknown> };
 
+/* Two owners take the database explicitly rather than reaching for the
+   binding themselves. Passing it is the whole difference between a step that
+   runs and one that reports "Cannot read properties of undefined". */
+const database = () => (env as unknown as { DB: D1Database }).DB;
+
 /*
   Ordered by dependency, then by how early a member can reach the feature.
   `error_log` is first because everything after it wants somewhere to record a
   failure.
 */
 export const MIGRATIONS: Step[] = [
-  { name: "error_log", run: ensureErrorLog },
+  { name: "error_log", run: () => ensureErrorLog(database()) },
   { name: "billing", run: ensureBillingTables },
   { name: "entitlements", run: ensureEntitlementTables },
   { name: "spend_guard", run: ensureSpendTables },
@@ -92,7 +98,7 @@ export const MIGRATIONS: Step[] = [
   { name: "shop_map_listings", run: ensureListingTables },
   { name: "finance", run: ensureFinanceTables },
 
-  { name: "trademark_register", run: ensureRegisterTables },
+  { name: "trademark_register", run: () => ensureRegisterTables(database()) },
 ];
 
 export type Outcome = {
