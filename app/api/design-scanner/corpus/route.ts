@@ -41,8 +41,13 @@ export const GET = withErrorLog("design-scanner-corpus", async () => {
             (SELECT reason FROM listing_sales_activity r
               WHERE r.listing_id = a.listing_id ORDER BY r.observed_at DESC LIMIT 1) AS reason,
             (SELECT taxonomy_id FROM shop_listings l WHERE l.listing_id = a.listing_id) AS taxonomyId,
+            /* The most recent snapshot that CARRIED an image, not the most
+               recent snapshot. The bulk poller does not request images, so
+               taking the latest row reports "no image" for every listing a
+               poll has touched since its inspection — which is all of them. */
             (SELECT image_hash FROM listing_snapshots s
-              WHERE s.listing_id = a.listing_id ORDER BY s.observed_at DESC LIMIT 1) AS imageHash,
+              WHERE s.listing_id = a.listing_id AND s.image_hash <> ''
+              ORDER BY s.observed_at DESC LIMIT 1) AS imageHash,
             (SELECT COUNT(*) FROM shop_reviews v
               WHERE v.listing_id = a.listing_id AND v.created_at >= ?) AS reviewsRecently
        FROM listing_sales_activity a
