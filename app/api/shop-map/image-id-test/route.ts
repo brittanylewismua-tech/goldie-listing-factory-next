@@ -372,15 +372,30 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     steps.push({ step: "state before deletion", state });
 
     /* ------------------------------------------------------------- clean up */
-    /* Etsy deletes a listing at /listings/{id}, NOT under the shop. The
-       shop-scoped path answers 404 and leaves the draft sitting there, which
-       is exactly what happened the first time this ran. */
-    const removed = await call(`/listings/${listingId}`, { method: "DELETE" });
-    const gone = await call(`/listings/${listingId}`);
-    steps.push({
-      step: "deleted the draft", deleteStatus: removed.status,
-      readBackStatus: gone.status, confirmedGone: gone.status === 404,
-    });
+    /*
+      Etsy deletes a listing at /listings/{id}, NOT under the shop — the
+      shop-scoped path answers 404 and leaves the draft sitting there.
+
+      And nothing is deleted at all when the draft was already here: this
+      connection holds no listings_d, the attempt would fail, and a failed
+      delete in the middle of a successful measurement reads like the
+      measurement failed.
+    */
+    let removed = { status: 0 };
+    let gone = { status: 0 };
+    if (!existing) {
+      removed = await call(`/listings/${listingId}`, { method: "DELETE" });
+      gone = await call(`/listings/${listingId}`);
+      steps.push({
+        step: "deleted the draft", deleteStatus: removed.status,
+        readBackStatus: gone.status, confirmedGone: gone.status === 404,
+      });
+    } else {
+      steps.push({
+        step: "left the draft in place",
+        why: "No listings_d on this connection. It must be deleted by hand in Shop Manager.",
+      });
+    }
 
     /*
       The verdict, stated as one of the four behaviours rather than left for
