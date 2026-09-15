@@ -30,7 +30,9 @@ export async function waitForEtsyCapacity(){
  * `feature` defaults to "unlabelled" so an unlabelled call still records
  * against the budget. Missing a label must never mean missing a call.
  */
-export type EtsyFeature="publish"|"photos"|"search"|"taxonomy"|"shipping"|"connect"|"qa"|"unlabelled";
+/* finance is its own feature so financial API spend is budgeted and
+   reported apart from Market Watch and Shop Watch freshness. */
+export type EtsyFeature="publish"|"photos"|"search"|"taxonomy"|"shipping"|"connect"|"qa"|"finance"|"unlabelled";
 
 export async function recordEtsyCall(response:Response,feature:EtsyFeature="unlabelled"){
   const bucket=hourBucket(),observedLimit=Math.max(0,Number(response.headers.get("x-limit-per-day"))||0);
