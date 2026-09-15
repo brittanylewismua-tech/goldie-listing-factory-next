@@ -1,5 +1,5 @@
 /**
- * A WORLD IS A PERSON, NOT A PRODUCT.
+ * A NICHE IS A SUBJECT, NOT A PRODUCT.
  *
  * The first build produced "Women's Tees", "Sweaters & Hoodies", "Feminist
  * Mugs" and "For Her". Those are a garment, a garment, a theme split by
@@ -10,22 +10,21 @@
  * could serve? "Feminist" passes — it can be a tee, a mug, a sticker.
  * "Feminist Mugs" fails, because the mug is the product, not the buyer.
  *
- * So the dimensions are kept apart and never concatenated:
+ * The dimensions are kept apart and never concatenated:
  *
- *   world          the customer identity, belief or community
- *   subWorld       a narrower territory inside it
- *   productFamily  the physical item, an analysis dimension INSIDE a world
+ *   niche          the subject, message, interest, occasion or market
+ *   productFamily  the physical item, an attribute INSIDE a niche
  *   messageTheme   the creative territory
  *   recipient      who it is bought for
  *   occasion       when it is bought
  *
- * World Builder, audited first, already defines a world this way: a customer
- * universe, not a product line. Shop Map now agrees with it.
+ * FLAT. There is no umbrella-and-sub-niche hierarchy here: the shop's data
+ * does not need a parent-child layer to keep unrelated listings apart, and
+ * manufacturing one would add a structure nobody asked the data for.
  */
 export type Dimensions = {
   listingId: number;
-  world: string;
-  subWorld: string;
+  niche: string;
   productFamily: string;
   messageTheme: string;
   recipient: string;
@@ -114,8 +113,8 @@ const DANGLING = new Set(["are", "is", "was", "for", "of", "and", "the", "a",
 const normalise = (text: string) =>
   ` ${String(text ?? "").toLowerCase().replace(/[^a-z0-9' ]+/g, " ").replace(/\s+/g, " ").trim()} `;
 
-/** Does this label name a person, or a thing? */
-export function rejectAsWorld(label: string): string {
+/** Does this label name a subject, or a product? */
+export function rejectAsNiche(label: string): string {
   const clean = String(label ?? "").trim();
   if (!clean) return "empty label";
   const words = clean.toLowerCase().split(/\s+/);
@@ -163,10 +162,9 @@ export function dimensionsFor(
 
   return {
     listingId,
-    world: identity?.label ?? "",
-    /* An occasion inside an identity is a sub-world; an occasion alone is
-       a world in its own right, because the buyer is defined by the moment. */
-    subWorld: identity && occasion ? occasion.label : "",
+    /* Subject first. An occasion is a niche in its own right when no subject
+       is present, because the buyer is defined by the moment. */
+    niche: identity?.label ?? occasion?.label ?? "",
     productFamily,
     messageTheme: identity?.term ?? occasion?.term ?? "",
     recipient: recipient?.label ?? "",
@@ -175,9 +173,4 @@ export function dimensionsFor(
   };
 }
 
-/** An occasion with no identity still describes a buyer at a moment. */
-export function worldFor(dimensions: Dimensions): string {
-  if (dimensions.world) return dimensions.world;
-  if (dimensions.occasion) return dimensions.occasion;
-  return "";
-}
+export const nicheFor = (dimensions: Dimensions): string => dimensions.niche;

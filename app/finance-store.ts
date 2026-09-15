@@ -118,10 +118,24 @@ export async function ensureFinanceTables() {
       rule_version INTEGER NOT NULL,
       computed_at INTEGER NOT NULL,
       PRIMARY KEY (user_id, shop_id, month))`),
+    /*
+      TIMEZONE BELONGS TO ONE MEMBER'S ONE SHOP.
+
+      It is keyed by user_id AND shop_id, defaults to nothing, and is only
+      usable once that member has confirmed it. A member with two shops in
+      two places keeps two answers.
+
+      There is deliberately no fallback value anywhere: a borrowed timezone
+      silently moves another member's revenue between months, and they would
+      have no way to see why their totals disagree with Etsy's.
+    */
     db().prepare(`CREATE TABLE IF NOT EXISTS finance_shop_settings (
       user_id TEXT NOT NULL,
       shop_id INTEGER NOT NULL,
       timezone TEXT NOT NULL DEFAULT '',
+      detected_timezone TEXT NOT NULL DEFAULT '',
+      confirmed INTEGER NOT NULL DEFAULT 0,
+      confirmed_at INTEGER,
       PRIMARY KEY (user_id, shop_id))`),
   ]);
   await db().prepare(
@@ -132,19 +146,65 @@ export async function ensureFinanceTables() {
        ON finance_production (user_id, shop_id, receipt_id)`).run();
 }
 
+/** Only a CONFIRMED timezone counts. An unconfirmed guess is not an answer. */
 export async function shopTimezone(userId: string, shopId: number): Promise<string> {
   const row = await db().prepare(
-    `SELECT timezone FROM finance_shop_settings WHERE user_id = ? AND shop_id = ?`)
-    .bind(userId, shopId).first<{ timezone: string }>();
-  return String(row?.timezone ?? "");
+    `SELECT timezone, confirmed FROM finance_shop_settings
+      WHERE user_id = ? AND shop_id = ?`)
+    .bind(userId, shopId).first<{ timezone: string; confirmed: number }>();
+  return row?.confirmed ? String(row.timezone ?? "") : "";
 }
 
-export async function setShopTimezone(userId: string, shopId: number, timezone: string) {
+export async function timezoneState(userId: string, shopId: number) {
+  await ensureFinanceTables();
+  const row = await db().prepare(
+    `SELECT timezone, detected_timezone, confirmed FROM finance_shop_settings
+      WHERE user_id = ? AND shop_id = ?`)
+    .bind(userId, shopId)
+    .first<{ timezone: string; detected_timezone: string; confirmed: number }>();
+  return {
+    timezone: String(row?.timezone ?? ""),
+    detected: String(row?.detected_timezone ?? ""),
+    confirmed: Boolean(row?.confirmed),
+  };
+}
+
+/** What the browser reported. Stored as a suggestion, never used until confirmed. */
+export async function rememberDetectedTimezone(
+  userId: string, shopId: number, detected: string,
+) {
   await ensureFinanceTables();
   await db().prepare(
-    `INSERT INTO finance_shop_settings (user_id, shop_id, timezone) VALUES (?,?,?)
-     ON CONFLICT(user_id, shop_id) DO UPDATE SET timezone = excluded.timezone`)
-    .bind(userId, shopId, timezone).run();
+    `INSERT INTO finance_shop_settings (user_id, shop_id, detected_timezone)
+     VALUES (?,?,?)
+     ON CONFLICT(user_id, shop_id) DO UPDATE SET
+       detected_timezone = excluded.detected_timezone`)
+    .bind(userId, shopId, detected).run();
+}
+
+export async function setShopTimezone(
+  userId: string, shopId: number, timezone: string,
+) {
+  await ensureFinanceTables();
+  const now = Math.floor(Date.now() / 1_000);
+  const before = await timezoneState(userId, shopId);
+  await db().prepare(
+    `INSERT INTO finance_shop_settings (user_id, shop_id, timezone, confirmed, confirmed_at)
+     VALUES (?,?,?,1,?)
+     ON CONFLICT(user_id, shop_id) DO UPDATE SET
+       timezone = excluded.timezone, confirmed = 1, confirmed_at = excluded.confirmed_at`)
+    .bind(userId, shopId, timezone, now).run();
+
+  /*
+    A timezone change moves month boundaries, so every stored rollup for this
+    shop was computed against the wrong edges and has to be recomputed.
+    Dropping them is what forces that.
+  */
+  if (before.timezone && before.timezone !== timezone)
+    await db().prepare(
+      `DELETE FROM finance_rollups WHERE user_id = ? AND shop_id = ?`)
+      .bind(userId, shopId).run();
+  return { recomputeRequired: Boolean(before.timezone && before.timezone !== timezone) };
 }
 
 /** Counters for the owner health view. All from stored rows. */

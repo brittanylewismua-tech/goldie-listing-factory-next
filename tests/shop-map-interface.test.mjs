@@ -11,7 +11,7 @@ const client = readFileSync(new URL("../app/shop-map/shop-map-client.tsx", impor
 const css = readFileSync(new URL("../app/shop-map/shop-map.css", import.meta.url), "utf8");
 
 test("the four sections are there, in order", () => {
-  const order = ["This month", "Your shop is pointing here", "Your worlds", "Needs attention"];
+  const order = ["This month", "Your shop map", "Where to focus", "Needs attention"];
   let at = -1;
   for (const heading of order) {
     const next = client.indexOf(heading);
@@ -34,10 +34,19 @@ test("the accuracy line sits with the number", () => {
   assert.match(client, /\{month\?\.accuracy\}/);
 });
 
-test("a direction is never shown without its reason", () => {
-  const block = client.slice(client.indexOf("pointing here"), client.indexOf("Your worlds"));
-  assert.match(block, /pointingHere\?\.label/);
-  assert.match(block, /pointingHere\?\.reason/);
+test("guidance is never shown without its reason", () => {
+  const block = client.slice(client.indexOf("Where to focus"), client.indexOf("Needs attention"));
+  assert.match(block, /row\.advice/);
+  assert.match(block, /row\.reason/);
+  /* Nothing to say is said, rather than left blank. */
+  assert.match(block, /Not enough evidence to guide you yet/);
+});
+
+test("the map emphasises the strongest niches visually", () => {
+  assert.match(client, /shop-map-world-strong/);
+  assert.match(css, /\.shop-map-world-strong\{/);
+  /* Product types show on the card as an attribute of the niche. */
+  assert.match(client, /shop-map-families/);
 });
 
 test("worlds stack vertically and have large touch targets", () => {
@@ -133,7 +142,7 @@ test("no world figure is shown without its period", () => {
 
 test("product families appear inside a world, never as one", () => {
   assert.match(client, /Products: \{world\.productFamilies/);
-  assert.match(client, /Inside it: \{world\.subWorlds/);
+
 });
 
 test("review evidence is shown as reviews, never as sales", () => {

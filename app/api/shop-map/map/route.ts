@@ -6,6 +6,7 @@ import { env } from "cloudflare:workers";
 import { ensureListingTables, performanceFrom } from "@/app/shop-map-listings";
 import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-map-worlds";
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
+import { guidance } from "@/app/shop-map-guidance";
 import { resolveCost, profitState, type CostRule } from "@/app/shop-map-cost-rules";
 import { monthWindow, monthOf } from "@/app/finance-month";
 import { shopTimezone } from "@/app/finance-store";
@@ -34,9 +35,17 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
     .bind(user.userId).first<{ shop_id: number; shop_name: string }>();
   if (!shopRow) return NextResponse.json({ error: "No connected shop." }, { status: 400 });
   const shopId = Number(shopRow.shop_id);
-  const timezone = await shopTimezone(user.userId, shopId) || "America/Los_Angeles";
-  const month = parameters.get("month") ?? monthOf(now, timezone) ?? "";
-  const window = monthWindow(month, timezone);
+  /*
+    NO FALLBACK TIMEZONE, EVER.
+
+    A borrowed default silently moves another member's revenue between months
+    and they would have no way to see why their totals disagree with Etsy's.
+    Without a confirmed timezone for THIS shop, the money section says so and
+    the rest of the map - which has no month boundary in it - still works.
+  */
+  const timezone = await shopTimezone(user.userId, shopId);
+  const month = parameters.get("month") ?? (timezone ? monthOf(now, timezone) ?? "" : "");
+  const window = timezone ? monthWindow(month, timezone) : null;
 
   /* ------------------------------------------------------------- listings */
   const listingRows = await db.prepare(
@@ -211,6 +220,8 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
 
   return NextResponse.json({
     shop: { shopId, shopName: shopRow.shop_name, timezone },
+    /* The money section is blocked until this shop's own timezone is set. */
+    timezoneNeeded: !timezone,
     month,
     thisMonth: {
       revenueMinor: revenue,
@@ -223,6 +234,9 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
         unavailable: state.unavailableShare },
       orders: receiptTotals?.receipts ?? 0,
     },
+    /* Where to Focus: the instruction, and the arithmetic behind it. */
+    whereToFocus: guidance(worldPerformance,
+      { period: recentEnough ? "the last 90 days" : "all time" }).slice(0, 5),
     pointingHere: found.worldId ? {
       label: found.label, finding: found.finding, reason: found.reason,
     } : { label: "No clear direction yet", finding: found.finding,
@@ -256,7 +270,6 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
           lifetimeRevenueMinor: world.revenueMinor,
           /* Product families live inside the world as supporting evidence. */
           productFamilies: built?.productFamilies ?? [],
-          subWorlds: built?.subWorlds ?? [],
           reviews: { recent: recent.length, lifetimeHeld: reviews.length },
           evidence: built?.evidence ?? "",
         };
@@ -266,7 +279,7 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
       missingProductionCosts: costs.filter(cost => cost.confidence === "none").length,
       overbuiltWorlds: overbuilt(worldPerformance),
     },
-    counts: { listings: rows.length, worlds: worlds.length,
+    counts: { listings: rows.length, niches: worlds.length,
       listingsWithSales: [...performance.keys()].length },
     paidProviderCost: 0,
   });

@@ -3,7 +3,7 @@ import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
-import { setShopTimezone, shopTimezone, ensureFinanceTables } from "@/app/finance-store";
+import { setShopTimezone, timezoneState, rememberDetectedTimezone, ensureFinanceTables } from "@/app/finance-store";
 import { isKnownTimezone, MISSING_TIMEZONE } from "@/app/finance-month";
 
 /**
@@ -27,19 +27,33 @@ export const GET = withErrorLog("shop-map-financial-settings", async (request: R
   if (!shop) return NextResponse.json({ error: "No connected shop." }, { status: 400 });
   const shopId = Number(shop.shop_id);
 
-  const wanted = new URL(request.url).searchParams.get("timezone") ?? "";
+  const parameters = new URL(request.url).searchParams;
+  const wanted = parameters.get("timezone") ?? "";
+  /* What the browser reported. Remembered as a suggestion only. */
+  const detected = parameters.get("detected") ?? "";
+  let recompute = false;
+
+  if (detected && isKnownTimezone(detected))
+    await rememberDetectedTimezone(user.userId, shopId, detected);
+
   if (wanted) {
     if (!isKnownTimezone(wanted))
       return NextResponse.json({ error: `"${wanted}" is not a timezone this runtime knows.` },
         { status: 400 });
-    await setShopTimezone(user.userId, shopId, wanted);
+    const result = await setShopTimezone(user.userId, shopId, wanted);
+    recompute = result.recomputeRequired;
   }
 
-  const timezone = await shopTimezone(user.userId, shopId);
+  const state = await timezoneState(user.userId, shopId);
   return NextResponse.json({
-    shopId, timezone,
-    monthlyFiguresAvailable: Boolean(timezone),
-    because: timezone ? "" : MISSING_TIMEZONE,
-    examples: ["America/Los_Angeles", "America/New_York", "Europe/London"],
+    shopId,
+    timezone: state.confirmed ? state.timezone : "",
+    detected: state.detected,
+    confirmed: state.confirmed,
+    /* Only this member's own confirmation unlocks monthly figures. */
+    monthlyFiguresAvailable: state.confirmed,
+    needsConfirmation: !state.confirmed,
+    rollupsClearedForRecompute: recompute,
+    because: state.confirmed ? "" : MISSING_TIMEZONE,
   });
 });

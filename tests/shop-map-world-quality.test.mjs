@@ -11,7 +11,7 @@
 */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { rejectAsWorld, dimensionsFor, worldFor } from "../app/shop-map-identity.ts";
+import { rejectAsNiche, dimensionsFor, nicheFor } from "../app/shop-map-identity.ts";
 import { buildWorlds } from "../app/shop-map-worlds.ts";
 
 const listing = (id, over = {}) => ({
@@ -20,34 +20,34 @@ const listing = (id, over = {}) => ({
 test("a garment name is never a world", () => {
   for (const label of ["Women's Tees", "Men's Tees", "Sweaters & Hoodies",
     "Tees", "Hoodies", "Unisex Apparel", "Phone Cases"])
-    assert.ok(rejectAsWorld(label), `"${label}" was accepted as a world`);
+    assert.ok(rejectAsNiche(label), `"${label}" was accepted as a world`);
 });
 
 test("an identity split by product is rejected, so it can merge", () => {
-  assert.match(rejectAsWorld("Feminist Mugs"), /split by product/);
-  assert.match(rejectAsWorld("Feminist Phone Cases"), /split by product/);
+  assert.match(rejectAsNiche("Feminist Mugs"), /split by product/);
+  assert.match(rejectAsNiche("Feminist Phone Cases"), /split by product/);
   /* The identity itself passes, which is what they should merge into. */
-  assert.equal(rejectAsWorld("Feminist"), "");
+  assert.equal(rejectAsNiche("Feminist"), "");
 });
 
 test("generic gift language is not a world", () => {
   for (const label of ["For Her", "For Him", "Gift", "Gifts", "Custom Order"])
-    assert.ok(rejectAsWorld(label), `"${label}" was accepted as a world`);
+    assert.ok(rejectAsNiche(label), `"${label}" was accepted as a world`);
 });
 
 test("an incomplete phrase is not a world", () => {
   for (const label of ["Women Are", "Custom Order For", "This Is The"])
-    assert.match(rejectAsWorld(label), /incomplete/);
+    assert.match(rejectAsNiche(label), /incomplete/);
 });
 
 test("an HTML entity in a label is refused outright", () => {
-  assert.match(rejectAsWorld("Women&#39;s Tees"), /HTML entity/);
+  assert.match(rejectAsNiche("Women&#39;s Tees"), /HTML entity/);
 });
 
 test("real customer identities pass", () => {
   for (const label of ["Feminist", "Political resistance", "Motherhood",
     "Nurses", "Horse girls", "Grief and remembrance", "Halloween", "Bachelorette"])
-    assert.equal(rejectAsWorld(label), "", `"${label}" was rejected`);
+    assert.equal(rejectAsNiche(label), "", `"${label}" was rejected`);
 });
 
 test("the same world merges across different products", () => {
@@ -63,7 +63,7 @@ test("the same world merges across different products", () => {
   /* The products are inside the world, as evidence. */
   const families = worlds[0].productFamilies.map(row => row.family).sort();
   assert.deepEqual(families, ["mug", "phoneCase", "sticker", "tee"]);
-  assert.match(worlds[0].evidence, /across/);
+  assert.match(worlds[0].evidence, /tee 1, mug 1/);
 });
 
 test("product families are never promoted to worlds", () => {
@@ -71,21 +71,21 @@ test("product families are never promoted to worlds", () => {
     listing(id, { title: `Unisex Heavy Cotton Tee ${id}`, shopSection: "Women's Tees" }));
   const { worlds, assignments } = buildWorlds(listings);
   for (const world of worlds)
-    assert.equal(rejectAsWorld(world.label), "", `"${world.label}" is not a customer`);
+    assert.equal(rejectAsNiche(world.label), "", `"${world.label}" is not a customer`);
   /* Nothing recognisable about the buyer, so nothing is claimed. */
   assert.ok(assignments.every(row => row.unclassified));
 });
 
-test("an occasion inside an identity becomes a sub-world", () => {
+test("niche categories stay flat - no manufactured hierarchy", () => {
   const listings = [
     ...[1, 2, 3].map(id => listing(id, { title: `Feminist Halloween Spooky ${id}` })),
     ...[4, 5, 6].map(id => listing(id, { title: `Feminist Rights March ${id}` })),
   ];
   const { worlds } = buildWorlds(listings);
   const feminist = worlds.find(world => world.label === "Feminist");
-  assert.ok(feminist, "the umbrella world was not formed");
-  assert.ok(feminist.subWorlds.some(sub => sub.label === "Halloween"),
-    "the narrower territory was not kept as a sub-world");
+  assert.ok(feminist, "the niche was not formed");
+  /* No parent-child layer: the data did not ask for one. */
+  assert.equal(feminist.subWorlds, undefined);
 });
 
 test("an unclear listing stays unclassified rather than stuffed anywhere", () => {
@@ -97,7 +97,7 @@ test("an unclear listing stays unclassified rather than stuffed anywhere", () =>
   assert.equal(assignments.find(row => row.listingId === 9).unclassified, true);
 });
 
-test("every world records the customer logic behind it", () => {
+test("every niche records the evidence behind it", () => {
   const { worlds, assignments } = buildWorlds(
     [1, 2, 3].map(id => listing(id, { title: `Dog Mom Dachshund ${id}` })));
   for (const world of worlds) assert.ok(world.evidence.length > 0);
@@ -105,21 +105,21 @@ test("every world records the customer logic behind it", () => {
     assert.ok(row.evidence.length > 0, "an assignment kept no evidence");
 });
 
-test("basis is always the customer, never the product", () => {
+test("basis is always the niche, never the product", () => {
   const { worlds } = buildWorlds(
     [1, 2, 3].map(id => listing(id, { title: `Nurse Life ${id}` })));
-  for (const world of worlds) assert.equal(world.basis, "customer-identity");
+  for (const world of worlds) assert.equal(world.basis, "niche");
 });
 
 test("dimensions are stored apart and never concatenated", () => {
   const dimensions = dimensionsFor({ listingId: 1,
     title: "Feminist Halloween Mug for Mom", tags: [], shopSection: "Feminist Mugs",
     productFamily: "mug" });
-  assert.equal(dimensions.world, "Feminist");
+  assert.equal(dimensions.niche, "Feminist");
   assert.equal(dimensions.occasion, "Halloween");
   assert.equal(dimensions.productFamily, "mug");
   assert.equal(dimensions.recipient, "For a mom");
   /* The world label carries no product word. */
-  assert.equal(rejectAsWorld(worldFor(dimensions)), "");
-  assert.doesNotMatch(dimensions.world, /mug|tee|case/i);
+  assert.equal(rejectAsNiche(nicheFor(dimensions)), "");
+  assert.doesNotMatch(dimensions.niche, /mug|tee|case/i);
 });

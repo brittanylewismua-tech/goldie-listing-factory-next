@@ -1,4 +1,4 @@
-import { dimensionsFor, worldFor, rejectAsWorld } from "./shop-map-identity.ts";
+import { dimensionsFor, nicheFor, rejectAsNiche } from "./shop-map-identity.ts";
 /**
  * GROUPING A SHOP'S LISTINGS FROM WHAT IT ALREADY SAYS.
  *
@@ -45,11 +45,10 @@ export type Assignment = {
 export type World = {
   id: string;
   label: string;
-  /* Always the customer. A product family can never be the basis. */
-  basis: "customer-identity";
+  /* Always the subject. A product family can never be the basis. */
+  basis: "niche";
   evidence: string;
   listingIds: number[];
-  subWorlds: Array<{ label: string; listings: number }>;
   /* Counted inside the world, as supporting evidence. */
   productFamilies: Array<{ family: string; listings: number }>;
 };
@@ -115,10 +114,10 @@ const titleCase = (text: string) =>
   text.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 
 /**
- * BUILD WORLDS BOTTOM UP, FROM CUSTOMER LOGIC.
+ * SORT LISTINGS INTO NICHE CATEGORIES.
  *
- * 1. Read each listing's dimensions: identity, occasion, recipient, product.
- * 2. Group by the customer identity, never by the product.
+ * 1. Read each listing's dimensions: subject, occasion, recipient, product.
+ * 2. Group by the subject, never by the product.
  * 3. Sub-worlds are narrower territories INSIDE a world.
  * 4. Product families are counted within a world, never promoted to one.
  * 5. A listing whose customer logic is unclear stays unclassified.
@@ -141,10 +140,10 @@ export function buildWorlds(
   /* Group by customer identity. Product family rides along as evidence. */
   const grouped = new Map<string, typeof read>();
   for (const row of read) {
-    const label = worldFor(row.dimensions);
+    const label = nicheFor(row.dimensions);
     if (!label) continue;
     /* The gate applies to automatic labels too, not only to the output. */
-    if (rejectAsWorld(label)) continue;
+    if (rejectAsNiche(label)) continue;
     grouped.set(label, [...(grouped.get(label) ?? []), row]);
   }
 
@@ -154,7 +153,7 @@ export function buildWorlds(
   for (const [label, rows] of [...grouped.entries()]
     .sort((a, b) => b[1].length - a[1].length)) {
     if (rows.length < minimumListings) continue;
-    const id = `world:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    const id = `niche:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
     /* Which product families carry this world - evidence, not identity. */
     const families = new Map<string, number>();
@@ -167,25 +166,15 @@ export function buildWorlds(
       .map(([family, count]) => `${family} ${count}`)
       .join(", ");
 
-    /* Sub-worlds: narrower territories that recur inside this world. */
-    const subCounts = new Map<string, number>();
-    for (const row of rows)
-      if (row.dimensions.subWorld)
-        subCounts.set(row.dimensions.subWorld, (subCounts.get(row.dimensions.subWorld) ?? 0) + 1);
-    const subWorlds = [...subCounts.entries()]
-      .filter(([, count]) => count >= minimumListings)
-      .map(([name, count]) => ({ label: name, listings: count }));
-
     worlds.push({
-      id, label, basis: "customer-identity",
-      evidence: `${rows.length} listings share this customer${familyNote ? ` · across ${familyNote}` : ""}`,
+      id, label, basis: "niche",
+      evidence: `${rows.length} listings in this niche${familyNote ? ` · ${familyNote}` : ""}`,
       listingIds: rows.map(row => row.listing.listingId),
-      subWorlds,
       productFamilies: [...families.entries()].map(([family, listings]) => ({ family, listings })),
     });
     for (const row of rows)
       claim(claimed, row.listing.listingId, id,
-        row.dimensions.evidence[0] ?? `customer identity "${label}"`);
+        row.dimensions.evidence[0] ?? `niche "${label}"`);
   }
 
   /* A member's own move outranks every rule above. */
