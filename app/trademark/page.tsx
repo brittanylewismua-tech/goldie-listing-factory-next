@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import FactoryShell from "../factory-shell";
+import { useEffect } from "react";
 import type { FullVerdict } from "../trademark-check";
 import "./trademark.css";
 
@@ -68,7 +69,18 @@ export default function TrademarkPage() {
     return parts;
   };
 
-  return <FactoryShell active="trademark" title="Trademark Check">
+  /* A phone is decided by the same breakpoint the desktop gate uses, measured
+     rather than guessed from a user-agent string. */
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 820px)");
+    const sync = () => setNarrow(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  const body = (<>
     <div className="tm-page interior-page">
       <header className="drop-head">
         <p className="mini-label">TRADEMARK CHECK</p>
@@ -150,5 +162,27 @@ export default function TrademarkPage() {
         searched properly first.
       </p>
     </div>
+</>);
+
+  /*
+    THE CHECKER IS NOT A FACTORY PAGE.
+
+    It rendered inside FactoryShell, which carries the desktop gate — so on a
+    phone the Trademark Checker showed "this one needs a bigger screen". It is
+    a search box and a verdict; there is nothing about it that needs a desktop,
+    and the product definition makes it a top-level feature reachable from More
+    on mobile.
+
+    On a narrow screen it renders bare. On a desktop it keeps the factory rail
+    it has always had, so nothing about the desktop experience changes.
+  */
+  if (narrow)
+    return <main className="tm-standalone">
+      <h1>Trademark Checker</h1>
+      {body}
+    </main>;
+
+  return <FactoryShell active="trademark" title="Trademark Check">
+    {body}
   </FactoryShell>;
 }

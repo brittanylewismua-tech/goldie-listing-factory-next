@@ -78,3 +78,19 @@
 /* The register's findings sit under the curated ones, quieter by design. */
 .tm-register { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(75, 40, 62, 0.2); }
 .tm-register .tm-cat { text-transform: none; letter-spacing: 0; }
+
+/*
+  THE CHECKER ON A PHONE.
+
+  It used to render inside the Listing Factory shell, which hides everything
+  behind a desktop gate at this width — so the Trademark Checker, a search box,
+  told phone users to find a bigger screen. This is the bare version.
+*/
+.tm-standalone {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 24px 20px 72px;
+}
+.tm-standalone > h1 { font-size: 1.4rem; margin: 0 0 16px; }
+.tm-standalone .drop-head h1 { font-size: 1.1rem; }
+.tm-standalone input, .tm-standalone button { min-height: 48px; font-size: 16px; }

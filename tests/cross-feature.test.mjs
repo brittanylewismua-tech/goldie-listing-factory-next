@@ -137,3 +137,40 @@ test("Market Watch gives no next move", () => {
     "consider adding"])
     assert.ok(!text.includes(banned), `Market Watch said "${banned}"`);
 });
+
+test("the Trademark Checker works on a phone", () => {
+  /* It rendered inside FactoryShell, which carries the desktop gate, so the
+     checker — a search box — told phone users to find a bigger screen. Only
+     the Listing Factory is desktop-only. */
+  const page = read("app/trademark/page.tsx");
+  assert.match(page, /if \(narrow\)/);
+  assert.match(page, /className="tm-standalone"/);
+  assert.match(page, /max-width: 820px/);
+  /* And the desktop rail is unchanged. */
+  assert.match(page, /<FactoryShell active="trademark"/);
+});
+
+test("only the Listing Factory is desktop-only", () => {
+  const registry = read("app/capability-registry.ts");
+  const desktop = [...registry.matchAll(/key: "([a-zA-Z]+)",[\s\S]{0,400}?access: "desktop-only-canary"/g)]
+    .map(match => match[1]);
+  assert.deepEqual(desktop.sort(), ["listingFactory", "trademarkAtPublish"].sort());
+});
+
+test("the same checker module answers on every surface", () => {
+  for (const file of ["app/trademark/page.tsx", "app/api/trademark/route.ts",
+    "app/api/design-scanner/scan/route.ts"]) {
+    const source = read(file);
+    assert.match(source, /trademark-check/, `${file} does not use the shared checker`);
+  }
+});
+
+test("no screen calls the checker a tracker or promises alerts", () => {
+  for (const file of ["app/trademark/page.tsx", "app/more/page.tsx",
+    "app/home/page.tsx", "app/design-scanner/design-scanner-client.tsx"]) {
+    const text = read(file).toLowerCase();
+    for (const banned of ["tracker", "we'll alert", "we will alert", "notify you when",
+      "watch this phrase", "monitor this phrase"])
+      assert.ok(!text.includes(banned), `${file} says "${banned}"`);
+  }
+});
