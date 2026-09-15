@@ -101,20 +101,20 @@ const cohort = (count, over = {}) =>
 
 test("a thin cohort refuses to give a read", () => {
   const result = compare(ingredients(), cohort(5));
-  assert.equal(result.overall, "Not enough verified niche evidence yet");
+  assert.equal(result.overall, "Not enough verified evidence");
   assert.equal(result.working.length, 0);
 });
 
 test("an aligned design reads as aligned", () => {
   const result = compare(ingredients(), cohort(20));
-  assert.equal(result.overall, "Strong alignment");
+  assert.equal(result.overall, "Strong visual-pattern alignment");
   assert.ok(result.working.length >= 2);
   assert.ok(result.working.length <= 3, "more than three things to celebrate");
 });
 
 test("thumbnail trouble outranks everything else", () => {
   const result = compare(ingredients({ thumbnailReadability: "crowded" }), cohort(20));
-  assert.equal(result.overall, "Promising, but unclear at thumbnail size");
+  assert.equal(result.overall, "Moderate visual-pattern alignment");
   assert.match(result.opportunity, /thumbnail size/);
 });
 
@@ -509,7 +509,7 @@ test("trademark stays visually separate from the design read", () => {
   assert.match(CLIENT, /<h2>Trademark<\/h2>/);
   /* And an incomplete register always says so. */
   assert.match(CLIENT, /registerReady/);
-  assert.match(CLIENT, /not a complete\s*\n?\s*search yet/);
+  assert.match(CLIENT.replace(/\s+/g, " "), /not a complete trademark search yet/);
 });
 
 test("the remaining daily scans are shown", () => {
@@ -548,7 +548,7 @@ test("a real design mentioning shipping in passing still qualifies", () => {
 test("the opportunity is never blank, and never invents a criticism", () => {
   const perfect = compare(ingredients(), cohort(20));
   assert.ok(perfect.opportunity.length > 0, "an empty opportunity block");
-  assert.match(perfect.opportunity, /stands out as the thing holding it back/);
+  assert.match(perfect.opportunity, /No clear visual-construction issue surfaced/);
   for (const banned of ["will sell", "bestseller", "guaranteed"])
     assert.ok(!perfect.opportunity.toLowerCase().includes(banned));
 });
@@ -561,4 +561,69 @@ test("the article agrees with the word after it", () => {
   const withConsonant = compare(ingredients({ mechanism: "minimal icon" }),
     cohort(20, { mechanism: "bold slogan" }));
   assert.match(withConsonant.opportunity, /with a bold slogan/);
+});
+
+/* ------------------------------------------------- claim scope and trademark */
+import { check as tmCheck, withRegister as tmWithRegister } from "../app/trademark-check.ts";
+
+test("no label claims more than construction was compared", () => {
+  for (const design of [ingredients(), ingredients({ mechanism: "minimal icon" }),
+    ingredients({ thumbnailReadability: "crowded" })]) {
+    const result = compare(design, cohort(20));
+    assert.match(result.overall, /visual-pattern alignment|Not enough verified evidence/);
+    /* The old labels asserted fit with the niche itself, which is the one
+       thing a content-free comparison cannot see. */
+    for (const banned of ["strong alignment", "weak niche alignment",
+      "nothing is holding", "what is left is reach", "the only thing left"])
+      assert.ok(!`${result.overall} ${result.opportunity}`.toLowerCase().includes(banned),
+        `a result said "${banned}"`);
+  }
+});
+
+test("the result says in one line what was compared", () => {
+  const result = compare(ingredients(), cohort(20));
+  assert.match(result.scope,
+    /shares several visual construction patterns with listings currently showing verified momentum/);
+});
+
+test("an incomplete register can never read as a clean result", () => {
+  const loading = tmWithRegister(tmCheck("Bride Tribe"), [], false);
+  assert.equal(loading.registerReady, false);
+  assert.match(loading.summary, /records currently loaded/);
+  /* It must not assert anything about brands, characters or franchises.
+     "legal clearance" is the disclaimer, so it is removed before the check
+     rather than allowed to satisfy a ban on the word "clear". */
+  const claimed = loading.summary.toLowerCase()
+    .replace("screening information, not legal clearance", "");
+  for (const banned of ["no known brands", "character", "franchise",
+    "clear", "safe", "no trademark"])
+    assert.ok(!claimed.includes(banned), `a loading register claimed "${banned}"`);
+  assert.match(loading.summary, /screening information, not legal clearance/);
+});
+
+test("a complete register describes exactly what was searched", () => {
+  const ready = tmWithRegister(tmCheck("Bride Tribe"), [], true);
+  assert.equal(ready.registerReady, true);
+  assert.match(ready.summary,
+    /No exact or contained match was found in the current federal trademark register or Goldie's curated risk list/);
+  assert.match(ready.summary, /screening information, not legal clearance/);
+  assert.ok(!ready.summary.toLowerCase().includes("character"));
+});
+
+test("the checker never claims to have checked characters or franchises", () => {
+  const text = readFileSync(new URL("../app/trademark-check.ts", import.meta.url), "utf8");
+  const strings = text.replace(/\/\*[\s\S]*?\*\//g, "").match(/"[^"]{20,}"|`[^`]{20,}`/g) ?? [];
+  for (const line of strings)
+    if (/no /i.test(line))
+      assert.ok(!/character|franchise|copyright/i.test(line),
+        `a summary claims to have checked: ${line}`);
+});
+
+test("a real risk still reports as a risk whatever the register state", () => {
+  const known = tmCheck("Mickey Mouse");
+  if (known.risk === "high") {
+    const loading = tmWithRegister(known, [], false);
+    assert.equal(loading.risk, "high");
+    assert.equal(loading.summary, known.summary);
+  }
 });

@@ -324,7 +324,7 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
 
   if (!gate.ok)
     return NextResponse.json({ ...base, ok: false,
-      overall: "Not enough verified niche evidence yet",
+      overall: "Not enough verified evidence",
       refusal: gate.refusal, cohort: shape });
 
   /* ------------------------------------------------------ the comparison */
@@ -351,7 +351,8 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
   const id = crypto.randomUUID();
   const result = { ...base, ok: true,
     overall: alignment.overall, working: alignment.working,
-    opportunity: alignment.opportunity, evidence: line, scanId: id };
+    opportunity: alignment.opportunity, scope: alignment.scope,
+    evidence: line, scanId: id };
   await db.prepare(
     `INSERT INTO scan_history (id, user_id, artwork_hash, niche, result_json, created_at)
      VALUES (?,?,?,?,?,?)`)

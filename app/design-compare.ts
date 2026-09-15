@@ -25,12 +25,26 @@ export type Ingredients = {
   mechanism: string;
 };
 
+/**
+ * WHAT THESE LABELS ARE ALLOWED TO CLAIM.
+ *
+ * The comparison layer cannot read a reference's wording or subject matter —
+ * deliberately, and permanently. So it cannot know whether a design's SUBJECT
+ * is right for a niche. It knows only whether the design is BUILT the way the
+ * listings that are moving are built.
+ *
+ * "Strong alignment" therefore overstated it. Every label now says
+ * visual-pattern, because that is the entire scope of what was measured, and a
+ * member who reads only the headline should still not be misled.
+ */
 export type Alignment = {
   /* Plain, and never a number the member has to interpret. */
-  overall: "Strong alignment" | "Promising, but unclear at thumbnail size"
-    | "Visually strong, weak niche alignment" | "Not enough verified niche evidence yet";
+  overall: "Strong visual-pattern alignment" | "Moderate visual-pattern alignment"
+    | "Weak visual-pattern alignment" | "Not enough verified evidence";
   working: string[];
   opportunity: string;
+  /* One line saying what was actually compared. Never a wall of caveats. */
+  scope: string;
 };
 
 const commonest = (values: string[]) => {
@@ -56,8 +70,8 @@ export function compare(
   design: Ingredients, cohort: Ingredients[], { minimum = 12 }: { minimum?: number } = {},
 ): Alignment {
   if (cohort.length < minimum)
-    return { overall: "Not enough verified niche evidence yet", working: [],
-      opportunity: "" };
+    return { overall: "Not enough verified evidence", working: [],
+      opportunity: "", scope: "" };
 
   const working: string[] = [];
   const gaps: Array<{ weight: number; say: string }> = [];
@@ -116,12 +130,11 @@ export function compare(
   */
   const aligned = working.length >= 2;
   const overall: Alignment["overall"] =
-    design.thumbnailReadability !== "readable" && aligned
-      ? "Promising, but unclear at thumbnail size"
-      : aligned ? "Strong alignment"
-      : working.length && design.thumbnailReadability === "readable"
-        ? "Visually strong, weak niche alignment"
-        : "Visually strong, weak niche alignment";
+    aligned && design.thumbnailReadability === "readable"
+      ? "Strong visual-pattern alignment"
+      : aligned || working.length >= 1
+        ? "Moderate visual-pattern alignment"
+        : "Weak visual-pattern alignment";
 
   return {
     overall,
@@ -130,12 +143,14 @@ export function compare(
     /*
       Always exactly one line. A design that matches the cohort on everything
       measured has no gap to name, and an empty block reads as a bug rather
-      than as good news — so it says what it actually means, without inventing
-      a criticism to fill the space or promising the design will sell.
+      than as good news — so it says what it actually means.
+      It does NOT then claim that only reach is left: whether the subject
+      lands with these buyers is exactly the thing this comparison never saw.
     */
     opportunity: gaps[0]?.say
-      ?? "Nothing in this design stands out as the thing holding it back. "
-       + "What is left is reach — getting it in front of the people it is for.",
+      ?? "No clear visual-construction issue surfaced in this comparison.",
+    scope: "Your design shares several visual construction patterns with "
+      + "listings currently showing verified momentum in this niche.",
   };
 }
 
@@ -146,4 +161,8 @@ export function compare(
 export const FORBIDDEN_ADVICE = [
   "copy this", "add the same", "this will sell", "bestseller", "best seller",
   "top seller", "use this phrase", "use this design", "replicate",
+  /* Claims about subject, market fit or what is "left" to do — all of which
+     are outside what a construction comparison can see. */
+  "what is left is reach", "nothing is holding", "right for this audience",
+  "will resonate", "the only thing left",
 ];

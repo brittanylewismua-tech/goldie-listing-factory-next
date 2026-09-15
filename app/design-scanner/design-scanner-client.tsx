@@ -28,6 +28,7 @@ type Result = {
   opportunity?: string;
   evidence?: string;
   refusal?: { kind: string; because: string };
+  scope?: string;
   trademark: Trademark | null;
   scansLeftToday: number | null;
   niche: string;
@@ -237,6 +238,7 @@ function ScanResult({ result }: { result: Result }) {
 
       {result.ok ? (
         <>
+          {result.scope && <p className="scope">{result.scope}</p>}
           {result.working && result.working.length > 0 && (
             <div className="block">
               <h2>What is working</h2>
@@ -263,8 +265,8 @@ function ScanResult({ result }: { result: Result }) {
             <p>{result.trademark.summary}</p>
             {!result.trademark.registerReady && (
               <p className="loading">
-                The federal register is still loading, so this is not a complete
-                search yet.
+                The federal register is still loading, so this is not a
+                complete trademark search yet.
               </p>
             )}
           </div>

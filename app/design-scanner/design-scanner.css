@@ -119,6 +119,10 @@
   margin: 0 0 16px;
   line-height: 1.35;
 }
+/* What was compared, said once, above the findings rather than buried
+   under them. */
+.scope { margin: -6px 0 20px; color: var(--muted); font-size: 0.9rem; }
+
 .block { margin: 0 0 22px; }
 .block h2 {
   font-size: 0.78rem;

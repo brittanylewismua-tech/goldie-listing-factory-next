@@ -324,13 +324,20 @@ export function check(raw: string): Verdict {
       risk: "clear",
       hits,
       /*
-        DELIBERATELY NOT "THIS IS SAFE".
+        DELIBERATELY NOT "THIS IS SAFE", AND NOT A CLAIM ABOUT CHARACTERS.
 
-        The list is the common traps, not the federal register, and a checker
-        that says "safe" is making a promise it cannot keep — the one a seller
-        would quote back after losing a shop.
+        The old wording — "No known brands, characters or franchises in this
+        phrase" — asserted three things this code does not check. Nothing here
+        looks for characters, franchises or copyrighted properties; it matches
+        a curated risk list and the federal trademark register. Saying
+        otherwise is the sentence a seller would quote back after losing a
+        shop, so the summary now names only what was actually searched.
+
+        `withRegister` replaces this line with one that says whether the
+        register was complete, because a register still loading cannot produce
+        a clean result at all.
       */
-      summary: "No known brands, characters or franchises in this phrase.",
+      summary: "No match was found in the trademark records currently loaded.",
     };
 
   const owners = [...new Set(hits.map(hit => hit.owner))];
@@ -408,8 +415,30 @@ export function withRegister(
   );
   const minor = matches.filter(match => !serious.includes(match));
 
-  if (verdict.risk === "high" || !matches.length)
-    return { ...verdict, register: matches, registerReady };
+  /*
+    A CLEAN RESULT REQUIRES A COMPLETE REGISTER.
+
+    "No match found" over a half-loaded register is not a clean search, and a
+    member reading the headline alone must not be able to mistake it for one.
+    So the summary itself carries the state — the warning beneath it is a
+    reinforcement, never the only place the limitation appears.
+  */
+  if (verdict.risk === "high") return { ...verdict, register: matches, registerReady };
+
+  if (!matches.length)
+    return {
+      ...verdict,
+      register: matches,
+      registerReady,
+      summary: verdict.risk === "clear"
+        ? (registerReady
+          ? "No exact or contained match was found in the current federal "
+            + "trademark register or Goldie's curated risk list. This is "
+            + "screening information, not legal clearance."
+          : "No match was found in the trademark records currently loaded. "
+            + "This is screening information, not legal clearance.")
+        : verdict.summary,
+    };
 
   if (serious.length) {
     const first = serious[0];
