@@ -11,6 +11,21 @@
  * an answer, it is a bin with a friendly name, and it makes a map look
  * complete while telling the member nothing.
  */
+/**
+ * Etsy returns HTML entities in titles and section names.
+ *
+ * A world labelled "Women&#39;s Tees" is not a cosmetic problem: it is what
+ * the member reads, and it makes Goldie look like it cannot handle their own
+ * shop's words.
+ */
+export function decodeEntities(text: string): string {
+  return String(text ?? "")
+    .replace(/&#(\d+);/g, (whole, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (whole, code) => String.fromCharCode(parseInt(code, 16)))
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+}
+
 export type Listing = {
   listingId: number;
   title: string;

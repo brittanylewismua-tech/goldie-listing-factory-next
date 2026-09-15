@@ -4,7 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
-import { ensureListingTables } from "@/app/shop-map-listings";
+import { ensureListingTables, decodeEntities } from "@/app/shop-map-listings";
 import { productFamily } from "@/app/product-type-utils";
 
 /**
@@ -58,7 +58,7 @@ export const GET = withErrorLog("shop-map-listings", async (request: Request) =>
   const sectionNames = new Map<number, string>();
   const sections = await etsy(`/shops/${shopId}/sections`);
   for (const section of ((sections.body as { results?: Array<{ shop_section_id?: number; title?: string }> })?.results) ?? [])
-    if (section.shop_section_id) sectionNames.set(Number(section.shop_section_id), String(section.title ?? ""));
+    if (section.shop_section_id) sectionNames.set(Number(section.shop_section_id), decodeEntities(String(section.title ?? "")));
 
   const byState: Record<string, number> = {};
   const fieldsSeen = { views: 0, favorites: 0, created: 0 };
@@ -101,11 +101,11 @@ export const GET = withErrorLog("shop-map-listings", async (request: Request) =>
              views = COALESCE(excluded.views, shop_map_listings.views),
              favorites = COALESCE(excluded.favorites, shop_map_listings.favorites),
              ingested_at = excluded.ingested_at`)
-          .bind(user.userId, shopId, listingId, String(listing.title ?? ""),
+          .bind(user.userId, shopId, listingId, decodeEntities(String(listing.title ?? "")),
             JSON.stringify(listing.tags ?? []), sectionNames.get(sectionId) ?? "",
             String(listing.state ?? state), created,
             Number(listing.last_modified_timestamp ?? listing.updated_timestamp ?? 0) || null,
-            views, favorites, productFamily(String(listing.title ?? "")), now)
+            views, favorites, productFamily(decodeEntities(String(listing.title ?? ""))), now)
           .run();
         stored += 1;
         byState[state] = (byState[state] ?? 0) + 1;

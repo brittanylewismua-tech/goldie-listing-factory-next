@@ -2,8 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  buildWorlds, repeatedPhrases, renameWorld, mergeWorlds, splitListings,
+  buildWorlds, repeatedPhrases, renameWorld, mergeWorlds, splitListings, decodeEntities,
 } from "../app/shop-map-worlds.ts";
+
 import {
   direction, overbuilt, MIN_ORDERS_FOR_DIRECTION, ANOMALY_SHARE,
 } from "../app/shop-map-direction.ts";
@@ -249,4 +250,28 @@ test("there is only ever one headline number", () => {
   /* Estimated and verified are never both offered as the figure. */
   assert.equal(typeof state.headline, "string");
   assert.ok(["Verified profit", "Estimated profit", "Profit unavailable"].includes(state.headline));
+});
+
+test("Etsy's HTML entities never reach a world label", () => {
+  /* Measured live: the section came back as "Women&#39;s Tees" and that is
+     what a member would have read on the map. */
+  assert.equal(decodeEntities("Women&#39;s Tees"), "Women's Tees");
+  assert.equal(decodeEntities("Sweaters &amp; Hoodies"), "Sweaters & Hoodies");
+  assert.equal(decodeEntities("&quot;Good&quot;"), '"Good"');
+  assert.equal(decodeEntities("plain"), "plain");
+});
+
+test("a measure nobody scored on cannot corroborate a direction", () => {
+  /* Every world had zero reviews, and the leader "led on reviews" - which
+     counted toward the two-measure threshold. */
+  const flat = [
+    world({ worldId: "a", label: "A", orders: 30, units: 30, revenueMinor: 90_000,
+      reviews: 0, ordersLast90: 0, largestOrderMinor: 3_000 }),
+    world({ worldId: "b", label: "B", orders: 2, units: 2, revenueMinor: 1_000,
+      reviews: 0, ordersLast90: 0, largestOrderMinor: 500, activeListings: 1 }),
+  ];
+  const result = direction(flat);
+  assert.equal(result.leadingMeasures.includes("reviews"), false,
+    "a tied-at-zero measure was counted as a lead");
+  assert.equal(result.leadingMeasures.includes("recent 90 days"), false);
 });

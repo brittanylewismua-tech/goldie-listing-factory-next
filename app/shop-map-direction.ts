@@ -82,9 +82,33 @@ export function direction(worlds: WorldPerformance[]): DirectionResult {
       leaderOf(world => world.activeListings ? world.revenueMinor / world.activeListings : 0)],
   ];
 
+  /*
+    A MEASURE NOBODY SCORED ON IS NOT A MEASURE.
+
+    Every world had zero reviews and the leader "led on reviews" — which
+    counted toward the two-measure threshold and made a weak result look
+    corroborated. A measure only counts when something was actually recorded
+    against it, and when the leader is not merely tied with everyone else.
+  */
+  const recorded = (pick: (world: WorldPerformance) => number) =>
+    worlds.some(world => pick(world) > 0)
+    && new Set(worlds.map(pick)).size > 1;
+  const pickers: Record<string, (world: WorldPerformance) => number> = {
+    orders: world => world.orders,
+    units: world => world.units,
+    revenue: world => world.revenueMinor,
+    reviews: world => world.reviews,
+    "recent 90 days": world => world.ordersLast90,
+    "revenue per active listing": world =>
+      world.activeListings ? world.revenueMinor / world.activeListings : 0,
+  };
+
   const leadCounts = new Map<string, string[]>();
-  for (const [name, world] of measures)
-    if (world) leadCounts.set(world.worldId, [...(leadCounts.get(world.worldId) ?? []), name]);
+  for (const [name, world] of measures) {
+    if (!world) continue;
+    if (!recorded(pickers[name])) continue;
+    leadCounts.set(world.worldId, [...(leadCounts.get(world.worldId) ?? []), name]);
+  }
 
   const candidateId = [...leadCounts.entries()]
     .sort((a, b) => b[1].length - a[1].length)[0]?.[0];

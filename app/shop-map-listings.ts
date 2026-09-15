@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+export { decodeEntities } from "./shop-map-worlds";
 
 /**
  * THE SELLER'S OWN LISTINGS, AND WHAT THEY ACTUALLY DID.
