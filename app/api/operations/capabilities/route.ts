@@ -89,8 +89,20 @@ export const GET = withErrorLog("operations-capabilities", async () => {
     .filter(entry => !claimed.has(entry.key))
     .map(entry => ({ key: entry.key, limitStatus: entry.limitStatus }));
 
+  /* The live schema of the tables the suite reads, so a query naming a column
+     that does not exist is visible here rather than as an empty screen. */
+  const schema: Record<string, string[]> = {};
+  for (const name of ["printify_connections", "etsy_connections", "finance_rollups",
+    "member_shop_watches", "spend_reservations"]) {
+    if (!present.has(name)) continue;
+    const columns = await db.prepare(`PRAGMA table_info(${name})`)
+      .all<{ name: string }>().catch(() => ({ results: [] as Array<{ name: string }> }));
+    schema[name] = (columns.results ?? []).map(row => String(row.name));
+  }
+
   return NextResponse.json({
     build: BUILD_MARKER,
+    schema,
     capabilities: resolved,
     notReady: resolved.filter(entry => !entry.ready).map(entry => entry.key),
     etsyScopes: scopeMap(),
