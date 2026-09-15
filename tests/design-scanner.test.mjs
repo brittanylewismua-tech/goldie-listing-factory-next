@@ -192,3 +192,151 @@ test("stale evidence is not counted as current", () => {
   assert.equal(m.withinFreshWindow, 0);
   assert.ok(m.oldestEvidenceDays > 60);
 });
+
+/* -------------------------------------------------------- image recovery */
+import { classify, account, recoveryRate } from "../app/reference-recovery.ts";
+import { isFresh, DISPLAY_FRESHNESS_SECONDS } from "../app/reference-images.ts";
+
+const etsyRow = (over = {}) => ({ listing_id: 5, shop_id: 9, state: "active",
+  quantity: 3, images: [{ url_570xN: "https://i.etsystatic.com/x.jpg", listing_image_id: 77 }],
+  ...over });
+
+test("every requested listing leaves with an outcome", () => {
+  const { rows, totals } = account([1, 2, 3],
+    [classify(etsyRow({ listing_id: 1 }))], [3]);
+  assert.equal(rows.length, 3);
+  assert.equal(totals.requested, 3);
+  assert.equal(totals.accounted, 3);
+  assert.equal(totals.recovered, 1);
+  assert.equal(totals.unavailable, 1, "a listing Etsy omitted");
+  assert.equal(totals.failed, 1, "a listing whose call failed");
+});
+
+test("a listing Etsy omitted is not the same as a call that failed", () => {
+  const omitted = account([1], [], []).totals;
+  const broke = account([1], [], [1]).totals;
+  assert.equal(omitted.unavailable, 1);
+  assert.equal(broke.failed, 1);
+});
+
+test("no recovery rate is reported until the accounting balances", () => {
+  const { totals } = account([1, 2], [classify(etsyRow({ listing_id: 1 }))], []);
+  assert.equal(recoveryRate(totals), 0.5);
+  assert.equal(recoveryRate({ ...totals, requested: 99 }), null,
+    "reported a rate over an accounting that does not add up");
+});
+
+test("a sold-out listing with an image is still a usable reference", () => {
+  /* Selling out is evidence, not a loss. */
+  assert.equal(classify(etsyRow({ state: "sold_out" })).outcome, "recovered");
+  assert.equal(classify(etsyRow({ state: "sold_out", images: [] })).outcome, "sold-out");
+});
+
+test("a removed listing is recorded as deleted, not merely inactive", () => {
+  assert.equal(classify(etsyRow({ state: "removed" })).outcome, "deleted");
+  assert.equal(classify(etsyRow({ state: "draft" })).outcome, "inactive");
+  assert.equal(classify(etsyRow({ images: [] })).outcome, "no-image");
+});
+
+test("an image older than Etsy's six-hour rule is not fresh", () => {
+  const now = 1_000_000;
+  assert.equal(isFresh(now - 3_600, now), true);
+  assert.equal(isFresh(now - DISPLAY_FRESHNESS_SECONDS - 1, now), false);
+});
+
+test("an Etsy image id is never called a content hash", () => {
+  const text = readFileSync(new URL("../app/reference-images.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(text.replace(/NOT a hash[\s\S]*?content hash\./g, ""),
+    /image[_ ]?id[^\n]*content hash/i);
+  assert.ok(/is NOT a hash of\s*\n?\s*\* the image's contents/.test(text)
+    || /NOT a hash of the image's contents/.test(text.replace(/\n \* /g, " ")),
+    "the file does not state what the image id is not");
+});
+
+test("image bytes are never stored", () => {
+  const text = readFileSync(new URL("../app/reference-images.ts", import.meta.url), "utf8");
+  const code = text.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(code, /image_bytes|blob|ARTWORK|R2/i);
+});
+
+/* ---------------------------------------------------------- niche cohort */
+import { normalizeNiche, relates, intersect, COHORT_CLAIM } from "../app/niche-cohort.ts";
+
+const listing = (over = {}) => ({ listingId: 1, shopId: 2,
+  title: "Dog Mom Shirt for Her", tags: ["dog mom", "dog lover"], ...over });
+
+test("plurals and punctuation do not change the niche", () => {
+  assert.deepEqual(normalizeNiche("Dog Moms!").terms, normalizeNiche("dog mom").terms);
+  assert.deepEqual(normalizeNiche("Girl Power").terms, ["girl", "power"]);
+});
+
+test("product words are not treated as the niche", () => {
+  /* "feminist shirt" is the feminist niche; the shirt is the product. */
+  assert.deepEqual(normalizeNiche("feminist shirt").terms, ["feminist"]);
+});
+
+test("a multi-word niche needs more than one of its words", () => {
+  const terms = normalizeNiche("dog mom").terms;
+  assert.equal(relates(listing(), terms).ok, true);
+  const justDog = listing({ title: "Dog Bandana", tags: ["dog"] });
+  assert.equal(relates(justDog, terms).ok, false);
+  assert.match(relates(justDog, terms).because, /only "dog"/);
+});
+
+test("the cohort is the overlap, and says why each listing entered", () => {
+  const qualified = new Set([1, 2]);
+  const result = intersect(
+    [listing({ listingId: 1 }), listing({ listingId: 2 }), listing({ listingId: 3 })],
+    qualified, normalizeNiche("dog mom").terms,
+    { savedDiscovery: new Set([2]) });
+  assert.equal(result.members.length, 2);
+  assert.equal(result.members.find(m => m.listingId === 1).entry, "search-match");
+  assert.equal(result.members.find(m => m.listingId === 2).entry, "saved-niche-discovery");
+  assert.equal(result.searched, 3);
+  assert.equal(result.withMomentum, 2, "a listing with no evidence is not in the cohort");
+});
+
+test("an unrelated search result is rejected with its reason", () => {
+  const result = intersect(
+    [listing({ listingId: 1, title: "Cat Mug", tags: ["cat"] })],
+    new Set([1]), normalizeNiche("dog mom").terms);
+  assert.equal(result.members.length, 0);
+  assert.equal(result.rejected.length, 1);
+  assert.match(result.rejected[0].because, /none of the niche terms/);
+});
+
+test("the cohort claim never says the marketplace has been classified", () => {
+  assert.match(COHORT_CLAIM, /returned for this niche query/);
+  for (const banned of ["classified", "all listings", "every listing", "marketplace"])
+    assert.ok(!COHORT_CLAIM.toLowerCase().includes(banned));
+});
+
+test("taxonomy is not used to build a cohort", () => {
+  const code = readFileSync(new URL("../app/niche-cohort.ts", import.meta.url), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(code, /taxonom/i);
+});
+
+/* -------------------------------------------------------- evidence window */
+import { describeWindow, evidenceLine as windowLine } from "../app/evidence-window.ts";
+
+test("the evidence line states the window we actually have", () => {
+  const line = windowLine({ earliest: 0, latest: 0, seconds: 29 * 3_600,
+    repeatedMovement: 4, attributedUnits: 9, shops: 12, withImage: 18,
+    withReview: 0, listings: 18 });
+  assert.equal(line,
+    "Compared with 18 listings showing verified momentum across 12 shops during "
+    + "29 hours of monitoring.");
+  assert.ok(!line.includes("60 days"));
+});
+
+test("sixty days is never claimed before sixty days exist", () => {
+  assert.match(describeWindow(29 * 3_600), /29 hours/);
+  assert.match(describeWindow(60 * 86_400), /60 days/);
+  assert.match(describeWindow(45 * 60), /45 minutes/);
+});
+
+test("the fixed sixty-day line is gone from the cohort module", () => {
+  const code = readFileSync(new URL("../app/momentum-cohort.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(code.split("EVIDENCE_FRESH_DAYS")[0], /in the last \$\{/);
+});

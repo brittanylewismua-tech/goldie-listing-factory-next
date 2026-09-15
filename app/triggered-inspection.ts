@@ -25,6 +25,8 @@ import {
   claimLock, closeInterval, ensureMarketTables, fingerprint, flagHotCandidates,
   latestSnapshots, releaseLock, writeEvents, writeSalesActivity, writeSnapshots,
 } from "@/app/market-store";
+import { classify as classifyReference } from "@/app/reference-recovery";
+import { ensureReferenceImageTable, rememberReferenceImage } from "@/app/reference-image-store";
 import {
   baselineCompleteBefore, ensureBaselineTables, knownListings, markMissing,
   readShopPage, writeShopListings, MAX_PAGES_PER_SHOP, PAGE,
@@ -81,6 +83,11 @@ const toSnapshot = (listing: EtsyListing, observedAt: string): Snapshot | null =
     taxonomyId: listing.taxonomy_id === undefined ? null : Number(listing.taxonomy_id),
     titleHash: fingerprint(String(listing.title ?? "")),
     tagsHash: fingerprint((listing.tags ?? []).join("|")),
+    /* A fingerprint of Etsy's IMAGE IDENTIFIER — enough to notice the primary
+       image changed, and nothing more. It is not a hash of the picture. The
+       identifier and the URL themselves are written to `reference_images`,
+       which the bulk poller never touches, so a later poll cannot erase the
+       current image the way it erases this column. */
     imageHash: fingerprint(String(listing.images?.[0]?.listing_image_id ?? "")),
   };
 };
@@ -255,6 +262,39 @@ export async function inspectInterval(intervalId: number): Promise<InspectionRes
     listingId: row.listingId, shopId: row.shopId, reason: row.reason,
   })));
   await writeSnapshots(seen);
+
+  /*
+    KEEP THE IMAGE OF WHAT ACTUALLY SOLD.
+
+    The shop enumeration returns no images at all — `listings/active` does not
+    carry them and `includes=Images` does not change that, which is measured,
+    not assumed. Only `listings/batch` does. So rather than fetch images for
+    every listing in every selling shop, this asks for them ONLY for the
+    listings that just earned sale-linked evidence: a handful per inspection,
+    one extra call, and exactly the listings a reference cohort can ever use.
+
+    It is written to `reference_images`, not to the snapshot, because a later
+    bulk poll overwrites snapshots with rows that carry no image and would
+    erase the current image identity. That is the bug this replaces.
+  */
+  const movedIds = [...new Set(outcome.linked.map(row => row.listingId))];
+  if (movedIds.length) {
+    try {
+      const withImages = await readListings(movedIds.slice(0, BATCH));
+      calls += withImages.calls;
+      await ensureReferenceImageTable();
+      const capturedAt = Math.floor(Date.now() / 1000);
+      for (const listing of withImages.listings) {
+        const row = classifyReference(listing);
+        if (!row.listingId) continue;
+        await rememberReferenceImage({ ...row, retrievedAt: capturedAt,
+          sourceEndpoint: "listings/batch?includes=Images" });
+      }
+    } catch {
+      /* An image we failed to capture is a thinner reference corpus, never a
+         failed inspection. The sales evidence is already safely written. */
+    }
+  }
 
   return {
     intervalId, shopId: interval.shop_id,
