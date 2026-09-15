@@ -59,12 +59,65 @@ export const GET = withErrorLog("operations-health", async () => {
     !at ? "empty" : now - at > staleAfter ? "stale" : "ok";
 
   await probe("etsySensor", async () => {
+    /*
+      THE MARKET SENSOR LIVES IN shop_sensor_state.
+
+      This read `shop_observations`, which is Shop Watch's table — two watched
+      shops — and reported the market detector as stale on the strength of it.
+      The detector was fine; the probe was pointed at the wrong feature.
+    */
     const row = await db.prepare(
-      `SELECT MAX(observed_at) AS latest, COUNT(*) AS shops FROM shop_observations`)
-      .first<{ latest: string; shops: number }>();
+      `SELECT MAX(observed_at) AS latest, COUNT(*) AS shops,
+              SUM(CASE WHEN observed_at IS NULL THEN 1 ELSE 0 END) AS neverSensed
+         FROM shop_sensor_state`)
+      .first<{ latest: string; shops: number; neverSensed: number }>();
     const at = seconds(row?.latest);
     return { state: ageState(at, 6 * 3_600),
+      detail: { lastReadingAt: at, shopsMonitored: Number(row?.shops ?? 0),
+        neverSensed: Number(row?.neverSensed ?? 0) } };
+  });
+
+  await probe("shopWatchObservations", async () => {
+    /* Shop Watch's own observations, which is what the previous probe was
+       actually measuring. Kept, under the right name. */
+    const row = await db.prepare(
+      `SELECT MAX(observed_at) AS latest, COUNT(DISTINCT shop_id) AS shops
+         FROM shop_observations`)
+      .first<{ latest: string; shops: number }>();
+    const at = seconds(row?.latest);
+    return { state: ageState(at, 24 * 3_600),
       detail: { lastObservationAt: at, shopsObserved: Number(row?.shops ?? 0) } };
+  });
+
+  await probe("inspectionBacklog", async () => {
+    /*
+      DETECTION WITHOUT ATTRIBUTION IS NOT EVIDENCE.
+
+      The sensor opens an interval whenever a shop's counter moves; the
+      inspector is what turns that into a listing-level claim. When the
+      inspector falls behind, Market Watch keeps looking healthy while the
+      evidence behind it stops growing — so the backlog is a first-class
+      health signal, not a footnote.
+    */
+    const row = await db.prepare(
+      `SELECT COUNT(*) AS total,
+              SUM(CASE WHEN inspected_at IS NULL THEN 1 ELSE 0 END) AS waiting
+         FROM shop_sales_intervals`)
+      .first<{ total: number; waiting: number }>();
+    const jobs = await db.prepare(
+      `SELECT state, COUNT(*) AS n FROM inspection_jobs GROUP BY state`)
+      .all<{ state: string; n: number }>();
+    const byState: Record<string, number> = {};
+    for (const entry of jobs.results ?? []) byState[entry.state] = Number(entry.n) || 0;
+    const waiting = Number(row?.waiting ?? 0);
+    const failed = byState.failed ?? 0;
+    return {
+      /* A backlog this size is not "stale", it is a workload that cannot keep
+         up, and it says so. */
+      state: waiting > 10_000 || failed > 500 ? "broken" : waiting > 1_000 ? "stale" : "ok",
+      detail: { intervals: Number(row?.total ?? 0), awaitingInspection: waiting,
+        jobs: byState },
+    };
   });
 
   await probe("listingPoller", async () => {
