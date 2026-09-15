@@ -11,7 +11,7 @@ import {
   classifyLedgerType, isUnmapped, sellerRevenueMinor, receiptArithmetic,
 } from "../app/finance-classify.ts";
 import {
-  windowsFor, incrementalFrom, windowTooLarge, outstanding,
+  windowsFor, incrementalFrom, windowTooLarge, outstanding, snapToGrid,
   MAX_WINDOW_SECONDS, OVERLAP_SECONDS,
 } from "../app/finance-windows.ts";
 import { monthWindow, monthOf, offsetSeconds, isKnownTimezone, MISSING_TIMEZONE } from "../app/finance-month.ts";
@@ -367,4 +367,26 @@ test("source rows are never rewritten except by the source", () => {
   /* Adjustments sit beside the source, never on top of it. */
   assert.match(store, /finance_adjustments/);
   assert.match(store, /reverses TEXT/);
+});
+
+test("planning the same period twice produces the same windows", () => {
+  /* Measured in production: shifting boundaries left 74 windows outstanding
+     while nothing had failed, which would block complete profit forever. */
+  const anchor = 0;
+  const now = 400 * 86_400;
+  const first = windowsFor(100 * 86_400, now, undefined, anchor);
+  /* A later run starting somewhere else inside the same period. */
+  const second = windowsFor(137 * 86_400, now, undefined, anchor);
+  const key = window => `${window.from}:${window.to}`;
+  const firstKeys = new Set(first.map(key));
+  for (const window of second)
+    assert.ok(firstKeys.has(key(window)),
+      `a re-plan produced a boundary the first plan never had: ${key(window)}`);
+});
+
+test("the grid snaps backwards, never forwards past unread time", () => {
+  assert.equal(snapToGrid(0, 0), 0);
+  const snapped = snapToGrid(45 * 86_400, 0);
+  assert.ok(snapped <= 45 * 86_400);
+  assert.equal(snapped % (30 * 86_400), 0);
 });

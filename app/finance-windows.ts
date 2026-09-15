@@ -22,18 +22,40 @@ export const OVERLAP_SECONDS = 14 * 86_400;
 
 export type Window = { from: number; to: number };
 
-/** Non-overlapping windows covering [from, to], oldest first. */
-export function windowsFor(from: number, to: number, size = WINDOW_SECONDS): Window[] {
+/**
+ * WINDOW BOUNDARIES SIT ON A FIXED GRID.
+ *
+ * The first version derived boundaries from wherever the incremental read
+ * happened to start. Because that start moves - it reaches fourteen days
+ * behind a high-water mark that advances every run - every run produced a
+ * DIFFERENT set of boundaries, inserted them all, and left the previous set
+ * outstanding forever. Measured: outstanding windows went 43 -> 74 across two
+ * runs while nothing failed.
+ *
+ * Anchoring to a fixed epoch makes planning idempotent: the same period always
+ * produces the same windows, so a window completed once stays completed.
+ */
+export function snapToGrid(at: number, anchor: number, size = WINDOW_SECONDS) {
+  if (at <= anchor) return anchor;
+  return anchor + Math.floor((at - anchor) / size) * size;
+}
+
+/** Non-overlapping windows covering [from, to], oldest first, grid-aligned. */
+export function windowsFor(
+  from: number, to: number, size = WINDOW_SECONDS, anchor = from,
+): Window[] {
   if (!(to > from)) return [];
   const windows: Window[] = [];
-  let cursor = Math.floor(from);
-  while (cursor < to) {
-    const end = Math.min(to, cursor + size);
-    windows.push({ from: cursor, to: end });
-    /* +1 so consecutive windows cannot both contain the boundary second and
-       ingest the same entry twice. */
-    cursor = end + 1;
-  }
+  /*
+    Boundaries come from the grid itself rather than from walking forward and
+    adding a second each time. Walking drifted the alignment by one second per
+    window, so a re-plan produced boundaries the first plan never had.
+
+    Each window ends one second before the next begins, so consecutive windows
+    cannot both contain the same entry.
+  */
+  for (let start = snapToGrid(from, anchor, size); start < to; start += size)
+    windows.push({ from: start, to: Math.min(to, start + size - 1) });
   return windows;
 }
 

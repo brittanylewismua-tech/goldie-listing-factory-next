@@ -61,7 +61,8 @@ export const GET = withErrorLog("shop-map-financial-ingest", async (request: Req
   const from = incrementalFrom(Number(state?.high_water ?? 0), now, EARLIEST);
 
   /* Record every window first, so a crash cannot lose the plan. */
-  const planned = windowsFor(from, now);
+  /* Anchored at EARLIEST so the grid never shifts between runs. */
+  const planned = windowsFor(from, now, undefined, EARLIEST);
   for (const window of planned)
     await db.prepare(
       `INSERT INTO finance_windows (user_id, shop_id, window_from, window_to, state, updated_at)
