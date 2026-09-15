@@ -64,7 +64,8 @@ export const GET = withErrorLog("shop-map-listings", async (request: Request) =>
   const fieldsSeen = { views: 0, favorites: 0, created: 0 };
   let stored = 0;
 
-  for (const state of STATES) {
+  const listingsOnly = parameters.get("sales") !== "1" || parameters.get("listings") === "1";
+  for (const state of (listingsOnly ? STATES : [])) {
     for (let page = 0; page < maxPages; page += 1) {
       const answer = await etsy(
         `/shops/${shopId}/listings?state=${state}&limit=100&offset=${page * 100}`);
@@ -123,8 +124,11 @@ export const GET = withErrorLog("shop-map-listings", async (request: Request) =>
   */
   let salesStored = 0;
   if (parameters.get("sales") === "1") {
-    const maxReceiptPages = Math.min(40, Math.max(1, Number(parameters.get("receipts")) || 34));
-    for (let page = 0; page < maxReceiptPages; page += 1) {
+    /* Chunked: roughly 3,700 transaction inserts do not fit in one request,
+       so the caller walks the receipt pages a few at a time. */
+    const from = Math.max(0, Number(parameters.get("salesFrom")) || 0);
+    const maxReceiptPages = Math.min(8, Math.max(1, Number(parameters.get("receipts")) || 4));
+    for (let page = from; page < from + maxReceiptPages; page += 1) {
       const answer = await etsy(`/shops/${shopId}/receipts?limit=100&offset=${page * 100}`);
       if (answer.status !== 200) break;
       const receipts = ((answer.body as { results?: Array<Record<string, unknown>> })?.results) ?? [];
@@ -169,6 +173,9 @@ export const GET = withErrorLog("shop-map-listings", async (request: Request) =>
       views: fieldsSeen.views, favorites: fieldsSeen.favorites, created: fieldsSeen.created,
     },
     salesStored, salesRowsHeld: sales?.n ?? 0,
+    nextSalesFrom: parameters.get("sales") === "1"
+      ? Math.max(0, Number(parameters.get("salesFrom")) || 0)
+        + Math.min(8, Math.max(1, Number(parameters.get("receipts")) || 4)) : null,
     reminder: "Read only. No listing created, edited, published or deleted. No buyer data.",
   });
 });
