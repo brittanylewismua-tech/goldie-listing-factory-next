@@ -138,6 +138,31 @@ export async function ensureFinanceTables() {
       confirmed_at INTEGER,
       PRIMARY KEY (user_id, shop_id))`),
   ]);
+  /*
+    CREATE TABLE IF NOT EXISTS IS A NO-OP ON AN EXISTING TABLE.
+
+    finance_shop_settings already existed, so the confirmation columns were
+    never added and every read of them failed with "no such column". SQLite
+    has no ADD COLUMN IF NOT EXISTS, so each one is attempted and the
+    already-there error is the expected outcome on a second run.
+  */
+  for (const column of [
+    "ALTER TABLE finance_shop_settings ADD COLUMN detected_timezone TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE finance_shop_settings ADD COLUMN confirmed INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE finance_shop_settings ADD COLUMN confirmed_at INTEGER",
+  ])
+    await db().prepare(column).run().catch(() => undefined);
+
+  /*
+    A shop that already had a timezone set before confirmation existed chose
+    it deliberately - it was typed in by hand - so it counts as confirmed.
+    This cannot leak across members: it only marks rows that already hold a
+    value, and each row is one member's one shop.
+  */
+  await db().prepare(
+    `UPDATE finance_shop_settings SET confirmed = 1
+      WHERE confirmed = 0 AND timezone <> ''`).run().catch(() => undefined);
+
   await db().prepare(
     `CREATE INDEX IF NOT EXISTS finance_ledger_when
        ON finance_ledger (user_id, shop_id, source_created_at)`).run();

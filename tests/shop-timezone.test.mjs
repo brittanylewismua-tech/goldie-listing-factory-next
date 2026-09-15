@@ -73,3 +73,17 @@ test("Shop Map detects the browser timezone and asks once", () => {
   /* And the money card is replaced, not shown with wrong numbers. */
   assert.match(client, /map\.timezoneNeeded/);
 });
+
+test("new columns are added to a table that already exists", () => {
+  /* CREATE TABLE IF NOT EXISTS is a no-op on an existing table, so the
+     confirmation columns were never added and every read failed. */
+  assert.match(store, /ALTER TABLE finance_shop_settings ADD COLUMN confirmed/);
+  assert.match(store, /ALTER TABLE finance_shop_settings ADD COLUMN detected_timezone/);
+  assert.match(store, /IS A NO-OP ON AN EXISTING TABLE/);
+});
+
+test("an existing hand-typed timezone counts as confirmed, per row", () => {
+  assert.match(store, /SET confirmed = 1\s*\n?\s*WHERE confirmed = 0 AND timezone <> ''/);
+  /* Only rows that already hold a value, and each row is one member's shop. */
+  assert.doesNotMatch(store, /UPDATE finance_shop_settings SET timezone =/);
+});
