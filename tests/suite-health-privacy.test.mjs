@@ -191,3 +191,23 @@ test("the data route describes and never deletes", () => {
   assert.match(route, /export const GET/);
   assert.doesNotMatch(route, /export const (POST|DELETE)/);
 });
+
+test("the Printify route reads only columns printify_connections has", () => {
+  /* Measured against the live schema: user_id, encrypted_token, updated_at.
+     An earlier version asked for shop_id and shop_name, threw, and told a
+     connected member they were not connected. */
+  const LIVE = ["user_id", "encrypted_token", "updated_at"];
+  const route = readFileSync(new URL(
+    "../app/api/connections/printify/route.ts", import.meta.url), "utf8");
+  const select = route.slice(route.indexOf("SELECT"), route.indexOf("FROM printify_connections"));
+  for (const match of select.matchAll(/\b([a-z_]+)\s+AS\s+/g))
+    assert.ok(LIVE.includes(match[1]),
+      `printify_connections has no column ${match[1]}`);
+});
+
+test("a failed connection lookup is never shown as disconnected", () => {
+  const route = readFileSync(new URL(
+    "../app/api/connections/printify/route.ts", import.meta.url), "utf8");
+  assert.match(route, /connected: null, error: failed/);
+  assert.match(route, /A failed lookup is reported, never rendered as "not connected"/);
+});
