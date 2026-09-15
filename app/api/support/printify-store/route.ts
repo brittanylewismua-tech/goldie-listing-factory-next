@@ -133,9 +133,55 @@ export const GET = withErrorLog("support-printify-store", async (request: Reques
     .bind(userId).all<{ shop_id: number; builds: number; lastOutcome: string }>()
     .catch(() => ({ results: [] }));
 
+  /*
+    DOES PRINTIFY STILL HAVE THESE PRODUCTS, AND IN WHICH STORE?
+
+    Goldie's own record says where it CREATED a draft. That is not the same
+    claim as where the product is now, or whether it still exists - a product
+    can be deleted in Printify and Goldie's row would not change. Asking each
+    store for each product id is the only way to know.
+  */
+  const probes: Array<{ productId: string; foundIn: number[]; missingFrom: number[];
+    statuses: Record<string, number> }> = [];
+  if (stored && productIds.length) {
+    const token = await decryptPrintifyToken(
+      stored.encrypted_token, (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
+    for (const productId of productIds.slice(0, 3)) {
+      const probe = { productId, foundIn: [] as number[], missingFrom: [] as number[],
+        statuses: {} as Record<string, number> };
+      for (const store of stores) {
+        const response = await fetch(
+          `https://api.printify.com/v1/shops/${store.id}/products/${productId}.json`,
+          { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
+            signal: AbortSignal.timeout(20_000) }).catch(() => null);
+        const status = response?.status ?? 0;
+        probe.statuses[String(store.id)] = status;
+        if (status === 200) probe.foundIn.push(store.id);
+        else probe.missingFrom.push(store.id);
+      }
+      probes.push(probe);
+    }
+  }
+
+  const liveSomewhere = probes.filter(probe => probe.foundIn.length);
+  const goneEverywhere = probes.filter(probe => !probe.foundIn.length);
+
   return NextResponse.json({
     found: true,
     account: matchedEmail,
+    /* Asked of Printify, not read from Goldie's records. */
+    liveCheck: {
+      probed: probes.length,
+      stillInPrintify: liveSomewhere.length,
+      goneFromEveryStore: goneEverywhere.length,
+      detail: probes,
+      verdict: !probes.length ? "Nothing to probe."
+        : goneEverywhere.length === probes.length
+          ? "Printify no longer has these products in ANY store on the account. They were deleted at Printify's end, and no store switch will bring them back."
+          : liveSomewhere.length === probes.length
+            ? `Printify still has them, in store ${liveSomewhere[0].foundIn.join(", ")}.`
+            : "Mixed: some survive, some are gone.",
+    },
     buildsByStore: ((diagnosed.results ?? []) as Array<{ shop_id: number; builds: number }>)
       .map(row => ({ storeId: Number(row.shop_id), builds: Number(row.builds),
         storeName: stores.find(store => store.id === Number(row.shop_id))?.title
