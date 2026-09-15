@@ -49,6 +49,9 @@ const median = (values: number[]) => {
 /* A pattern only counts when most of the cohort shares it. */
 const SHARED = 0.55;
 
+/* "a illustrated scene" shipped to a member once. It will not again. */
+const article = (word: string) => /^[aeiou]/i.test(word.trim()) ? "an" : "a";
+
 export function compare(
   design: Ingredients, cohort: Ingredients[], { minimum = 12 }: { minimum?: number } = {},
 ): Alignment {
@@ -66,8 +69,9 @@ export function compare(
       working.push(`Your design uses the ${mechanism.value} approach that most `
         + `listings with verified momentum here are using.`);
     else
-      gaps.push({ weight: 3, say: `Most listings moving in this niche lead with a `
-        + `${mechanism.value}. Yours leads with a ${design.mechanism || "different approach"} — `
+      gaps.push({ weight: 3, say: `Most listings moving in this niche lead with `
+        + `${article(mechanism.value)} ${mechanism.value}. Yours leads with `
+        + `${article(design.mechanism)} ${design.mechanism || "a different approach"} — `
         + `worth testing that direction in your own words.` });
   }
 
@@ -123,7 +127,15 @@ export function compare(
     overall,
     /* Three at most. A list of six is a list nobody acts on. */
     working: working.slice(0, 3),
-    opportunity: gaps[0]?.say ?? "",
+    /*
+      Always exactly one line. A design that matches the cohort on everything
+      measured has no gap to name, and an empty block reads as a bug rather
+      than as good news — so it says what it actually means, without inventing
+      a criticism to fill the space or promising the design will sell.
+    */
+    opportunity: gaps[0]?.say
+      ?? "Nothing in this design stands out as the thing holding it back. "
+       + "What is left is reach — getting it in front of the people it is for.",
   };
 }
 

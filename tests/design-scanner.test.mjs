@@ -544,3 +544,21 @@ test("a real design mentioning shipping in passing still qualifies", () => {
     tags: ["bachelorette", "bachelorette party"] });
   assert.equal(relates(real, terms).ok, true);
 });
+
+test("the opportunity is never blank, and never invents a criticism", () => {
+  const perfect = compare(ingredients(), cohort(20));
+  assert.ok(perfect.opportunity.length > 0, "an empty opportunity block");
+  assert.match(perfect.opportunity, /stands out as the thing holding it back/);
+  for (const banned of ["will sell", "bestseller", "guaranteed"])
+    assert.ok(!perfect.opportunity.toLowerCase().includes(banned));
+});
+
+test("the article agrees with the word after it", () => {
+  const withVowel = compare(ingredients({ mechanism: "bold slogan" }),
+    cohort(20, { mechanism: "illustrated scene" }));
+  assert.match(withVowel.opportunity, /with an illustrated scene/);
+  assert.doesNotMatch(withVowel.opportunity, /\ba (illustrated|emblem|icon)/);
+  const withConsonant = compare(ingredients({ mechanism: "minimal icon" }),
+    cohort(20, { mechanism: "bold slogan" }));
+  assert.match(withConsonant.opportunity, /with a bold slogan/);
+});
