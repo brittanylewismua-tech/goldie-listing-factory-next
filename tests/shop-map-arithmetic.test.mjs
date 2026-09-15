@@ -95,3 +95,30 @@ test("moving a listing recomputes without duplicating it", () => {
   const moved = assignments.find(row => row.listingId === 1);
   assert.deepEqual(moved.worldIds, [target]);
 });
+
+test("a classifier niche exists even when the lexicon never saw it", () => {
+  /* Without this the override points at a niche that was never created and
+     the listing vanishes from every total. */
+  const { worlds, assignments } = buildWorlds(shop, {
+    overrides: new Map([[11, ["niche:bachelorette"]]]),
+    classifiedNiches: new Set(["Bachelorette"]),
+  });
+  assert.ok(worlds.some(world => world.id === "niche:bachelorette"),
+    "the classifier's niche was not created");
+  const moved = assignments.find(row => row.listingId === 11);
+  assert.deepEqual(moved.worldIds, ["niche:bachelorette"]);
+  assert.equal(moved.unclassified, false);
+});
+
+test("classifier assignments still reconcile to the listing count", () => {
+  const classified = new Map(shop.map(listing =>
+    [listing.listingId, ["niche:bachelorette"]]));
+  const { worlds, assignments } = buildWorlds(shop, {
+    overrides: classified, classifiedNiches: new Set(["Bachelorette"]) });
+  const inNiches = worlds.reduce((sum, world) => sum + world.listingIds.length, 0);
+  const unclassified = assignments.filter(row => row.unclassified).length;
+  assert.equal(inNiches + unclassified, shop.length);
+  const membership = worlds.flatMap(world => world.listingIds);
+  assert.equal(new Set(membership).size, membership.length,
+    "a listing landed in two niches");
+});

@@ -103,7 +103,31 @@ async function buildMap(request: Request) {
     try { overrides.set(Number(row.listing_id), JSON.parse(row.world_ids) as string[]); }
     catch { /* an unreadable override is simply not applied */ }
 
-  let { worlds, assignments } = buildWorlds(listings, { overrides });
+  /*
+    A CLASSIFIER RESULT OUTRANKS THE LEXICON.
+
+    The deterministic pass found two broad niches because it can only see
+    words it was taught. Where a build has stored a classification for a
+    listing, that is the better answer and is used as the listing's override -
+    which keeps every downstream count, correction and merge working exactly
+    as before, with no second code path for financial totals.
+  */
+  const classified = await db.prepare(
+    `SELECT listing_id, primary_niche FROM shop_map_classifications
+      WHERE user_id = ? AND shop_id = ? AND primary_niche <> ''`)
+    .bind(user.userId, shopId)
+    .all<{ listing_id: number; primary_niche: string }>()
+    .catch(() => ({ results: [] }));
+  const classifiedNiches = new Set<string>();
+  for (const row of ((classified.results ?? []) as Array<Record<string, unknown>>)) {
+    const listingId = Number(row.listing_id);
+    const label = String(row.primary_niche ?? "");
+    if (!label || overrides.has(listingId)) continue;
+    classifiedNiches.add(label);
+    overrides.set(listingId, [`niche:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`]);
+  }
+
+  let { worlds, assignments } = buildWorlds(listings, { overrides, classifiedNiches });
 
   /* Member renames and merges, applied over the automatic grouping. */
   const labelRows = await db.prepare(

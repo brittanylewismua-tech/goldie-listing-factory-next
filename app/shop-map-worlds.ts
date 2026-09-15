@@ -130,8 +130,10 @@ const titleCase = (text: string) =>
  */
 export function buildWorlds(
   listings: Listing[],
-  { minimumListings = 3, overrides = new Map<number, string[]>() }:
-  { minimumListings?: number; overrides?: Map<number, string[]> } = {},
+  { minimumListings = 3, overrides = new Map<number, string[]>(),
+    classifiedNiches = new Set<string>() }:
+  { minimumListings?: number; overrides?: Map<number, string[]>;
+    classifiedNiches?: Set<string> } = {},
 ): { worlds: World[]; assignments: Assignment[] } {
   const read = listings.map(listing => ({
     listing,
@@ -188,9 +190,24 @@ export function buildWorlds(
         row.dimensions.evidence[0] ?? `niche "${label}"`);
   }
 
+  /*
+    Niches the classifier named exist even when the lexicon never saw them.
+    Without this, an override would point at a niche that was never created
+    and the listing would silently vanish from every total.
+  */
+  for (const label of classifiedNiches) {
+    if (rejectAsNiche(label)) continue;
+    const id = `niche:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    if (worlds.some(world => world.id === id)) continue;
+    worlds.push({ id, label, basis: "niche",
+      evidence: "grouped from this shop's own wording", listingIds: [],
+      productFamilies: [] });
+  }
+
   /* A member's own move outranks every rule above. */
   for (const [listingId, worldIds] of overrides)
-    claimed.set(listingId, { ids: [...worldIds], evidence: ["moved here by you"] });
+    claimed.set(listingId, { ids: [...worldIds],
+      evidence: [classifiedNiches.size ? "grouped from this listing's wording" : "moved here by you"] });
 
   const secondaryBy = new Map<number, string[]>();
   for (const row of read) {

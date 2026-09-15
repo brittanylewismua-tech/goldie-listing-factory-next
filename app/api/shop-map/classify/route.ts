@@ -23,6 +23,47 @@ import {
  *
  * TEXT ONLY. No image is sent, and there is no per-listing call.
  */
+/** Read what the last build produced. Free, and never calls a provider. */
+export const GET = withErrorLog("shop-map-classify-read", async () => {
+  const user = await getChatGPTUser();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const shopRow = await db.prepare(
+    `SELECT shop_id FROM etsy_connections WHERE user_id = ? AND is_active = 1 LIMIT 1`)
+    .bind(user.userId).first<{ shop_id: number }>();
+  if (!shopRow) return NextResponse.json({ error: "No connected shop." }, { status: 400 });
+  const shopId = Number(shopRow.shop_id);
+
+  const list = await db.prepare(
+    `SELECT niches_json, built_at FROM shop_map_niche_list WHERE user_id = ? AND shop_id = ?`)
+    .bind(user.userId, shopId).first<{ niches_json: string; built_at: number }>()
+    .catch(() => null);
+  const rows = await db.prepare(
+    `SELECT primary_niche, secondary_niche, confidence, COUNT(*) AS n
+       FROM shop_map_classifications WHERE user_id = ? AND shop_id = ?
+      GROUP BY primary_niche, secondary_niche, confidence`)
+    .bind(user.userId, shopId)
+    .all<{ primary_niche: string; secondary_niche: string; confidence: string; n: number }>()
+    .catch(() => ({ results: [] }));
+  const byNiche = new Map<string, number>();
+  let secondaries = 0;
+  for (const row of ((rows.results ?? []) as Array<Record<string, unknown>>)) {
+    const primary = String(row.primary_niche ?? "");
+    byNiche.set(primary, (byNiche.get(primary) ?? 0) + Number(row.n));
+    if (String(row.secondary_niche ?? "")) secondaries += Number(row.n);
+  }
+  return NextResponse.json({
+    canonicalNiches: (() => {
+      try { return JSON.parse(list?.niches_json ?? "[]") as string[]; } catch { return []; }
+    })(),
+    builtAt: list?.built_at ?? null,
+    primaryCounts: [...byNiche.entries()].map(([niche, listings]) => ({ niche, listings }))
+      .sort((a, b) => b.listings - a.listings),
+    secondaryAssignments: secondaries,
+  });
+});
+
 export const POST = withErrorLog("shop-map-classify", async (request: Request) => {
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
