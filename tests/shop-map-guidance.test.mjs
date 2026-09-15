@@ -2,16 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { guidance, standout, MIN_ORDERS_TO_ADVISE } from "../app/shop-map-guidance.ts";
 
+/* Guidance reads the last 90 days on both sides, so the fixtures carry
+   recent figures and lifetime is only history. */
 const niche = (over = {}) => ({
-  worldId: "n", label: "N", activeListings: 10, orders: 20, units: 20,
-  revenueMinor: 50_000, verifiedProfitMinor: null, reviews: 0,
-  ordersLast30: 3, ordersLast90: 8, revenueLast90Minor: 10_000,
+  worldId: "n", label: "N", activeListings: 10, orders: 200, units: 200,
+  revenueMinor: 500_000, verifiedProfitMinor: null, reviews: 0,
+  ordersLast30: 8, ordersLast90: 20, revenueLast90Minor: 50_000,
   largestOrderMinor: 3_000, refundedOrders: 0, ...over });
 
 test("every instruction carries its arithmetic", () => {
   const found = guidance([
-    niche({ worldId: "a", label: "Feminist", activeListings: 5, revenueMinor: 80_000 }),
-    niche({ worldId: "b", label: "Horses", activeListings: 40, revenueMinor: 5_000 }),
+    niche({ worldId: "a", label: "Feminist", activeListings: 5, revenueLast90Minor: 80_000 }),
+    niche({ worldId: "b", label: "Horses", activeListings: 40, revenueLast90Minor: 5_000 }),
   ]);
   for (const row of found) {
     assert.ok(row.reason.length > 0, `${row.label} advises with no reason`);
@@ -21,18 +23,18 @@ test("every instruction carries its arithmetic", () => {
 
 test("a niche earning above its shelf space is the focus", () => {
   const found = guidance([
-    niche({ worldId: "a", label: "Feminist", activeListings: 3, revenueMinor: 80_000, orders: 40 }),
-    niche({ worldId: "b", label: "Other", activeListings: 40, revenueMinor: 10_000, orders: 10 }),
+    niche({ worldId: "a", label: "Feminist", activeListings: 3, revenueLast90Minor: 80_000, ordersLast90: 40 }),
+    niche({ worldId: "b", label: "Other", activeListings: 40, revenueLast90Minor: 10_000, ordersLast90: 10 }),
   ]);
   assert.equal(found[0].nicheId, "a");
   assert.ok(["Focus here", "Expand this niche"].includes(found[0].headline));
-  assert.match(found[0].reason, /% of revenue from .*% of active listings/);
+  assert.match(found[0].reason, /% of revenue in .* from .*% of active listings/);
 });
 
 test("a niche with many listings and little response is called out", () => {
   const found = guidance([
-    niche({ worldId: "a", label: "Big", activeListings: 60, revenueMinor: 2_000, orders: 8 }),
-    niche({ worldId: "b", label: "Small", activeListings: 4, revenueMinor: 90_000, orders: 40 }),
+    niche({ worldId: "a", label: "Big", activeListings: 60, revenueLast90Minor: 2_000, ordersLast90: 8 }),
+    niche({ worldId: "b", label: "Small", activeListings: 4, revenueLast90Minor: 90_000, ordersLast90: 40 }),
   ]);
   const big = found.find(row => row.nicheId === "a");
   assert.ok(["Overbuilt", "Reconsider this category"].includes(big.headline));
@@ -40,15 +42,15 @@ test("a niche with many listings and little response is called out", () => {
 });
 
 test("too few orders says so rather than advising", () => {
-  const found = guidance([niche({ orders: MIN_ORDERS_TO_ADVISE - 1 })]);
+  const found = guidance([niche({ ordersLast90: MIN_ORDERS_TO_ADVISE - 1 })]);
   assert.equal(found[0].headline, "Needs more data");
   assert.match(found[0].reason, /too few to read a pattern/);
 });
 
 test("guidance never invents a design", () => {
   const found = guidance([
-    niche({ worldId: "a", label: "Feminist", activeListings: 3, revenueMinor: 80_000, orders: 40 }),
-    niche({ worldId: "b", label: "Other", activeListings: 40, revenueMinor: 9_000, orders: 9 }),
+    niche({ worldId: "a", label: "Feminist", activeListings: 3, revenueLast90Minor: 80_000, ordersLast90: 40 }),
+    niche({ worldId: "b", label: "Other", activeListings: 40, revenueLast90Minor: 9_000, ordersLast90: 9 }),
   ]);
   for (const row of found) {
     assert.doesNotMatch(row.advice, /design a|create a design|make a (shirt|mug|sticker) that says/i);
@@ -61,10 +63,10 @@ test("an emerging niche is recognised from recent share", () => {
      holding half the listings is overbuilt, not emerging, however recent
      its orders are. */
   const found = guidance([
-    niche({ worldId: "a", label: "New", activeListings: 5, revenueMinor: 10_000,
-      orders: 10, ordersLast90: 9 }),
-    niche({ worldId: "b", label: "Old", activeListings: 40, revenueMinor: 90_000,
-      orders: 40, ordersLast90: 1 }),
+    niche({ worldId: "a", label: "New", activeListings: 5, revenueLast90Minor: 10_000,
+      ordersLast90: 30 }),
+    niche({ worldId: "b", label: "Old", activeListings: 40, revenueLast90Minor: 90_000,
+      ordersLast90: 5 }),
   ]);
   assert.equal(found.find(row => row.nicheId === "a").headline, "Emerging");
 });
@@ -73,8 +75,8 @@ test("nothing outperforming is said plainly, not dressed as advice", () => {
   /* Two niches each earning roughly their shelf share is the absence of
      evidence, not a reason to make more. */
   const niches = [
-    niche({ worldId: "a", label: "Feminist", activeListings: 70, revenueMinor: 73_000, orders: 40, ordersLast90: 8 }),
-    niche({ worldId: "b", label: "Political", activeListings: 30, revenueMinor: 27_000, orders: 20, ordersLast90: 4 }),
+    niche({ worldId: "a", label: "Feminist", activeListings: 70, revenueLast90Minor: 73_000, ordersLast90: 40 }),
+    niche({ worldId: "b", label: "Political", activeListings: 30, revenueLast90Minor: 27_000, ordersLast90: 20 }),
   ];
   const advice = guidance(niches);
   const result = standout(niches, advice);
@@ -87,8 +89,8 @@ test("nothing outperforming is said plainly, not dressed as advice", () => {
 
 test("real leverage is surfaced as the standout", () => {
   const niches = [
-    niche({ worldId: "a", label: "Horses", activeListings: 3, revenueMinor: 80_000, orders: 40 }),
-    niche({ worldId: "b", label: "Other", activeListings: 60, revenueMinor: 10_000, orders: 10 }),
+    niche({ worldId: "a", label: "Horses", activeListings: 3, revenueLast90Minor: 80_000, ordersLast90: 40 }),
+    niche({ worldId: "b", label: "Other", activeListings: 60, revenueLast90Minor: 10_000, ordersLast90: 10 }),
   ];
   const result = standout(niches, guidance(niches));
   assert.equal(result.hasStandout, true);
@@ -97,8 +99,8 @@ test("real leverage is surfaced as the standout", () => {
 
 test("keep building no longer implies making more", () => {
   const niches = [
-    niche({ worldId: "a", activeListings: 50, revenueMinor: 50_000, orders: 20, ordersLast90: 5 }),
-    niche({ worldId: "b", activeListings: 50, revenueMinor: 50_000, orders: 20, ordersLast90: 5 }),
+    niche({ worldId: "a", activeListings: 50, revenueLast90Minor: 50_000, ordersLast90: 20 }),
+    niche({ worldId: "b", activeListings: 50, revenueLast90Minor: 50_000, ordersLast90: 20 }),
   ];
   for (const row of guidance(niches).filter(entry => entry.headline === "Keep building")) {
     assert.match(row.advice, /Maintain/);

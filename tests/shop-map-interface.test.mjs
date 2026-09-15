@@ -11,7 +11,7 @@ const client = readFileSync(new URL("../app/shop-map/shop-map-client.tsx", impor
 const css = readFileSync(new URL("../app/shop-map/shop-map.css", import.meta.url), "utf8");
 
 test("the four sections are there, in order", () => {
-  const order = ["This month", "Your shop map", "Where to focus", "Needs attention"];
+  const order = ["This month", "Your shop is pointing here", "Your niches", "Needs attention"];
   let at = -1;
   for (const heading of order) {
     const next = client.indexOf(heading);
@@ -34,16 +34,18 @@ test("the accuracy line sits with the number", () => {
   assert.match(client, /\{month\?\.accuracy\}/);
 });
 
-test("guidance is never shown without its reason", () => {
-  const block = client.slice(client.indexOf("Where to focus"), client.indexOf("Needs attention"));
-  assert.match(block, /row\.advice/);
-  assert.match(block, /row\.reason/);
-  /* Nothing to say is said, rather than left blank. */
-  assert.match(block, /Not enough evidence to guide you yet/);
+test("a direction is never shown without its reason", () => {
+  const block = client.slice(client.indexOf("pointing here"), client.indexOf("Your niches"));
+  assert.match(block, /standout\.headline/);
+  assert.match(block, /standout\.nextStep/);
+  assert.match(block, /No clear direction yet/);
+  /* The period mismatch is stated, not hidden. */
+  assert.match(block, /directionCaveat/);
 });
 
 test("the map emphasises the strongest niches visually", () => {
   assert.match(client, /shop-map-world-strong/);
+  assert.match(client, /shop-map-world-quiet/);
   assert.match(css, /\.shop-map-world-strong\{/);
   /* Product types show on the card as an attribute of the niche. */
   assert.match(client, /shop-map-families/);
@@ -57,8 +59,8 @@ test("worlds stack vertically and have large touch targets", () => {
 });
 
 test("evidence is behind a tap, not on the face of the card", () => {
-  assert.match(client, /aria-expanded=\{open === world\.worldId\}/);
-  assert.match(client, /open === world\.worldId\s*\n?\s*\? <div className="shop-map-evidence"/);
+  assert.match(client, /aria-expanded=\{open === niche\.worldId\}/);
+  assert.match(client, /open === niche\.worldId\s*\n?\s*\? <div className="shop-map-evidence"/);
 });
 
 test("nothing overflows a phone sideways", () => {
@@ -72,10 +74,10 @@ test("nothing overflows a phone sideways", () => {
 
 test("needs attention stays actionable and says so when it is empty", () => {
   const block = client.slice(client.indexOf("Needs attention"));
-  assert.match(block, /aren’t in a niche yet/);
-  assert.match(block, /no production cost/);
+  assert.match(block, /in a niche yet/);
+
   /* Counts read correctly at one as well as many. */
-  assert.match(block, /"order has" : "orders have"/);
+  assert.match(block, /listing isn’t" : " listings aren’t/);
   assert.match(block, /Nothing needs your attention/);
   /* Not a technical error dashboard. */
   assert.doesNotMatch(block, /stack|exception|status code|endpoint/i);
@@ -132,42 +134,69 @@ test("no world figure is shown without its period", () => {
   /* The cards showed lifetime revenue under a heading that said This month,
      so $59,960 read as a monthly figure. */
   assert.match(client, /shop-map-period/);
-  assert.match(client, /\{map\.worldsPeriod\}/);
+  assert.match(client, /\{shown\.worldsPeriod\}/);
   const route = readFileSync(new URL(
     "../app/api/shop-map/map/route.ts", import.meta.url), "utf8");
-  assert.match(route, /worldsPeriod: recentEnough \? "Last 90 days" : "Lifetime"/);
+  assert.match(route, /worldsPeriod: "Last 90 days"/);
   assert.match(route, /ONE PERIOD, SAID OUT LOUD/);
 });
 
 test("product families appear inside a world, never as one", () => {
-  assert.match(client, /Products: \{world\.productFamilies/);
+  assert.match(client, /Products: \{niche\.productFamilies/);
 
 });
 
 test("review evidence is shown as reviews, never as sales", () => {
-  assert.match(client, /reviews in the last 90 days/);
-  const block = client.slice(client.indexOf("world.reviews"));
+  assert.match(client, /niche\.reviews\.lifetimeHeld\} reviews/);
+  const block = client.slice(client.indexOf("niche.reviews"));
   assert.doesNotMatch(block.slice(0, 300), /sale|sold/i);
 });
 
-test("no standout is stated before any per-niche advice", () => {
-  const block = client.slice(client.indexOf("Where to focus"));
-  assert.match(block, /shop-map-standout/);
-  assert.match(block, /map\.standout && !map\.standout\.hasStandout/);
-  /* It appears above the list, not buried under it. */
-  assert.ok(block.indexOf("shop-map-standout") < block.indexOf("shop-map-focus"));
+test("a niche card shows recent first and lifetime as history", () => {
+  const block = client.slice(client.indexOf("Your niches"));
+  assert.match(block, /niche\.activeListings/);
+  assert.match(block, /niche\.orders/);
+  assert.match(block, /money\(niche\.revenueMinor\)/);
+  assert.match(block, /Lifetime \{money\(niche\.lifetimeRevenueMinor\)\}/);
+  assert.match(block, /niche\.reviews\.lifetimeHeld/);
+  assert.match(block, /shop-map-families/);
 });
 
-test("unclassified performance is shown, not just a count", () => {
-  /* 132 listings holding 856 orders and ~$19,950 were reported as a bare
-     number, which reads as tidying rather than as missing map. */
+test("no classifier mechanics reach the member", () => {
+  for (const leak of ["confidence", "secondary", "evidenceClass", "canonical",
+    "classifier", "rejectAsNiche", "collapse"])
+    assert.doesNotMatch(client, new RegExp(leak, "i"), `the page exposes ${leak}`);
+});
+
+test("a correction control exists and moves one listing", () => {
+  assert.match(client, /action: "move-listing"/);
+  assert.match(client, /Unclassified<\/option>/);
+  /* One niche at a time: worldIds carries a single id or none. */
+  assert.match(client, /worldIds: nicheId === "unclassified" \? \[\] : \[nicheId\]/);
+});
+
+test("a failed refresh keeps the last valid map", () => {
+  assert.match(client, /lastGood/);
+  assert.match(client, /Showing your last map/);
+  assert.match(client, /Nothing has changed/);
+});
+
+test("the states a member can land in are all handled", () => {
+  for (const state of ["Organizing your shop", "No sales yet",
+    "No clear direction yet", "could not load"])
+    assert.match(client, new RegExp(state), `the ${state} state is missing`);
+});
+
+test("unclassified is a card of its own, not a footnote", () => {
+  /* It is part of the shop, so it is shown the way a niche is. */
+  assert.match(client, /unclassifiedCard/);
+  assert.match(client, /shown\.unclassifiedCard\?\.listings/);
+  /* Needs attention names only the ACTIVE ones, which are actionable. */
   const block = client.slice(client.indexOf("Needs attention"));
-  assert.match(block, /unclassifiedPerformance/);
-  assert.match(block, /lifetime orders/);
-  assert.match(block, /still active/);
+  assert.match(block, /unclassifiedPerformance\?\.activeListings/);
 });
 
 test("coverage is shown beside the map", () => {
   assert.match(client, /% of active listings organized/);
-  assert.match(client, /map\.coverage/);
+  assert.match(client, /shown\.coverage/);
 });

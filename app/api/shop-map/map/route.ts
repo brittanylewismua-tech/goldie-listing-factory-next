@@ -365,9 +365,29 @@ async function buildMap(request: Request) {
     standout: standout(worldPerformance,
       guidance(worldPerformance, { period: recentEnough ? "the last 90 days" : "all time",
         shop: shopTotals }), coverage),
+    directionWindowDays: 90,
+    /*
+      Active listings are a "now" measure while orders are a 90-day window, so
+      a listing published last week has not had 90 days to earn. Stated rather
+      than hidden, because it makes revenue-per-listing read low for a niche
+      that is being actively built.
+    */
+    directionCaveat: "Active listings are counted as they stand today, while "
+      + "orders and revenue cover the last 90 days.",
     coverage,
     unclassifiedPerformance: unclassified,
     shopTotals,
+    /* Unclassified is a card, not a footnote: it is part of the shop. */
+    unclassifiedCard: {
+      worldId: "unclassified", label: "Unclassified",
+      listings: unclassified.listings, activeListings: unclassified.activeListings,
+      period: "Last 90 days",
+      orders: unclassified.ordersLast90, revenueMinor: unclassified.revenueLast90Minor,
+      lifetimeOrders: unclassified.orders, lifetimeRevenueMinor: unclassified.revenueMinor,
+      reviews: { recent: 0, lifetimeHeld: unclassified.reviews },
+      productFamilies: [],
+      evidence: "Goldie could not tell which niche these belong to.",
+    },
     whereToFocus: guidance(worldPerformance,
       { period: recentEnough ? "the last 90 days" : "all time", shop: shopTotals }).slice(0, 5),
     pointingHere: found.worldId ? {
@@ -382,11 +402,12 @@ async function buildMap(request: Request) {
       there is enough recent trade to mean something, and lifetime otherwise -
       labelled either way.
     */
-    worldsPeriod: recentEnough ? "Last 90 days" : "Lifetime",
+    /* The cards lead with the last 90 days; lifetime rides along as history. */
+    worldsPeriod: "Last 90 days",
     worlds: worldPerformance
       .filter(world => world.orders > 0 || world.activeListings > 0)
-      .sort((a, b) => (recentEnough ? b.revenueLast90Minor - a.revenueLast90Minor
-        : b.revenueMinor - a.revenueMinor))
+      .sort((a, b) => b.revenueLast90Minor - a.revenueLast90Minor
+        || b.revenueMinor - a.revenueMinor)
       .map(world => {
         const built = worlds.find(row => row.id === world.worldId);
         const members = built?.listingIds ?? [];
@@ -396,9 +417,9 @@ async function buildMap(request: Request) {
           worldId: world.worldId, label: world.label,
           listings: members.length,
           activeListings: world.activeListings,
-          period: recentEnough ? "Last 90 days" : "Lifetime",
-          orders: recentEnough ? world.ordersLast90 : world.orders,
-          revenueMinor: recentEnough ? world.revenueLast90Minor : world.revenueMinor,
+          period: "Last 90 days",
+          orders: world.ordersLast90,
+          revenueMinor: world.revenueLast90Minor,
           lifetimeOrders: world.orders,
           lifetimeRevenueMinor: world.revenueMinor,
           /* Product families live inside the world as supporting evidence. */

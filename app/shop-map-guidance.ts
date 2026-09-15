@@ -61,6 +61,20 @@ export const coverageMet = (coverage: Coverage) =>
 export function standout(
   niches: WorldPerformance[], advice: Guidance[], coverage?: Coverage,
 ): Standout {
+  /*
+    A direction drawn from a handful of recent orders is noise wearing a
+    percentage. With too few, the honest answer is that there is no
+    defensible direction yet - not a weaker version of one.
+  */
+  const recentOrders = niches.reduce((sum, niche) => sum + niche.ordersLast90, 0);
+  if (recentOrders < MIN_RECENT_ORDERS_FOR_DIRECTION)
+    return {
+      hasStandout: false,
+      headline: "No clear direction yet.",
+      nextStep: `Only ${recentOrders} order${recentOrders === 1 ? "" : "s"} in the last `
+        + `${DIRECTION_WINDOW_DAYS} days across every niche — too few to say where the `
+        + `shop is pointed. Lifetime figures are shown on each niche as history.`,
+    };
   if (coverage && !coverageMet(coverage))
     return {
       hasStandout: false,
@@ -106,7 +120,25 @@ function standoutFrom(niches: WorldPerformance[], advice: Guidance[]): Standout 
 */
 export type ShopTotals = {
   revenueMinor: number; activeListings: number; ordersLast90: number; orders: number;
+  revenueLast90Minor?: number;
 };
+
+/*
+  COMPATIBLE PERIODS, OR NO RECOMMENDATION.
+
+  The page said "Girl Power generated 35% of revenue from 19% of active
+  listings". The 35% was LIFETIME revenue and the 19% was the catalog as it
+  stands today - two different periods presented as one ratio. A shop can
+  earn a third of its lifetime money from listings it has since deactivated,
+  and that sentence would still read as a reason to build more of them.
+
+  The direction signal now uses the last 90 days on both sides. Active
+  listings remain a "now" measure, which is a real limitation and is stated
+  rather than hidden: a listing published last week has not had 90 days to
+  earn, so its niche's revenue-per-listing is understated.
+*/
+export const DIRECTION_WINDOW_DAYS = 90;
+export const MIN_RECENT_ORDERS_FOR_DIRECTION = 20;
 
 export function guidance(
   niches: WorldPerformance[],
@@ -114,30 +146,36 @@ export function guidance(
   { period?: string; shop?: ShopTotals } = {},
 ): Guidance[] {
   const totals = shop ? {
-    revenue: shop.revenueMinor, listings: shop.activeListings,
-    recent: shop.ordersLast90, orders: shop.orders,
+    /* Recent on both sides. Lifetime is context, never the signal. */
+    revenue: shop.revenueLast90Minor ?? shop.revenueMinor,
+    listings: shop.activeListings,
+    recent: shop.ordersLast90, orders: shop.ordersLast90,
   } : {
-    revenue: niches.reduce((sum, niche) => sum + niche.revenueMinor, 0),
+    /* Recent on both sides here too: a recent numerator over a lifetime
+       denominator is the very mismatch this change exists to remove. */
+    revenue: niches.reduce((sum, niche) => sum + niche.revenueLast90Minor, 0),
     listings: niches.reduce((sum, niche) => sum + niche.activeListings, 0),
     recent: niches.reduce((sum, niche) => sum + niche.ordersLast90, 0),
-    orders: niches.reduce((sum, niche) => sum + niche.orders, 0),
+    orders: niches.reduce((sum, niche) => sum + niche.ordersLast90, 0),
   };
 
   const out: Guidance[] = [];
   for (const niche of niches) {
-    const revenueShare = share(niche.revenueMinor, totals.revenue);
+    /* Every figure below is the last 90 days. */
+    const recentRevenue = niche.revenueLast90Minor;
+    const revenueShare = share(recentRevenue, totals.revenue);
     const listingShare = share(niche.activeListings, totals.listings);
     const recentShare = share(niche.ordersLast90, totals.recent);
     const perListing = niche.activeListings
-      ? niche.revenueMinor / niche.activeListings : 0;
+      ? recentRevenue / niche.activeListings : 0;
     const averagePerListing = totals.listings ? totals.revenue / totals.listings : 0;
 
-    /* Too little trade to advise on. Said plainly rather than skipped. */
-    if (niche.orders < MIN_ORDERS_TO_ADVISE) {
+    /* Too little RECENT trade to advise on. Said plainly rather than skipped. */
+    if (niche.ordersLast90 < MIN_ORDERS_TO_ADVISE) {
       out.push({ nicheId: niche.worldId, label: niche.label, headline: "Needs more data",
         advice: `Collect more data before committing further to ${niche.label}.`,
-        reason: `${niche.orders} order${niche.orders === 1 ? "" : "s"} so far — `
-          + `too few to read a pattern.`, rank: 90 });
+        reason: `${niche.ordersLast90} order${niche.ordersLast90 === 1 ? "" : "s"} in `
+          + `${period} — too few to read a pattern.`, rank: 90 });
       continue;
     }
 
@@ -148,8 +186,8 @@ export function guidance(
         advice: headline === "Expand this niche"
           ? `Add listings in ${niche.label}, and try it on product types it is not on yet.`
           : `Give ${niche.label} more of your shop.`,
-        reason: `${niche.label} generated ${percent(revenueShare)} of revenue from `
-          + `${percent(listingShare)} of active listings.`, rank: 10 });
+        reason: `${niche.label} generated ${percent(revenueShare)} of revenue in `
+          + `${period} from ${percent(listingShare)} of active listings.`, rank: 10 });
       continue;
     }
 
@@ -169,7 +207,7 @@ export function guidance(
           ? `${niche.label} is taking real effort for little response. Consider whether it earns its place.`
           : `Stop giving ${niche.label} so much of the shop.`,
         reason: `${percent(listingShare)} of active listings and `
-          + `${percent(revenueShare)} of revenue.`, rank: severe ? 30 : 40 });
+          + `${percent(revenueShare)} of revenue in ${period}.`, rank: severe ? 30 : 40 });
       continue;
     }
 
@@ -178,7 +216,7 @@ export function guidance(
       out.push({ nicheId: niche.worldId, label: niche.label, headline: "Emerging",
         advice: `Watch ${niche.label} — it is growing faster than its history suggests.`,
         reason: `${percent(recentShare)} of orders in ${period}, against `
-          + `${percent(revenueShare)} of revenue all time.`, rank: 20 });
+          + `${percent(revenueShare)} of revenue in the same window.`, rank: 20 });
       continue;
     }
 
@@ -198,8 +236,9 @@ export function guidance(
     */
     out.push({ nicheId: niche.worldId, label: niche.label, headline: "Keep building",
       advice: `Maintain ${niche.label} at its current mix.`,
-      reason: `${percent(revenueShare)} of revenue from ${percent(listingShare)} of `
-        + `active listings — in proportion, so there is no leverage to act on`
+      reason: `${percent(revenueShare)} of revenue in ${period} from `
+        + `${percent(listingShare)} of active listings — in proportion, so there is `
+        + `no leverage to act on`
         + `${averagePerListing > 0 && perListing > averagePerListing
           ? ", though it earns slightly above the shop average per listing" : ""}.`,
       rank: 50 });

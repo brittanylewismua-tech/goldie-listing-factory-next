@@ -2,7 +2,6 @@
 .shop-map{max-width:640px;margin:0 auto;padding:16px 16px 48px}
 .shop-map-head h1{font-size:20px;margin:0 0 2px;line-height:1.25}
 .shop-map-head p{margin:0 0 16px;font-size:13px;opacity:.7}
-.shop-map-loading{padding:32px 0;font-size:14px;opacity:.75}
 .shop-map-card{border:1px solid #e6dfe4;border-radius:14px;padding:16px;margin-bottom:14px;background:#fff}
 .shop-map-card h2{font-size:13px;margin:0 0 10px;letter-spacing:.02em;text-transform:uppercase;opacity:.65}
 .shop-map-headline-label{margin:0;font-size:13px;opacity:.75}
@@ -34,14 +33,20 @@
 .shop-map-world-strong .shop-map-bar{height:10px}
 .shop-map-world-mid .shop-map-bar{height:8px}
 .shop-map-families{font-size:11px;opacity:.6;letter-spacing:.01em}
-.shop-map-focus{list-style:none;margin:0;padding:0;display:grid;gap:14px}
-.shop-map-focus li{display:grid;gap:3px}
-.shop-map-focus-head{font-size:12px;font-weight:750;letter-spacing:.03em;text-transform:uppercase;color:#a33a48}
-.shop-map-focus-advice{font-size:15px;line-height:1.45}
-.shop-map-focus-reason{font-size:12px;opacity:.72;line-height:1.5}
 .shop-map-confirm{margin-top:10px;min-height:44px;padding:10px 16px;border-radius:10px;
   border:1px solid #a33a48;background:#a33a48;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .shop-map-confirm:disabled{opacity:.6}
-.shop-map-standout{margin:0 0 14px;padding:12px;border-radius:10px;background:#faf7f9}
-.shop-map-standout-head{margin:0 0 4px;font-size:15px;line-height:1.45;font-weight:700}
-.shop-map-standout-next{margin:0;font-size:13px;line-height:1.5;opacity:.8}
+.shop-map-state{padding:32px 0;font-size:14px;opacity:.75;line-height:1.5}
+.shop-map-stale{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:#fff8ec;
+  font-size:13px;line-height:1.45}
+.shop-map-caveat{margin:8px 0 0;font-size:12px;opacity:.65;line-height:1.5}
+.shop-map-lifetime{font-size:11px;opacity:.55}
+/* Built as shop-map-world-${strength}: strong, mid, quiet. */
+.shop-map-world-quiet .shop-map-bar{height:5px}
+.shop-map-move{display:grid;gap:10px}
+.shop-map-move label{display:grid;gap:4px;font-size:13px}
+.shop-map-move input,.shop-map-move select{min-height:44px;padding:8px 10px;font-size:16px;
+  border:1px solid #ded6dc;border-radius:10px;width:100%;box-sizing:border-box;background:#fff}
+.shop-map-move button{min-height:44px;padding:10px 16px;border-radius:10px;border:1px solid #a33a48;
+  background:#a33a48;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+.shop-map-move button:disabled{opacity:.5}

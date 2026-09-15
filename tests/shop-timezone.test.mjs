@@ -73,7 +73,7 @@ test("Shop Map detects the browser timezone and asks once", () => {
   assert.match(client, /My shop runs on \$\{detected\}/);
   assert.match(client, /asks rather than assumes/);
   /* And the money card is replaced, not shown with wrong numbers. */
-  assert.match(client, /map\.timezoneNeeded/);
+  assert.match(client, /shown\.timezoneNeeded/);
 });
 
 test("new columns are added to a table that already exists", () => {

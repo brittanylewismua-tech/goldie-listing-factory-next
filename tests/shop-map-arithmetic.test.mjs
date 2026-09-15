@@ -182,7 +182,8 @@ test("shares divide by the whole shop, not by the classified part", () => {
       largestOrderMinor: 500, refundedOrders: 0 },
   ];
   /* The shop is twice the size of its one classified niche. */
-  const shop = { revenueMinor: 80_000, activeListings: 20, ordersLast90: 20, orders: 200 };
+  const shop = { revenueMinor: 80_000, revenueLast90Minor: 8_000,
+    activeListings: 20, ordersLast90: 20, orders: 200 };
   const withShop = guidance(niches, { shop });
   const withoutShop = guidance(niches);
   assert.match(withShop[0].reason, /50% of revenue/);
@@ -193,7 +194,7 @@ test("a focus recommendation is gated on coverage", () => {
   const niches = [
     { worldId: "a", label: "A", activeListings: 3, orders: 40, units: 40,
       revenueMinor: 80_000, verifiedProfitMinor: null, reviews: 0,
-      ordersLast30: 0, ordersLast90: 20, revenueLast90Minor: 40_000,
+      ordersLast30: 0, ordersLast90: 30, revenueLast90Minor: 40_000,
       largestOrderMinor: 2_000, refundedOrders: 0 },
   ];
   const thin = standout(niches, guidance(niches),
