@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import FactoryShell from "../factory-shell";
-import { useEffect } from "react";
 import type { FullVerdict } from "../trademark-check";
 import "./trademark.css";
 
@@ -68,17 +66,6 @@ export default function TrademarkPage() {
     if (at < verdict.phrase.length) parts.push(verdict.phrase.slice(at));
     return parts;
   };
-
-  /* A phone is decided by the same breakpoint the desktop gate uses, measured
-     rather than guessed from a user-agent string. */
-  const [narrow, setNarrow] = useState(false);
-  useEffect(() => {
-    const query = window.matchMedia("(max-width: 820px)");
-    const sync = () => setNarrow(query.matches);
-    sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
 
   const body = (<>
     <div className="tm-page interior-page">
@@ -165,24 +152,21 @@ export default function TrademarkPage() {
 </>);
 
   /*
-    THE CHECKER IS NOT A FACTORY PAGE.
+    THE CHECKER IS NOT A FACTORY PAGE — AT ANY WIDTH.
 
-    It rendered inside FactoryShell, which carries the desktop gate — so on a
-    phone the Trademark Checker showed "this one needs a bigger screen". It is
-    a search box and a verdict; there is nothing about it that needs a desktop,
-    and the product definition makes it a top-level feature reachable from More
-    on mobile.
+    It rendered inside FactoryShell, which carries the desktop gate, so on a
+    phone it told members to find a bigger screen. That was fixed for mobile
+    and left alone on desktop, which turned out to be half a fix: on a wide
+    screen it still appeared inside the Listing Factory, with the factory's
+    sidebar, its "Start a new batch" button, and a "198 / 10,000 listings"
+    counter from the retired three-tier plan — none of which has anything to do
+    with checking a phrase.
 
-    On a narrow screen it renders bare. On a desktop it keeps the factory rail
-    it has always had, so nothing about the desktop experience changes.
+    The Trademark Checker is one of four top-level features. It renders as
+    itself now, everywhere.
   */
-  if (narrow)
-    return <main className="tm-standalone">
-      <h1>Trademark Checker</h1>
-      {body}
-    </main>;
-
-  return <FactoryShell active="trademark" title="Trademark Check">
+  return <main className="tm-standalone">
+    <h1>Trademark Checker</h1>
     {body}
-  </FactoryShell>;
+  </main>;
 }

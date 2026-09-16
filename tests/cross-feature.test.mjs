@@ -138,16 +138,19 @@ test("Market Watch gives no next move", () => {
     assert.ok(!text.includes(banned), `Market Watch said "${banned}"`);
 });
 
-test("the Trademark Checker works on a phone", () => {
-  /* It rendered inside FactoryShell, which carries the desktop gate, so the
-     checker — a search box — told phone users to find a bigger screen. Only
-     the Listing Factory is desktop-only. */
+test("the Trademark Checker renders as itself at every width", () => {
+  /* It rendered inside FactoryShell, which carries the desktop gate, so on a
+     phone it told members to find a bigger screen. Fixing only mobile left it
+     inside the factory on desktop — with the factory sidebar and a
+     "198 / 10,000 listings" counter from the retired three-tier plan. */
   const page = read("app/trademark/page.tsx");
-  assert.match(page, /if \(narrow\)/);
   assert.match(page, /className="tm-standalone"/);
-  assert.match(page, /max-width: 820px/);
-  /* And the desktop rail is unchanged. */
-  assert.match(page, /<FactoryShell active="trademark"/);
+  /* Comments explaining the old arrangement are stripped: the check reads
+     code, not history. */
+  const code = strip(page);
+  assert.ok(!code.includes("FactoryShell"),
+    "the checker still renders inside the Listing Factory shell");
+  assert.ok(!code.includes("MobileGate"), "the checker still carries a desktop gate");
 });
 
 test("only the Listing Factory is desktop-only", () => {
