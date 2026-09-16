@@ -100,6 +100,10 @@ test("every member-owned table read is scoped by user_id", () => {
        listed rather than pattern-matched so a new cross-member read cannot
        appear without this line changing. */
     "api/operations/beta/route.ts: FROM etsy_connections",
+    /* Discovery reads the DISTINCT saved niches across every member — grouped,
+       counted, and never returning whose watch they are. That is what makes
+       twenty members watching one niche cost one search instead of twenty. */
+    "api/market/discover/route.ts: FROM niche_watches",
   ]);
   assert.deepEqual(offences.filter(row => !allowed.has(row)), []);
 });

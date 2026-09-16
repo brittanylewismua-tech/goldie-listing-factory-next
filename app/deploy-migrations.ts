@@ -40,6 +40,7 @@ import { ensureDesignIntelligenceTable } from "@/app/design-intelligence";
 import { ensureMarketTables } from "@/app/market-store";
 import { ensureCorrelationTables } from "@/app/correlation-worker";
 import { ensureObservationTables } from "@/app/market-observation";
+import { ensureCandidateTables } from "@/app/niche-candidate-store";
 import { ensureBaselineTables } from "@/app/shop-baseline";
 import { ensurePollTables } from "@/app/listing-poller";
 import { ensureShopWatchTables } from "@/app/shop-watch";
@@ -88,6 +89,7 @@ export const MIGRATIONS: Step[] = [
   { name: "market_store", run: ensureMarketTables },
   { name: "correlations", run: ensureCorrelationTables },
   { name: "market_observations", run: ensureObservationTables },
+  { name: "niche_candidates", run: ensureCandidateTables },
   { name: "shop_baselines", run: ensureBaselineTables },
   { name: "listing_poller", run: ensurePollTables },
   { name: "shop_watch", run: ensureShopWatchTables },
