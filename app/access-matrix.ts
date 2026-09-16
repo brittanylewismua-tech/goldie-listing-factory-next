@@ -133,6 +133,7 @@ export const ACCESS: Record<string, Rule> = {
   "/api/shop-map/unclassified": { kind: "feature", feature: "shopMap" },
   "/api/shop-map/capability": { kind: "feature", feature: "shopMap" },
   "/api/shop-map/provenance": { kind: "feature", feature: "shopMap" },
+  "/api/shop-map/production-cost": { kind: "feature", feature: "shopMap" },
   "/api/shop-map/printify-shops": { kind: "feature", feature: "shopMap" },
   "/api/launch-check": { kind: "feature", feature: "shopMap" },
   "/launch-check": { kind: "feature", feature: "shopMap" },
@@ -148,6 +149,8 @@ export const OWNER_PREFIXES = [
   "/api/mastermind", "/mastermind", "/mastermind-admin", "/mastermind-beta",
   "/api/market/",                     /* cron and detector controls */
   "/api/market-watch/budget",         /* capacity model, not a member view */
+  "/api/market/correlate", "/api/market/observe", "/api/market/discover",
+  "/api/market/backlog-audit",
   "/api/design-scanner/corpus", "/api/design-scanner/recover-images",
   "/api/design-scanner/analyze-references", "/api/design-scanner/niche-probe",
   "/api/design-scanner/precision-audit", "/api/design-scanner/review-audit",
