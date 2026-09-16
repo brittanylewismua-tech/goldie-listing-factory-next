@@ -125,6 +125,12 @@ html, body { background: var(--lf-paper); }
   can no longer be clipped by anything, at any link count.
 */
 .app-shell > .topbar > .top-actions{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin}
+/* D1588 · the rail's first child used to be the wordmark, which carried
+   `margin-bottom:34px` and with it all the breathing room above the
+   navigation. On a page with no wordmark the nav sat flush against the top
+   edge. The space belongs to the rail, not to the mark that happened to be
+   in it. */
+.app-shell > .topbar > .top-actions:first-child{padding-top:26px}
 .app-shell > .topbar > .approved-sidebar-footer{flex:0 0 auto}
 .app-shell > .topbar .account-link { display: none; }
 
@@ -884,7 +890,7 @@ html, body { background: var(--lf-paper); }
    The Goldie wordmark keeps DM Serif Display - it is the logo, and the
    prototype's lockup is the same one. */
 .app-shell button,.app-shell input,.app-shell select,.app-shell textarea,.app-shell a,.app-shell strong,.app-shell small,.app-shell b,.app-shell em{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
-.app-shell .approved-wm,.app-shell .approved-footer-i,.app-shell [class*="wordmark"]{font-family:"DM Serif Display",Georgia,serif}
+.app-shell .approved-wm,.app-shell [class*="wordmark"]{font-family:"DM Serif Display",Georgia,serif}
 
 /* D737 · Surfaces on the Connect screen that were still speaking the old
    language. Swept by listing every element on the built page carrying a
@@ -1244,7 +1250,7 @@ html, body { background: var(--lf-paper); }
    the wordmark and its star are the only things that carry their own, because
    they are the logo. */
 .app-shell{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
-.app-shell [class*="wordmark"],.app-shell .approved-wm,.app-shell .approved-footer-i{font-family:"DM Serif Display",Georgia,serif}
+.app-shell [class*="wordmark"],.app-shell .approved-wm{font-family:"DM Serif Display",Georgia,serif}
 
 /* D773 · Full-sweep findings, run on every step with every panel open.
 

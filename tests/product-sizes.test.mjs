@@ -1164,14 +1164,24 @@ test("the sidebar goal names the period — D351", async () => {
    the column's visual edge. Above the copyright and the Etsy notice it made
    those two look indented. At the bottom the block reads as one left-aligned
    stack that widens as it descends. */
-test("the sidebar closes with Powered by Goldie AI — D357", async () => {
+test("the workflow sidebar closes with the Etsy notice, and names no product — D357", async () => {
+  /*
+    D357 put "Powered by Goldıe AI" last in the sidebar and this asserted the
+    order. D1588 removed it: the umbrella product has not been named, so the
+    shared chrome names none — and the workflow's rail is the same chrome.
+
+    What still has to be true is that the legally required Etsy attribution is
+    there and that the copyright sits with it. Order is asserted between the
+    two that remain.
+  */
   const app = await read("app/listing-factory-app.tsx");
-  const powered = app.indexOf('className="approved-powered"');
   const etsy = app.indexOf('className="etsy-api-disclosure"');
   const copyright = app.indexOf("© 2026 Be A Wolf Biz");
-  assert.ok(powered > 0 && etsy > 0 && copyright > 0);
-  assert.ok(powered > copyright, "it sits below the copyright");
-  assert.ok(powered > etsy, "and below the Etsy notice, so it is genuinely last");
+  assert.ok(etsy > 0, "the Etsy attribution is required wherever Etsy data is shown");
+  assert.ok(copyright > 0);
+  assert.ok(etsy > copyright, "the attribution closes the sidebar");
+  assert.ok(!app.includes('className="approved-powered"'),
+    "the workflow rail still names the old product");
 });
 
 /* D363 · Approved is a state, not an action. The button used to stay on screen

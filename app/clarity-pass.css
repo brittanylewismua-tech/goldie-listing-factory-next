@@ -497,7 +497,6 @@
 .app-shell .recipe-card .delete-recipe{color:rgba(74,42,62,.72)!important}
 .app-shell .hero-step-count{color:rgba(74,42,62,.9)!important}
 .app-shell .account-link,
-.app-shell .approved-powered>span,
 .app-shell .approved-sidebar-footer>small,
 .app-shell .etsy-api-disclosure{color:rgba(255,255,255,.6)!important}
 .app-shell .approved-usage span{color:#fff!important}
@@ -1881,11 +1880,6 @@ body{min-width:0}
 
 /* D357 · Powered-by now closes the sidebar, so it needs the separation a closing
    line has rather than the tight spacing it had as a middle element. */
-.app-shell .approved-sidebar-footer .approved-powered{
-  margin-top:14px!important;
-  padding-top:12px!important;
-  border-top:1px solid #eee8ec!important;
-}
 
 /* D359 · The closing control at the foot of an open panel.
    Its styling was collateral damage when the dead bundle-pricing rules were
@@ -2108,7 +2102,6 @@ body{min-width:0}
   .app-shell .topbar .listing-goal-side{padding-block:8px;margin-top:8px}
   .app-shell .topbar .approved-sidebar-footer{gap:6px}
   .app-shell .topbar .approved-sidebar-footer>small{margin-top:12px}
-  .app-shell .topbar .approved-powered{margin-top:8px;padding-top:6px}
   .app-shell .topbar .top-nav a{padding-block:9px}
 }
 

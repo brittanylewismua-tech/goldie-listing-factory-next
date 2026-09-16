@@ -8,6 +8,11 @@ import "@/app/signup/signup-copy.css";
 import "@/app/signup/signup-polish.css";
 import "@/app/signup/signup-pricing.css";
 
+/* The Listing Factory names itself. Without this the tab fell through to the
+   neutral fallback, which is the one page that has a name of its own. */
+export const metadata = { title: "Listing Factory" };
+
+
 export default async function ListingFactoryRoute({searchParams}:{searchParams:Promise<{offer?:string}>}){
   const offerValue = (await searchParams).offer;
   const initialOffer = offerValue === "trial" || offerValue === "goldie" || offerValue === "pro" || offerValue === "scale" ? offerValue : undefined;

@@ -5575,7 +5575,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             the column's visual edge. Sitting above the copyright and the Etsy notice
             it made those look indented; at the bottom the block reads as one
             left-aligned stack that widens as it descends. */}
-            <small>© 2026 Be A Wolf Biz</small><p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p><div className="approved-powered"><span>Powered by</span><b>Gold<span className="approved-footer-i">ı<i>✦</i></span>e AI</b></div></div>
+            <small>© 2026 Be A Wolf Biz</small><p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>{/* D1588 · the "Powered by" line named the old product. The umbrella
+                product has no name, so the footer names none. */}</div>
       </header>
 
       {/* D721 · The main pane scrolls; the sidebar does not. The shell is a
