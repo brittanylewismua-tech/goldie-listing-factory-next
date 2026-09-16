@@ -82,12 +82,32 @@ export const POST = withErrorLog("design-scanner-recover-images", async (request
     A bounded refresh has to spend its calls where a blank box would actually
     appear, so listings inside a saved niche go before the rest of the corpus.
   */
+  /*
+    WHAT A MEMBER ACTUALLY SEES IS THE MOMENTUM CORPUS.
+
+    A first version prioritised `niche_candidates`, which is the pool Goldie is
+    WATCHING — none of it has evidence yet, so none of it renders. The cards on
+    a niche page come from listings with corroborated movement, sorted with
+    repeated momentum first. Those are the pictures a member is looking at, so
+    those are the ones the refresh has to reach first.
+  */
   const visible = await db.prepare(
-    `SELECT DISTINCT listing_id AS listingId FROM niche_candidates
-      WHERE state IN ('monitoring','momentum','repeated-momentum')`)
-    .all<{ listingId: number }>()
-    .catch(() => ({ results: [] as Array<{ listingId: number }> }));
-  const inNiche = new Set((visible.results ?? []).map(row => Number(row.listingId)));
+    `SELECT listing_id AS listingId,
+            COUNT(DISTINCT interval_id) AS intervals,
+            MAX(observed_at) AS lastSeen
+       FROM listing_sales_activity
+      WHERE interval_id IS NOT NULL
+      GROUP BY listing_id
+      ORDER BY intervals DESC, lastSeen DESC
+      LIMIT 2000`)
+    .all<{ listingId: number; intervals: number; lastSeen: string }>()
+    .catch(() => ({ results: [] as Array<{ listingId: number; intervals: number;
+      lastSeen: string }> }));
+  /* Rank within the visible set too: repeated momentum sorts to the top of a
+     member's page, so it is refreshed first. */
+  const rank = new Map((visible.results ?? [])
+    .map((row, index) => [Number(row.listingId), index]));
+  const inNiche = new Set(rank.keys());
   const staleness = new Map((held.results ?? [])
     .map(row => [Number(row.listingId), Number(row.retrievedAt) || 0]));
 
@@ -96,6 +116,8 @@ export const POST = withErrorLog("design-scanner-recover-images", async (request
     .sort((a, b) => {
       const seen = (inNiche.has(b) ? 1 : 0) - (inNiche.has(a) ? 1 : 0);
       if (seen) return seen;
+      if (inNiche.has(a) && inNiche.has(b))
+        return (rank.get(a) ?? 0) - (rank.get(b) ?? 0);
       return (staleness.get(a) ?? 0) - (staleness.get(b) ?? 0);
     });
   const thisRun = todo.slice(0, maxBatches * BATCH);

@@ -370,6 +370,10 @@ test("the refresh spends its calls where a member would see a blank box", () => 
   const route = readFileSync(new URL(
     "../app/api/design-scanner/recover-images/route.ts", import.meta.url), "utf8");
   assert.match(route, /OLDEST FIRST, AND WHAT A MEMBER CAN SEE FIRST/);
-  assert.match(route, /FROM niche_candidates/);
+  /* The cards come from the momentum corpus, not the watching pool — the
+     pool has no evidence yet, so none of it renders. */
+  assert.match(route, /WHAT A MEMBER ACTUALLY SEES IS THE MOMENTUM CORPUS/);
+  assert.match(route, /FROM listing_sales_activity/);
+  assert.match(route, /ORDER BY intervals DESC, lastSeen DESC/);
   assert.match(route, /inNiche\.has/);
 });
