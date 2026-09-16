@@ -14,6 +14,7 @@ import { readDesignIntelligence, EXTRACTION_SCHEMA_VERSION, DESIGN_MODEL_VERSION
 import { check, withRegister, type RegisterMatch } from "@/app/trademark-check";
 import { lookup, normalize, registerSize } from "@/app/trademark-register";
 import { canaryFor } from "@/app/listing-flow-canary";
+import { POD_LISTING_FIELDS, LISTING_FIELD_FOR_PROPERTY } from "@/app/pod-listing-fields";
 
 /**
  * THE WHOLE LISTING FACTORY, UP TO THE ETSY WRITE.
@@ -186,10 +187,7 @@ async function run(request: Request, user: { userId: string; email: string }) {
       The facts table holds the real per-family attribute values, so those are
       used rather than the first allowed value.
     */
-    const LISTING_FIELDS: Record<string, string> = {
-      "Who made it": "who_made", "What is it": "is_supply",
-      "When was it made": "when_made",
-    };
+    const LISTING_FIELDS = LISTING_FIELD_FOR_PROPERTY;
     const values: Record<string, string> = {};
     for (const property of classification.requiredProperties) {
       if (LISTING_FIELDS[property]) continue;
@@ -215,7 +213,7 @@ async function run(request: Request, user: { userId: string; email: string }) {
       description: copy.blurb,
       taxonomy_id: classification.etsyTaxonomyNodeId,
       tags,
-      who_made: "i_did", when_made: "made_to_order", is_supply: false,
+      ...POD_LISTING_FIELDS,
       should_auto_renew: true,
       is_personalizable: Boolean(design?.personalizationStructure),
       property_values: Object.entries(values)

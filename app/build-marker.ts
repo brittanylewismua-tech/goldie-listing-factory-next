@@ -84,7 +84,10 @@
 /* D1414 lets the existing draft be measured without the creation gate. */
 /* D1415 ranks captured print files against current listing mockups on free
    signals alone, so a paid vision pass only looks at what is worth looking at. */
-export const BUILD_MARKER = "D1571";
+/* D1572 gives the print-on-demand listing fields one definition, after the
+   dry run was found answering "i_did" while the delivery path forced
+   "someone_else" — two payload builders that never had to agree. */
+export const BUILD_MARKER = "D1572";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
