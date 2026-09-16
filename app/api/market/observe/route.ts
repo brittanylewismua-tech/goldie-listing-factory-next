@@ -39,10 +39,17 @@ export const GET = withErrorLog("market-observe", async (request: Request) => {
   const sensor = await db.prepare(
     `SELECT MAX(observed_at) AS at FROM shop_sensor_state`)
     .first<{ at: string }>().catch(() => null);
+  /*
+    The column is `listings`. Asking for `listings_read` threw, the catch
+    returned null, and the gate recorded "a listing sweep did not complete"
+    against a poller that was 97% fresh with every batch completing — a probe
+    failure dressed as a product failure, which is exactly what this milestone
+    was told to stop doing.
+  */
   const sweep = await db.prepare(
-    `SELECT finished_at AS at, listings_read AS read FROM poll_sweeps
+    `SELECT finished_at AS at, listings FROM poll_sweeps
       WHERE finished_at IS NOT NULL ORDER BY id DESC LIMIT 1`)
-    .first<{ at: string; read: number }>().catch(() => null);
+    .first<{ at: string; listings: number }>().catch(() => null);
   const fresh = await db.prepare(
     `SELECT COUNT(*) AS total,
             SUM(CASE WHEN last_polled_at > ? THEN 1 ELSE 0 END) AS fresh

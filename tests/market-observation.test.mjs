@@ -138,3 +138,23 @@ test("the gate's delay standard agrees with the correlation window", () => {
   assert.equal(declared, actual,
     "the gate would accept a delay past the useful evidence window");
 });
+
+test("the observation sample reads columns poll_sweeps actually has", () => {
+  /* A probe that throws and is caught records a false failure against a
+     healthy workload, which is worse than no probe. */
+  const poller = readFileSync(new URL("../app/listing-poller.ts", import.meta.url), "utf8");
+  const create = poller.slice(poller.indexOf("CREATE TABLE IF NOT EXISTS poll_sweeps"));
+  const columns = new Set([...create.slice(0, 900)
+    .matchAll(/^\s*([a-z_]+)\s+(TEXT|INTEGER|REAL)/gm)].map(match => match[1]));
+  assert.ok(columns.has("listings") && columns.has("finished_at"));
+  assert.ok(!columns.has("listings_read"));
+
+  const route = readFileSync(new URL(
+    "../app/api/market/observe/route.ts", import.meta.url), "utf8");
+  const select = route.slice(route.indexOf("SELECT finished_at"),
+    route.indexOf("FROM poll_sweeps"));
+  for (const match of select.matchAll(/\b([a-z_]+)(?:\s+AS\s+\w+)?\s*[,\s]/g))
+    if (/^[a-z_]+$/.test(match[1]) && match[1] !== "select")
+      assert.ok(columns.has(match[1]),
+        `the observation reads poll_sweeps.${match[1]}, which does not exist`);
+});
