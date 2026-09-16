@@ -152,3 +152,35 @@ test("correlation needs no Etsy call", () => {
 test("the rule version is recorded so results can be recomputed", () => {
   assert.equal(typeof CORRELATION_RULE_VERSION, "number");
 });
+
+test("no query binds an unbounded number of shop ids", () => {
+  /* D1 caps bound variables. A batch of 1,500 intervals spans more shops than
+     the cap, and binding them all produced "too many SQL variables". */
+  const worker = readFileSync(
+    new URL("../app/correlation-worker.ts", import.meta.url), "utf8");
+  assert.match(worker, /const CHUNK = \d+;/);
+  assert.match(worker, /for \(let index = 0; index < shops\.length; index \+= CHUNK\)/);
+  const chunk = Number(worker.match(/const CHUNK = (\d+);/)[1]);
+  assert.ok(chunk <= 90, `a chunk of ${chunk} shop ids is near the variable cap`);
+});
+
+test("expired intervals are closed in one statement, not one slot per batch", () => {
+  const worker = readFileSync(
+    new URL("../app/correlation-worker.ts", import.meta.url), "utf8");
+  assert.match(worker, /SET correlated_at = \?, correlation_state = 'expired'\n\s+WHERE correlated_at IS NULL AND to_observed < \?/);
+});
+
+test("the pass selects intervals that are ready, not merely recent", () => {
+  /* Ordering newest-first and filtering afterwards produced 200 considered,
+     200 too early, 0 correlated — forever. */
+  const worker = readFileSync(
+    new URL("../app/correlation-worker.ts", import.meta.url), "utf8");
+  assert.match(worker, /AND to_observed <= \?/);
+  assert.match(worker, /SELECT WHAT IS ACTUALLY READY, NOT THE NEWEST/);
+});
+
+test("the lock is released even when a pass throws", () => {
+  const worker = readFileSync(
+    new URL("../app/correlation-worker.ts", import.meta.url), "utf8");
+  assert.match(worker, /\} finally \{[\s\S]{0,200}releaseLock\("correlation", holder\)/);
+});

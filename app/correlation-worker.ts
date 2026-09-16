@@ -162,37 +162,53 @@ export async function correlationPass(
     }
     if (!ready.length) return { ...result, milliseconds: Date.now() - began };
 
-    /* One read for every event that could belong to any interval in this
-       batch — a single query rather than one per interval. */
+    /*
+      ONE READ PER CHUNK OF SHOPS, NOT ONE PER INTERVAL — AND NOT ONE HUGE IN().
+
+      D1 caps the number of bound variables in a statement, and a batch of
+      1,500 intervals spans far more shops than that: the first version bound
+      every shop id into one IN() and got "too many SQL variables". The shops
+      are chunked instead, which keeps the read count small without exceeding
+      the limit.
+    */
     const shops = [...new Set(ready.map(row => row.shopId))];
     const earliest = Math.min(...ready.map(row => row.fromObserved)) - 600;
     const latest = Math.max(...ready.map(row => row.toObserved)) + 600;
-    const shopMarks = shops.map(() => "?").join(",");
-    const eventRows = await db().prepare(
-      `SELECT id, listing_id AS listingId, shop_id AS shopId, type, delta,
-              observed_at AS observedAt, previous_observed_at AS previousObservedAt
-         FROM listing_events
-        WHERE shop_id IN (${shopMarks})
-          AND observed_at >= ? AND observed_at <= ?`)
-      .bind(...shops, new Date(earliest * 1000).toISOString(),
-        new Date(latest * 1000).toISOString())
-      .all<{ id: number; listingId: number; shopId: number; type: string;
-        delta: number | null; observedAt: string; previousObservedAt: string }>();
+    const fromIso = new Date(earliest * 1000).toISOString();
+    const toIso = new Date(latest * 1000).toISOString();
+    const CHUNK = 80;
 
-    const events: ListingEvent[] = (eventRows.results ?? []).map(row => ({
-      id: Number(row.id), listingId: Number(row.listingId), shopId: Number(row.shopId),
-      type: String(row.type), delta: row.delta === null ? null : Number(row.delta),
-      observedAt: epoch(row.observedAt),
-      previousObservedAt: epoch(row.previousObservedAt),
-    }));
+    const events: ListingEvent[] = [];
+    const listingCount = new Map<number, number>();
+    for (let index = 0; index < shops.length; index += CHUNK) {
+      const slice = shops.slice(index, index + CHUNK);
+      const marks = slice.map(() => "?").join(",");
+      const eventRows = await db().prepare(
+        `SELECT id, listing_id AS listingId, shop_id AS shopId, type, delta,
+                observed_at AS observedAt, previous_observed_at AS previousObservedAt
+           FROM listing_events
+          WHERE shop_id IN (${marks})
+            AND observed_at >= ? AND observed_at <= ?`)
+        .bind(...slice, fromIso, toIso)
+        .all<{ id: number; listingId: number; shopId: number; type: string;
+          delta: number | null; observedAt: string; previousObservedAt: string }>();
+      for (const row of eventRows.results ?? [])
+        events.push({
+          id: Number(row.id), listingId: Number(row.listingId),
+          shopId: Number(row.shopId), type: String(row.type),
+          delta: row.delta === null ? null : Number(row.delta),
+          observedAt: epoch(row.observedAt),
+          previousObservedAt: epoch(row.previousObservedAt),
+        });
 
-    const observed = await db().prepare(
-      `SELECT shop_id AS shopId, COUNT(*) AS n FROM shop_listings
-        WHERE shop_id IN (${shopMarks}) GROUP BY shop_id`)
-      .bind(...shops).all<{ shopId: number; n: number }>()
-      .catch(() => ({ results: [] as Array<{ shopId: number; n: number }> }));
-    const listingCount = new Map((observed.results ?? [])
-      .map(row => [Number(row.shopId), Number(row.n)]));
+      const observed = await db().prepare(
+        `SELECT shop_id AS shopId, COUNT(*) AS n FROM shop_listings
+          WHERE shop_id IN (${marks}) GROUP BY shop_id`)
+        .bind(...slice).all<{ shopId: number; n: number }>()
+        .catch(() => ({ results: [] as Array<{ shopId: number; n: number }> }));
+      for (const row of observed.results ?? [])
+        listingCount.set(Number(row.shopId), Number(row.n));
+    }
 
     const writes: D1PreparedStatement[] = [];
     const activity = db().prepare(
@@ -239,8 +255,11 @@ export async function correlationPass(
       if (outcome.conflicted) result.conflicted += 1;
     }
 
-    for (let index = 0; index < writes.length; index += 50)
-      await db().batch(writes.slice(index, index + 50));
+    /* Batched in small groups for the same reason the reads are chunked: a
+       statement list that is too long is refused outright, and a refused write
+       loses a whole pass of work. */
+    for (let index = 0; index < writes.length; index += 25)
+      await db().batch(writes.slice(index, index + 25));
 
     return { ...result, milliseconds: Date.now() - began };
   } finally {
