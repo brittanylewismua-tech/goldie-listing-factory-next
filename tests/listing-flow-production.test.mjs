@@ -143,8 +143,10 @@ test("the production path stops before Etsy", () => {
   const get = route.slice(route.indexOf("export const GET"));
   for (const verb of ['method: "POST"', 'method: "PUT"', 'method: "DELETE"'])
     assert.ok(!get.includes(verb), `the sample endpoint issues a ${verb}`);
-  assert.match(get, /listings\/active|listings\/\$\{first\.listing_id\}\/images/,
-    "the sample must read listings, nothing else");
+  assert.match(get, /artwork_provenance/,
+    "the sample must read the member's own stored artwork");
+  assert.ok(!get.includes("etsyFetch"),
+    "the sample needs no Etsy round trip: the artwork is already stored");
 });
 
 test("validateOnly stops before any provider is contacted", () => {

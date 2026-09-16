@@ -13,7 +13,6 @@ import { check, withRegister } from "@/app/trademark-check";
 import { lookup, registerSize } from "@/app/trademark-register";
 import { env } from "cloudflare:workers";
 import { isOwner } from "@/app/mastermind/access";
-import { decryptEtsy, etsyFetch } from "@/app/api/etsy/client";
 
 /**
  * THE LAYERED FLOW, IN PRODUCTION, UP TO THE ETSY WRITE.
@@ -34,7 +33,11 @@ import { decryptEtsy, etsyFetch } from "@/app/api/etsy/client";
  */
 type Body = {
   artworkHash?: string;
+  /* Either a public URL or a data URL. The member's artwork lives in R2, not
+     at a public address, so a data URL is the ordinary case rather than the
+     exception. */
   imageUrl?: string;
+  imageDataUrl?: string;
   blueprints?: { id: number; title: string }[];
   audience?: string[];
   occasions?: string[];
@@ -53,7 +56,7 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
 
   const body = await request.json() as Body;
   const artworkHash = String(body.artworkHash ?? "").trim();
-  const imageUrl = String(body.imageUrl ?? "").trim();
+  const imageUrl = String(body.imageDataUrl ?? body.imageUrl ?? "").trim();
   const blueprints = (body.blueprints ?? []).filter(entry => entry && entry.title);
   if (!artworkHash || !blueprints.length)
     return NextResponse.json({ error: "An artwork and at least one product are required." },
@@ -173,8 +176,13 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
  * The canary run needs a real image: a synthetic swatch produces design
  * intelligence that means nothing, and a competitor's listing image is
  * somebody else's artwork and has no business being analyzed as the member's.
- * So it is one of her own published listings, read-only, owner-gated, and
- * used for nothing but exercising the path she is about to use.
+ *
+ * THE ARTWORK IS ALREADY HERE. A first version asked Etsy for one of her
+ * published listing images, which was a round trip to fetch something the
+ * artwork-capture pipeline has been storing in R2 all along — the actual
+ * print file she uploaded, not a mockup of it. It is also what the real flow
+ * will analyze, so measuring against anything else would measure the wrong
+ * thing.
  */
 export const GET = withErrorLog("listing-factory-prepare-sample", async () => {
   try { return await sample(); } catch (error) {
@@ -193,27 +201,31 @@ async function sample() {
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
   const db = (env as unknown as { DB: D1Database }).DB;
-  const connection = await db.prepare(
-    `SELECT encrypted_access_token AS token, shop_id AS shopId
-       FROM etsy_connections WHERE user_id = ? AND is_active = 1`)
-    .bind(user.userId).first<{ token: string; shopId: number }>();
-  if (!connection) return NextResponse.json({ error: "No active Etsy connection." }, { status: 409 });
+  const bucket = (env as unknown as { ARTWORK: R2Bucket }).ARTWORK;
+  const rows = await db.prepare(
+    `SELECT DISTINCT artwork_hash AS hash, artwork_key AS objectKey
+       FROM artwork_provenance WHERE user_id = ? AND artwork_key <> '' LIMIT 5`)
+    .bind(user.userId).all<{ hash: string; objectKey: string }>();
 
-  const token = await decryptEtsy(connection.token);
-  const listings = await etsyFetch<{ results?: { listing_id: number; title: string }[] }>(
-    `/shops/${connection.shopId}/listings/active?limit=3`, token);
-  const first = listings.results?.[0];
-  if (!first) return NextResponse.json({ error: "No active listing to sample." }, { status: 409 });
-
-  const images = await etsyFetch<{ results?: { url_fullxfull?: string; listing_image_id?: number }[] }>(
-    `/shops/${connection.shopId}/listings/${first.listing_id}/images`, token);
-  const image = images.results?.[0];
-  return NextResponse.json({
-    listingId: first.listing_id, title: first.title,
-    imageUrl: image?.url_fullxfull ?? "",
-    /* The hash identifies the artwork in the cache. It is the member's own
-       listing image identity, not a content hash of the bytes. */
-    artworkHash: `own-listing-${first.listing_id}-${image?.listing_image_id ?? 0}`,
-    readOnly: "No listing was created, edited or published.",
-  });
+  for (const row of rows.results ?? []) {
+    const object = await bucket.get(row.objectKey);
+    if (!object) continue;
+    const bytes = await object.arrayBuffer();
+    /* fal takes a data URL — the design scanner has been sending one all
+       along — so the artwork never needs a public address to be analyzed. */
+    const binary = new Uint8Array(bytes);
+    let text = "";
+    for (let index = 0; index < binary.length; index += 0x8000)
+      text += String.fromCharCode(...binary.subarray(index, index + 0x8000));
+    const type = object.httpMetadata?.contentType || "image/png";
+    return NextResponse.json({
+      artworkHash: row.hash,
+      bytes: binary.length,
+      contentType: type,
+      imageDataUrl: `data:${type};base64,${btoa(text)}`,
+      readOnly: "Read from the member's own stored artwork. Nothing was created or changed.",
+    });
+  }
+  return NextResponse.json({ error: "No captured artwork to sample.",
+    candidates: (rows.results ?? []).length }, { status: 409 });
 }
