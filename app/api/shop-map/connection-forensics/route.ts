@@ -81,10 +81,10 @@ export const GET = withErrorLog("shop-map-connection-forensics", async (request:
 
   /* Every error this account recorded around the attempt, which is the only
      contemporaneous record of what the callback did. */
-  const errors = await ask<{ area: string; message: string; created_at: string; path: string }>(
-    `SELECT area, message, created_at, path FROM error_log
+  const errors = await ask<{ area: string; message: string; created_at: string; url: string }>(
+    `SELECT area, message, created_at, url FROM error_log
       WHERE created_at >= datetime('now','-6 hours')
-        AND (area LIKE '%etsy%' OR path LIKE '%etsy%' OR area LIKE '%shop-map%')
+        AND (area LIKE '%etsy%' OR url LIKE '%etsy%' OR area LIKE '%shop-map%')
       ORDER BY created_at DESC LIMIT 40`);
 
   return NextResponse.json({

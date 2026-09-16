@@ -47,7 +47,9 @@ for (const file of files) {
       then reported the other two as missing. A guard that reports healthy code
       as broken gets deleted, so it splits on commas instead.
     */
-    const columns = new Set(body.split(",")
+    /* Comments inside a CREATE body contain commas and would split into
+       fragments that look like columns. */
+    const columns = new Set(body.replace(/\/\*[\s\S]*?\*\//g, "").split(",")
       .map(part => part.trim().match(/^([a-z_]+)\s+(TEXT|INTEGER|REAL)\b/i))
       .filter(Boolean)
       .map(match => match[1]));
@@ -56,6 +58,15 @@ for (const file of files) {
     for (const alter of source.matchAll(
       new RegExp(`ALTER TABLE ${table} ADD COLUMN ([a-z_]+)`, "g")))
       columns.add(alter[1]);
+    /*
+      Some files express their ALTERs as a loop over an array of column
+      definitions, so the column name never appears beside "ADD COLUMN". Those
+      are real columns and the parser has to see them, or it reports working
+      code as broken — which is how a guard gets deleted.
+    */
+    for (const list of source.matchAll(/for \(const column of \[([\s\S]*?)\]\)/g))
+      for (const definition of list[1].matchAll(/"([a-z_]+)\s+(?:TEXT|INTEGER|REAL)/gi))
+        columns.add(definition[1]);
     schema.set(table, new Set([...(schema.get(table) ?? []), ...columns]));
   }
 }
@@ -68,7 +79,78 @@ test("the schema was discovered at all", () => {
       `${table} was not discovered`);
 });
 
-test("no query reads a column its table does not have", () => {
+test("no single-table query reads a column its table does not have", () => {
+  /*
+    THE GAP THAT LET THE PRINTIFY BUG THROUGH.
+
+    The aliased check below only sees `p.cost_minor`. A query with ONE table
+    and bare column names — `SELECT source_created_at FROM finance_production
+    WHERE user_id = ?` — was invisible to it, threw in production, was caught,
+    and reported a shop with 23 Printify orders as having none.
+
+    So: when a statement names exactly one table and no alias, every bare
+    identifier in its SELECT list is checked against that table.
+  */
+  const offences = [];
+  const KEYWORDS = new Set(["select", "from", "where", "and", "or", "as", "count",
+    "sum", "min", "max", "coalesce", "case", "when", "then", "else", "end",
+    "distinct", "group", "by", "order", "limit", "desc", "asc", "null", "is",
+    "not", "in", "on", "join", "left", "inner", "outer", "insert", "into",
+    "values", "update", "set", "delete", "create", "table", "index", "if",
+    "exists", "primary", "key", "default", "text", "integer", "real", "cast",
+    "strftime", "replace", "group_concat", "substr", "like", "conflict", "do",
+    "nothing", "unique", "autoincrement"]);
+
+  for (const file of files) {
+    const source = readFileSync(file, "utf8");
+    for (const statement of source.matchAll(/`(SELECT[\s\S]*?)`/gi)) {
+      const sql = statement[1];
+      const tables = [...sql.matchAll(/\bFROM\s+([a-z_]+)/gi)].map(row => row[1]);
+      /* One table, and no alias anywhere, or the attribution is ambiguous. */
+      if (new Set(tables).size !== 1) continue;
+      if (/\bFROM\s+[a-z_]+\s+[a-z]\b/i.test(sql)) continue;
+      if (/\bJOIN\b/i.test(sql)) continue;
+      const table = tables[0];
+      const columns = schema.get(table);
+      if (!columns) continue;
+      /* Quoted literals are values, not columns: `outcome = 'recovered'`
+         must not report a column called `recovered`. */
+      /*
+        FROM HAS TO BE A WORD.
+
+        `indexOf("FROM")` matched inside `window_from`, cutting the select list
+        mid-identifier and reporting a column called `window_`. A guard that
+        invents column names is worse than no guard.
+      */
+      const fromAt = sql.toUpperCase().search(/\bFROM\b/);
+      const selectList = sql.slice(sql.toUpperCase().search(/\bSELECT\b/) + 6, fromAt)
+        .replace(/'[^']*'/g, "")
+        .replace(/\/\*[\s\S]*?\*\//g, "");
+      /*
+        ALIASES ARE NAMES THIS QUERY INVENTS, NOT COLUMNS IT READS.
+
+        Detecting them per-identifier was fragile, so every `AS <alias>` pair
+        is removed from the list before anything is checked. What remains is
+        what the query actually asks the table for.
+      */
+      const withoutAliases = selectList
+        .replace(/\bAS\s+[a-z_][a-z0-9_]*/gi, "")
+        /* SQL also allows an alias with no AS: `COUNT(*) n`. */
+        .replace(/\)\s+[a-z_][a-z0-9_]*/g, ")");
+      for (const word of withoutAliases.matchAll(/\b([a-z][a-z0-9_]*)\b/g)) {
+        const name = word[1];
+        if (KEYWORDS.has(name.toLowerCase())) continue;
+        if (!columns.has(name))
+          offences.push(`${file.slice(appDir.length)}: ${table}.${name}`);
+      }
+    }
+  }
+  assert.deepEqual([...new Set(offences)], [],
+    `a single-table query names a column its table does not have:\n`
+    + `${[...new Set(offences)].join("\n")}`);
+});
+
+test("no aliased query reads a column its table does not have", () => {
   const offences = [];
   for (const file of files) {
     const source = readFileSync(file, "utf8");

@@ -74,7 +74,7 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
   const loose = await db.prepare(
     `SELECT printify_order_id AS id, cost_minor AS costMinor,
             shipping_minor AS shippingMinor, currency, status,
-            source_created_at AS createdAt
+            COALESCE(fulfilled_at, ingested_at) AS createdAt
        FROM finance_production
       WHERE user_id = ? AND (receipt_id IS NULL OR receipt_id = 0)`)
     .bind(user.userId)
@@ -97,7 +97,8 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
   /* How far Printify ingestion has actually read, so "outside the window" is a
      fact rather than a guess. */
   const window = await db.prepare(
-    `SELECT MIN(source_created_at) AS from_, MAX(source_created_at) AS to_
+    `SELECT MIN(COALESCE(fulfilled_at, ingested_at)) AS from_,
+            MAX(COALESCE(fulfilled_at, ingested_at)) AS to_
        FROM finance_production WHERE user_id = ?`)
     .bind(user.userId).first<{ from_: number; to_: number }>().catch(() => null);
 

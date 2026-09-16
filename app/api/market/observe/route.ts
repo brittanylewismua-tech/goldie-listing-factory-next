@@ -51,9 +51,12 @@ export const GET = withErrorLog("market-observe", async (request: Request) => {
     `SELECT finished_at AS at, listings FROM poll_sweeps
       WHERE finished_at IS NOT NULL ORDER BY id DESC LIMIT 1`)
     .first<{ at: string; listings: number }>().catch(() => null);
+  /* The column is `last_polled`, and it is TEXT. `last_polled_at` does not
+     exist, so this threw and listing freshness was recorded as 1.0 every
+     time — a gate condition that could never fail. */
   const fresh = await db.prepare(
     `SELECT COUNT(*) AS total,
-            SUM(CASE WHEN last_polled_at > ? THEN 1 ELSE 0 END) AS fresh
+            SUM(CASE WHEN last_polled > ? THEN 1 ELSE 0 END) AS fresh
        FROM corpus_poll_state`)
     .bind(new Date((now - 6 * 3_600) * 1000).toISOString())
     .first<{ total: number; fresh: number }>().catch(() => null);

@@ -57,7 +57,8 @@ export const GET = withErrorLog("shop-map-printify-audit", async () => {
   const mine = await ask<{ n: number; shops: number; oldest: number; newest: number;
     cost: number; withReceipt: number }>(
     `SELECT COUNT(*) AS n, COUNT(DISTINCT shop_id) AS shops,
-            MIN(source_created_at) AS oldest, MAX(source_created_at) AS newest,
+            MIN(COALESCE(fulfilled_at, ingested_at)) AS oldest,
+            MAX(COALESCE(fulfilled_at, ingested_at)) AS newest,
             COALESCE(SUM(cost_minor + shipping_minor), 0) AS cost,
             SUM(CASE WHEN receipt_id IS NOT NULL AND receipt_id > 0 THEN 1 ELSE 0 END) AS withReceipt
        FROM finance_production WHERE user_id = ?`, user.userId);
@@ -70,6 +71,9 @@ export const GET = withErrorLog("shop-map-printify-audit", async () => {
 
   const receipts = await ask<{ n: number; shops: number; oldest: number; newest: number;
     matched: number }>(
+    /* Receipts DO have source_created_at; production does not. The two tables
+       spell their timestamps differently and a blanket replacement crossed
+       them over. */
     `SELECT COUNT(*) AS n, COUNT(DISTINCT shop_id) AS shops,
             MIN(source_created_at) AS oldest, MAX(source_created_at) AS newest,
             SUM(CASE WHEN match_status = 'matched' THEN 1 ELSE 0 END) AS matched
@@ -77,11 +81,12 @@ export const GET = withErrorLog("shop-map-printify-audit", async () => {
 
   /* The reconciliation window rows — "never created" is a hypothesis. */
   const windows = await ask<{ n: number; kinds: string }>(
-    `SELECT COUNT(*) AS n, GROUP_CONCAT(DISTINCT source) AS kinds
+    `SELECT COUNT(*) AS n, GROUP_CONCAT(DISTINCT state) AS kinds
        FROM finance_windows WHERE user_id = ?`, user.userId);
-  const sources = await ask<{ source: string; state: string; n: number }>(
-    `SELECT source, state, COUNT(*) AS n FROM finance_sources
-      WHERE user_id = ? GROUP BY source, state`, user.userId);
+  const sources = await ask<{ source: string; refreshedAt: number; highWater: number }>(
+    `SELECT source, refreshed_at AS refreshedAt, high_water AS highWater,
+            last_error AS lastError
+       FROM finance_sources WHERE user_id = ?`, user.userId);
 
   /* Any older table that might still hold the 23 orders. */
   const legacy: Record<string, unknown> = {};

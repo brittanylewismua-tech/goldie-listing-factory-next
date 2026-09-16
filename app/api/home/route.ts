@@ -49,20 +49,32 @@ export const GET = withErrorLog("home-status", async () => {
   /* This month, from Shop Map's own rollups. Profit unavailable stays
      unavailable — it is a correct state, not a gap to fill with a zero. */
   try {
+    /*
+      THE ROLLUP IS A PAYLOAD, NOT A ROW OF COLUMNS.
+
+      This asked for revenue_minor, currency, profit_minor, profit_complete,
+      orders and period — none of which exist. `finance_rollups` stores one
+      `payload_json` per month. The query threw on every request, the catch
+      dropped the block, and Home has never once shown This Month.
+    */
     const row = await db.prepare(
-      `SELECT revenue_minor AS revenue, currency, profit_minor AS profit,
-              profit_complete AS complete, orders
-         FROM finance_rollups WHERE user_id = ?
-        ORDER BY period DESC LIMIT 1`)
-      .bind(user.userId).first<{ revenue: number; currency: string;
-        profit: number | null; complete: number; orders: number }>();
-    if (row)
+      `SELECT payload_json AS payload, month FROM finance_rollups
+        WHERE user_id = ? ORDER BY month DESC LIMIT 1`)
+      .bind(user.userId).first<{ payload: string; month: string }>();
+    if (row) {
+      const parsed = JSON.parse(row.payload) as {
+        revenueMinor?: number; currency?: string; orders?: number;
+        profitMinor?: number | null; headline?: string };
       blocks.thisMonth = {
-        revenueMinor: Number(row.revenue) || 0, currency: row.currency ?? "USD",
-        orders: Number(row.orders) || 0,
-        profitMinor: row.complete ? Number(row.profit) : null,
-        profitAvailable: Boolean(row.complete),
+        month: row.month,
+        revenueMinor: Number(parsed.revenueMinor) || 0,
+        currency: parsed.currency ?? "USD",
+        orders: Number(parsed.orders) || 0,
+        /* Profit that cannot be evidenced stays null, never zero. */
+        profitMinor: parsed.profitMinor ?? null,
+        profitAvailable: parsed.profitMinor !== null && parsed.profitMinor !== undefined,
       };
+    }
   } catch { /* Shop Map may not be set up for this member */ }
 
   /* Watched niches carrying something new since the last brief. */
