@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import {
   correlate, timingFor, eventsInWindow, CORRELATION_RULE_VERSION,
+  EARLIEST_CORRELATION_SECONDS, MAX_EVIDENCE_AGE_SECONDS,
   type ShopInterval, type ListingEvent,
 } from "@/app/correlation";
 import { claimLock, releaseLock } from "@/app/market-store";
@@ -93,14 +94,39 @@ export async function correlationPass(
       skipped: "A correlation pass was already running." };
 
   try {
+    /*
+      SELECT WHAT IS ACTUALLY READY, NOT THE NEWEST.
+
+      The first version ordered by to_observed DESC and filtered afterwards, so
+      every batch filled with intervals that were minutes old, all of them
+      returned "too early", and the ready ones behind them were never reached:
+      200 considered, 200 too early, 0 correlated. The window belongs in the
+      query.
+
+      Newest-first WITHIN the ready range, so a burst is worked from the end
+      that is still recoverable.
+    */
+    const readyBefore = new Date((now - EARLIEST_CORRELATION_SECONDS) * 1000).toISOString();
+    const expiredBefore = new Date((now - MAX_EVIDENCE_AGE_SECONDS) * 1000).toISOString();
+
+    /* Anything past the useful window is closed in one statement rather than
+       occupying a slot in every batch from now on. */
+    const closedOut = await db().prepare(
+      `UPDATE shop_sales_intervals
+          SET correlated_at = ?, correlation_state = 'expired'
+        WHERE correlated_at IS NULL AND to_observed < ?`)
+      .bind(now, expiredBefore).run();
+    result.expired = Number(closedOut.meta?.changes ?? 0);
+
     const rows = await db().prepare(
       `SELECT id, shop_id AS shopId, sold_delta AS soldDelta,
               from_observed AS fromObserved, to_observed AS toObserved
          FROM shop_sales_intervals
         WHERE correlated_at IS NULL AND sold_delta > 0
+          AND to_observed <= ?
         ORDER BY to_observed DESC
         LIMIT ?`)
-      .bind(maxIntervals)
+      .bind(readyBefore, maxIntervals)
       .all<{ id: number; shopId: number; soldDelta: number;
         fromObserved: string; toObserved: string }>();
 
@@ -123,8 +149,8 @@ export async function correlationPass(
       else result.tooEarly += 1;
     }
 
-    /* Expired intervals are CLOSED, not retried. They never re-enter the
-       queue, never count as current demand and never reach a cohort. */
+    /* A safety net only: the statement above closes the expired ones. This
+       catches anything that aged out between the two queries. */
     if (expired.length) {
       const marks = expired.map(() => "?").join(",");
       await db().prepare(
@@ -132,7 +158,7 @@ export async function correlationPass(
             SET correlated_at = ?, correlation_state = 'expired'
           WHERE id IN (${marks})`)
         .bind(now, ...expired).run();
-      result.expired = expired.length;
+      result.expired += expired.length;
     }
     if (!ready.length) return { ...result, milliseconds: Date.now() - began };
 
