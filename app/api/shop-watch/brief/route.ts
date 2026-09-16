@@ -85,11 +85,16 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
 /* What a card looks like to a member: the pattern, the listing, the weight of
    evidence, and nothing about how it was computed. */
 function present(card: {
-  headline: string; listingId: number | null; sampleSize: number;
+  headline: string; because: string; listingId: number | null; sampleSize: number;
   windowFrom: number; windowTo: number;
 }, shopName: string) {
   return {
     pattern: card.headline,
+    /* The reasoning, which the selection rule computed and then discarded.
+       Without it, "9 of the last 496 reviews" is a true sentence nobody can
+       act on: whether nine is a lot depends on a denominator the card never
+       showed. */
+    because: card.because,
     listing: card.listingId
       ? { id: card.listingId, url: `https://www.etsy.com/listing/${card.listingId}` }
       : { id: null, url: `https://www.etsy.com/shop/${encodeURIComponent(shopName)}` },

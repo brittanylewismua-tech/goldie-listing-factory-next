@@ -42,6 +42,18 @@ export type EvidenceClass =
 export type Pattern = {
   section: "attention" | "love" | "dislike" | "changed";
   headline: string;
+  /* WHY THE NUMBER MATTERS, NOT JUST WHAT IT IS.
+
+     The attention cards shipped reading "9 of the last 496 reviews in this
+     shop are for this listing", which is a true sentence a member can do
+     nothing with: 9 out of 496 sounds small, and whether it is large depends
+     entirely on how many listings those 496 reviews were spread across — a
+     denominator the card never showed. The selection rule knew (it only
+     admits listings above one and a half times an even share) and then threw
+     the reasoning away before printing.
+
+     A raw count is the evidence under the insight. This is the insight. */
+  because: string;
   listingId: number | null;
   evidenceClass: EvidenceClass;
   /* Every number a member sees can be traced back to these. */
@@ -79,7 +91,12 @@ export function gettingAttention(reviews: Review[], now: number): Pattern[] {
     .map(([listingId, group]) => ({
       section: "attention" as const,
       /* Says reviews, because reviews is what was counted. */
-      headline: `${group.length} of the last ${recent.length} reviews in this shop are for this listing`,
+      headline: `This listing is drawing ${(group.length / evenShare).toFixed(1)}× `
+        + `its share of this shop's recent reviews`,
+      because: `${group.length} of the last ${recent.length} reviews in this shop are for `
+        + `this one listing. Those reviews are spread across ${byListing.size} listings, so `
+        + `an average reviewed listing here has ${evenShare.toFixed(1)}. Reviews are not `
+        + `sales, and a buyer can leave one up to a hundred days after delivery.`,
       listingId,
       evidenceClass: "confirmed-review-activity" as const,
       supportingReviewIds: group.map(review => review.transactionId),
@@ -115,6 +132,7 @@ function phrasePatterns(
   reviews: Review[], phrases: string[], now: number,
   section: Pattern["section"], shape: (phrase: string, count: number) => string,
   ratingFilter: (rating: number | null) => boolean,
+  explain: (phrase: string, count: number, sample: number, listings: number) => string,
 ): Pattern[] {
   const recent = within(reviews, now).filter(review => ratingFilter(review.rating));
   return phrases
@@ -128,6 +146,8 @@ function phrasePatterns(
     .map(entry => ({
       section,
       headline: shape(entry.phrase, entry.hits.length),
+      because: explain(entry.phrase, entry.hits.length, recent.length,
+        new Set(entry.hits.map(hit => hit.listingId)).size),
       /* A phrase pattern belongs to the shop unless every mention is about
          one listing; attributing it to a listing on a majority would put a
          complaint on a product some of those buyers never bought. */
@@ -144,20 +164,36 @@ function phrasePatterns(
 export const whatBuyersLove = (reviews: Review[], now: number) =>
   [
     ...phrasePatterns(reviews, PRAISE, now, "love",
-      (phrase, count) => `${count} recent reviews mention "${phrase}"`,
-      rating => rating === null || rating >= 4),
+      phrase => `Buyers here keep saying the same thing: "${phrase}"`,
+      rating => rating === null || rating >= 4,
+      (phrase, count, sample, listings) =>
+        `${count} of ${sample} recent positive reviews use the words "${phrase}", across `
+        + `${listings} listing${listings === 1 ? "" : "s"}. A phrase that repeats across `
+        + `different buyers is what this shop is getting right in their words.`),
     ...phrasePatterns(reviews, RECIPIENTS, now, "love",
-      (phrase, count) => `${count} recent reviews mention buying this for a ${phrase}`,
-      rating => rating === null || rating >= 4),
+      phrase => `This shop is being bought as a gift for a ${phrase}`,
+      rating => rating === null || rating >= 4,
+      (phrase, count, sample, listings) =>
+        `${count} of ${sample} recent positive reviews mention a ${phrase}, across `
+        + `${listings} listing${listings === 1 ? "" : "s"}. That is who the buyer is `
+        + `shopping for, said by the buyer rather than inferred from the listing.`),
     ...phrasePatterns(reviews, OCCASIONS, now, "love",
-      (phrase, count) => `${count} recent reviews mention ${phrase}`,
-      rating => rating === null || rating >= 4),
+      phrase => `${phrase[0].toLocaleUpperCase()}${phrase.slice(1)} is showing up in what buyers write`,
+      rating => rating === null || rating >= 4,
+      (phrase, count, sample, listings) =>
+        `${count} of ${sample} recent positive reviews mention ${phrase}, across `
+        + `${listings} listing${listings === 1 ? "" : "s"}. Reviews can be written long `
+        + `after delivery, so this says the occasion mattered to buyers, not when they bought.`),
   ].slice(0, 8);
 
 export const whatBuyersDislike = (reviews: Review[], now: number) =>
   phrasePatterns(reviews, COMPLAINT, now, "dislike",
-    (phrase, count) => `${count} recent reviews mention "${phrase}"`,
-    rating => rating === null || rating <= 3);
+    phrase => `Buyers keep raising the same problem: "${phrase}"`,
+    rating => rating === null || rating <= 3,
+    (phrase, count, sample, listings) =>
+      `${count} of ${sample} recent reviews rated three stars or lower use the words `
+      + `"${phrase}", across ${listings} listing${listings === 1 ? "" : "s"}. A complaint `
+      + `several different buyers make is a pattern in the product, not one bad day.`);
 
 export type ShopTotals = {
   /* Present only when Etsy exposed the exact value. An absent field stays
@@ -181,29 +217,53 @@ export function whatChanged(
   const both = (key: keyof ShopTotals) =>
     typeof previous[key] === "number" && typeof current[key] === "number";
 
-  if (both("saleCount") && current.saleCount !== previous.saleCount)
+  if (both("saleCount") && current.saleCount !== previous.saleCount) {
+    const moved = (current.saleCount ?? 0) - (previous.saleCount ?? 0);
     patterns.push({
       section: "changed",
-      headline: `Shop sales total moved from ${previous.saleCount} to ${current.saleCount}`,
+      headline: moved > 0
+        ? `This shop sold ${moved} more item${moved === 1 ? "" : "s"} since yesterday`
+        : `This shop's sales total fell by ${Math.abs(moved)} since yesterday`,
+      because: `Etsy's own shop sales counter moved from ${previous.saleCount} to `
+        + `${current.saleCount} between two observations a day apart. This is the one `
+        + `number here that is actually sales rather than reviews.`,
       listingId: null, evidenceClass: "confirmed-shop-total",
       supportingReviewIds: [], sampleSize: 1, windowFrom: now - 86_400, windowTo: now,
     });
+  }
 
-  if (both("favorites") && current.favorites !== previous.favorites)
-    patterns.push({
-      section: "changed",
-      headline: `Shop favorites moved from ${previous.favorites} to ${current.favorites}`,
-      listingId: null, evidenceClass: "confirmed-shop-total",
-      supportingReviewIds: [], sampleSize: 1, windowFrom: now - 86_400, windowTo: now,
-    });
+  if (both("favorites") && current.favorites !== previous.favorites) {
+    const moved = (current.favorites ?? 0) - (previous.favorites ?? 0);
+    /* One or two favourites a day is background noise in any shop of size. A
+       card for it is a count with no interpretation, which is the thing this
+       section is not for. */
+    const share = moved / Math.max(1, previous.favorites ?? 1);
+    if (Math.abs(moved) >= 5 || share >= 0.02)
+      patterns.push({
+        section: "changed",
+        headline: moved > 0
+          ? `${moved} people favourited this shop since yesterday`
+          : `This shop lost ${Math.abs(moved)} favourites since yesterday`,
+        because: `Favourites moved from ${previous.favorites} to ${current.favorites} in a `
+          + `day — ${(Math.abs(share) * 100).toFixed(1)}% of where it started. Favourites `
+          + `are interest, not purchases.`,
+        listingId: null, evidenceClass: "confirmed-shop-total",
+        supportingReviewIds: [], sampleSize: 1, windowFrom: now - 86_400, windowTo: now,
+      });
+  }
 
-  if (both("reviewCount") && current.reviewCount !== previous.reviewCount)
-    patterns.push({
-      section: "changed",
-      headline: `${(current.reviewCount ?? 0) - (previous.reviewCount ?? 0)} new reviews since yesterday`,
-      listingId: null, evidenceClass: "confirmed-review-activity",
-      supportingReviewIds: [], sampleSize: 1, windowFrom: now - 86_400, windowTo: now,
-    });
+  /*
+    "3 NEW REVIEWS SINCE YESTERDAY" WAS NOT AN INSIGHT.
+
+    It states that reviews were added. That is a fact the member can read off
+    the shop page, it carries no interpretation, and it is the exact shape of
+    card this section exists to avoid — a count with a time window attached.
+    What reviews mean is already said properly elsewhere: which listing is
+    drawing a disproportionate share, and which words buyers repeat.
+
+    Removed rather than reworded. There is no sentence that makes a bare
+    arrival count worth a member's attention.
+  */
 
   /* A rating moves on small samples for reasons that are not about quality,
      so it needs more support than anything else here. */
@@ -211,7 +271,13 @@ export function whatChanged(
       && reviewSampleSize >= RATING_MIN_SUPPORT)
     patterns.push({
       section: "changed",
-      headline: `Average rating moved from ${previous.averageRating} to ${current.averageRating}`,
+      headline: (current.averageRating ?? 0) > (previous.averageRating ?? 0)
+        ? `This shop's rating is climbing`
+        : `This shop's rating is slipping`,
+      because: `The average moved from ${previous.averageRating} to ${current.averageRating} `
+        + `across ${reviewSampleSize} reviews. A rating built on a small sample moves for `
+        + `reasons that are not about quality, which is why this needs at least `
+        + `${RATING_MIN_SUPPORT} reviews before it is shown at all.`,
       listingId: null, evidenceClass: "confirmed-shop-total",
       supportingReviewIds: [], sampleSize: reviewSampleSize,
       windowFrom: now - 86_400, windowTo: now,

@@ -42,6 +42,8 @@ type WatchRow = { key: string; phrase: string; moving: number; repeated: number;
 */
 type ShopPattern = {
   pattern?: string;
+  /* Why the number matters. A card without this is a count. */
+  because?: string;
   evidence?: string;
   window?: string;
   listing?: { id: number | null; url: string };
@@ -307,7 +309,10 @@ function ShopCard({ shop }: { shop: ShopView }) {
           <h3>{name}</h3>
           {cards.map((card, index) => (
             <div className="pattern" key={`${name}-${index}`}>
-              <p>{card.pattern}</p>
+              <p className="pattern-headline">{card.pattern}</p>
+              {/* The finding first, then why it is a finding. A card that
+                  shows only the count is the one this replaced. */}
+              {card.because && <p className="pattern-because">{card.because}</p>}
               <span className="support">
                 {card.evidence}
                 {card.window ? ` · ${card.window}` : ""}

@@ -130,3 +130,53 @@ test("D1433: a bare shop id resolves as a shop, not as a name", () => {
   /* The id branch must come before the name search. */
   assert.ok(module.indexOf("No Etsy shop has the id") < module.indexOf("No Etsy shop is named"));
 });
+
+test("a card carries a finding, not only a count", () => {
+  /*
+    THE CARDS SHIPPED AS RAW COUNTS.
+
+    Audited in the canary brief against ArrowGiftCoLtd: every card in Getting
+    Attention read "9 of the last 496 reviews in this shop are for this
+    listing" — or 6, or 6. True sentences, and useless: whether nine of 496 is
+    a lot depends entirely on how many listings those 496 were spread across,
+    which the card never showed. The selection rule KNEW — it only admits a
+    listing above one and a half times an even share — and discarded the
+    reasoning before printing.
+
+    And "3 new reviews since yesterday" was removed outright. It states that
+    reviews were added; there is no wording that makes a bare arrival count
+    worth somebody's attention.
+  */
+  const patterns = readFileSync(new URL(
+    "../app/shop-watch-patterns.ts", import.meta.url), "utf8");
+  const route = readFileSync(new URL(
+    "../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
+
+  /* Every pattern shape states why its number matters. */
+  const sections = (patterns.match(/section: "/g) || []).length;
+  const becauses = (patterns.match(/because: /g) || []).length;
+  assert.equal(sections, becauses,
+    `${sections} card shapes and ${becauses} explanations — every card needs one`);
+
+  /* The explanation reaches the card rather than stopping at the route. */
+  assert.match(route.slice(route.indexOf("function present")), /because: card\.because/);
+  const client = readFileSync(new URL(
+    "../app/market-watch/market-watch-client.tsx", import.meta.url), "utf8");
+  assert.match(client, /card\.because/, "the card computes an explanation and never shows it");
+
+  /* The rejected shapes stay rejected. */
+  assert.doesNotMatch(patterns, /new reviews since yesterday/,
+    "a bare count of arriving reviews is not an insight");
+  assert.doesNotMatch(patterns, /headline: `\$\{group\.length\} of the last/,
+    "the attention headline is a raw count again");
+});
+
+test("no card tells the seller what to do next", () => {
+  /* Evidence only. What to do with it is the seller's job. */
+  const patterns = readFileSync(new URL(
+    "../app/shop-watch-patterns.ts", import.meta.url), "utf8");
+  const headlines = [...patterns.matchAll(/headline: ([^\n]+)/g)].map(match => match[1]);
+  for (const line of headlines)
+    for (const advice of ["you should", "consider ", "try ", "add a", "raise your", "lower your"])
+      assert.ok(!line.toLowerCase().includes(advice), `a headline advises: ${line}`);
+});

@@ -207,3 +207,12 @@
 .summary { color: var(--muted); font-size: 0.9rem; margin: 0 0 14px; }
 .back { min-height: 44px; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0; font-size: 0.9rem; }
 .error { color: #a33a3a; font-size: 0.92rem; }
+
+/* D1586 · A card states the finding, then the evidence under it.
+   "9 of the last 496 reviews in this shop are for this listing" shipped as the
+   whole card: true, and impossible to act on without knowing what an average
+   listing there draws. The headline carries the finding now and this carries
+   the reasoning. */
+.pattern .pattern-headline{margin:0;font-size:14px;font-weight:700;line-height:1.35;color:var(--g-ink,#211725)}
+.pattern .pattern-because{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--g-copy,#645a68)}
+.pattern .support{display:inline-block;margin-top:8px;font-size:11px;color:var(--g-copy,#645a68);opacity:.85}

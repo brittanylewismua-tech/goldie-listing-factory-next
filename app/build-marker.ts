@@ -115,7 +115,11 @@
 /* D1585 stops "Gift for none" reaching a member's title. The first real
    seven-product run composed it into all seven: a cue that says it is empty
    is still a non-empty string, so the absence has to be spelled out. */
-export const BUILD_MARKER = "D1585";
+/* D1586 makes a Shop Watch card state its finding rather than a raw count.
+   Every attention card read "9 of the last 496 reviews in this shop are for
+   this listing" — true, and unusable without the denominator the selection
+   rule had already computed. "3 new reviews since yesterday" is gone. */
+export const BUILD_MARKER = "D1586";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
