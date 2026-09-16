@@ -74,6 +74,9 @@ export const GET = withErrorLog("market-observe", async (request: Request) => {
     .first<{ attributed: number; unresolved: number; correlated: number }>()
     .catch(() => null);
   const budget = await etsyBudget().catch(() => null);
+  const forced = await db.prepare(
+    `SELECT COUNT(*) AS n FROM admin_actions WHERE at > ?`)
+    .bind(now - 900).first<{ n: number }>().catch(() => null);
 
   const epoch = (value?: string | null) => {
     if (!value) return 0;
@@ -102,6 +105,8 @@ export const GET = withErrorLog("market-observe", async (request: Request) => {
     etsyCalls: Number((budget as { used?: number } | null)?.used ?? 0),
     errors: Number(errors?.n ?? 0),
     cohortsOk: true, briefsOk: true,
+    /* True when an operator forced a discovery run inside this window. */
+    adminForced: Boolean(forced),
   };
 
   await recordSample(sample);

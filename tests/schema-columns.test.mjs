@@ -104,7 +104,8 @@ test("no single-table query reads a column its table does not have", () => {
   for (const file of files) {
     const source = readFileSync(file, "utf8");
     for (const statement of source.matchAll(/`(SELECT[\s\S]*?)`/gi)) {
-      const sql = statement[1];
+      /* `${marks}` is an interpolated placeholder list, not a column. */
+      const sql = statement[1].replace(/\$\{[^}]*\}/g, "?");
       const tables = [...sql.matchAll(/\bFROM\s+([a-z_]+)/gi)].map(row => row[1]);
       /* One table, and no alias anywhere, or the attribution is ambiguous. */
       if (new Set(tables).size !== 1) continue;

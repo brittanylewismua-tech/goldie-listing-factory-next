@@ -14,6 +14,16 @@ export const GATE_STANDARD = {
   minimumHours: OBSERVATION_HOURS,
   /* Share of eligible intervals correlated before expiry. */
   correlationCoverage: 0.95,
+  /*
+    HEADROOM, NOT JUST A CEILING.
+
+    p95 sat at 20,655 seconds against a 21,600-second evidence ceiling — 94% of
+    the way to worthless, and the gate called it a pass because it was
+    technically under. A delay that close to expiry means the next bad hour
+    loses evidence, so the gate now requires real room: p95 must stay inside
+    this share of the useful window.
+  */
+  p95HeadroomShare: 0.6,
   /* Stated here rather than imported, so the gate module stays free of the
      Workers runtime. It mirrors MAX_EVIDENCE_AGE_SECONDS in app/correlation.ts,
      and a test asserts the two agree. */
@@ -37,6 +47,13 @@ export type Sample = {
   attributedUnits: number; unresolvedUnits: number;
   listingFreshness: number; etsyCalls: number; errors: number;
   cohortsOk: boolean; briefsOk: boolean;
+  /*
+    A forced administrative discovery run is not production load. Counting one
+    against the gate would fail a healthy system because an operator pressed a
+    button; ignoring it entirely would hide a real burst. It is recorded and
+    excluded from the backlog-growth judgement, and reported separately.
+  */
+  adminForced?: boolean;
 };
 
 /* `recordSample` lives in market-observation.ts, which has the database. A
@@ -104,9 +121,12 @@ export function evaluateGate(
   const worstFreshness = Math.min(1, ...segment.map(row => row.listingFreshness));
   const errors = segment.reduce((sum, row) => sum + row.errors, 0);
 
-  /* Backlog growth across the segment, not within one sample. */
-  const backlogGrowth = segment.length >= 2
-    ? segment[segment.length - 1].backlog - segment[0].backlog : 0;
+  /* Backlog growth across the segment, measured over PRODUCTION samples only:
+     a forced discovery run spikes the backlog by design. */
+  const production = segment.filter(row => !row.adminForced);
+  const backlogGrowth = production.length >= 2
+    ? production[production.length - 1].backlog - production[0].backlog : 0;
+  const adminSamples = segment.length - production.length;
 
   const failing: string[] = [];
   if (hours < standard.minimumHours)
@@ -117,8 +137,14 @@ export function evaluateGate(
   if (coverage !== null && coverage < standard.correlationCoverage)
     failing.push(`${Math.round(coverage * 100)}% of eligible intervals correlated `
       + `before expiry, below ${Math.round(standard.correlationCoverage * 100)}%`);
+  const headroomCeiling = standard.maxP95DelaySeconds * standard.p95HeadroomShare;
   if (worstP95 > standard.maxP95DelaySeconds)
-    failing.push(`p95 correlation delay reached ${Math.round(worstP95 / 3_600)}h`);
+    failing.push(`p95 correlation delay reached ${Math.round(worstP95 / 3_600)}h, `
+      + `past the ${Math.round(standard.maxP95DelaySeconds / 3_600)}h evidence window`);
+  else if (worstP95 > headroomCeiling)
+    failing.push(`p95 correlation delay reached ${Math.round(worstP95 / 3_600)}h — `
+      + `inside the ${Math.round(standard.maxP95DelaySeconds / 3_600)}h window but with `
+      + `too little headroom before evidence starts expiring`);
   if (backlogGrowth > 0 && segment.length >= 3)
     failing.push(`backlog grew by ${backlogGrowth} across the observation`);
   if (errors > 0) failing.push(`${errors} errors recorded`);
@@ -148,6 +174,9 @@ export function evaluateGate(
       peakEtsyCallsPerDay: peakEtsy,
       worstListingFreshness: Number(worstFreshness.toFixed(3)),
       errors,
+      p95HeadroomCeilingSeconds: headroomCeiling,
+      adminForcedSamples: adminSamples,
+      productionSamples: production.length,
     },
   };
 }

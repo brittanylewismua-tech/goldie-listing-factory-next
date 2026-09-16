@@ -23,14 +23,79 @@ export type CandidateState =
   | "inactive"            /* listing is no longer active */
   | "unavailable"         /* Etsy will not answer for it */
   | "expired"             /* dropped from the pool for lack of evidence */
+  | "over-cap"            /* demoted because the niche pool exceeded its limit */
   | "historical";         /* kept as evidence, no longer actively polled */
 
 export const ACTIVE_STATES: CandidateState[] = [
   "awaiting-baseline", "monitoring", "momentum", "repeated-momentum",
 ];
 
+/* States that are kept for audit but are not actively polled. */
+export const RETAINED_STATES: CandidateState[] = [
+  "over-cap", "expired", "inactive", "unavailable", "historical",
+];
+
 /** Only these may appear to a member as evidence. */
 export const EVIDENCE_STATES: CandidateState[] = ["momentum", "repeated-momentum"];
+
+/**
+ * WHICH CANDIDATES KEEP THEIR SLOT WHEN A POOL IS OVER ITS CAP.
+ *
+ * Fixing the insertion logic stopped pools GROWING past 200; it did nothing
+ * about pools already over it — halloween held 359, teacher 353. Those have to
+ * come down, and which ones go cannot be arbitrary or the answer changes every
+ * time it runs.
+ *
+ * The order is evidence first, then the longest-observed, then the lowest
+ * listing id. Every part is deterministic and none of it is a judgement call:
+ *
+ *   1. repeated momentum   — evidence that cannot be re-collected
+ *   2. momentum            — the same, weaker
+ *   3. baselined longest   — closest to producing evidence
+ *   4. discovered earliest — has waited longest
+ *   5. lowest listing id   — a tiebreak that is stable across runs
+ *
+ * NOTHING IS DELETED. An excess candidate is demoted to `over-cap`, keeping
+ * its discovery provenance and any history, so it can be promoted again if the
+ * pool has room or it is rediscovered.
+ */
+export function rankForRetention(candidate: Candidate): number[] {
+  const evidence = candidate.state === "repeated-momentum" ? 0
+    : candidate.state === "momentum" ? 1
+    : candidate.lastQualifyingAt ? 2 : 3;
+  return [
+    evidence,
+    /*
+      EARLIER BASELINE SORTS FIRST, and a candidate with no baseline sorts
+      after every candidate that has one. Negating the timestamp put the
+      NEWEST first, which is the opposite of "closest to producing evidence".
+    */
+    candidate.baselinedAt ?? Number.MAX_SAFE_INTEGER,
+    candidate.discoveredAt,
+    candidate.listingId,
+  ];
+}
+
+export function selectRetained(
+  candidates: Candidate[], limit: number,
+): { keep: Candidate[]; demote: Candidate[] } {
+  const ordered = [...candidates].sort((a, b) => {
+    const left = rankForRetention(a);
+    const right = rankForRetention(b);
+    for (let index = 0; index < left.length; index += 1)
+      if (left[index] !== right[index]) return left[index] - right[index];
+    return 0;
+  });
+  return { keep: ordered.slice(0, limit), demote: ordered.slice(limit) };
+}
+
+/*
+  A candidate carrying evidence is never demoted for being over the cap: the
+  evidence is the reason the pool exists, and it cannot be collected again.
+*/
+export const carriesEvidence = (candidate: Candidate) =>
+  candidate.state === "momentum" || candidate.state === "repeated-momentum"
+  || Boolean(candidate.lastQualifyingAt);
 
 export type Candidate = {
   nicheKey: string;

@@ -32,10 +32,14 @@ test("a discovered candidate is not yet monitored", () => {
 test("nothing in the candidate model reads search rank or favourites", () => {
   const code = readFileSync(new URL("../app/niche-candidates.ts", import.meta.url), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "");
-  for (const banned of ["favorit", "favourit", "rank", "score", "review_count",
-    "relevance", "views"])
+  /* The ban is on reading a SEARCH signal, not on the English word: retention
+     ordering is legitimately called a rank and reads none of these. */
+  for (const banned of ["favorit", "favourit", "searchrank", "search_rank",
+    "score", "review_count", "relevance", "views"])
     assert.ok(!code.toLowerCase().includes(banned),
       `candidate qualification reads ${banned}`);
+  /* And nothing reads a rank off the candidate itself. */
+  assert.doesNotMatch(code, /candidate\.(rank|score|favorites|views)\b/);
 });
 
 test("evidence outranks interest, and interest outranks novelty", () => {
@@ -170,4 +174,53 @@ test("candidate counts are shown as watching, never as momentum", () => {
   for (const banned of ["moving", "momentum", "selling", "sold"])
     assert.ok(!block.toLowerCase().includes(banned),
       `candidates were described as "${banned}"`);
+});
+
+/* ------------------------------------------------- over-cap reconciliation */
+import { selectRetained, carriesEvidence, RETAINED_STATES } from "../app/niche-candidates.ts";
+
+test("evidence is never demoted to fit a cap", () => {
+  /* It cannot be collected again; it is the reason the pool exists. */
+  const pool = [
+    candidate({ listingId: 1, state: "repeated-momentum", lastQualifyingAt: NOW }),
+    candidate({ listingId: 2, state: "momentum", lastQualifyingAt: NOW }),
+    ...Array.from({ length: 10 }, (unused, index) =>
+      candidate({ listingId: 100 + index, state: "awaiting-baseline" })),
+  ];
+  const { keep, demote } = selectRetained(pool, 3);
+  assert.equal(keep.length, 3);
+  assert.ok(keep.some(row => row.listingId === 1));
+  assert.ok(keep.some(row => row.listingId === 2));
+  for (const row of demote) assert.equal(carriesEvidence(row), false);
+});
+
+test("reconciliation is deterministic across runs and input order", () => {
+  const pool = Array.from({ length: 20 }, (unused, index) =>
+    candidate({ listingId: 500 - index, discoveredAt: NOW - index * 60,
+      baselinedAt: index % 3 === 0 ? NOW - index * 120 : null }));
+  const first = selectRetained(pool, 7).keep.map(row => row.listingId);
+  const second = selectRetained([...pool].reverse(), 7).keep.map(row => row.listingId);
+  assert.deepEqual(first, second, "the answer depends on input order");
+});
+
+test("the longest-observed candidate outranks a newer one", () => {
+  const older = candidate({ listingId: 1, baselinedAt: NOW - 10 * 86_400 });
+  const newer = candidate({ listingId: 2, baselinedAt: NOW - 60 });
+  const { keep } = selectRetained([newer, older], 1);
+  assert.equal(keep[0].listingId, 1);
+});
+
+test("an unbaselined candidate falls back to discovery order", () => {
+  const early = candidate({ listingId: 9, baselinedAt: null, discoveredAt: NOW - 86_400 });
+  const late = candidate({ listingId: 1, baselinedAt: null, discoveredAt: NOW - 60 });
+  const { keep } = selectRetained([late, early], 1);
+  assert.equal(keep[0].listingId, 9);
+});
+
+test("demotion keeps the row, it never deletes it", () => {
+  assert.ok(RETAINED_STATES.includes("over-cap"));
+  /* And an over-cap candidate is not active, so it cannot be displayed. */
+  const active = readFileSync(new URL("../app/niche-candidates.ts", import.meta.url), "utf8");
+  const activeBlock = active.slice(active.indexOf("ACTIVE_STATES"), active.indexOf("RETAINED_STATES"));
+  assert.ok(!activeBlock.includes("over-cap"));
 });

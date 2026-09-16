@@ -40,6 +40,18 @@ export const POST = withErrorLog("market-discover", async (request: Request) => 
   const url = new URL(request.url);
   const single = (url.searchParams.get("q") ?? "").trim();
   const force = url.searchParams.get("force") === "1";
+  /*
+    A forced run is an operator action, not production load. It is recorded so
+    the observation gate can exclude its backlog spike rather than failing a
+    healthy system because somebody pressed a button.
+  */
+  if (force) {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS admin_actions (
+      at INTEGER PRIMARY KEY, what TEXT NOT NULL)`).run().catch(() => {});
+    await db.prepare(`INSERT INTO admin_actions (at, what) VALUES (?, 'forced-discovery')
+      ON CONFLICT(at) DO NOTHING`)
+      .bind(Math.floor(Date.now() / 1000)).run().catch(() => {});
+  }
   const now = Math.floor(Date.now() / 1000);
 
   /* Every distinct saved niche, once — not once per member watching it. */

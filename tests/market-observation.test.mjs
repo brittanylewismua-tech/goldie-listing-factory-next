@@ -219,3 +219,41 @@ test("the sample carries the build for audit but not as the key", () => {
   const keyLine = gate.slice(gate.indexOf("const key ="), gate.indexOf("const segment"));
   assert.ok(!keyLine.includes("build"), "the build is still part of the segment key");
 });
+
+test("a p95 close to the evidence ceiling fails for lack of headroom", () => {
+  /* Measured: p95 20,655s against a 21,600s window — 94% of the way to
+     worthless — and the gate passed it because it was technically under. */
+  const near = window(80).map(row => ({ ...row, p95: 20_655 }));
+  const gate = evaluateGate(near, NOW);
+  assert.equal(gate.passes, false);
+  assert.ok(gate.failing.some(line => /too little headroom/.test(line)),
+    gate.failing.join("; "));
+
+  const comfortable = window(80).map(row => ({ ...row, p95: 6_000 }));
+  assert.equal(evaluateGate(comfortable, NOW).passes, true);
+});
+
+test("past the window and merely close to it read differently", () => {
+  const past = window(80).map(row => ({ ...row, p95: 30_000 }));
+  const gate = evaluateGate(past, NOW);
+  assert.ok(gate.failing.some(line => /past the 6h evidence window/.test(line)));
+});
+
+test("a forced admin run does not fail the backlog condition", () => {
+  /* An operator pressing discover spikes the backlog by design. */
+  const samples = window(80).map((row, index) => ({
+    ...row,
+    adminForced: index === 40,
+    backlog: index === 40 ? 5_000 : 50,
+  }));
+  const gate = evaluateGate(samples, NOW);
+  assert.equal(gate.measured.adminForcedSamples, 1);
+  assert.ok(!gate.failing.some(line => /backlog grew/.test(line)),
+    gate.failing.join("; "));
+});
+
+test("a real production backlog rise still fails", () => {
+  const samples = window(80).map((row, index) => ({ ...row, backlog: 50 + index * 10 }));
+  const gate = evaluateGate(samples, NOW);
+  assert.ok(gate.failing.some(line => /backlog grew/.test(line)));
+});
