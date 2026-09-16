@@ -109,7 +109,10 @@
 /* D1578 adds an owner-only read of one of the member's own listing images, so
    the layered flow can be measured against real artwork rather than a
    synthetic swatch or somebody else's design. */
-export const BUILD_MARKER = "D1583";
+/* D1584 prices the two Listing Factory workloads from measured production
+   calls. Both sat at a unitCost of 0, which meant their dollar ceilings could
+   never stop anything: an unpriced workload is an uncapped one. */
+export const BUILD_MARKER = "D1584";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

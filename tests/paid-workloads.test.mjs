@@ -44,8 +44,29 @@ test("the production Listing Factory vision calls are registered", () => {
      the registry would leave the busiest paid feature uncapped. */
   const listing = workload("listingIntelligenceVision");
   assert.ok(listing, "the live fal.run vision calls are missing from the registry");
-  assert.equal(listing.costBasis, "unknown", "an unmeasured cost must not be presented as known");
   assert.equal(listing.limitStatus, "temporary");
+  /*
+    This asserted costBasis stayed "unknown", which was right while nothing had
+    ever been measured. It is measured now — four real calls on the layered
+    path on 2026-09-16 — and freezing the old answer would have meant keeping
+    a price of zero.
+  */
+  assert.equal(listing.costBasis, "measured");
+});
+
+test("a workload with a ceiling has a price, or the ceiling cannot bite", () => {
+  /*
+    `reserveSpend` stops a call when `spentToday + unitCost > ceiling`. With a
+    unitCost of 0 that comparison is never true however much has been spent, so
+    an unpriced workload is an UNCAPPED one however carefully its ceiling was
+    chosen. Both Listing Factory workloads sat at zero while the architecture
+    was only a planner; connecting it to production made the gap real.
+  */
+  for (const entry of PAID_WORKLOADS) {
+    if (entry.costBasis === "unknown") continue;
+    assert.ok(entry.unitCost > 0,
+      `${entry.key} claims a ${entry.costBasis} cost of 0, so its ceiling can never stop it`);
+  }
 });
 
 test("every workload declares a ceiling, a retry policy and a cache policy", () => {

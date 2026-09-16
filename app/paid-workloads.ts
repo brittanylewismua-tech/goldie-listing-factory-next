@@ -118,7 +118,17 @@ export const PAID_WORKLOADS: Workload[] = [
     key: "listingFamilyCopy",
     what: "One text-only call covering every product family for a design. No image.",
     provider: "fal / openrouter", model: "google/gemini-2.5-flash",
-    unitCost: 0, costBasis: "unknown",
+    /*
+      MEASURED against production on 2026-09-16, once the call actually ran:
+      six families in one call billed $0.0008714; a single added family (tote)
+      billed $0.000183. Rounded up to the six-family figure, because that is
+      the shape a real batch takes and a reservation should not under-reserve.
+
+      UNTIL THIS, unitCost WAS 0 — which meant `spentToday + 0 > ceiling` was
+      never true and the $5 ceiling could not stop anything. An unpriced
+      workload is an uncapped one.
+    */
+    unitCost: 0.0009, costBasis: "measured",
     customerFacing: true,
     memberDailyLimit: 50, memberDailyAttempts: 75,
     globalDailyCeiling: 5, globalDailyRequests: 1_000, limitStatus: "temporary",
@@ -129,9 +139,19 @@ export const PAID_WORKLOADS: Workload[] = [
   },
   {
     key: "listingIntelligenceVision",
-    what: "Title, keyword and attribute pre-fill for a Listing Factory publish. TWO calls per listing today.",
+    what: "One image analysis per member artwork, reused across every product in the batch.",
     provider: "fal / openrouter", model: "google/gemini-2.5-flash",
-    unitCost: 0, costBasis: "unknown",
+    /*
+      MEASURED against production on 2026-09-16 across four real calls on the
+      layered path: $0.0009949, $0.0013196, $0.00049988, $0.00049988 — mean
+      $0.00083, highest $0.00132. Reserved at the highest, because a
+      reservation that under-reserves lets the ceiling be passed.
+
+      The old description said TWO calls per listing. On the layered path it is
+      one call per ARTWORK, whatever the batch size: measured at two paid calls
+      for a seven-product batch against fourteen on the legacy path.
+    */
+    unitCost: 0.0014, costBasis: "measured",
     customerFacing: true,
     memberDailyLimit: 50, memberDailyAttempts: 75,
     globalDailyCeiling: 15, globalDailyRequests: 2_000, limitStatus: "temporary",

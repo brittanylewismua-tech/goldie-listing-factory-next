@@ -153,11 +153,15 @@ async function runDesign(
   }
 
   let billed = 0;
+  let reachedProvider = true;
   let usage: Usage = { cost: 0, inputTokens: 0, outputTokens: 0 };
   try {
     /* An unbilled failure never reaches the provider: nothing is charged and
        the reservation is released rather than settled. */
-    if (fault === "unbilled") throw new Error("injected failure before the provider was called");
+    if (fault === "unbilled") {
+      reachedProvider = false;
+      throw new Error("injected failure before the provider was called");
+    }
     const response = await fetch("https://fal.run/openrouter/router/vision", {
       method: "POST",
       headers: { Authorization: `Key ${key()}`, "Content-Type": "application/json" },
@@ -211,7 +215,10 @@ async function runDesign(
       because: error instanceof Error ? error.message : "the analysis failed",
       memberMessage: "Goldie could not analyze this design just now. "
         + "Nothing was charged to your daily limit — try again in a moment.",
-      calls: 1, billed };
+      /* A call that never reached the provider is not a call. Reporting it as
+         one made the unbilled failure look identical to the billed one in
+         everything but the money, which is the one place they must differ. */
+      calls: reachedProvider ? 1 : 0, billed };
   } finally {
     await releaseLease("design-intelligence", leaseKey, token).catch(() => {});
   }

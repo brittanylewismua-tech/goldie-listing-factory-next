@@ -205,7 +205,11 @@ test("fault injection is unreachable by a member", () => {
     "fault injection must sit behind the canary gate");
   /* The flow treats an injected fault exactly as a real one: same failure
      path, same refund, same settlement — otherwise it proves nothing. */
-  assert.match(flow, /if \(fault === "unbilled"\) throw new Error/);
+  assert.match(flow, /if \(fault === "unbilled"\) \{/);
+  /* And it is honest about not having called anything: a call that never
+     reached the provider must not be counted as one, or the unbilled failure
+     looks identical to the billed one everywhere but the money. */
+  assert.match(flow, /calls: reachedProvider \? 1 : 0/);
   assert.match(flow, /fault === "billed" \? null : readDesign/);
   assert.equal((flow.match(/failSpend\(reservation\.id, \{ billed \}\)/g) || []).length, 2);
 });
