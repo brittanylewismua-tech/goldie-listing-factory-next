@@ -62,7 +62,10 @@ export async function ensureRegisterTables(db: D1Database): Promise<void> {
     added after the first release is also stated as an ALTER, and the only
     error tolerated is the one that means it is already there.
   */
-  for (const column of ["done_records INTEGER NOT NULL DEFAULT 0", "started TEXT"]) {
+  for (const column of ["done_records INTEGER NOT NULL DEFAULT 0", "started TEXT",
+    /* D1574: when the other side is rate limiting, when to ask again and how
+       many times it has refused in a row. */
+    "retry_after TEXT", "strikes INTEGER NOT NULL DEFAULT 0"]) {
     try {
       await db.prepare(`ALTER TABLE tm_ingest_files ADD COLUMN ${column}`).run();
     } catch (error) {

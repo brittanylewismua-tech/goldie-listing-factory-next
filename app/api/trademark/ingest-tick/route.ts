@@ -5,6 +5,7 @@ import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { filesFromProduct, productFilesUrl } from "@/app/uspto-bulk";
 import { ensureRegisterTables, ingestFile, registerSize } from "@/app/trademark-register";
+import { isRateLimit, retryAfter } from "@/app/uspto-backoff";
 
 /**
  * ONE BULK FILE PER FIRING.
@@ -127,9 +128,9 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
   */
   const resuming = await db
     .prepare(
-      `SELECT name, product, url, done_records FROM tm_ingest_files
+      `SELECT name, product, url, done_records, strikes FROM tm_ingest_files
         WHERE state = 'partial' ORDER BY priority ASC, name DESC LIMIT 1`)
-    .first<{ name: string; product: string; url: string; done_records: number }>();
+    .first<{ name: string; product: string; url: string; done_records: number; strikes: number }>();
 
   /*
     RESUMING A PARTIAL FILE WAS NOT ENOUGH.
@@ -149,7 +150,9 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
   const dailyWaiting = await db
     .prepare(
       `SELECT COUNT(*) AS n FROM tm_ingest_files
-        WHERE state = 'waiting' AND priority <= 2`)
+        WHERE state = 'waiting' AND priority <= 2
+          AND (retry_after IS NULL OR retry_after <= ?)`)
+    .bind(new Date().toISOString())
     .first<{ n: number }>();
 
   const preferHistorical = Number(dailyWaiting?.n ?? 0) === 0;
@@ -157,16 +160,20 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
   const next = resuming ?? await db
     .prepare(
       preferHistorical
-        ? `SELECT name, product, url, done_records FROM tm_ingest_files
-            WHERE state = 'waiting'
+        /* A file under backoff is not available. Skipping it lets the rest of
+           the queue advance instead of the whole backfile stopping behind one
+           refusal. */
+        ? `SELECT name, product, url, done_records, strikes FROM tm_ingest_files
+            WHERE state = 'waiting' AND (retry_after IS NULL OR retry_after <= ?)
             ORDER BY priority DESC, name DESC
             LIMIT 1`
-        : `SELECT name, product, url, done_records FROM tm_ingest_files
-            WHERE state = 'waiting'
+        : `SELECT name, product, url, done_records, strikes FROM tm_ingest_files
+            WHERE state = 'waiting' AND (retry_after IS NULL OR retry_after <= ?)
             ORDER BY priority ASC, name DESC
             LIMIT 1`,
     )
-    .first<{ name: string; product: string; url: string; done_records: number }>();
+    .bind(new Date().toISOString())
+    .first<{ name: string; product: string; url: string; done_records: number; strikes: number }>();
 
   if (!next) return NextResponse.json({ added, idle: true, ...(await registerSize(db)) });
 
@@ -183,7 +190,8 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
     await db
       .prepare(
         `UPDATE tm_ingest_files
-            SET state = ?, records = ?, kept = kept + ?, done_records = ?, note = '', finished = ?
+            SET state = ?, records = ?, kept = kept + ?, done_records = ?, note = '', finished = ?,
+                retry_after = NULL, strikes = 0
           WHERE name = ?`,
       )
       .bind(
@@ -208,10 +216,26 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
       transient failures go back in the queue.
     */
     const permanent = /Not a zip|not deflate|Truncated zip/i.test(note);
+    /*
+      AND A RATE LIMIT IS NEITHER.
+
+      429 is the other side asking for time. Putting the file straight back in
+      the queue turned that request into twenty-minute hammering for two days.
+      It goes back in the queue with a time attached, escalating while the
+      refusals continue.
+    */
+    const limited = isRateLimit(note);
+    const strikes = limited ? Number(next.strikes ?? 0) + 1 : 0;
     await db
-      .prepare(`UPDATE tm_ingest_files SET state = ?, note = ? WHERE name = ?`)
-      .bind(permanent ? "skipped" : "waiting", note.slice(0, 300), next.name)
+      .prepare(
+        `UPDATE tm_ingest_files
+            SET state = ?, note = ?, retry_after = ?, strikes = ?
+          WHERE name = ?`)
+      .bind(permanent ? "skipped" : "waiting", note.slice(0, 300),
+        limited ? retryAfter(strikes) : null, strikes, next.name)
       .run();
-    return NextResponse.json({ added, file: next.name, error: note }, { status: 500 });
+    return NextResponse.json({ added, file: next.name, error: note,
+      ...(limited ? { rateLimited: true, strikes, retryAfter: retryAfter(strikes) } : {}) },
+      { status: 500 });
   }
 });

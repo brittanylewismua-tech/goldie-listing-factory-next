@@ -91,7 +91,10 @@
    one design cannot both be billed, and adds the second charge to the record
    instead of discarding it. Also stops the dry run implying a cache can warm
    up when nothing writes it. */
-export const BUILD_MARKER = "D1573";
+/* D1574 stops the register hammering an API that is rate limiting it, and
+   makes a stalled queue say so instead of reporting "88 waiting" for two
+   days while every firing was refused with a 429. */
+export const BUILD_MARKER = "D1574";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
