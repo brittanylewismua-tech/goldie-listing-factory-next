@@ -37,16 +37,33 @@ export type Classification = {
   properties the blank can satisfy.
 */
 const NODES: Record<string, { id: number; noun: string; allowed: Record<string, string[]> }> = {
+  /*
+    GARMENT FIT WAS REQUIRED AND NEVER RECORDED.
+
+    `APPAREL_REQUIRED` has listed "Garment fit" since it was written, and no
+    apparel node carried an allowed value for it — so every apparel payload
+    this shop could build was missing a property Etsy requires. Nothing caught
+    it because the planner and the unit tests never assembled a whole payload;
+    the seven-blueprint dry run did, on its first complete run.
+
+    "Regular fit" is the blank these blueprints actually are: Gildan and
+    Bella+Canvas unisex bodies are cut straight rather than fitted or relaxed.
+  */
   tee: { id: 1_455, noun: "t-shirt",
-    allowed: { "Sleeve length": ["Short sleeve"], Neckline: ["Crew neck", "V neck"] } },
+    allowed: { "Sleeve length": ["Short sleeve"], Neckline: ["Crew neck", "V neck"],
+      "Garment fit": ["Regular fit"] } },
   hoodie: { id: 1_469, noun: "hoodie",
-    allowed: { "Sleeve length": ["Long sleeve"], Neckline: ["Hooded"] } },
+    allowed: { "Sleeve length": ["Long sleeve"], Neckline: ["Hooded"],
+      "Garment fit": ["Regular fit"] } },
   crewneck: { id: 1_469, noun: "sweatshirt",
-    allowed: { "Sleeve length": ["Long sleeve"], Neckline: ["Crew neck"] } },
+    allowed: { "Sleeve length": ["Long sleeve"], Neckline: ["Crew neck"],
+      "Garment fit": ["Regular fit"] } },
   tank: { id: 1_457, noun: "tank top",
-    allowed: { "Sleeve length": ["Sleeveless"], Neckline: ["Scoop neck", "Crew neck"] } },
+    allowed: { "Sleeve length": ["Sleeveless"], Neckline: ["Scoop neck", "Crew neck"],
+      "Garment fit": ["Regular fit"] } },
   longSleeve: { id: 1_455, noun: "long sleeve shirt",
-    allowed: { "Sleeve length": ["Long sleeve"], Neckline: ["Crew neck"] } },
+    allowed: { "Sleeve length": ["Long sleeve"], Neckline: ["Crew neck"],
+      "Garment fit": ["Regular fit"] } },
   mug: { id: 1_284, noun: "mug", allowed: { Material: ["Ceramic"], Capacity: ["11 oz", "15 oz"] } },
   tumbler: { id: 1_285, noun: "tumbler", allowed: { Material: ["Stainless steel"] } },
   tote: { id: 1_027, noun: "tote bag", allowed: { Material: ["Cotton canvas", "Polyester"] } },

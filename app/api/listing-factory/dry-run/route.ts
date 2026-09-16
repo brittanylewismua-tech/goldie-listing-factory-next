@@ -282,6 +282,22 @@ async function run(request: Request, user: { userId: string; email: string }) {
         families: ["tee"],
       }),
     },
+    /*
+      A WARM RUN IS ONLY WARM IF SOMETHING IS CACHED.
+
+      Asking for warm=1 does not make a cache exist. When this artwork has no
+      stored design intelligence and there is no family-copy cache table, the
+      warm plan is identical to the cold one — and saying "warm: 2 calls"
+      without that context would read as the caching being broken.
+    */
+    warmth: {
+      designIntelligenceCached: Boolean(held),
+      familyCopyCacheTablePresent: Boolean(copyTable),
+      genuinelyWarm: Boolean(held) && Boolean(copyTable),
+      because: held
+        ? (copyTable ? "" : "there is no family-copy cache table yet")
+        : "this artwork has no stored design intelligence yet",
+    },
     plan: {
       mode: warm ? "warm" : "cold",
       designCalls: plan.designCalls.length,

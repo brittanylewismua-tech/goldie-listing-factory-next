@@ -135,3 +135,25 @@ test("design intelligence is per member, versioned, and never expires", () => {
   const read = module.slice(module.indexOf("export async function readDesignIntelligence"));
   assert.match(read, /WHERE user_id = \?/);
 });
+
+test("every required apparel property has an allowed value", () => {
+  /* "Garment fit" was required since APPAREL_REQUIRED was written and no node
+     carried a value, so every apparel payload was missing a property Etsy
+     requires. The planner never assembled a payload, so nothing caught it. */
+  const registry = readFileSync(
+    new URL("../app/blueprint-registry.ts", import.meta.url), "utf8");
+  const facts = readFileSync(
+    new URL("../app/product-facts.ts", import.meta.url), "utf8");
+  const required = (facts.match(/const APPAREL_REQUIRED = \[([^\]]+)\]/)?.[1] ?? "")
+    .split(",").map(part => part.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+  assert.ok(required.includes("Garment fit"));
+
+  const nodes = registry.slice(registry.indexOf("const NODES"), registry.indexOf("export const APPAREL_ONLY"));
+  for (const family of ["tee", "hoodie", "crewneck", "tank", "longSleeve"]) {
+    const block = nodes.slice(nodes.indexOf(`${family}: {`));
+    const body = block.slice(0, block.indexOf("} },") + 4);
+    for (const property of required)
+      assert.ok(body.includes(`"${property}"`) || body.includes(`${property}:`),
+        `${family} has no allowed value for ${property}`);
+  }
+});
