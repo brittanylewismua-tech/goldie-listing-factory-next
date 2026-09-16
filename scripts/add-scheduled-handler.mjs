@@ -67,6 +67,12 @@ export default {
         not: that is the arithmetic that buried the inspector.
       */
       run("/api/market/correlate");
+      /*
+        An observation sample every ten minutes, beside the work it measures.
+        Persisted rather than watched: a gate that depends on somebody
+        remembering to look is not a gate.
+      */
+      run("/api/market/observe");
       return;
     }
 

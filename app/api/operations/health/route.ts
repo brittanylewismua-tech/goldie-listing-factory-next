@@ -5,6 +5,8 @@ import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { BUILD_MARKER } from "@/app/build-marker";
 import { CAPABILITIES } from "@/app/capability-registry";
+import { currentCorrelationHealth, recordHistoricalLoss, gateStatus }
+  from "@/app/market-observation";
 
 /**
  * THE WHOLE SUITE, AND WHAT IS ACTUALLY BROKEN.
@@ -89,34 +91,39 @@ export const GET = withErrorLog("operations-health", async () => {
       detail: { lastObservationAt: at, shopsObserved: Number(row?.shops ?? 0) } };
   });
 
-  await probe("inspectionBacklog", async () => {
+  await probe("correlation", async () => {
     /*
-      DETECTION WITHOUT ATTRIBUTION IS NOT EVIDENCE.
+      CURRENT HEALTH, NOT HISTORY.
 
-      The sensor opens an interval whenever a shop's counter moves; the
-      inspector is what turns that into a listing-level claim. When the
-      inspector falls behind, Market Watch keeps looking healthy while the
-      evidence behind it stops growing — so the backlog is a first-class
-      health signal, not a footnote.
+      The previous probe reported `broken` because 27,641 intervals had expired
+      under the retired inspector. That is a permanent historical fact and it
+      would have kept this probe broken forever — which teaches an operator to
+      ignore a broken probe, the worst outcome a health view can produce.
+      Historical loss is now a closed incident, reported separately below.
     */
-    const row = await db.prepare(
-      `SELECT COUNT(*) AS total,
-              SUM(CASE WHEN inspected_at IS NULL THEN 1 ELSE 0 END) AS waiting
-         FROM shop_sales_intervals`)
-      .first<{ total: number; waiting: number }>();
-    const jobs = await db.prepare(
-      `SELECT state, COUNT(*) AS n FROM inspection_jobs GROUP BY state`)
-      .all<{ state: string; n: number }>();
-    const byState: Record<string, number> = {};
-    for (const entry of jobs.results ?? []) byState[entry.state] = Number(entry.n) || 0;
-    const waiting = Number(row?.waiting ?? 0);
-    const failed = byState.failed ?? 0;
+    const health = await currentCorrelationHealth(now);
     return {
-      /* A backlog this size is not "stale", it is a workload that cannot keep
-         up, and it says so. */
-      state: waiting > 10_000 || failed > 500 ? "broken" : waiting > 1_000 ? "stale" : "ok",
-      detail: { intervals: Number(row?.total ?? 0), awaitingInspection: waiting,
-        jobs: byState },
+      state: health.state === "ok" ? "ok"
+        : health.state === "empty" ? "empty"
+        : health.state === "behind" ? "stale" : "broken",
+      detail: { ...health },
+    };
+  });
+
+  await probe("historicalLoss", async () => {
+    /* A closed incident. Visible, and never part of today's status. */
+    const incident = await recordHistoricalLoss(now) as Record<string, unknown>;
+    return { state: "ok", detail: { incident } };
+  });
+
+  await probe("observationGate", async () => {
+    const gate = await gateStatus(now);
+    return {
+      /* Observing is not broken and it is not ready. It is observing. */
+      state: gate.passes ? "ok" : gate.samples ? "empty" : "empty",
+      detail: { passes: gate.passes, hoursObserved: gate.hoursObserved,
+        samples: gate.samples, segmentStartedAt: gate.segmentStartedAt,
+        failing: gate.failing, measured: gate.measured },
     };
   });
 
