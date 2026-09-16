@@ -38,6 +38,7 @@ import { ensureCaptureQueue } from "@/app/artwork-capture-queue";
 import { ensureMockupAnalysisTable } from "@/app/mockup-analysis-cache";
 import { ensureDesignIntelligenceTable } from "@/app/design-intelligence";
 import { ensureMarketTables } from "@/app/market-store";
+import { ensureCorrelationTables } from "@/app/correlation-worker";
 import { ensureBaselineTables } from "@/app/shop-baseline";
 import { ensurePollTables } from "@/app/listing-poller";
 import { ensureShopWatchTables } from "@/app/shop-watch";
@@ -84,6 +85,7 @@ export const MIGRATIONS: Step[] = [
 
   /* Market detector, then the things that read it. */
   { name: "market_store", run: ensureMarketTables },
+  { name: "correlations", run: ensureCorrelationTables },
   { name: "shop_baselines", run: ensureBaselineTables },
   { name: "listing_poller", run: ensurePollTables },
   { name: "shop_watch", run: ensureShopWatchTables },

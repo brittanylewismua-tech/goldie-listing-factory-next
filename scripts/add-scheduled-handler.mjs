@@ -58,6 +58,15 @@ export default {
     */
     if (event.cron === "*/10 * * * *") {
       run("/api/market/poll-tick");
+      /*
+        CORRELATION RIDES THE FAST CLOCK, BESIDE THE POLLER.
+
+        It is a database join with no Etsy call, so it costs nothing to run
+        often and it must keep pace with a sensor that opens roughly 130
+        intervals every hundred seconds. On the twenty-minute clock it could
+        not: that is the arithmetic that buried the inspector.
+      */
+      run("/api/market/correlate");
       return;
     }
 
