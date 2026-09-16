@@ -211,3 +211,13 @@ test("the connections screen reports a real last sync", () => {
   assert.ok(!client.includes('return "not yet"'),
     "a missing field still claims the shop has never synced");
 });
+
+test("the checker shows one heading, not three", () => {
+  /* The standalone wrapper added an <h1> above a body that already had its
+     own header, stacking "Trademark Checker", "TRADEMARK CHECK" and
+     "Check it before you print it". */
+  const page = read("app/trademark/page.tsx");
+  const wrapper = page.slice(page.indexOf('className="tm-standalone"'));
+  assert.ok(!/<h1>/.test(wrapper.slice(0, 200)),
+    "the wrapper still adds a second heading");
+});

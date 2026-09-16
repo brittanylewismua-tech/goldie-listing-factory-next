@@ -91,9 +91,7 @@
   margin: 0 auto;
   padding: 24px 20px 72px;
 }
-/* A way back to the rest of Goldie, since this no longer sits inside the
-   factory's navigation. */
-.tm-standalone > h1 { margin-bottom: 18px; }
+.tm-standalone .drop-head { margin-bottom: 18px; }
 .tm-standalone > h1 { font-size: 1.4rem; margin: 0 0 16px; }
 .tm-standalone .drop-head h1 { font-size: 1.1rem; }
 .tm-standalone input, .tm-standalone button { min-height: 48px; font-size: 16px; }

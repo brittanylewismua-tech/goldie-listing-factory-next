@@ -165,8 +165,8 @@ export default function TrademarkPage() {
     The Trademark Checker is one of four top-level features. It renders as
     itself now, everywhere.
   */
-  return <main className="tm-standalone">
-    <h1>Trademark Checker</h1>
-    {body}
-  </main>;
+  /* The body carries its own header ("Check it before you print it"), so this
+     wrapper adds none: stacking a second heading above it read as three
+     titles in a row. */
+  return <main className="tm-standalone">{body}</main>;
 }
