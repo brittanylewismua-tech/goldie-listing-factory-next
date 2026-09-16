@@ -177,6 +177,17 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
  * used for nothing but exercising the path she is about to use.
  */
 export const GET = withErrorLog("listing-factory-prepare-sample", async () => {
+  try { return await sample(); } catch (error) {
+    /* The real message, to the owner. This endpoint has no member audience and
+       a generic wrapper turns a five-minute fix into an afternoon of guessing. */
+    return NextResponse.json({
+      error: error instanceof Error ? error.message : "sample failed",
+      stack: error instanceof Error ? String(error.stack ?? "").slice(0, 600) : "",
+    }, { status: 500 });
+  }
+});
+
+async function sample() {
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
@@ -205,4 +216,4 @@ export const GET = withErrorLog("listing-factory-prepare-sample", async () => {
     artworkHash: `own-listing-${first.listing_id}-${image?.listing_image_id ?? 0}`,
     readOnly: "No listing was created, edited or published.",
   });
-});
+}

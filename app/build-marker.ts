@@ -109,7 +109,7 @@
 /* D1578 adds an owner-only read of one of the member's own listing images, so
    the layered flow can be measured against real artwork rather than a
    synthetic swatch or somebody else's design. */
-export const BUILD_MARKER = "D1578";
+export const BUILD_MARKER = "D1579";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
