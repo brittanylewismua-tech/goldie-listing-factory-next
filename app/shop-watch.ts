@@ -144,7 +144,9 @@ export function nextRefreshAt(from = Date.now()): string {
   return new Date(due).toISOString();
 }
 
-async function etsy(path: string, feature: "search" | "qa" = "search") {
+/* Labelled `shop-watch` so this feature's spend is separable from the
+   detector's — the allowance above is measured from that label. */
+async function etsy(path: string, feature: "shop-watch" | "qa" = "shop-watch") {
   await waitForEtsyCapacity();
   const response = await fetch(`https://openapi.etsy.com/v3/application/${path}`, {
     headers: { "x-api-key": etsyApiCredential() },
@@ -326,15 +328,45 @@ export async function watchesFor(userId: string): Promise<Array<{
  * It is the newest workload and the least urgent: a brief is generated once a
  * morning, so nothing here justifies competing with the detector, the sensor,
  * or a member publishing a batch. It stops instead.
+ *
+ * THE FIRST VERSION OF THIS STOPPED IT PERMANENTLY.
+ *
+ * The rule was "80,000 minus a 55,000 reserve minus everything used today",
+ * which means Shop Watch may only run while fewer than 25,000 calls have been
+ * made. Normal detector traffic passes that before lunch, so every refresh
+ * after it returned "No room under the reserve" — measured in production with
+ * 50,551 calls still available and a shop due. Fifteen watched shops need
+ * roughly thirty calls a day between them; reserving 55,000 for everybody else
+ * guaranteed starvation rather than preventing greed.
+ *
+ * So the cap is now on SHOP WATCH'S OWN consumption, which is what a reserve
+ * is supposed to mean, plus a floor that stops it when the whole key is
+ * genuinely nearly spent.
  */
-export const SHOP_WATCH_RESERVE = 55_000;
+export const SHOP_WATCH_DAILY_ALLOWANCE = 2_000;
+/* Below this much left for the day, nothing optional runs at all. */
+export const SHOP_WATCH_FLOOR = 5_000;
 
 export async function shopWatchRoom(): Promise<number> {
-  const used = await db().prepare(
+  const totalUsed = await db().prepare(
     `SELECT COALESCE(SUM(calls), 0) AS n FROM etsy_api_usage_buckets WHERE bucket >= ?`)
     .bind(new Date(Date.now() - 24 * 3_600_000).toISOString().slice(0, 13))
     .first<{ n: number }>();
-  return Math.max(0, 80_000 - SHOP_WATCH_RESERVE - Number(used?.n ?? 0));
+  const remaining = 80_000 - Number(totalUsed?.n ?? 0);
+  if (remaining <= SHOP_WATCH_FLOOR) return 0;
+
+  /* What Shop Watch itself has spent in the last day. Its own feature label is
+     how its consumption is separated from the detector's. */
+  const mine = await db().prepare(
+    `SELECT COALESCE(SUM(calls), 0) AS n FROM etsy_api_usage_buckets
+      WHERE bucket >= ? AND feature = 'shop-watch'`)
+    .bind(new Date(Date.now() - 24 * 3_600_000).toISOString().slice(0, 13))
+    .first<{ n: number }>()
+    .catch(() => ({ n: 0 }));
+
+  return Math.max(0, Math.min(
+    SHOP_WATCH_DAILY_ALLOWANCE - Number(mine?.n ?? 0),
+    remaining - SHOP_WATCH_FLOOR));
 }
 
 type ReviewRow = {
@@ -600,6 +632,7 @@ export async function shopWatchHealth(): Promise<Record<string, unknown>> {
     nextDueAt: shops?.soonest ?? null,
     reviewsHeld: Number(reviews?.n ?? 0),
     watchLimitPerMember: watchLimit(),
-    reserveBelowCeiling: SHOP_WATCH_RESERVE,
+    dailyAllowance: SHOP_WATCH_DAILY_ALLOWANCE,
+    floorBelowWhichNothingOptionalRuns: SHOP_WATCH_FLOOR,
   };
 }

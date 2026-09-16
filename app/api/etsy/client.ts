@@ -32,7 +32,10 @@ export async function waitForEtsyCapacity(){
  */
 /* finance is its own feature so financial API spend is budgeted and
    reported apart from Market Watch and Shop Watch freshness. */
-export type EtsyFeature="publish"|"photos"|"search"|"taxonomy"|"shipping"|"connect"|"qa"|"finance"|"unlabelled";
+/* `shop-watch` is its own label so its consumption can be capped separately
+   from the detector's. Without it every Shop Watch call counted as "search"
+   and its own allowance could never deplete. */
+export type EtsyFeature="publish"|"photos"|"search"|"taxonomy"|"shipping"|"connect"|"qa"|"finance"|"shop-watch"|"unlabelled";
 
 export async function recordEtsyCall(response:Response,feature:EtsyFeature="unlabelled"){
   const bucket=hourBucket(),observedLimit=Math.max(0,Number(response.headers.get("x-limit-per-day"))||0);

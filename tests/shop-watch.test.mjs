@@ -109,7 +109,13 @@ test("dropping the last watcher does not destroy the shop's history", () => {
 });
 
 test("Shop Watch yields to every other Etsy workload", () => {
-  assert.match(source, /SHOP_WATCH_RESERVE/);
+  /* The cap is on Shop Watch's OWN spend, not on how much of the whole key
+     must remain untouched — the inversion that stopped it running after
+     midday every day. */
+  assert.match(source, /SHOP_WATCH_DAILY_ALLOWANCE/);
+  assert.match(source, /feature = 'shop-watch'/);
+  assert.ok(!source.includes("80_000 - SHOP_WATCH_RESERVE - Number"),
+    "the reserve still requires most of the day's budget to be unused");
   assert.match(source, /No room under the reserve/);
   assert.match(source, /FROM etsy_api_usage_buckets/);
 });
