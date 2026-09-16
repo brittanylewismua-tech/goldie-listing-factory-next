@@ -95,7 +95,13 @@ export async function writeDesignIntelligence(
         payload_json, provider_cost)
      VALUES (?,?,?,?,?,?,?)
      ON CONFLICT(user_id, artwork_hash, schema_version, model_version, prompt_version)
-       DO UPDATE SET payload_json = excluded.payload_json`)
+       DO UPDATE SET payload_json = excluded.payload_json,
+         /* THE SECOND CHARGE USED TO VANISH HERE. When two requests raced for
+            one artwork, both paid the provider and the second write replaced
+            the first — silently keeping the first row's cost. The money was
+            spent either way; the record simply stopped mentioning it. Costs
+            accumulate, so the row says what this artwork actually cost. */
+         provider_cost = design_intelligence.provider_cost + excluded.provider_cost`)
     .bind(userId, artworkHash, EXTRACTION_SCHEMA_VERSION, DESIGN_MODEL_VERSION,
       DESIGN_PROMPT_VERSION, JSON.stringify(design), providerCost)
     .run();

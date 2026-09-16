@@ -87,7 +87,11 @@
 /* D1572 gives the print-on-demand listing fields one definition, after the
    dry run was found answering "i_did" while the delivery path forced
    "someone_else" — two payload builders that never had to agree. */
-export const BUILD_MARKER = "D1572";
+/* D1573 claims an artwork before paying to analyze it, so two requests for
+   one design cannot both be billed, and adds the second charge to the record
+   instead of discarding it. Also stops the dry run implying a cache can warm
+   up when nothing writes it. */
+export const BUILD_MARKER = "D1573";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

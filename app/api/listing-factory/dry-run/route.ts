@@ -292,9 +292,28 @@ async function run(request: Request, user: { userId: string; email: string }) {
       designIntelligenceCached: Boolean(held),
       familyCopyCacheTablePresent: Boolean(copyTable),
       genuinelyWarm: Boolean(held) && Boolean(copyTable),
+      /*
+        "YET" WAS DOING FALSE WORK HERE.
+
+        This first reported that the artwork "has no stored design
+        intelligence yet", which reads as a cache that has not filled up.
+        It is not. NOTHING IN THE APPLICATION CALLS `writeDesignIntelligence`
+        — the extraction layer and the family-copy generator are planned and
+        costed but not implemented, and the only readers are this dry run and
+        the health route. No amount of use warms this cache, so a warm plan
+        cannot be demonstrated on live data at all.
+
+        The saving this dry run proves is real and already banked: categories
+        come from a table rather than a model, which is what takes the cold
+        plan from fourteen paid calls to two. The further saving from warm
+        reuse is not yet available to measure.
+      */
+      writePathImplemented: false,
       because: held
         ? (copyTable ? "" : "there is no family-copy cache table yet")
-        : "this artwork has no stored design intelligence yet",
+        : "nothing in the application writes design intelligence, so this "
+          + "cache cannot warm up through use; the extraction layer is "
+          + "planned and costed but not implemented",
     },
     plan: {
       mode: warm ? "warm" : "cold",

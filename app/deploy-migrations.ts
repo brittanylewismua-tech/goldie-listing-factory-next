@@ -37,6 +37,7 @@ import { ensureProvenanceTables } from "@/app/artwork-provenance";
 import { ensureCaptureQueue } from "@/app/artwork-capture-queue";
 import { ensureMockupAnalysisTable } from "@/app/mockup-analysis-cache";
 import { ensureDesignIntelligenceTable } from "@/app/design-intelligence";
+import { ensureDesignClaimTable } from "@/app/design-claim";
 import { ensureMarketTables } from "@/app/market-store";
 import { ensureCorrelationTables } from "@/app/correlation-worker";
 import { ensureObservationTables } from "@/app/market-observation";
@@ -84,6 +85,9 @@ export const MIGRATIONS: Step[] = [
   { name: "artwork_capture_jobs", run: ensureCaptureQueue },
   { name: "mockup_analysis_cache", run: ensureMockupAnalysisTable },
   { name: "design_intelligence", run: ensureDesignIntelligenceTable },
+  /* The claim that stops two requests paying twice for one artwork. It must
+     exist before the extraction layer is connected, not on first use. */
+  { name: "design_intelligence_claims", run: ensureDesignClaimTable },
 
   /* Market detector, then the things that read it. */
   { name: "market_store", run: ensureMarketTables },
