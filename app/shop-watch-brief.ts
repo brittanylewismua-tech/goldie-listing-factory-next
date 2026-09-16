@@ -53,10 +53,28 @@ export async function briefForShop(
   const day = today(now);
 
   if (!rebuild) {
+    /*
+      A SAME-DAY BRIEF IS REUSED ONLY WHILE IT IS STILL THE NEWEST THING WE KNOW.
+
+      The brief is built once a morning, which is right — a member does not need
+      hourly updates. But it was reused for the rest of the day even after the
+      evidence beneath it was refreshed, so a member looking at a shop Goldie
+      had just re-read still saw "Last checked 35 hours ago". A cached answer
+      that is older than the data it summarises is simply out of date.
+    */
     const held = await db.prepare(
-      `SELECT payload_json FROM shop_watch_briefs WHERE shop_id = ? AND brief_day = ?`)
-      .bind(shopId, day).first<{ payload_json: string }>();
-    if (held) {
+      `SELECT payload_json, built_at AS builtAt FROM shop_watch_briefs
+        WHERE shop_id = ? AND brief_day = ?`)
+      .bind(shopId, day).first<{ payload_json: string; builtAt: string }>();
+    const observed = await db.prepare(
+      `SELECT MAX(observed_at) AS at FROM shop_observations WHERE shop_id = ?`)
+      .bind(shopId).first<{ at: string }>().catch(() => null);
+    const briefAt = Date.parse(String(held?.builtAt ?? "").replace(" ", "T") + "Z");
+    const evidenceAt = Date.parse(String(observed?.at ?? "").replace(" ", "T") + "Z");
+    const outOfDate = Number.isFinite(briefAt) && Number.isFinite(evidenceAt)
+      && evidenceAt > briefAt;
+
+    if (held && !outOfDate) {
       try { return { ...JSON.parse(held.payload_json), regenerated: false }; }
       catch { /* rebuilt below */ }
     }

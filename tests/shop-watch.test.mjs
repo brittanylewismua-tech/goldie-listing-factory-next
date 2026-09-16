@@ -161,3 +161,24 @@ test("an index on a new column is created after the ALTER, not inside the batch"
   assert.ok(alterAt > 0 && indexAt > alterAt, "the index must come after the ALTER");
   assert.match(source, /Only now can an index name that column/);
 });
+
+test("a cached brief is not reused once its evidence is newer", () => {
+  /* Measured: the observation cadence was repaired and 15 shops were re-read,
+     and the member's brief still said "Last checked 35 hours ago" because a
+     same-day brief was reused regardless of the data beneath it. */
+  const brief = readFileSync(
+    new URL("../app/shop-watch-brief.ts", import.meta.url), "utf8");
+  assert.match(brief, /A SAME-DAY BRIEF IS REUSED ONLY WHILE IT IS STILL THE NEWEST THING WE KNOW/);
+  assert.match(brief, /MAX\(observed_at\) AS at FROM shop_observations WHERE shop_id = \?/);
+  assert.match(brief, /const outOfDate =/);
+  assert.match(brief, /if \(held && !outOfDate\)/);
+});
+
+test("Shop Watch's own spend is what its allowance caps", () => {
+  const source = readFileSync(new URL("../app/shop-watch.ts", import.meta.url), "utf8");
+  assert.match(source, /THE FIRST VERSION OF THIS STOPPED IT PERMANENTLY/);
+  assert.match(source, /SHOP_WATCH_DAILY_ALLOWANCE = 2_000/);
+  assert.match(source, /SHOP_WATCH_FLOOR/);
+  /* And its calls carry their own label, or the allowance could never deplete. */
+  assert.match(source, /feature: "shop-watch" \| "qa" = "shop-watch"/);
+});
