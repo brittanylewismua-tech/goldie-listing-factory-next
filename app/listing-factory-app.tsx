@@ -56,6 +56,7 @@ import { GoldieCommandBar } from "./returning-command-center";
 import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
 import GoldieWordmark from "./goldie-wordmark";
+import { NAV } from "./factory-shell";
 import MobileGate from "./mobile-gate";
 import { productFamily, productOptionAxis } from "./product-type-utils";
 import { printifyMockupDetails, printifyMockupForColor, printifyVariantIdsForColor } from "./printify-color-mockup";
@@ -5531,12 +5532,27 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         </div>
         <div className="top-actions">
           <nav className="top-nav" aria-label="Listing Factory navigation">
-            <a href="/home" onClick={event=>guardNavigation(event,"/home")}>Home</a>
-            <a className="active" href="/listing-factory" onClick={event=>guardNavigation(event,"/listing-factory")}>New listing project</a>
-            <a href="/batches" onClick={event=>guardNavigation(event,"/batches")}>Batch History</a>
-            <a href="/keywords" target="_blank" rel="noopener noreferrer">Keyword Banks</a>
-            {/* D834 · Usage + Plan and Connections live in the account menu now,
-                with the account. The rail is the three places work happens. */}
+            {/*
+              D1575 · THIS LIST WAS WRITTEN OUT BY HAND AND THE TWO RAILS DREW APART.
+
+              The workflow keeps its own copy of the rail markup because its
+              sidebar is wired to workflow state — the unsaved-work navigation
+              guard in particular. The LINKS are not workflow state, and
+              copying them meant that when Market Watch, Shop Map, Design
+              Scanner and the Trademark Checker were added to the shell's rail,
+              the workflow's rail still showed four items: a member standing in
+              the Listing Factory, where she spends most of her time, could not
+              see most of the product.
+
+              One list, rendered twice. The guard stays here, where it belongs.
+            */}
+            {NAV.map(item => item.href === "/keywords"
+              /* Unsaved batch work: this one opens beside the workflow rather
+                 than navigating away from it. */
+              ? <a key={item.key} href={item.href} target="_blank" rel="noopener noreferrer">{item.label}</a>
+              : <a key={item.key} href={item.href}
+                  className={item.href === "/listing-factory" ? "active" : undefined}
+                  onClick={event=>guardNavigation(event,item.href)}>{item.label}</a>)}
           </nav>
           {/* THE HOT LIST BUTTON IS GONE FROM HERE ON PURPOSE.
 

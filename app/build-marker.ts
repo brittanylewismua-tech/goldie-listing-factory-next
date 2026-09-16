@@ -99,7 +99,10 @@
    Listing Factory, none of the factory's own batch controls, and no desktop
    gate on the features built for a phone. The rail's hand-maintained height
    budget is replaced by a pinned footer. */
-export const BUILD_MARKER = "D1575";
+/* D1576 makes the workflow's rail render the same navigation list as every
+   other page, after the two rails drew apart for a third time and the Listing
+   Factory showed four of Goldie's eight destinations. */
+export const BUILD_MARKER = "D1576";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

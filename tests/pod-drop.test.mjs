@@ -304,17 +304,29 @@ test("a wrong drop is not stuck until tomorrow", () => {
 });
 
 test("the two rails cannot disagree about what is on them", () => {
-  /* The workflow page renders its own inline copy of the rail instead of
-     mounting FactoryShell, so every rail change has to be made twice. It has
-     been missed twice already: once when a control added to the shared rail
-     never appeared here, and once when the Hot List button survived here for a
-     deploy after being removed from the shared one. */
+  /*
+    The workflow page renders its own inline copy of the rail instead of
+    mounting FactoryShell, so every rail change had to be made twice. It was
+    missed three times: a control added to the shared rail never appeared
+    here; the Hot List button survived here for a deploy after being removed
+    from the shared one; and when Goldie's four other top-level features were
+    added to the shared rail, the workflow rail still showed four links.
+
+    Checking that both files spell the same labels is what allowed all three:
+    it can only catch a disagreement somebody already thought to list. The
+    workflow renders the shared NAV now, so the rails cannot hold different
+    links at all, and that is what is asserted.
+  */
   const shell = read("factory-shell.tsx");
   const app = read("listing-factory-app.tsx");
-  for (const label of ["Home", "New listing project", "Batch History", "Keyword Banks"]) {
+  assert.match(shell, /export const NAV/, "the rail's links must be exported to be shared");
+  assert.match(app, /import \{ NAV \} from "\.\/factory-shell"/,
+    "the workflow rail must render the shared list, not a copy of it");
+  assert.match(app, /NAV\.map\(item =>/, "the workflow rail must render every shared link");
+  /* Every top-level feature, in the one list both rails draw from. */
+  for (const label of ["Home", "New listing project", "Batch History", "Keyword Banks",
+    "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker"])
     assert.ok(shell.includes(`label: "${label}"`), `${label} missing from the shared rail`);
-    assert.ok(app.includes(`>${label}</a>`), `${label} missing from the workflow rail`);
-  }
   /* And neither may carry a way into the Hot List: it is not part of making a
      listing, and it is reached from Home with the other tools. */
   for (const [name, source] of [["shared rail", shell], ["workflow rail", app]]) {

@@ -1207,10 +1207,14 @@ test("D818: one component renders the interior sidebar, and it matches the workf
      so. Both surfaces still have to carry every destination — that is what
      this guards, and it is why the workflow's own inline rail is checked
      alongside the shared shell. */
-  for (const label of ["Home", "New listing project", "Batch History", "Keyword Banks"]) {
+  /* D1575 · the workflow renders the shared NAV rather than a hand-written
+     copy, so "on both surfaces" is structural instead of a list of labels
+     somebody has to remember to extend. */
+  for (const label of ["Home", "New listing project", "Batch History", "Keyword Banks",
+    "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker"])
     assert.ok(shell.includes(`label: "${label}"`), `${label} is on the interior rail`);
-    assert.ok(app.includes(`>${label}</a>`), `${label} is on the workflow rail`);
-  }
+  assert.match(app, /import \{ NAV \} from "\.\/factory-shell"/,
+    "the workflow rail must draw from the same list");
   for (const source of [shell, app]) {
     const menu = source.slice(source.indexOf("factory-account-menu"));
     assert.match(menu, /role="menuitem"[^>]*href="\/usage"/, "Usage + Plan is in the account menu");

@@ -27,7 +27,7 @@ import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
-type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "usage"
+export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "usage"
   | "connections" | "market-watch" | "shop-map" | "design-scanner";
 
 /* D834 · Usage + Plan and Connections moved into the account menu, where the
@@ -55,7 +55,7 @@ type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywor
   to anything. A member who opened Market Watch could reach the rest of Goldie
   only with the browser's back button.
 */
-const NAV: { key: NavKey; label: string; href: string }[] = [
+export const NAV: { key: NavKey; label: string; href: string }[] = [
   { key: "home", label: "Home", href: "/home" },
   { key: "factory", label: "New listing project", href: "/listing-factory" },
   { key: "market-watch", label: "Market Watch", href: "/market-watch" },
