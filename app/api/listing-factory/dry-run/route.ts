@@ -173,14 +173,33 @@ async function run(request: Request, user: { userId: string; email: string }) {
         payloadValid: false,
       };
 
-    /* One allowed value per required property, from the table. */
+    /*
+      TWO DIFFERENT KINDS OF "REQUIRED FIELD".
+
+      `Who made it`, `What is it` and `When was it made` are Etsy LISTING
+      fields — they are `who_made`, `is_supply` and `when_made` on the payload
+      itself. `Sleeve length`, `Neckline`, `Garment fit`, `Material` and the
+      rest are taxonomy PROPERTY VALUES. A first version of this checked both
+      against `allowedValues` and reported every blueprint invalid for missing
+      fields the payload already carries.
+
+      The facts table holds the real per-family attribute values, so those are
+      used rather than the first allowed value.
+    */
+    const LISTING_FIELDS: Record<string, string> = {
+      "Who made it": "who_made", "What is it": "is_supply",
+      "When was it made": "when_made",
+    };
     const values: Record<string, string> = {};
     for (const property of classification.requiredProperties) {
+      if (LISTING_FIELDS[property]) continue;
+      const fromFacts = (facts.mapped ? facts.attributes : {})[property];
       const allowed = classification.allowedValues[property];
-      if (allowed?.length) values[property] = allowed[0];
+      if (fromFacts) values[property] = fromFacts;
+      else if (allowed?.length) values[property] = allowed[0];
     }
     const missing = classification.requiredProperties
-      .filter(property => !values[property]);
+      .filter(property => !LISTING_FIELDS[property] && !values[property]);
     /* The leak that turns a mug into apparel. */
     const apparelLeak = !["tee", "hoodie", "crewneck", "tank", "longSleeve"].includes(family)
       ? APPAREL_ONLY.filter(property => classification.allowedValues[property])
@@ -212,6 +231,11 @@ async function run(request: Request, user: { userId: string; email: string }) {
     if (payload.tags.some(tag => tag.length > 20)) problems.push("a tag over 20 characters");
     if (!payload.description) problems.push("no description");
     if (missing.length) problems.push(`no value for ${missing.join(", ")}`);
+    /* The listing fields the payload carries directly. */
+    for (const [property, field] of Object.entries(LISTING_FIELDS))
+      if (classification.requiredProperties.includes(property)
+        && (payload as Record<string, unknown>)[field] === undefined)
+        problems.push(`payload is missing ${field} for ${property}`);
     if (apparelLeak.length) problems.push(`apparel property on ${family}: ${apparelLeak.join(", ")}`);
 
     return {
