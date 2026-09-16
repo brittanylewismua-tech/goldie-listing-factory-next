@@ -71,10 +71,34 @@ test("shows a trial subscriber the trial end date instead of the monthly reset d
   assert.match(usage, /`Trial ends \$\{new Date\(data\.billing\.subscription\.currentPeriodEnd\*1000\)/);
 });
 
+/*
+  ONE WORKER PER FILE, NOT ONE PER RENDER.
+
+  The cache-buster used `Date.now()`, so every call to `render()` evaluated a
+  fresh copy of the entire built worker bundle — four full initialisations in
+  this file. Locally that is slow; in CI, under memory pressure alongside three
+  thousand other tests, it was intermittently fatal: the suite failed twice with
+  2,990/1 and never once reproduced across eight local runs, blocking two
+  deploys until an empty retry commit cleared it.
+
+  The buster exists to avoid sharing module state with OTHER test files in the
+  same process. A single constant per file achieves that; re-evaluating per call
+  achieves nothing except the flake.
+*/
+const WORKER_KEY = `${process.pid}-${Math.random().toString(36).slice(2)}`;
+let workerPromise;
+
+function loadWorker() {
+  if (!workerPromise) {
+    const workerUrl = new URL("../dist/server/index.js", import.meta.url);
+    workerUrl.searchParams.set("test", WORKER_KEY);
+    workerPromise = import(workerUrl.href).then(module => module.default);
+  }
+  return workerPromise;
+}
+
 async function render(path = "/") {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
+  const worker = await loadWorker();
   return worker.fetch(new Request(`http://localhost${path}`, { headers: { accept: "text/html" } }), {
     ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
   }, { waitUntil() {}, passThroughOnException() {} });
