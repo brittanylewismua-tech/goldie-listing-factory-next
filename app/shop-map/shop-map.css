@@ -50,3 +50,17 @@
 .shop-map-move button{min-height:44px;padding:10px 16px;border-radius:10px;border:1px solid #a33a48;
   background:#a33a48;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .shop-map-move button:disabled{opacity:.5}
+
+/* The way out of "profit unavailable". A member told there is a problem and
+   given no action is a member who assumes the product is broken. */
+.shop-map-fix {
+  display: inline-block;
+  margin-top: 14px;
+  min-height: 44px;
+  line-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid currentColor;
+  text-decoration: none;
+  font-size: 0.92rem;
+}

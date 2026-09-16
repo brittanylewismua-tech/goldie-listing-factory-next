@@ -14,6 +14,7 @@ type ShopMap = {
   month?: string;
   thisMonth?: { revenueMinor: number; etsyFeesMinor: number; productionCostMinor: number;
     headline: string; profitMinor: number | null; accuracy: string; orders: number;
+    coverage?: { verified: number; estimated: number; unavailable: number };
     coverage?: { verified: number; estimated: number; unavailable: number } };
   standout?: { hasStandout: boolean; headline: string; nextStep: string };
   whereToFocus?: Focus[];
@@ -125,14 +126,39 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         : <section className="shop-map-card shop-map-money">
             <h2>This month</h2>
             <p className="shop-map-headline-label">{month?.headline}</p>
-            <p className="shop-map-figure">{money(month?.profitMinor)}</p>
+            {/* The figure line is omitted entirely when there is no profit to
+                show. It used to render a bare em dash under "Profit
+                unavailable", which reads as a broken value rather than an
+                absent one. */}
+            {month?.profitMinor !== null && month?.profitMinor !== undefined && (
+              <p className="shop-map-figure">{money(month.profitMinor)}</p>
+            )}
             <p className="shop-map-accuracy">{month?.accuracy}</p>
             <dl className="shop-map-rows">
               <div><dt>Revenue</dt><dd>{money(month?.revenueMinor)}</dd></div>
               <div><dt>Etsy fees</dt><dd>{money(month?.etsyFeesMinor)}</dd></div>
-              <div><dt>Production</dt><dd>{money(month ? -month.productionCostMinor : 0)}</dd></div>
+              <div>
+                <dt>Production</dt>
+                {/*
+                  A COST THAT IS UNKNOWN IS NOT ZERO.
+
+                  This rendered "$0.00" directly beneath "Production costs
+                  missing for 1 of 1 orders" — two lines of the same card
+                  contradicting each other, and the zero is the one a member
+                  would believe. It now says what is true.
+                */}
+                <dd>{month?.coverage?.unavailable
+                  ? "Not available"
+                  : money(month ? -month.productionCostMinor : 0)}</dd>
+              </div>
               <div><dt>Orders</dt><dd>{month?.orders ?? 0}</dd></div>
             </dl>
+            {month?.coverage?.unavailable ? (
+              /* Told there is a problem, and given the way to fix it. */
+              <a className="shop-map-fix" href="/shop-map/costs">
+                Add the missing production cost
+              </a>
+            ) : null}
           </section>}
 
       {/* 2 · One sentence, or the reason there isn't one. */}

@@ -26,7 +26,10 @@ test("one headline number, never two competing", () => {
   const figures = client.match(/className="shop-map-figure"/g) ?? [];
   assert.equal(figures.length, 1, "more than one headline figure is rendered");
   assert.match(client, /\{month\?\.headline\}/);
-  assert.match(client, /\{money\(month\?\.profitMinor\)\}/);
+  /* And the slot is omitted entirely when there is no profit to put in it,
+     rather than rendering a bare dash under "Profit unavailable". */
+  assert.match(client, /\{money\(month\.profitMinor\)\}/);
+  assert.match(client, /month\?\.profitMinor !== null && month\?\.profitMinor !== undefined/);
 });
 
 test("the accuracy line sits with the number", () => {
@@ -199,4 +202,17 @@ test("unclassified is a card of its own, not a footnote", () => {
 test("coverage is shown beside the map", () => {
   assert.match(client, /% of active listings organized/);
   assert.match(client, /shown\.coverage/);
+});
+
+test("an unknown production cost is never rendered as zero", () => {
+  /* It rendered "$0.00" directly beneath "Production costs missing for 1 of 1
+     orders" — two lines of one card contradicting each other, and the zero is
+     the one a member believes. */
+  assert.match(client, /A COST THAT IS UNKNOWN IS NOT ZERO/);
+  assert.match(client, /month\?\.coverage\?\.unavailable\s*\n?\s*\?\s*"Not available"/);
+});
+
+test("a member told profit is unavailable is given the way to fix it", () => {
+  assert.match(client, /href="\/shop-map\/costs"/);
+  assert.match(client, /Add the missing production cost/);
 });

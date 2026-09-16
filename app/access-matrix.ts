@@ -121,6 +121,7 @@ export const ACCESS: Record<string, Rule> = {
 
   /* ---------------------------------------------------------------- Shop Map */
   "/shop-map": { kind: "feature", feature: "shopMap" },
+  "/shop-map/costs": { kind: "feature", feature: "shopMap" },
   "/api/shop-map/map": { kind: "feature", feature: "shopMap" },
   "/api/shop-map/listings": { kind: "feature", feature: "shopMap" },
   "/api/shop-map/correct": { kind: "feature", feature: "shopMap" },

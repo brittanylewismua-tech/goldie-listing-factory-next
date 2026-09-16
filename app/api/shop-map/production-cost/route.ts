@@ -198,3 +198,101 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
     reconciliationWindow: window,
   });
 });
+
+
+/**
+ * RECORD A CORRECTION.
+ *
+ * Written as an ADJUSTMENT, never over the Printify or Etsy evidence. The
+ * original rows stay exactly as ingested, so a correction can be reviewed,
+ * reversed, or recomputed under a different rule later.
+ *
+ * The basis is decided here and is permanent: a figure the member typed is
+ * `manually-confirmed` and a linked Printify order is `printify-verified`
+ * because it IS an exact record. Nothing promotes an estimate.
+ */
+export const POST = withErrorLog("shop-map-production-cost-save", async (request: Request) => {
+  const access = await requireFeatureApi("shopMap");
+  if (!access.ok) return access.response;
+  const user = access.user;
+
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const body = await request.json().catch(() => null) as
+    { receiptId?: number; kind?: string; amount?: string; currency?: string } | null;
+  const receiptId = Number(body?.receiptId ?? 0);
+  if (!receiptId) return NextResponse.json({ error: "Which order?" }, { status: 400 });
+
+  const receipt = await db.prepare(
+    `SELECT shop_id AS shopId, currency, source_created_at AS createdAt
+       FROM finance_receipts WHERE user_id = ? AND receipt_id = ?`)
+    .bind(user.userId, receiptId)
+    .first<{ shopId: number; currency: string; createdAt: number }>().catch(() => null);
+  if (!receipt) return NextResponse.json({ error: "That order was not found." }, { status: 404 });
+
+  const month = new Date(Number(receipt.createdAt) * 1000).toISOString().slice(0, 7);
+  const now = Math.floor(Date.now() / 1000);
+  const id = crypto.randomUUID();
+
+  if (body?.kind === "manual") {
+    const amount = Number(String(body.amount ?? "").replace(/[^0-9.]/g, ""));
+    if (!Number.isFinite(amount) || amount <= 0)
+      return NextResponse.json({ error: "Enter the amount as a number." }, { status: 400 });
+    const currency = String(body.currency ?? "").toUpperCase().slice(0, 3) || "USD";
+    /* Currencies are never mixed inside a month. */
+    if (receipt.currency && currency !== receipt.currency)
+      return NextResponse.json({
+        error: `That order was paid in ${receipt.currency}. Enter the cost in `
+          + `${receipt.currency} so the month adds up.` }, { status: 400 });
+
+    await db.prepare(
+      `INSERT INTO finance_adjustments
+         (id, user_id, shop_id, month, receipt_id, printify_order_id, kind,
+          amount_minor, currency, estimated, reason)
+       VALUES (?,?,?,?,?,'', 'manual-production-cost', ?,?,0,?)`)
+      .bind(id, user.userId, receipt.shopId, month, receiptId,
+        Math.round(amount * 100), currency,
+        "entered by the member because no Printify order matched")
+      .run();
+    return NextResponse.json({ ok: true, basis: "manually-confirmed", month, id });
+  }
+
+  if (body?.kind === "link") {
+    /* Re-derive the candidate server-side. A browser must never choose which
+       Printify order a receipt belongs to. */
+    const loose = await db.prepare(
+      `SELECT printify_order_id AS id, cost_minor AS costMinor,
+              shipping_minor AS shippingMinor, currency,
+              COALESCE(fulfilled_at, ingested_at) AS createdAt
+         FROM finance_production
+        WHERE user_id = ? AND (receipt_id IS NULL OR receipt_id = 0)`)
+      .bind(user.userId)
+      .all<{ id: string; costMinor: number; shippingMinor: number;
+        currency: string; createdAt: number }>()
+      .catch(() => ({ results: [] as Array<{ id: string; costMinor: number;
+        shippingMinor: number; currency: string; createdAt: number }> }));
+    const candidates = (loose.results ?? []).filter(order => plausibleLink({
+      receiptAt: Number(receipt.createdAt) || 0, orderAt: Number(order.createdAt) || 0,
+      receiptCurrency: receipt.currency, orderCurrency: order.currency,
+    }).ok);
+    if (candidates.length !== 1)
+      return NextResponse.json({
+        error: "There is no single Printify order Goldie can be sure about for "
+          + "this sale." }, { status: 409 });
+
+    await db.prepare(
+      `UPDATE finance_production SET receipt_id = ?
+        WHERE user_id = ? AND printify_order_id = ?`)
+      .bind(receiptId, user.userId, candidates[0].id).run();
+    await db.prepare(
+      `INSERT INTO finance_adjustments
+         (id, user_id, shop_id, month, receipt_id, printify_order_id, kind,
+          amount_minor, currency, estimated, reason)
+       VALUES (?,?,?,?,?,?, 'linked-printify-order', 0, ?, 0, ?)`)
+      .bind(id, user.userId, receipt.shopId, month, receiptId, candidates[0].id,
+        receipt.currency, "linked by the member to the one plausible Printify order")
+      .run();
+    return NextResponse.json({ ok: true, basis: "printify-verified", month, id });
+  }
+
+  return NextResponse.json({ error: "Unknown correction." }, { status: 400 });
+});
