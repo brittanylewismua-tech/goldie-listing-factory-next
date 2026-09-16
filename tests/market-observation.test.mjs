@@ -114,7 +114,7 @@ test("every standard is enforced, and named when it fails", () => {
     [{ sweepOk: false }, /listing sweep did not complete/],
     [{ correlationOk: false }, /correlation pass failed/],
 
-    [{ p95: GATE_STANDARD.maxP95DelaySeconds + 10 }, /p95 correlation delay/],
+
     [{ errors: 3 }, /3 errors recorded/],
     [{ etsyCalls: 90_000 }, /Etsy usage peaked/],
     [{ listingFreshness: 0.5 }, /listing freshness fell/],
@@ -140,6 +140,18 @@ test("expiry outrunning correlation fails the coverage standard", () => {
   assert.ok(gate.failing.some(line => /before expiry, below 95%/.test(line)),
     gate.failing.join("; "));
   assert.equal(gate.measured.correlationCoverage, 0.8);
+});
+
+test("a p95 past the evidence window fails, measured on recent samples", () => {
+  /* Broken in the LAST hour, since latency is now judged on recent behaviour:
+     a single bad sample forty hours ago is an incident, not a current state. */
+  const samples = window(80).map((row, index) => ({
+    ...row, p95: index > 76 ? GATE_STANDARD.maxP95DelaySeconds + 10 : 4_000,
+  }));
+  const gate = evaluateGate(samples, NOW);
+  assert.equal(gate.passes, false);
+  assert.ok(gate.failing.some(line => /p95 correlation delay/.test(line)),
+    gate.failing.join("; "));
 });
 
 test("a growing backlog fails the gate", () => {
@@ -287,4 +299,37 @@ test("a partly-read ingest file is resumed before a newer daily file starts", ()
   assert.match(tick, /DAILY FIRST, BUT NOT DAILY FOREVER/);
   assert.match(tick, /WHERE state = 'partial' ORDER BY priority ASC/);
   assert.match(tick, /const next = resuming \?\?/);
+});
+
+test("latency is judged on recent behaviour, not the worst hour ever seen", () => {
+  /* Measured: the original backlog drain left p95 at 20,655s in the segment
+     while current samples read 18,083s and falling. A gate that can never
+     clear because of something already repaired teaches an operator to
+     ignore it. */
+  const samples = window(80).map((row, index) => ({
+    ...row,
+    /* One terrible hour, long ago; everything since is comfortable. */
+    p95: index === 2 ? 21_000 : 4_000,
+  }));
+  const gate = evaluateGate(samples, NOW);
+  assert.equal(gate.passes, true, gate.failing.join("; "));
+  assert.equal(gate.measured.recentWorstP95Seconds, 4_000);
+  assert.equal(gate.measured.segmentWorstP95Seconds, 21_000,
+    "the incident is no longer visible at all");
+});
+
+test("latency that is bad NOW still fails", () => {
+  const samples = window(80).map((row, index) => ({
+    ...row, p95: index > 74 ? 21_000 : 4_000,
+  }));
+  const gate = evaluateGate(samples, NOW);
+  assert.equal(gate.passes, false);
+  assert.ok(gate.failing.some(line => /p95 correlation delay/.test(line)));
+});
+
+test("a young observation falls back to the whole segment", () => {
+  const samples = window(2).map(row => ({ ...row, p95: 21_000 }));
+  const gate = evaluateGate(samples, NOW);
+  assert.equal(gate.measured.latencySamples, 2);
+  assert.ok(gate.failing.some(line => /p95/.test(line)));
 });

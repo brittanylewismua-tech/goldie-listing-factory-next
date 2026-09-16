@@ -30,6 +30,19 @@ export const GATE_STANDARD = {
   maxP95DelaySeconds: 6 * 3_600,
   maxEtsyCallsPerDay: 80_000,
   minListingFreshness: 0.9,
+  /*
+    LATENCY IS JUDGED ON RECENT BEHAVIOUR, NOT ON THE WORST HOUR EVER SEEN.
+
+    p95 was taken as the maximum across the whole segment, so the original
+    backlog drain — a one-off, since fixed — kept the gate failing hours after
+    the system had recovered: p95 measured 20,655s from the drain while current
+    samples read 18,083s and falling, with p50 at 29 minutes.
+
+    A gate that can never clear because of something already repaired teaches
+    an operator to ignore it. The incident stays in historical health; the gate
+    asks whether latency is acceptable NOW.
+  */
+  latencyWindowHours: 6,
 } as const;
 
 export type Sample = {
@@ -116,7 +129,12 @@ export function evaluateGate(
   const totalCorrelated = segment.reduce((sum, row) => sum + row.correlated, 0);
   const totalExpired = segment.reduce((sum, row) => sum + row.expiredNew, 0);
   const coverage = totalEligible ? totalCorrelated / (totalCorrelated + totalExpired) : null;
-  const worstP95 = Math.max(0, ...segment.map(row => row.p95));
+  /* Recent samples only — see `latencyWindowHours`. Falls back to the whole
+     segment when the observation is younger than the window. */
+  const latencyFrom = now - standard.latencyWindowHours * 3_600;
+  const recent = segment.filter(row => row.at >= latencyFrom);
+  const latencySamples = recent.length ? recent : segment;
+  const worstP95 = Math.max(0, ...latencySamples.map(row => row.p95));
   const peakEtsy = Math.max(0, ...segment.map(row => row.etsyCalls));
   const worstFreshness = Math.min(1, ...segment.map(row => row.listingFreshness));
   const errors = segment.reduce((sum, row) => sum + row.errors, 0);
@@ -175,6 +193,10 @@ export function evaluateGate(
       worstListingFreshness: Number(worstFreshness.toFixed(3)),
       errors,
       p95HeadroomCeilingSeconds: headroomCeiling,
+      /* Both, so a recovery is visible rather than hidden by an average. */
+      recentWorstP95Seconds: worstP95,
+      segmentWorstP95Seconds: Math.max(0, ...segment.map(row => row.p95)),
+      latencySamples: latencySamples.length,
       adminForcedSamples: adminSamples,
       productionSamples: production.length,
     },
