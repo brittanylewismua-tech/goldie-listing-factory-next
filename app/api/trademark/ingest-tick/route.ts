@@ -131,12 +131,40 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
         WHERE state = 'partial' ORDER BY priority ASC, name DESC LIMIT 1`)
     .first<{ name: string; product: string; url: string; done_records: number }>();
 
+  /*
+    RESUMING A PARTIAL FILE WAS NOT ENOUGH.
+
+    The first attempt at this only moved partial files to the front, then still
+    ordered waiting files by priority — so a daily file (priority 1) continued
+    to beat every historical chunk (priority 5), and a new daily file arrives
+    every day. Measured after that change: 26 files done, 88 still waiting, and
+    NO historical file completed between 2026-09-14 and 2026-09-16 while the
+    daily files kept completing. The diagnosis was right and the fix was not.
+
+    So the backfile now gets a guaranteed turn. Today's daily work still goes
+    first — the register must stay current — but once the newest daily file is
+    done, the tick spends itself on history instead of idling against a queue
+    it will never reach.
+  */
+  const dailyWaiting = await db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM tm_ingest_files
+        WHERE state = 'waiting' AND priority <= 2`)
+    .first<{ n: number }>();
+
+  const preferHistorical = Number(dailyWaiting?.n ?? 0) === 0;
+
   const next = resuming ?? await db
     .prepare(
-      `SELECT name, product, url, done_records FROM tm_ingest_files
-        WHERE state = 'waiting'
-        ORDER BY priority ASC, name DESC
-        LIMIT 1`,
+      preferHistorical
+        ? `SELECT name, product, url, done_records FROM tm_ingest_files
+            WHERE state = 'waiting'
+            ORDER BY priority DESC, name DESC
+            LIMIT 1`
+        : `SELECT name, product, url, done_records FROM tm_ingest_files
+            WHERE state = 'waiting'
+            ORDER BY priority ASC, name DESC
+            LIMIT 1`,
     )
     .first<{ name: string; product: string; url: string; done_records: number }>();
 

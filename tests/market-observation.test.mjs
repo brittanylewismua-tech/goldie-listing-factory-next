@@ -333,3 +333,15 @@ test("a young observation falls back to the whole segment", () => {
   assert.equal(gate.measured.latencySamples, 2);
   assert.ok(gate.failing.some(line => /p95/.test(line)));
 });
+
+test("the backfile gets a turn once the daily queue is empty", () => {
+  /* Measured after the first attempt: 26 done, 88 waiting, and no historical
+     file completed across two days while daily files kept completing. */
+  const tick = readFileSync(new URL(
+    "../app/api/trademark/ingest-tick/route.ts", import.meta.url), "utf8");
+  assert.match(tick, /RESUMING A PARTIAL FILE WAS NOT ENOUGH/);
+  assert.match(tick, /const preferHistorical = Number\(dailyWaiting\?\.n \?\? 0\) === 0;/);
+  assert.match(tick, /ORDER BY priority DESC, name DESC/);
+  /* Daily still wins while any daily file is waiting. */
+  assert.match(tick, /WHERE state = 'waiting' AND priority <= 2/);
+});
