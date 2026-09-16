@@ -30,11 +30,22 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
   const month = (new URL(request.url).searchParams.get("month")
     ?? new Date().toISOString().slice(0, 7)).slice(0, 7);
 
-  /* This month's orders, with whatever production evidence exists. */
+  /*
+    THE COLUMNS THE FINANCE TABLES ACTUALLY HAVE.
+
+    Receipts carry `source_created_at` as an epoch integer and `grand_total_minor`,
+    not `created_at` and `revenue_minor`. A first draft of this used the names
+    that read well rather than the names that exist, D1 threw, and the member
+    would have seen a broken screen. There is now a test comparing every column
+    this route reads against the CREATE statements.
+  */
+  const monthStart = Math.floor(Date.parse(`${month}-01T00:00:00Z`) / 1000);
+  const monthEnd = Math.floor(Date.parse(
+    `${month}-01T00:00:00Z`) / 1000) + 32 * 86_400;
   const rows = await db.prepare(
-    `SELECT r.receipt_id AS receiptId, r.created_at AS createdAt,
-            r.revenue_minor AS revenueMinor, r.currency AS currency,
-            r.shop_id AS shopId,
+    `SELECT r.receipt_id AS receiptId, r.source_created_at AS createdAt,
+            r.grand_total_minor AS revenueMinor, r.currency AS currency,
+            r.shop_id AS shopId, r.canceled AS receiptCanceled,
             p.printify_order_id AS printifyOrderId,
             p.cost_minor AS costMinor, p.shipping_minor AS shippingMinor,
             p.status AS printifyStatus, p.canceled AS canceled,
@@ -45,10 +56,11 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
          ON p.receipt_id = r.receipt_id AND p.user_id = r.user_id
        LEFT JOIN finance_adjustments a
          ON a.receipt_id = r.receipt_id AND a.user_id = r.user_id
-      WHERE r.user_id = ? AND substr(r.created_at, 1, 7) = ?`)
-    .bind(user.userId, month)
-    .all<{ receiptId: number; createdAt: string; revenueMinor: number; currency: string;
-      shopId: number; printifyOrderId: string | null; costMinor: number | null;
+      WHERE r.user_id = ? AND r.source_created_at >= ? AND r.source_created_at < ?`)
+    .bind(user.userId, monthStart, monthEnd)
+    .all<{ receiptId: number; createdAt: number; revenueMinor: number; currency: string;
+      shopId: number; receiptCanceled: number | null;
+      printifyOrderId: string | null; costMinor: number | null;
       shippingMinor: number | null; printifyStatus: string | null; canceled: number | null;
       adjustmentMinor: number | null; adjustmentKind: string | null;
       adjustmentCurrency: string | null }>()
@@ -61,38 +73,44 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
      the only pool a link may be offered from. */
   const loose = await db.prepare(
     `SELECT printify_order_id AS id, cost_minor AS costMinor,
-            shipping_minor AS shippingMinor, currency, status, created_at AS createdAt
+            shipping_minor AS shippingMinor, currency, status,
+            source_created_at AS createdAt
        FROM finance_production
       WHERE user_id = ? AND (receipt_id IS NULL OR receipt_id = 0)`)
     .bind(user.userId)
     .all<{ id: string; costMinor: number; shippingMinor: number; currency: string;
-      status: string; createdAt: string }>()
+      status: string; createdAt: number }>()
     .catch(() => ({ results: [] as Array<{ id: string; costMinor: number;
-      shippingMinor: number; currency: string; status: string; createdAt: string }> }));
+      shippingMinor: number; currency: string; status: string; createdAt: number }> }));
 
   const rules = await db.prepare(
-    `SELECT family, base_cost_minor AS baseCostMinor FROM shop_map_cost_rules
-      WHERE user_id = ?`)
-    .bind(user.userId).all<{ family: string; baseCostMinor: number }>()
-    .catch(() => ({ results: [] as Array<{ family: string; baseCostMinor: number }> }));
+    `SELECT product_family AS family, cost_minor AS baseCostMinor,
+            shipping_minor AS shippingMinor, currency, confirmed
+       FROM shop_map_cost_rules WHERE user_id = ?`)
+    .bind(user.userId)
+    .all<{ family: string; baseCostMinor: number; shippingMinor: number;
+      currency: string; confirmed: number }>()
+    .catch(() => ({ results: [] as Array<{ family: string; baseCostMinor: number;
+      shippingMinor: number; currency: string; confirmed: number }> }));
   const hasFamilyRule = (rules.results ?? []).length > 0;
 
   /* How far Printify ingestion has actually read, so "outside the window" is a
      fact rather than a guess. */
   const window = await db.prepare(
-    `SELECT MIN(created_at) AS from_, MAX(created_at) AS to_ FROM finance_production
-      WHERE user_id = ?`)
-    .bind(user.userId).first<{ from_: string; to_: string }>().catch(() => null);
+    `SELECT MIN(source_created_at) AS from_, MAX(source_created_at) AS to_
+       FROM finance_production WHERE user_id = ?`)
+    .bind(user.userId).first<{ from_: number; to_: number }>().catch(() => null);
 
   const diagnose = (row: typeof rows.results[number]): UnmatchedReason => {
-    if (Number(row.canceled ?? 0) === 1) return "canceled";
+    if (Number(row.canceled ?? 0) === 1 || Number(row.receiptCanceled ?? 0) === 1)
+      return "canceled";
     if (!row.receiptId) return "receipt-id-missing";
     if (row.printifyOrderId && (row.costMinor === null || Number(row.costMinor) === 0))
       /* Printify has it and has not priced it yet. */
       return "printify-order-delayed";
     if (!row.printifyOrderId) {
-      const created = row.createdAt ?? "";
-      if (window?.to_ && created > String(window.to_))
+      const created = Number(row.createdAt) || 0;
+      if (window?.to_ && created > Number(window.to_))
         return "outside-reconciliation-window";
       if ((loose.results ?? []).length > 0) return "metadata-missing";
       return "absent-from-printify";
@@ -119,7 +137,7 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
       /* Safe for the seller: their own Etsy order number, nothing about who
          bought it. */
       receiptId: row.receiptId,
-      orderDate: row.createdAt,
+      orderDate: Number(row.createdAt) || 0,
       revenueMinor: Number(row.revenueMinor) || 0,
       currency: row.currency || "USD",
       costBasis: basis,
