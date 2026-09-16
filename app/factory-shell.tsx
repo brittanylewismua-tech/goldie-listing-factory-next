@@ -23,7 +23,8 @@
  * ==========================================================================*/
 import { useEffect, useState } from "react";
 import {readBatchHistory,preparedDaysFromHistory} from "./batch-history-read";
-import GoldieWordmark from "./goldie-wordmark";
+import ListingFactoryWordmark from "./goldie-wordmark";
+import { showsListingFactoryWordmark } from "./shell-identity";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
@@ -52,8 +53,8 @@ export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | 
   "collection of separately built internal tools" this rail exists to prevent.
 
   It was also a dead end: with no rail on those pages there was no link back
-  to anything. A member who opened Market Watch could reach the rest of Goldie
-  only with the browser's back button.
+  to anything. A member who opened Market Watch could reach the rest of the
+  product only with the browser's back button.
 */
 export const NAV: { key: NavKey; label: string; href: string }[] = [
   { key: "home", label: "Home", href: "/home" },
@@ -79,8 +80,10 @@ export const NAV: { key: NavKey; label: string; href: string }[] = [
   WHAT IS THE PRODUCT, AND WHAT IS THE LISTING FACTORY.
 
   The rail carries two different kinds of thing. The wordmark, the navigation,
-  the account menu and the footer belong to Goldie — every feature should wear
-  them, and that is the whole point of one shell. "Start a new batch", the
+  the account menu and the footer belong to the product as a whole — every
+  feature should wear them, and that is the whole point of one shell. The
+  wordmark does NOT: it is the Listing Factory's, and it appears only on the
+  Listing Factory's pages. "Start a new batch", the
   listings counter and the prepared-listings goal belong to the Listing
   Factory alone.
 
@@ -139,7 +142,17 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
         these pages rendered as a blank screen. */}
     {desktopOnly && <MobileGate />}
     <header className="topbar">
-      <div className="brand-lockup"><GoldieWordmark className="approved-brand" /></div>
+      {/*
+        NEUTRAL UNLESS THIS IS THE LISTING FACTORY.
+
+        The umbrella name has not been chosen, so the shared rail carries no
+        wordmark at all rather than a placeholder — a placeholder is how a
+        temporary name becomes the real one. The topbar already names the page,
+        so nothing is lost by the slot being empty.
+      */}
+      {showsListingFactoryWordmark(active) && (
+        <div className="brand-lockup"><ListingFactoryWordmark className="approved-brand" /></div>
+      )}
       <div className="top-actions">
         <nav className="top-nav" aria-label="Listing Factory navigation">
           {NAV.map(item => <a key={item.key} className={item.key === active ? "active" : undefined}
@@ -163,7 +176,8 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
           {goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span>}</a>}
         <small>&copy; 2026 Be A Wolf Biz</small>
         <p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>
-        <div className="approved-powered"><span>Powered by</span><b>Gold<span className="approved-footer-i">&#305;<i>&#10022;</i></span>e AI</b></div>
+        {/* "Powered by Goldıe AI" stood here. The shared footer names no
+            product until there is one to name. */}
       </div>
     </header>
 

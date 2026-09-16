@@ -77,7 +77,7 @@ test("a fully Printify month is the only one called simply verified", () => {
 test("currencies are never added together", () => {
   const mixed = currencyCheck([cost(), cost({ receiptId: 2, currency: "GBP" })]);
   assert.equal(mixed.ok, false);
-  assert.match(mixed.because, /will not add them together/);
+  assert.match(mixed.because, /will not be added\s+together/);
   assert.equal(currencyCheck([cost(), cost({ receiptId: 2 })]).ok, true);
 });
 

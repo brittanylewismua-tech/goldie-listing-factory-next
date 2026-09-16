@@ -25,8 +25,9 @@ export default function MobileGate() {
   return (
     <section className="mobile-gate" aria-label="Desktop required">
       <div className="mobile-brand">
-        <div className="approved-wm">Gold<span className="approved-i">&#305;<span>&#10022;</span></span>e</div>
-        <div className="approved-sub">Listing Factory</div>
+        {/* This gate belongs to the Listing Factory, so it says so — and says
+            nothing about an umbrella product that has no name yet. */}
+        <div className="approved-wm">Listing Factory</div>
       </div>
       <div className="mobile-card">
         <div className="mobile-command">&#8984;</div>
@@ -34,7 +35,7 @@ export default function MobileGate() {
         <p>The Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p>
         <div className="mobile-saved">&#10003; Your progress is saved automatically.</div>
       </div>
-      <div className="mobile-footer">Powered by Goldie AI &middot; &copy; 2026 Be A Wolf Biz</div>
+      <div className="mobile-footer">&copy; 2026 Be A Wolf Biz</div>
     </section>
   );
 }

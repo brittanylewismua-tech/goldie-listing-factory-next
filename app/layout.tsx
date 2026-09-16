@@ -18,33 +18,42 @@ import "./interface-v2.css";
 import ReliableNavigation from "./reliable-navigation";
 import MobileShell from "./mobile-shell";
 import "./mobile-shell.css";
+import { NEUTRAL_FALLBACK_TITLE } from "./shell-identity";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") || "localhost:3000";
   const origin = `${host.startsWith("localhost") ? "http" : "https"}://${host}`;
   /*
-    THE SUITE, NOT ONE OF ITS FOUR FEATURES.
+    NO PRODUCT NAME, BECAUSE THERE IS NOT ONE YET.
 
-    Every tab, bookmark and share card said "Goldie Listing Factory" while the
-    home page showed four products. The factory is one of them.
+    This said "Goldie Listing Factory", then "Goldie". The umbrella product
+    name has not been chosen, and a tab title is exactly the kind of place a
+    temporary stand-in quietly becomes permanent — so it says what the
+    software does rather than what it is called.
+
+    Individual pages set their own titles from their own feature names, which
+    is what a member actually sees almost all of the time; this is only the
+    fallback. Replace it, and NEUTRAL_FALLBACK_TITLE, when the name exists.
   */
-  const title = "Goldie";
+  const title = NEUTRAL_FALLBACK_TITLE;
   const description = "Etsy seller tools: bulk listing creation, market evidence, "
     + "your own shop's numbers, and a trademark check before you print.";
   return {
     metadataBase: new URL(origin),
     title,
     description,
-    icons: {
-      icon: "/goldie-g.png",
-      shortcut: "/goldie-g.png",
-      /* iOS ignores the manifest icons for a home-screen tile and uses this
-         one, composited onto an opaque ground. */
-      apple: "/apple-touch-icon.png",
-    },
+    /*
+      THE FAVICON WAS THE GOLDIE MARK.
+
+      A tab icon is branding in the place a member looks at most often, so the
+      custom icons are not referenced while the product has no identity. The
+      browser's own default is genuinely neutral in a way that any mark chosen
+      here would not be. The files are left in place, untouched, for whenever
+      there is a brand to point at them.
+    */
     manifest: "/manifest.webmanifest",
-    appleWebApp: { capable: true, title: "Goldie", statusBarStyle: "black-translucent" },
+    appleWebApp: { capable: true, title: NEUTRAL_FALLBACK_TITLE, statusBarStyle: "black-translucent" },
     openGraph: { title, description },
     twitter: { card: "summary", title, description },
   };

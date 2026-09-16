@@ -2,12 +2,17 @@ import Link from "next/link";
 import { accountSignInPath, getChatGPTUser } from "@/app/chatgpt-auth";
 import HomeStatus from "./home-status";
 
+/* The tab says what this page is. There is no product name to append, and
+   a placeholder in a tab title is how a stand-in becomes permanent. */
+export const metadata = { title: "Home" };
+
+
 /**
  * THE FRONT DOOR, FOR THE PRODUCT AS IT NOW IS.
  *
  * Four features, not a growing shelf of tools. The previous version listed Hot
  * List and a "Customer Service" tile marked coming soon — neither is part of
- * Goldie, and a permanent coming-soon tile is a promise nobody made.
+ * the product, and a permanent coming-soon tile is a promise nobody made.
  *
  * Status lives above the doors and only appears when it says something. A
  * member with nothing pending sees four doors and no numbers, which is the
@@ -68,9 +73,15 @@ export default async function HomePage() {
 
   return <main className="hub">
     <header className="hub-head">
-      {/* The suite mark. The Listing Factory lockup belongs inside the
-          factory, not at the top of a page offering four products. */}
-      <div className="hub-brand"><span className="suite-mark">Goldie</span></div>
+      {/*
+        NO MARK HERE.
+
+        This carried the suite name. The umbrella product has not been named
+        yet, and Home — the page that offers every feature — is the last place
+        a stand-in should sit, because whatever goes here reads as the name of
+        the whole thing. The greeting is the heading; the features name
+        themselves on their own tiles.
+      */}
       {/* No name. The only one available is the part of an email address
           before the @, and "Good to see you, shesawolfclothing" is worse than
           not trying. */}

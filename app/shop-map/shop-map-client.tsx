@@ -57,7 +57,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   useEffect(() => { void load(); }, []);
 
   /*
-    The browser knows where the member is; Goldie asks rather than assumes.
+    The browser knows where the member is; Shop Map asks rather than assumes.
     A timezone is stored for THIS member's THIS shop only, and only once they
     say yes - month boundaries move real money between months.
   */

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 /**
  * THE MEMBER'S WAY OUT OF "PROFIT UNAVAILABLE".
  *
- * One card per order Goldie could not price, each saying plainly why, and
+ * One card per order Shop Map could not price, each saying plainly why, and
  * offering only the corrections the evidence supports.
  *
  * WHAT THIS REFUSES TO DO. It does not guess a cost. It does not offer a
@@ -107,7 +107,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
       </button>
       <h1>Production costs</h1>
       <p className="lede">
-        Goldie works out your profit from what Printify charged you to make each
+        Shop Map works out your profit from what Printify charged you to make each
         order. Where it could not find that, it says so rather than guessing.
       </p>
 
@@ -188,7 +188,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
                     <>
                       <p className="confirm">
                         Save <strong>{amount} {currency}</strong> as what order
-                        #{order.receiptId} cost you to make? Goldie will label this
+                        #{order.receiptId} cost you to make? Shop Map will label this
                         as a figure you entered, not one it verified, and you can
                         change it later.
                       </p>

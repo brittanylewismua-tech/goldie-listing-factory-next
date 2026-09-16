@@ -170,7 +170,7 @@ test("candidate counts are shown as watching, never as momentum", () => {
     "../app/market-watch/market-watch-client.tsx", import.meta.url), "utf8");
   const block = client.slice(client.indexOf("view.gathering && listings.length"),
     client.indexOf("!view.gathering &&"));
-  assert.match(block, /Goldie is watching \$\{view\.candidates\.watching\} listings/);
+  assert.match(block, /Market Watch is watching \$\{view\.candidates\.watching\} listings/);
   for (const banned of ["moving", "momentum", "selling", "sold"])
     assert.ok(!block.toLowerCase().includes(banned),
       `candidates were described as "${banned}"`);

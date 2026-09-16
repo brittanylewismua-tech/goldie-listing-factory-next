@@ -17,7 +17,7 @@ import { usePathname } from "next/navigation";
 /*
   SCAN SITS IN THE MIDDLE, AND THAT IS THE POINT.
 
-  Uploading a design straight from the camera roll is the thing Goldie can do
+  Uploading a design straight from the camera roll is the thing this can do
   on a phone that it cannot do better anywhere else, so it takes the centre
   position — the easiest place on the bar to reach with a thumb. The Trademark
   Checker moves into More with a shortcut on Home: it is a thing people do
@@ -111,11 +111,11 @@ export default function MobileShell() {
         Your saved designs, batches and keyword banks are exactly where you left
         them, and they will be ready when you are back at your computer.
       </p>
-      <a href="/home">Back to Goldie</a>
+      <a href="/home">Back to Home</a>
     </aside>;
 
   return <>
-    <nav className="goldie-tabs" aria-label="Goldie">
+    <nav className="goldie-tabs" aria-label="Main">
       {TABS.map(tab => {
         const current = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
         return <a key={tab.href} href={tab.href} className={current ? "current" : ""}
@@ -126,12 +126,12 @@ export default function MobileShell() {
       })}
     </nav>
 
-    {!dismissed && installable && <aside className="goldie-install" role="dialog" aria-label="Add Goldie to your home screen">
+    {!dismissed && installable && <aside className="goldie-install" role="dialog" aria-label="Add to your home screen">
       <div>
-        <b>Keep Goldie on your home screen</b>
+        <b>Keep these tools on your home screen</b>
         <p>{installable === "ios"
-          ? "Tap the share button below, then Add to Home Screen. Goldie opens like an app, without the browser bars."
-          : "Install Goldie and it opens like an app, without the browser bars."}</p>
+          ? "Tap the share button below, then Add to Home Screen. It opens like an app, without the browser bars."
+          : "Install it and it opens like an app, without the browser bars."}</p>
       </div>
       <div className="goldie-install-actions">
         {installable === "prompt" && <button type="button" onClick={async () => {

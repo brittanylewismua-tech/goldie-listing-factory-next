@@ -3,6 +3,11 @@ import FactoryShell from "@/app/factory-shell";
 import MarketWatchClient from "./market-watch-client";
 import "./market-watch.css";
 
+/* The tab says what this page is. There is no product name to append, and
+   a placeholder in a tab title is how a stand-in becomes permanent. */
+export const metadata = { title: "Market Watch" };
+
+
 /*
   Market Watch is about everybody else's shop, never the member's own. It
   answers one question — what is actually moving out there — and then gets out

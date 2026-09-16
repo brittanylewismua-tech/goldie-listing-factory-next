@@ -157,9 +157,8 @@ html, body { background: var(--lf-paper); }
 
 /* D786 · The star over the Goldie "i" breathes: 3.2s, ease-in-out, forever.
    The prototype has it; production had the glyph and none of the motion. */
-.app-shell .approved-i{animation:3.2s ease-in-out infinite approved-star}
 @keyframes approved-star{50%{transform:translateX(-50%) scale(1.14);filter:drop-shadow(0 0 8px rgba(115,63,106,.45))}}
-@media (prefers-reduced-motion: reduce){.app-shell .approved-i{animation:none}}
+@media (prefers-reduced-motion: reduce){}
 
 /* work column — prototype .goldie-work */
 .app-shell .factory-work {
@@ -885,7 +884,7 @@ html, body { background: var(--lf-paper); }
    The Goldie wordmark keeps DM Serif Display - it is the logo, and the
    prototype's lockup is the same one. */
 .app-shell button,.app-shell input,.app-shell select,.app-shell textarea,.app-shell a,.app-shell strong,.app-shell small,.app-shell b,.app-shell em{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
-.app-shell .approved-wm,.app-shell .approved-i,.app-shell .approved-footer-i,.app-shell [class*="wordmark"]{font-family:"DM Serif Display",Georgia,serif}
+.app-shell .approved-wm,.app-shell .approved-footer-i,.app-shell [class*="wordmark"]{font-family:"DM Serif Display",Georgia,serif}
 
 /* D737 · Surfaces on the Connect screen that were still speaking the old
    language. Swept by listing every element on the built page carrying a
@@ -1244,8 +1243,8 @@ html, body { background: var(--lf-paper); }
    list never ends. Everything inside the shell inherits the shell's family;
    the wordmark and its star are the only things that carry their own, because
    they are the logo. */
-.app-shell,.app-shell *:not([class*="wordmark"]):not(.approved-wm):not(.approved-i):not(.approved-footer-i):not(.approved-wm *){font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
-.app-shell [class*="wordmark"],.app-shell .approved-wm,.app-shell .approved-i,.app-shell .approved-footer-i{font-family:"DM Serif Display",Georgia,serif}
+.app-shell{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+.app-shell [class*="wordmark"],.app-shell .approved-wm,.app-shell .approved-footer-i{font-family:"DM Serif Display",Georgia,serif}
 
 /* D773 · Full-sweep findings, run on every step with every panel open.
 
@@ -4557,8 +4556,6 @@ html, body { background: var(--lf-paper); }
 .hub > *{position:relative;z-index:1}
 
 .hub-head{max-width:1120px;margin:0 auto 40px}
-.hub-brand{margin-bottom:32px}
-.hub-brand img{display:block;width:196px;height:auto}
 .hub-head .mini-label{color:#ff4fc3;margin:0 0 8px}
 .hub-head h1{margin:0;font-size:32px;letter-spacing:-.02em;font-weight:800}
 
@@ -4579,7 +4576,6 @@ html, body { background: var(--lf-paper); }
    coming; making it look live would be a lie you discover by clicking. */
 /* The suite mark on Home. Plain type rather than the factory lockup, because
    this page is the door to four products and one of them is the factory. */
-.suite-mark{font-size:22px;font-weight:700;letter-spacing:-.02em;color:#fff}
 
 /* The coming-soon tile is gone with the tools it advertised. A permanent
    "coming soon" is a promise nobody made, and the two tools it named — Hot
@@ -4615,8 +4611,6 @@ html, body { background: var(--lf-paper); }
 
 /* The lockup centres itself by default (justify-items:center, for the rail).
    Here it sits at the head of a left-aligned column. */
-.hub-brand .goldie-wordmark-lockup{justify-items:start;margin:0}
-.hub-brand .goldie-wordmark-lockup img{width:176px;height:auto;display:block}
 /* The disclosure inherits a 210px width from the rail, where it sits in a
    narrow column. It has a whole page here. */
 .hub-foot .etsy-api-disclosure{width:auto;max-width:640px}

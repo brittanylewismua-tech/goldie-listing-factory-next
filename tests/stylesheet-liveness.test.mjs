@@ -367,14 +367,20 @@ test("D395: the product rows grid declares a constrained track", async () => {
    Etsy data is shown, and these pages show it. */
 test("D398: the management pages carry the Etsy attribution too", async () => {
   /* D818 - they carried it in a nav footer of their own because they had no
-     shell to inherit one from. They render the shell now, so the attribution,
-     the copyright and the Powered-by line are the same elements the workflow
-     shows rather than a second copy that can drift. */
+     shell to inherit one from. They render the shell now, so the attribution
+     and the copyright are the same elements the workflow shows rather than a
+     second copy that can drift.
+
+     D1588 - the "Powered by" line went with the branding. The umbrella product
+     has no name, so the shared footer names no product; what has to be there
+     is the Etsy attribution, which is a legal requirement rather than a
+     brand. */
   const shell = await readFile(new URL("app/factory-shell.tsx", root), "utf8");
   assert.match(shell, /etsy-api-disclosure/,
     "Etsy attribution is required on every page that shows Etsy data");
   assert.match(shell, /approved-sidebar-footer/);
-  assert.match(shell, /approved-powered/);
+  assert.doesNotMatch(shell, /approved-powered/,
+    "the shared footer must not name a product that has not been chosen");
 
   const css = await readFile(new URL("app/interface-v2.css", root), "utf8");
   assert.match(css, /\.approved-sidebar-footer \{ margin-top: auto/,

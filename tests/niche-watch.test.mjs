@@ -351,7 +351,7 @@ test("removing a personal watch keeps the shared shop and its history", () => {
 test("a withheld image explains itself instead of rendering an empty box", () => {
   /* Measured in the browser: 44 of 45 cards showed a blank grey square,
      because the six-hour rule was withholding images nothing was refreshing. */
-  assert.match(MW, /Picture not current — Goldie refreshes it shortly/);
+  assert.match(MW, /Picture not current — refreshed shortly/);
   assert.match(MW, /No picture available/);
   assert.ok(!MW.includes('background: "#f4f2ef"'),
     "the unexplained grey box is still rendered");

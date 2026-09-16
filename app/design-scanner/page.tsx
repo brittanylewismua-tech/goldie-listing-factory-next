@@ -3,6 +3,11 @@ import FactoryShell from "@/app/factory-shell";
 import DesignScannerClient from "./design-scanner-client";
 import "./design-scanner.css";
 
+/* The tab says what this page is. There is no product name to append, and
+   a placeholder in a tab title is how a stand-in becomes permanent. */
+export const metadata = { title: "Design Scanner" };
+
+
 /*
   The member is holding a design and one question: is this going to land with
   the people I made it for. Everything on this page serves that question, and

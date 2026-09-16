@@ -37,21 +37,21 @@ export const EXPLANATION: Record<UnmatchedReason, string> = {
     "Printify has the order but has not reported its cost yet. This usually "
     + "resolves on its own within a day or two.",
   "manually-fulfilled":
-    "This order was fulfilled outside Printify, so Goldie has no production "
+    "This order was fulfilled outside Printify, so there is no production "
     + "cost for it.",
   "metadata-missing":
     "The Printify order exists but does not carry the Etsy order number, so "
-    + "Goldie cannot be certain the two belong together.",
+    + "There is no way to be certain the two belong together.",
   "receipt-id-missing":
-    "This Etsy order has no receipt number Goldie can match against.",
+    "This Etsy order has no receipt number to match against.",
   canceled: "This order was cancelled, so there is no production cost.",
   "fulfilled-elsewhere":
-    "Another production service made this order. Goldie only reads Printify.",
+    "Another production service made this order. Only Printify is read.",
   "outside-reconciliation-window":
-    "The matching Printify order falls outside the period Goldie has read. It "
+    "The matching Printify order falls outside the period that has been read. It "
     + "will match once that period is filled in.",
   unknown:
-    "Goldie could not work out why this order has no production cost.",
+    "The reason this order has no production cost could not be worked out.",
 };
 
 /** What the member can do about it. Never more than the evidence supports. */
@@ -171,8 +171,8 @@ export function currencyCheck(costs: OrderCost[]):
   const currencies = [...new Set(costs.map(row => row.currency).filter(Boolean))];
   if (currencies.length > 1)
     return { ok: false,
-      because: `This month mixes ${currencies.join(" and ")}. Goldie will not add `
-        + `them together, because the result would depend on a rate it made up.` };
+      because: `This month mixes ${currencies.join(" and ")}. They will not be added `
+        + `together, because the result would depend on an exchange rate nobody chose.` };
   return { ok: true, currency: currencies[0] ?? "USD" };
 }
 

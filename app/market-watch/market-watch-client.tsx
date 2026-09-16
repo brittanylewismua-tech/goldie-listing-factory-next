@@ -175,7 +175,7 @@ export default function MarketWatchClient({ signedInEmail }: { signedInEmail: st
       {tab === "niches" ? (
         watches.length === 0
           ? <p className="empty">
-              Watch a niche and Goldie starts collecting evidence for it. Come back
+              Watch a niche and Market Watch starts collecting evidence for it. Come back
               tomorrow to see what changed.
             </p>
           : watches.map(watch => (
@@ -228,7 +228,7 @@ function NicheDetail({ view, onBack }: { view: NicheView; onBack: () => void }) 
         <p className="empty">
           {view.gathering}
           {view.candidates?.watching
-            ? ` Goldie is watching ${view.candidates.watching} listings across `
+            ? ` Market Watch is watching ${view.candidates.watching} listings across `
               + `${view.candidates.shops} shops for this niche.`
             : ""}
         </p>
@@ -236,7 +236,7 @@ function NicheDetail({ view, onBack }: { view: NicheView; onBack: () => void }) 
 
       {!view.gathering && !summary?.meaningfulMomentum && listings.length === 0 && (
         <p className="empty">
-          Goldie has not confirmed enough movement in this niche yet. It keeps
+          Market Watch has not confirmed enough movement in this niche yet. It keeps
           watching, and this fills in as evidence arrives.
         </p>
       )}
@@ -263,7 +263,7 @@ function NicheDetail({ view, onBack }: { view: NicheView; onBack: () => void }) 
                    like a product that knows what it is doing. */
                 <p className="no-image">
                   {listing.imageUrl
-                    ? "Picture not current — Goldie refreshes it shortly"
+                    ? "Picture not current — refreshed shortly"
                     : "No picture available"}
                 </p>
               )}
@@ -301,7 +301,7 @@ function ShopCard({ shop }: { shop: ShopView }) {
       <h3>{shop.shopName}</h3>
       {!anything && (
         <p className="empty">
-          Nothing confirmed for this shop yet. Goldie checks it daily.
+          Nothing confirmed for this shop yet. Shop Watch checks it daily.
         </p>
       )}
       {sections.map(([name, cards]) => cards.length === 0 ? null : (

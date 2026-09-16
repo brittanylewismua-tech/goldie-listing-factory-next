@@ -236,12 +236,33 @@ test("the service worker never caches an API response or a page", () => {
   assert.match(bail, /cacheable = \/\\\.\(\?:png/);
 });
 
-test("the manifest opens the suite, standalone, at Home", () => {
+test("the installed app carries no product name and no branded icon", () => {
+  /*
+    THIS ASSERTED A SUITE NAME AND A 512px ICON.
+
+    The manifest said "Goldie Suite" / "Goldie" and pointed at the Goldie
+    icons — a product name and a mark, in the two places a member sees them
+    most permanently: the home-screen tile and the app switcher. The umbrella
+    product has not been named, so neither can stand.
+
+    THE COST, STATED RATHER THAN HIDDEN: Chrome requires a 192px and a 512px
+    icon before it will offer to install. With the icons gone the install
+    prompt will not appear, so home-screen install is off until there is a
+    brand to put on the tile. That is a deliberate trade — a placeholder mark
+    on somebody's home screen is exactly how a stand-in becomes the name — and
+    it reverses by adding the icons back.
+
+    The files themselves are untouched in public/.
+  */
   const manifest = JSON.parse(readFileSync(
     new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
   assert.equal(manifest.display, "standalone");
   assert.match(manifest.start_url, /^\/home/);
-  assert.ok((manifest.icons ?? []).some(icon => icon.sizes === "512x512"));
+  assert.deepEqual(manifest.icons, [],
+    "an icon in the manifest is a mark on a home screen");
+  for (const field of ["name", "short_name", "description"])
+    assert.doesNotMatch(String(manifest[field] ?? ""), /goldie/i,
+      `the manifest ${field} still names the old product`);
 });
 
 test("the connections screen reports a real last sync", () => {

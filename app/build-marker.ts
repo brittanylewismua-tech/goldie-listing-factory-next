@@ -123,7 +123,13 @@
    rewrote every Shop Watch card and deployed cleanly, and the live page kept
    showing the old sentences all day: only refreshed evidence invalidated a
    stored brief, never a change to the wording. */
-export const BUILD_MARKER = "D1587";
+/* D1588 takes the old product name out of the shared interface. The umbrella
+   product has not been named, so the rail carries no wordmark, the footer
+   names nothing, tab titles say what each page is, the manifest carries no
+   name or icon, and the Listing Factory's wordmark appears only on the
+   Listing Factory's own pages. Assets, storage keys, event names and the
+   domain are untouched. */
+export const BUILD_MARKER = "D1588";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

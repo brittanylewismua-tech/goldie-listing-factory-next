@@ -24,7 +24,7 @@ export async function POST(request:Request) {
   try {
     if (!checkoutOpen())
       return NextResponse.json(
-        { error: "Goldie is not open for new subscriptions yet. No charge was made." },
+        { error: "New subscriptions are not open yet. No charge was made." },
         { status: 503 });
 
     const user = await getChatGPTUser();

@@ -5,6 +5,10 @@ import type { FullVerdict } from "../trademark-check";
 import "./trademark.css";
 import FactoryShell from "@/app/factory-shell";
 
+/* The tab says what this page is; there is no product name to append. */
+export const metadata = { title: "Trademark Checker" };
+
+
 /**
  * TRADEMARK CHECK.
  *
@@ -168,8 +172,8 @@ export default function TrademarkPage() {
     link back to anything. Screenshotted beside the Listing Factory it read as
     a different piece of software.
 
-    Both were the same confusion — the shell mixing what belongs to Goldie
-    with what belongs to the Listing Factory. The shell separates them now:
+    Both were the same confusion — the shell mixing what belongs to the
+    product as a whole with what belongs to the Listing Factory. The shell separates them now:
     the checker wears the product's chrome and none of the factory's controls,
     and `desktopOnly={false}` keeps it working on a phone.
   */

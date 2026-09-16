@@ -49,7 +49,7 @@ export const DELETION_PLAN: PlanStep[] = [
     say: "Your Shop Map, and the niches your listings were organised into." },
   { table: "shop_map_listing_sales", disposition: "delete",
     sql: `DELETE FROM shop_map_listing_sales WHERE user_id = ?`,
-    say: "Your per-listing sales history inside Goldie." },
+    say: "Your per-listing sales history held here." },
   { table: "finance_receipts", disposition: "delete",
     sql: `DELETE FROM finance_receipts WHERE user_id = ?`,
     say: "Your order and revenue records." },
@@ -75,18 +75,18 @@ export const DELETION_PLAN: PlanStep[] = [
              SET encrypted_access_token = '', encrypted_refresh_token = '', is_active = 0
            WHERE user_id = ?`,
     say: "Your Etsy connection is switched off and its access keys destroyed. "
-      + "Goldie can no longer read or publish to your shop." },
+      + "This software can no longer read or publish to your shop." },
   { table: "printify_connections", disposition: "retire",
     sql: `UPDATE printify_connections SET encrypted_token = '' WHERE user_id = ?`,
     say: "Your Printify connection is switched off and its key destroyed." },
   { table: "member_entitlements", disposition: "retire",
     sql: `UPDATE member_entitlements SET state = 'none', plan = NULL WHERE user_id = ?`,
-    say: "Your access to Goldie's features ends." },
+    say: "Your access to these features ends." },
 ];
 
 /** Not touched, and why — shown to the member rather than left to be noticed. */
 export const KEPT = [
-  { what: "Listings, reviews and movement Goldie observed on public Etsy shops",
+  { what: "Listings, reviews and movement observed on public Etsy shops",
     why: "This is public marketplace evidence that other members' watches rely "
       + "on. It was never about you and it does not identify you." },
   { what: "The record that your connection existed",
@@ -97,7 +97,10 @@ export const KEPT = [
       + "matter, and are not linked to you." },
 ];
 
-export const CONFIRMATION_PHRASE = "DELETE MY GOLDIE DATA";
+/* The phrase a member types to confirm deletion. It named the old product;
+   what it has to be is unmistakable and hard to type by accident, which it
+   still is. */
+export const CONFIRMATION_PHRASE = "DELETE MY DATA";
 
 /** How recent a sign-in has to be for this to be allowed. */
 export const RECENT_AUTH_SECONDS = 15 * 60;

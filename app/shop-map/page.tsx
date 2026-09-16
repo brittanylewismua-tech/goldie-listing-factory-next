@@ -3,6 +3,11 @@ import FactoryShell from "@/app/factory-shell";
 import ShopMapClient from "./shop-map-client";
 import "./shop-map.css";
 
+/* The tab says what this page is. There is no product name to append, and
+   a placeholder in a tab title is how a stand-in becomes permanent. */
+export const metadata = { title: "Shop Map" };
+
+
 /*
   Shop Map is read-only and phone-first. The member is usually standing in a
   queue or sitting on a sofa, not at a desk with a spreadsheet, so the page

@@ -1,16 +1,12 @@
 {
-  "name": "Goldie Suite",
-  "short_name": "Goldie",
-  "description": "What is selling on Etsy, what your shop is really built on, and what a phrase might cost you.",
+  "name": "Etsy seller tools",
+  "short_name": "Seller tools",
+  "description": "Bulk listing creation, market evidence, your own shop's numbers, and a trademark check before you print.",
   "start_url": "/home?source=homescreen",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0c0a0e",
   "theme_color": "#0c0a0e",
-  "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+  "icons": []
 }
