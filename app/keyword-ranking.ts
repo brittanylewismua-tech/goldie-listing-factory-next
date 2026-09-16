@@ -44,3 +44,39 @@ export function bestFitFromBank(candidates:string[],designText:string[],product?
   if(matched.length>=3)return matched.slice(0,13).map(item=>item.phrase);
   return scored.slice(0,Math.max(matched.length,3)).map(item=>item.phrase);
 }
+
+/**
+ * ONLY PHRASES THAT ACTUALLY MATCH. NO FALLBACK, NO PADDING.
+ *
+ * `bestFitFromBank` deliberately returns three closest phrases when nothing
+ * matches, so a member can SEE that the bank is wrong for the design — paired
+ * with a mismatch warning, that is a useful answer to a human.
+ *
+ * It is the wrong answer to give a title builder. D544 measured the cost of
+ * filling space with unselected bank phrases, and D414 measured the cost of a
+ * mismatched bank producing a padded title: a listing that looks confident and
+ * describes somebody else's artwork.
+ *
+ * So the layered path ranks strictly. A phrase appears only if it shares a
+ * stem with something actually in the design. Returning two phrases — or none
+ * — is a correct answer, and the caller decides what to do about it.
+ */
+export function strictFitFromBank(
+  candidates: string[], designText: string[],
+  product?: { blueprintTitle?: string; brand?: string; model?: string },
+): string[] {
+  const haystack = [...designText, product?.blueprintTitle || "", product?.brand || "",
+    product?.model || ""].map(clean).map(normalize).join(" ");
+  const words = [...new Set(haystack.split(" ")
+    .filter(word => word.length >= 4 && !DESIGN_TEXT_STOPWORDS.has(word)))];
+  const touches = (part: string) =>
+    part.length >= 4 && words.some(word => word === part || word.includes(part) || part.includes(word));
+  return candidates
+    .map((phrase, index) => {
+      const parts = normalize(clean(phrase)).split(" ").filter(Boolean);
+      return { phrase, index, score: parts.filter(touches).length, parts: parts.length };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.parts - b.parts || a.index - b.index)
+    .map(item => item.phrase);
+}

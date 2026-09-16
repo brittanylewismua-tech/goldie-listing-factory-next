@@ -245,3 +245,76 @@ test("a cue that says it is empty never reaches a title", () => {
   assert.ok(!composeTags(["none"], "tee", ["n/a"], ["unknown"]).includes("none"));
   assert.ok(composeTags(["sunset club"], "tee", [], []).includes("sunset club"));
 });
+
+test("the member's own workflow reaches the layered path", () => {
+  /*
+    THE MEASUREMENT WAS NOT THE PRODUCT.
+
+    The orchestrator was proven on `/api/listing-factory/prepare`, a route
+    nothing in the interface calls. A path no workflow reaches is a
+    measurement, not a member flow — so the branch belongs at the door the
+    workflow already knocks on, which is `/api/listing-intelligence`: the
+    route the Listing Factory calls twice per listing.
+  */
+  const intelligence = readFileSync(new URL(
+    "../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+  assert.match(intelligence, /const canary=await canaryFor\(user\.userId\)/,
+    "the member route must decide per account");
+  assert.match(intelligence, /if\(canary\.useNewFlow\)return layeredSelection\(\)/,
+    "title mode must take the layered path");
+  assert.match(intelligence, /if\(canary\.useNewFlow\)\{/,
+    "details mode must take the layered path");
+  for (const layer of ["ensureDesign", "ensureFamilyCopy"])
+    assert.ok(intelligence.includes(layer), `the member route does not use ${layer}`);
+});
+
+test("the legacy path survives as rollback", () => {
+  /* Rolling back is deleting a canary row, not shipping a deploy. The old
+     two-call path has to still be there for everyone else. */
+  const intelligence = readFileSync(new URL(
+    "../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+  assert.match(intelligence, /fal\.run\/openrouter\/router\/vision/,
+    "the legacy vision call must remain for accounts not on the flag");
+  const canary = readFileSync(new URL(
+    "../app/listing-flow-canary.ts", import.meta.url), "utf8");
+  assert.match(canary, /useNewFlow: false, unmappedBehaviour: "legacy"/);
+});
+
+test("the artwork's identity is the image, not the request around it", () => {
+  /*
+    The legacy details call keyed its cache on the whole request body —
+    product facts, title and tags included — so one design across twenty
+    products missed twenty times. Design-level understanding keys on the
+    artwork alone.
+  */
+  const intelligence = readFileSync(new URL(
+    "../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+  const hash = intelligence.slice(intelligence.indexOf("async function artworkHashOf"),
+    intelligence.indexOf("/* Everything the bank is ranked against"));
+  assert.match(hash, /crypto\.subtle\.digest\("SHA-256", bytes\)/);
+  for (const contaminant of ["title", "tags", "product", "blueprint"])
+    assert.ok(!hash.includes(contaminant),
+      `the artwork hash includes ${contaminant}, so one design across many products misses many times`);
+});
+
+test("an unsupported blueprint is never given a guessed category", () => {
+  const intelligence = readFileSync(new URL(
+    "../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+  const layered = intelligence.slice(intelligence.indexOf("if(canary.useNewFlow){"));
+  const stop = layered.indexOf("return NextResponse.json({details:reviewFallback(body.product)})");
+  const design = layered.indexOf("await ensureDesign(");
+  assert.ok(stop > 0 && stop < design,
+    "an unmapped blueprint must stop before anything is paid for");
+});
+
+test("the layered details answer comes from tables, not from a picture", () => {
+  const intelligence = readFileSync(new URL(
+    "../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
+  const layered = intelligence.slice(intelligence.indexOf("if(canary.useNewFlow){"),
+    intelligence.indexOf("const response=await fetch(\"https://fal.run"));
+  assert.match(layered, /category:classification\.category/);
+  assert.match(layered, /classification\.requiredProperties/);
+  assert.match(layered, /optional:\{\}/, "nothing optional is invented");
+  assert.ok(!layered.includes("image_urls"),
+    "the details answer must not send the image again");
+});

@@ -129,7 +129,13 @@
    name or icon, and the Listing Factory's wordmark appears only on the
    Listing Factory's own pages. Assets, storage keys, event names and the
    domain are untouched. */
-export const BUILD_MARKER = "D1590";
+/* D1591 puts the layered flow in the member's actual workflow. The route the
+   Listing Factory calls twice per listing now branches on the canary: the
+   design is analysed once per artwork and reused for both modes, the title
+   stops being a paid call, and the category and attributes come from tables
+   rather than a model looking at a picture. The legacy path stays for
+   everybody else, which is what makes the flag a rollback. */
+export const BUILD_MARKER = "D1591";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

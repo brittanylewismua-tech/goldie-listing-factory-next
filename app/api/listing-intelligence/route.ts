@@ -13,6 +13,58 @@ import { recordFalUsage } from "@/app/fal-usage";
    import it directly: the test runner loads that module on its own. */
 setFalUsageRecorder(recordFalUsage);
 import { env } from "cloudflare:workers";
+import { canaryFor } from "@/app/listing-flow-canary";
+import { ensureDesign, ensureFamilyCopy } from "@/app/listing-flow";
+import { classifyBlueprint } from "@/app/blueprint-registry";
+import { productFactsFor } from "@/app/product-facts";
+import { productFamily } from "@/app/product-type-utils";
+import { strictFitFromBank } from "@/app/keyword-ranking";
+import { LISTING_FIELD_FOR_PROPERTY } from "@/app/pod-listing-fields";
+import { composeTags } from "@/app/listing-composition";
+
+/**
+ * THE LAYERED PATH, REACHED FROM THE MEMBER'S OWN INTERFACE.
+ *
+ * This route is what the Listing Factory workflow actually calls — twice per
+ * listing, historically: once to pick title phrases from the bank against the
+ * design, once to prefill Etsy details. Both sent the image. Twenty products
+ * from one design meant forty image calls, the title call was excluded from
+ * the cache entirely, and neither went through the spend guard.
+ *
+ * The layered architecture was proven on a canary route, which is not the same
+ * as being in the product: a route nobody's workflow calls is a measurement,
+ * not a path. So the branch is here, at the door the workflow already knocks
+ * on. A canary member gets the layered behaviour with no change to the
+ * interface; everybody else gets exactly what they got before, which is what
+ * makes the flag a rollback rather than a deploy.
+ *
+ * WHAT CHANGES FOR THE MEMBER:
+ *   the design is analysed ONCE per artwork, ever, and reused for every
+ *   product and for both modes — so the title mode stops calling a model at
+ *   all once the design is known;
+ *   the category and the required attributes come from the product tables,
+ *   never from a model looking at a picture of a shirt;
+ *   the description comes from one text-only call covering every family.
+ */
+const ARTWORK_HASH_VERSION = 1;
+
+/** The artwork's identity: the image bytes, not the request around them. */
+async function artworkHashOf(dataUrl: string) {
+  const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+  const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return `a${ARTWORK_HASH_VERSION}-` + [...new Uint8Array(digest)]
+    .map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/* Everything the bank is ranked against, in the design's own words. */
+const designTextOf = (design: {
+  wording: string[]; audienceCues: string[]; occasionCues: string[];
+  recipientCues: string[]; illustrationCategory: string; tone: string;
+}) => [...design.wording, ...design.audienceCues, ...design.occasionCues,
+  ...design.recipientCues, design.illustrationCategory, design.tone]
+  .map(clean).filter(Boolean);
+
 
 type Details={category:string;attributes:Record<string,string>;optional:Record<string,string>;blurb:string;confidence:"high"|"review"};
 const validImage=(value:unknown):value is string=>typeof value==="string"&&/^data:image\/(png|jpeg|webp);base64,/i.test(value)&&value.length<18*1024*1024;
@@ -73,6 +125,10 @@ async function handlePOST(request:Request){
   const body=await request.json() as {mode?:"details"|"title";image?:string;product?:{blueprintTitle?:string;brand?:string;model?:string;description?:string};title?:string;tags?:string[];keywords?:string[];useCommas?:boolean};
   if(!validImage(body.image))return NextResponse.json({error:"The Listing Factory could not read this design safely."},{status:400});
   const key=process.env.FAL_KEY;if(!key)return NextResponse.json({error:"Automatic Etsy details are temporarily unavailable."},{status:503});
+  /* The layered path is opt-in per account and off globally: rolling back is
+     deleting a row, not shipping a deploy. */
+  const canary=await canaryFor(user.userId);
+  const artworkHash=canary.useNewFlow?await artworkHashOf(body.image!):"";
   // Explicitly asking for a different title must remain a fresh generation.
   const fetch=body.mode==="title"?boundedVisionFetch:cachedVisionFetch(user.userId,env.DB,boundedVisionFetch);
   if(body.mode==="title"){
@@ -80,7 +136,38 @@ async function handlePOST(request:Request){
     const excludedNouns=excludedProductNouns(body.product?.blueprintTitle||"");
     const titleCandidates=keywords.filter(keyword=>!namesExcludedProduct(keyword,excludedNouns));
     const tagCandidates=keywords.filter(keyword=>keyword.length<=20&&!namesExcludedProduct(keyword,excludedNouns));
+    /*
+      THE TITLE STOPS BEING A PAID CALL.
+
+      The legacy selection sent the design image to a model and asked it to
+      pick phrases from the seller's bank. Every one of those was a fresh
+      call — this mode was excluded from the cache on purpose, so asking for a
+      different title would re-generate.
+
+      The design is already understood: its wording is transcribed and its
+      audience, occasion and recipient cues are stored against the artwork
+      hash. Ranking the bank against that is string work, and the layered path
+      ranks it strictly — a phrase appears only if it shares a stem with
+      something actually in the design, and returning two phrases or none is a
+      correct answer. Padding the title with bank-order phrases is what D544
+      and D414 were about.
+      So on the layered path the title costs one design analysis the FIRST time
+      this artwork is seen, and nothing after that.
+    */
+    async function layeredSelection(){
+      const design=await ensureDesign(user!.userId,artworkHash,body.image!);
+      if(!design.ok)throw new Error(design.memberMessage);
+      const designText=designTextOf(design.design);
+      return {
+        selected:strictFitFromBank(titleCandidates,designText,body.product).slice(0,13),
+        tags:strictFitFromBank(tagCandidates,designText,body.product).slice(0,13),
+        designText,
+        designSubjects:[design.design.illustrationCategory,design.design.composition,
+          ...design.design.audienceCues].map(clean).filter(Boolean).slice(0,8),
+      };
+    }
     async function requestSelection(){
+      if(canary.useNewFlow)return layeredSelection();
       const titleResponse=await fetch("https://fal.run/openrouter/router/vision",{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify({image_urls:[body.image],model:"google/gemini-2.5-flash",temperature:0,system_prompt:"Return only compact valid JSON. Never use markdown.",prompt:`Inspect this specific design. First transcribe its meaningful visible wording as exact lines. Then select the exact phrases from this seller-validated keyword bank that best fit it: ${JSON.stringify(keywords)}. Product: ${JSON.stringify(body.product||{})}.
 
 PRODUCT TYPE RULE (most important): this listing is for the physical product named above. Reject every phrase that names any different product type. For this exact Printify blueprint, the excluded product nouns are: ${JSON.stringify(excludedNouns)}. A phrase containing any excluded noun is always wrong, no matter how strong its search data.
@@ -137,6 +224,61 @@ Select only phrases a shopper looking at THIS artwork would call accurate. If a 
       :bankFit==="unknown"?"The Listing Factory could not read any text in this design, so it could not check the bank. Check the title.":"";
     return NextResponse.json({title,keywords:included,tags:pickedTags.length?pickedTags:tags,titleWarning,designText});
   }
+  /*
+    ETSY DETAILS, WITHOUT ASKING A MODEL WHAT THE PRODUCT IS.
+
+    The legacy details call sent the design image and then instructed the model
+    that the artwork "must never change the product category, age group,
+    garment type or department" — it paid to look at a picture it had ruled out
+    of the answer. Category, department and required attributes follow from the
+    Printify blueprint alone, which makes them a table lookup.
+
+    What genuinely needs writing is the description, and that needs no image:
+    everything it knows about the artwork is in the stored design intelligence.
+    One text-only call covers every product family for this design.
+  */
+  if(canary.useNewFlow){
+    const blueprintTitle=body.product?.blueprintTitle||"";
+    const family=productFamily(blueprintTitle)||"";
+    const classification=classifyBlueprint(blueprintTitle);
+    const facts=productFactsFor(blueprintTitle);
+    /* An unsupported blueprint is never given a guessed category. It falls to
+       the reviewable placeholder the existing flow already uses, so the member
+       keeps working and nothing is invented. */
+    if(!family||!facts.mapped||!classification.etsyTaxonomyNodeId)
+      return NextResponse.json({details:reviewFallback(body.product)});
+
+    const design=await ensureDesign(user.userId,artworkHash,body.image!);
+    if(!design.ok)return NextResponse.json({details:reviewFallback(body.product)});
+
+    const copy=await ensureFamilyCopy(user.userId,artworkHash,design.design,[family],
+      ()=>classification.productNoun||family);
+
+    /* Required taxonomy properties from the table. Listing fields such as
+       "Who made it" are not property values and are set on the payload
+       itself, so they are skipped here. */
+    const attributes:Record<string,string>={};
+    for(const property of classification.requiredProperties){
+      if(LISTING_FIELD_FOR_PROPERTY[property])continue;
+      const fromFacts=(facts.mapped?facts.attributes:{})[property];
+      const allowed=classification.allowedValues[property];
+      if(fromFacts)attributes[property]=fromFacts;
+      else if(allowed?.length)attributes[property]=allowed[0];
+    }
+
+    return NextResponse.json({details:{
+      category:classification.category,
+      attributes,
+      /* Nothing invented: an empty set is honest where a guessed holiday is
+         not. The member fills these in if they want them. */
+      optional:{},
+      blurb:clean(copy.copy[family]?.blurb||""),
+      /* The category came from a table rather than a model's impression of a
+         photograph, so it is not a thing to review. */
+      confidence:"high",
+    } satisfies Details});
+  }
+
   const response=await fetch("https://fal.run/openrouter/router/vision",{method:"POST",headers:{Authorization:`Key ${key}`,"Content-Type":"application/json"},body:JSON.stringify({image_urls:[body.image],model:"google/gemini-2.5-flash",temperature:0,system_prompt:"Return only compact valid JSON. Never use markdown.",prompt:`Pre-fill Etsy listing details for this specific print-on-demand product. Product facts: ${JSON.stringify(body.product||{})}. Final title: ${clean(body.title)}. Selected tags: ${JSON.stringify((body.tags||[]).slice(0,13))}. Choose the closest Etsy category from the physical Printify product facts only. The artwork, design wording, title, and tags must never change the product category, age group, garment type, or department. Two designs placed on the same Printify template must receive the same product category. Include every physical or product attribute you can confidently support from the product name, brand, model, and description. Do not stop at required fields. Use product facts, not the artwork, for material, garment, size, shape, room, orientation, neckline, sleeve, and other physical attributes. Inspect the artwork only for contextual fields. Fill holiday, occasion, recipient, or style only when the design, title, or tags clearly support that exact choice; otherwise leave those optional fields out. Never guess simply to make a field non-empty. Write a natural 1-2 sentence design-specific introduction using at most 2 exact keyword phrases from the title or tags, without keyword stuffing or unsupported claims. Return {"category":"...","attributes":{"Sleeve length":"..."},"optional":{"Holiday":"..."},"blurb":"...","confidence":"high"|"review"}. Use concise Etsy-style field names and values. Attribute names must suit this product type; tote, mug, poster, shirt, and sweatshirt fields differ.`})});
   const payload=await response.json().catch(()=>({})) as {output?:string;detail?:string};
   /* Visual analysis improves the prefill, but it is not allowed to strand the
