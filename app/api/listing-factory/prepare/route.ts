@@ -184,8 +184,11 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
  * will analyze, so measuring against anything else would measure the wrong
  * thing.
  */
-export const GET = withErrorLog("listing-factory-prepare-sample", async () => {
-  try { return await sample(); } catch (error) {
+export const GET = withErrorLog("listing-factory-prepare-sample", async (request: Request) => {
+  try {
+    if (new URL(request.url).searchParams.get("probe") === "1") return await probe();
+    return await sample();
+  } catch (error) {
     /* The real message, to the owner. This endpoint has no member audience and
        a generic wrapper turns a five-minute fix into an afternoon of guessing. */
     return NextResponse.json({
@@ -228,4 +231,47 @@ async function sample() {
   }
   return NextResponse.json({ error: "No captured artwork to sample.",
     candidates: (rows.results ?? []).length }, { status: 409 });
+}
+
+
+/**
+ * WHICH TEXT-ONLY ENDPOINT ACTUALLY ANSWERS.
+ *
+ * The family-copy call is text-only — it carries no image, because everything
+ * it knows about the artwork is already in the stored design intelligence.
+ * The first attempt guessed `openrouter/router/chat` and production answered
+ * "Path /chat not found": the batch fell back to deterministic copy exactly as
+ * designed, so nothing broke, but the call that proves the saving never
+ * happened.
+ *
+ * Only `openrouter/router/vision` is proven in this codebase. Rather than
+ * guess a second time and spend another deploy cycle finding out, this asks
+ * each candidate once, with a trivial prompt, and reports what came back.
+ */
+async function probe() {
+  const user = await getChatGPTUser();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const key = (env as unknown as { FAL_KEY?: string }).FAL_KEY?.trim() || "";
+  if (!key) return NextResponse.json({ error: "No provider key." }, { status: 503 });
+
+  const candidates = [
+    "https://fal.run/openrouter/router",
+    "https://fal.run/openrouter/router/vision",
+    "https://fal.run/fal-ai/any-llm",
+  ];
+  const tried: unknown[] = [];
+  for (const url of candidates) {
+    try {
+      const response = await fetch(url, { method: "POST",
+        headers: { Authorization: `Key ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "google/gemini-2.5-flash", temperature: 0,
+          prompt: 'Return only {"ok":true}' }) });
+      const text = (await response.text()).slice(0, 220);
+      tried.push({ url, status: response.status, body: text });
+    } catch (error) {
+      tried.push({ url, failed: error instanceof Error ? error.message : "threw" });
+    }
+  }
+  return NextResponse.json({ probe: true, tried });
 }

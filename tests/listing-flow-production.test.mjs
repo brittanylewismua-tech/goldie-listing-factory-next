@@ -139,10 +139,15 @@ test("the production path stops before Etsy", () => {
     assert.ok(!post.includes(call), `the prepare POST reaches ${call} directly`);
   for (const verb of ['method: "POST"', 'method: "PUT"', 'method: "DELETE"'])
     assert.ok(!post.includes(verb), `the prepare POST issues a ${verb} of its own`);
-  /* And the sample really is read-only. */
+  /*
+    And the owner-only GET changes nothing of the member's. It POSTs to a
+    provider when probing which text endpoint answers — that is a request to
+    a model, not a write to her shop — so what is guarded is the shops.
+  */
   const get = route.slice(route.indexOf("export const GET"));
-  for (const verb of ['method: "POST"', 'method: "PUT"', 'method: "DELETE"'])
-    assert.ok(!get.includes(verb), `the sample endpoint issues a ${verb}`);
+  for (const host of ["etsy.com", "printify.com", "etsyFetch", "/listings"])
+    assert.ok(!get.includes(host), `the owner endpoint reaches ${host}`);
+  assert.match(get, /isOwner\(user\)/, "the owner endpoint must be owner-gated");
   assert.match(get, /artwork_provenance/,
     "the sample must read the member's own stored artwork");
   assert.ok(!get.includes("etsyFetch"),
