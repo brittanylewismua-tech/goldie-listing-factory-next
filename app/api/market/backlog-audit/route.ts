@@ -19,12 +19,25 @@ import { MAX_EVIDENCE_AGE_SECONDS } from "@/app/correlation";
  */
 export const maxDuration = 300;
 
+/*
+  THE CORRELATION STATE IS CHECKED FIRST.
+
+  The correlation worker sets `inspected_at` so that everything downstream
+  keeps working, which meant a correlated interval that matched no listing
+  change was being filed as "completed-after-expiry" — a claim about the old
+  inspector that was not true of it. A correlated interval with nothing to
+  credit is a shop sale no listing change explains, which is a different and
+  much less alarming fact.
+*/
 const CLASSES = `
   CASE
-    WHEN i.inspected_at IS NOT NULL AND i.resolved_units > 0 THEN 'completed-with-evidence'
-    WHEN i.inspected_at IS NOT NULL THEN 'completed-after-expiry'
     WHEN i.correlation_state = 'expired' THEN 'expired-before-inspection'
-    WHEN i.correlation_state IN ('correlated','conflicted') THEN 'superseded-by-correlation'
+    WHEN i.correlation_state IN ('correlated','conflicted') AND i.resolved_units > 0
+      THEN 'correlated-with-evidence'
+    WHEN i.correlation_state IN ('correlated','conflicted')
+      THEN 'correlated-no-listing-change'
+    WHEN i.inspected_at IS NOT NULL AND i.resolved_units > 0 THEN 'inspector-with-evidence'
+    WHEN i.inspected_at IS NOT NULL THEN 'inspector-completed-after-expiry'
     WHEN (? - CAST(strftime('%s', REPLACE(i.to_observed,' ','T')) AS INTEGER)) > ? THEN 'expired-before-inspection'
     ELSE 'timely-and-eligible'
   END`;
@@ -57,7 +70,7 @@ export const GET = withErrorLog("market-backlog-audit", async () => {
 
   const byClass = new Map((intervals.results ?? []).map(row => [row.class, row]));
   const expired = byClass.get("expired-before-inspection");
-  const late = byClass.get("completed-after-expiry");
+  const late = byClass.get("inspector-completed-after-expiry");
 
   /*
     THE HONEST NUMBER: shop-level sales that were detected and can never be
