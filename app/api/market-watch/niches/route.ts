@@ -136,13 +136,13 @@ async function readNiche(userId: string, terms: string[], key: string, now: numb
     corpus to 200 candidates under observation, and the page still read as a
     dead end.
   */
-  const candidates = await candidateSummary(key);
-  const watching = (candidates.byState["awaiting-baseline"] ?? 0)
-    + (candidates.byState.monitoring ?? 0);
+  const watched = await candidateSummary(key);
+  const watching = (watched.byState["awaiting-baseline"] ?? 0)
+    + (watched.byState.monitoring ?? 0);
 
   return {
     key, summary, visualPatterns,
-    candidates: { watching, shops: candidates.shops, byState: candidates.byState },
+    candidates: { watching, shops: watched.shops, byState: watched.byState },
     /* Shown only while nothing has moved: never alongside real evidence. */
     gathering: summary.moving === 0 && watching > 0 ? GATHERING : null,
     window: summary.windowSeconds ? describeWindow(summary.windowSeconds) : null,
