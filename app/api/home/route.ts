@@ -62,17 +62,28 @@ export const GET = withErrorLog("home-status", async () => {
         WHERE user_id = ? ORDER BY month DESC LIMIT 1`)
       .bind(user.userId).first<{ payload: string; month: string }>();
     if (row) {
+      /*
+        THE NAMES THE ROLLUP ACTUALLY WRITES.
+
+        `revenueMinor`, `orders` and `profitMinor` do not exist in the payload.
+        The rollup writes `grossSellerRevenueMinor`, `coverage.receipts` and
+        `knownOperatingProfitMinor` — so after the query was fixed, Home still
+        rendered "$0.00 from 0 orders" for a month with a $26.49 sale. An
+        unexplained zero is worse than a missing block: it looks like an answer.
+      */
       const parsed = JSON.parse(row.payload) as {
-        revenueMinor?: number; currency?: string; orders?: number;
-        profitMinor?: number | null; headline?: string };
+        grossSellerRevenueMinor?: number; currency?: string;
+        coverage?: { receipts?: number };
+        knownOperatingProfitMinor?: number | null };
+      const profit = parsed.knownOperatingProfitMinor;
       blocks.thisMonth = {
         month: row.month,
-        revenueMinor: Number(parsed.revenueMinor) || 0,
+        revenueMinor: Number(parsed.grossSellerRevenueMinor) || 0,
         currency: parsed.currency ?? "USD",
-        orders: Number(parsed.orders) || 0,
-        /* Profit that cannot be evidenced stays null, never zero. */
-        profitMinor: parsed.profitMinor ?? null,
-        profitAvailable: parsed.profitMinor !== null && parsed.profitMinor !== undefined,
+        orders: Number(parsed.coverage?.receipts) || 0,
+        /* Null unless every completeness condition held. Never zero. */
+        profitMinor: profit ?? null,
+        profitAvailable: profit !== null && profit !== undefined,
       };
     }
   } catch { /* Shop Map may not be set up for this member */ }

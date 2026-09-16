@@ -194,3 +194,19 @@ test("the production-cost route reads only real finance columns", () => {
   assert.ok(!route.includes("r.created_at"));
   assert.ok(!route.includes("r.revenue_minor"));
 });
+
+test("Home reads the field names the rollup actually writes", () => {
+  /* Fixing the SQL was not enough: the payload's own keys were invented too,
+     so Home rendered "$0.00 from 0 orders" for a month with a real sale. */
+  const rollup = readFileSync(
+    path.join(appDir, "finance-rollup.ts"), "utf8");
+  const home = readFileSync(path.join(appDir, "api/home/route.ts"), "utf8");
+
+  for (const field of ["grossSellerRevenueMinor", "knownOperatingProfitMinor"]) {
+    assert.ok(rollup.includes(`${field}:`), `the rollup no longer writes ${field}`);
+    assert.ok(home.includes(field), `Home does not read ${field}`);
+  }
+  /* And the names it used to invent are gone. */
+  for (const invented of ["parsed.revenueMinor", "parsed.orders", "parsed.profitMinor"])
+    assert.ok(!home.includes(invented), `Home still reads ${invented}`);
+});
