@@ -128,8 +128,23 @@ test("categories cost nothing by construction", () => {
 
 test("the production path stops before Etsy", () => {
   assert.match(route, /wroteToEtsy: false, createdDraft: false, createdPrintifyProduct: false/);
-  for (const call of ["/listings", "createDraft", "publishListing"])
-    assert.ok(!route.includes(call), `the prepare route reaches Etsy via ${call}`);
+  /*
+    Scoped to the POST handler. The route also carries an owner-only GET that
+    READS one of the member's own listing images to measure the flow against —
+    a read is not the thing being guarded here, a write is.
+  */
+  const post = route.slice(route.indexOf("export const POST"), route.indexOf("export const GET"));
+  assert.ok(post.length > 500, "the POST handler was not found");
+  for (const call of ["/listings", "createDraft", "publishListing", "fal.run"])
+    assert.ok(!post.includes(call), `the prepare POST reaches ${call} directly`);
+  for (const verb of ['method: "POST"', 'method: "PUT"', 'method: "DELETE"'])
+    assert.ok(!post.includes(verb), `the prepare POST issues a ${verb} of its own`);
+  /* And the sample really is read-only. */
+  const get = route.slice(route.indexOf("export const GET"));
+  for (const verb of ['method: "POST"', 'method: "PUT"', 'method: "DELETE"'])
+    assert.ok(!get.includes(verb), `the sample endpoint issues a ${verb}`);
+  assert.match(get, /listings\/active|listings\/\$\{first\.listing_id\}\/images/,
+    "the sample must read listings, nothing else");
 });
 
 test("validateOnly stops before any provider is contacted", () => {

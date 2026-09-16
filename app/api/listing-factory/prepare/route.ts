@@ -12,6 +12,8 @@ import { POD_LISTING_FIELDS, LISTING_FIELD_FOR_PROPERTY } from "@/app/pod-listin
 import { check, withRegister } from "@/app/trademark-check";
 import { lookup, registerSize } from "@/app/trademark-register";
 import { env } from "cloudflare:workers";
+import { isOwner } from "@/app/mastermind/access";
+import { decryptEtsy, etsyFetch } from "@/app/api/etsy/client";
 
 /**
  * THE LAYERED FLOW, IN PRODUCTION, UP TO THE ETSY WRITE.
@@ -161,5 +163,46 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
     stopped: unmapped.map(entry => ({ id: entry.blueprint.id, title: entry.blueprint.title,
       because: entry.classification.ambiguity || entry.usable.problems.join("; ") })),
     listings,
+  });
+});
+
+
+/**
+ * ONE OF THE MEMBER'S OWN DESIGNS, TO MEASURE THE FLOW AGAINST.
+ *
+ * The canary run needs a real image: a synthetic swatch produces design
+ * intelligence that means nothing, and a competitor's listing image is
+ * somebody else's artwork and has no business being analyzed as the member's.
+ * So it is one of her own published listings, read-only, owner-gated, and
+ * used for nothing but exercising the path she is about to use.
+ */
+export const GET = withErrorLog("listing-factory-prepare-sample", async () => {
+  const user = await getChatGPTUser();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const connection = await db.prepare(
+    `SELECT encrypted_access_token AS token, shop_id AS shopId
+       FROM etsy_connections WHERE user_id = ? AND is_active = 1`)
+    .bind(user.userId).first<{ token: string; shopId: number }>();
+  if (!connection) return NextResponse.json({ error: "No active Etsy connection." }, { status: 409 });
+
+  const token = await decryptEtsy(connection.token);
+  const listings = await etsyFetch<{ results?: { listing_id: number; title: string }[] }>(
+    `/shops/${connection.shopId}/listings/active?limit=3`, token);
+  const first = listings.results?.[0];
+  if (!first) return NextResponse.json({ error: "No active listing to sample." }, { status: 409 });
+
+  const images = await etsyFetch<{ results?: { url_fullxfull?: string; listing_image_id?: number }[] }>(
+    `/shops/${connection.shopId}/listings/${first.listing_id}/images`, token);
+  const image = images.results?.[0];
+  return NextResponse.json({
+    listingId: first.listing_id, title: first.title,
+    imageUrl: image?.url_fullxfull ?? "",
+    /* The hash identifies the artwork in the cache. It is the member's own
+       listing image identity, not a content hash of the bytes. */
+    artworkHash: `own-listing-${first.listing_id}-${image?.listing_image_id ?? 0}`,
+    readOnly: "No listing was created, edited or published.",
   });
 });
