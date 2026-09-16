@@ -63,7 +63,8 @@ export async function addCandidates(
   now: number, watchers: number,
 ) {
   await ensureCandidateTables();
-  if (!found.length) return { added: 0, alreadyKnown: 0 };
+  if (!found.length)
+    return { added: 0, alreadyKnown: 0, selected: 0, selectedShops: 0, insertedShops: 0 };
 
   /* How many of these Goldie already polls, so the report can separate new
      monitoring cost from reuse. */
@@ -97,7 +98,15 @@ export async function addCandidates(
        removed_reason = CASE WHEN niche_candidates.state IN ('expired','inactive')
                     THEN '' ELSE niche_candidates.removed_reason END`);
 
-  const statements = found.slice(0, GROWTH.maxCandidatesPerNiche).map(row =>
+  /*
+    THE CAP IS APPLIED HERE AND THE SELECTED SET IS RETURNED.
+
+    It used to be applied silently inside this map while the caller went on
+    reporting shop counts from the uncapped `found` array — which is how a
+    200-listing pool came to be described as spanning 211 shops.
+  */
+  const selected = found.slice(0, GROWTH.maxCandidatesPerNiche);
+  const statements = selected.map(row =>
     insert.bind(nicheKey, row.listingId, row.shopId, phrase, query, now, row.page,
       row.state,
       /* Something already polled needs no baseline pass of its own. */
@@ -110,7 +119,19 @@ export async function addCandidates(
     const results = await db().batch(statements.slice(index, index + 25));
     for (const result of results) added += Number(result.meta?.changes ?? 0);
   }
-  return { added, alreadyKnown: known.size };
+
+  /*
+    `added` counts rows the upsert changed, which includes a revived candidate.
+    The inserted SHOP count is taken from the selected set, because that is the
+    set those rows came from — never from `found`.
+  */
+  return {
+    added,
+    alreadyKnown: known.size,
+    selected: selected.length,
+    selectedShops: new Set(selected.map(row => row.shopId)).size,
+    insertedShops: new Set(selected.map(row => row.shopId)).size,
+  };
 }
 
 export async function recordDiscoveryRun(
@@ -134,18 +155,34 @@ export async function recordDiscoveryRun(
 export async function candidateSummary(nicheKey: string) {
   await ensureCandidateTables();
   const rows = await db().prepare(
-    `SELECT state, COUNT(*) AS n, COUNT(DISTINCT shop_id) AS shops
-       FROM niche_candidates WHERE niche_key = ? GROUP BY state`)
-    .bind(nicheKey).all<{ state: string; n: number; shops: number }>()
-    .catch(() => ({ results: [] as Array<{ state: string; n: number; shops: number }> }));
+    `SELECT state, COUNT(*) AS n FROM niche_candidates
+      WHERE niche_key = ? GROUP BY state`)
+    .bind(nicheKey).all<{ state: string; n: number }>()
+    .catch(() => ({ results: [] as Array<{ state: string; n: number }> }));
   const byState: Record<string, number> = {};
-  let shops = 0;
-  for (const row of rows.results ?? []) {
-    byState[row.state] = Number(row.n) || 0;
-    shops = Math.max(shops, Number(row.shops) || 0);
-  }
+  for (const row of rows.results ?? []) byState[row.state] = Number(row.n) || 0;
+
+  /*
+    THE SHOP COUNT IS OF THE MONITORED SET, NOT THE LARGEST STATE.
+
+    Taking a max across per-state counts produced a number belonging to no
+    single set — the arithmetic bug this whole file now guards against. This
+    counts distinct shops among exactly the candidates being watched.
+  */
+  const watchedStates = ["awaiting-baseline", "monitoring", "momentum", "repeated-momentum"];
+  const marks = watchedStates.map(() => "?").join(",");
+  const shopRow = await db().prepare(
+    `SELECT COUNT(DISTINCT shop_id) AS shops, COUNT(*) AS listings
+       FROM niche_candidates WHERE niche_key = ? AND state IN (${marks})`)
+    .bind(nicheKey, ...watchedStates)
+    .first<{ shops: number; listings: number }>().catch(() => null);
+
   const total = Object.values(byState).reduce((sum, value) => sum + value, 0);
-  return { byState, total, shops };
+  return {
+    byState, total,
+    shops: Number(shopRow?.shops ?? 0),
+    watching: Number(shopRow?.listings ?? 0),
+  };
 }
 
 /** Promote a candidate once real movement has been observed for it. */

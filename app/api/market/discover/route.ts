@@ -6,6 +6,7 @@ import { env } from "cloudflare:workers";
 import { etsyApiCredential, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import { normalizeNiche, relates, type Candidate as Shape } from "@/app/niche-cohort";
 import { GROWTH } from "@/app/niche-candidates";
+import { invariants, type Stage } from "@/app/discovery-counts";
 import {
   addCandidates, recordDiscoveryRun, dueForDiscovery, candidateSummary, corpusSize,
 } from "@/app/niche-candidate-store";
@@ -125,17 +126,40 @@ export const POST = withErrorLog("market-discover", async (request: Request) => 
     totalCalls += calls;
     totalAdded += outcome.added;
 
+    const summary = await candidateSummary(key);
+    /*
+      EVERY STAGE, SEPARATELY NAMED.
+
+      Examined, accepted, selected after the cap, inserted — each with its own
+      shop count taken from its own set. Mixing two of them is what produced
+      "200 listings across 211 shops".
+    */
+    const stage: Stage = {
+      examined,
+      accepted: found.length,
+      acceptedShops: new Set(found.map(row => row.shopId)).size,
+      selected: outcome.selected,
+      selectedShops: outcome.selectedShops,
+      inserted: outcome.added,
+      insertedShops: outcome.insertedShops,
+      awaitingBaseline: summary.byState["awaiting-baseline"] ?? 0,
+      monitoring: summary.byState.monitoring ?? 0,
+      withEvidence: (summary.byState.momentum ?? 0)
+        + (summary.byState["repeated-momentum"] ?? 0),
+    };
+    const broken = invariants(stage, summary.shops);
+
     report.push({
       phrase: niche.phrase, key, watchers: niche.watchers,
-      searchResultsExamined: examined,
-      candidatesAccepted: found.length,
-      uniqueShops: new Set(found.map(row => row.shopId)).size,
+      stage,
+      /* What the member is told, from the monitored set alone. */
+      monitored: { watching: summary.watching, shops: summary.shops },
       alreadyInPoller: outcome.alreadyKnown,
-      newlyAdded: outcome.added,
       rejected: Object.entries(rejected).map(([because, n]) => ({ because, n }))
         .sort((a, b) => b.n - a.n),
       etsyCalls: calls,
-      candidates: await candidateSummary(key),
+      /* Reported beside the numbers rather than hidden behind a 500. */
+      invariantViolations: broken,
     });
   }
 

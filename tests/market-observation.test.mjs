@@ -9,6 +9,7 @@ import { evaluateGate, GATE_STANDARD, OBSERVATION_HOURS } from "../app/observati
 
 const NOW = 1_800_000_000;
 const sample = (over = {}) => ({ at: NOW - 3_600, build: "D1532", ruleVersion: 1,
+  semanticsVersion: 1,
   sensorOk: true, sweepOk: true, correlationOk: true,
   eligible: 100, correlated: 100, expiredNew: 0, p50: 900, p95: 1_800,
   backlog: 50, attributedUnits: 40, unresolvedUnits: 60,
@@ -38,17 +39,55 @@ test("72 healthy hours on one build and rule version passes", () => {
   assert.ok(gate.hoursObserved >= OBSERVATION_HOURS);
 });
 
-test("a deploy segments the clock rather than inheriting it", () => {
-  /* 70 hours on the old build, then 2 on the new one, is 2 hours of evidence.
-     Timestamps must not overlap, or "latest" is ambiguous. */
-  const old = Array.from({ length: 70 }, (unused, index) =>
+test("an unrelated deploy does NOT restart the clock", () => {
+  /*
+    The whole point. A styling change, a Shop Map deploy or a copy fix ships a
+    new build marker and touches nothing the detector means — so the window
+    must survive it. Segmenting on build made the gate unpassable for any
+    product that ships.
+  */
+  const before = Array.from({ length: 70 }, (unused, index) =>
     sample({ at: NOW - (72 - index) * 3_600, build: "D1400" }));
+  const after = Array.from({ length: 2 }, (unused, index) =>
+    sample({ at: NOW - (2 - index) * 3_600, build: "D1538" }));
+  const gate = evaluateGate([...before, ...after], NOW);
+  assert.equal(gate.samples, 72, "an unrelated deploy reset the observation");
+  assert.ok(gate.hoursObserved >= 71);
+  assert.equal(gate.passes, true, gate.failing.join("; "));
+  /* And the builds are still recorded, for audit. */
+  assert.deepEqual([...gate.buildsObserved].sort(), ["D1400", "D1538"]);
+});
+
+test("a detector-semantics change DOES restart the clock", () => {
+  const old = Array.from({ length: 70 }, (unused, index) =>
+    sample({ at: NOW - (72 - index) * 3_600, semanticsVersion: 1 }));
   const fresh = Array.from({ length: 2 }, (unused, index) =>
-    sample({ at: NOW - (2 - index) * 3_600 }));
+    sample({ at: NOW - (2 - index) * 3_600, semanticsVersion: 2 }));
   const gate = evaluateGate([...old, ...fresh], NOW);
+  assert.equal(gate.samples, 2, "a semantics change inherited an old window");
   assert.equal(gate.passes, false);
-  assert.equal(gate.samples, 2, "the gate counted samples from another build");
-  assert.ok(gate.hoursObserved < 3);
+  assert.equal(gate.semanticsVersion, 2);
+});
+
+test("samples from the retired architecture can never count", () => {
+  const retired = Array.from({ length: 70 }, (unused, index) =>
+    sample({ at: NOW - (72 - index) * 3_600, semanticsVersion: 0 }));
+  const current = Array.from({ length: 3 }, (unused, index) =>
+    sample({ at: NOW - (3 - index) * 3_600, semanticsVersion: 1 }));
+  const gate = evaluateGate([...retired, ...current], NOW);
+  assert.equal(gate.samples, 3);
+});
+
+test("normal production load never restarts the clock", () => {
+  /* A member saving a niche, candidates added, a listing qualifying — all of
+     these change counts inside a sample and none of them changes the key. */
+  const busy = Array.from({ length: 80 }, (unused, index) =>
+    sample({ at: NOW - (80 - index) * 3_600,
+      build: index % 7 === 0 ? `D${1500 + index}` : "D1538",
+      eligible: 100 + index * 3, correlated: 100 + index * 3 }));
+  const gate = evaluateGate(busy, NOW);
+  assert.equal(gate.samples, 80);
+  assert.equal(gate.passes, true, gate.failing.join("; "));
 });
 
 test("a rule-version change segments the clock too", () => {
@@ -64,8 +103,9 @@ test("a rule-version change segments the clock too", () => {
 test("the gate cannot be backdated onto old-architecture data", () => {
   const source = readFileSync(
     new URL("../app/observation-gate.ts", import.meta.url), "utf8");
-  assert.match(source.replace(/\s+/g, " "), /never backdated onto old-architecture data/);
-  assert.match(source, /SEGMENTED BY BUILD AND RULE VERSION/);
+  assert.match(source.replace(/\s+/g, " "),
+    /never backdated onto old-architecture\s*data/);
+  assert.match(source, /SEGMENTED BY DETECTOR SEMANTICS, NOT BY DEPLOY/);
 });
 
 test("every standard is enforced, and named when it fails", () => {
@@ -157,4 +197,25 @@ test("the observation sample reads columns poll_sweeps actually has", () => {
     if (/^[a-z_]+$/.test(match[1]) && match[1] !== "select")
       assert.ok(columns.has(match[1]),
         `the observation reads poll_sweeps.${match[1]}, which does not exist`);
+});
+
+test("the detector-semantics version is documented and hand-bumped", () => {
+  const source = readFileSync(
+    new URL("../app/detector-semantics.ts", import.meta.url), "utf8");
+  assert.match(source, /BUMP THIS WHEN, AND ONLY WHEN/);
+  assert.match(source, /DO NOT BUMP IT FOR normal production load/);
+  /* Every version has a written reason. */
+  assert.match(source, /SEMANTICS_HISTORY/);
+  const history = source.slice(source.indexOf("SEMANTICS_HISTORY"));
+  assert.match(history, /because:/);
+});
+
+test("the sample carries the build for audit but not as the key", () => {
+  const gate = readFileSync(
+    new URL("../app/observation-gate.ts", import.meta.url), "utf8");
+  assert.match(gate, /SEGMENTED BY DETECTOR SEMANTICS, NOT BY DEPLOY/);
+  assert.match(gate, /\$\{sample\.semanticsVersion \?\? 0\}:\$\{sample\.ruleVersion\}/);
+  /* The build is never part of the key. */
+  const keyLine = gate.slice(gate.indexOf("const key ="), gate.indexOf("const segment"));
+  assert.ok(!keyLine.includes("build"), "the build is still part of the segment key");
 });

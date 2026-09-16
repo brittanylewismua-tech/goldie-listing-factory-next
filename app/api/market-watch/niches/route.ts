@@ -136,9 +136,15 @@ async function readNiche(userId: string, terms: string[], key: string, now: numb
     corpus to 200 candidates under observation, and the page still read as a
     dead end.
   */
+  /*
+    BOTH NUMBERS FROM ONE SET.
+
+    `candidateSummary` counts the watched listings and their distinct shops in
+    one query over the same rows, so the member-facing line cannot claim more
+    shops than listings — which it did when the two came from different pools.
+  */
   const watched = await candidateSummary(key);
-  const watching = (watched.byState["awaiting-baseline"] ?? 0)
-    + (watched.byState.monitoring ?? 0);
+  const watching = watched.watching;
 
   return {
     key, summary, visualPatterns,

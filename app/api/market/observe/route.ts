@@ -9,6 +9,7 @@ import {
 } from "@/app/market-observation";
 import { CORRELATION_RULE_VERSION } from "@/app/correlation";
 import { BUILD_MARKER } from "@/app/build-marker";
+import { DETECTOR_SEMANTICS_VERSION } from "@/app/detector-semantics";
 import { etsyBudget } from "@/app/api/etsy/client";
 
 /**
@@ -80,6 +81,8 @@ export const GET = withErrorLog("market-observe", async (request: Request) => {
   const total = Number(fresh?.total ?? 0);
   const sample: Sample = {
     at: now, build: BUILD_MARKER, ruleVersion: CORRELATION_RULE_VERSION,
+    /* The segment key. A UI deploy changes `build` and leaves this alone. */
+    semanticsVersion: DETECTOR_SEMANTICS_VERSION,
     sensorOk: now - epoch(sensor?.at) < 6 * 3_600,
     sweepOk: now - epoch(sweep?.at) < 3 * 3_600,
     /* A pass that has not run for three hours is not working, whatever the

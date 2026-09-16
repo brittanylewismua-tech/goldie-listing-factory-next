@@ -23,7 +23,14 @@ export const GATE_STANDARD = {
 } as const;
 
 export type Sample = {
-  at: number; build: string; ruleVersion: number;
+  at: number;
+  /* Recorded for audit — which build produced this reading — and deliberately
+     NOT the segment key. See `semanticsVersion`. */
+  build: string;
+  ruleVersion: number;
+  /* The segment key. Bumped only when the meaning of detector evidence
+     changes; see app/detector-semantics.ts. */
+  semanticsVersion: number;
   sensorOk: boolean; sweepOk: boolean; correlationOk: boolean;
   eligible: number; correlated: number; expiredNew: number;
   p50: number; p95: number; backlog: number;
@@ -39,6 +46,9 @@ export type Sample = {
 
 export type GateResult = {
   passes: boolean;
+  /* The segment key. Several builds inside one window is expected. */
+  semanticsVersion?: number;
+  buildsObserved?: string[];
   /* Where the clock actually starts: the first sample on the CURRENT build and
      rule version. A deploy or rule change segments the observation rather
      than inheriting a window it did not earn. */
@@ -54,22 +64,31 @@ export function evaluateGate(
 ): GateResult {
   if (!samples.length)
     return { passes: false, segmentStartedAt: null, hoursObserved: 0, samples: 0,
+      semanticsVersion: 0, buildsObserved: [],
       failing: ["no observation samples yet"], measured: {} };
 
   /*
-    SEGMENTED BY BUILD AND RULE VERSION.
+    SEGMENTED BY DETECTOR SEMANTICS, NOT BY DEPLOY.
 
     Observing 72 hours across three different correlation rules is not 72 hours
-    of evidence about any of them. The newest contiguous run on the current
-    build and rule version is the only window that counts, and it is never
-    backdated onto old-architecture data.
+    of evidence about any of them — so a change to what the detector MEANS
+    still restarts the clock, and is never backdated onto old-architecture
+    data.
+
+    But an unrelated deploy does not. Segmenting on the build marker meant a
+    copy fix reset a window measuring the sensor, and it meant the gate could
+    never pass after launch, because a product that ships would reset it every
+    day. The build is still on every sample for audit; it simply does not
+    decide the window.
   */
   const ordered = [...samples].sort((a, b) => a.at - b.at);
   const latest = ordered[ordered.length - 1];
+  const key = (sample: Sample) =>
+    `${sample.semanticsVersion ?? 0}:${sample.ruleVersion}`;
   const segment: Sample[] = [];
   for (let index = ordered.length - 1; index >= 0; index -= 1) {
     const sample = ordered[index];
-    if (sample.build !== latest.build || sample.ruleVersion !== latest.ruleVersion) break;
+    if (key(sample) !== key(latest)) break;
     segment.unshift(sample);
   }
 
@@ -110,9 +129,15 @@ export function evaluateGate(
   if (segment.some(row => !row.cohortsOk)) failing.push("cohort recomputation failed");
   if (segment.some(row => !row.briefsOk)) failing.push("a morning brief failed to build");
 
+  /* Which builds produced this window, for audit. Several is normal and
+     healthy: it means unrelated work shipped without disturbing the clock. */
+  const builds = [...new Set(segment.map(row => row.build))];
+
   return {
     passes: failing.length === 0,
     segmentStartedAt: startedAt,
+    semanticsVersion: latest.semanticsVersion ?? 0,
+    buildsObserved: builds,
     hoursObserved: Number(hours.toFixed(2)),
     samples: segment.length,
     failing,
