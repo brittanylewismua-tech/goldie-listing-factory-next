@@ -14,6 +14,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { leaseHolds, LEASE_TTL_SECONDS } from "../app/work-lease-rules.ts";
+import * as composition from "../app/listing-composition.ts";
 
 const read = name => readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
 const flow = read("listing-flow.ts");
@@ -225,4 +226,22 @@ test("the reset affordance touches only the caller's own cached analysis", () =>
       "a reset must never reach beyond the caller");
   for (const forbidden of ["etsy_", "listings", "finance_", "artwork_provenance"])
     assert.ok(!reset.includes(`DELETE FROM ${forbidden}`), `reset deletes from ${forbidden}`);
+});
+
+test("a cue that says it is empty never reaches a title", () => {
+  /*
+    The first real seven-product production run composed every title as
+    "…, T-shirt, Gift for none": the model, asked for audience cues and
+    finding none in the artwork, answered with the word "none". A correct
+    answer to the question and a broken listing.
+  */
+  const { composeTitle, composeTags, isRealValue } = composition;
+  for (const empty of ["none", "None", "N/A", "unknown", "everyone", "-", " none "])
+    assert.equal(isRealValue(empty), false, `"${empty}" was treated as a real value`);
+  assert.equal(composeTitle(["Sunset Club"], "t-shirt", ["none"]),
+    "Sunset Club, T-shirt");
+  assert.equal(composeTitle(["Sunset Club"], "t-shirt", ["dog moms"]),
+    "Sunset Club, T-shirt, Gift for dog moms");
+  assert.ok(!composeTags(["none"], "tee", ["n/a"], ["unknown"]).includes("none"));
+  assert.ok(composeTags(["sunset club"], "tee", [], []).includes("sunset club"));
 });

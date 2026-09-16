@@ -112,7 +112,10 @@
 /* D1584 prices the two Listing Factory workloads from measured production
    calls. Both sat at a unitCost of 0, which meant their dollar ceilings could
    never stop anything: an unpriced workload is an uncapped one. */
-export const BUILD_MARKER = "D1584";
+/* D1585 stops "Gift for none" reaching a member's title. The first real
+   seven-product run composed it into all seven: a cue that says it is empty
+   is still a non-empty string, so the absence has to be spelled out. */
+export const BUILD_MARKER = "D1585";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
