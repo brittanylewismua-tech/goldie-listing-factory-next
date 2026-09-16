@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { accountSignInPath, getChatGPTUser } from "@/app/chatgpt-auth";
-import GoldieWordmark from "../goldie-wordmark";
 import HomeStatus from "./home-status";
 
 /**
@@ -69,7 +68,9 @@ export default async function HomePage() {
 
   return <main className="hub">
     <header className="hub-head">
-      <div className="hub-brand"><GoldieWordmark className="approved-brand" /></div>
+      {/* The suite mark. The Listing Factory lockup belongs inside the
+          factory, not at the top of a page offering four products. */}
+      <div className="hub-brand"><span className="suite-mark">Goldie</span></div>
       {/* No name. The only one available is the part of an email address
           before the @, and "Good to see you, shesawolfclothing" is worse than
           not trying. */}

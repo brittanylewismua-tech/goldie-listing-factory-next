@@ -44,8 +44,19 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
   const monthEnd = Math.floor(Date.parse(
     `${month}-01T00:00:00Z`) / 1000) + 32 * 86_400;
   const rows = await db.prepare(
+    /*
+      SELLER REVENUE, THE SAME NUMBER SHOP MAP AND HOME SHOW.
+
+      This used `grand_total_minor`, which is what the BUYER paid — it includes
+      marketplace tax the seller never receives. So the month read "$25.00"
+      on two screens and the order inside it read "$26.49" on a third. Two
+      member-facing screens calling different numbers "revenue" is the kind of
+      contradiction that makes somebody distrust all three.
+    */
     `SELECT r.receipt_id AS receiptId, r.source_created_at AS createdAt,
-            r.grand_total_minor AS revenueMinor, r.currency AS currency,
+            (r.subtotal_minor + r.shipping_minor - r.seller_discount_minor)
+              AS revenueMinor,
+            r.currency AS currency,
             r.shop_id AS shopId, r.canceled AS receiptCanceled,
             p.printify_order_id AS printifyOrderId,
             p.cost_minor AS costMinor, p.shipping_minor AS shippingMinor,

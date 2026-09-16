@@ -4557,6 +4557,10 @@ html, body { background: var(--lf-paper); }
 
 /* Not ready, and visibly so. Hiding it would leave no sense of what is
    coming; making it look live would be a lie you discover by clicking. */
+/* The suite mark on Home. Plain type rather than the factory lockup, because
+   this page is the door to four products and one of them is the factory. */
+.suite-mark{font-size:22px;font-weight:700;letter-spacing:-.02em;color:#fff}
+
 /* The coming-soon tile is gone with the tools it advertised. A permanent
    "coming soon" is a promise nobody made, and the two tools it named — Hot
    List and a customer-service bot — are not part of Goldie. */

@@ -23,8 +23,15 @@ export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") || "localhost:3000";
   const origin = `${host.startsWith("localhost") ? "http" : "https"}://${host}`;
-  const title = "Goldie Listing Factory";
-  const description = "Batch-create unpublished Printify product drafts from finished designs and a saved product template.";
+  /*
+    THE SUITE, NOT ONE OF ITS FOUR FEATURES.
+
+    Every tab, bookmark and share card said "Goldie Listing Factory" while the
+    home page showed four products. The factory is one of them.
+  */
+  const title = "Goldie";
+  const description = "Etsy seller tools: bulk listing creation, market evidence, "
+    + "your own shop's numbers, and a trademark check before you print.";
   return {
     metadataBase: new URL(origin),
     title,
