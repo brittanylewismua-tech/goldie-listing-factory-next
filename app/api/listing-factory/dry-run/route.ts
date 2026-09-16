@@ -250,7 +250,13 @@ async function run(request: Request, user: { userId: string; email: string }) {
          from a cache that happens to be cold. */
       cacheTablePresent: Boolean(copyTable),
       cachedFamilies: copyTable ? [...cachedCopy].map(key => key.split(":")[1]) : null,
-      sampleKey: familyCopyKey(user.userId, artworkHash, ["tee"]),
+      /* Takes one object, not positional arguments: calling it positionally
+         spread a string as `families` and threw "i is not iterable". */
+      sampleKey: familyCopyKey({
+        userId: user.userId, artworkHash,
+        designVersion: `${EXTRACTION_SCHEMA_VERSION}.${DESIGN_PROMPT_VERSION}`,
+        families: ["tee"],
+      }),
     },
     plan: {
       mode: warm ? "warm" : "cold",
