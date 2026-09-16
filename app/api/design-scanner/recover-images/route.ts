@@ -28,9 +28,23 @@ export const maxDuration = 300;
 const BATCH = 100;
 
 export const POST = withErrorLog("design-scanner-recover-images", async (request: Request) => {
-  const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
-    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  /*
+    ALSO ON THE CLOCK.
+
+    Nothing refreshed reference images, so every one of them aged past Etsy's
+    six-hour display rule and Market Watch correctly withheld them — leaving a
+    member looking at 44 blank grey boxes. The rule was right; nothing was
+    keeping the data inside it.
+
+    The scheduled caller builds its request inside the worker, so it carries no
+    cf-connecting-ip, the same proof of origin the other cron routes use.
+  */
+  const internal = !request.headers.get("cf-connecting-ip");
+  if (!internal) {
+    const user = await getChatGPTUser();
+    if (!user || !isOwner(user))
+      return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  }
 
   const db = (env as unknown as { DB: D1Database }).DB;
   await ensureReferenceImageTable();
@@ -62,7 +76,28 @@ export const POST = withErrorLog("design-scanner-recover-images", async (request
     .filter(row => refresh ? false : now - Number(row.retrievedAt) < 6 * 3_600)
     .map(row => Number(row.listingId)));
 
-  const todo = everyId.filter(id => !recent.has(id));
+  /*
+    OLDEST FIRST, AND WHAT A MEMBER CAN SEE FIRST.
+
+    A bounded refresh has to spend its calls where a blank box would actually
+    appear, so listings inside a saved niche go before the rest of the corpus.
+  */
+  const visible = await db.prepare(
+    `SELECT DISTINCT listing_id AS listingId FROM niche_candidates
+      WHERE state IN ('monitoring','momentum','repeated-momentum')`)
+    .all<{ listingId: number }>()
+    .catch(() => ({ results: [] as Array<{ listingId: number }> }));
+  const inNiche = new Set((visible.results ?? []).map(row => Number(row.listingId)));
+  const staleness = new Map((held.results ?? [])
+    .map(row => [Number(row.listingId), Number(row.retrievedAt) || 0]));
+
+  const todo = everyId
+    .filter(id => !recent.has(id))
+    .sort((a, b) => {
+      const seen = (inNiche.has(b) ? 1 : 0) - (inNiche.has(a) ? 1 : 0);
+      if (seen) return seen;
+      return (staleness.get(a) ?? 0) - (staleness.get(b) ?? 0);
+    });
   const thisRun = todo.slice(0, maxBatches * BATCH);
 
   const answered: Recovered[] = [];

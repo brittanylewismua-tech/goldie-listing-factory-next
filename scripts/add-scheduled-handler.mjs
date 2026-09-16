@@ -73,6 +73,15 @@ export default {
         remembering to look is not a gate.
       */
       run("/api/market/observe");
+      /*
+        Keep reference images inside Etsy's six-hour display rule. Without this
+        they age out and every listing card renders as a blank box — the rule
+        working correctly against data nothing was refreshing.
+      */
+      ctx.waitUntil(
+        app.fetch(new Request(site + "/api/design-scanner/recover-images?batches=3",
+          { method: "POST" }), env, ctx).catch(() => {}),
+      );
       return;
     }
 

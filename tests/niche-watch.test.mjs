@@ -344,3 +344,32 @@ test("removing a personal watch keeps the shared shop and its history", () => {
     assert.ok(!new RegExp(`DELETE FROM ${table}`).test(removeWatch),
       `removing a personal watch deletes ${table}`);
 });
+
+test("a withheld image explains itself instead of rendering an empty box", () => {
+  /* Measured in the browser: 44 of 45 cards showed a blank grey square,
+     because the six-hour rule was withholding images nothing was refreshing. */
+  assert.match(MW, /Picture not current — Goldie refreshes it shortly/);
+  assert.match(MW, /No picture available/);
+  assert.ok(!MW.includes('background: "#f4f2ef"'),
+    "the unexplained grey box is still rendered");
+  assert.match(MWCSS, /\.no-image \{/);
+});
+
+test("reference images are refreshed on the clock, not only by hand", () => {
+  const scheduled = readFileSync(
+    new URL("../scripts/add-scheduled-handler.mjs", import.meta.url), "utf8");
+  assert.match(scheduled, /recover-images\?batches=3/);
+  assert.match(scheduled, /six-hour display rule/);
+  const route = readFileSync(new URL(
+    "../app/api/design-scanner/recover-images/route.ts", import.meta.url), "utf8");
+  assert.match(route, /ALSO ON THE CLOCK/);
+  assert.match(route, /const internal = !request\.headers\.get\("cf-connecting-ip"\)/);
+});
+
+test("the refresh spends its calls where a member would see a blank box", () => {
+  const route = readFileSync(new URL(
+    "../app/api/design-scanner/recover-images/route.ts", import.meta.url), "utf8");
+  assert.match(route, /OLDEST FIRST, AND WHAT A MEMBER CAN SEE FIRST/);
+  assert.match(route, /FROM niche_candidates/);
+  assert.match(route, /inNiche\.has/);
+});
