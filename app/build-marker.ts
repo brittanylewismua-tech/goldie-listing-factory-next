@@ -129,7 +129,7 @@
    name or icon, and the Listing Factory's wordmark appears only on the
    Listing Factory's own pages. Assets, storage keys, event names and the
    domain are untouched. */
-export const BUILD_MARKER = "D1589";
+export const BUILD_MARKER = "D1590";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

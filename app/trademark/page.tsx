@@ -5,9 +5,6 @@ import type { FullVerdict } from "../trademark-check";
 import "./trademark.css";
 import FactoryShell from "@/app/factory-shell";
 
-/* The tab says what this page is; there is no product name to append. */
-export const metadata = { title: "Trademark Checker" };
-
 
 /**
  * TRADEMARK CHECK.
