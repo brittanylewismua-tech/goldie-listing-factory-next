@@ -147,3 +147,27 @@ test("rediscovery revives a demoted candidate rather than resetting it", () => {
   assert.ok(!upsert.includes("discovered_at = excluded"),
     "rediscovery rewrites the original discovery date");
 });
+
+test("a niche being watched says gathering, not unsupported", () => {
+  const route = readFileSync(new URL(
+    "../app/api/market-watch/niches/route.ts", import.meta.url), "utf8");
+  assert.match(route, /GATHERING IS NOT THE SAME AS UNSUPPORTED/);
+  /* Only while nothing has moved — never shown beside real evidence. */
+  assert.match(route, /summary\.moving === 0 && watching > 0 \? GATHERING : null/);
+
+  const client = readFileSync(new URL(
+    "../app/market-watch/market-watch-client.tsx", import.meta.url), "utf8");
+  assert.match(client, /\{view\.gathering && listings\.length === 0 &&/);
+  assert.match(client, /!view\.gathering && !summary\?\.meaningfulMomentum/);
+});
+
+test("candidate counts are shown as watching, never as momentum", () => {
+  const client = readFileSync(new URL(
+    "../app/market-watch/market-watch-client.tsx", import.meta.url), "utf8");
+  const block = client.slice(client.indexOf("view.gathering && listings.length"),
+    client.indexOf("!view.gathering &&"));
+  assert.match(block, /Goldie is watching \$\{view\.candidates\.watching\} listings/);
+  for (const banned of ["moving", "momentum", "selling", "sold"])
+    assert.ok(!block.toLowerCase().includes(banned),
+      `candidates were described as "${banned}"`);
+});

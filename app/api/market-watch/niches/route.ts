@@ -12,6 +12,8 @@ import {
   MAX_NICHE_WATCHES,
 } from "@/app/niche-watch-store";
 import { ANALYSIS_VERSION } from "@/app/reference-analysis";
+import { candidateSummary } from "@/app/niche-candidate-store";
+import { GATHERING } from "@/app/niche-candidates";
 import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 import { describeWindow } from "@/app/evidence-window";
 import { DISPLAY_FRESHNESS_SECONDS } from "@/app/reference-images";
@@ -124,8 +126,25 @@ async function readNiche(userId: string, terms: string[], key: string, now: numb
       (b.state === "repeated-momentum" ? 1 : 0) - (a.state === "repeated-momentum" ? 1 : 0)
       || b.confirmedAt - a.confirmedAt);
 
+  /*
+    GATHERING IS NOT THE SAME AS UNSUPPORTED.
+
+    A niche Goldie has just started watching has candidates being baselined and
+    no movement yet. Saying "not enough verified evidence" makes that look
+    permanent, when the honest answer is that the watching has begun and
+    nothing has moved YET. Measured: "girl power" went from 0 listings in the
+    corpus to 200 candidates under observation, and the page still read as a
+    dead end.
+  */
+  const candidates = await candidateSummary(key);
+  const watching = (candidates.byState["awaiting-baseline"] ?? 0)
+    + (candidates.byState.monitoring ?? 0);
+
   return {
     key, summary, visualPatterns,
+    candidates: { watching, shops: candidates.shops, byState: candidates.byState },
+    /* Shown only while nothing has moved: never alongside real evidence. */
+    gathering: summary.moving === 0 && watching > 0 ? GATHERING : null,
     window: summary.windowSeconds ? describeWindow(summary.windowSeconds) : null,
     listings,
     staleForDisplay: listings.filter(row => !row.displayFresh).length,

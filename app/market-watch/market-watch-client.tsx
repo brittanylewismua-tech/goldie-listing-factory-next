@@ -24,6 +24,8 @@ type NicheView = {
   window?: string | null;
   visualPatterns?: string[];
   listings?: Listing[];
+  gathering?: string | null;
+  candidates?: { watching: number; shops: number };
   lastCheckedAt?: number;
 };
 
@@ -208,7 +210,17 @@ function NicheDetail({ view, onBack }: { view: NicheView; onBack: () => void }) 
         </p>
       )}
 
-      {!summary?.meaningfulMomentum && listings.length === 0 && (
+      {view.gathering && listings.length === 0 && (
+        <p className="empty">
+          {view.gathering}
+          {view.candidates?.watching
+            ? ` Goldie is watching ${view.candidates.watching} listings across `
+              + `${view.candidates.shops} shops for this niche.`
+            : ""}
+        </p>
+      )}
+
+      {!view.gathering && !summary?.meaningfulMomentum && listings.length === 0 && (
         <p className="empty">
           Goldie has not confirmed enough movement in this niche yet. It keeps
           watching, and this fills in as evidence arrives.
