@@ -177,5 +177,8 @@
   margin-bottom: 8px; cursor: pointer; font-size: 0.92rem; color: var(--ink);
 }
 .history .when { color: var(--muted); font-size: 0.8rem; }
+.history .verdict-line {
+  display: block; color: var(--muted); font-size: 0.82rem; margin-top: 2px;
+}
 
 .error { color: var(--risk); margin-top: 14px; font-size: 0.92rem; }

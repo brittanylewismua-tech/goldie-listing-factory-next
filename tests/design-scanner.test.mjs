@@ -662,3 +662,33 @@ test("the register-backed wording still reports what the register says", () => {
     code.indexOf("export function mentionsAMark"));
   assert.doesNotMatch(curated, /property owned by/);
 });
+
+test("a retired label is never shown to a member again", () => {
+  /* Scans saved before the wording correction carry "Strong alignment" — a
+     claim about niche fit a construction-only comparison cannot make. */
+  const client = readFileSync(new URL(
+    "../app/design-scanner/design-scanner-client.tsx", import.meta.url), "utf8");
+  assert.match(client, /LABELS THIS PRODUCT NO LONGER STANDS BEHIND/);
+  for (const retired of ["Strong alignment",
+    "Visually strong, weak niche alignment", "Not enough verified niche evidence yet"])
+    assert.ok(client.includes(`"${retired}":`), `${retired} is not mapped`);
+  /* Every render goes through the mapping. */
+  assert.match(client, /\{currentLabel\(result\.overall\)\}/);
+  assert.ok(!client.includes("{result.overall}"), "a raw stored label still renders");
+});
+
+test("the stored record is not rewritten", () => {
+  const client = readFileSync(new URL(
+    "../app/design-scanner/design-scanner-client.tsx", import.meta.url), "utf8");
+  assert.match(client, /rewriting history is worse/);
+  /* Mapping happens at display; nothing writes back. */
+  const block = client.slice(client.indexOf("RETIRED_LABELS"), client.indexOf("const STAGES"));
+  assert.ok(!/fetch\(|PUT|PATCH/.test(block));
+});
+
+test("scan history says what each scan found", () => {
+  const client = readFileSync(new URL(
+    "../app/design-scanner/design-scanner-client.tsx", import.meta.url), "utf8");
+  assert.match(client, /className="verdict-line"/);
+  assert.match(client, /row\.result\?\.overall/);
+});

@@ -39,6 +39,24 @@ type Result = {
 type HistoryRow = { id: string; niche: string; artworkHash: string;
   createdAt: number; result: Result };
 
+/**
+ * LABELS THIS PRODUCT NO LONGER STANDS BEHIND.
+ *
+ * Scans saved before the wording correction carry "Strong alignment" and
+ * "Visually strong, weak niche alignment" — claims about niche fit that a
+ * construction-only comparison cannot make. The stored record keeps what it
+ * said, because rewriting history is worse; what a member SEES is mapped to
+ * the current wording, so no retired claim can be reopened.
+ */
+const RETIRED_LABELS: Record<string, string> = {
+  "Strong alignment": "Strong visual-pattern alignment",
+  "Promising, but unclear at thumbnail size": "Moderate visual-pattern alignment",
+  "Visually strong, weak niche alignment": "Weak visual-pattern alignment",
+  "Not enough verified niche evidence yet": "Not enough verified evidence",
+};
+
+const currentLabel = (overall: string) => RETIRED_LABELS[overall] ?? overall;
+
 const STAGES = [
   "Reading your design",
   "Finding listings with verified movement in this niche",
@@ -230,6 +248,11 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
             <button key={row.id} onClick={() => { setResult(row.result); setNiche(row.niche); }}>
               {row.niche}
               <span className="when"> · {new Date(row.createdAt * 1000).toLocaleDateString()}</span>
+              {/* What it said, so a list of seven scans is not seven identical
+                  rows the member has to open one by one to tell apart. */}
+              {row.result?.overall && (
+                <span className="verdict-line">{currentLabel(row.result.overall)}</span>
+              )}
             </button>
           ))}
         </section>
@@ -241,7 +264,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
 function ScanResult({ result }: { result: Result }) {
   return (
     <section className="result">
-      <p className="overall">{result.overall}</p>
+      <p className="overall">{currentLabel(result.overall)}</p>
 
       {result.ok ? (
         <>
