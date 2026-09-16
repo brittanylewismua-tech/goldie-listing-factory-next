@@ -104,6 +104,10 @@ test("every member-owned table read is scoped by user_id", () => {
        counted, and never returning whose watch they are. That is what makes
        twenty members watching one niche cost one search instead of twenty. */
     "api/market/discover/route.ts: FROM niche_watches",
+    /* Review collection is SHARED: it reads which shops anyone follows so one
+       fetch serves every watcher. It returns shop ids, never whose watch they
+       are, and that is the whole reason twenty watchers cost what one costs. */
+    "api/design-scanner/cohort-reviews/route.ts: FROM member_shop_watches",
   ]);
   assert.deepEqual(offences.filter(row => !allowed.has(row)), []);
 });
