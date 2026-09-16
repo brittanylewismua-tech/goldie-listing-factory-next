@@ -243,7 +243,16 @@ function NicheDetail({ view, onBack }: { view: NicheView; onBack: () => void }) 
                  it loads, which is a defect this codebase has shipped before
                  and now guards against. */
               ? <img src={listing.imageUrl} alt="" loading="lazy" width={570} height={570} />
-              : <div style={{ aspectRatio: "1 / 1", background: "#f4f2ef" }} />}
+              : (
+                /* Etsy requires displayed listing data to be under six hours
+                   old. An empty grey square looks like a bug; saying why looks
+                   like a product that knows what it is doing. */
+                <p className="no-image">
+                  {listing.imageUrl
+                    ? "Picture not current — Goldie refreshes it shortly"
+                    : "No picture available"}
+                </p>
+              )}
             <div className="body">
               <span className="tag" data-state={listing.state}>{listing.label}</span>
               <p className="title">{listing.title}</p>
