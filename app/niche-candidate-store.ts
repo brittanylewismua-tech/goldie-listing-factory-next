@@ -64,7 +64,8 @@ export async function addCandidates(
 ) {
   await ensureCandidateTables();
   if (!found.length)
-    return { added: 0, alreadyKnown: 0, selected: 0, selectedShops: 0, insertedShops: 0 };
+    return { added: 0, alreadyKnown: 0, selected: 0, selectedShops: 0,
+      insertedShops: 0, atCap: false };
 
   /* How many of these Goldie already polls, so the report can separate new
      monitoring cost from reuse. */
@@ -79,6 +80,10 @@ export async function addCandidates(
       .catch(() => ({ results: [] as Array<{ listingId: number }> }));
     for (const row of rows.results ?? []) known.add(Number(row.listingId));
   }
+
+  if (!selected.length)
+    return { added: 0, alreadyKnown: known.size, selected: 0, selectedShops: 0,
+      insertedShops: 0, atCap: true };
 
   const insert = db().prepare(
     `INSERT INTO niche_candidates
@@ -99,13 +104,25 @@ export async function addCandidates(
                     THEN '' ELSE niche_candidates.removed_reason END`);
 
   /*
-    THE CAP IS APPLIED HERE AND THE SELECTED SET IS RETURNED.
+    THE CAP BOUNDS THE POOL, NOT THE BATCH.
 
-    It used to be applied silently inside this map while the caller went on
-    reporting shop counts from the uncapped `found` array — which is how a
-    200-listing pool came to be described as spanning 211 shops.
+    It used to slice each run to 200, which meant a second discovery run added
+    200 more on top — measured: bachelorette reached 259 candidates, halloween
+    359 and teacher 353, all against a "maximum 200 per niche". A cap that only
+    limits one batch is not a cap, and corpus growth is the thing this whole
+    lifecycle exists to bound.
+
+    It is also applied here, where the selected set is returned, so the caller
+    reports shop counts from the set that was actually kept — the mix-up that
+    described a 200-listing pool as spanning 211 shops.
   */
-  const selected = found.slice(0, GROWTH.maxCandidatesPerNiche);
+  const held = await db().prepare(
+    `SELECT COUNT(*) AS n FROM niche_candidates
+      WHERE niche_key = ? AND state IN
+            ('discovered','awaiting-baseline','monitoring','momentum','repeated-momentum')`)
+    .bind(nicheKey).first<{ n: number }>().catch(() => null);
+  const room = Math.max(0, GROWTH.maxCandidatesPerNiche - Number(held?.n ?? 0));
+  const selected = found.slice(0, room);
   const statements = selected.map(row =>
     insert.bind(nicheKey, row.listingId, row.shopId, phrase, query, now, row.page,
       row.state,
@@ -131,6 +148,7 @@ export async function addCandidates(
     selected: selected.length,
     selectedShops: new Set(selected.map(row => row.shopId)).size,
     insertedShops: new Set(selected.map(row => row.shopId)).size,
+    atCap: room === 0,
   };
 }
 

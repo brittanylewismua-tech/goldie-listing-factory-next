@@ -94,3 +94,22 @@ test("state counts sum to the candidates that exist", () => {
   /* `total` is the sum of the per-state counts, so it cannot disagree. */
   assert.match(store, /Object\.values\(byState\)\.reduce\(\(sum, value\) => sum \+ value, 0\)/);
 });
+
+test("the per-niche cap bounds the pool, not one batch", () => {
+  /* Measured: with a 200 cap, repeated discovery reached 259, 359 and 353
+     candidates. A cap that only limits one run is not a cap. */
+  const store = readFileSync(
+    new URL("../app/niche-candidate-store.ts", import.meta.url), "utf8");
+  assert.match(store, /THE CAP BOUNDS THE POOL, NOT THE BATCH/);
+  assert.match(store, /SELECT COUNT\(\*\) AS n FROM niche_candidates/);
+  assert.match(store, /const room = Math\.max\(0, GROWTH\.maxCandidatesPerNiche - Number/);
+  assert.match(store, /const selected = found\.slice\(0, room\);/);
+  /* And a full niche says so instead of reporting a mysterious zero. */
+  assert.match(store, /atCap: true/);
+});
+
+test("a niche at its cap reports that, not an unexplained zero", () => {
+  const route = readFileSync(new URL(
+    "../app/api/market/discover/route.ts", import.meta.url), "utf8");
+  assert.match(route, /atNicheCap: outcome\.atCap/);
+});

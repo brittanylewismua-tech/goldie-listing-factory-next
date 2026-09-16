@@ -155,6 +155,8 @@ export const POST = withErrorLog("market-discover", async (request: Request) => 
       /* What the member is told, from the monitored set alone. */
       monitored: { watching: summary.watching, shops: summary.shops },
       alreadyInPoller: outcome.alreadyKnown,
+      /* Stated rather than silently producing a zero-insert run. */
+      atNicheCap: outcome.atCap,
       rejected: Object.entries(rejected).map(([because, n]) => ({ because, n }))
         .sort((a, b) => b.n - a.n),
       etsyCalls: calls,
