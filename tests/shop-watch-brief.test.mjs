@@ -152,11 +152,13 @@ test("a card carries a finding, not only a count", () => {
   const route = readFileSync(new URL(
     "../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
 
-  /* Every pattern shape states why its number matters. */
-  const sections = (patterns.match(/section: "/g) || []).length;
-  const becauses = (patterns.match(/because: /g) || []).length;
-  assert.equal(sections, becauses,
-    `${sections} card shapes and ${becauses} explanations — every card needs one`);
+  /* Every pattern shape states why its number matters. Counted on `headline`
+     rather than `section`, because one builder passes the section through as a
+     parameter and a count of the literal misses it. */
+  const headlines = (patterns.match(/headline:/g) || []).length;
+  const becauses = (patterns.match(/because:/g) || []).length;
+  assert.equal(headlines, becauses,
+    `${headlines} headlines and ${becauses} explanations — every card needs one`);
 
   /* The explanation reaches the card rather than stopping at the route. */
   assert.match(route.slice(route.indexOf("function present")), /because: card\.because/);
