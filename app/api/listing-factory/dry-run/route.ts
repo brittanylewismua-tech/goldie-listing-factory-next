@@ -69,6 +69,19 @@ export const GET = withErrorLog("listing-factory-dry-run", async (request: Reque
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  try {
+    return await run(request, user);
+  } catch (error) {
+    /* The real message, to the owner. This route has no member audience and a
+       generic wrapper turns a five-minute fix into an afternoon of guessing. */
+    return NextResponse.json({
+      error: error instanceof Error ? error.message : "dry run failed",
+      stack: error instanceof Error ? String(error.stack ?? "").slice(0, 700) : "",
+    }, { status: 500 });
+  }
+});
+
+async function run(request: Request, user: { userId: string; email: string }) {
 
   const db = (env as unknown as { DB: D1Database }).DB;
   const url = new URL(request.url);
@@ -254,4 +267,4 @@ export const GET = withErrorLog("listing-factory-dry-run", async (request: Reque
     allValid: perBlueprint.filter(row => !row.stopped).every(row => row.payloadValid),
     stoppedCount: perBlueprint.filter(row => row.stopped).length,
   });
-});
+}
