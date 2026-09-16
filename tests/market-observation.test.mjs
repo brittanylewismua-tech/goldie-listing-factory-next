@@ -257,3 +257,34 @@ test("a real production backlog rise still fails", () => {
   const gate = evaluateGate(samples, NOW);
   assert.ok(gate.failing.some(line => /backlog grew/.test(line)));
 });
+
+test("a progressing ingest queue is not reported as stale", () => {
+  /* Measured: the register moved 177,626 → 184,306 marks with a file
+     completing that morning, and health called it stale purely because 88
+     files were still queued. Progressing, backlogged and stalled are three
+     different states. */
+  const route = readFileSync(new URL(
+    "../app/api/operations/health/route.ts", import.meta.url), "utf8");
+  assert.match(route, /MEASURED CADENCE, NOT AN ASSUMPTION/);
+  assert.match(route, /MAX\(finished\) AS at FROM tm_ingest_files WHERE state = 'done'/);
+  assert.match(route, /progressing: Boolean\(lastAt && sinceLast < 36 \* 3_600\)/);
+  /* A queue that has genuinely stopped is still broken. */
+  assert.match(route, /sinceLast > 36 \* 3_600 \? "broken"/);
+});
+
+test("an incomplete register still blocks a clean trademark claim", () => {
+  const route = readFileSync(new URL(
+    "../app/api/operations/health/route.ts", import.meta.url), "utf8");
+  assert.match(route, /registerComplete: incomplete === 0 && Number\(marks\?\.n \?\? 0\) > 0/);
+});
+
+test("a partly-read ingest file is resumed before a newer daily file starts", () => {
+  /* Strict priority meant a daily file always beat the backfile, and a new
+     daily file arrives every day — so 88 historical files had no path to
+     running at all. */
+  const tick = readFileSync(new URL(
+    "../app/api/trademark/ingest-tick/route.ts", import.meta.url), "utf8");
+  assert.match(tick, /DAILY FIRST, BUT NOT DAILY FOREVER/);
+  assert.match(tick, /WHERE state = 'partial' ORDER BY priority ASC/);
+  assert.match(tick, /const next = resuming \?\?/);
+});

@@ -200,8 +200,32 @@ export const GET = withErrorLog("operations-health", async () => {
     const byState: Record<string, number> = {};
     for (const row of files.results ?? []) byState[row.state] = Number(row.n) || 0;
     const incomplete = (byState.waiting ?? 0) + (byState.partial ?? 0);
-    return { state: (byState.failed ?? 0) > 0 ? "broken" : incomplete ? "stale" : "ok",
+
+    /*
+      MEASURED CADENCE, NOT AN ASSUMPTION.
+
+      "Stale" was being reported purely because files were waiting — but the
+      register moved from 177,626 to 184,306 marks and a file completed today.
+      A queue that is progressing is not stale; a queue with a long backlog is
+      not broken. Those are three different states and this now tells them
+      apart by looking at when a file last finished.
+    */
+    const lastDone = await db.prepare(
+      `SELECT MAX(finished) AS at FROM tm_ingest_files WHERE state = 'done'`)
+      .first<{ at: string }>().catch(() => null);
+    const lastAt = seconds(lastDone?.at);
+    const sinceLast = lastAt ? now - lastAt : 0;
+
+    return {
+      state: (byState.failed ?? 0) > 0 ? "broken"
+        /* Nothing finished in a day and work is queued: genuinely stalled. */
+        : incomplete && lastAt && sinceLast > 36 * 3_600 ? "broken"
+        : incomplete ? "ok"
+        : "ok",
       detail: { marks: Number(marks?.n ?? 0), files: byState,
+        lastCompletedAt: lastAt,
+        hoursSinceLastFile: lastAt ? Math.round(sinceLast / 3_600) : null,
+        progressing: Boolean(lastAt && sinceLast < 36 * 3_600),
         /* While anything is waiting or partial, no check may read as clean. */
         registerComplete: incomplete === 0 && Number(marks?.n ?? 0) > 0 } };
   });

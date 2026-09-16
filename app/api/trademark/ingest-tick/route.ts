@@ -111,10 +111,30 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
         WHERE state IN ('waiting', 'partial') AND name NOT LIKE '%.zip'`)
     .run();
 
-  const next = await db
+  /*
+    DAILY FIRST, BUT NOT DAILY FOREVER.
+
+    Strict priority order meant a daily file always beat the historical
+    backfile — and a new daily file arrives every day. Measured over four days:
+    the daily files completed one per day and the last historical chunk
+    finished on 2026-09-14, leaving 88 waiting with no path to ever running.
+    The register was progressing and the initial queue was starved, which is
+    why "marks are increasing" and "the backfile is stuck" were both true.
+
+    A file already in progress is always resumed. Otherwise today's daily work
+    goes first, and once there is none pending, the backfile advances. So the
+    register stays current AND the initial queue finishes.
+  */
+  const resuming = await db
     .prepare(
       `SELECT name, product, url, done_records FROM tm_ingest_files
-        WHERE state IN ('waiting', 'partial')
+        WHERE state = 'partial' ORDER BY priority ASC, name DESC LIMIT 1`)
+    .first<{ name: string; product: string; url: string; done_records: number }>();
+
+  const next = resuming ?? await db
+    .prepare(
+      `SELECT name, product, url, done_records FROM tm_ingest_files
+        WHERE state = 'waiting'
         ORDER BY priority ASC, name DESC
         LIMIT 1`,
     )
