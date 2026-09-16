@@ -21,6 +21,7 @@ import { productFamily } from "@/app/product-type-utils";
 import { strictFitFromBank } from "@/app/keyword-ranking";
 import { LISTING_FIELD_FOR_PROPERTY } from "@/app/pod-listing-fields";
 import { composeTags } from "@/app/listing-composition";
+import { artworkHashOfDataUrl } from "@/app/artwork-identity";
 
 /**
  * THE LAYERED PATH, REACHED FROM THE MEMBER'S OWN INTERFACE.
@@ -46,17 +47,6 @@ import { composeTags } from "@/app/listing-composition";
  *   never from a model looking at a picture of a shirt;
  *   the description comes from one text-only call covering every family.
  */
-const ARTWORK_HASH_VERSION = 1;
-
-/** The artwork's identity: the image bytes, not the request around them. */
-async function artworkHashOf(dataUrl: string) {
-  const base64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
-  const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return `a${ARTWORK_HASH_VERSION}-` + [...new Uint8Array(digest)]
-    .map(byte => byte.toString(16).padStart(2, "0")).join("");
-}
-
 /* Everything the bank is ranked against, in the design's own words. */
 const designTextOf = (design: {
   wording: string[]; audienceCues: string[]; occasionCues: string[];
@@ -128,7 +118,7 @@ async function handlePOST(request:Request){
   /* The layered path is opt-in per account and off globally: rolling back is
      deleting a row, not shipping a deploy. */
   const canary=await canaryFor(user.userId);
-  const artworkHash=canary.useNewFlow?await artworkHashOf(body.image!):"";
+  const artworkHash=canary.useNewFlow?await artworkHashOfDataUrl(body.image!):"";
   // Explicitly asking for a different title must remain a fresh generation.
   const fetch=body.mode==="title"?boundedVisionFetch:cachedVisionFetch(user.userId,env.DB,boundedVisionFetch);
   if(body.mode==="title"){

@@ -135,7 +135,11 @@
    stops being a paid call, and the category and attributes come from tables
    rather than a model looking at a picture. The legacy path stays for
    everybody else, which is what makes the flag a rollback. */
-export const BUILD_MARKER = "D1591";
+/* D1592 gives an artwork one identity. The member route hashed the image and
+   the canary route used the stored provenance hash — same design, two cache
+   keys, two paid analyses, and a "cold" run that made no call because the warm
+   entry was under the other key. */
+export const BUILD_MARKER = "D1592";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

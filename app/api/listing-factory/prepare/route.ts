@@ -9,6 +9,7 @@ import { planBatch, routeUnmapped, type BatchItem } from "@/app/listing-call-pla
 import { composeTitle, composeTags } from "@/app/listing-composition";
 import { ensureDesign, ensureFamilyCopy, DESIGN_VERSION } from "@/app/listing-flow";
 import { POD_LISTING_FIELDS, LISTING_FIELD_FOR_PROPERTY } from "@/app/pod-listing-fields";
+import { artworkHashOfBytes, artworkHashOfDataUrl } from "@/app/artwork-identity";
 import { check, withRegister } from "@/app/trademark-check";
 import { lookup, registerSize } from "@/app/trademark-register";
 import { env } from "cloudflare:workers";
@@ -75,7 +76,19 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
     charged for both.
   */
   const fault = isOwner(user) ? (body.faultInjection ?? "") : "";
-  const artworkHash = String(body.artworkHash ?? "").trim();
+  /*
+    THE ARTWORK'S IDENTITY IS THE BYTES, WHEREVER IT IS ASKED FOR.
+
+    This took the hash from the caller, which for the canary was the one stored
+    in `artwork_provenance`. The member route hashes the image itself. Same
+    design, two keys, two paid analyses — and a "cold" run that made no call
+    because the warm entry was under the other one. Derived from the image
+    whenever there is an image, so the two paths cannot disagree.
+  */
+  const supplied = String(body.artworkHash ?? "").trim();
+  const imageForHash = String(body.imageDataUrl ?? "").trim();
+  const artworkHash = imageForHash
+    ? await artworkHashOfDataUrl(imageForHash) : supplied;
   const imageUrl = String(body.imageDataUrl ?? body.imageUrl ?? "").trim();
   const blueprints = (body.blueprints ?? []).filter(entry => entry && entry.title);
   if (!artworkHash || !blueprints.length)
@@ -248,7 +261,11 @@ async function sample(index: string) {
       text += String.fromCharCode(...binary.subarray(index, index + 0x8000));
     const type = object.httpMetadata?.contentType || "image/png";
     return NextResponse.json({
-      artworkHash: row.hash,
+      /* The identity the flow will actually use: the bytes, not the
+         provenance row's own hash. Both are returned so a mismatch is
+         visible rather than mysterious. */
+      artworkHash: await artworkHashOfBytes(bytes),
+      provenanceHash: row.hash,
       bytes: binary.length,
       contentType: type,
       imageDataUrl: `data:${type};base64,${btoa(text)}`,

@@ -286,15 +286,26 @@ test("the artwork's identity is the image, not the request around it", () => {
     product facts, title and tags included — so one design across twenty
     products missed twenty times. Design-level understanding keys on the
     artwork alone.
+
+    And on ONE definition of the artwork. The member route hashed the image
+    while the canary route used the hash stored in `artwork_provenance`: same
+    design, two keys, two paid analyses, and a "cold" run that made no call
+    because the warm entry sat under the other one. One module now.
   */
-  const intelligence = readFileSync(new URL(
-    "../app/api/listing-intelligence/route.ts", import.meta.url), "utf8");
-  const hash = intelligence.slice(intelligence.indexOf("async function artworkHashOf"),
-    intelligence.indexOf("/* Everything the bank is ranked against"));
-  assert.match(hash, /crypto\.subtle\.digest\("SHA-256", bytes\)/);
-  for (const contaminant of ["title", "tags", "product", "blueprint"])
-    assert.ok(!hash.includes(contaminant),
+  const identity = read("artwork-identity.ts");
+  assert.match(identity, /crypto\.subtle\.digest\("SHA-256"/);
+  assert.match(identity, /ARTWORK_HASH_VERSION/,
+    "a change to how this is computed must not silently reuse old entries");
+  for (const contaminant of ["title", "tags", "blueprint", "product"])
+    assert.ok(!identity.includes(contaminant),
       `the artwork hash includes ${contaminant}, so one design across many products misses many times`);
+
+  /* Both paths derive it from the same place. */
+  for (const file of ["api/listing-intelligence/route.ts", "api/listing-factory/prepare/route.ts"]) {
+    const source = read(file);
+    assert.match(source, /from "@\/app\/artwork-identity"/,
+      `${file} computes an artwork identity of its own`);
+  }
 });
 
 test("an unsupported blueprint is never given a guessed category", () => {
