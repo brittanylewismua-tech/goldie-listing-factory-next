@@ -210,9 +210,12 @@ export const GET = withErrorLog("operations-health", async () => {
       not broken. Those are three different states and this now tells them
       apart by looking at when a file last finished.
     */
+    /* No catch here: this probe is already inside the wrapper that turns a
+       throw into `broken` with its message, and a bare catch would hide the
+       very failure this view exists to surface. */
     const lastDone = await db.prepare(
       `SELECT MAX(finished) AS at FROM tm_ingest_files WHERE state = 'done'`)
-      .first<{ at: string }>().catch(() => null);
+      .first<{ at: string }>();
     const lastAt = seconds(lastDone?.at);
     const sinceLast = lastAt ? now - lastAt : 0;
 
