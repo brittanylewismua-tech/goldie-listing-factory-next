@@ -57,6 +57,34 @@ export const EXPLANATION: Record<UnmatchedReason, string> = {
 /** What the member can do about it. Never more than the evidence supports. */
 export type CorrectionAction = "link-printify-order" | "enter-cost" | "apply-rule" | "leave";
 
+/**
+ * HOW CLOSE IN TIME A LINK CANDIDATE HAS TO BE.
+ *
+ * Measured against the live data: the one unmatched Printify order was created
+ * 2025-11-30 and was offered as the link for a 2026-09-08 Etsy receipt —
+ * nine months apart, and the only candidate, so the "exactly one" rule
+ * happily proposed it. Being the only one left is not evidence of anything.
+ *
+ * Production starts within days of an order, so anything outside this window
+ * is a different sale and linking it would silently corrupt a month.
+ */
+export const LINK_WINDOW_SECONDS = 14 * 86_400;
+
+export function plausibleLink(
+  { receiptAt, orderAt, receiptCurrency, orderCurrency }:
+  { receiptAt: number; orderAt: number; receiptCurrency: string; orderCurrency: string },
+): { ok: true } | { ok: false; because: string } {
+  if (receiptCurrency !== orderCurrency)
+    return { ok: false, because: "the currencies differ" };
+  if (!receiptAt || !orderAt)
+    return { ok: false, because: "one of them has no date" };
+  const gap = Math.abs(receiptAt - orderAt);
+  if (gap > LINK_WINDOW_SECONDS)
+    return { ok: false,
+      because: `they are ${Math.round(gap / 86_400)} days apart` };
+  return { ok: true };
+}
+
 export function actionsFor(
   reason: UnmatchedReason, { exactCandidates, hasFamilyRule }:
   { exactCandidates: number; hasFamilyRule: boolean },

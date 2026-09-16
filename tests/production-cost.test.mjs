@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   EXPLANATION, actionsFor, verdictFor, currencyCheck, ruleFor, ADJUSTMENT_KINDS,
+  plausibleLink, LINK_WINDOW_SECONDS,
 } from "../app/production-cost.ts";
 
 const cost = (over = {}) => ({ receiptId: 1, basis: "printify-verified",
@@ -122,8 +123,10 @@ test("a link is only offered against one unambiguous candidate", () => {
   assert.match(route, /candidates\.length === 1/);
   /* And only from Printify orders attached to nothing else. */
   assert.match(route, /receipt_id IS NULL OR receipt_id = 0/);
-  /* Currency has to agree, or the "cost" is a different unit. */
-  assert.match(route, /order\.currency === row\.currency/);
+  /* Currency has to agree AND the dates have to be close — checked together
+     by plausibleLink, because "the only one left" is not evidence. */
+  assert.match(route, /plausibleLink\(\{/);
+  assert.match(route, /receiptCurrency: row\.currency, orderCurrency: order\.currency/);
 });
 
 test("the diagnosis is evidence-led and admits when it does not know", () => {
@@ -141,4 +144,41 @@ test("the route enforces the Shop Map entitlement", () => {
   const route = readFileSync(new URL(
     "../app/api/shop-map/production-cost/route.ts", import.meta.url), "utf8");
   assert.match(route, /requireFeatureApi\("shopMap"\)/);
+});
+
+test("a link candidate must be close in time, not merely the last one left", () => {
+  /* Measured: a 2025-11-30 Printify order was offered as the link for a
+     2026-09-08 receipt because it was the only unmatched one. */
+  const receiptAt = 1_789_247_042;   /* 2026-09-08 */
+  const farOrder = 1_764_523_437;    /* 2025-11-30 */
+  const far = plausibleLink({ receiptAt, orderAt: farOrder,
+    receiptCurrency: "USD", orderCurrency: "USD" });
+  assert.equal(far.ok, false);
+  assert.match(far.because, /days apart/);
+
+  const near = plausibleLink({ receiptAt, orderAt: receiptAt + 2 * 86_400,
+    receiptCurrency: "USD", orderCurrency: "USD" });
+  assert.equal(near.ok, true);
+});
+
+test("a currency mismatch is never a link candidate", () => {
+  const at = 1_789_247_042;
+  const verdict = plausibleLink({ receiptAt: at, orderAt: at,
+    receiptCurrency: "USD", orderCurrency: "GBP" });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.because, /currencies differ/);
+});
+
+test("a missing date disqualifies a link rather than defaulting it", () => {
+  assert.equal(plausibleLink({ receiptAt: 0, orderAt: 1_789_247_042,
+    receiptCurrency: "USD", orderCurrency: "USD" }).ok, false);
+});
+
+test("the route filters candidates by plausibility, not just currency", () => {
+  const route = readFileSync(new URL(
+    "../app/api/shop-map/production-cost/route.ts", import.meta.url), "utf8");
+  assert.match(route, /A CANDIDATE NEEDS EVIDENCE, NOT JUST SCARCITY/);
+  assert.match(route, /plausibleLink\(\{/);
+  assert.ok(!route.includes("order.currency === row.currency)"),
+    "candidates are still filtered on currency alone");
 });

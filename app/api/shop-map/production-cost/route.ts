@@ -5,6 +5,7 @@ import { requireFeatureApi } from "@/app/require-feature";
 import { env } from "cloudflare:workers";
 import {
   EXPLANATION, actionsFor, verdictFor, currencyCheck,
+  plausibleLink,
   type UnmatchedReason, type OrderCost, type CostBasis,
 } from "@/app/production-cost";
 
@@ -128,10 +129,20 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
         : "unavailable";
     const reason = basis === "unavailable" ? diagnose(row) : null;
 
-    /* A candidate is only a candidate when the evidence is unambiguous: one
-       loose Printify order in the same currency. */
+    /*
+      A CANDIDATE NEEDS EVIDENCE, NOT JUST SCARCITY.
+
+      Same currency AND close enough in time to be the same sale. Being the
+      only unmatched order left is not evidence: the live data offered a
+      2025-11-30 Printify order as the link for a 2026-09-08 receipt purely
+      because nothing else was unmatched.
+    */
     const candidates = basis === "unavailable"
-      ? (loose.results ?? []).filter(order => order.currency === row.currency)
+      ? (loose.results ?? []).filter(order => plausibleLink({
+          receiptAt: Number(row.createdAt) || 0,
+          orderAt: Number(order.createdAt) || 0,
+          receiptCurrency: row.currency, orderCurrency: order.currency,
+        }).ok)
       : [];
 
     return {
