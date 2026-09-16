@@ -212,7 +212,10 @@ test("listing images cannot overflow their card", () => {
 
 test("every listing card offers a direct Etsy link", () => {
   assert.match(MW, /href=\{listing\.etsyUrl\}/);
-  assert.match(MW, /etsy\.com\/listing\/\$\{card\.listingId\}/);
+  /* Shop Watch cards carry a server-built URL rather than composing one, so
+     a shop-level pattern links to the shop and a listing-level one to the
+     listing. */
+  assert.match(MW, /href=\{card\.listing\.url\}/);
   assert.match(MW, /rel="noreferrer noopener"/);
 });
 
@@ -376,4 +379,21 @@ test("the refresh spends its calls where a member would see a blank box", () => 
   assert.match(route, /FROM listing_sales_activity/);
   assert.match(route, /ORDER BY intervals DESC, lastSeen DESC/);
   assert.match(route, /inNiche\.has/);
+});
+
+test("Shop Watch cards read the shape the brief returns", () => {
+  /* Measured in the browser: every card rendered as "reviews · 30 days" with
+     no pattern and no link, because the client declared `headline`/`support`/
+     `listingId` and the route returns `pattern`/`evidence`/`window`/`listing`. */
+  const route = readFileSync(new URL(
+    "../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
+  const returned = route.slice(route.indexOf("function present"));
+  for (const field of ["pattern:", "evidence:", "window:", "listing:"])
+    assert.ok(returned.includes(field), `the brief no longer returns ${field}`);
+
+  assert.match(MW, /\{card\.pattern\}/);
+  assert.match(MW, /\{card\.evidence\}/);
+  assert.match(MW, /card\.listing\?\.url/);
+  for (const stale of ["card.headline", "card.support", "card.listingId"])
+    assert.ok(!MW.includes(stale), `the card still reads ${stale}`);
 });

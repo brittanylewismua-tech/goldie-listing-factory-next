@@ -32,8 +32,20 @@ type NicheView = {
 type WatchRow = { key: string; phrase: string; moving: number; repeated: number;
   shops: number; lastCheckedAt: number; stale: boolean };
 
-type ShopPattern = { headline?: string; support?: number; listingId?: number | null;
-  window?: string; etsyUrl?: string };
+/*
+  THE SHAPE THE BRIEF ACTUALLY RETURNS.
+
+  This declared `headline`, `support` and `listingId`; the route returns
+  `pattern`, `evidence`, `window` and a `listing` object. Every field the card
+  rendered was undefined, so Shop Watch showed rows reading "reviews · 30 days"
+  with no pattern and no link — two shapes for one card, written months apart.
+*/
+type ShopPattern = {
+  pattern?: string;
+  evidence?: string;
+  window?: string;
+  listing?: { id: number | null; url: string };
+};
 
 type ShopView = {
   shopId: number; shopName: string; etsy: string;
@@ -295,14 +307,15 @@ function ShopCard({ shop }: { shop: ShopView }) {
           <h3>{name}</h3>
           {cards.map((card, index) => (
             <div className="pattern" key={`${name}-${index}`}>
-              <p>{card.headline}</p>
+              <p>{card.pattern}</p>
               <span className="support">
-                {card.support} review{card.support === 1 ? "" : "s"}
+                {card.evidence}
                 {card.window ? ` · ${card.window}` : ""}
               </span>
-              {card.listingId && (
-                <a href={`https://www.etsy.com/listing/${card.listingId}`}
-                  target="_blank" rel="noreferrer noopener">View listing on Etsy</a>
+              {card.listing?.url && (
+                <a href={card.listing.url} target="_blank" rel="noreferrer noopener">
+                  {card.listing.id ? "View listing on Etsy" : "View shop on Etsy"}
+                </a>
               )}
             </div>
           ))}
