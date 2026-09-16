@@ -55,8 +55,9 @@ for (const file of files) {
       .map(match => match[1]));
     if (!columns.size) continue;
     /* A later ALTER adds columns the CREATE does not carry. */
+    /* SQLite accepts `ADD COLUMN x` and the shorter `ADD x`; both are real. */
     for (const alter of source.matchAll(
-      new RegExp(`ALTER TABLE ${table} ADD COLUMN ([a-z_]+)`, "g")))
+      new RegExp(`ALTER TABLE ${table} ADD (?:COLUMN )?([a-z_]+)`, "g")))
       columns.add(alter[1]);
     /*
       Some files express their ALTERs as a loop over an array of column
