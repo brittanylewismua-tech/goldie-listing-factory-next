@@ -22,5 +22,17 @@ export const GET = withErrorLog("market-correlate", async (request: Request) => 
   const requested = Number(new URL(request.url).searchParams.get("max"));
   const maxIntervals = Number.isFinite(requested) && requested > 0
     ? Math.min(requested, 2_000) : 400;
-  return NextResponse.json(await correlationPass({ maxIntervals }));
+  try {
+    return NextResponse.json(await correlationPass({ maxIntervals }));
+  } catch (error) {
+    /*
+      The real message, to the owner, rather than "something went wrong".
+      A generic wrapper on an internal route turns a five-minute fix into an
+      afternoon of guessing, and this route has no member audience.
+    */
+    return NextResponse.json({
+      error: error instanceof Error ? error.message : "correlation failed",
+      stack: error instanceof Error ? String(error.stack ?? "").slice(0, 600) : "",
+    }, { status: 500 });
+  }
 });
