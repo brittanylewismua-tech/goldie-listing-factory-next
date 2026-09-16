@@ -293,7 +293,20 @@ export async function ensureFamilyCopy(
       + `Describe the design and the product only. Never invent a material, a size, a `
       + `shipping time, a brand, or a claim about quality. Never mention a trademark, `
       + `a celebrity, or another shop.`;
-    const response = await fetch("https://fal.run/openrouter/router/chat", {
+    /*
+      THE TEXT ENDPOINT, ESTABLISHED BY ASKING RATHER THAN GUESSING.
+
+      A first version posted to `openrouter/router/chat`, which production
+      answered with "Path /chat not found". The batch fell back to
+      deterministic copy exactly as designed — nothing broke, and that is why
+      it would have been easy to leave — but the call that proves the saving
+      never happened.
+
+      Probed against production: `openrouter/router` answers and reports
+      `usage.cost`; `fal-ai/any-llm` answers and reports no usage at all,
+      which would put an unbillable call on the ledger. So it is the router.
+    */
+    const response = await fetch("https://fal.run/openrouter/router", {
       method: "POST",
       headers: { Authorization: `Key ${key()}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: COPY_MODEL_VERSION, temperature: 0.4,
