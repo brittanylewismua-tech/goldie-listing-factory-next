@@ -37,7 +37,8 @@ import { ensureProvenanceTables } from "@/app/artwork-provenance";
 import { ensureCaptureQueue } from "@/app/artwork-capture-queue";
 import { ensureMockupAnalysisTable } from "@/app/mockup-analysis-cache";
 import { ensureDesignIntelligenceTable } from "@/app/design-intelligence";
-import { ensureDesignClaimTable } from "@/app/design-claim";
+import { ensureWorkLeaseTable } from "@/app/work-lease";
+import { ensureFamilyCopyTable } from "@/app/family-copy-store";
 import { ensureMarketTables } from "@/app/market-store";
 import { ensureCorrelationTables } from "@/app/correlation-worker";
 import { ensureObservationTables } from "@/app/market-observation";
@@ -85,9 +86,11 @@ export const MIGRATIONS: Step[] = [
   { name: "artwork_capture_jobs", run: ensureCaptureQueue },
   { name: "mockup_analysis_cache", run: ensureMockupAnalysisTable },
   { name: "design_intelligence", run: ensureDesignIntelligenceTable },
-  /* The claim that stops two requests paying twice for one artwork. It must
-     exist before the extraction layer is connected, not on first use. */
-  { name: "design_intelligence_claims", run: ensureDesignClaimTable },
+  /* The lease that stops two requests paying twice for the same work, and the
+     family-copy table the call plan has costed since it was written but which
+     had never existed — so every batch was a cold batch by construction. */
+  { name: "work_leases", run: ensureWorkLeaseTable },
+  { name: "listing_family_copy", run: ensureFamilyCopyTable },
 
   /* Market detector, then the things that read it. */
   { name: "market_store", run: ensureMarketTables },

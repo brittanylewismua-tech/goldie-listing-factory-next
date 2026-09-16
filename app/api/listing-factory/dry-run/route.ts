@@ -14,6 +14,9 @@ import { readDesignIntelligence, EXTRACTION_SCHEMA_VERSION, DESIGN_MODEL_VERSION
 import { check, withRegister, type RegisterMatch } from "@/app/trademark-check";
 import { lookup, normalize, registerSize } from "@/app/trademark-register";
 import { canaryFor } from "@/app/listing-flow-canary";
+/* One composition module, so the audited dry run and the production path
+   cannot compose a member's title two different ways. */
+import { composeTitle, composeTags } from "@/app/listing-composition";
 import { POD_LISTING_FIELDS, LISTING_FIELD_FOR_PROPERTY } from "@/app/pod-listing-fields";
 
 /**
@@ -44,27 +47,6 @@ const BLUEPRINTS: Array<{ id: number; title: string }> = [
 ];
 
 const UNKNOWN = { id: 99_999, title: "Holographic Lawn Flamingo" };
-
-/* Titles and tags are composed from stored intelligence, never generated. */
-function composeTitle(
-  wording: string[], noun: string, audience: string[],
-): string {
-  const phrase = wording.filter(Boolean).slice(0, 2).join(" ");
-  const who = audience.filter(Boolean)[0] ?? "";
-  const parts = [phrase, noun ? `${noun[0].toUpperCase()}${noun.slice(1)}` : "",
-    who ? `Gift for ${who}` : ""].filter(Boolean);
-  return parts.join(", ").slice(0, 140);
-}
-
-function composeTags(
-  wording: string[], family: string, occasions: string[], recipients: string[],
-): string[] {
-  const raw = [...wording, family, ...occasions, ...recipients]
-    .map(value => String(value ?? "").toLowerCase().trim())
-    .filter(value => value.length > 1 && value.length <= 20);
-  /* Etsy allows thirteen, each at most twenty characters. */
-  return [...new Set(raw)].slice(0, 13);
-}
 
 export const GET = withErrorLog("listing-factory-dry-run", async (request: Request) => {
   const user = await getChatGPTUser();

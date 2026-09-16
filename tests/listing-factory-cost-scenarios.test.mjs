@@ -21,7 +21,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { planBatch } from "../app/listing-call-plan.ts";
-import { claimHolds, CLAIM_TTL_SECONDS } from "../app/design-claim-rules.ts";
+import { leaseHolds as claimHolds, LEASE_TTL_SECONDS as CLAIM_TTL_SECONDS } from "../app/work-lease-rules.ts";
 
 const HASH = "artwork-abc";
 const SEVEN = [
@@ -73,10 +73,10 @@ test("a claim expires, so a crashed winner cannot lock an artwork forever", () =
 });
 
 test("the extraction claim is decided in one statement, not read-then-write", () => {
-  const source = readFileSync(new URL("../app/design-claim.ts", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../app/work-lease.ts", import.meta.url), "utf8");
   /* A SELECT followed by an INSERT reopens the exact gap this closes. */
-  assert.match(source, /INSERT INTO design_intelligence_claims/);
-  assert.match(source, /ON CONFLICT[\s\S]*DO UPDATE SET claimed_at/);
+  assert.match(source, /INSERT INTO work_leases/);
+  assert.match(source, /ON CONFLICT[\s\S]*DO UPDATE SET token = excluded.token/);
   assert.match(source, /meta\.changes/,
     "the winner must be decided by what the write actually changed");
 });

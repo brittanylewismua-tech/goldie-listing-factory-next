@@ -102,7 +102,11 @@
 /* D1576 makes the workflow's rail render the same navigation list as every
    other page, after the two rails drew apart for a third time and the Listing
    Factory showed four of Goldie's eight destinations. */
-export const BUILD_MARKER = "D1576";
+/* D1577 connects the layered flow to production: the design and family-copy
+   layers now actually run, leased so two requests pay once, settled through
+   the spend guard, with the family-copy table the plan had costed since it
+   was written but which had never existed. */
+export const BUILD_MARKER = "D1577";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
