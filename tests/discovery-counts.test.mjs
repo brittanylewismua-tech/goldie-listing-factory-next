@@ -70,8 +70,8 @@ test("the member-facing line uses the monitored set and says watching", () => {
 test("the cap is applied where the counts are taken", () => {
   const store = readFileSync(
     new URL("../app/niche-candidate-store.ts", import.meta.url), "utf8");
-  assert.match(store, /THE CAP IS APPLIED HERE AND THE SELECTED SET IS RETURNED/);
-  assert.match(store, /const selected = found\.slice\(0, GROWTH\.maxCandidatesPerNiche\);/);
+  assert.match(store, /THE CAP BOUNDS THE POOL, NOT THE BATCH/);
+  assert.match(store, /const selected = found\.slice\(0, room\);/);
   assert.match(store, /selectedShops: new Set\(selected\.map\(row => row\.shopId\)\)\.size/);
   /* And nothing takes a shop count from the uncapped pool any more. */
   const route = readFileSync(new URL(
