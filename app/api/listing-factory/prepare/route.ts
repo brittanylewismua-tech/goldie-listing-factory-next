@@ -43,6 +43,8 @@ type Body = {
   occasions?: string[];
   recipients?: string[];
   validateOnly?: boolean;
+  /* Owner-only. See the note at its use. */
+  faultInjection?: "" | "billed" | "unbilled";
 };
 
 export const POST = withErrorLog("listing-factory-prepare", async (request: Request) => {
@@ -55,6 +57,24 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
       { status: 404 });
 
   const body = await request.json() as Body;
+
+  /*
+    FAULT INJECTION, OWNER ONLY, CANARY ONLY.
+
+    "A billed failure" and "an unbilled failure" are the two paths where the
+    member's allowance and the dollar ledger are supposed to part company, and
+    they cannot be observed by waiting for a provider to misbehave. So they can
+    be asked for — by the owner, on an account already on the layered-flow
+    allowlist, and never by a member: `isOwner` is checked on every request and
+    the field is ignored entirely without it.
+
+    `unbilled` fails before the provider answers, so nothing is charged and the
+    reservation is released. `billed` lets the call complete and bills for it,
+    then refuses the reply — which is what a model returning unparseable JSON
+    actually does: it read the image, wrote a response, and the provider
+    charged for both.
+  */
+  const fault = isOwner(user) ? (body.faultInjection ?? "") : "";
   const artworkHash = String(body.artworkHash ?? "").trim();
   const imageUrl = String(body.imageDataUrl ?? body.imageUrl ?? "").trim();
   const blueprints = (body.blueprints ?? []).filter(entry => entry && entry.title);
@@ -98,7 +118,7 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
       stopped: unmapped.map(entry => entry.blueprint.title) }, { status: 422 });
 
   /* Steps 1-6. */
-  const design = await ensureDesign(user.userId, artworkHash, imageUrl);
+  const design = await ensureDesign(user.userId, artworkHash, imageUrl, fault);
   if (!design.ok)
     return NextResponse.json({ error: design.memberMessage, because: design.because,
       calls: design.calls, billed: design.billed, wroteToEtsy: false }, { status: 503 });
@@ -186,8 +206,10 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
  */
 export const GET = withErrorLog("listing-factory-prepare-sample", async (request: Request) => {
   try {
-    if (new URL(request.url).searchParams.get("probe") === "1") return await probe();
-    return await sample();
+    const params = new URL(request.url).searchParams;
+    if (params.get("probe") === "1") return await probe();
+    if (params.get("reset")) return await reset(params.get("reset") ?? "");
+    return await sample(new URL(request.url).searchParams.get("n") ?? "0");
   } catch (error) {
     /* The real message, to the owner. This endpoint has no member audience and
        a generic wrapper turns a five-minute fix into an afternoon of guessing. */
@@ -198,7 +220,7 @@ export const GET = withErrorLog("listing-factory-prepare-sample", async (request
   }
 });
 
-async function sample() {
+async function sample(index: string) {
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
@@ -207,10 +229,14 @@ async function sample() {
   const bucket = (env as unknown as { ARTWORK: R2Bucket }).ARTWORK;
   const rows = await db.prepare(
     `SELECT DISTINCT artwork_hash AS hash, artwork_key AS objectKey
-       FROM artwork_provenance WHERE user_id = ? AND artwork_key <> '' LIMIT 5`)
+       FROM artwork_provenance WHERE user_id = ? AND artwork_key <> ''
+      ORDER BY artwork_hash LIMIT 12`)
     .bind(user.userId).all<{ hash: string; objectKey: string }>();
 
-  for (const row of rows.results ?? []) {
+  /* A cold run needs an artwork whose design has never been extracted, so the
+     canary can ask for the second or third rather than always the first. */
+  const wanted = Number(index) || 0;
+  for (const row of (rows.results ?? []).slice(wanted)) {
     const object = await bucket.get(row.objectKey);
     if (!object) continue;
     const bytes = await object.arrayBuffer();
@@ -274,4 +300,33 @@ async function probe() {
     }
   }
   return NextResponse.json({ probe: true, tried });
+}
+
+
+/**
+ * Put the canary artwork back to cold.
+ *
+ * "Two calls cold, zero warm" is only measurable if cold can be reached more
+ * than once. This clears the stored design intelligence and family copy for
+ * ONE artwork hash belonging to the caller — never another member's, never
+ * anything else — so the same measurement can be taken again.
+ */
+async function reset(artworkHash: string) {
+  const user = await getChatGPTUser();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const design = await db.prepare(
+    `DELETE FROM design_intelligence WHERE user_id = ? AND artwork_hash = ?`)
+    .bind(user.userId, artworkHash).run();
+  const copy = await db.prepare(
+    `DELETE FROM listing_family_copy WHERE user_id = ? AND artwork_hash = ?`)
+    .bind(user.userId, artworkHash).run();
+  const leases = await db.prepare(
+    `DELETE FROM work_leases WHERE lease_key LIKE ?`)
+    .bind(`${user.userId}|${artworkHash}%`).run();
+  return NextResponse.json({ reset: artworkHash,
+    designRowsCleared: design.meta.changes, copyRowsCleared: copy.meta.changes,
+    leasesCleared: leases.meta.changes,
+    scope: "This member's own cached analysis only. No listing or shop data touched." });
 }

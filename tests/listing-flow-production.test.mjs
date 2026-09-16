@@ -189,3 +189,36 @@ test("a waiter is bounded and never fails the batch on copy", () => {
   assert.match(waitBlock, /fallbackFor\(family\)/,
     "a held copy lease must fall back deterministically rather than fail or double-pay");
 });
+
+test("fault injection is unreachable by a member", () => {
+  /*
+    The billed and unbilled failure paths are where the member's allowance and
+    the dollar ledger part company, and no amount of waiting makes a provider
+    misbehave on cue. So they can be asked for — and the asking must be shut
+    to everyone but the owner, on an account already on the canary allowlist.
+  */
+  assert.match(route, /const fault = isOwner\(user\) \? \(body\.faultInjection \?\? ""\) : ""/,
+    "a member's request body must never be able to inject a fault");
+  /* And it is reached only after the canary gate has already refused a
+     non-canary account. */
+  assert.ok(route.indexOf("if (!canary.useNewFlow)") < route.indexOf("const fault ="),
+    "fault injection must sit behind the canary gate");
+  /* The flow treats an injected fault exactly as a real one: same failure
+     path, same refund, same settlement — otherwise it proves nothing. */
+  assert.match(flow, /if \(fault === "unbilled"\) throw new Error/);
+  assert.match(flow, /fault === "billed" \? null : readDesign/);
+  assert.equal((flow.match(/failSpend\(reservation\.id, \{ billed \}\)/g) || []).length, 2);
+});
+
+test("the reset affordance touches only the caller's own cached analysis", () => {
+  const reset = route.slice(route.indexOf("async function reset("));
+  assert.match(reset, /isOwner\(user\)/);
+  for (const table of ["design_intelligence", "listing_family_copy", "work_leases"])
+    assert.ok(reset.includes(table), `${table} is not cleared, so cold is not reachable twice`);
+  /* Every delete is scoped to this member. */
+  for (const statement of reset.split("DELETE FROM").slice(1))
+    assert.ok(/user_id = \?|lease_key LIKE \?/.test(statement.slice(0, 200)),
+      "a reset must never reach beyond the caller");
+  for (const forbidden of ["etsy_", "listings", "finance_", "artwork_provenance"])
+    assert.ok(!reset.includes(`DELETE FROM ${forbidden}`), `reset deletes from ${forbidden}`);
+});

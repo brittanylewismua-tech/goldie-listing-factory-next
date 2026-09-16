@@ -112,7 +112,7 @@ function usageFrom(payload: unknown): Usage {
  * if the winner never lands.
  */
 export async function ensureDesign(
-  userId: string, artworkHash: string, imageUrl: string,
+  userId: string, artworkHash: string, imageUrl: string, fault = "",
 ): Promise<DesignOutcome> {
   const held = await readDesignIntelligence(userId, artworkHash).catch(() => null);
   if (held) return { ok: true, design: held.design, source: "cache", calls: 0, billed: 0 };
@@ -135,13 +135,13 @@ export async function ensureDesign(
       return { ok: false, because: "a lease was held throughout the wait",
         memberMessage: "This design is still being analyzed. Try again in a moment.",
         calls: 0, billed: 0 };
-    return runDesign(userId, artworkHash, imageUrl, second.token);
+    return runDesign(userId, artworkHash, imageUrl, second.token, fault);
   }
-  return runDesign(userId, artworkHash, imageUrl, lease.token);
+  return runDesign(userId, artworkHash, imageUrl, lease.token, fault);
 }
 
 async function runDesign(
-  userId: string, artworkHash: string, imageUrl: string, token: string,
+  userId: string, artworkHash: string, imageUrl: string, token: string, fault = "",
 ): Promise<DesignOutcome> {
   const leaseKey = `${userId}|${artworkHash}`;
   const reservation = await reserveSpend({
@@ -155,6 +155,9 @@ async function runDesign(
   let billed = 0;
   let usage: Usage = { cost: 0, inputTokens: 0, outputTokens: 0 };
   try {
+    /* An unbilled failure never reaches the provider: nothing is charged and
+       the reservation is released rather than settled. */
+    if (fault === "unbilled") throw new Error("injected failure before the provider was called");
     const response = await fetch("https://fal.run/openrouter/router/vision", {
       method: "POST",
       headers: { Authorization: `Key ${key()}`, "Content-Type": "application/json" },
@@ -166,7 +169,9 @@ async function runDesign(
     usage = usageFrom(payload);
     billed = usage.cost;
     if (!response.ok) throw new Error(payload.detail || "the provider refused the request");
-    const design = readDesign(payload.output ?? "");
+    /* A billed failure lets the call complete and bills for it, then refuses
+       the reply — what a model returning unparseable JSON actually does. */
+    const design = fault === "billed" ? null : readDesign(payload.output ?? "");
     /* A reply that cannot be read still burned tokens: the member is refunded
        and the dollar ledger keeps the charge. */
     if (!design) throw new Error("the provider's reply could not be read");
