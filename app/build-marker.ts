@@ -119,7 +119,11 @@
    Every attention card read "9 of the last 496 reviews in this shop are for
    this listing" — true, and unusable without the denominator the selection
    rule had already computed. "3 new reviews since yesterday" is gone. */
-export const BUILD_MARKER = "D1586";
+/* D1587 makes what a card SAYS part of the brief's cache identity. D1586
+   rewrote every Shop Watch card and deployed cleanly, and the live page kept
+   showing the old sentences all day: only refreshed evidence invalidated a
+   stored brief, never a change to the wording. */
+export const BUILD_MARKER = "D1587";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

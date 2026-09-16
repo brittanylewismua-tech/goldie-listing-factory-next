@@ -22,6 +22,25 @@ export const SHOP_WATCH_FLAG = "shopWatchInternalBeta";
   There will never be one call per review, and never one per member watching
   the same shop: the summary belongs to the shop's brief, which is shared.
 */
+/**
+ * WHAT A CARD SAYS IS PART OF THE CACHE IDENTITY.
+ *
+ * The brief is built once a morning and reused all day, invalidated only when
+ * the evidence underneath it is refreshed. That is right for evidence and
+ * wrong for wording: D1586 changed every attention card from a raw count to a
+ * stated finding, deployed cleanly, and the live page kept showing the old
+ * sentences — because nothing about a code change makes yesterday's stored
+ * payload look stale.
+ *
+ * Bump this whenever the CARDS THEMSELVES change: a new headline, a new
+ * explanation, a card added or removed, a threshold that decides what is
+ * shown. Not for a fix that leaves the wording alone.
+ *
+ * 1  the original raw-count cards
+ * 2  D1586 — findings rather than counts, and the bare arrival count removed
+ */
+export const BRIEF_CARD_VERSION = 2;
+
 export const SUMMARY_WORKLOAD = "shopWatchSummary";
 export const SUMMARY_ENABLED = false;
 
@@ -36,7 +55,9 @@ export async function ensureBriefTables() {
     PRIMARY KEY (shop_id, brief_day))`).run();
 }
 
-const today = (now: Date) => now.toISOString().slice(0, 10);
+/* The cache key carries the card version, so a wording change reaches the
+   next reader rather than the next morning. */
+const today = (now: Date) => `${now.toISOString().slice(0, 10)}#v${BRIEF_CARD_VERSION}`;
 
 /**
  * The brief for one shop, built once and shared by every watcher.

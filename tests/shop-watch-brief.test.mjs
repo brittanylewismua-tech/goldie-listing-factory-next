@@ -182,3 +182,20 @@ test("no card tells the seller what to do next", () => {
     for (const advice of ["you should", "consider ", "try ", "add a", "raise your", "lower your"])
       assert.ok(!line.toLowerCase().includes(advice), `a headline advises: ${line}`);
 });
+
+test("a change to what a card says invalidates the stored brief", () => {
+  /*
+    D1586 rewrote every attention card and deployed cleanly, and the live page
+    went on showing the old sentences: the brief is built once a morning and
+    invalidated only when the EVIDENCE beneath it refreshes, so a change to the
+    wording left yesterday's payload looking perfectly current.
+
+    The same shape as the observation window keying on the build marker. The
+    card version is part of the cache identity now.
+  */
+  const brief = readFileSync(new URL(
+    "../app/shop-watch-brief.ts", import.meta.url), "utf8");
+  assert.match(brief, /export const BRIEF_CARD_VERSION = \d+/);
+  assert.match(brief, /\$\{now\.toISOString\(\)\.slice\(0, 10\)\}#v\$\{BRIEF_CARD_VERSION\}/,
+    "the cache key must carry the card version");
+});
