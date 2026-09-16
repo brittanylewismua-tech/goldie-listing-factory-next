@@ -28,6 +28,21 @@ export const GET = withErrorLog("shop-map-connections", async () => {
     .bind(user.userId)
     .all<{ shop_id: number; shop_name: string; is_active: number; scopes: string | null; live: number }>();
 
+  /*
+    WHEN EACH SHOP LAST ACTUALLY SYNCED.
+
+    The page said "Last successful sync: not yet" for a shop with 3,155
+    ingested receipts, because nothing ever filled the field in. `not yet` is a
+    claim, and it was false.
+  */
+  const synced = await db.prepare(
+    `SELECT shop_id AS shopId, MAX(refreshed_at) AS at FROM finance_sources
+      WHERE user_id = ? GROUP BY shop_id`)
+    .bind(user.userId).all<{ shopId: number; at: number }>()
+    .catch(() => ({ results: [] as Array<{ shopId: number; at: number }> }));
+  const lastSync = new Map((synced.results ?? [])
+    .map(row => [Number(row.shopId), Number(row.at) || 0]));
+
   const connections = [];
   for (const row of rows.results ?? []) {
     const issued = await issueTarget(user.userId, Number(row.shop_id));
@@ -41,6 +56,7 @@ export const GET = withErrorLog("shop-map-connections", async () => {
       /* A shop that was disconnected keeps its place in the list so it can be
          reconnected rather than re-added from scratch. */
       needsReconnect: row.live === 0,
+      lastSyncAt: lastSync.get(Number(row.shop_id)) ?? null,
       authorizeSalesUrl: issued
         ? `/api/shop-map/connect-sales?for=${encodeURIComponent(issued.handle)}`
         : null,

@@ -194,3 +194,17 @@ test("the manifest opens the suite, standalone, at Home", () => {
   assert.match(manifest.start_url, /^\/home/);
   assert.ok((manifest.icons ?? []).some(icon => icon.sizes === "512x512"));
 });
+
+test("the connections screen reports a real last sync", () => {
+  /* It said "not yet" for a shop with 3,155 ingested receipts, because the
+     field was never populated. */
+  const route = read("app/api/shop-map/connections/route.ts");
+  assert.match(route, /WHEN EACH SHOP LAST ACTUALLY SYNCED/);
+  assert.match(route, /MAX\(refreshed_at\) AS at FROM finance_sources/);
+  assert.match(route, /lastSyncAt: lastSync\.get\(Number\(row\.shop_id\)\) \?\? null/);
+
+  const client = read("app/connections/connections-client.tsx");
+  assert.match(client, /not recorded yet/);
+  assert.ok(!client.includes('return "not yet"'),
+    "a missing field still claims the shop has never synced");
+});

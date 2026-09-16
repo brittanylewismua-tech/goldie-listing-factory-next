@@ -28,7 +28,10 @@ type Printify = { connected: boolean; shopName?: string; shopId?: number | null;
   lastSyncAt?: number | null };
 
 const when = (seconds?: number | null) => {
-  if (!seconds) return "not yet";
+  /* Only when it genuinely never has. A missing field is not evidence that a
+     shop has never synced, and saying so was false for a shop with three
+     thousand ingested receipts. */
+  if (!seconds) return "not recorded yet";
   const gap = Math.max(0, Math.floor(Date.now() / 1000) - seconds);
   if (gap < 3_600) return `${Math.max(1, Math.round(gap / 60))} minutes ago`;
   if (gap < 172_800) return `${Math.round(gap / 3_600)} hours ago`;
