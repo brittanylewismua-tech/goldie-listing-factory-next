@@ -1,4 +1,5 @@
 import { requireFeaturePage } from "@/app/require-feature";
+import FactoryShell from "@/app/factory-shell";
 import ShopMapClient from "./shop-map-client";
 import "./shop-map.css";
 
@@ -10,5 +11,11 @@ import "./shop-map.css";
 */
 export default async function ShopMapPage() {
   const user = await requireFeaturePage("shopMap", "/shop-map");
-  return <ShopMapClient signedInEmail={user.email} />;
+  return (
+    /* D1575 · the same rail, topbar, wordmark and footer as the Listing
+       Factory. This page rendered as a bare column on white before. */
+    <FactoryShell active="shop-map" title="Shop Map" desktopOnly={false}>
+      <ShopMapClient signedInEmail={user.email} />
+    </FactoryShell>
+  );
 }

@@ -94,7 +94,12 @@
 /* D1574 stops the register hammering an API that is rate limiting it, and
    makes a stalled queue say so instead of reporting "88 waiting" for two
    days while every firing was refused with a 429. */
-export const BUILD_MARKER = "D1574";
+/* D1575 puts Market Watch, Shop Map, Design Scanner and the Trademark Checker
+   inside the product: the same rail, wordmark, navigation and footer as the
+   Listing Factory, none of the factory's own batch controls, and no desktop
+   gate on the features built for a phone. The rail's hand-maintained height
+   budget is replaced by a pinned footer. */
+export const BUILD_MARKER = "D1575";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

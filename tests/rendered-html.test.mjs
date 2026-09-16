@@ -1604,7 +1604,7 @@ test("blocks the factory workflow on mobile while preserving saved work", async 
   assert.match(page, /<MobileGate \/>/, "the workflow mounts it");
   assert.match(shell, /<MobileGate \/>/, "and so does every page that renders the shell");
   assert.match(styles, /@media\(max-width:820px\)/);
-  assert.match(styles, /\.app-shell>:not\(\.mobile-gate\)\{display:none!important\}/);
+  assert.match(styles, /\.app-shell:not\(\.responsive-shell\)>:not\(\.mobile-gate\)\{display:none!important\}/);
 });
 
 test("downloads each listing's selected Printify photos and uploaded photos as one local ZIP",async()=>{

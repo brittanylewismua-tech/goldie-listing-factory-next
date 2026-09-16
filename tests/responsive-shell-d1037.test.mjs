@@ -13,5 +13,5 @@ test("a narrowed desktop window cannot retain the desktop sidebar offset", () =>
 
 test("the touch-device desktop-required gate remains independently scoped", () => {
   assert.match(readFileSync(new URL("../app/approved-functional.css", import.meta.url), "utf8"),
-    /@media\(max-width:820px\) and \(pointer:coarse\)[\s\S]*?\.app-shell>:not\(\.mobile-gate\)\{display:none!important\}/);
+    /@media\(max-width:820px\) and \(pointer:coarse\)[\s\S]*?\.app-shell:not\(\.responsive-shell\)>:not\(\.mobile-gate\)\{display:none!important\}/);
 });

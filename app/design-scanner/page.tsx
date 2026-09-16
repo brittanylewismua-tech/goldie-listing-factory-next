@@ -1,4 +1,5 @@
 import { requireFeaturePage } from "@/app/require-feature";
+import FactoryShell from "@/app/factory-shell";
 import DesignScannerClient from "./design-scanner-client";
 import "./design-scanner.css";
 
@@ -9,5 +10,11 @@ import "./design-scanner.css";
 */
 export default async function DesignScannerPage() {
   const user = await requireFeaturePage("designScanner", "/design-scanner");
-  return <DesignScannerClient signedInEmail={user.email} />;
+  return (
+    /* D1575 · the same rail, topbar, wordmark and footer as the Listing
+       Factory. This page rendered as a bare column on white before. */
+    <FactoryShell active="design-scanner" title="Design Scanner" desktopOnly={false}>
+      <DesignScannerClient signedInEmail={user.email} />
+    </FactoryShell>
+  );
 }

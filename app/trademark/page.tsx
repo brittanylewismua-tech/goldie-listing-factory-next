@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FullVerdict } from "../trademark-check";
 import "./trademark.css";
+import FactoryShell from "@/app/factory-shell";
 
 /**
  * TRADEMARK CHECK.
@@ -152,21 +153,32 @@ export default function TrademarkPage() {
 </>);
 
   /*
-    THE CHECKER IS NOT A FACTORY PAGE — AT ANY WIDTH.
+    THE CHECKER IS NOT A FACTORY PAGE — AND IT IS STILL A GOLDIE PAGE.
 
-    It rendered inside FactoryShell, which carries the desktop gate, so on a
+    It rendered inside FactoryShell, which carried the desktop gate, so on a
     phone it told members to find a bigger screen. That was fixed for mobile
     and left alone on desktop, which turned out to be half a fix: on a wide
     screen it still appeared inside the Listing Factory, with the factory's
     sidebar, its "Start a new batch" button, and a "198 / 10,000 listings"
-    counter from the retired three-tier plan — none of which has anything to do
-    with checking a phrase.
+    counter from the retired three-tier plan — none of which has anything to
+    do with checking a phrase.
 
-    The Trademark Checker is one of four top-level features. It renders as
-    itself now, everywhere.
+    So it was pulled out of the shell altogether, and that was the other half
+    of the mistake: it then had no wordmark, no navigation, no footer and no
+    link back to anything. Screenshotted beside the Listing Factory it read as
+    a different piece of software.
+
+    Both were the same confusion — the shell mixing what belongs to Goldie
+    with what belongs to the Listing Factory. The shell separates them now:
+    the checker wears the product's chrome and none of the factory's controls,
+    and `desktopOnly={false}` keeps it working on a phone.
   */
   /* The body carries its own header ("Check it before you print it"), so this
      wrapper adds none: stacking a second heading above it read as three
      titles in a row. */
-  return <main className="tm-standalone">{body}</main>;
+  return (
+    <FactoryShell active="trademark" title="Trademark Checker" desktopOnly={false}>
+      <main className="tm-standalone">{body}</main>
+    </FactoryShell>
+  );
 }

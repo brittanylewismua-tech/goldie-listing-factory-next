@@ -139,18 +139,64 @@ test("Market Watch gives no next move", () => {
 });
 
 test("the Trademark Checker renders as itself at every width", () => {
-  /* It rendered inside FactoryShell, which carries the desktop gate, so on a
-     phone it told members to find a bigger screen. Fixing only mobile left it
-     inside the factory on desktop — with the factory sidebar and a
-     "198 / 10,000 listings" counter from the retired three-tier plan. */
+  /*
+    It rendered inside FactoryShell, which carries the desktop gate, so on a
+    phone it told members to find a bigger screen. Fixing only mobile left it
+    inside the factory on desktop — with the factory sidebar and a
+    "198 / 10,000 listings" counter from the retired three-tier plan.
+
+    THIS TEST THEN OVERCORRECTED. It asserted the checker must not use
+    FactoryShell at all, which took the wordmark, the navigation, the footer
+    and every link back to the rest of Goldie away with the batch counter. The
+    checker became a bare column on white that did not look like the same
+    product — the thing a shared shell exists to prevent.
+
+    What was ever actually required is below: none of the factory's controls,
+    and no desktop gate. The chrome that belongs to Goldie is welcome.
+  */
   const page = read("app/trademark/page.tsx");
   assert.match(page, /className="tm-standalone"/);
-  /* Comments explaining the old arrangement are stripped: the check reads
-     code, not history. */
   const code = strip(page);
-  assert.ok(!code.includes("FactoryShell"),
-    "the checker still renders inside the Listing Factory shell");
+  assert.ok(code.includes("FactoryShell"),
+    "the checker has no product chrome and no way back to the rest of Goldie");
+  assert.match(code, /desktopOnly=\{false\}/,
+    "the checker must not carry the Listing Factory's desktop gate");
   assert.ok(!code.includes("MobileGate"), "the checker still carries a desktop gate");
+});
+
+test("the factory's own controls appear only on factory pages", () => {
+  /* The batch button, the listings counter and the prepared-listings goal are
+     the Listing Factory's, not Goldie's. Putting them on every page is what
+     made the checker look like a factory screen. */
+  const shell = strip(read("app/factory-shell.tsx"));
+  for (const control of ["Start a new batch", "approved-usage", "listing-goal-side"]) {
+    const at = shell.indexOf(control);
+    assert.ok(at > 0, `${control} is missing from the shell`);
+    assert.ok(shell.lastIndexOf("FACTORY_PAGES.has(active)", at) > shell.lastIndexOf("<header", at) - 2000
+      || shell.slice(Math.max(0, at - 600), at).includes("FACTORY_PAGES.has(active)"),
+      `${control} is not scoped to factory pages`);
+  }
+});
+
+test("every top-level feature is reachable from the navigation", () => {
+  /*
+    Market Watch, Shop Map, Design Scanner and the Trademark Checker were not
+    in the rail. With no rail on those pages either, a member who opened
+    Market Watch could reach the rest of Goldie only with the back button.
+  */
+  const shell = read("app/factory-shell.tsx");
+  for (const href of ["/market-watch", "/shop-map", "/design-scanner", "/trademark"])
+    assert.ok(shell.includes(`href: "${href}"`), `${href} is not in the navigation`);
+});
+
+test("every top-level feature wears the shell", () => {
+  for (const page of ["app/market-watch/page.tsx", "app/shop-map/page.tsx",
+    "app/design-scanner/page.tsx", "app/trademark/page.tsx"]) {
+    const code = strip(read(page));
+    assert.ok(code.includes("FactoryShell"), `${page} renders without the product shell`);
+    /* Phone-first features must not inherit the Listing Factory's gate. */
+    assert.match(code, /desktopOnly=\{false\}/, `${page} would be blocked on a phone`);
+  }
 });
 
 test("only the Listing Factory is desktop-only", () => {

@@ -543,7 +543,16 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(max-width:820px) and (pointer:coarse){
   html,body{min-height:100%;overflow:hidden;background:#e8b1c8 url('/goldie-background-reference.jpg') center/cover fixed no-repeat}
   .app-shell{display:block;min-height:100vh;padding:0}
-  .app-shell>:not(.mobile-gate){display:none!important}
+  /* D1575 · the gate belongs to the Listing Factory, not to the chrome.
+     Design Scanner and Shop Map wear the same shell and are phone-first, so
+     they opt out and keep the global bottom bar. */
+  .app-shell:not(.responsive-shell)>:not(.mobile-gate){display:none!important}
+  /* The rail is 288px of fixed-height desktop chrome. On a phone the global
+     bottom bar is the navigation, so the rail goes and the content fills —
+     with room at the bottom for the bar it is navigating with. */
+  .responsive-shell{display:block;min-height:100vh;background:var(--lf-paper,#fbfaff)}
+  .responsive-shell>.topbar{display:none}
+  .responsive-shell>.factory-main{padding:16px 16px 96px}
   .mobile-gate{position:relative;z-index:3;display:flex;min-height:100vh;flex-direction:column;padding:28px 22px 24px;color:var(--ink)}
   .mobile-brand{text-align:center}.mobile-brand .approved-wm{font-size:58px}.mobile-brand .approved-sub{font-size:10px}
   .mobile-card{margin:auto 0;padding:38px 26px 34px;border:1px solid rgba(255,255,255,.84);border-radius:16px;background:linear-gradient(158deg,rgba(255,255,255,.66),rgba(255,252,255,.52)),url('/goldie-background-reference.jpg') center/cover fixed no-repeat;box-shadow:0 1px 0 rgba(255,255,255,.95) inset,0 34px 70px -36px rgba(74,42,62,.35);text-align:center}

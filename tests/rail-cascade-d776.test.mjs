@@ -423,7 +423,9 @@ test("D818: the interior pages are inside the shell, and the plan name is legibl
       `/${page} no longer renders a bare management page as its root`);
   }
   const shell = await fs.promises.readFile(new URL("../app/factory-shell.tsx", import.meta.url), "utf8");
-  assert.match(shell, /className="app-shell interior-shell"/);
+  /* D1575 · the class list is built now, because a page that works on a phone
+     adds `responsive-shell` and opts out of the Listing Factory's gate. */
+  assert.match(shell, /app-shell interior-shell\$\{desktopOnly \? "" : " responsive-shell"\}/);
   assert.match(shell, /className="factory-work"/);
 
   /* D798 declared the light ink for the dark plan banner and never won, because
@@ -843,7 +845,23 @@ test("D835: the rail is fixed and its contents fit inside it", () => {
      formality: add a fifth link without taking something out and the
      powered-by line at the bottom is clipped again with nothing to catch it.
      Measure before adding either. */
-  assert.equal(navCount, 4, `the rail carries ${navCount} nav links; the height budget assumes 4`);
+  /*
+    D1575 · THIS ASSERTED A NUMBER, NOT THE PROPERTY THAT MATTERS.
+
+    "Exactly four nav links" defends the footer only for as long as nobody has
+    a reason to add a fifth — and Goldie has five top-level features, four of
+    which were missing from the rail entirely. The budget was the thing in the
+    way of fixing that.
+
+    What actually has to be true is that the footer cannot be clipped. It is
+    pinned now instead of pushed by an auto margin, and the navigation above it
+    flexes, so the link count is free to be whatever the product needs.
+  */
+  assert.ok(navCount >= 4, `the rail carries ${navCount} nav links`);
+  assert.match(v2, /\.app-shell > \.topbar > \.top-actions\{flex:1 1 auto;min-height:0;overflow-y:auto/,
+    "the navigation must flex, or extra links push the footer out of a hidden-overflow rail");
+  assert.match(v2, /\.app-shell > \.topbar > \.approved-sidebar-footer\{flex:0 0 auto\}/,
+    "the footer must be pinned, not placed by an auto margin that collapses");
   assert.doesNotMatch(shell, /rail-drop-button/,
     "the action button Home replaced must stay gone, or the budget is overspent");
   assert.match(v2, /\.app-shell > \.topbar\{overflow:hidden;padding-top:24px;padding-bottom:20px\}/);

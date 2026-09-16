@@ -27,7 +27,8 @@ import GoldieWordmark from "./goldie-wordmark";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
-type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "usage" | "connections";
+type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "usage"
+  | "connections" | "market-watch" | "shop-map" | "design-scanner";
 
 /* D834 · Usage + Plan and Connections moved into the account menu, where the
    account itself already lives. The rail is the three places work happens. */
@@ -41,15 +42,57 @@ type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywor
   Sold Overnight has left this rail entirely. It is not part of making a
   listing; it lives on the home page with the other tools.
 */
+/*
+  D1575 · FOUR FEATURES WERE NOT IN THE PRODUCT.
+
+  Market Watch, Shop Map, Design Scanner and the Trademark Checker rendered as
+  bare centred columns on white — no rail, no topbar, no wordmark, no grid, no
+  footer, and system fonts. Screenshotted side by side with the Listing
+  Factory at 1440px they do not read as the same software, which is the
+  "collection of separately built internal tools" this rail exists to prevent.
+
+  It was also a dead end: with no rail on those pages there was no link back
+  to anything. A member who opened Market Watch could reach the rest of Goldie
+  only with the browser's back button.
+*/
 const NAV: { key: NavKey; label: string; href: string }[] = [
   { key: "home", label: "Home", href: "/home" },
   { key: "factory", label: "New listing project", href: "/listing-factory" },
+  { key: "market-watch", label: "Market Watch", href: "/market-watch" },
+  { key: "shop-map", label: "Shop Map", href: "/shop-map" },
+  { key: "design-scanner", label: "Design Scanner", href: "/design-scanner" },
+  { key: "trademark", label: "Trademark Checker", href: "/trademark" },
   { key: "batches", label: "Batch History", href: "/batches" },
   { key: "keywords", label: "Keyword Banks", href: "/keywords" },
 ];
 
-export default function FactoryShell({ active, title, children }:
-  { active: NavKey; title: string; children: React.ReactNode }) {
+/*
+  THE DESKTOP GATE BELONGS TO THE LISTING FACTORY, NOT TO THE SHELL.
+
+  `.app-shell > :not(.mobile-gate){display:none}` hides everything on a phone,
+  which is right for a bulk publishing workspace and wrong for Design Scanner,
+  whose whole reason to exist is a design in a camera roll. Shop Map is
+  phone-first too. So the gate is a property of the page, not of the chrome,
+  and a page that works on a phone keeps the global bottom bar instead.
+*/
+/*
+  WHAT IS THE PRODUCT, AND WHAT IS THE LISTING FACTORY.
+
+  The rail carries two different kinds of thing. The wordmark, the navigation,
+  the account menu and the footer belong to Goldie — every feature should wear
+  them, and that is the whole point of one shell. "Start a new batch", the
+  listings counter and the prepared-listings goal belong to the Listing
+  Factory alone.
+
+  Mixing the two is what put a "198 / 10,000 listings" counter and a batch
+  button on the Trademark Checker, and it is why the checker was taken out of
+  the shell entirely rather than have the shell tell the truth about which
+  half was which. So the shell says it now.
+*/
+const FACTORY_PAGES = new Set<NavKey>(["home", "factory", "batches", "keywords"]);
+
+export default function FactoryShell({ active, title, desktopOnly = true, children }:
+  { active: NavKey; title: string; desktopOnly?: boolean; children: React.ReactNode }) {
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
   const [goal, setGoal] = useState<ListingGoal | null>(null);
   const [goalDays, setGoalDays] = useState<PublishedDay[]>([]);
@@ -91,10 +134,10 @@ export default function FactoryShell({ active, title, children }:
     ? `${usage.used.toLocaleString()} / ${usage.limit.toLocaleString()} listings`
     : "Loading usage…";
 
-  return <main className="app-shell interior-shell">
+  return <main className={`app-shell interior-shell${desktopOnly ? "" : " responsive-shell"}`}>
     {/* D828 · the shell hides every child but this one on a phone. Without it
         these pages rendered as a blank screen. */}
-    <MobileGate />
+    {desktopOnly && <MobileGate />}
     <header className="topbar">
       <div className="brand-lockup"><GoldieWordmark className="approved-brand" /></div>
       <div className="top-actions">
@@ -108,13 +151,13 @@ export default function FactoryShell({ active, title, children }:
         {/* Above the primary action, because that is the order of the morning:
             see what moved, then go and list. Styled quieter than Start a new
             batch so the money action keeps its weight. */}
-        <a className="workflow-restart-button" href="/listing-factory">
-          <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" /><path d="M3 21v-5h5" /></svg> Start a new batch</a>
+        {FACTORY_PAGES.has(active) && <a className="workflow-restart-button" href="/listing-factory">
+          <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" /><path d="M3 21v-5h5" /></svg> Start a new batch</a>}
       </div>
       <div className="approved-sidebar-footer">
-        <a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{usageLine}</span>
-          <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>
-        {goal && <a className="listing-goal-side" href="/goals">
+        {FACTORY_PAGES.has(active) && <a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{usageLine}</span>
+          <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>}
+        {FACTORY_PAGES.has(active) && goal && <a className="listing-goal-side" href="/goals">
           <span className="listing-goal-caption">This {goal.period}&rsquo;s goal</span>
           <b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${goal.target} prepared`:"Loading progress…"}</b>
           {goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span>}</a>}

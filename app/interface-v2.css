@@ -106,6 +106,26 @@ html, body { background: var(--lf-paper); }
   border:1.5px solid #2b2b2b;background:#0d0d0d;color:#fff}
 .app-shell > .topbar .workflow-restart-button .new-batch-icon{color:var(--lf-pink)}
 .app-shell > .topbar .approved-sidebar-footer { margin-top: auto; padding: 16px 0 0; display: grid; gap: 9px; }
+/*
+  D1575 · THE RAIL HELD A HAND-MAINTAINED HEIGHT BUDGET.
+
+  The rail is fixed height with `overflow:hidden`, and the footer was placed by
+  `margin-top:auto`. That works only while the contents happen to fit: once
+  they do not, the auto margin collapses and the footer — the Etsy API
+  disclosure and the "Powered by Goldie AI" line — is pushed out of the box and
+  clipped. It had already happened once (measured: 643 of rail, 769 of content)
+  and was fixed by trimming padding until the number came out right, with a
+  test asserting the rail carries exactly four navigation links.
+
+  A budget defended by a magic number fails the next time the product grows,
+  which is now: Goldie has five top-level features and the rail listed one.
+
+  So the footer is pinned rather than pushed, and the navigation above it is
+  the part that flexes. The rail still never scrolls as a whole. The footer
+  can no longer be clipped by anything, at any link count.
+*/
+.app-shell > .topbar > .top-actions{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin}
+.app-shell > .topbar > .approved-sidebar-footer{flex:0 0 auto}
 .app-shell > .topbar .account-link { display: none; }
 
 /* main pane — the only scroller. padding lives on the work column, not here. */
