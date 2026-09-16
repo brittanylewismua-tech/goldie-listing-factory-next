@@ -6,7 +6,6 @@ import { env } from "cloudflare:workers";
 import { ingestReviews, shopWatchRoom } from "@/app/shop-watch";
 import { planFetch, pagesFor, type ShopCandidate, type PriorityClass }
   from "@/app/review-priority";
-import { normalizeNiche, intersect, type Candidate } from "@/app/niche-cohort";
 import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 
 /**
@@ -32,8 +31,9 @@ export const POST = withErrorLog("design-scanner-cohort-reviews", async (request
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
   const url = new URL(request.url);
-  const phrase = (url.searchParams.get("q") ?? "").trim();
-  if (!phrase) return NextResponse.json({ error: "Give a niche as ?q=" }, { status: 400 });
+  /* The niche parameter is no longer required: priority now spans saved
+     niches, repeated movement, scanner cohorts and followed shops, so the
+     queue is built from all of them rather than from one phrase. */
   const dryRun = url.searchParams.get("apply") !== "1";
   /* A hard ceiling on the Etsy budget this may consume in one invocation. */
   const maxShops = Math.max(1, Math.min(20, Number(url.searchParams.get("shops")) || 8));
