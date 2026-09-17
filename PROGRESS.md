@@ -37,8 +37,26 @@ Fixed along the way:
 - Strict bank ranking on the layered path: a phrase appears only if it shares
   a stem with the design. No bank-order padding (D544/D414 stay honoured).
 
-STILL OPEN in section 1: the ten-step Chrome walkthrough of the real
-interface (upload → variants → final review → return and edit).
+Chrome walkthrough so far (real interface, canary account):
+- product selection, artwork upload (4500x5400 PNG accepted), batch saved to
+  Batch History, Designs step reached — all working.
+- final review screen reached on an existing completed batch: per-listing
+  checklist in plain language, no internal IDs, no provider or cache
+  terminology, correct shop named. Reads well enough to catch a bad listing.
+
+TWO BLOCKERS FOUND, NEITHER RESOLVED:
+1. The Review step is gated behind creating a Printify draft, and this
+   instruction says create no listing or draft — so the walkthrough cannot
+   continue past Designs on a NEW batch without that decision being made.
+2. "Reload saved batch here" DOES NOTHING when clicked. The batch-held-by-
+   another-tab notice offers it as the only way to take over, so a member in
+   that state is stuck with saving paused and no way out.
+   Likely cause, NOT yet confirmed: `confirmAction` in confirm-dialog.tsx
+   returns `Promise.resolve(false)` when its module-level `announce` is unset,
+   which happens if the workflow and the layout's `ConfirmHost` end up holding
+   different instances of that module. Every confirm-guarded control would
+   silently do nothing. Needs confirming before fixing — a wrong fix here
+   could make destructive actions proceed WITHOUT a prompt, which is worse.
 
 ## 1b. Earlier canary-route measurements (kept for reference)
 
