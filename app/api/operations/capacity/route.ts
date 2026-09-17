@@ -103,6 +103,28 @@ export const GET = withErrorLog("operations-capacity", async () => {
         billedFailures: states["failed-billed"]?.n ?? 0,
         billedFailureCost: Number((states["failed-billed"]?.settled ?? 0).toFixed(5)),
       },
+      /*
+        WHAT A CALL ACTUALLY COST, BESIDE WHAT IT RESERVES.
+
+        `unitCost` is the conservative cache-miss figure reservations are
+        sized on, which is correct for holding money back and wrong as a
+        picture of spend: for the scanner it is 5.5x the measured cost, so
+        the dollar view reads nearly empty while the binding limit — a
+        per-member count — is full. Reading headroom off the money and
+        concluding scanning was wide open is a mistake this view invited,
+        and one made while finishing this feature.
+      */
+      measuredUnitCost: (states.settled?.n ?? 0) > 0
+        ? Number(((states.settled?.settled ?? 0) / (states.settled!.n)).toFixed(6))
+        : null,
+      /*
+        AND WHICH LIMIT ACTUALLY BINDS.
+
+        At the measured cost the scanner's $2 daily ceiling is thousands of
+        calls, while one member may make ten. Saying so removes the reading
+        that the money view invites.
+      */
+      bindingLimit: entry.memberDailyLimit !== null ? "member daily count" : "global spend",
       staleReservations: staleBy.get(entry.key) ?? 0,
       /* An unmeasured workload must keep a request-count ceiling, or it
          reserves zero dollars and behaves as free. */
