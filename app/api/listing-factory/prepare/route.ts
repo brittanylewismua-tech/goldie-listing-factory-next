@@ -11,6 +11,7 @@ import { ensureDesign, ensureFamilyCopy, DESIGN_VERSION } from "@/app/listing-fl
 import { POD_LISTING_FIELDS, LISTING_FIELD_FOR_PROPERTY } from "@/app/pod-listing-fields";
 import { artworkHashOfBytes, artworkHashOfDataUrl } from "@/app/artwork-identity";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
+import { INTERNAL_VALIDATION_MARKER, isInternalValidationProduct } from "@/app/printify-validation-marker";
 import { check, withRegister } from "@/app/trademark-check";
 import { lookup, registerSize } from "@/app/trademark-register";
 import { env } from "cloudflare:workers";
@@ -461,8 +462,16 @@ async function printifyProduct(shopId: string, productId: string, remove: boolea
       visible: product.visible, locked: product.is_locked,
       linkedToSalesChannel: product.external?.id ?? null });
 
-  if (!String(product.title ?? "").trim().toUpperCase().startsWith(INTERNAL_TEST_PREFIX))
-    return NextResponse.json({ error: "Refused: this route only removes INTERNAL TEST products.",
+  /*
+    THE MARKER, NOT THE PREFIX.
+
+    "INTERNAL TEST" is a phrase a seller could plausibly type. The marker is an
+    arbitrary token that nothing else can carry, so it — and only it — decides
+    what this route is allowed to remove.
+  */
+  if (!isInternalValidationProduct(String(product.title ?? "")))
+    return NextResponse.json({
+      error: `Refused: this route only removes products carrying ${INTERNAL_VALIDATION_MARKER}.`,
       title: product.title }, { status: 409 });
 
   const deleteResponse = await fetch(url, { method: "DELETE", headers,
@@ -517,7 +526,8 @@ async function findInternalTestProducts(shopId: string) {
     shopId: Number(shopId),
     scanned: all.length,
     internalTests: all
-      .filter(entry => String(entry.title ?? "").trim().toUpperCase().startsWith(INTERNAL_TEST_PREFIX))
+      .filter(entry => isInternalValidationProduct(String(entry.title ?? ""))
+        || String(entry.title ?? "").trim().toUpperCase().startsWith(INTERNAL_TEST_PREFIX))
       .map(entry => ({ id: entry.id, title: entry.title, visible: entry.visible,
         createdAt: entry.created_at, linkedToSalesChannel: entry.external?.id ?? null })),
     /* For orientation only — titles, never anything that could identify a buyer. */

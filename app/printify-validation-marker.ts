@@ -11,7 +11,16 @@
  * So the marker is an arbitrary token, and it is the only thing removal and
  * reconciliation match on.
  */
-export const INTERNAL_VALIDATION_MARKER = "[gv-9f3a1c]";
+/*
+  NO HYPHEN, NO UNDERSCORE, ON PURPOSE.
+
+  When a title is not supplied explicitly the creation path derives one from
+  the design's file name with `.replace(/[_-]+/g, " ")`. A marker containing a
+  hyphen therefore arrives at Printify as "[gv 9f3a1c]" — silently different
+  from the token the cleanup route matches on, which would leave a product
+  that nothing could identify or remove.
+*/
+export const INTERNAL_VALIDATION_MARKER = "[gv9f3a1c]";
 
 export const internalValidationTitle = () =>
   `INTERNAL TEST - DO NOT ORDER ${INTERNAL_VALIDATION_MARKER}`;

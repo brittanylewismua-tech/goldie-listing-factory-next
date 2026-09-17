@@ -17,6 +17,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const read = name => readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
+import * as marker from "../app/printify-validation-marker.ts";
 
 test("only a draft Printify actually created is counted", () => {
   const route = read("api/batches/route.ts");
@@ -60,7 +61,28 @@ test("a product id is never taken from a preview or thumbnail URL", () => {
   assert.ok(removal.length > 400, "the removal function was not found");
   assert.ok(!/thumbnail|mockup|previewUrl/i.test(removal),
     "the removal route must not accept an id derived from an image URL");
-  /* It reads the product and refuses on the title instead. */
-  assert.match(removal, /INTERNAL_TEST_PREFIX/);
+  /* It reads the product and refuses on an arbitrary marker — "INTERNAL TEST"
+     alone is a phrase a seller could type, so it is not an identifier. */
+  assert.match(removal, /isInternalValidationProduct/);
   assert.match(removal, /confirmedGone/);
+});
+
+test("the validation marker survives the title path", () => {
+  /*
+    When no title is supplied the creation path derives one from the design's
+    file name with `.replace(/[_-]+/g, " ")`. A marker containing a hyphen
+    would reach Printify as "[gv 9f3a1c]" — silently different from the token
+    the cleanup route matches, leaving a product nothing could identify.
+  */
+  const { INTERNAL_VALIDATION_MARKER, isInternalValidationProduct } = marker;
+  assert.ok(!/[-_]/.test(INTERNAL_VALIDATION_MARKER),
+    "a hyphen or underscore in the marker is destroyed by the title derivation");
+  const derived = `INTERNAL TEST DO NOT ORDER ${INTERNAL_VALIDATION_MARKER}.png`
+    .replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+  assert.ok(isInternalValidationProduct(derived),
+    "the marker must still be recognisable after the filename transform");
+  /* And no real title from the member's shop can collide with it. */
+  for (const real of ["Unisex Heavy Cotton Tee", "case test salt air",
+    "Tough Phone Cases", "INTERNAL TEST", "internal test do not order"])
+    assert.equal(isInternalValidationProduct(real), false, `${real} collides with the marker`);
 });
