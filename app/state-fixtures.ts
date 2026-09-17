@@ -45,7 +45,8 @@ export type StateFixture = {
   key: string;
   label: string;
   /* Which component the preview should mount. */
-  surface: "connections" | "market-watch" | "design-scanner" | "shop-map" | "account";
+  surface: "connections" | "market-watch" | "design-scanner" | "shop-map" | "account"
+    | "batches";
   /*
     Which sub-view of that surface the state lives in. Two shop fixtures
     rendered Market Watch's niche tab and were called verified: the state they
@@ -534,6 +535,46 @@ export const stateFixtures = (): StateFixture[] => [
       { path: "/api/account/data", status: 200,
         body: { yours: { scans: 12 }, kept: [], note: "" } },
       { path: "/api/usage", status: 500, body: { error: "upstream" } }] },
+
+
+  /* --------------------------------------------------------------- batches */
+  { key: "batches-loading", label: "Loading", surface: "batches",
+    what: "Saved work takes a moment to read. Nothing may claim there is none.",
+    replies: [{ path: "/api/batches", status: 200, body: { batches: [] }, delayMs: 60_000 }] },
+
+  { key: "batches-empty", label: "No saved batches", surface: "batches",
+    what: "A member who has not built anything yet.",
+    replies: [{ path: "/api/batches", status: 200,
+      body: { batches: [], prepared: [], preparedAvailable: true } }] },
+
+  { key: "batches-saved", label: "Saved batches", surface: "batches",
+    what: "The ordinary list: finished work, and one still running.",
+    replies: [{ path: "/api/batches", status: 200, body: { prepared: [],
+      preparedAvailable: true, batches: [
+        { id: "b-1", status: "complete", step: "results", setup_name: "Bachelorette set", product_title: "Bachelorette Party Shirt", design_count: 6, created_at: "2026-09-16 14:02:11", updated_at: "2026-09-17 09:14:02", display_name: "Bachelorette Party Shirt", thumbnail_url: "", published_count: 0, draft_count: 6, expected_listing_count: 6 },
+        { id: "b-2", status: "processing", step: "creating", setup_name: "Bachelorette set", product_title: "Dog Mom Tee", design_count: 6, created_at: "2026-09-16 14:02:11", updated_at: "2026-09-17 09:14:02", display_name: "Dog Mom Tee", thumbnail_url: "", published_count: 0, draft_count: 2, expected_listing_count: 6 },
+        { id: "b-3", status: "draft", step: "artwork", setup_name: "Bachelorette set", product_title: "Teacher Mug", design_count: 6, created_at: "2026-09-16 14:02:11", updated_at: "2026-09-17 09:14:02", display_name: "Teacher Mug", thumbnail_url: "", published_count: 0 }] } }] },
+
+  { key: "batches-remove-uncertain", label: "Removal not confirmed", surface: "batches",
+    what: "A delete whose outcome is unknown. It must not report success it cannot prove.",
+    replies: [
+      { path: "/api/batches", method: "DELETE", status: 500,
+        body: { error: "That could not be confirmed." } },
+      { path: "/api/batches", status: 200, body: { prepared: [], preparedAvailable: true,
+        batches: [{ id: "b-1", status: "complete", step: "results", setup_name: "Bachelorette set", product_title: "Bachelorette Party Shirt", design_count: 6, created_at: "2026-09-16 14:02:11", updated_at: "2026-09-17 09:14:02", display_name: "Bachelorette Party Shirt", thumbnail_url: "", published_count: 0 }] } }] },
+
+  { key: "batches-signed-out", label: "Signed out", surface: "batches",
+    what: "A 401 on saved work is not an empty history.",
+    replies: [{ path: "/api/batches", status: 401, body: { error: "Sign in." } }] },
+
+  { key: "batches-load-failed", label: "History could not be read", surface: "batches",
+    what: "Must not read as a member who has built nothing.",
+    replies: [{ path: "/api/batches", status: 500, body: { error: "upstream" } }] },
+
+  { key: "batches-count-unavailable", label: "Listing count unavailable", surface: "batches",
+    what: "The list loads, the daily listing count does not. Said, not shown as zero.",
+    replies: [{ path: "/api/batches", status: 200, body: { preparedAvailable: false,
+      batches: [{ id: "b-1", status: "complete", step: "results", setup_name: "Bachelorette set", product_title: "Bachelorette Party Shirt", design_count: 6, created_at: "2026-09-16 14:02:11", updated_at: "2026-09-17 09:14:02", display_name: "Bachelorette Party Shirt", thumbnail_url: "", published_count: 0 }] } }] },
 
   /* -------------------------------------------------------------- shop map */
   { key: "shop-map-loading", label: "Loading", surface: "shop-map",

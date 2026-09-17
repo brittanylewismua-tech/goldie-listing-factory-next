@@ -8,10 +8,12 @@ import { conditionsOf, MOBILE_GATE, PHONE_WIDTHS,
    same files the routes do — not copies of them. */
 import "@/app/connections/connections.css";
 import "@/app/market-watch/market-watch.css";
+import "@/app/interface-v2.css";
 import "@/app/design-scanner/design-scanner.css";
 import "@/app/shop-map/shop-map.css";
 import ConnectionsClient from "@/app/connections/connections-client";
 import MarketWatchClient from "@/app/market-watch/market-watch-client";
+import BatchesPage from "@/app/batches/page";
 import DesignScannerClient from "@/app/design-scanner/design-scanner-client";
 import ShopMapClient from "@/app/shop-map/shop-map-client";
 import AccountClient from "@/app/account/settings/account-client";
@@ -93,6 +95,7 @@ const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
   "design-scanner": () => <DesignScannerClient signedInEmail="preview@example.invalid" />,
   "shop-map": () => <ShopMapClient signedInEmail="preview@example.invalid" />,
   account: () => <AccountClient email="preview@example.invalid" />,
+  batches: () => <BatchesPage />,
 };
 
 /*
