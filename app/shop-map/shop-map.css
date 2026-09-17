@@ -124,3 +124,7 @@
 */
 .shop-map-freshness{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--p-muted)}
 .shop-map-freshness[data-stale="yes"]{color:#6b4a06;font-weight:600}
+.shop-map-clear-correction{min-height:44px;padding:10px 14px;border-radius:10px;
+  border:1px solid var(--p-line);background:transparent;color:var(--p-ink-soft);
+  font-size:13px;font-weight:600;cursor:pointer;justify-self:start;margin-top:4px}
+.shop-map-clear-correction:disabled{opacity:.5;cursor:default}

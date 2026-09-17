@@ -162,3 +162,33 @@ test("a classified listing is not described back as the member's correction", ()
   assert.ok(captured > -1 && classifierWrites > captured,
     "correctedIds must be taken before the classifier loop writes into overrides");
 });
+
+/* ------------------------------------ getting back to automatic placement */
+
+test("a correction can be cleared, and nothing to clear is not success", () => {
+  const route = src("../app/api/shop-map/correct/route.ts");
+  const clear = route.slice(route.indexOf('case "clear-correction"'),
+    route.indexOf('case "rename-world"'));
+  assert.match(clear, /SET reversed_at = \?/,
+    "reversal is a timestamp, not a delete");
+  assert.ok(!/DELETE FROM shop_map_world_overrides/.test(clear));
+  assert.match(clear, /done\.meta\?\.changes/);
+  assert.match(clear, /status: 404/,
+    "a member told 'done' when no correction existed would believe a listing "
+    + "had gone back to automatic placement when it never left it");
+  assert.match(clear, /status: 500/, "a failed clear must not report success");
+});
+
+test("clearing is offered only where there is a correction to clear", () => {
+  const client = src("../app/shop-map/shop-map-client.tsx");
+  assert.match(client, /\{placement\.corrected && \(/,
+    "offering it on an automatic placement would promise an undo of nothing");
+  assert.match(client, /Use the automatic placement instead/);
+});
+
+test("clearing re-reads the placement rather than leaving the old sentence", () => {
+  const client = src("../app/shop-map/shop-map-client.tsx");
+  const at = client.indexOf("await onClear(placement.listingId);");
+  assert.ok(at > -1);
+  assert.match(client.slice(at, at + 160), /await look\(String\(placement\.listingId\)\)/);
+});

@@ -82,6 +82,44 @@ export const POST = withErrorLog("shop-map-correct", async (request: Request) =>
           JSON.stringify(body.worldIds ?? []), String(body.reason ?? ""), now).run();
       return NextResponse.json({ ok: true, action: body.action });
     }
+    /*
+      BACK TO THE AUTOMATIC PLACEMENT.
+
+      A member who corrected a listing had no way to undo it. Moving it to
+      Unclassified is not the same thing: that is a member saying "this
+      belongs nowhere", which is itself a correction and still overrides the
+      build. Without this, a correction made by mistake was permanent, and
+      the only records that could ever be retired were the orphans an audit
+      found — which is a strange shape for a feature whose whole promise is
+      that a member can fix what the shop got wrong.
+
+      Reversal is a timestamp, not a delete. What someone thought last week is
+      part of how the current map came to look the way it does.
+    */
+    case "clear-correction": {
+      if (!body.listingId)
+        return NextResponse.json({ error: "Which listing?" }, { status: 400 });
+      const done = await db.prepare(
+        `UPDATE shop_map_world_overrides SET reversed_at = ?
+          WHERE user_id = ? AND shop_id = ? AND listing_id = ? AND reversed_at IS NULL`)
+        .bind(now, user.userId, shopId, body.listingId).run()
+        .catch(() => null);
+      if (!done || done.success === false)
+        return NextResponse.json({
+          error: "That correction could not be cleared, so it is still in place.",
+        }, { status: 500 });
+      /*
+        Nothing to clear is not success. A member told "done" when no
+        correction existed would believe a listing had gone back to the
+        automatic placement when it had never left it.
+      */
+      if (!Number(done.meta?.changes ?? 0))
+        return NextResponse.json({
+          error: `Listing ${body.listingId} has no correction of yours to clear, `
+            + `so nothing was changed.`,
+        }, { status: 404 });
+      return NextResponse.json({ ok: true, action: body.action });
+    }
     case "rename-world":
     case "merge-worlds": {
       if (!body.worldId) return NextResponse.json({ error: "Which world?" }, { status: 400 });

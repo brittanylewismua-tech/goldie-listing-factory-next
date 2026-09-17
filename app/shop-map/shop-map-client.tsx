@@ -135,6 +135,25 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setBusy("");
   };
 
+  const clearCorrection = async (listingId: number) => {
+    setBusy(`clear:${listingId}`);
+    setCorrectionFailed("");
+    try {
+      const response = await fetch("/api/shop-map/correct", { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear-correction", listingId }) });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        setCorrectionFailed(body.error
+          ?? "That correction could not be cleared. It is still in place.");
+      }
+    } catch {
+      setCorrectionFailed("That correction could not be cleared. It is still in place.");
+    }
+    await load();
+    setBusy("");
+  };
+
   const shown = map ?? lastGood;
 
   if (!shown && failed)
@@ -449,7 +468,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
             {correctionFailed}
           </p>
         )}
-        <MoveControl niches={niches} busy={busy} onMove={moveListing} />
+        <MoveControl niches={niches} busy={busy} onMove={moveListing}
+          onClear={clearCorrection} />
       </section>
       {signedInEmail ? null : null}
     </main>
@@ -460,8 +480,10 @@ type Placement = { listingId: number; title: string; nicheId: string;
   nicheLabel: string; corrected: boolean; why: string };
 
 function MoveControl(
-  { niches, busy, onMove }:
-  { niches: Niche[]; busy: string; onMove: (listingId: number, nicheId: string) => Promise<void> },
+  { niches, busy, onMove, onClear }:
+  { niches: Niche[]; busy: string;
+    onMove: (listingId: number, nicheId: string) => Promise<void>;
+    onClear: (listingId: number) => Promise<void> },
 ) {
   const [listingId, setListingId] = useState("");
   const [nicheId, setNicheId] = useState("unclassified");
@@ -530,6 +552,21 @@ function MoveControl(
             {placement.corrected ? " — your correction" : ""}
           </p>
           <p className="shop-map-placement-why">{placement.why}</p>
+          {placement.corrected && (
+            /*
+              A correction made by mistake was permanent. Moving the listing
+              to Unclassified is not the same thing — that is a member saying
+              it belongs nowhere, which is itself a correction.
+            */
+            <button type="button" className="shop-map-clear-correction"
+              disabled={busy.startsWith("clear:")}
+              onClick={() => void (async () => {
+                await onClear(placement.listingId);
+                await look(String(placement.listingId));
+              })()}>
+              {busy.startsWith("clear:") ? "Clearing…" : "Use the automatic placement instead"}
+            </button>
+          )}
         </div>
       )}
       <label>
