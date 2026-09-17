@@ -117,3 +117,10 @@
 .shop-map-placement-title{margin:0;font-size:14px;font-weight:700;color:var(--p-ink)}
 .shop-map-placement-where{margin:0;font-size:13px;color:var(--p-ink)}
 .shop-map-placement-why{margin:0;font-size:13px;line-height:1.55;color:var(--p-ink-soft)}
+
+/*
+  D1684 · How current the money is, said beside the money. A figure days old
+  looked exactly like one computed a minute ago.
+*/
+.shop-map-freshness{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--p-muted)}
+.shop-map-freshness[data-stale="yes"]{color:#6b4a06;font-weight:600}

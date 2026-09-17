@@ -15,6 +15,7 @@ type ShopMap = {
   month?: string;
   thisMonth?: { revenueMinor: number; etsyFeesMinor: number; productionCostMinor: number;
     headline: string; profitMinor: number | null; accuracy: string; orders: number;
+    salesAsOf?: number; salesStale?: boolean; freshness?: string;
     /* What this month's figures may be called. An estimate must never be
        able to read as a verified figure, so the distinction is structural
        rather than a word inside `headline`. */
@@ -222,6 +223,19 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
               </p>
             )}
             <p className="shop-map-accuracy">{month?.accuracy}</p>
+            {/*
+              D1684 · How current the figure is, beside the figure. The
+              financial view already refused profit with staleness as its
+              first reason while this card mentioned only production costs.
+              The sentence is built on the server, so the page never handles
+              a source name.
+            */}
+            {month?.freshness && (
+              <p className="shop-map-freshness"
+                data-stale={month.salesStale ? "yes" : "no"}>
+                {month.freshness}
+              </p>
+            )}
             <dl className="shop-map-rows">
               <div><dt>Revenue</dt><dd>{money(month?.revenueMinor)}</dd></div>
               <div><dt>Etsy fees</dt><dd>{money(month?.etsyFeesMinor)}</dd></div>

@@ -14,6 +14,7 @@ import { monthWindow, monthOf } from "@/app/finance-month";
 import { shopTimezone } from "@/app/finance-store";
 import { explainGrouping } from "@/app/niche-grouping-explained";
 import { describePlacement } from "@/app/listing-placement";
+import { freshnessNote, isStale, salesAsOf } from "@/app/finance-freshness";
 
 /**
  * THE MAP.
@@ -369,6 +370,22 @@ async function buildMap(request: Request) {
       ? 1 - unclassified.ordersLast90 / shopTotals.ordersLast90 : 1,
   };
 
+  /*
+    HOW CURRENT THE MONEY IS, SAID OUT LOUD.
+
+    The financial view already refused profit with staleness as its FIRST
+    reason while the member's own card said only that production costs were
+    missing — true, but not the first thing wrong with the number. The import
+    is not on a clock, so a figure can be days old and look new.
+  */
+  const sourceRows = await db.prepare(
+    `SELECT refreshed_at FROM finance_sources WHERE user_id = ? AND shop_id = ?`)
+    .bind(user.userId, shopId).all<{ refreshed_at: number }>()
+    .catch(() => ({ results: [] as Array<{ refreshed_at: number }> }));
+  const asOf = salesAsOf(((sourceRows.results ?? []) as Array<{ refreshed_at: number }>)
+    .map(row => ({ refreshedAt: Number(row.refreshed_at) })));
+  const nowSeconds = Math.floor(Date.now() / 1_000);
+
   /* Enough recent trade to make a 90-day view meaningful? */
   const recentOrders = worldPerformance.reduce((sum, world) => sum + world.ordersLast90, 0);
   const recentEnough = recentOrders >= 10;
@@ -394,6 +411,9 @@ async function buildMap(request: Request) {
         verdict already computes the label; it was simply not sent.
       */
       label: state.label,
+      salesAsOf: asOf,
+      salesStale: isStale(asOf, nowSeconds),
+      freshness: freshnessNote({ asOf, nowSeconds, timezone: timezone || "UTC" }),
       profitMinor: state.profitMinor,
       accuracy: state.accuracy,
       coverage: { verified: state.verifiedShare, estimated: state.estimatedShare,
