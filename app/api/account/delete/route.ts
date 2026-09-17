@@ -36,8 +36,10 @@ export const POST = withErrorLog("account-delete", async (request: Request) => {
     return NextResponse.json({ error: "Invalid origin." }, { status: 403 });
   if (isOwner(user))
     return NextResponse.json({
-      error: "This account cannot be deleted from here while the product is in "
-        + "private beta. It is the account every check runs through.",
+      /* Not a phase, a standing protection: this is the account every check
+         and every deploy verification runs through. */
+      error: "This account cannot be deleted from here. It is the account every "
+        + "check on the platform runs through.",
     }, { status: 409 });
 
   const body = await request.json().catch(() => ({})) as { phrase?: string };

@@ -22,6 +22,19 @@
 export type FixtureReply = {
   /* Matched against the start of the request path. */
   path: string;
+  /*
+    AND OPTIONALLY THE METHOD.
+
+    Without this, one path could only have one answer. So a fixture for "the
+    niche you tried to add was refused" — a 400 on POST /api/market-watch/niches
+    — also answered the GET that loads the saved list, and the preview showed
+    "your saved niches could not be loaded" instead of the refusal it was
+    built to show. A write state could not be previewed at all without
+    breaking the read beside it.
+
+    Omitted means any method, which is what every existing fixture wants.
+  */
+  method?: "GET" | "POST" | "PUT" | "DELETE";
   status: number;
   body: unknown;
   /* Milliseconds before answering, for watching a loading state on purpose. */
@@ -164,6 +177,26 @@ export const stateFixtures = (): StateFixture[] => [
         shopId: 4471, shopName: "a-quiet-shop", etsy: "", gettingAttention: [],
         whatBuyersLove: [], whatBuyersDislike: [], whatChanged: [] }] } }] },
 
+  { key: "market-watch-unsupported", label: "Niche refused", surface: "market-watch",
+    what: "A phrase with nothing to search on. The refusal says what is wrong with it.",
+    replies: [
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
+      { path: "/api/market-watch/niches", method: "POST", status: 400,
+        body: { error: "That niche needs at least one meaningful word." } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
+      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+
+  { key: "market-watch-at-limit", label: "Watch limit reached", surface: "market-watch",
+    what: "The cap is a standing limit with a way out, not a dead end.",
+    replies: [
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [
+        { key: "bachelorette", phrase: "bachelorette", moving: 14, repeated: 5, shops: 9,
+          lastCheckedAt: secondsAgo(5_400), stale: false }] } },
+      { path: "/api/market-watch/niches", method: "POST", status: 400,
+        body: { error: "You can watch 10 niches at once. Remove one to add another." } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
+      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+
   { key: "market-watch-api-error", label: "API failure", surface: "market-watch",
     what: "Evidence unavailable. Must not read as 'nothing is moving' or 'you watch nothing'.",
     replies: [{ path: "/api/market-watch/niches", status: 500, body: { error: "upstream" } },
@@ -246,8 +279,15 @@ export const fixtureFor = (key: string) =>
   stateFixtures().find(entry => entry.key === key) ?? null;
 
 /** Which fixture reply answers a request, if any. */
-export function replyFor(fixture: StateFixture, url: string): FixtureReply | null {
+export function replyFor(
+  fixture: StateFixture, url: string, method = "GET",
+): FixtureReply | null {
   let path = url;
   try { path = new URL(url, "https://example.invalid").pathname; } catch { /* already a path */ }
-  return fixture.replies.find(reply => path.startsWith(reply.path)) ?? null;
+  const verb = method.toUpperCase();
+  const matches = fixture.replies.filter(reply => path.startsWith(reply.path));
+  /* A reply that names the method wins over one that takes any. */
+  return matches.find(reply => reply.method === verb)
+    ?? matches.find(reply => !reply.method)
+    ?? null;
 }

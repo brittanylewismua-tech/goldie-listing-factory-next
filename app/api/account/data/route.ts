@@ -50,10 +50,16 @@ export const GET = withErrorLog("account-data", async (request: Request) => {
       .map(effect => ({ say: effect.say, why: effect.disposition })),
     needsConfirmation: CONFIRMATION_REQUIRED.includes(action),
     /* Stated plainly rather than discovered by clicking. */
-    note: action === "account-deletion"
-      ? "Nothing is deleted by viewing this. During the private beta, account "
-        + "deletion is carried out by hand so that it can be checked — ask and "
-        + "it will be done."
-      : "Nothing is deleted by viewing this.",
+    /*
+      D1623 · THIS OUTLIVED THE THING IT DESCRIBED.
+
+      It told every member that deletion was "carried out by hand during the
+      private beta". The route that does it is built, scoped, audited and
+      idempotent, and the control is wired — so the sentence was a standing
+      apology for a feature that works. Removed from the page in D1621 and
+      still served from here, which is the whole reason a member-facing
+      string belongs in one place.
+    */
+    note: "Nothing is deleted by viewing this.",
   });
 });

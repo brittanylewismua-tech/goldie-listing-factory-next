@@ -56,14 +56,14 @@ function useClosedNetwork(fixture: StateFixture | null) {
       const method = (init?.method ?? "GET").toUpperCase();
 
       /* A preview never writes, whatever the fixture says. */
-      if (method !== "GET" && method !== "HEAD" && !replyFor(fixture, url)) {
+      if (method !== "GET" && method !== "HEAD" && !replyFor(fixture, url, method)) {
         window.dispatchEvent(new CustomEvent("state-preview:refused",
           { detail: `${method} ${url}` }));
         return new Response(JSON.stringify({ error: "Blocked by state preview." }),
           { status: 503, headers: { "Content-Type": "application/json" } });
       }
 
-      const reply = replyFor(fixture, url);
+      const reply = replyFor(fixture, url, method);
       if (!reply) {
         window.dispatchEvent(new CustomEvent("state-preview:refused", { detail: url }));
         return new Response(JSON.stringify({ error: "No fixture for this request." }),

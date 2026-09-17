@@ -90,6 +90,7 @@ export default function MarketWatchClient({ signedInEmail }: { signedInEmail: st
   const [shops, setShops] = useState<Load<ShopView[]>>({ status: "loading", data: [] });
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [opening, setOpening] = useState("");
   const [error, setError] = useState("");
 
   const loadNiches = useCallback(async (quiet = false) => {
@@ -149,14 +150,21 @@ export default function MarketWatchClient({ signedInEmail }: { signedInEmail: st
     finally { setBusy(false); }
   };
 
+  /*
+    Opening a watch reads evidence from the database and can take a moment.
+    With no state for it, the row absorbed the tap and the page sat still —
+    so the member tapped again, and again.
+  */
   const openNiche = async (key: string) => {
     setError("");
+    setOpening(key);
     try {
       const response = await fetch(`/api/market-watch/niches?key=${encodeURIComponent(key)}`);
       const body = await response.json() as NicheView & { error?: string };
       if (!response.ok) setError(body.error ?? "That watch could not be opened.");
       else setOpen(body);
     } catch { setError("That watch could not be opened."); }
+    finally { setOpening(""); }
   };
 
   if (open) return <NicheDetail view={open} onBack={() => { setOpen(null); void loadNiches(true); }} />;
@@ -223,12 +231,15 @@ export default function MarketWatchClient({ signedInEmail }: { signedInEmail: st
         >
           {watches.data.map(watch => (
             <button key={watch.key} className="watch" data-stale={watch.stale ? "yes" : "no"}
-              onClick={() => void openNiche(watch.key)}>
+              onClick={() => void openNiche(watch.key)}
+              disabled={opening !== ""} aria-busy={opening === watch.key}>
               <span className="name">{watch.phrase}</span>
               <span className="meta">
-                {watch.stale
-                  ? "Last update could not be refreshed — showing the last confirmed reading"
-                  : `${watch.moving} moving · ${watch.repeated} repeated · ${watch.shops} shops`}
+                {opening === watch.key
+                  ? "Opening…"
+                  : watch.stale
+                    ? "Last update could not be refreshed — showing the last confirmed reading"
+                    : `${watch.moving} moving · ${watch.repeated} repeated · ${watch.shops} shops`}
               </span>
             </button>
           ))}

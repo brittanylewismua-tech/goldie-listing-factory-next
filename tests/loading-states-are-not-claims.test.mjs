@@ -128,8 +128,26 @@ test("deletion is a real flow, with no sentence apologising for itself", () => {
   assert.match(source, /This cannot be undone/);
   /* Success states the counts rather than reassuring. */
   assert.match(source, /done\.removed\.map/);
-  /* And no permanent note explaining that the feature is unfinished. */
-  assert.ok(!/carried out by hand/.test(source));
+  /*
+    AND NO PERMANENT NOTE EXPLAINING THAT THE FEATURE IS UNFINISHED —
+    ANYWHERE A MEMBER CAN READ IT.
+
+    This checked the client only. The sentence lived in the API: the account
+    data route served "deletion is carried out by hand … ask and it will be
+    done" to every member long after the route that does it was built and
+    wired. A guard aimed at one of the two places a string can live is a
+    guard that reports success while the string is still on screen.
+  */
+  for (const file of ["account/settings/account-client.tsx",
+    "api/account/data/route.ts", "api/account/delete/route.ts"]) {
+    const text = read(file);
+    /* Comments explain history; served strings must not. */
+    const served = text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    assert.ok(!/carried out by hand/.test(served),
+      `${file} still tells members deletion is done by hand`);
+    assert.ok(!/private beta|during the beta/i.test(served),
+      `${file} dates a member-facing sentence to a phase that is ending`);
+  }
 });
 
 test("market watch tells waiting, broken and genuinely empty apart", () => {
@@ -201,4 +219,21 @@ test("every state fixture answers the endpoints its surface actually calls", () 
       assert.ok([...called].some(one => one.startsWith(path) || path.startsWith(one)),
         `${surface} fixtures answer ${path}, which the page never calls`);
   }
+});
+
+test("a fixture can answer a write without breaking the read beside it", async () => {
+  /*
+    One path could only have one answer, so the fixture for "the niche you
+    tried to add was refused" (POST → 400) also answered the GET that loads
+    the saved list. The preview showed a broken list instead of the refusal,
+    which means no write state could be previewed at all.
+  */
+  const { replyFor, fixtureFor } = await import("../app/state-fixtures.ts");
+  const refused = fixtureFor("market-watch-unsupported");
+  assert.ok(refused, "the refusal fixture is missing");
+  assert.equal(replyFor(refused, "/api/market-watch/niches", "GET").status, 200,
+    "the saved list must still load while a refusal is being shown");
+  assert.equal(replyFor(refused, "/api/market-watch/niches", "POST").status, 400);
+  /* Defaulting to GET keeps every fixture written before this unchanged. */
+  assert.equal(replyFor(refused, "/api/market-watch/niches").status, 200);
 });

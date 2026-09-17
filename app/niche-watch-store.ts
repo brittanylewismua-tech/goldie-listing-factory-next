@@ -70,7 +70,9 @@ export async function saveWatch(
     .bind(userId, key).first<{ found: number }>();
   if (!existing && Number(held?.saved ?? 0) >= MAX_NICHE_WATCHES)
     return { ok: false,
-      because: `You can watch ${MAX_NICHE_WATCHES} niches during the beta. `
+      /* "during the beta" dated the sentence to a phase that is ending, and
+         made a standing limit read as temporary. It states the limit. */
+      because: `You can watch ${MAX_NICHE_WATCHES} niches at once. `
         + `Remove one to add another.` };
   await db().prepare(
     `INSERT INTO niche_watches (user_id, niche_key, phrase, terms, added_at)
