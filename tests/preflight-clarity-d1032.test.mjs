@@ -6,7 +6,14 @@ const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.u
 test("free private draft creation has no confirmation detour",()=>{
   assert.doesNotMatch(app,/preflightOpen|preflight-backdrop|preflight-title/);
   assert.match(app,/onClick=\{createDrafts\}/);
-  assert.match(app,/function beginDraftCreation\(\)[\s\S]{0,900}confirmDrafts\(\)/);
+  /* D1659 widened this window: beginDraftCreation now refuses outright when
+     the plan allowance could not be READ, which is a refusal rather than the
+     confirmation detour this test exists to keep out. The point stands — the
+     only dialog on the path is confirmDrafts. */
+  assert.match(app,/function beginDraftCreation\(\)[\s\S]{0,2200}confirmDrafts\(\)/);
+  const begin=app.slice(app.indexOf("function beginDraftCreation()"),app.indexOf("/** Stage every member"));
+  assert.equal((begin.match(/confirmAction\(|confirmDrafts\(/g)||[]).length,1,
+    "exactly one confirmation on the creation path");
 });
 
 test("final price approval persists to its original product even when a bundle product is switched",()=>{

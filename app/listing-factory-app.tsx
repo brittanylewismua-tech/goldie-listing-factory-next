@@ -1423,6 +1423,11 @@ export default function ListingFactoryApp() {
   const [sizeGuideStatus,setSizeGuideStatus]=useState("");
   const commandCenterData=null;
   const [sidebarUsage,setSidebarUsage]=useState<{used:number;limit:number}|null>(null);
+  /* D1659 · A failed allowance read is not one still in flight. Without this
+     the sidebar said "Loading usage…" for the rest of the session, and
+     planDraftsRemaining stayed null, which silently removed the plan gate
+     from draft creation. */
+  const [sidebarUsageFailed,setSidebarUsageFailed]=useState(false);
   /* D342 · The goal is off unless the seller turned it on. Both places it can
      appear — here and the publish receipt — read this one value, so it is never
      half-shown. */
@@ -1521,7 +1526,7 @@ export default function ListingFactoryApp() {
      it read "16 / 10000" immediately after spending two listings. Bumped when
      drafts are created so the figure matches what was just spent. */
   const [usageRevision,setUsageRevision]=useState(0);
-  useEffect(()=>{fetch("/api/usage").then(async response=>{if(!response.ok)return null;return response.json() as Promise<{usage?:{drafts?:number};plan?:{drafts?:number}}>}).then(result=>{if(result?.usage&&result.plan)setSidebarUsage({used:Number(result.usage.drafts||0),limit:Number(result.plan.drafts||100)})}).catch(()=>undefined)},[usageRevision]);
+  useEffect(()=>{fetch("/api/usage").then(async response=>{if(!response.ok)return null;return response.json() as Promise<{usage?:{drafts?:number};plan?:{drafts?:number}}>}).then(result=>{if(result?.usage&&result.plan){setSidebarUsage({used:Number(result.usage.drafts||0),limit:Number(result.plan.drafts||100)});setSidebarUsageFailed(false)}else setSidebarUsageFailed(true)}).catch(()=>setSidebarUsageFailed(true))},[usageRevision]);
   const bundleProductCount=activeBundle?Math.max(1,bundleRecipes.length):1;
   const planDraftsRemaining=sidebarUsage?Math.max(0,sidebarUsage.limit-sidebarUsage.used):null;
   const batchDesignLimit=Math.min(MAX_BATCH_FILES,planDraftsRemaining===null?MAX_BATCH_FILES:Math.floor(planDraftsRemaining/bundleProductCount));
@@ -5328,7 +5333,26 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   return [primaryLabel,...extraSides].join(" + ");
   }
 
-  function beginDraftCreation(){if(planDraftsRemaining!==null&&requestedListingCount>planDraftsRemaining)return void stopWith("This batch is larger than your remaining plan allowance.",[activeBundle?`${files.length} designs × ${bundleProductCount} products = ${requestedListingCount} listings after exclusions. You have ${planDraftsRemaining} listings remaining this month.`:`${planDraftsRemaining} ${planDraftsRemaining===1?"listing remains":"listings remain"} this month, but this batch contains ${files.length} designs.`]);confirmDrafts()}
+  function beginDraftCreation(){
+    /*
+      D1659 · A SPEND LIMIT FAILS CLOSED.
+
+      planDraftsRemaining is null both when the allowance has not loaded yet
+      and when reading it FAILED, and the gate below only fires when it is
+      non-null. So a failed /api/usage silently removed the plan limit from
+      draft creation entirely — and batchDesignLimit fell back to the maximum
+      at the same time. A member whose allowance read had failed could create
+      past their plan, which is the one kind of mistake that costs real money
+      and cannot be taken back.
+
+      A limit nobody could read is not an absent limit.
+    */
+    if(sidebarUsageFailed)return void stopWith(
+      "Your remaining plan allowance could not be read, so this batch was not started.",
+      ["Nothing has been created. Reload this page to try reading it again — "
+        +"creation stays blocked until the allowance is known, because going "
+        +"ahead could take you past your plan."]);
+    if(planDraftsRemaining!==null&&requestedListingCount>planDraftsRemaining)return void stopWith("This batch is larger than your remaining plan allowance.",[activeBundle?`${files.length} designs × ${bundleProductCount} products = ${requestedListingCount} listings after exclusions. You have ${planDraftsRemaining} listings remaining this month.`:`${planDraftsRemaining} ${planDraftsRemaining===1?"listing remains":"listings remain"} this month, but this batch contains ${files.length} designs.`]);confirmDrafts()}
   function createDrafts() {const issues=requiredForStep("review");if(issues.length)return void stopWith("This batch isn’t ready to create.",issues);const undecided=bundleQualityGroups.filter(group=>group.keys.some(key=>!bundleQualityDecisions[key]));
     /* D509 - a flagged design in a bundle got a blocking dialog of sentences -
        one run-on line per design per product, no sizes, and no way past it. The
@@ -5622,7 +5646,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage + Plan</a>
           {signedIn!==null&&(localPreview&&!signedIn?<span className="account-link" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>:<a className="account-link" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
         </div>
-        <div className="approved-sidebar-footer"><a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{sidebarUsage?`${sidebarUsage.used.toLocaleString()} / ${sidebarUsage.limit.toLocaleString()} listings`:"Loading usage…"}</span><div className="approved-usage-track" aria-hidden="true"><i style={{width:sidebarUsage?`${Math.min(100,sidebarUsage.used/sidebarUsage.limit*100)}%`:"0%"}} /></div></a>{listingGoal&&<a className="listing-goal-side" href="/goals"><span className="listing-goal-caption">This {listingGoal.period}&rsquo;s goal</span><b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${listingGoal.target} prepared`:"Loading progress…"}</b>{goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{width:`${Math.min(100,Math.round((goalDone/Math.max(1,listingGoal.target))*100))}%`}}/></span>}</a>}{/* D357 · "Powered by Goldie AI" is the widest line in the sidebar, so it sets
+        <div className="approved-sidebar-footer"><a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{sidebarUsage?`${sidebarUsage.used.toLocaleString()} / ${sidebarUsage.limit.toLocaleString()} listings`:sidebarUsageFailed?"Allowance unavailable":"Loading usage…"}</span><div className="approved-usage-track" aria-hidden="true"><i style={{width:sidebarUsage?`${Math.min(100,sidebarUsage.used/sidebarUsage.limit*100)}%`:"0%"}} /></div></a>{listingGoal&&<a className="listing-goal-side" href="/goals"><span className="listing-goal-caption">This {listingGoal.period}&rsquo;s goal</span><b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${listingGoal.target} prepared`:"Loading progress…"}</b>{goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{width:`${Math.min(100,Math.round((goalDone/Math.max(1,listingGoal.target))*100))}%`}}/></span>}</a>}{/* D357 · "Powered by Goldie AI" is the widest line in the sidebar, so it sets
             the column's visual edge. Sitting above the copyright and the Etsy notice
             it made those look indented; at the bottom the block reads as one
             left-aligned stack that widens as it descends. */}

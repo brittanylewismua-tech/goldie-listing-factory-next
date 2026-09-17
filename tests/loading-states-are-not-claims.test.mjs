@@ -549,3 +549,34 @@ test("a failed connection check does not disconnect the member or move them", ()
   assert.match(source, /if\(connectionCheckFailed\|\|etsyCheckFailed\)return;const fallback=/);
   assert.match(source, /:connectionCheckFailed\|\|etsyCheckFailed\?"Your connections could not be checked"/);
 });
+
+test("a plan allowance that could not be read blocks creation rather than being absent", () => {
+  /*
+    planDraftsRemaining is null both when the allowance has not loaded yet AND
+    when reading it failed, and the gate only fired when it was non-null. So a
+    failed /api/usage silently removed the plan limit from draft creation,
+    while batchDesignLimit fell back to the maximum at the same moment. A
+    member whose allowance read had failed could create past their plan — the
+    one kind of mistake here that costs real money and cannot be undone.
+
+    Found in the state harness: the sidebar sat on "Loading usage…" while
+    everything else had rendered, because the catch swallowed the failure.
+  */
+  const source = read("listing-factory-app.tsx");
+  assert.match(source, /const \[sidebarUsageFailed,setSidebarUsageFailed\]=useState\(false\)/);
+  assert.match(source, /\.catch\(\(\)=>setSidebarUsageFailed\(true\)\)/);
+  /* The gate must refuse before the comparison that null silently skips. */
+  const begin = source.slice(source.indexOf("function beginDraftCreation()"),
+    source.indexOf("/** Stage every member"));
+  const guard = begin.indexOf("sidebarUsageFailed");
+  const compare = begin.indexOf("planDraftsRemaining!==null");
+  assert.ok(guard > -1 && guard < compare,
+    "the unreadable-allowance refusal must come before the plan comparison");
+  assert.match(begin, /could not be read, so this batch was not started/);
+
+  /* And the sidebar says so rather than claiming to still be loading. */
+  assert.match(source, /sidebarUsageFailed\?"Allowance unavailable"/);
+  const shell = read("factory-shell.tsx");
+  assert.match(shell, /usageFailed \? "Allowance unavailable"/);
+  assert.match(shell, /if \(!response\.ok\) throw new Error\("usage"\)/);
+});

@@ -48,6 +48,34 @@ import "@/app/account/settings/account.css";
 
   Patching in the parent's render body happens before any child mounts.
 */
+/*
+  A REFUSAL BEFORE ANYONE IS LISTENING IS STILL A REFUSAL.
+
+  Refusals were reported by dispatching a window event, and the panel attached
+  its listener in an effect. The requests most likely to be unfixtured are the
+  ones a surface fires on mount — and those fire before the listener exists,
+  so they were dropped silently. Every "no unfixtured requests" reading taken
+  from this panel was worth less than it looked: the shell's own /api/usage
+  call was being refused on several fixtures and the panel showed nothing.
+
+  Buffered on `window` instead, so a listener that arrives late still sees
+  everything. One object per page, shared by every chunk — the same reason the
+  confirmation dialog stopped using a module-level singleton.
+*/
+type RefusalBuffer = { seen: string[] };
+
+const refusalBuffer = (): RefusalBuffer => {
+  const host = window as unknown as { __statePreviewRefusals?: RefusalBuffer };
+  if (!host.__statePreviewRefusals) host.__statePreviewRefusals = { seen: [] };
+  return host.__statePreviewRefusals;
+};
+
+function noteRefusal(what: string) {
+  const buffer = refusalBuffer();
+  if (!buffer.seen.includes(what)) buffer.seen.push(what);
+  window.dispatchEvent(new CustomEvent("state-preview:refused", { detail: what }));
+}
+
 function useClosedNetwork(fixture: StateFixture | null) {
   const patched = useRef<{ key: string; real: typeof window.fetch } | null>(null);
 
@@ -62,15 +90,14 @@ function useClosedNetwork(fixture: StateFixture | null) {
 
       /* A preview never writes, whatever the fixture says. */
       if (method !== "GET" && method !== "HEAD" && !replyFor(fixture, url, method)) {
-        window.dispatchEvent(new CustomEvent("state-preview:refused",
-          { detail: `${method} ${url}` }));
+        noteRefusal(`${method} ${url}`);
         return new Response(JSON.stringify({ error: "Blocked by state preview." }),
           { status: 503, headers: { "Content-Type": "application/json" } });
       }
 
       const reply = replyFor(fixture, url, method);
       if (!reply) {
-        window.dispatchEvent(new CustomEvent("state-preview:refused", { detail: url }));
+        noteRefusal(url);
         return new Response(JSON.stringify({ error: "No fixture for this request." }),
           { status: 503, headers: { "Content-Type": "application/json" } });
       }
@@ -189,14 +216,28 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
   useClosedNetwork(fixture);
 
   useEffect(() => {
+    /* Whatever was refused before this listener existed, plus whatever comes
+       next. The buffer is cleared when the fixture changes, not when the
+       listener mounts. */
+    const buffer = (window as unknown as { __statePreviewRefusals?: { seen: string[] } })
+      .__statePreviewRefusals;
+    if (buffer) buffer.seen = [];
     setRefused([]);
+    const catchUp = window.setTimeout(() => {
+      const seen = (window as unknown as { __statePreviewRefusals?: { seen: string[] } })
+        .__statePreviewRefusals?.seen ?? [];
+      if (seen.length) setRefused(current => [...new Set([...current, ...seen])]);
+    }, 1_500);
     const onRefused = (event: Event) =>
       setRefused(current => {
         const url = String((event as CustomEvent).detail);
         return current.includes(url) ? current : [...current, url];
       });
     window.addEventListener("state-preview:refused", onRefused);
-    return () => window.removeEventListener("state-preview:refused", onRefused);
+    return () => {
+      window.clearTimeout(catchUp);
+      window.removeEventListener("state-preview:refused", onRefused);
+    };
   }, [key]);
 
   const Surface = fixture ? SURFACES[fixture.surface] : null;

@@ -109,11 +109,31 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
   const [menuOpen, setMenuOpen] = useState(false);
   const [switchError, setSwitchError] = useState("");
   const [switching, setSwitching] = useState(0);
+  /* Whether the allowance could not be read, as distinct from not yet read. */
+  const [usageFailed, setUsageFailed] = useState(false);
 
   useEffect(() => {
-    void (fetch("/api/usage").then(response => response.json()) as Promise<{ plan?: { drafts: number }; usage?: { drafts: number } }>).then((result: { plan?: { drafts: number }; usage?: { drafts: number } }) => {
-      if (result.plan && result.usage) setUsage({ used: result.usage.drafts, limit: result.plan.drafts });
-    }).catch(() => undefined);
+    /*
+      D1659 · "LOADING USAGE…" FOREVER.
+
+      A failed or unreadable /api/usage left this sentence on screen for the
+      rest of the session: the catch swallowed the error and the success path
+      needed both `plan` and `usage`, so anything else was indistinguishable
+      from a request still in flight. Found in the state harness, where the
+      sidebar sat on "Loading usage…" while everything else had rendered.
+
+      Three states, like everywhere else in this product.
+    */
+    void (fetch("/api/usage").then(response => {
+      if (!response.ok) throw new Error("usage");
+      return response.json();
+    }) as Promise<{ plan?: { drafts: number }; usage?: { drafts: number } }>)
+      .then((result: { plan?: { drafts: number }; usage?: { drafts: number } }) => {
+        if (result.plan && result.usage) {
+          setUsage({ used: result.usage.drafts, limit: result.plan.drafts });
+          setUsageFailed(false);
+        } else setUsageFailed(true);
+      }).catch(() => setUsageFailed(true));
     void (fetch("/api/seller-preferences").then(response => response.json()) as Promise<{ listingGoal?: ListingGoal }>).then((result: { listingGoal?: ListingGoal }) => {
       if (result.listingGoal?.enabled) setGoal(result.listingGoal);
     }).catch(() => undefined);
@@ -135,6 +155,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
      digits. Same number, the preview's formatting. */
   const usageLine = usage
     ? `${usage.used.toLocaleString()} / ${usage.limit.toLocaleString()} listings`
+    : usageFailed ? "Allowance unavailable"
     : "Loading usage…";
 
   return <main className={`app-shell interior-shell${desktopOnly ? "" : " responsive-shell"}`}>
