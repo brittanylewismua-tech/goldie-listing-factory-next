@@ -237,3 +237,27 @@ test("a fixture can answer a write without breaking the read beside it", async (
   /* Defaulting to GET keeps every fixture written before this unchanged. */
   assert.equal(replyFor(refused, "/api/market-watch/niches").status, 200);
 });
+
+test("a fixture that lives in a sub-view opens in that sub-view", async () => {
+  /*
+    Two Market Watch fixtures described Shop Watch states and rendered the
+    niche tab, because the preview always mounted the component at its
+    default. Both read as verified. A state one click away from what is on
+    screen has not been looked at.
+  */
+  const { stateFixtures } = await import("../app/state-fixtures.ts");
+  const shopStates = stateFixtures().filter(one =>
+    one.surface === "market-watch" && one.key.includes("shop"));
+  assert.ok(shopStates.length >= 2, "the shop fixtures are missing");
+  for (const one of shopStates)
+    assert.equal(one.at, "shops", `${one.key} would open on the wrong tab`);
+
+  const preview = read("dev/state-preview/preview-client.tsx");
+  assert.match(preview, /<Surface key=\{key\} at=\{fixture\?\.at\}/,
+    "the preview must pass the sub-view through, and remount when it changes");
+
+  /* And the tab is a real address, not only a preview hook. */
+  const client = read("market-watch/market-watch-client.tsx");
+  assert.match(client, /const tabFromUrl = /);
+  assert.match(client, /url\.searchParams\.set\("tab", "shops"\)/);
+});

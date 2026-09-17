@@ -80,9 +80,25 @@ const ago = (seconds: number) => {
 */
 type Load<T> = { status: "loading" | "ready" | "failed"; data: T };
 
-export default function MarketWatchClient({ signedInEmail }: { signedInEmail: string }) {
+/*
+  WHICH TAB IS IN THE URL.
+
+  Shop Watch had no address of its own: every visit landed on Niche Watch, so
+  a member who only follows shops re-clicked past the other tab every time,
+  and a shop state could not be linked to at all — including from the state
+  preview, where two shop fixtures rendered the niche tab and proved nothing.
+*/
+const tabFromUrl = (): "niches" | "shops" => {
+  if (typeof window === "undefined") return "niches";
+  return new URLSearchParams(window.location.search).get("tab") === "shops"
+    ? "shops" : "niches";
+};
+
+export default function MarketWatchClient(
+  { signedInEmail, startTab }: { signedInEmail: string; startTab?: "niches" | "shops" },
+) {
   void signedInEmail;
-  const [tab, setTab] = useState<"niches" | "shops">("niches");
+  const [tab, setTab] = useState<"niches" | "shops">(startTab ?? tabFromUrl);
   const [update, setUpdate] = useState<Load<{ lines: string[]; message: string | null } | null>>(
     { status: "loading", data: null });
   const [watches, setWatches] = useState<Load<WatchRow[]>>({ status: "loading", data: [] });
@@ -155,6 +171,18 @@ export default function MarketWatchClient({ signedInEmail }: { signedInEmail: st
     With no state for it, the row absorbed the tap and the page sat still —
     so the member tapped again, and again.
   */
+  /* One place changes the tab, so the address and the stale error from the
+     other tab cannot drift apart from it. */
+  const chooseTab = (next: "niches" | "shops") => {
+    setTab(next);
+    setError("");
+    if (typeof window === "undefined" || startTab) return;
+    const url = new URL(window.location.href);
+    if (next === "shops") url.searchParams.set("tab", "shops");
+    else url.searchParams.delete("tab");
+    window.history.replaceState(null, "", url.toString());
+  };
+
   const openNiche = async (key: string) => {
     setError("");
     setOpening(key);
@@ -202,10 +230,10 @@ export default function MarketWatchClient({ signedInEmail }: { signedInEmail: st
       </section>
 
       <div className="tabs p-tabs" role="tablist">
-        <button className="p-tab" role="tab" aria-selected={tab === "niches"} onClick={() => { setTab("niches"); setError(""); }}>
+        <button className="p-tab" role="tab" aria-selected={tab === "niches"} onClick={() => chooseTab("niches")}>
           Niche Watch
         </button>
-        <button className="p-tab" role="tab" aria-selected={tab === "shops"} onClick={() => { setTab("shops"); setError(""); }}>
+        <button className="p-tab" role="tab" aria-selected={tab === "shops"} onClick={() => chooseTab("shops")}>
           Shop Watch
         </button>
       </div>

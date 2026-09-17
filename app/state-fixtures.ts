@@ -46,6 +46,12 @@ export type StateFixture = {
   label: string;
   /* Which component the preview should mount. */
   surface: "connections" | "market-watch" | "design-scanner" | "shop-map" | "account";
+  /*
+    Which sub-view of that surface the state lives in. Two shop fixtures
+    rendered Market Watch's niche tab and were called verified: the state they
+    described was one click away and nobody had made the click.
+  */
+  at?: string;
   what: string;
   replies: FixtureReply[];
 };
@@ -152,7 +158,7 @@ export const stateFixtures = (): StateFixture[] => [
       { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
       { path: "/api/market-watch/update", status: 500, body: { error: "upstream" } }] },
 
-  { key: "market-watch-shop-patterns", label: "Shop Watch patterns", surface: "market-watch",
+  { key: "market-watch-shop-patterns", label: "Shop Watch patterns", surface: "market-watch", at: "shops",
     what: "A shop brief with a finding, its reasoning and its evidence — not a bare count.",
     replies: [
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
@@ -168,7 +174,7 @@ export const stateFixtures = (): StateFixture[] => [
           evidence: "31 reviews", window: "last 90 days", listing: { id: null, url: "" } }],
         whatBuyersDislike: [], whatChanged: [] }] } }] },
 
-  { key: "market-watch-shop-empty", label: "Shop watched, nothing confirmed", surface: "market-watch",
+  { key: "market-watch-shop-empty", label: "Shop watched, nothing confirmed", surface: "market-watch", at: "shops",
     what: "A shop is followed but has no confirmed pattern. Silence has to be explained.",
     replies: [
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },

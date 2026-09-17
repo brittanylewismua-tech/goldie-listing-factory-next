@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { stateFixtures, fixtureFor, replyFor, type StateFixture } from "@/app/state-fixtures";
 /* The feature stylesheets are imported by each ROUTE, not by the component, so
    mounting a component directly gives unstyled markup. The preview imports the
@@ -81,13 +81,17 @@ function useClosedNetwork(fixture: StateFixture | null) {
   }, []);
 }
 
-const SURFACES = {
+/* Every surface is given the same props; most ignore `at`, which is what
+   makes adding a sub-view to one of them a one-line change. */
+const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
   connections: () => <ConnectionsClient signedInEmail="preview@example.invalid" />,
-  "market-watch": () => <MarketWatchClient signedInEmail="preview@example.invalid" />,
+  "market-watch": ({ at }: { at?: string }) =>
+    <MarketWatchClient signedInEmail="preview@example.invalid"
+      startTab={at === "shops" ? "shops" : "niches"} />,
   "design-scanner": () => <DesignScannerClient signedInEmail="preview@example.invalid" />,
   "shop-map": () => <ShopMapClient signedInEmail="preview@example.invalid" />,
   account: () => <AccountClient email="preview@example.invalid" />,
-} as const;
+};
 
 export default function StatePreviewClient({ initial }: { initial: string }) {
   const all = useMemo(() => stateFixtures(), []);
@@ -134,6 +138,10 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
         {refused.length > 3 ? "…" : ""}
       </p>
     )}
-    <div className="sp-stage">{Surface ? <Surface /> : null}</div>
+    {/* `at` opens the sub-view the state actually lives in — keyed so
+        switching fixtures remounts rather than keeping the previous tab. */}
+    <div className="sp-stage">
+      {Surface ? <Surface key={key} at={fixture?.at} /> : null}
+    </div>
   </div>;
 }
