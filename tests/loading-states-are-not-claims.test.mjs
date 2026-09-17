@@ -347,3 +347,28 @@ test("no page component refuses by returning a Response", () => {
       `${file.pathname} returns a Response from a page component, which throws at render`);
   }
 });
+
+test("the observation sample is taken after the work it measures", () => {
+  /*
+    correlate and observe were two separate waitUntil calls on the same cron
+    firing, so they ran concurrently and whichever won decided what the gate
+    recorded. Backlog read 338, then 0, then 109, then 122 — an instrument
+    reading its own race, not work piling up. Measured while diagnosing it:
+    pastEarliest 122, one pass correlated all 122 in 908ms with zero Etsy
+    calls, pastEarliest 0 immediately after; coverage 1 across the segment
+    and nothing expired, so no evidence was ever lost.
+
+    A gate that fails on an artifact of its own measurement teaches the
+    operator to ignore the number.
+  */
+  const entry = readFileSync(new URL("../scripts/add-scheduled-handler.mjs", import.meta.url),
+    "utf8");
+  const tick = entry.slice(entry.indexOf('if (event.cron === "*/10'),
+    entry.indexOf("SCHEMA FIRST"));
+  assert.ok(!/run\("\/api\/market\/observe"\)/.test(tick),
+    "observe must not be fired beside the work it measures");
+  const sequenced = tick.slice(tick.indexOf("ctx.waitUntil((async"));
+  assert.ok(sequenced.indexOf("/api/market/correlate") < sequenced.indexOf("/api/market/observe"),
+    "the sample must be taken after the correlator has run");
+  assert.match(sequenced, /await app\.fetch\(new Request\(site \+ "\/api\/market\/correlate"\)/);
+});

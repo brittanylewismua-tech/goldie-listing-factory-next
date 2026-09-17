@@ -66,13 +66,34 @@ export default {
         intervals every hundred seconds. On the twenty-minute clock it could
         not: that is the arithmetic that buried the inspector.
       */
-      run("/api/market/correlate");
       /*
-        An observation sample every ten minutes, beside the work it measures.
+        AND THE SAMPLE IS TAKEN AFTER THE WORK, NOT BESIDE IT.
+
+        These were two separate waitUntil calls on the same firing, so they
+        ran concurrently and whichever won the race decided what the gate
+        recorded. The backlog reading oscillated — 338, then 0, then 109,
+        then 122 — not because work was piling up but because the sampler
+        frequently read the queue before the correlator had drained it.
+
+        Measured while diagnosing exactly that: pastEarliest read 122, one
+        pass correlated all 122 in 908ms with zero Etsy calls, and
+        pastEarliest read 0 immediately after. Coverage across the whole
+        segment is 1 and nothing has expired under this architecture, so no
+        evidence was ever lost — the instrument was reading its own race.
+
+        A gate failing on an artifact of its own measurement is worse than no
+        gate: it teaches the operator that the number does not mean anything.
+        The fix is to the instrument. The standard is untouched.
+
         Persisted rather than watched: a gate that depends on somebody
         remembering to look is not a gate.
       */
-      run("/api/market/observe");
+      ctx.waitUntil((async () => {
+        await app.fetch(new Request(site + "/api/market/correlate"), env, ctx)
+          .catch(() => {});
+        await app.fetch(new Request(site + "/api/market/observe"), env, ctx)
+          .catch(() => {});
+      })());
       /*
         Keep reference images inside Etsy's six-hour display rule. Without this
         they age out and every listing card renders as a blank box — the rule
