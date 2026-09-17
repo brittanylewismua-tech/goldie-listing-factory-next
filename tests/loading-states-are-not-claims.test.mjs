@@ -65,6 +65,24 @@ test("pages that wait on a provider draw the shape of what is coming", () => {
   }
 });
 
+test("every interior page says what it is in the tab", () => {
+  /*
+    D1670 · /shop-map/costs had no title at all, so its tab read "Etsy seller
+    tools" — the neutral fallback. That fallback exists for pages which must
+    not name a product, not for a page that forgot to say what it is. It is a
+    server component, so metadata is all it needed.
+  */
+  for (const [route, title] of [
+    ["shop-map", "Shop Map"],
+    ["shop-map/costs", "Production costs"],
+    ["market-watch", "Market Watch"],
+  ]) {
+    const page = read(`${route}/page.tsx`);
+    assert.match(page, new RegExp(`title: "${title}"`),
+      `${route} has no tab title, so it falls back to the neutral one`);
+  }
+});
+
 test("client-component pages carry a route layout so the tab has a name", () => {
   /* `export const metadata` is silently ignored in a "use client" page, so
      these fell through to the neutral fallback and every tab read the same. */
