@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { monthName } from "@/app/shop-map-month";
 
 type Niche = {
   worldId: string; label: string; listings: number; activeListings: number;
@@ -143,7 +144,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     <main className="shop-map">
       <header className="shop-map-head">
         <h1>{shown.shop?.shopName ?? "Your shop"}</h1>
-        <p>{shown.month}</p>
+        <p>{monthName(shown.month)}</p>
       </header>
 
       {failed
