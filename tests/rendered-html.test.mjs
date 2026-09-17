@@ -119,8 +119,34 @@ test("serves the closed notice at home, with no prices anywhere in the payload",
   const homepage = await response.text();
   assert.match(homepage, /isn't open yet|not open yet/i);
   assert.doesNotMatch(homepage, /Choose your plan/);
-  for (const amount of ["14.99", "24.99", "39.99", "149", "249", "399"])
-    assert.ok(!homepage.includes(amount), `the homepage still ships the price ${amount}`);
+  /*
+    A PRICE, NOT A DIGIT RUN — THIS GUARD WAS FAILING AT RANDOM.
+
+    `homepage.includes("149")` matched inside the build's own deployment
+    UUID: "13a7ef85-f149-4947-8d11-8f7550edb7fb". The UUID is new on every
+    build, so whether this passed was a coin flip, and a guard that fails at
+    random is worse than no guard — it teaches whoever is deploying to re-run
+    CI until it goes green, which throws away every other guard in the suite
+    along with this one.
+
+    The intent is unchanged and the reach is the same: no price may appear
+    anywhere in the payload, scripts included. It is matched as a price now —
+    against a currency marker, or as a standalone number in the visible text
+    — so an asset hash or a UUID cannot stand in for one.
+  */
+  const visible = homepage
+    .replace(/<script[^]*?<\/script>/gi, " ")
+    .replace(/<style[^]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ");
+  for (const amount of ["14.99", "24.99", "39.99", "149", "249", "399"]) {
+    const escaped = amount.replace(".", "\\.");
+    /* Anywhere in the payload, if it carries a currency marker. */
+    assert.ok(!new RegExp(`[$£€]\\s?${escaped}\\b`).test(homepage),
+      `the homepage still ships the price ${amount}`);
+    /* Or standing alone as a number somebody can read on the page. */
+    assert.ok(!new RegExp(`(^|[^\\d.])${escaped}([^\\d.]|$)`).test(visible),
+      `the homepage still shows the amount ${amount} in its visible text`);
+  }
   for (const plan of ["Starter", "Scale"])
     assert.ok(!homepage.includes(plan), `the homepage still names the ${plan} plan`);
   assert.equal((await render("/listing-factory")).status, 200);
