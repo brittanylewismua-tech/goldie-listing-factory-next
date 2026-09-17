@@ -44,7 +44,9 @@ Chrome walkthrough so far (real interface, canary account):
   checklist in plain language, no internal IDs, no provider or cache
   terminology, correct shop named. Reads well enough to catch a bad listing.
 
-TWO BLOCKERS FOUND, NEITHER RESOLVED:
+BLOCKER 2 IS FIXED (D1594). Original text kept below for the record.
+
+TWO BLOCKERS FOUND:
 1. The Review step is gated behind creating a Printify draft, and this
    instruction says create no listing or draft — so the walkthrough cannot
    continue past Designs on a NEW batch without that decision being made.
@@ -142,3 +144,42 @@ change when the name exists.
 - A cache keyed only on data is not invalidated by a change to wording.
 - Two copies of anything drift: two rails, two `who_made` answers, two
   composition functions. One source, asserted by test.
+
+
+## Confirmation controls — ROOT CAUSED AND FIXED (D1594)
+
+Reproduced: the identical `confirmAction` call opened a dialog on Batch
+History and silently returned false inside the Listing Factory workflow.
+Reproducible, no console error, and only ONE confirm-dialog chunk on disk — so
+not a missing host and not a duplicated file.
+
+Cause: `announce` was a MODULE-LEVEL variable. `ConfirmHost` set it on mount;
+`confirmAction` read it. That is a singleton only while every caller and the
+host share one instance of the module, which nothing guarantees across route
+chunks. D528 had already fixed one instance of this by moving the host into
+the root layout; it came back because the mechanism was unchanged.
+
+Worst part was the failure mode: `confirmAction` answered "the person said
+no", so a guarded control became a button that does nothing. "Reload saved
+batch here" is the ONLY exit from a paused batch, and it did nothing at all.
+
+Fix: a request is now a `window` CustomEvent — one object per page, shared by
+every module instance, chunk and React root by construction. A mounted host
+claims the request synchronously inside the dispatch. If nothing claims it,
+the action still does not run AND the person is shown a notice saying nothing
+was changed, instead of watching a dead control.
+
+Verified in Chrome on D1594:
+- dialog visibly opens in the workflow (was dead)
+- Cancel: dialog closes, lock still held, no reload — no action taken
+- Confirm: page reloads once, lock cleared, lands on Review — action ran once
+- Batch History delete: dialog opens; Cancel leaves the batch present
+Tests: tests/confirmation-controls.test.mjs (8 cases).
+
+## Printify deletion preflight (safeguard 1) — VERIFIED IN CODE, NOT YET RUN
+Endpoint: DELETE https://api.printify.com/v1/shops/{shopId}/products/{id}.json
+Proven in app/api/launch-check/listing.ts, which treats 404 as already-gone.
+A purpose-built safeguarded cleanup already exists: `cleanupLaunchListings`
+takes 1-8 exact owner-owned batch ids, verifies ownership, and cannot select a
+customer product. That is the mechanism to use for the temporary draft.
+Live token/permission check NOT yet performed.
