@@ -484,3 +484,19 @@ test("a readability measurement is kept with the design, not thrown away", () =>
   assert.ok(!/readability could not be verified/.test(served));
   assert.match(route, /has not been measured/);
 });
+
+test("a refused Shop Map correction is stated, not swallowed", () => {
+  /*
+    moveListing did `.catch(() => undefined)` and reloaded, so a member who
+    moved a listing and was refused saw it sitting where it had been with no
+    error — indistinguishable from a move that saved and was correctly shown.
+    Correcting a classification is the one thing on that page a member does TO
+    their data, which makes it the worst place for silence.
+  */
+  const source = read("shop-map/shop-map-client.tsx");
+  assert.match(source, /const \[correctionFailed, setCorrectionFailed\] = useState\(""\)/);
+  assert.ok(!/body: JSON\.stringify\(\{ action: "move-listing"[\s\S]{0,200}?\.catch\(\(\) => undefined\)/
+    .test(source), "the correction must not swallow its own failure");
+  assert.match(source, /The listing is where it was/);
+  assert.match(source, /role="alert"/);
+});

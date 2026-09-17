@@ -72,12 +72,34 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setBusy("");
   };
 
+  /*
+    A CORRECTION THAT FAILED MUST NOT LOOK LIKE ONE THAT WORKED.
+
+    This swallowed every failure and reloaded the map, so a member who moved a
+    listing into the wrong niche and was refused saw the listing sitting
+    exactly where it had been, with no error — indistinguishable from a move
+    that had been saved and then correctly shown. Correcting a classification
+    is the one thing on this page a member does TO their data, so it is the
+    one place silence is least affordable.
+  */
+  const [correctionFailed, setCorrectionFailed] = useState("");
+
   const moveListing = async (listingId: number, nicheId: string) => {
     setBusy(`move:${listingId}`);
-    await fetch("/api/shop-map/correct", { method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "move-listing", listingId,
-        worldIds: nicheId === "unclassified" ? [] : [nicheId] }) }).catch(() => undefined);
+    setCorrectionFailed("");
+    try {
+      const response = await fetch("/api/shop-map/correct", { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "move-listing", listingId,
+          worldIds: nicheId === "unclassified" ? [] : [nicheId] }) });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        setCorrectionFailed(body.error
+          ?? "That change could not be saved. The listing is where it was.");
+      }
+    } catch {
+      setCorrectionFailed("That change could not be saved. The listing is where it was.");
+    }
     await load();
     setBusy("");
   };
@@ -281,6 +303,11 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         <p className="shop-map-reason">
           Put a listing in the right niche. Its orders and revenue move with it.
         </p>
+        {correctionFailed && (
+          <p className="p-notice p-notice-bad shop-map-correction-failed" role="alert">
+            {correctionFailed}
+          </p>
+        )}
         <MoveControl niches={niches} busy={busy} onMove={moveListing} />
       </section>
       {signedInEmail ? null : null}
