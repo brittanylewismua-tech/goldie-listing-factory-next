@@ -19,6 +19,22 @@ type ShopMap = {
     coverage?: { verified: number; estimated: number; unavailable: number } };
   standout?: { hasStandout: boolean; headline: string; nextStep: string };
   whereToFocus?: Focus[];
+  /*
+    D1671 · These arrive on every response and were rendered nowhere.
+
+    `whereToFocus` carries a per-niche recommendation with its reasoning;
+    `classifier` records which raw Etsy-derived niches were collapsed into
+    which, and why. A member looking at five niches when their shop suggests
+    thirteen has no way to know that "Feminist Slogans", "Feminist Activism"
+    and "Feminist Icons" were folded into "Feminist" because they are a
+    design format rather than a different buyer — and that is exactly the
+    judgement they would want to check.
+  */
+  classifier?: {
+    rawNiches?: string[];
+    usedNiches?: string[];
+    collapsed?: Array<{ from: string; into: string; because: string }>;
+  };
   worlds?: Niche[];
   unclassifiedCard?: Niche;
   worldsPeriod?: string;
@@ -224,6 +240,69 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
             </p>
           : null}
       </section>
+
+      {/*
+        2b · WHERE TO FOCUS.
+
+        Computed on every response since this feature existed and rendered
+        nowhere. The "needs more data" entries are grouped rather than given
+        a card each: four identical cards saying nothing happened is how a
+        real finding gets lost among them.
+      */}
+      {(shown.whereToFocus ?? []).length > 0 && (
+        <section className="shop-map-card">
+          <h2>Where to focus</h2>
+          {(shown.whereToFocus ?? [])
+            .filter(focus => !/needs more data/i.test(focus.headline))
+            .map(focus => (
+              <div className="shop-map-focus" key={focus.nicheId || focus.label}>
+                <p className="shop-map-world-name">{focus.label} · {focus.headline}</p>
+                <p className="shop-map-reason">{focus.reason}</p>
+                {focus.advice ? <p className="shop-map-advice">{focus.advice}</p> : null}
+              </div>
+            ))}
+          {(() => {
+            const thin = (shown.whereToFocus ?? [])
+              .filter(focus => /needs more data/i.test(focus.headline));
+            if (!thin.length) return null;
+            return (
+              <p className="shop-map-reason shop-map-thin">
+                Not enough recent orders to read a pattern in{" "}
+                {thin.map(focus => focus.label).join(", ")}. They stay on the map
+                with their lifetime figures.
+              </p>
+            );
+          })()}
+        </section>
+      )}
+
+      {/*
+        2c · HOW THE NICHES WERE WORKED OUT.
+
+        The classifier's own record of what it collapsed and why. Without it
+        a member counting five niches against a shop that suggests thirteen
+        can only conclude something was lost.
+      */}
+      {(shown.classifier?.collapsed ?? []).length > 0 && (
+        <section className="shop-map-card">
+          <h2>How these niches were worked out</h2>
+          <p className="shop-map-reason">
+            {(shown.classifier?.rawNiches ?? []).length} groupings were found in your
+            shop and combined into {(shown.classifier?.usedNiches ?? []).length}.
+          </p>
+          <ul className="shop-map-collapsed">
+            {(shown.classifier?.collapsed ?? []).map(entry => (
+              <li key={`${entry.from}->${entry.into}`}>
+                <b>{entry.from}</b>{" "}
+                {entry.into
+                  ? <>became part of <b>{entry.into}</b></>
+                  : <>was left out</>}
+                {" — "}{entry.because}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* 3 · The niches. Recent first, lifetime as history. */}
       <section className="shop-map-card">

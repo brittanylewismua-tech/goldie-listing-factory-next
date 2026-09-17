@@ -1,145 +1,68 @@
+/*
+  COMPUTED ON EVERY RESPONSE, RENDERED NOWHERE.
+
+  /api/shop-map/map returns `whereToFocus` — a per-niche recommendation with
+  a headline, a reason and advice — and `classifier`, which records which raw
+  groupings were collapsed into which and why. Measured on the live shop:
+  five focus entries and eight collapse decisions, none of them on screen.
+
+  `whereToFocus` was even declared in the client's own type and never used.
+
+  The classifier's record matters most. A member counting five niches against
+  a shop that suggested thirteen has no way to know that "Feminist Slogans",
+  "Feminist Activism" and "Feminist Icons" were folded into "Feminist"
+  because they are a design format rather than a different buyer — and that
+  is exactly the judgement they would want to check.
+
+  Third instance of this shape: the scanner's readability measurement
+  (D1626), the unsupported-blueprint confidence (D1660), and this.
+*/
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { guidance, standout, MIN_ORDERS_TO_ADVISE, SHOP_MAP_MIN_RECENT_ORDERS,
-  DIRECTION_BASIS } from "../app/shop-map-guidance.ts";
 
-/* Guidance reads the last 90 days on both sides, so the fixtures carry
-   recent figures and lifetime is only history. */
-const niche = (over = {}) => ({
-  worldId: "n", label: "N", activeListings: 10, orders: 200, units: 200,
-  revenueMinor: 500_000, verifiedProfitMinor: null, reviews: 0,
-  ordersLast30: 8, ordersLast90: 20, revenueLast90Minor: 50_000,
-  largestOrderMinor: 3_000, refundedOrders: 0, ...over });
+const client = readFileSync(new URL(
+  "../app/shop-map/shop-map-client.tsx", import.meta.url), "utf8");
 
-test("every instruction carries its arithmetic", () => {
-  const found = guidance([
-    niche({ worldId: "a", label: "Feminist", activeListings: 5, revenueLast90Minor: 80_000 }),
-    niche({ worldId: "b", label: "Horses", activeListings: 40, revenueLast90Minor: 5_000 }),
-  ]);
-  for (const row of found) {
-    assert.ok(row.reason.length > 0, `${row.label} advises with no reason`);
-    assert.match(row.reason, /\d/, `${row.label}'s reason cites no number`);
-  }
+test("the per-niche guidance is rendered", () => {
+  assert.match(client, /<h2>Where to focus<\/h2>/);
+  assert.match(client, /\{focus\.label\} · \{focus\.headline\}/);
+  assert.match(client, /\{focus\.reason\}/);
+  assert.match(client, /\{focus\.advice\}/);
 });
 
-test("a niche earning above its shelf space is the focus", () => {
-  const found = guidance([
-    niche({ worldId: "a", label: "Feminist", activeListings: 3, revenueLast90Minor: 80_000, ordersLast90: 40 }),
-    niche({ worldId: "b", label: "Other", activeListings: 40, revenueLast90Minor: 10_000, ordersLast90: 10 }),
-  ]);
-  assert.equal(found[0].nicheId, "a");
-  assert.ok(["Focus here", "Expand this niche"].includes(found[0].headline));
-  assert.match(found[0].reason, /% of revenue in .* from .*% of active listings/);
+test("the thin niches are grouped, not given a card each", () => {
+  /* Four identical "needs more data" cards is how a real finding gets lost
+     among them. */
+  assert.match(client, /filter\(focus => !\/needs more data\/i\.test\(focus\.headline\)\)/);
+  assert.match(client, /Not enough recent orders to read a pattern in/);
+  assert.match(client, /They stay on the map\s*\n?\s*with their lifetime figures/);
 });
 
-test("a niche with many listings and little response is called out", () => {
-  const found = guidance([
-    niche({ worldId: "a", label: "Big", activeListings: 60, revenueLast90Minor: 2_000, ordersLast90: 8 }),
-    niche({ worldId: "b", label: "Small", activeListings: 4, revenueLast90Minor: 90_000, ordersLast90: 40 }),
-  ]);
-  const big = found.find(row => row.nicheId === "a");
-  assert.ok(["Overbuilt", "Reconsider this category"].includes(big.headline));
-  assert.match(big.reason, /% of active listings and .*% of revenue/);
+test("the classifier's collapse decisions are shown with their reasons", () => {
+  assert.match(client, /<h2>How these niches were worked out<\/h2>/);
+  assert.match(client, /classifier\?\.collapsed/);
+  assert.match(client, /became part of/);
+  assert.match(client, /was left out/);
+  assert.match(client, /\{entry\.because\}/);
+  /* The count reconciles the two numbers a member would compare. */
+  assert.match(client, /rawNiches \?\? \[\]\)\.length\} groupings were found/);
+  assert.match(client, /usedNiches \?\? \[\]\)\.length\}/);
 });
 
-test("too few orders says so rather than advising", () => {
-  const found = guidance([niche({ ordersLast90: MIN_ORDERS_TO_ADVISE - 1 })]);
-  assert.equal(found[0].headline, "Needs more data");
-  assert.match(found[0].reason, /too few to read a pattern/);
+test("both sections stay absent when there is nothing to say", () => {
+  assert.match(client, /\(shown\.whereToFocus \?\? \[\]\)\.length > 0 &&/);
+  assert.match(client, /\(shown\.classifier\?\.collapsed \?\? \[\]\)\.length > 0 &&/);
 });
 
-test("guidance never invents a design", () => {
-  const found = guidance([
-    niche({ worldId: "a", label: "Feminist", activeListings: 3, revenueLast90Minor: 80_000, ordersLast90: 40 }),
-    niche({ worldId: "b", label: "Other", activeListings: 40, revenueLast90Minor: 9_000, ordersLast90: 9 }),
-  ]);
-  for (const row of found) {
-    assert.doesNotMatch(row.advice, /design a|create a design|make a (shirt|mug|sticker) that says/i);
-    assert.doesNotMatch(row.advice, /"[^"]{10,}"/, "the advice quoted a phrase to print");
-  }
-});
-
-test("an emerging niche is recognised from recent share", () => {
-  /* A modest share of the shelf, but most of the recent trade. A niche
-     holding half the listings is overbuilt, not emerging, however recent
-     its orders are. */
-  const found = guidance([
-    niche({ worldId: "a", label: "New", activeListings: 5, revenueLast90Minor: 10_000,
-      ordersLast90: 30 }),
-    niche({ worldId: "b", label: "Old", activeListings: 40, revenueLast90Minor: 90_000,
-      ordersLast90: 5 }),
-  ]);
-  assert.equal(found.find(row => row.nicheId === "a").headline, "Emerging");
-});
-
-test("nothing outperforming is said plainly, not dressed as advice", () => {
-  /* Two niches each earning roughly their shelf share is the absence of
-     evidence, not a reason to make more. */
-  const niches = [
-    niche({ worldId: "a", label: "Feminist", activeListings: 70, revenueLast90Minor: 73_000, ordersLast90: 40 }),
-    niche({ worldId: "b", label: "Political", activeListings: 30, revenueLast90Minor: 27_000, ordersLast90: 20 }),
-  ];
-  const advice = guidance(niches);
-  const result = standout(niches, advice);
-  assert.equal(result.hasStandout, false);
-  assert.match(result.headline, /No standout opportunity yet/);
-  assert.ok(result.nextStep.length > 0, "no next step was offered");
-  /* And it does not tell her to make more without leverage. */
-  assert.doesNotMatch(result.headline, /create more|add listings/i);
-});
-
-test("real leverage is surfaced as the standout", () => {
-  const niches = [
-    niche({ worldId: "a", label: "Horses", activeListings: 3, revenueLast90Minor: 80_000, ordersLast90: 40 }),
-    niche({ worldId: "b", label: "Other", activeListings: 60, revenueLast90Minor: 10_000, ordersLast90: 10 }),
-  ];
-  const result = standout(niches, guidance(niches));
-  assert.equal(result.hasStandout, true);
-  assert.match(result.nextStep, /\d+% of revenue/);
-});
-
-test("keep building no longer implies making more", () => {
-  const niches = [
-    niche({ worldId: "a", activeListings: 50, revenueLast90Minor: 50_000, ordersLast90: 20 }),
-    niche({ worldId: "b", activeListings: 50, revenueLast90Minor: 50_000, ordersLast90: 20 }),
-  ];
-  for (const row of guidance(niches).filter(entry => entry.headline === "Keep building")) {
-    assert.match(row.advice, /Maintain/);
-    assert.match(row.reason, /no leverage to act on/);
-  }
-});
-
-test("the recommendation floor is a named beta setting, not buried arithmetic", () => {
-  /* Twenty is where this beta draws the line. It is not a measured Etsy
-     standard and nothing should imply that it is. */
-  assert.equal(SHOP_MAP_MIN_RECENT_ORDERS, 20);
-  const module = readFileSync(new URL("../app/shop-map-guidance.ts", import.meta.url), "utf8");
-  assert.match(module, /A BETA THRESHOLD, NOT A LAW/);
-  assert.match(module, /export const SHOP_MAP_MIN_RECENT_ORDERS/);
-  /* The comparison uses the constant, never a literal. */
-  assert.doesNotMatch(module, /recentOrders < 20/);
-});
-
-test("the basis names both periods honestly", () => {
-  assert.match(DIRECTION_BASIS, /Recent 90-day performance/);
-  assert.match(DIRECTION_BASIS, /current active catalog/);
-  const module = readFileSync(new URL("../app/shop-map-guidance.ts", import.meta.url), "utf8");
-  /* It must not claim both sides share a window. */
-  assert.doesNotMatch(module, /last 90 days on both sides/);
-});
-
-test("this shop has no direction on the merits, floor aside", () => {
-  /* Feminist 12 recent orders over 53 active; Girl Power 3 over 16. */
-  const niches = [
-    niche({ worldId: "f", label: "Feminist", activeListings: 53,
-      ordersLast90: 12, revenueLast90Minor: 27_200 }),
-    niche({ worldId: "g", label: "Girl Power", activeListings: 16,
-      ordersLast90: 3, revenueLast90Minor: 6_600 }),
-  ];
-  const advice = guidance(niches, { shop: { revenueMinor: 33_800,
-    revenueLast90Minor: 33_800, activeListings: 83, ordersLast90: 15, orders: 15 } });
-  assert.equal(advice.some(row =>
-    row.headline === "Focus here" || row.headline === "Expand this niche"), false,
-    "a niche was called a focus without a convincing recent advantage");
+test("pointingHere is deliberately not rendered", () => {
+  /*
+    It names a niche with a reason ("Feminist is 80% of orders in the last 90
+    days") while `standout.hasStandout` is false and the page says "No clear
+    direction yet". Rendering both would put a finding directly above a
+    statement that there is no finding. The gate wins; this is recorded so
+    the omission reads as a decision rather than an oversight.
+  */
+  assert.ok(!/pointingHere/.test(client.replace(/\/\*[\s\S]*?\*\//g, "")),
+    "pointingHere must not be rendered while standout gates the direction");
 });

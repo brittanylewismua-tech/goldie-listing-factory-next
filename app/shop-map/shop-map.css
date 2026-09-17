@@ -68,3 +68,13 @@
 /* D1643 · A refused correction is stated. It used to be swallowed, so a move
    that failed and a move that succeeded looked identical. */
 .shop-map-correction-failed{margin:0 0 12px}
+
+/* D1671 · Guidance and the classifier's reasoning, which were computed on
+   every response and rendered nowhere. */
+.shop-map-focus{margin:0 0 14px}
+.shop-map-focus:last-of-type{margin-bottom:0}
+.shop-map-advice{margin:4px 0 0;font-size:13px;font-weight:650;color:var(--p-ink)}
+.shop-map-thin{margin-top:14px;padding-top:12px;border-top:1px solid var(--p-line)}
+.shop-map-collapsed{margin:10px 0 0;padding-left:18px;display:grid;gap:6px}
+.shop-map-collapsed li{font-size:13px;line-height:1.5;color:var(--p-ink-soft)}
+.shop-map-collapsed b{color:var(--p-ink)}
