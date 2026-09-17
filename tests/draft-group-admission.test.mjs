@@ -144,3 +144,53 @@ test('a reload can call provider recovery only after atomic admission is confirm
   assert.match(source,/void admittedHistorySave\.catch\(\(\)=>undefined\)/);
   assert.match(source,/void Promise\.allSettled\(cacheWrites\);\s*await providerCompletion/);
 });
+
+test('an uncertain job is never re-admitted, so no second product can be created',()=>{
+  /*
+    THE SAFETY PROPERTY THE WHOLE UNCERTAIN STATUS EXISTS FOR.
+
+    `uncertain` means the server could not tell whether Printify created the
+    product. Re-admitting that request would be the one action that can
+    duplicate a real product in a real shop, and the member cannot undo it.
+
+    Two separate things have to hold, and only the first was covered:
+      · the uncertain job keeps its QUOTA, so it still counts against the
+        allowance and a different design cannot slip into its place;
+      · the SAME request key cannot be re-claimed, because ON CONFLICT only
+        fires for status='failed'.
+  */
+  const {db,claim}=fixture();
+  assert.equal(claim(['a'],4).length,1);
+  db.exec("UPDATE printify_draft_results SET status='uncertain' WHERE request_key='a'");
+
+  /* The same submission again: refused, and the row is untouched. */
+  const before=db.prepare("SELECT status,response_json,updated_at FROM printify_draft_results WHERE request_key='a'").get();
+  assert.equal(claim(['a'],4).length,0,'an uncertain job must not be re-admitted');
+  const after=db.prepare("SELECT status,response_json,updated_at FROM printify_draft_results WHERE request_key='a'").get();
+  assert.deepEqual(after,before,'the uncertain row must not be rewritten');
+
+  /* A failed job IS retryable — the distinction the status exists to draw. */
+  db.exec("UPDATE printify_draft_results SET status='failed' WHERE request_key='a'");
+  assert.equal(claim(['a'],4).length,1,'a failed job must remain retryable');
+  db.close();
+});
+
+test('the five creation outcomes stay distinct',()=>{
+  /*
+    rejected, uncertain, retryable, created, reconciled are five different
+    answers and collapsing any two of them is how a member ends up with a
+    duplicate product or a lost one.
+  */
+  /* Only a failure frees the key for another attempt. */
+  assert.match(CLAIM_DRAFT_GROUP_SQL,/printify_draft_results\.status='failed'/);
+  /* Uncertain and running both hold quota; succeeded holds it for the month. */
+  assert.match(CLAIM_DRAFT_GROUP_SQL,/status IN \('running','uncertain'\)/);
+  /* Reconciliation is read-only work that frees the lane but not the quota. */
+  assert.equal(draftCreationSlotReleased('running'),false);
+  assert.equal(draftCreationSlotReleased('uncertain'),true);
+  /* And an uncertain job is the one status that always re-registers its
+     durable workflow, because reconciling it is the only way to learn. */
+  assert.equal(shouldRestartDraftWorkflow('uncertain','2026-09-17 09:00:00'),true);
+  assert.equal(shouldRestartDraftWorkflow('failed','2026-09-17 09:00:00'),false);
+  assert.equal(shouldRestartDraftWorkflow('succeeded','2026-09-17 09:00:00'),false);
+});
