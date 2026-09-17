@@ -1,5 +1,6 @@
 "use client";
 
+import { nextScanAt } from "@/app/scan-reset";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
@@ -47,6 +48,7 @@ type Result = {
   };
   trademark: Trademark | null;
   scansLeftToday: number | null;
+  nextScanAt?: string | null;
   niche: string;
   warm: boolean;
   scanId?: string;
@@ -122,6 +124,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
      request that carries it fell over. */
   const [historyFailed, setHistoryFailed] = useState(false);
   const [left, setLeft] = useState<number | null>(null);
+  const [nextAt, setNextAt] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
 
   const loadHistory = useCallback(async () => {
@@ -129,9 +132,10 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
       const response = await fetch("/api/design-scanner/scan");
       if (!response.ok) { setHistoryFailed(true); return; }
       const body = await response.json() as
-        { scans: HistoryRow[]; scansLeftToday: number | null };
+        { scans: HistoryRow[]; scansLeftToday: number | null; nextScanAt?: string | null };
       setHistory(body.scans ?? []);
       setLeft(body.scansLeftToday);
+      setNextAt(body.nextScanAt ?? null);
       setHistoryFailed(false);
     } catch { setHistoryFailed(true); }
   }, []);
@@ -191,7 +195,8 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
       });
       const body = await response.json() as Result & { error?: string };
       if (!response.ok) setError(body.error ?? "That scan did not complete.");
-      else { setResult(body); setLeft(body.scansLeftToday); void loadHistory(); }
+      else { setResult(body); setLeft(body.scansLeftToday);
+        setNextAt(body.nextScanAt ?? null); void loadHistory(); }
     } catch {
       setError("That scan did not complete. It has not been counted against your daily scans.");
     } finally {
@@ -255,7 +260,17 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
       )}
 
       {left !== null && !scanning && (
-        <p className="left p-badge">{left} scan{left === 1 ? "" : "s"} left today</p>
+        <p className="left p-badge">
+          {left} scan{left === 1 ? "" : "s"} left today
+          {/*
+            D1690 · At the limit, when one comes back is the only useful thing
+            left to say. The allowance is a rolling day rather than a calendar
+            one, so it is not midnight, and a member with no date guesses.
+          */}
+          {left === 0 && nextScanAt(nextAt)
+            ? <span className="left-next"> · next one {nextScanAt(nextAt)}</span>
+            : null}
+        </p>
       )}
 
       {error && <p className="error p-notice p-notice-bad" role="alert">{error}</p>}

@@ -367,6 +367,7 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
     niche, warm, paidCalls, cost: Number(cost.toFixed(5)),
     etsyRefreshCalls: etsyCalls, droppedOnRefresh: dropped,
     scansLeftToday: usage.remaining,
+    nextScanAt: usage.oldestLeavesWindowAt,
     milliseconds: Date.now() - started,
     trademark,
   };
@@ -524,6 +525,11 @@ export const GET = withErrorLog("design-scanner-history", async () => {
   const usage = await memberUsage(user.userId, WORKLOAD);
   return NextResponse.json({
     scansLeftToday: usage.remaining, dailyLimit: usage.limit,
+    /* At the limit, when one comes back is the only useful thing left to
+       say. The allowance is a rolling day, so it is not midnight — it is
+       when the oldest scan ages out, which was already computed and
+       simply never sent. */
+    nextScanAt: usage.oldestLeavesWindowAt,
     scans: (rows.results ?? []).map(row => ({
       id: row.id, niche: row.niche, artworkHash: row.artworkHash,
       createdAt: row.createdAt, result: JSON.parse(row.result) as unknown,
