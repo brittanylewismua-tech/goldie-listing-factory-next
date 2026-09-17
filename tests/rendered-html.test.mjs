@@ -6264,7 +6264,7 @@ test("the connection screen stays reachable after connecting — D639", async ()
   assert.match(management, /role="menuitem" href="\/listing-factory\?step=connect">Connections<\/a>/,
     "D203's rule: both navigations list the same destinations or they drift");
   assert.match(icons, /case "connections":/);
-  assert.match(icons, /\| "connections";/);
+  assert.match(icons, /\| "connections"/);
 
   /* The destination only works because an explicitly requested connect step is
      left alone by the auto-skip. D639 shipped this link asserting that guard

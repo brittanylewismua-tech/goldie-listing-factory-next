@@ -1,0 +1,48 @@
+/*
+  TOOLS & SETTINGS — the same density as the Listing Factory's own checklists.
+
+  The page this replaces used `.hub`, which is Home's treatment: a full-height
+  black field with a gear, built for Home's volume of content. Four links in
+  that frame read as a page that had not been designed. These are compact rows
+  — icon, label, one line of description, a chevron — grouped under quiet
+  headings, on the same white-over-pink-grid paper as every feature page.
+*/
+.tools-settings{min-height:100vh}
+.tools-settings .p-page{max-width:760px}
+
+.ts-group{margin-top:var(--p-6)}
+.ts-group:first-of-type{margin-top:var(--p-5)}
+.ts-heading{margin:0 0 var(--p-2);color:var(--p-plum);font-size:11px;font-weight:800;
+  letter-spacing:.16em;text-transform:uppercase}
+
+/* One bordered block per group, rows divided inside it, so a group reads as a
+   group rather than as separate floating cards. */
+.ts-rows{border:1px solid var(--p-line);border-radius:var(--p-radius-lg);
+  background:var(--p-card);overflow:hidden;box-shadow:var(--p-shadow)}
+.ts-row{display:grid;grid-template-columns:38px minmax(0,1fr) 20px;align-items:center;
+  gap:var(--p-3);padding:14px var(--p-4);color:var(--p-ink);text-decoration:none;
+  border-top:1px solid var(--p-line);transition:background .14s}
+.ts-row:first-child{border-top:0}
+.ts-row:hover{background:var(--p-card-quiet)}
+.ts-row:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--p-pink)}
+
+.ts-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;
+  background:var(--p-lavender);color:var(--p-plum)}
+.ts-text{display:grid;gap:2px;min-width:0}
+.ts-text b{font-size:14px;font-weight:750;letter-spacing:-.01em}
+.ts-text small{color:var(--p-muted);font-size:12px;line-height:1.45}
+.ts-go{color:var(--p-muted);display:grid;place-items:center}
+.ts-row:hover .ts-go{color:var(--p-pink)}
+
+/* Quiet, standalone, and plainly not one of the rows above it. */
+.ts-signout{margin-top:var(--p-6);padding-top:var(--p-5);border-top:1px solid var(--p-line)}
+.ts-signout a{display:inline-flex;align-items:center;min-height:44px;padding:0 var(--p-5);
+  border:1px solid var(--p-line-strong);border-radius:var(--p-radius);
+  color:var(--p-muted);font-size:13px;font-weight:750;text-decoration:none}
+.ts-signout a:hover{border-color:var(--p-bad);color:var(--p-bad);background:var(--p-bad-soft)}
+
+@media (max-width:820px){
+  .tools-settings .p-page{max-width:none}
+  .ts-row{grid-template-columns:38px minmax(0,1fr) 20px;padding:14px var(--p-3);min-height:60px}
+  .ts-group{margin-top:var(--p-5)}
+}

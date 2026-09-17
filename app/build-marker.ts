@@ -175,7 +175,12 @@
    It carried that wordmark and read "Sign in to your Listing Factory" for
    every member, whichever feature they were heading for — somebody bounced
    from Market Watch was told they were signing in to something else. */
-export const BUILD_MARKER = "D1607";
+/* D1608 redesigns Tools & settings. It was a page called "More" — a
+   navigation label promoted to a hero heading over four oversized cards in a
+   full-height black field with a decorative gear. It is compact grouped rows
+   at the Listing Factory's own density now, on the same paper as every
+   feature page, and it says what it holds. */
+export const BUILD_MARKER = "D1608";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

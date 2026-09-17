@@ -9,7 +9,7 @@
  * and leave the two free to drift again on the next change. The icons live here
  * instead, keyed by destination, and both navigations render from this map — so
  * an icon added or changed in one place is added or changed in both. */
-export type NavKey = "listingFactory" | "batches" | "keywords" | "mockups" | "usage" | "operations" | "connections";
+export type NavKey = "listingFactory" | "batches" | "keywords" | "mockups" | "usage" | "operations" | "connections" | "trademark" | "goals";
 
 
 /* D246 · D203 centralised the icon MARKUP so the two navigations could not
@@ -51,6 +51,12 @@ export function NavIcon({ name }: { name: NavKey }) {
       return <svg {...ICON}><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg>;
     case "usage":
       return <svg {...ICON}><path d="M12 3l8 3.5v5c0 4.6-3.2 8.6-8 9.5-4.8-.9-8-4.9-8-9.5v-5L12 3z"/><path d="M9.2 12.2l1.9 1.9 3.9-3.9"/></svg>;
+    /* D1608 · Tools & settings lists the Trademark Checker and the goal, and
+       an icon invented at the call site is how two icon sets begin. */
+    case "trademark":
+      return <svg {...ICON}><path d="M12 3l7.5 3v5.2c0 4.3-3 8.1-7.5 9.3-4.5-1.2-7.5-5-7.5-9.3V6L12 3z"/><path d="M9.4 11.8l1.8 1.8 3.6-3.6"/></svg>;
+    case "goals":
+      return <svg {...ICON}><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></svg>;
     case "operations":
       return <svg {...ICON}><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>;
   }
