@@ -188,4 +188,5 @@
    identical to a real bachelorette design — the visual comparison was right,
    and read as approval. */
 .result .subject-warning{margin:0 0 10px;padding:11px 13px;border:1px solid #e4cedb;border-radius:10px;background:#fff7fb;color:#6b3552;font-size:12px;line-height:1.5;font-weight:600}
+.result .subject-off{color:#6b3552}
 .result .subject-unreadable{background:#f7f5fa;color:#5b5266}
