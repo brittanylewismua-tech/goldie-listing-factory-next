@@ -151,15 +151,35 @@ function flatten(pixels: Pixels) {
  * also accused of being blurred. The two are separate failures.
  */
 function sharpness(pixels: Pixels, luminances: number[], range: number) {
+  /*
+    BOTH AXES, AND ONLY WHERE SOMETHING ACTUALLY CHANGES.
+
+    Two flaws had to come out of this one function. Scanning rows only meant a
+    design of horizontal strokes had almost no measurable steps — the metric
+    depended on which way the ink happened to run. And taking a percentile of
+    EVERY adjacent pair meant a sparse design was judged mostly on background
+    sitting next to background: at the 95th percentile a page of crisp text
+    scored zero, because 95% of neighbouring pixels are both paper.
+
+    So: step in both directions, keep only the pairs where something actually
+    changes, and take a high percentile of those. What is left is edges, and
+    an edge is the thing being measured. A blurred edge spreads the same total
+    change across more pixels, so each step is smaller and this falls.
+  */
   const steps: number[] = [];
+  const at = (x: number, y: number) => luminances[y * pixels.width + x];
   for (let y = 0; y < pixels.height; y += 1)
-    for (let x = 1; x < pixels.width; x += 1) {
-      const index = y * pixels.width + x;
-      steps.push(Math.abs(luminances[index] - luminances[index - 1]));
-    }
-  if (!steps.length || range <= 0) return 0;
-  steps.sort((a, b) => a - b);
-  const peak = steps[Math.floor(steps.length * 0.95)];
+    for (let x = 1; x < pixels.width; x += 1)
+      steps.push(Math.abs(at(x, y) - at(x - 1, y)));
+  for (let y = 1; y < pixels.height; y += 1)
+    for (let x = 0; x < pixels.width; x += 1)
+      steps.push(Math.abs(at(x, y) - at(x, y - 1)));
+
+  /* Anything below this is sensor-level noise or compression, not an edge. */
+  const transitions = steps.filter(step => step > 0.01).sort((a, b) => a - b);
+  if (!transitions.length || range <= 0) return 0;
+  const peak = transitions[Math.min(transitions.length - 1,
+    Math.floor(transitions.length * 0.9))];
   return peak / range;
 }
 
@@ -180,12 +200,38 @@ export function measureQuality(pixels: Pixels): ImageQuality {
   }
 
   const { luminances, inkShare } = flatten(pixels);
-  const sorted = [...luminances].sort((a, b) => a - b);
-  /* Percentiles rather than min/max: one stray dark pixel is not contrast. */
-  const low = sorted[Math.floor(sorted.length * 0.05)];
-  const high = sorted[Math.floor(sorted.length * 0.95)];
-  const ratio = contrastRatio(low, high);
-  const range = high - low;
+
+  /*
+    INK AGAINST GROUND, NOT TWO PERCENTILES OF THE WHOLE IMAGE.
+
+    A first version took the 5th and 95th percentile luminance. On a print
+    design the artwork covers a small share of a large canvas, so BOTH
+    percentiles landed on the background and every sparse design — including
+    crisp black text on white — measured 1.0:1 and was told it could not be
+    read. Caught in production; the unit fixtures had all used 50%-coverage
+    stripes, which is why they passed.
+
+    The percentile was guarding against one stray pixel counting as contrast.
+    A histogram keeps that guard without the flaw: the GROUND is the most
+    populated tone, the INK is the tone furthest from it that still covers a
+    meaningful share, and anything rarer than that share is the stray pixel
+    the percentile was there to ignore.
+  */
+  const BUCKETS = 64;
+  const histogram = new Array<number>(BUCKETS).fill(0);
+  for (const value of luminances)
+    histogram[Math.min(BUCKETS - 1, Math.max(0, Math.round(value * (BUCKETS - 1))))] += 1;
+  const groundBucket = histogram.indexOf(Math.max(...histogram));
+  const floor = Math.max(1, luminances.length * MIN_INK_SHARE);
+  let inkBucket = groundBucket;
+  for (let bucket = 0; bucket < BUCKETS; bucket += 1)
+    if (histogram[bucket] >= floor
+      && Math.abs(bucket - groundBucket) > Math.abs(inkBucket - groundBucket))
+      inkBucket = bucket;
+  const ground = groundBucket / (BUCKETS - 1);
+  const ink = inkBucket / (BUCKETS - 1);
+  const ratio = contrastRatio(ground, ink);
+  const range = Math.abs(ink - ground);
 
   const empty = inkShare < MIN_INK_SHARE;
   if (empty) notes.push("This design is empty or almost empty.");
@@ -214,10 +260,18 @@ export function measureQuality(pixels: Pixels): ImageQuality {
 
   const thumb = toThumbnail(pixels);
   const thumbFlat = flatten(thumb);
-  const thumbSorted = [...thumbFlat.luminances].sort((a, b) => a - b);
-  const thumbRatio = contrastRatio(
-    thumbSorted[Math.floor(thumbSorted.length * 0.05)],
-    thumbSorted[Math.floor(thumbSorted.length * 0.95)]);
+  /* Same ink-against-ground reading, on the reduced image. */
+  const thumbHistogram = new Array<number>(BUCKETS).fill(0);
+  for (const value of thumbFlat.luminances)
+    thumbHistogram[Math.min(BUCKETS - 1, Math.max(0, Math.round(value * (BUCKETS - 1))))] += 1;
+  const thumbGround = thumbHistogram.indexOf(Math.max(...thumbHistogram));
+  const thumbFloor = Math.max(1, thumbFlat.luminances.length * MIN_INK_SHARE);
+  let thumbInk = thumbGround;
+  for (let bucket = 0; bucket < BUCKETS; bucket += 1)
+    if (thumbHistogram[bucket] >= thumbFloor
+      && Math.abs(bucket - thumbGround) > Math.abs(thumbInk - thumbGround))
+      thumbInk = bucket;
+  const thumbRatio = contrastRatio(thumbGround / (BUCKETS - 1), thumbInk / (BUCKETS - 1));
   const survivesReduction = thumbRatio >= CONTRAST_FLOOR;
   if (!survivesReduction && contrast === "pass")
     notes.push("This design loses its contrast when it is shrunk to thumbnail size, "

@@ -60,6 +60,41 @@ function bars(fg, bg, { period = 12, blur = 0, alpha = 255 } = {}) {
 
 const BLACK = [0, 0, 0], WHITE = [255, 255, 255], FAINT = [228, 228, 228];
 
+/*
+  SPARSE INK — THE SHAPE REAL ARTWORK ACTUALLY HAS.
+
+  Every fixture above is 50% coverage stripes, and that is why this module
+  passed its tests and then failed in production: on a print design the ink
+  covers a few per cent of the canvas, and two separate measurements were
+  reading the background instead of the design. A crisp black-on-white design
+  was told it could not be read.
+
+  A few horizontal strokes, ~4% coverage — and horizontal on purpose, because
+  an earlier sharpness pass scanned rows only and scored them zero.
+*/
+function strokes(fg, bg, { rows = 6, thick = 4, blur = 0 } = {}) {
+  const pixels = canvas(bg[0], bg[1], bg[2]);
+  for (let row = 0; row < rows; row += 1) {
+    const top = 30 + row * 34;
+    for (let y = top; y < top + thick; y += 1)
+      for (let x = 50; x < W - 50; x += 1) {
+        const i = (y * W + x) * 4;
+        pixels.rgba[i] = fg[0]; pixels.rgba[i + 1] = fg[1]; pixels.rgba[i + 2] = fg[2];
+      }
+  }
+  for (let pass = 0; pass < blur; pass += 1) {
+    const copy = new Uint8Array(pixels.rgba);
+    for (let y = 1; y < H - 1; y += 1)
+      for (let x = 1; x < W - 1; x += 1)
+        for (let c = 0; c < 3; c += 1) {
+          const i = (y * W + x) * 4 + c;
+          pixels.rgba[i] = Math.round(
+            (copy[i] + copy[i - 4] + copy[i + 4] + copy[i - W * 4] + copy[i + W * 4]) / 5);
+        }
+  }
+  return pixels;
+}
+
 test("luminance and contrast are the standard ones", () => {
   assert.ok(Math.abs(luminance(0, 0, 0) - 0) < 1e-9);
   assert.ok(Math.abs(luminance(255, 255, 255) - 1) < 1e-9);
@@ -210,4 +245,46 @@ test("construction and subject stay separate in the result model", () => {
   assert.ok(!relevance.includes("ImageQuality"));
   assert.match(relevance, /export function relevanceOf\(\s*visibleWording: string, nicheTerms: string\[\],\s*\)/,
     "relevance takes wording and niche terms, and nothing about how the design looks");
+});
+
+
+test("sparse ink is measured against the ground, not against itself", () => {
+  /*
+    THE PRODUCTION FALSE POSITIVE.
+
+    Contrast was the 5th against the 95th percentile of the whole image. On a
+    design whose ink covers a few per cent, BOTH land on the background, so
+    crisp black text on white measured 1.0:1 and the member was told their
+    design could not be read and looked blurred. That is worse than the
+    original defect: it condemns good artwork.
+  */
+  const good = measureQuality(strokes(BLACK, WHITE));
+  assert.equal(good.contrast, "pass", "crisp black on white must never fail contrast");
+  assert.equal(good.sharpness, "pass");
+  assert.equal(good.thumbnailReadable, "pass");
+  assert.equal(good.mayClaimReadable, true);
+  assert.deepEqual(good.notes, []);
+});
+
+test("sparse ink still fails when it genuinely should", () => {
+  const faint = measureQuality(strokes(FAINT, WHITE));
+  assert.equal(faint.contrast, "fail");
+  assert.equal(faint.mayClaimHighContrast, false);
+  /* Faint text has crisp edges. Telling its owner to sharpen it sends them to
+     fix the wrong thing. */
+  assert.equal(faint.sharpness, "pass");
+
+  const blurred = measureQuality(strokes(BLACK, WHITE, { blur: 12 }));
+  assert.equal(blurred.sharpness, "fail");
+  assert.equal(blurred.contrast, "pass");
+  assert.equal(blurred.mayClaimReadable, false);
+});
+
+test("sharpness does not depend on which way the ink runs", () => {
+  /* An earlier version stepped along rows only, so a design of horizontal
+     strokes had almost nothing to measure and scored zero. */
+  const horizontal = measureQuality(strokes(BLACK, WHITE));
+  const vertical = measureQuality(bars(BLACK, WHITE, { period: 40 }));
+  assert.equal(horizontal.sharpness, "pass");
+  assert.equal(vertical.sharpness, "pass");
 });

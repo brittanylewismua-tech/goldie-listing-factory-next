@@ -190,7 +190,13 @@
    instead of waited for. And Tools & settings now explains itself when a
    member is redirected there for lacking access — it ignored ?needs=
    entirely, which is a door closing with no sign on it. */
-export const BUILD_MARKER = "D1615";
+/* D1616 fixes a false positive worse than the defect it replaced: contrast
+   was read as the 5th against the 95th percentile of the whole image, so on a
+   design whose ink covers a few per cent BOTH landed on the background and
+   crisp black text on white measured 1.0:1 — the member was told good artwork
+   could not be read. Ink against ground now, and sharpness measured on actual
+   transitions in both directions. */
+export const BUILD_MARKER = "D1616";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
