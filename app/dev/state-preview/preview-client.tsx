@@ -1,6 +1,13 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { stateFixtures, fixtureFor, replyFor, type StateFixture } from "@/app/state-fixtures";
+/* The feature stylesheets are imported by each ROUTE, not by the component, so
+   mounting a component directly gives unstyled markup. The preview imports the
+   same files the routes do — not copies of them. */
+import "@/app/connections/connections.css";
+import "@/app/market-watch/market-watch.css";
+import "@/app/design-scanner/design-scanner.css";
+import "@/app/shop-map/shop-map.css";
 import ConnectionsClient from "@/app/connections/connections-client";
 import MarketWatchClient from "@/app/market-watch/market-watch-client";
 import DesignScannerClient from "@/app/design-scanner/design-scanner-client";
@@ -23,11 +30,23 @@ import ShopMapClient from "@/app/shop-map/shop-map-client";
  * fixture that forgot an endpoint shows up as a gap to fill instead of an
  * inexplicably stuck component.
  */
+/*
+  INSTALLED DURING RENDER, NOT IN AN EFFECT.
+
+  A first version patched `fetch` in a `useEffect`. React runs a CHILD's
+  effects before its parent's, so the component being previewed had already
+  fired its real requests by the time the interceptor existed — the preview
+  showed live production data wearing a fixture's label, which is worse than
+  showing nothing.
+
+  Patching in the parent's render body happens before any child mounts.
+*/
 function useClosedNetwork(fixture: StateFixture | null) {
-  useEffect(() => {
-    if (!fixture) return;
-    const real = window.fetch;
-    const refused: string[] = [];
+  const patched = useRef<{ key: string; real: typeof window.fetch } | null>(null);
+
+  if (typeof window !== "undefined" && fixture && patched.current?.key !== fixture.key) {
+    const real = patched.current?.real ?? window.fetch;
+    patched.current = { key: fixture.key, real };
 
     window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input
@@ -36,14 +55,14 @@ function useClosedNetwork(fixture: StateFixture | null) {
 
       /* A preview never writes, whatever the fixture says. */
       if (method !== "GET" && method !== "HEAD" && !replyFor(fixture, url)) {
-        refused.push(`${method} ${url}`);
+        window.dispatchEvent(new CustomEvent("state-preview:refused",
+          { detail: `${method} ${url}` }));
         return new Response(JSON.stringify({ error: "Blocked by state preview." }),
           { status: 503, headers: { "Content-Type": "application/json" } });
       }
 
       const reply = replyFor(fixture, url);
       if (!reply) {
-        refused.push(`${method} ${url}`);
         window.dispatchEvent(new CustomEvent("state-preview:refused", { detail: url }));
         return new Response(JSON.stringify({ error: "No fixture for this request." }),
           { status: 503, headers: { "Content-Type": "application/json" } });
@@ -52,9 +71,12 @@ function useClosedNetwork(fixture: StateFixture | null) {
       return new Response(JSON.stringify(reply.body),
         { status: reply.status, headers: { "Content-Type": "application/json" } });
     }) as typeof window.fetch;
+  }
 
-    return () => { window.fetch = real; };
-  }, [fixture]);
+  /* Put the real one back when the preview unmounts. */
+  useEffect(() => () => {
+    if (patched.current) { window.fetch = patched.current.real; patched.current = null; }
+  }, []);
 }
 
 const SURFACES = {
