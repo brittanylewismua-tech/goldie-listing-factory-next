@@ -4,6 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { ensureListingTables } from "@/app/shop-map-listings";
+import { reasonIsMemberSafe } from "@/app/listing-placement";
 
 /**
  * ARE THERE ANY CORRECTIONS POINTING AT NOTHING?
@@ -82,6 +83,22 @@ export const GET = withErrorLog("shop-map-override-audit", async (request: Reque
         GROUP BY listing_id HAVING COUNT(*) > 1`,
       user.userId, shopId);
 
+    /*
+      HOW OFTEN DOES A MEMBER SEE A REAL REASON?
+
+      D1682 shows the stored reason when it reads like a sentence a shop owner
+      would write and replaces it with a general explanation otherwise. Which
+      of those a member actually gets is a fact about the stored prose, not
+      about the code, so it is measured rather than assumed. A low share here
+      is not a bug — it means the panel is mostly explaining how placement
+      works — but it should be known rather than discovered by a member.
+    */
+    const reasons = await all<{ evidence: string }>(
+      `SELECT evidence FROM shop_map_classifications
+        WHERE user_id = ? AND shop_id = ? AND primary_niche <> ''`,
+      user.userId, shopId);
+    const usable = reasons.filter(row => reasonIsMemberSafe(String(row.evidence ?? "")));
+
     let repaired = 0;
     if (repair && orphans.length) {
       const now = Math.floor(Date.now() / 1_000);
@@ -111,6 +128,12 @@ export const GET = withErrorLog("shop-map-override-audit", async (request: Reque
       moneyInTwoPlaces: { count: multiNiche.length, listingIds: multiNiche.slice(0, 50) },
       unreadable: { count: unreadable.length, listingIds: unreadable.slice(0, 50) },
       duplicatedRows: duplicated,
+      storedReasons: {
+        classified: reasons.length,
+        shownAsWritten: usable.length,
+        replacedWithTheGeneralExplanation: reasons.length - usable.length,
+        empty: reasons.filter(row => !String(row.evidence ?? "").trim()).length,
+      },
       clean: !orphans.length && !multiNiche.length && !unreadable.length && !duplicated.length,
     });
   } catch (error) {
