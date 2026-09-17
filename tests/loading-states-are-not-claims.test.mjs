@@ -500,3 +500,24 @@ test("a refused Shop Map correction is stated, not swallowed", () => {
   assert.match(source, /The listing is where it was/);
   assert.match(source, /role="alert"/);
 });
+
+test("an uncertain draft creation is answered, not polled through", () => {
+  /*
+    The server sets `uncertain` when it cannot tell whether Printify created
+    the product — the one status where the truthful answer is "we do not
+    know". The poll loop matched succeeded, failed, connection_missing and
+    not_found; uncertain fell through all four, so the member waited out 180
+    attempts, about fifteen minutes, for a generic sentence about background
+    checking that the server could have given on the first poll.
+  */
+  const source = read("listing-factory-app.tsx");
+  const loop = source.slice(source.indexOf("async function recoverDraft"),
+    source.indexOf("type DraftPreparation="));
+  assert.match(loop, /if\(result\.status==="uncertain"\)throw new Error/,
+    "uncertain must end the wait");
+  assert.match(loop, /did not confirm whether this product was created/);
+  /* And it must not invite the one action that could duplicate a product. */
+  assert.ok(!/uncertain[\s\S]{0,400}?try again/i.test(loop),
+    "an unknown creation outcome must not be answered with 'try again'");
+  assert.match(loop, /a second attempt could duplicate it/);
+});

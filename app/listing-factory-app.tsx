@@ -4820,6 +4820,27 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       if(result.status==="failed")throw new Error(result.error||"This draft could not be completed.");
       if(result.status==="connection_missing")throw new Error(result.error||"Reload the saved product connection before continuing.");
       if(result.status==="not_found")return null;
+      /*
+        D1648 · UNCERTAIN IS AN ANSWER, AND IT WAS BEING POLLED THROUGH.
+
+        The server sets `uncertain` when it cannot tell whether Printify
+        created the product — the one status where the truthful answer is
+        "we do not know". This loop matched succeeded, failed,
+        connection_missing and not_found, and `uncertain` fell through every
+        one of them, so the member waited out all 180 attempts — about
+        fifteen minutes — for a generic sentence about background checking,
+        when the server had the answer on the first poll.
+
+        It stops here and says what is actually known. The wording does NOT
+        invite a retry: the durable idempotency key would collapse a second
+        attempt onto the same product, but a member told "try again" after a
+        creation whose outcome is unknown is being asked to gamble on that,
+        and the honest instruction is to look rather than to act.
+      */
+      if(result.status==="uncertain")throw new Error(result.error
+        ||"Printify did not confirm whether this product was created. Nothing "
+        +"further has been sent. Open this batch again to see what was saved "
+        +"before creating anything else — a second attempt could duplicate it.");
     }
     throw new Error("This draft is still being checked in the background. Reload this batch to see its saved result; do not create a second copy.");
   }
