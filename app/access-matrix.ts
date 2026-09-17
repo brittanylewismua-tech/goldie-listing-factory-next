@@ -51,6 +51,7 @@ export const ACCESS: Record<string, Rule> = {
   /* Signed in, no feature required: it is where somebody sent here for lacking
      a feature has to be able to land. */
   "/account/settings": { kind: "open" },
+  "/api/account/delete": { kind: "open" },
   "/connections": { kind: "open" },
   "/usage": { kind: "open" },
   "/api/home": { kind: "open" },

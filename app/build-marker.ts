@@ -202,7 +202,12 @@
    was softness — the ink was found by looking for one histogram bucket, and
    blur spreads a stroke across many. The ink is a population now. When both
    are wrong, both are said. */
-export const BUILD_MARKER = "D1618";
+/* D1619 completes the deletion path: scoped plan execution, an append-only
+   audit opened before the first statement and closed after the last, idempotent
+   retry, and per-step counts as evidence. Exercised against a seeded store and
+   a disposable identity; the owner's own account is refused while the product
+   is being finished. */
+export const BUILD_MARKER = "D1619";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

@@ -39,6 +39,7 @@ import { ensureMockupAnalysisTable } from "@/app/mockup-analysis-cache";
 import { ensureDesignIntelligenceTable } from "@/app/design-intelligence";
 import { ensureWorkLeaseTable } from "@/app/work-lease";
 import { ensureFamilyCopyTable } from "@/app/family-copy-store";
+import { ensureDeletionAudit } from "@/app/api/account/delete/route";
 import { ensureMarketTables } from "@/app/market-store";
 import { ensureCorrelationTables } from "@/app/correlation-worker";
 import { ensureObservationTables } from "@/app/market-observation";
@@ -91,6 +92,12 @@ export const MIGRATIONS: Step[] = [
      had never existed — so every batch was a cold batch by construction. */
   { name: "work_leases", run: ensureWorkLeaseTable },
   { name: "listing_family_copy", run: ensureFamilyCopyTable },
+  /* The deletion audit. It must exist before the first deletion, not be
+     created by it — a table created mid-run cannot record that the run began. */
+  { name: "account_deletions", run: async () => {
+      const { env } = await import("cloudflare:workers");
+      await ensureDeletionAudit((env as unknown as { DB: D1Database }).DB);
+    } },
 
   /* Market detector, then the things that read it. */
   { name: "market_store", run: ensureMarketTables },
