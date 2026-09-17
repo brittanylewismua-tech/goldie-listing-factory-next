@@ -72,3 +72,57 @@ Cases 14–16 (stale reference image, changed reference image, provider
 failure) need a cold scan each and the allowance is at 10 of 10. The next
 slot returns at 2026-09-18T02:15Z as the oldest scan leaves the rolling
 window; the three cases need three slots, which arrive over several hours.
+
+---
+
+# Mobile verification — what was proved where
+
+Two different things, and the distinction is the point.
+
+## Narrow-layout verification (the harness sweep)
+
+An iframe of exactly 375, 390 or 430 CSS pixels gives a page a real narrow
+viewport and makes its **width** media queries fire. It does not make the
+browser report a touch device. Every sweep run reports the conditions it ran
+under and labels itself accordingly:
+
+```
+narrow-layout verified · widths asked 375/390/430 · viewport 375/390/430
+· clientWidth 375/390/430 · pointer:coarse false · mobile gate never matched
+· worst horizontal overflow 0px · undersized targets 0
+```
+
+Chrome's window resize is not an alternative: the page stays 1440 CSS pixels
+wide however small the window gets, which is why narrow-width checks through
+it have never measured anything.
+
+## Actual mobile verification (in-app browser, real device emulation)
+
+D1657, deployed build, unauthenticated — the 404 renders inside the same
+`.app-shell` the Listing Factory uses, so the gate can be exercised without
+credentials.
+
+| | 375 × 812 | 430 × 932 |
+|---|---|---|
+| `pointer: coarse` | **true** | **true** |
+| `(max-width:820px) and (pointer:coarse)` | **matches** | **matches** |
+| `.app-shell` present | yes | yes |
+| `.mobile-gate` rendered | yes | yes |
+| shell children leaking past the gate | **none** | **none** |
+| horizontal overflow | 0px | 0px |
+| tap targets under 40px | none | none |
+
+The card reads "Oops, this one needs a bigger screen." That last row of zero
+leaks is the D828 defect itself: the rule hides `.app-shell > :not(.mobile-gate)`,
+and when interior pages were moved into the shell without the card, it hid the
+sidebar AND the main pane and left a blank screen behind it.
+
+The public homepage at 430 with a coarse pointer: no overflow, nothing wider
+than the screen, no undersized targets, and it still says "Not open yet —
+there's nothing to buy right now", which is checkout staying closed.
+
+## Still unverified
+
+Authenticated mobile states. The in-app browser has real device emulation but
+no session, and signing it in means handling credentials. Every authenticated
+surface is narrow-layout verified only.
