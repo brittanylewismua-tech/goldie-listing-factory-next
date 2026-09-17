@@ -77,7 +77,7 @@ const SERVICE_LISTING =
 export const isServiceListing = (title: string) =>
   SERVICE_LISTING.test(title) || /^(add[\s-]?on|upgrade|shipping)\b/i.test(title.trim());
 
-const wordsOf = (text: string) =>
+export const wordsOf = (text: string) =>
   new Set(text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
     .filter(Boolean).map(singular));
 

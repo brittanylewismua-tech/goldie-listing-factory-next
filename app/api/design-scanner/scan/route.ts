@@ -12,6 +12,7 @@ import {
 } from "@/app/scan-record";
 import { compare } from "@/app/design-compare";
 import { normalizeNiche, intersect, type Candidate } from "@/app/niche-cohort";
+import { relevanceOf, relevanceNotice } from "@/app/design-niche-relevance";
 import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 import { evidenceLine } from "@/app/evidence-window";
 import { isFresh } from "@/app/reference-images";
@@ -350,10 +351,28 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
     listings: shape.listings,
   });
 
+  /*
+    SUBJECT AND CONSTRUCTION ARE DIFFERENT QUESTIONS.
+
+    Measured: "Vintage Tractor Parts Since 1947" scanned against bachelorette
+    returned output identical to "Bride Squad Bachelorette Party" — same
+    verdict, same scope, same supporting points. Both are built the same way,
+    so the visual comparison was right; what was wrong was that a member reads
+    "shares visual patterns with listings moving in this niche" as "this fits
+    the niche", and nothing anywhere said otherwise.
+  */
+  const relevance = relevanceOf(String(upload?.visibleWording ?? ""), terms);
+  const notice = relevanceNotice(relevance, niche);
+
   const id = crypto.randomUUID();
   const result = { ...base, ok: true,
     overall: alignment.overall, working: alignment.working,
-    opportunity: alignment.opportunity, scope: alignment.scope,
+    opportunity: alignment.opportunity,
+    /* When the design is not about the niche, the re-scoping comes first and
+       the construction sentence follows it. */
+    scope: notice ? `${notice} ${alignment.scope}` : alignment.scope,
+    subject: { verdict: relevance.verdict, matched: relevance.matched,
+      because: relevance.because },
     evidence: line, scanId: id };
   await db.prepare(
     `INSERT INTO scan_history (id, user_id, artwork_hash, niche, result_json, created_at)

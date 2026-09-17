@@ -29,6 +29,9 @@ type Result = {
   evidence?: string;
   refusal?: { kind: string; because: string };
   scope?: string;
+  /* Whether the design is about the niche at all, as distinct from whether it
+     is built like the listings that are moving in it. */
+  subject?: { verdict: "on-subject" | "off-subject" | "unreadable"; matched: string[]; because: string };
   trademark: Trademark | null;
   scansLeftToday: number | null;
   niche: string;
@@ -268,6 +271,12 @@ function ScanResult({ result }: { result: Result }) {
 
       {result.ok ? (
         <>
+          {/* An off-subject design is told so plainly, ahead of a verdict it
+              would otherwise read as approval. */}
+          {result.subject && result.subject.verdict !== "on-subject" &&
+            <p className={`subject-warning subject-${result.subject.verdict}`} role="status">
+              {result.subject.because}
+            </p>}
           {result.scope && <p className="scope">{result.scope}</p>}
           {result.working && result.working.length > 0 && (
             <div className="block">
