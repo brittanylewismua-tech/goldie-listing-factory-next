@@ -38,6 +38,8 @@ const when = (seconds?: number | null) => {
   return `${Math.round(gap / 86_400)} days ago`;
 };
 
+import FactoryShell from "@/app/factory-shell";
+
 export default function ConnectionsClient({ signedInEmail }: { signedInEmail: string }) {
   void signedInEmail;
   const [shops, setShops] = useState<Connection[]>([]);
@@ -78,6 +80,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
   useEffect(() => { void load(); }, [load]);
 
   return (
+    <FactoryShell active="connections" title="Connections" desktopOnly={false}>
     <main className="conn p-grid">
       <h1>Connections</h1>
       <p className="lede">
@@ -176,5 +179,6 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
 
       {error && <p className="error">{error}</p>}
     </main>
+    </FactoryShell>
   );
 }
