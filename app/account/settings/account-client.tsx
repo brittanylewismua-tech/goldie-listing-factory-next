@@ -58,12 +58,12 @@ const when = (seconds?: number | null) => {
   The success state is the important one. "Your data has been removed" with
   nothing under it is a reassurance; the counts are what make it a statement.
 */
-function DeleteAccount({ counts }: { counts: number }) {
+function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [phrase, setPhrase] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [done, setDone] = useState<{ removed: { table: string; changed: number }[];
+  const [done, setDone] = useState<{ removed: { say: string; changed: number }[];
     say: string } | null>(null);
 
   if (done) return (
@@ -71,7 +71,7 @@ function DeleteAccount({ counts }: { counts: number }) {
       <b>{done.say}</b>
       {done.removed.length > 0 && (
         <ul>{done.removed.map(step => (
-          <li key={step.table}>{step.changed.toLocaleString()} from {step.table}</li>
+          <li key={step.say}>{step.say} <em>({step.changed.toLocaleString()})</em></li>
         ))}</ul>
       )}
       <p>Your connections are switched off and their keys destroyed. Sign out to finish.</p>
@@ -117,13 +117,14 @@ function DeleteAccount({ counts }: { counts: number }) {
                   body: JSON.stringify({ phrase }),
                 });
                 const answer = await response.json() as {
-                  deleted?: boolean; removed?: { table: string; changed: number }[];
+                  deleted?: boolean; removed?: { say: string; changed: number }[];
                   say?: string; error?: string };
                 if (!response.ok || !answer.deleted) {
                   setError(answer.error || "That did not go through. Nothing was changed.");
                   return;
                 }
                 setDone({ removed: answer.removed ?? [], say: answer.say ?? "Your data has been removed." });
+                onDone();
               } catch {
                 setError("That did not go through. Nothing was changed.");
               } finally { setBusy(false); }
@@ -233,7 +234,7 @@ export default function AccountClient({ email }: { email: string }) {
               ))}</ul>
             </details>
           )}
-          {loaded && <DeleteAccount counts={rows.length} />}
+          {loaded && <DeleteAccount counts={rows.length} onDone={() => setData({ yours: {} })} />}
         </div>
       </section>
 

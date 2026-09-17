@@ -150,9 +150,11 @@ export const stateFixtures = (): StateFixture[] => [
       { path: "/api/account/delete", status: 200,
         body: { deleted: true, alreadyDone: false,
           say: "Your data has been removed and your connections switched off.",
-          removed: [{ table: "scan_history", changed: 27 },
-            { table: "niche_watches", changed: 7 },
-            { table: "etsy_connections", changed: 1 }] } }] },
+          removed: [
+            { say: "Your design scans and their results.", changed: 27 },
+            { say: "The niches you were watching.", changed: 7 },
+            { say: "Your Etsy connection is switched off and its access keys destroyed.",
+              changed: 1 }] } }] },
 
   { key: "account-delete-already", label: "Deletion already done", surface: "account",
     what: "A retry reports the same completion and runs nothing.",

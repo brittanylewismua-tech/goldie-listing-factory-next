@@ -5,6 +5,7 @@ import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { deleteAccount, DELETION_AUDIT_TABLE, CONFIRMATION_PHRASE }
   from "@/app/account-deletion";
+import { DELETION_PLAN } from "@/app/deletion-plan";
 
 /**
  * THE ONE ROUTE THAT CANNOT BE TAKEN BACK.
@@ -89,8 +90,18 @@ export const POST = withErrorLog("account-delete", async (request: Request) => {
     deleted: true,
     alreadyDone: outcome.alreadyDone,
     finishedAt: outcome.finishedAt,
-    /* Evidence, not reassurance. */
-    removed: outcome.steps.filter(step => step.changed > 0),
+    /*
+      EVIDENCE, NOT REASSURANCE — AND NOT TABLE NAMES.
+
+      A first version returned the raw table for each step, so the member's
+      confirmation read "27 from scan_history, 1 from etsy_connections". The
+      plan already carries a sentence for every step written for a person;
+      that is what belongs here.
+    */
+    removed: outcome.steps.filter(step => step.changed > 0).map(step => ({
+      changed: step.changed,
+      say: DELETION_PLAN.find(entry => entry.table === step.table)?.say ?? step.table,
+    })),
     say: outcome.alreadyDone
       ? "This account's data was already removed. Nothing further was changed."
       : "Your data has been removed and your connections switched off.",

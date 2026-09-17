@@ -173,3 +173,31 @@ test("the route refuses the owner and anyone not signed in", () => {
   assert.match(route, /status: 401/);
   assert.match(route, /CONFIRMATION_PHRASE/);
 });
+
+test("the confirmation never shows a member a table name", () => {
+  /*
+    The first version of the success state listed "27 from scan_history" and
+    "1 from etsy_connections" — the same defect as the raw field names on the
+    account page, made twice on the same screen. The plan already carries a
+    sentence per step written for a person.
+  */
+  const route = readFileSync(new URL(
+    "../app/api/account/delete/route.ts", import.meta.url), "utf8");
+  assert.match(route, /say: DELETION_PLAN\.find\(entry => entry\.table === step\.table\)\?\.say/);
+  const client = readFileSync(new URL(
+    "../app/account/settings/account-client.tsx", import.meta.url), "utf8");
+  assert.match(client, /step\.say/);
+  assert.ok(!/step\.table/.test(client), "the interface still renders a table name");
+  /* Every step has a sentence to render. */
+  for (const step of DELETION_PLAN)
+    assert.ok(step.say && step.say.length > 10, `${step.table} has no member-facing sentence`);
+});
+
+test("the held-data counts do not go stale after a deletion", () => {
+  /* The page showed "27 design scans" above a panel saying they had just been
+     removed. */
+  const client = readFileSync(new URL(
+    "../app/account/settings/account-client.tsx", import.meta.url), "utf8");
+  assert.match(client, /onDone\(\)/);
+  assert.match(client, /onDone=\{\(\) => setData\(\{ yours: \{\} \}\)\}/);
+});
