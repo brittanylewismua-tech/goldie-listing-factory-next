@@ -571,3 +571,30 @@ Factory (`/listing-factory`, `/batches`, `/keywords`); otherwise it says
 
 Also renamed the component `GoldieWordmark` -> `ListingFactoryWordmark`
 everywhere it is used, since that is what it renders.
+
+
+## VISUAL MIGRATION — SECOND PASS (D1606-D1607)
+
+Verified in Chrome on the deployed build at 1440px, then fixed:
+
+- **Sign-in (shared)** — carried the Listing Factory wordmark and "Sign in to
+  your Listing Factory" for every member whatever their destination. Now
+  conditional on the destination actually being the Listing Factory.
+- **Batch History** — loading was the bare sentence "Loading saved batches…"
+  on the grid. Skeletons now.
+- **More** — `.hub` is `min-height:100vh` because HOME fills it; More has four
+  links, so the same rule left most of the screen an empty black expanse with
+  a gear in the corner. `.hub-short` gives it the height it needs.
+- **More / Sign out** — sat in the same grid, same card, same weight as
+  Trademark Checker and Connections: the one item that ENDS THE SESSION looked
+  exactly like the ones that open a feature. It has its own row below the grid
+  and a quieter treatment now.
+
+Home already uses the Listing Factory's own `--lf-*` tokens (dark ground, pink
+accent) and needed no re-pointing — checked, not assumed.
+
+### Pattern worth noting
+Three pages had the same defect independently: a single sentence as the whole
+loading state (Shop Map, Batch History, and the batch-restore path). Any page
+that waits on Printify or Etsy needs the shape of what is coming, or it jumps
+when the answer lands.
