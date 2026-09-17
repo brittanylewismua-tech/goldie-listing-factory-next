@@ -398,3 +398,23 @@ test("the phone-width sweep is a control, not something done by hand once", () =
   assert.ok(!/\{window\.self === window\.top &&/.test(source),
     "reading window during render breaks the server render");
 });
+
+test("a subscription status is translated, never shown raw", async () => {
+  /*
+    Two statuses were translated and every other one fell through to Stripe's
+    own identifier, so a member whose card failed read "past_due" on their
+    account page. The fourth time this product has put an internal value in
+    front of somebody: three database column names, a UTC timestamp, and now
+    this.
+  */
+  const { subscriptionLabel } = await import("../app/account/settings/account-client.tsx")
+    .catch(() => ({ subscriptionLabel: null }));
+  const source = read("account/settings/account-client.tsx");
+  assert.match(source, /const SUBSCRIPTION_LABELS: Record<string, string>/);
+  assert.match(source, /subscriptionLabel\(usage\.billing\.subscription\.status\)/);
+  for (const raw of ["past_due", "trialing", "unpaid", "incomplete"])
+    assert.ok(source.includes(`${raw}:`), `${raw} has no human label`);
+  /* An unknown status is made readable rather than leaked or dropped. */
+  assert.match(source, /replace\(\/_\/g, " "\)/);
+  void subscriptionLabel;
+});

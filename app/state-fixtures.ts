@@ -475,6 +475,43 @@ export const stateFixtures = (): StateFixture[] => [
         body: { deleted: true, alreadyDone: true, removed: [],
           say: "This account's data was already removed. Nothing further was changed." } }] },
 
+  { key: "account-payment-overdue", label: "Payment overdue", surface: "account",
+    what: "A failed card. Said in words, never as Stripe's own status identifier.",
+    replies: [
+      { path: "/api/account/data", status: 200,
+        body: { yours: { scans: 12, nicheWatches: 3 }, kept: [], note: "" } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite" },
+        billing: { active: false, subscription: { status: "past_due",
+          currentPeriodEnd: secondsAgo(-86_400 * 4), cancelAtPeriodEnd: 0 },
+          terms: { amount: 2900, currency: "usd", interval: "month" } } } }] },
+
+  { key: "account-in-trial", label: "In trial", surface: "account",
+    what: "A trial is not 'trialing'. Access and subscription are different questions.",
+    replies: [
+      { path: "/api/account/data", status: 200,
+        body: { yours: { scans: 2 }, kept: [], note: "" } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite" },
+        billing: { active: true, subscription: { status: "trialing",
+          currentPeriodEnd: secondsAgo(-86_400 * 11), cancelAtPeriodEnd: 0 },
+          terms: { amount: 2900, currency: "usd", interval: "month" } } } }] },
+
+  { key: "account-access-ended", label: "Access ended", surface: "account",
+    what: "Subscription over and access with it. The member's saved work is untouched.",
+    replies: [
+      { path: "/api/account/data", status: 200,
+        body: { yours: { scans: 41, nicheWatches: 6 }, kept: [], note: "" } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "No active plan" },
+        billing: { active: false, subscription: { status: "canceled",
+          currentPeriodEnd: secondsAgo(86_400 * 3), cancelAtPeriodEnd: 1 },
+          terms: { amount: 2900, currency: "usd", interval: "month" } } } }] },
+
+  { key: "account-usage-failed", label: "Plan could not be read", surface: "account",
+    what: "Billing unavailable. Must not read as 'you have no plan'.",
+    replies: [
+      { path: "/api/account/data", status: 200,
+        body: { yours: { scans: 12 }, kept: [], note: "" } },
+      { path: "/api/usage", status: 500, body: { error: "upstream" } }] },
+
   /* -------------------------------------------------------------- shop map */
   { key: "shop-map-loading", label: "Loading", surface: "shop-map",
     what: "Shop Map reads a whole shop. The wait needs somewhere to land.",

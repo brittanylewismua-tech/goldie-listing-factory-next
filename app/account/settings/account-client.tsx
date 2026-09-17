@@ -137,6 +137,34 @@ function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void 
   </div>;
 }
 
+/*
+  STRIPE'S WORDS ARE NOT THE MEMBER'S WORDS.
+
+  Two statuses were translated and every other one fell through to the raw
+  identifier, so a member whose card failed read "past_due" on their own
+  account page, and one in a trial read "trialing". The fourth time this
+  product has shown somebody an internal value because nothing stood between
+  them — after three database column names and a UTC timestamp.
+
+  An unknown status is made readable rather than dropped, so a status Stripe
+  adds later appears as words instead of vanishing or leaking.
+*/
+const SUBSCRIPTION_LABELS: Record<string, string> = {
+  active: "Active",
+  canceled: "Cancelled",
+  trialing: "In trial",
+  past_due: "Payment overdue",
+  unpaid: "Unpaid",
+  incomplete: "Not finished setting up",
+  incomplete_expired: "Setup expired",
+  paused: "Paused",
+};
+
+export function subscriptionLabel(status: string) {
+  return SUBSCRIPTION_LABELS[status]
+    ?? status.replace(/_/g, " ").replace(/^./, first => first.toUpperCase());
+}
+
 export default function AccountClient({ email }: { email: string }) {
   const [data, setData] = useState<DataView | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
@@ -195,9 +223,7 @@ export default function AccountClient({ email }: { email: string }) {
             <div className="acc-line">
               <span>Subscription</span>
               <b>
-                {usage.billing.subscription.status === "active" ? "Active"
-                  : usage.billing.subscription.status === "canceled" ? "Cancelled"
-                    : usage.billing.subscription.status}
+                {subscriptionLabel(usage.billing.subscription.status)}
                 {usage.billing.subscription.currentPeriodEnd
                   ? ` · ${usage.billing.subscription.cancelAtPeriodEnd ? "ends" : "renews"} `
                     + when(usage.billing.subscription.currentPeriodEnd)
