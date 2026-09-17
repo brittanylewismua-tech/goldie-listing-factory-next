@@ -190,3 +190,19 @@
 .result .subject-warning{margin:0 0 10px;padding:11px 13px;border:1px solid #e4cedb;border-radius:10px;background:#fff7fb;color:#6b3552;font-size:12px;line-height:1.5;font-weight:600}
 .result .subject-off{color:#6b3552}
 .result .subject-unknown{background:#f7f5fa;color:#5b5266}
+
+
+/* D1604 · THE EMPTY STATE WAS A BOX INSIDE A BOX.
+   The stage is already a bordered, rounded surface; putting a bordered empty
+   card inside it drew two nested rectangles around a lot of nothing. The
+   empty state IS the stage when there is no design. */
+.stage .p-empty{border:0;background:transparent;padding:var(--p-5);box-shadow:none}
+.stage{background:var(--p-card-quiet);border-color:var(--p-line)}
+
+/* The pick control is the primary action on an empty scanner, so it looks
+   like one rather than a full-width unstyled bar. */
+.pick{display:inline-flex;align-items:center;justify-content:center;min-height:46px;
+  margin-top:var(--p-4);padding:0 var(--p-5);border:1px solid var(--p-line-strong);
+  border-radius:var(--p-radius);background:#fff;color:var(--p-ink);
+  font-weight:750;font-size:13px;cursor:pointer}
+.pick:hover{background:var(--p-lavender);border-color:var(--p-pink)}

@@ -171,7 +171,7 @@
    Watch, Design Scanner, the Trademark Checker and Shop Map at it. Market
    Watch had a private palette including a legacy gold; Shop Map's loading
    state was one sentence on white. */
-export const BUILD_MARKER = "D1604";
+export const BUILD_MARKER = "D1605";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

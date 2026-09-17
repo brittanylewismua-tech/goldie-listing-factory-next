@@ -99,8 +99,11 @@
 .p-button:hover{background:var(--p-plum-deep)}
 .p-button:focus-visible{outline:none;box-shadow:var(--p-glow)}
 .p-button:active{transform:translateY(1px)}
-.p-button[disabled]{background:var(--p-line-strong);color:#fff;cursor:not-allowed;
-  box-shadow:none;transform:none}
+/* A disabled control should read as "not yet", not as broken. Pale grey on
+   pale grey looked like a rendering fault beside the input next to it. */
+.p-button[disabled]{background:var(--p-lavender);color:#8b8194;cursor:not-allowed;
+  box-shadow:none;transform:none;border:1px solid var(--p-line)}
+.p-button-primary[disabled]{background:var(--p-lavender);color:#8b8194}
 .p-button-primary{background:var(--p-pink);color:#3d0b2b}
 .p-button-primary:hover{background:#ff6bcd}
 .p-button-quiet{background:transparent;color:var(--p-ink);border:1px solid var(--p-line-strong)}
