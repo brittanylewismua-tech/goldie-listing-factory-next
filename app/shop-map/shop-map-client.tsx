@@ -14,7 +14,7 @@ type ShopMap = {
   month?: string;
   thisMonth?: { revenueMinor: number; etsyFeesMinor: number; productionCostMinor: number;
     headline: string; profitMinor: number | null; accuracy: string; orders: number;
-    coverage?: { verified: number; estimated: number; unavailable: number };
+    /* Declared twice in the same type literal, identically. */
     coverage?: { verified: number; estimated: number; unavailable: number } };
   standout?: { hasStandout: boolean; headline: string; nextStep: string };
   whereToFocus?: Focus[];
