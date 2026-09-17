@@ -62,7 +62,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
     <main className="conn">
       <h1>Connections</h1>
       <p className="lede">
-        Goldie reads your Etsy shop so it can build listings and show you what
+        The Listing Factory reads your Etsy shop so it can build listings and show you what
         they earned. It never changes a listing you did not ask it to.
       </p>
 
@@ -70,7 +70,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
       {shops.length === 0 && (
         <p className="empty">
           No Etsy shop connected yet. <a href="/api/etsy/connect">Connect your shop</a> to
-          start using Goldie.
+          start using it.
         </p>
       )}
       {shops.map(shop => (
@@ -94,14 +94,14 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
           )}
           {shop.needsReconnect && (
             <p className="fact">
-              Goldie&apos;s access to this shop has lapsed. Reconnecting brings it
+              Access to this shop has lapsed. Reconnecting brings it
               back with everything it already knows.
             </p>
           )}
           <div className="row">
             {shop.needsReconnect && <a href="/api/etsy/connect">Reconnect</a>}
             {!shop.canReadSales && shop.authorizeSalesUrl && (
-              <a href={shop.authorizeSalesUrl}>Let Goldie see sales</a>
+              <a href={shop.authorizeSalesUrl}>Let the platform see sales</a>
             )}
             {!shop.activeForListingFactory && !shop.needsReconnect && (
               <a href={`/api/etsy/set-active?shop=${shop.shopId}`}>Publish to this shop</a>
@@ -114,9 +114,9 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
           {showEffect === shop.shopId && (
             <div className="effect">
               <p>
-                Disconnecting stops Goldie reading or publishing to{" "}
+                Disconnecting stops any reading or publishing to{" "}
                 <strong>{shop.shopName}</strong>. Your Etsy listings are not touched.
-                Goldie keeps what it already recorded, so if you reconnect later it
+                What was already recorded is kept, so if you reconnect later it
                 picks up where it left off rather than starting again.
               </p>
               <div className="row">

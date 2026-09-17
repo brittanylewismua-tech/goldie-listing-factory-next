@@ -233,7 +233,7 @@ export function scopeMap() {
  * "not built yet" from "decided against".
  */
 export const NOT_IN_GOLDIE = [
-  { what: "A chatbot or Goldie GPT", why: "Not a Goldie feature. Removed from scope." },
+  { what: "A chatbot", why: "Not a feature of this product. Removed from scope." },
   { what: "World Builder six-keyword worlds",
     why: "Superseded. Shop Map organizes by flat customer niches; the keyword "
       + "framework categorized products rather than customers and was removed." },
@@ -241,7 +241,7 @@ export const NOT_IN_GOLDIE = [
     why: "The Trademark Checker is a checker. Nothing stores a phrase to watch "
       + "it, so no screen may promise an alert." },
   { what: "Trend videos, customer-service bot",
-    why: "Not a Goldie feature." },
+    why: "Not a feature of this product." },
   { what: "Next-move recommendations in Market Watch",
     why: "Market Watch shows evidence. Deciding what to do with it is the seller's job." },
   { what: "Visual artwork matching for the reference corpus",

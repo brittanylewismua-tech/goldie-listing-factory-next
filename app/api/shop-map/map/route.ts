@@ -388,7 +388,7 @@ async function buildMap(request: Request) {
       lifetimeOrders: unclassified.orders, lifetimeRevenueMinor: unclassified.revenueMinor,
       reviews: { recent: 0, lifetimeHeld: unclassified.reviews },
       productFamilies: [],
-      evidence: "Goldie could not tell which niche these belong to.",
+      evidence: "These could not be matched to a niche.",
     },
     whereToFocus: guidance(worldPerformance,
       { period: recentEnough ? "the last 90 days" : "all time", shop: shopTotals }).slice(0, 5),

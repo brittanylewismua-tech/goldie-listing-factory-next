@@ -57,7 +57,7 @@ export function periodsFor(
 
   periods.push({
     kind: "prospective-goldie", from: GOLDIE_FINANCIAL_EPOCH, to: now,
-    label: "Prospective Goldie period",
+    label: "Prospective access period",
     productionCostPossible: true,
     why: "Exact identity is captured at publish time from here on, so this period "
       + "is the one expected to reach complete profit and stay there.",

@@ -84,7 +84,7 @@ test("there is a way to remove a draft a failed run left behind", () => {
   assert.match(source, /parameters\.get\("cleanup"\)/);
   /* And it refuses to delete anything that is not a Goldie test draft. */
   assert.match(source, /!title\.startsWith\("GOLDIE INTERNAL"\)/);
-  assert.match(source, /That listing is not a Goldie test draft\. Nothing was deleted\./);
+  assert.match(source, /That listing is not an internal test draft\. Nothing was deleted\./);
 });
 
 test("the test images are built, not fetched from our own origin", () => {

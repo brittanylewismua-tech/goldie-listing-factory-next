@@ -24,6 +24,11 @@ const read = name => readFileSync(join(APP, name), "utf8");
 
 /* Files a member reads from, rather than the whole tree. */
 const MEMBER_SURFACES = [
+  "data-lifecycle.ts", "capability-registry.ts", "suite-plans.ts",
+  "signup/signup-client.tsx", "connections/connections-client.tsx",
+  "usage/page.tsx", "returning-command-center.tsx", "wait-progress.tsx",
+  "market-update.ts", "niche-candidates.ts", "finance-periods.ts",
+  "shop-map-monthly.ts", "design-compare.ts", "plan-limits.ts",
   "factory-shell.tsx", "mobile-gate.tsx", "mobile-shell.tsx", "layout.tsx",
   "home/page.tsx", "more/page.tsx",
   "market-watch/market-watch-client.tsx", "shop-map/shop-map-client.tsx",
@@ -31,23 +36,32 @@ const MEMBER_SURFACES = [
   "trademark/page.tsx", "production-cost.ts", "deletion-plan.ts",
 ];
 
-/* Internal identifiers that are not branding and are explicitly left alone. */
-const INFRASTRUCTURE = [
-  "goldie-history-loaded", "goldie-install-asked", "goldieInstallEvent",
-  "goldie-tabs", "goldie-install", "goldie-colors-", "goldie-sizes-",
-  "goldie-spin", "goldie-wordmark-lockup", "Goldie-Listing-Factory",
-  "goldie-background", "goldie-g.png", "thegoldiesuite",
-  /* A module path, not a word anybody reads. Renaming files is churn. */
-  "./goldie-wordmark",
-];
+/*
+  WHAT COUNTS AS BRANDING, AND WHAT IS JUST A NAME IN THE CODE.
 
-/** Strip comments and known infrastructure, leaving what a member could see. */
-function memberVisible(source) {
-  let text = source
+  An allowlist of identifiers grew unmanageably and kept needing new entries
+  for things no member will ever read — a Stripe plan key, CSS class names, a
+  component, a User-Agent string. The distinction that actually matters is
+  whether the word appears as PROSE: a sentence a member reads, rather than a
+  token a program uses.
+
+  So the check looks for the word used as a word — followed by a space and an
+  ordinary word, or ending a sentence — which is how it reads in copy, and not
+  how it appears in `PLANS.goldie`, `goldie-wait-card` or `GoldieButton`.
+
+  Deliberately out of scope either way: storage keys, event names, bucket
+  bindings, the domain, and the asset files themselves.
+*/
+
+/** Strip comments, then find the word used in a sentence rather than in code. */
+function brandingProse(source) {
+  const text = source
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/^\s*\/\/.*$/gm, "");
-  for (const token of INFRASTRUCTURE) text = text.split(token).join("");
-  return text;
+  /* Preceded by a space, quote or > (start of prose), and followed by a space
+     and a lowercase word, an apostrophe, or sentence-ending punctuation. */
+  const prose = /[\s>"'`(]Goldie(?:&apos;s|'s)?(?=[\s][a-z]|[.,!?;:]|$)/gm;
+  return [...text.matchAll(prose)].map(match => match[0].trim());
 }
 
 test("no member-facing surface names the old product", () => {
@@ -55,7 +69,8 @@ test("no member-facing surface names the old product", () => {
   for (const file of MEMBER_SURFACES) {
     let source;
     try { source = read(file); } catch { continue; }
-    if (/goldie/i.test(memberVisible(source))) offenders.push(file);
+    const found = brandingProse(source);
+    if (found.length) offenders.push(`${file} (${found.length})`);
   }
   assert.deepEqual(offenders, [],
     `these still show the old product name: ${offenders.join(", ")}`);
@@ -72,12 +87,12 @@ test("the rail's wordmark is the Listing Factory's, and only on its pages", () =
   /* And nothing stands in for it elsewhere. */
   const rail = shell.slice(shell.indexOf("<header className=\"topbar\">"),
     shell.indexOf("<div className=\"factory-main\">"));
-  assert.doesNotMatch(memberVisible(rail), /suite|Suite/,
+  assert.doesNotMatch(rail, /suite|Suite/,
     "the shared rail must not name an umbrella product");
 });
 
 test("no page title, manifest or install prompt names a product", () => {
-  const layout = memberVisible(read("layout.tsx"));
+  const layout = read("layout.tsx");
   assert.match(layout, /NEUTRAL_FALLBACK_TITLE/);
   assert.doesNotMatch(layout, /goldie-g\.png|apple-touch-icon/i,
     "a favicon is a mark in the place a member looks most often");
@@ -105,4 +120,31 @@ test("each feature names itself in its own tab title", () => {
   /* No suffix: a suffix is where a suite name would go. */
   assert.doesNotMatch(identity, /\$\{.*\} · |" · "/,
     "a title suffix is a product name waiting to happen");
+});
+
+
+test("nothing anywhere in the app writes the old product name as prose", () => {
+  /*
+    The listed surfaces above are the ones a member is certain to read. This
+    is the wider net: any file in the application that uses the word as a
+    word, wherever it lives. A string only has to reach a screen once.
+
+    Code identifiers are not prose and are not flagged — `PLANS.goldie`,
+    `goldie-wait-card`, `GoldieButton`, the User-Agent and the Stripe plan key
+    all pass, because none of them is a sentence anybody reads.
+  */
+  const offenders = [];
+  const walk = dir => {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      if (statSync(full).isDirectory()) walk(full);
+      else if (/\.tsx?$/.test(name)) {
+        const found = brandingProse(readFileSync(full, "utf8"));
+        if (found.length) offenders.push(full.slice(APP.length));
+      }
+    }
+  };
+  walk(APP);
+  assert.deepEqual(offenders, [],
+    `these write the old product name as prose: ${offenders.join(", ")}`);
 });

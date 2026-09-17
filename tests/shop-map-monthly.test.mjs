@@ -48,7 +48,7 @@ test("two currencies are never added together", () => {
   const summary = summarizeMonth("2026-01",
     [line(), line({ gross: minorUnits(2_000, "GBP") })]);
   assert.equal(summary.profit, null);
-  assert.match(summary.profitUnavailableBecause, /will not add them together/);
+  assert.match(summary.profitUnavailableBecause, /will not be added\s+together/);
   assert.equal(summary.grossRevenue.minor, 0);
 });
 

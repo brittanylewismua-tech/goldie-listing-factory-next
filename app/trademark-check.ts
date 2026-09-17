@@ -446,7 +446,7 @@ export function withRegister(
       summary: verdict.risk === "clear"
         ? (registerReady
           ? "No exact or contained match was found in the current federal "
-            + "trademark register or Goldie's curated risk list. This is "
+            + "trademark register or the curated risk list. This is "
             + "screening information, not legal clearance."
           : "No match was found in the trademark records currently loaded. "
             + "This is screening information, not legal clearance.")

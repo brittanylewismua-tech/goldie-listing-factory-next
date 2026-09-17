@@ -28,6 +28,6 @@ export const GET = withErrorLog("shop-map-capability", async (request: Request) 
       : "Connect Etsy",
     why: capability.canReadSales
       ? null
-      : "Etsy asks for your permission before Goldie can read the sales and fees it needs to work out profit. Your shop stays connected either way.",
+      : "Etsy asks for your permission before the platform can read the sales and fees it needs to work out profit. Your shop stays connected either way.",
   });
 });

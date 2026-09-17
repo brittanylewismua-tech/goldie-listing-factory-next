@@ -24,8 +24,8 @@ export async function POST(request: Request) {
     }
     const outbound = new FormData();
     outbound.append("access_key", accessKey);
-    outbound.append("subject", `Goldie Listing Factory support: ${email}`);
-    outbound.append("from_name", "Goldie Listing Factory Support");
+    outbound.append("subject", `Listing Factory support: ${email}`);
+    outbound.append("from_name", "Listing Factory Support");
     outbound.append("replyto", email);
     outbound.append("email", email);
     outbound.append("message", message);

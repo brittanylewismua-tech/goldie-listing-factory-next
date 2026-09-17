@@ -16,7 +16,7 @@ export function checkoutOpen(): boolean {
   return String(raw ?? "").trim().toLowerCase() === "open";
 }
 
-export const CLOSED_HEADLINE = "Goldie isn't open yet";
+export const CLOSED_HEADLINE = "Not open yet";
 export const CLOSED_BODY =
   "The Listing Factory is still in private testing. There's nothing to buy "
   + "right now, and no plans or prices are available yet.";

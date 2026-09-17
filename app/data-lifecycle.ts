@@ -35,7 +35,7 @@ export const EFFECTS: Record<Action, Effect[]> = {
     { what: "scan_uploads, scan_history", disposition: "removed",
       say: "Your design scans and their results." },
     { what: "artwork_provenance, ARTWORK objects", disposition: "removed",
-      say: "Every print file Goldie captured for you." },
+      say: "Every print file captured for you." },
     { what: "niche_watches", disposition: "removed",
       say: "Your saved niches. The evidence behind them is market data and stays." },
     { what: "member_shop_watches", disposition: "removed",
@@ -53,10 +53,10 @@ export const EFFECTS: Record<Action, Effect[]> = {
   ],
   "etsy-disconnect": [
     { what: "etsy_connections.encrypted_access_token", disposition: "retired",
-      say: "Goldie stops reading or publishing to this shop straight away. Your "
+      say: "The platform stops reading or publishing to this shop straight away. Your "
         + "Etsy listings are not touched." },
     { what: "shop_map_listings, finance_*", disposition: "shared-kept",
-      say: "What Goldie already recorded about this shop is kept, so reconnecting "
+      say: "What was already recorded about this shop is kept, so reconnecting "
         + "later picks up where it left off." },
   ],
   "printify-disconnect": [
@@ -64,7 +64,7 @@ export const EFFECTS: Record<Action, Effect[]> = {
       say: "The Listing Factory stops being able to build listings, and Shop Map "
         + "can no longer work out what new orders cost you to make." },
     { what: "artwork_provenance", disposition: "shared-kept",
-      say: "Print files Goldie already captured stay yours." },
+      say: "Print files already captured stay yours." },
   ],
   "delete-scan": [
     { what: "scan_history row", disposition: "removed", say: "This scan and its result." },
@@ -82,7 +82,7 @@ export const EFFECTS: Record<Action, Effect[]> = {
     { what: "niche_watches row", disposition: "removed",
       say: "You stop following this niche." },
     { what: "niche_watch_history", disposition: "shared-kept",
-      say: "The evidence Goldie gathered is market data. If you watch this niche "
+      say: "The evidence gathered is market data. If you watch this niche "
         + "again it will not start from nothing." },
   ],
   "remove-shop-watch": [

@@ -109,7 +109,7 @@ export const GET = withErrorLog("operations-beta", async (request: Request) => {
     const userId = row?.userId ?? fallback?.userId ?? null;
     if (!userId)
       return NextResponse.json({ found: false,
-        note: "No Goldie account has signed in with that address yet. A member "
+        note: "No account has signed in with that address yet. A member "
           + "must sign in once before access can be granted." });
     return NextResponse.json({ found: true, member: await profile(userId, row?.email ?? email) });
   }

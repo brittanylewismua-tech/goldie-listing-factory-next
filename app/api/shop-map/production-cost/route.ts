@@ -276,7 +276,7 @@ export const POST = withErrorLog("shop-map-production-cost-save", async (request
     }).ok);
     if (candidates.length !== 1)
       return NextResponse.json({
-        error: "There is no single Printify order Goldie can be sure about for "
+        error: "There is no single Printify order that can be matched with certainty for "
           + "this sale." }, { status: 409 });
 
     await db.prepare(

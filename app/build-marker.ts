@@ -161,7 +161,12 @@
    high contrast. A vision model had said both about a 7px-blurred design and a
    near-invisible one. An image-only design is now "unknown" on subject rather
    than off-subject. */
-export const BUILD_MARKER = "D1602";
+/* D1603 takes the old product name out of member-facing copy across the
+   product — notices, errors, access states, connections, emails, the account
+   footer. Code identifiers stay: a Stripe plan key, CSS class names, a
+   User-Agent. The guard now detects the word used as PROSE rather than
+   maintaining an allowlist of identifiers that kept needing new entries. */
+export const BUILD_MARKER = "D1603";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

@@ -75,4 +75,4 @@ export function buildUpdate(
 
 /** What the member sees when there is genuinely nothing. Not an empty page. */
 export const NOTHING_NEW =
-  "Nothing new in your watches since yesterday. Goldie is still watching.";
+  "Nothing new in your watches since yesterday. Market Watch is still watching.";

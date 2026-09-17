@@ -112,7 +112,7 @@ export function compare(
       && !measuredBlocksReadable && !measuredUnverified)
     working.push("It stays readable at thumbnail size, like the listings that are moving.");
   else if (measuredUnverified)
-    gaps.push({ weight: 2, say: "Goldie could not verify how this design reads at "
+    gaps.push({ weight: 2, say: "Readability at thumbnail size could not be verified, so "
       + "thumbnail size, so treat the comparison below as being about its construction." });
   else if (design.thumbnailReadability !== "readable" || measuredBlocksReadable)
     gaps.push({ weight: 5, say: "It gets hard to read at thumbnail size. That is where "

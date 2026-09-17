@@ -78,6 +78,6 @@ export function watchingLine(
 ): string {
   if (!watching) return "";
   /* Stated as a fact about what is being watched, never as movement. */
-  return ` Goldie is watching ${watching} listing${watching === 1 ? "" : "s"} across `
+  return ` Market Watch is watching ${watching} listing${watching === 1 ? "" : "s"} across `
     + `${shops} shop${shops === 1 ? "" : "s"} for this niche.`;
 }

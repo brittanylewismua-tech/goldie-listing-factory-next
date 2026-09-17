@@ -89,13 +89,13 @@ export function allows(
       : { ok: false, because: "That is not part of your plan.", upgrade: "full_suite" };
 
   if (entitlement.state === "none")
-    return { ok: false, because: "Your Goldie access is not active.", upgrade: "full_suite" };
+    return { ok: false, because: "Your access is not active.", upgrade: "full_suite" };
 
   /* Canceled keeps working to the end of the period that was paid for.
      Cutting access at the cancel click bills for time nobody gets. */
   if (entitlement.state === "canceled") {
     if (entitlement.until !== null && now > entitlement.until)
-      return { ok: false, because: "Your Goldie access ended.", upgrade: entitlement.plan };
+      return { ok: false, because: "Your access ended.", upgrade: entitlement.plan };
     return inPlan(entitlement.plan)
       ? { ok: true }
       : { ok: false, because: "That is not part of your plan.", upgrade: "full_suite" };
@@ -115,7 +115,7 @@ export function allows(
 
   /* Active. */
   if (entitlement.until !== null && now > entitlement.until)
-    return { ok: false, because: "Your Goldie access ended.", upgrade: entitlement.plan };
+    return { ok: false, because: "Your access ended.", upgrade: entitlement.plan };
   return inPlan(entitlement.plan)
     ? { ok: true }
     : { ok: false,

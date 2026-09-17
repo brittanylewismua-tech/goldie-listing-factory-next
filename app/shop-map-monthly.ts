@@ -82,7 +82,7 @@ export function summarizeMonth(month: string, lines: ReceiptLine[]): MonthlySumm
       grossRevenue: zeroMoney(currency), etsyFees: null, productionCost: null, profit: null,
       profitUnavailableBecause:
         `This month holds ${currencies.size} currencies (${[...currencies].join(", ")}). `
-        + `Goldie will not add them together.`,
+        + `They will not be added together.`,
     };
 
   const withFees = inMonth.filter(line => line.fees);

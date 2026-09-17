@@ -224,7 +224,7 @@ async function runDesign(
       model: DESIGN_MODEL_VERSION, cost: billed, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens }).catch(() => {});
     return { ok: false,
       because: error instanceof Error ? error.message : "the analysis failed",
-      memberMessage: "Goldie could not analyze this design just now. "
+      memberMessage: "This design could not be analyzed just now. "
         + "Nothing was charged to your daily limit — try again in a moment.",
       /* A call that never reached the provider is not a call. Reporting it as
          one made the unbilled failure look identical to the billed one in

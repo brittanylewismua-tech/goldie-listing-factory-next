@@ -59,7 +59,7 @@ export function storeWarning(stores: StoreSummary[], buildShopId: number): Store
       ? `You have ${stores.length} Printify stores with the same name`
       : `You have ${stores.length} Printify stores`,
     detail: duplicateName
-      ? `Goldie builds into ${label}. Your other store shares that name, so `
+      ? `Listings are built into ${label}. Your other store shares that name, so `
         + `Printify's store switcher looks identical either way — check the store `
         + `is set to the ${channelLabel(buildingIn.salesChannel)} before opening a draft, `
         + `or Printify will say the listing isn't available.`
@@ -69,7 +69,7 @@ export function storeWarning(stores: StoreSummary[], buildShopId: number): Store
         selected, so having more than one store is the whole condition - the
         names only decide how hard it is to notice.
       */
-      : `Goldie builds into ${label}. Printify opens drafts in whichever store `
+      : `Listings are built into ${label}. Printify opens drafts in whichever store `
         + `you last had selected, so set it to ${label} before opening one, or `
         + `Printify will say the listing isn't available.`,
   };

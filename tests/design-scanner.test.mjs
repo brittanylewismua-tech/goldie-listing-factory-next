@@ -614,7 +614,7 @@ test("a complete register describes exactly what was searched", () => {
   const ready = tmWithRegister(tmCheck("Bride Tribe"), [], true);
   assert.equal(ready.registerReady, true);
   assert.match(ready.summary,
-    /No exact or contained match was found in the current federal trademark register or Goldie's curated risk list/);
+    /No exact or contained match was found in the current federal trademark register or the curated risk list/);
   assert.match(ready.summary, /screening information, not legal clearance/);
   assert.ok(!ready.summary.toLowerCase().includes("character"));
 });

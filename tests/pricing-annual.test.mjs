@@ -69,7 +69,7 @@ test('trial reminder uses actual annual or legacy price and the correct period',
 const Signup=load('../app/signup/signup-client.tsx',{useEffect:React.useEffect,useRef:React.useRef,useState:React.useState,PLANS,GoldieWordmark:()=>React.createElement('span',null,'Goldie')}).default;
 test('homepage renders clear navigation, existing copy, and correct monthly prices',()=>{
   const html=renderToStaticMarkup(React.createElement(Signup,{signedIn:false}));
-  for(const text of ['Pricing','Login','Start for free','never seen before','automated listing assistant','14.99','24.99','39.99','Best for most shops','Card required'])assert.ok(html.includes(text),text);
+  for(const text of ['Pricing','Login','Start for free','never seen before','finished Etsy listings, in bulk','14.99','24.99','39.99','Best for most shops','Card required'])assert.ok(html.includes(text),text);
   assert.doesNotMatch(html,/MOST POPULAR|What counts as a listing creation/);assert.equal((html.match(/<article /g)||[]).length,3);
 });
 test('yearly display uses full billed prices and preserves interval through sign-in',()=>{

@@ -188,7 +188,7 @@ test("the scan lets measurement overrule the model, never the reverse", () => {
   assert.match(compare, /&& \(!measured \|\| measured\.mayClaimHighContrast\)/);
   /* And when it cannot be verified, the member is told that rather than
      receiving either a positive or a negative claim. */
-  assert.match(compare, /could not verify how this design reads at/);
+  assert.match(compare, /Readability at thumbnail size could not be verified/);
 });
 
 test("construction and subject stay separate in the result model", () => {

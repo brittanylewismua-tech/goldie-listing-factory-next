@@ -225,5 +225,5 @@ export function stillNeeded(
 
 /** What a member is told while a new niche has candidates but no evidence. */
 export const GATHERING =
-  "Goldie has started watching this niche. Listings appear here once they "
+  "Market Watch has started watching this niche. Listings appear here once they "
   + "actually move — not because a search returned them.";

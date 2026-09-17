@@ -134,7 +134,7 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
       return NextResponse.json({ listingId: cleanup, alreadyGone: true });
     if (!title.startsWith("GOLDIE INTERNAL"))
       return NextResponse.json({
-        error: "That listing is not a Goldie test draft. Nothing was deleted.",
+        error: "That listing is not an internal test draft. Nothing was deleted.",
         title, state,
       }, { status: 400 });
     const deleted = await remove(`/listings/${cleanup}`, { method: "DELETE" });
@@ -241,7 +241,7 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
     const fields = {
       quantity: "1",
       title: "GOLDIE INTERNAL — image id test, do not publish",
-      description: "Internal Goldie test listing. Created and deleted automatically. Never published.",
+      description: "Internal test listing. Created and deleted automatically. Never published.",
       price: "1.00",
       who_made: "i_did",
       when_made: "made_to_order",
@@ -263,7 +263,7 @@ export const GET = withErrorLog("shop-map-image-id-test", async (request: Reques
       const state = String((draft.parsed as { state?: string })?.state ?? "");
       if (!title.startsWith("GOLDIE INTERNAL") || state !== "draft")
         return NextResponse.json({
-          error: "That listing is not an unpublished Goldie test draft. Nothing was touched.",
+          error: "That listing is not an unpublished internal test draft. Nothing was touched.",
           title, state,
         }, { status: 400 });
       steps.push({ step: "using the existing test draft", listingId: existing, state });
