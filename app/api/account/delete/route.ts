@@ -105,13 +105,27 @@ export const POST = withErrorLog("account-delete", async (request: Request) => {
         } while (cursor);
         return removed;
       },
+      /*
+        The last finished run AND what it could not do. The steps are read
+        back out of the audit rather than recomputed, so a resume acts on
+        what actually happened rather than on an assumption about it.
+      */
       async existing(userId) {
         const row = await db.prepare(
-          `SELECT finished_at AS finishedAt FROM ${DELETION_AUDIT_TABLE}
+          `SELECT finished_at AS finishedAt, steps_json AS steps
+             FROM ${DELETION_AUDIT_TABLE}
             WHERE user_id = ? AND finished_at IS NOT NULL
             ORDER BY started_at DESC LIMIT 1`)
-          .bind(userId).first<{ finishedAt: string }>();
-        return row ? { finishedAt: row.finishedAt } : null;
+          .bind(userId).first<{ finishedAt: string; steps: string | null }>();
+        if (!row) return null;
+        let incompleteTables: string[] = [];
+        try {
+          const steps = JSON.parse(row.steps ?? "[]") as
+            Array<{ table: string; failed?: string }>;
+          incompleteTables = steps.filter(step => step.failed).map(step => step.table);
+        } catch { /* An unreadable audit is treated as nothing outstanding:
+                     it must not trigger an unbounded resume. */ }
+        return { finishedAt: row.finishedAt, incompleteTables };
       },
     },
   });
@@ -121,7 +135,13 @@ export const POST = withErrorLog("account-delete", async (request: Request) => {
       { status: 400 });
 
   return NextResponse.json({
+    /*
+      `deleted` says the request ran; `complete` says whether it finished.
+      An interface must never turn the first into a success message.
+    */
     deleted: true,
+    complete: outcome.complete,
+    resumed: outcome.resumed,
     alreadyDone: outcome.alreadyDone,
     finishedAt: outcome.finishedAt,
     /*

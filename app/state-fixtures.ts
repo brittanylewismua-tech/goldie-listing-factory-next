@@ -461,6 +461,7 @@ export const stateFixtures = (): StateFixture[] => [
       { path: "/api/account/delete", status: 200,
         body: { deleted: true, alreadyDone: false,
           say: "Your data has been removed and your connections switched off.",
+          complete: true, resumed: false,
           removed: [
             { say: "Your design scans and their results.", changed: 27 },
             { say: "The niches you were watching.", changed: 7 },
@@ -486,9 +487,23 @@ export const stateFixtures = (): StateFixture[] => [
             { say: "Your design scans and their results.", changed: 27 },
             { say: "The niches you were watching.", changed: 7 },
             { say: "The print files you uploaded.", changed: 112 }],
+          complete: false, resumed: false,
           incomplete: [{ say: "Your mockup templates." }],
           kept: ["Your billing record with the payment processor.",
             "The record of what you subscribed to and when."] } }] },
+
+  { key: "account-delete-resumed", label: "Deletion resumed and finished", surface: "account",
+    what: "A second attempt picks up only what failed and finishes. Nothing is repeated.",
+    replies: [
+      { path: "/api/account/data", status: 200,
+        body: { yours: {}, kept: [], note: "" } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite" } } },
+      { path: "/api/account/delete", status: 200,
+        body: { deleted: true, alreadyDone: false, complete: true, resumed: true,
+          say: "Your data has been removed and your connections switched off.",
+          removed: [{ say: "Your mockup templates.", changed: 14 }],
+          incomplete: [],
+          kept: ["Your billing record with the payment processor."] } }] },
 
   { key: "account-delete-already", label: "Deletion already done", surface: "account",
     what: "A retry reports the same completion and runs nothing.",

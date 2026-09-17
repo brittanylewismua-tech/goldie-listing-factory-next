@@ -69,10 +69,19 @@ function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void 
        removed" when some of it was not has been misled about the one thing
        they cannot check for themselves. */
     incomplete?: { say: string }[]; kept?: string[];
+    /*
+      Whether the deletion actually finished, as distinct from whether the
+      request ran. A partial run must not render as the success confirmation:
+      the member is the one person who cannot check, so the difference is on
+      the screen rather than in the wording alone.
+    */
+    complete?: boolean; resumed?: boolean;
     say: string } | null>(null);
 
   if (done) return (
-    <div className="acc-deleted" role="status">
+    <div className={done.complete === false ? "acc-deleted acc-deleted-partial" : "acc-deleted"}
+      role="status">
+      {done.complete === false && <b className="acc-deleted-heading">Deletion unfinished</b>}
       <b>{done.say}</b>
       {done.removed.length > 0 && (
         <ul>{done.removed.map(step => (
@@ -84,8 +93,8 @@ function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void 
           <b>This could not be removed</b>
           <ul>{done.incomplete!.map(step => <li key={step.say}>{step.say}</li>)}</ul>
           <p>
-            It has been recorded. Asking again will finish it — nothing that was
-            already removed is affected.
+            It has been recorded. Asking again resumes from here and attempts only
+            these — nothing already removed is touched a second time.
           </p>
         </div>
       )}
@@ -145,6 +154,7 @@ function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void 
                      below" above nothing at all. A promise of a list is
                      worse than no list. */
                   incomplete?: { say: string }[]; kept?: string[];
+                  complete?: boolean; resumed?: boolean;
                   say?: string; error?: string };
                 if (!response.ok || !answer.deleted) {
                   setError(answer.error || "That did not go through. Nothing was changed.");
@@ -152,6 +162,7 @@ function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void 
                 }
                 setDone({ removed: answer.removed ?? [],
                   incomplete: answer.incomplete ?? [], kept: answer.kept ?? [],
+                  complete: answer.complete !== false, resumed: Boolean(answer.resumed),
                   say: answer.say ?? "Your data has been removed." });
                 onDone();
               } catch {

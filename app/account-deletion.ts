@@ -30,7 +30,19 @@ export type DeletionStep = { table: string; changed: number; failed?: string };
 export type DeletionOutcome =
   | { ok: true; alreadyDone: boolean; steps: DeletionStep[];
       /* Steps that could not be carried out. Empty on a clean run. */
-      incomplete: DeletionStep[]; finishedAt: string }
+      incomplete: DeletionStep[];
+      /*
+        WHETHER THE DELETION IS ACTUALLY DONE.
+
+        Distinct from `ok`, which only means the request was allowed and ran.
+        A run with a failed step is not a success, and no interface may show
+        it as one — so the honest answer to "is this finished" is its own
+        field rather than something a reader has to infer from an empty array.
+      */
+      complete: boolean;
+      /* True when this run picked up steps a previous run could not do. */
+      resumed: boolean;
+      finishedAt: string }
   | { ok: false; because: string };
 
 export type DeletionRunner = {
@@ -38,7 +50,13 @@ export type DeletionRunner = {
   run(sql: string, userId: string): Promise<number>;
   begin(userId: string, at: number): Promise<void>;
   finish(userId: string, at: number, steps: DeletionStep[]): Promise<void>;
-  existing(userId: string): Promise<{ finishedAt: string | null } | null>;
+  /*
+    The last finished run, and which of its steps did not succeed. The tables
+    are what make a resume possible: without them a partial deletion could
+    only be repeated whole or abandoned.
+  */
+  existing(userId: string): Promise<
+    { finishedAt: string | null; incompleteTables?: string[] } | null>;
   /*
     Stored files, removed by member-scoped prefix. Optional so the lifecycle
     can still be exercised against a store that has no object bucket; a runner
@@ -62,11 +80,33 @@ export async function deleteAccount(
   const allowed = mayDelete({ phrase, authenticatedAt, now });
   if (!allowed.ok) return { ok: false, because: allowed.because };
 
-  /* Already finished? Say so and touch nothing. */
+  /*
+    FINISHED, OR FINISHED EXCEPT FOR SOMETHING.
+
+    A first version returned "already removed, nothing further was changed"
+    for any finished audit. But a run with a failed step also finishes its
+    audit — that is what keeps the record honest and stops a retry repeating
+    the whole plan — so a member whose deletion had partly failed was told it
+    was complete, one screen after being told that asking again would finish
+    it. The interface promised a resume the lifecycle could not perform.
+
+    A finished run with nothing outstanding is reported and touched. A
+    finished run with outstanding steps is RESUMED: only those steps are
+    attempted, so nothing already done is repeated.
+  */
   const prior = await runner.existing(userId);
-  if (prior?.finishedAt)
+  const outstanding = prior?.finishedAt ? prior.incompleteTables ?? [] : [];
+  if (prior?.finishedAt && outstanding.length === 0)
     return { ok: true, alreadyDone: true, steps: [], incomplete: [],
-      finishedAt: prior.finishedAt };
+      complete: true, resumed: false, finishedAt: prior.finishedAt };
+
+  const resuming = outstanding.length > 0;
+  const plan = resuming
+    ? DELETION_PLAN.filter(step => outstanding.includes(step.table))
+    : DELETION_PLAN;
+  const prefixes = resuming
+    ? OBJECT_PREFIXES.filter(entry => outstanding.includes(`${entry.prefix}<member>`))
+    : OBJECT_PREFIXES;
 
   await runner.begin(userId, now);
 
@@ -88,7 +128,7 @@ export async function deleteAccount(
     One statement, one bound parameter: the member's own id.
   */
   const steps: DeletionStep[] = [];
-  for (const step of DELETION_PLAN) {
+  for (const step of plan) {
     try {
       const changed = await runner.run(step.sql, userId);
       steps.push({ table: step.table, changed });
@@ -101,7 +141,7 @@ export async function deleteAccount(
   /* Files, after rows. A row pointing at a deleted object is a broken
      reference; an object with no row pointing at it is unreachable, which is
      the safer order to fail in. */
-  for (const entry of OBJECT_PREFIXES) {
+  for (const entry of prefixes) {
     const table = `${entry.prefix}<member>`;
     if (!runner.removeObjects) {
       steps.push({ table, changed: 0, failed: "no object store was available" });
@@ -124,6 +164,7 @@ export async function deleteAccount(
   */
   await runner.finish(userId, now, steps);
   return { ok: true, alreadyDone: false, steps, incomplete,
+    complete: incomplete.length === 0, resumed: resuming,
     finishedAt: new Date(now * 1000).toISOString() };
 }
 

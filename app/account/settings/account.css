@@ -64,3 +64,9 @@
 .acc-kept{background:var(--p-card-quiet)}
 .acc-incomplete ul,.acc-kept ul{margin:0;padding-left:18px}
 .acc-incomplete p,.acc-kept p{margin:0;color:var(--p-muted);font-size:12px}
+
+/* D1654 · A partial deletion is not the success confirmation. It carries its
+   own heading so the difference is on the screen, not only in the wording. */
+.acc-deleted-partial{border:1px solid #e4cedb;background:var(--p-bad-soft);
+  border-radius:var(--p-radius);padding:var(--p-4)}
+.acc-deleted-partial .acc-deleted-heading{color:#7d3346;font-size:15px}

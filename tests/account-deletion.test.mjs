@@ -14,7 +14,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { deleteAccount, DELETION_AUDIT_TABLE } from "../app/account-deletion.ts";
-import { DELETION_PLAN, OBJECT_PREFIXES, CONFIRMATION_PHRASE, RECENT_AUTH_SECONDS } from "../app/deletion-plan.ts";
+import { DELETION_PLAN, OBJECT_PREFIXES, NOT_MEMBER_DATA, CONFIRMATION_PHRASE, RECENT_AUTH_SECONDS } from "../app/deletion-plan.ts";
 
 const NOW = 1_800_000_000;
 const VICTIM = "disposable-identity";
@@ -68,8 +68,14 @@ function seededStore() {
         open.steps = steps;
       },
       async existing(userId) {
-        const done = audits.find(entry => entry.userId === userId && entry.finishedAt);
-        return done ? { finishedAt: done.finishedAt } : null;
+        /* The most recent finished run, and what it could not do — the same
+           shape the real storage reads back out of the audit. */
+        const done = [...audits].reverse()
+          .find(entry => entry.userId === userId && entry.finishedAt);
+        if (!done) return null;
+        return { finishedAt: done.finishedAt,
+          incompleteTables: (done.steps ?? [])
+            .filter(step => step.failed).map(step => step.table) };
       },
     },
   };
@@ -308,4 +314,193 @@ test("the confirmation renders the lists its own sentence promises", () => {
   assert.match(client, /kept: answer\.kept \?\? \[\]/);
   assert.match(client, /done\.incomplete!\.map/);
   assert.match(client, /done\.kept!\.map/);
+});
+
+/* ------------------------------------------------------------------------
+   THE FINAL SAFEGUARDS.
+
+   Deletion is the one thing in this product with no second attempt against a
+   real account, so each of these is proved against a seeded store and a
+   bystander identity rather than reasoned about. Controlled fixtures only:
+   nothing here touches a real member.
+   ------------------------------------------------------------------------ */
+
+const failingOn = (store, tables) => ({ ...store.runner,
+  async run(sql, userId) {
+    const table = /(?:DELETE FROM|UPDATE)\s+(\w+)/.exec(sql)?.[1];
+    if (tables.includes(table)) throw new Error(`no such table: ${table}`);
+    return store.runner.run(sql, userId);
+  } });
+
+test("a failed step means the outcome is not complete", () => {
+  /* `ok` says the request was allowed and ran. `complete` says whether it
+     finished. An interface must never turn the first into the second. */
+  const route = readFileSync(new URL(
+    "../app/api/account/delete/route.ts", import.meta.url), "utf8");
+  assert.match(route, /complete: outcome\.complete/);
+  const client = readFileSync(new URL(
+    "../app/account/settings/account-client.tsx", import.meta.url), "utf8");
+  assert.match(client, /complete\?: boolean/,
+    "the interface must receive whether the deletion finished");
+});
+
+test("a partial run reports incomplete, and a resume finishes only what failed", async () => {
+  /*
+    A run with a failed step finishes its audit — that is what keeps the
+    record honest and stops a retry repeating the whole plan. A first version
+    then answered any finished audit with "already removed, nothing further
+    was changed", so a member whose deletion had partly failed was told it was
+    complete one screen after being told that asking again would finish it.
+  */
+  const store = seededStore();
+  const first = await deleteAccount({ ...good(store),
+    runner: failingOn(store, ["mockup_templates", "keyword_lists"]) });
+
+  assert.equal(first.complete, false, "a failed step is not a completed deletion");
+  assert.equal(first.resumed, false);
+  assert.equal(first.incomplete.length, 2);
+
+  /* Resume: only the two failed tables are touched. */
+  const attempted = [];
+  const watching = { ...store.runner,
+    async run(sql, userId) {
+      attempted.push(/(?:DELETE FROM|UPDATE)\s+(\w+)/.exec(sql)?.[1]);
+      return store.runner.run(sql, userId);
+    } };
+  const second = await deleteAccount({ ...good(store), runner: watching });
+
+  assert.equal(second.ok, true);
+  assert.equal(second.resumed, true, "the second run must resume, not report done");
+  assert.equal(second.alreadyDone, false);
+  assert.deepEqual(attempted.sort(), ["keyword_lists", "mockup_templates"],
+    "a resume must attempt only the steps that failed");
+  assert.equal(second.complete, true);
+
+  /* And a third run, with nothing outstanding, changes nothing. */
+  let ranAgain = false;
+  const third = await deleteAccount({ ...good(store),
+    runner: { ...store.runner, async run(sql, userId) {
+      ranAgain = true; return store.runner.run(sql, userId); } } });
+  assert.equal(third.alreadyDone, true);
+  assert.equal(third.complete, true);
+  assert.equal(ranAgain, false, "nothing already done may be repeated");
+});
+
+test("a resume does not repeat a completed step destructively", async () => {
+  /* Every step is scoped to one member and idempotent, but a resume must not
+     rely on that: it attempts only what is outstanding. */
+  const store = seededStore();
+  await deleteAccount({ ...good(store), runner: failingOn(store, ["scan_history"]) });
+  /* The bystander's rows in an ALREADY completed table are the canary: a
+     resume that re-ran everything would still have to leave them, but one
+     that re-ran nothing cannot touch them at all. */
+  const before = JSON.stringify([...store.rows.entries()]);
+  const attempted = [];
+  await deleteAccount({ ...good(store),
+    runner: { ...store.runner, async run(sql, userId) {
+      attempted.push(sql); return store.runner.run(sql, userId); } } });
+  assert.equal(attempted.length, 1);
+  assert.match(attempted[0], /scan_history/);
+  const after = JSON.parse(before);
+  for (const [table, rows] of after)
+    if (table !== "scan_history")
+      assert.deepEqual(store.rows.get(table), rows, `${table} was touched again`);
+});
+
+test("R2 removal pages to the end of the prefix", async () => {
+  /*
+    R2 lists a page at a time. A first implementation that removed the first
+    page and reported success would leave every object past it in the bucket
+    while telling the member their files were gone.
+  */
+  const store = seededStore();
+  const pages = [];
+  const paging = { ...store.runner,
+    async removeObjects(prefix, userId) {
+      /* 2,500 objects across three pages of 1,000. */
+      let removed = 0;
+      for (let page = 0; page < 3; page += 1) {
+        const size = page < 2 ? 1_000 : 500;
+        pages.push({ prefix, page, size });
+        removed += size;
+      }
+      void userId;
+      return removed;
+    } };
+  const outcome = await deleteAccount({ ...good(store), runner: paging });
+  for (const entry of OBJECT_PREFIXES) {
+    const step = outcome.steps.find(one => one.table === `${entry.prefix}<member>`);
+    assert.equal(step.changed, 2_500, `${entry.prefix} stopped before the end`);
+  }
+  assert.equal(pages.length, OBJECT_PREFIXES.length * 3);
+
+  /* And the real implementation follows the cursor rather than one page. */
+  const route = readFileSync(new URL(
+    "../app/api/account/delete/route.ts", import.meta.url), "utf8");
+  assert.match(route, /cursor = page\.truncated \? page\.cursor : undefined/);
+  assert.match(route, /\} while \(cursor\)/);
+  assert.match(route, /key\.startsWith\(scoped\)/,
+    "keys must be re-checked before an unrecoverable delete");
+});
+
+test("tokens are destroyed and entitlement is removed", () => {
+  const etsy = DELETION_PLAN.find(step => step.table === "etsy_connections");
+  assert.equal(etsy.disposition, "retire");
+  assert.match(etsy.sql, /encrypted_access_token = ''/);
+  assert.match(etsy.sql, /encrypted_refresh_token = ''/);
+  assert.match(etsy.sql, /is_active = 0/);
+  const printify = DELETION_PLAN.find(step => step.table === "printify_connections");
+  assert.match(printify.sql, /encrypted_token = ''/);
+  const entitlement = DELETION_PLAN.find(step => step.table === "member_entitlements");
+  assert.match(entitlement.sql, /state = 'none'/);
+  assert.match(entitlement.sql, /plan = NULL/);
+});
+
+test("the audit record survives the deletion it records", () => {
+  /* Deleting the proof of a deletion is how a system ends up unable to answer
+     the only question that matters afterwards. */
+  assert.ok(!DELETION_PLAN.some(step => step.table === DELETION_AUDIT_TABLE),
+    "the audit table must not be in the plan it audits");
+  assert.ok(NOT_MEMBER_DATA.some(entry => entry.table === DELETION_AUDIT_TABLE),
+    "and it must be accounted for as deliberately kept");
+});
+
+test("another member's rows and objects survive a partial run too", async () => {
+  /*
+    A partial run is the case where a mistake would be hardest to see: some
+    tables are cleared, some are not, and the bystander's rows have to come
+    through all of it untouched.
+  */
+  const failed = ["scan_history", "niche_watches"];
+  const store = seededStore();
+  await deleteAccount({ ...good(store), runner: failingOn(store, failed) });
+
+  const disposition = new Map(DELETION_PLAN.map(step => [step.table, step.disposition]));
+  for (const [table, rows] of store.rows) {
+    if (failed.includes(table)) {
+      /* The step failed, so the member's rows are still there — that is what
+         "incomplete" means, and it is why the resume exists. */
+      assert.ok(rows.some(row => row.user_id === VICTIM),
+        `${table} was reported as failed but its rows are gone`);
+      continue;
+    }
+    if (disposition.get(table) === "retire") {
+      /* A retired row survives on purpose, with its secret destroyed — the
+         record that the connection existed is what shows nothing was
+         published after the member left. */
+      const mine = rows.filter(row => row.user_id === VICTIM);
+      assert.ok(mine.length > 0, `${table} was dropped rather than retired`);
+      assert.ok(mine.every(row => row.retired), `${table} was not actually retired`);
+      continue;
+    }
+    for (const row of rows)
+      assert.equal(row.user_id, BYSTANDER,
+        `${table} still holds a row belonging to the deleted member`);
+  }
+  /* The bystander is untouched everywhere, failed tables included. */
+  for (const [table, rows] of store.rows)
+    assert.ok(rows.some(row => row.user_id === BYSTANDER),
+      `${table} lost the other member's rows`);
+  for (const key of store.objects)
+    assert.ok(key.includes(BYSTANDER), `a prefix delete reached ${key}`);
 });
