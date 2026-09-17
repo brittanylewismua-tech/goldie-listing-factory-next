@@ -93,6 +93,56 @@ const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
   account: () => <AccountClient email="preview@example.invalid" />,
 };
 
+/*
+  EVERY STATE, EVERY PHONE WIDTH, IN ONE PASS.
+
+  The states were swept by hand once — twenty-two of them at 375, 390 and
+  430 — and a sweep done by hand is a sweep done once. Each state is loaded
+  into an iframe of that exact width, which gives the page a real CSS
+  viewport and makes its media queries fire, and is then measured for the
+  four things that actually go wrong at phone width: the page scrolling
+  sideways, an element wider than the screen, a tap target under 40px, and a
+  request no fixture answered.
+
+  It reads; it changes nothing. The previews it opens have their own closed
+  network, so this cannot reach anything either.
+*/
+const PHONE_WIDTHS = [375, 390, 430];
+
+async function sweepOne(state: string, width: number): Promise<string[]> {
+  const frame = document.createElement("iframe");
+  frame.style.cssText =
+    `position:fixed;left:-9999px;top:0;width:${width}px;height:900px;border:0`;
+  frame.src = `/dev/state-preview?state=${encodeURIComponent(state)}`;
+  document.body.appendChild(frame);
+  await new Promise(resolve => { frame.onload = resolve; setTimeout(resolve, 6_000); });
+  await new Promise(resolve => setTimeout(resolve, 350));
+  const found: string[] = [];
+  try {
+    const doc = frame.contentDocument!;
+    const view = frame.contentWindow!;
+    const main = doc.querySelector("main");
+    if (!main) found.push("nothing rendered");
+    else {
+      const over = main.scrollWidth - view.innerWidth;
+      if (over > 0) found.push(`scrolls sideways by ${over}px`);
+      for (const node of main.querySelectorAll("*"))
+        if (node.getBoundingClientRect().width > view.innerWidth + 1)
+          found.push(`wider than the screen: ${node.tagName.toLowerCase()}`);
+      for (const node of main.querySelectorAll("button, a, select")) {
+        const box = node.getBoundingClientRect();
+        if (box.width > 0 && box.height > 0 && box.height < 40)
+          found.push(`${Math.round(box.height)}px tap target: `
+            + `${(node.textContent ?? "").trim().slice(0, 24)}`);
+      }
+    }
+    const refused = doc.querySelector(".sp-refused")?.textContent?.trim();
+    if (refused) found.push(refused.slice(0, 80));
+  } catch { found.push("could not be measured"); }
+  frame.remove();
+  return [...new Set(found)];
+}
+
 export default function StatePreviewClient({ initial }: { initial: string }) {
   const all = useMemo(() => stateFixtures(), []);
   const [key, setKey] = useState(initial || all[0].key);
@@ -113,6 +163,31 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
 
   const Surface = fixture ? SURFACES[fixture.surface] : null;
 
+  const [sweep, setSweep] = useState<{ running: boolean; done: number; total: number;
+    problems: string[] } | null>(null);
+  /*
+    The sweep opens each state in an iframe, and those iframes render this
+    same component. Set after mount rather than read during render, because
+    this page is server-rendered first and `window` does not exist there.
+  */
+  const [topLevel, setTopLevel] = useState(false);
+  useEffect(() => { setTopLevel(window.self === window.top); }, []);
+
+  const runSweep = async () => {
+    const total = all.length * PHONE_WIDTHS.length;
+    setSweep({ running: true, done: 0, total, problems: [] });
+    const problems: string[] = [];
+    let done = 0;
+    for (const width of PHONE_WIDTHS)
+      for (const entry of all) {
+        for (const line of await sweepOne(entry.key, width))
+          problems.push(`${entry.key} @${width}: ${line}`);
+        done += 1;
+        setSweep({ running: true, done, total, problems: [...problems] });
+      }
+    setSweep({ running: false, done: total, total, problems });
+  };
+
   return <div className="state-preview">
     <header className="sp-bar">
       <div className="sp-title">
@@ -131,6 +206,26 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
       </label>
     </header>
     {fixture && <p className="sp-what">{fixture.what}</p>}
+    {topLevel && (
+      <p className="sp-sweep">
+        <button type="button" className="p-button p-button-quiet"
+          onClick={() => void runSweep()} disabled={sweep?.running}>
+          {sweep?.running
+            ? `Checking ${sweep.done} of ${sweep.total}…`
+            : "Check every state at phone widths"}
+        </button>
+        {sweep && !sweep.running && (sweep.problems.length === 0
+          ? <span className="sp-sweep-ok">
+              {sweep.total} checks clean — nothing scrolls sideways, nothing is wider
+              than the screen, no tap target under 40px, no unanswered request.
+            </span>
+          : <span className="sp-sweep-bad">
+              {sweep.problems.length} problem{sweep.problems.length === 1 ? "" : "s"}:{" "}
+              {sweep.problems.slice(0, 6).join(" · ")}
+              {sweep.problems.length > 6 ? " …" : ""}
+            </span>)}
+      </p>
+    )}
     {refused.length > 0 && (
       <p className="sp-refused" role="status">
         Refused {refused.length} request{refused.length === 1 ? "" : "s"} with no fixture:{" "}

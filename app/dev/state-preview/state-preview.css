@@ -27,3 +27,10 @@
   .sp-pick { width: 100%; }
   .sp-pick select { min-width: 0; width: 100%; }
 }
+
+/* The sweep: one control, and its finding in words rather than a colour. */
+.sp-sweep{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0;
+  padding:8px 16px;border-bottom:1px solid var(--p-line);font-size:12px;line-height:1.5}
+.sp-sweep .p-button{min-height:44px;padding:0 12px}
+.sp-sweep-ok{color:var(--p-good)}
+.sp-sweep-bad{color:var(--p-bad);overflow-wrap:anywhere}

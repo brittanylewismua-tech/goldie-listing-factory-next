@@ -372,3 +372,29 @@ test("the observation sample is taken after the work it measures", () => {
     "the sample must be taken after the correlator has run");
   assert.match(sequenced, /await app\.fetch\(new Request\(site \+ "\/api\/market\/correlate"\)/);
 });
+
+test("the phone-width sweep is a control, not something done by hand once", () => {
+  /*
+    Twenty-two states were checked at 375, 390 and 430 by hand — sixty-six
+    measurements, all clean — and a sweep done by hand is a sweep done once.
+    It is a button now, and it measures the four things that actually go
+    wrong at phone width rather than being a screenshot somebody eyeballed.
+  */
+  const source = read("dev/state-preview/preview-client.tsx");
+  assert.match(source, /const PHONE_WIDTHS = \[375, 390, 430\]/);
+  assert.match(source, /scrolls sideways by/);
+  assert.match(source, /wider than the screen/);
+  assert.match(source, /tap target/);
+  /* Each state gets a real CSS viewport, not a scaled screenshot: an iframe
+     of that exact width is what makes the media queries fire. */
+  assert.match(source, /width:\$\{width\}px/);
+  /*
+    The sweep opens this same component inside each iframe, so the control
+    must not recurse — and `window` cannot be read during render, because
+    this page is server-rendered first.
+  */
+  assert.match(source, /const \[topLevel, setTopLevel\] = useState\(false\)/);
+  assert.match(source, /setTopLevel\(window\.self === window\.top\)/);
+  assert.ok(!/\{window\.self === window\.top &&/.test(source),
+    "reading window during render breaks the server render");
+});
