@@ -3133,3 +3133,9 @@ body{min-width:0}
   font:600 12px/1.5 "Manrope",system-ui,sans-serif;
   text-align:center!important;
 }
+
+/* D1598 · The reason a listing was not created, shown where the Retry button
+   is. It was a bare "Retry listing" over a draft whose own `error` field said
+   "Reload the saved product to renew this batch connection" — the only
+   sentence that would have helped. */
+.recipe-listing-card .recipe-listing-failure{margin:0 0 8px;padding:9px 11px;border:1px solid #e4cedb;border-radius:9px;background:#fff1ef;color:#8b3346;font-size:11px;line-height:1.45}

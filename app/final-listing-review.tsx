@@ -156,7 +156,15 @@ export default function FinalListingReview({drafts,files,selections,defaultIndic
           ],issue=sections.find(section=>!section.ready)?.detail||"";return <article className={`recipe-listing-card ${issue?"needs-work":"is-ready"}`} key={`${name}:${draft.clientId}`}>
             <div className="recipe-listing-image">{previews.length?<ReviewPreviewImage sources={previews} alt="Product preview"/>:<span>No preview</span>}</div>
             <div className="recipe-listing-copy"><small>Listing {items.indexOf(draft)+1} of {items.length}</small><h5>{design?.title||`Untitled listing ${items.indexOf(draft)+1}`}</h5><p>{priceLabel(draft)} · {design?.tags?.length||0}/13 tags · {photoCount} {photoCount===1?"photo":"photos"}{sizeGuideReady?" · size guide ready":""}</p>{!issue&&<strong className="ready">✓ Ready</strong>}</div>
-            {draft.status!=="Created"?<button type="button" className="recipe-listing-retry" onClick={()=>onRetry?.(draft.clientId)||window.dispatchEvent(new CustomEvent("goldie-retry-draft",{detail:{clientId:draft.clientId}}))}>Retry listing</button>:<nav className="recipe-listing-sections" aria-label={`Edit listing ${items.indexOf(draft)+1}`}>{sections.map(section=><button type="button" key={section.label} aria-label={`${section.label}: ${section.ready?"complete":"incomplete"}. ${section.detail}`} onClick={section.run}><span className={section.ready?"is-complete":"is-incomplete"} aria-hidden="true">{section.ready?"✓":"×"}</span><b>{section.label}</b><small>{section.detail}</small><em>Edit <span aria-hidden="true">→</span></em></button>)}</nav>}
+            {/* D1598 · WHY IT FAILED, NOT JUST THAT IT DID.
+
+                A refused creation showed a bare "Retry listing". The reason was
+                sitting on the draft the whole time — measured on a real
+                attempt, it was "Reload the saved product to renew this batch
+                connection", which is the one thing that would have told the
+                member what to do. Pressing Retry without renewing the
+                connection fails the same way every time. */}
+            {draft.status!=="Created"?<><p className="recipe-listing-failure" role="status">{draft.error||"This listing was not created in Printify yet."}</p><button type="button" className="recipe-listing-retry" onClick={()=>onRetry?.(draft.clientId)||window.dispatchEvent(new CustomEvent("goldie-retry-draft",{detail:{clientId:draft.clientId}}))}>Retry listing</button></>:<nav className="recipe-listing-sections" aria-label={`Edit listing ${items.indexOf(draft)+1}`}>{sections.map(section=><button type="button" key={section.label} aria-label={`${section.label}: ${section.ready?"complete":"incomplete"}. ${section.detail}`} onClick={section.run}><span className={section.ready?"is-complete":"is-incomplete"} aria-hidden="true">{section.ready?"✓":"×"}</span><b>{section.label}</b><small>{section.detail}</small><em>Edit <span aria-hidden="true">→</span></em></button>)}</nav>}
           </article>})}</div>
         </section>})}</div>
     </section>;

@@ -83,7 +83,20 @@ function batchListItem(row:Record<string,unknown>,publishedByBatch:Record<string
      or not a single draft existed. Measured across all 17 saved batches: not one
      had a draft in its snapshot, and all 17 claimed drafts were ready. The count
      is right here in the state, so report it. */
-  draft_count:(state.drafts||[]).length,/* D511 - a batch minted by the bundle run has no drafts yet, so this found no
+  /*
+    D1598 · A FAILED DRAFT OBJECT IS NOT A DRAFT.
+
+    This counted every entry in the client's draft array, including ones whose
+    status is "Failed" or "NeedsRetry". A batch whose only creation attempt was
+    refused therefore reported `draft_count: 1` — which read exactly like a
+    successful draft and made the batch's real state unreadable. It is what
+    sent a manual audit looking for a Printify product that had never been
+    created, and from there at an id belonging to a real customer product.
+
+    A draft counts when Printify created it and said so.
+  */
+  draft_count:(state.drafts||[]).filter(draft=>draft?.status==="Created"&&Boolean(draft?.id)).length,
+  attempted_draft_count:(state.drafts||[]).length,/* D511 - a batch minted by the bundle run has no drafts yet, so this found no
      preview and the row showed a grey placeholder icon - on the very screen whose
      job is to let her recognise a batch at a glance. The product's own photo is
      in the snapshot; use it until a draft preview exists. */

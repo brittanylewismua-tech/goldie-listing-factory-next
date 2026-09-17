@@ -148,7 +148,11 @@
    silently returned false inside the Listing Factory workflow, so every
    guarded control there — including the only way out of a paused batch — was
    a button that did nothing. It fails closed and says so now. */
-export const BUILD_MARKER = "D1597";
+/* D1598 stops counting a failed draft object as a draft, and shows WHY a
+   listing was not created instead of a bare Retry button. A refused attempt
+   reported draft_count 1, which reads like a success and is what sent an
+   audit hunting a Printify product that never existed. */
+export const BUILD_MARKER = "D1598";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
