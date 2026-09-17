@@ -276,7 +276,20 @@ export const stateFixtures = (): StateFixture[] => [
     what: "Low contrast, crisp edges. ONE note, about contrast. Nothing about blur.",
     replies: [
       { path: "/api/design-scanner/scan", method: "GET", status: 200,
-        body: { scans: [], scansLeftToday: 7 } },
+        /* The same result in the saved list, so the state is reachable the
+           way a member reaches it — by reopening a scan — rather than only
+           by uploading a file the preview cannot supply. */
+        body: { scansLeftToday: 6, scans: [{ id: "q-faint", niche: "bachelorette",
+          artworkHash: "a1-preview", createdAt: secondsAgo(7_200),
+          result: {
+          ok: true, niche: "bachelorette", overall: "Partial visual-pattern alignment",
+          scansLeftToday: 6, warm: false, trademark: null,
+          imageQuality: { contrast: "fail", sharpness: "pass", thumbnailReadable: "fail",
+            notes: ["The design's light and dark areas are too close together to read "
+              + "easily (measured 2.1:1; around 4.5:1 is where text stays comfortable)."] },
+          working: ["Script lettering, which most of the moving listings use."],
+          opportunity: "The moving listings set the date much smaller than the name.",
+          evidence: "Compared with 23 listings confirmed moving in the last 14 days." } }] } },
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
       { path: "/api/design-scanner/scan", method: "POST", status: 200, body: {
         ok: true, niche: "bachelorette", overall: "Partial visual-pattern alignment",
@@ -292,7 +305,20 @@ export const stateFixtures = (): StateFixture[] => [
     what: "Strong contrast, soft edges. ONE note, about softness. Nothing about contrast.",
     replies: [
       { path: "/api/design-scanner/scan", method: "GET", status: 200,
-        body: { scans: [], scansLeftToday: 7 } },
+        /* The same result in the saved list, so the state is reachable the
+           way a member reaches it — by reopening a scan — rather than only
+           by uploading a file the preview cannot supply. */
+        body: { scansLeftToday: 6, scans: [{ id: "q-soft", niche: "dog mom",
+          artworkHash: "a1-preview", createdAt: secondsAgo(7_200),
+          result: {
+          ok: true, niche: "dog mom", overall: "Strong visual-pattern alignment",
+          scansLeftToday: 6, warm: false, trademark: null,
+          imageQuality: { contrast: "pass", sharpness: "fail", thumbnailReadable: "pass",
+            notes: ["The edges in this design are soft. At the size buyers first see it, "
+              + "that reads as a blurry picture rather than a soft style."] },
+          working: ["Heavy slab lettering, like the listings that keep moving."],
+          opportunity: "Most moving listings put the animal above the words, not beside them.",
+          evidence: "Compared with 31 listings confirmed moving in the last 14 days." } }] } },
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
       { path: "/api/design-scanner/scan", method: "POST", status: 200, body: {
         ok: true, niche: "dog mom", overall: "Strong visual-pattern alignment",
@@ -308,7 +334,21 @@ export const stateFixtures = (): StateFixture[] => [
     what: "Both measurements fail. BOTH notes appear. Neither is written as the cause of the other.",
     replies: [
       { path: "/api/design-scanner/scan", method: "GET", status: 200,
-        body: { scans: [], scansLeftToday: 7 } },
+        /* The same result in the saved list, so the state is reachable the
+           way a member reaches it — by reopening a scan — rather than only
+           by uploading a file the preview cannot supply. */
+        body: { scansLeftToday: 6, scans: [{ id: "q-both", niche: "teacher",
+          artworkHash: "a1-preview", createdAt: secondsAgo(7_200),
+          result: {
+          ok: true, niche: "teacher", overall: "Partial visual-pattern alignment",
+          scansLeftToday: 6, warm: false, trademark: null,
+          imageQuality: { contrast: "fail", sharpness: "fail", thumbnailReadable: "fail",
+            notes: ["The design's light and dark areas are too close together to read "
+              + "easily (measured 1.8:1; around 4.5:1 is where text stays comfortable).",
+              "The edges in this design are soft. At the size buyers first see it, "
+              + "that reads as a blurry picture rather than a soft style."] },
+          working: [], opportunity: "",
+          evidence: "Compared with 18 listings confirmed moving in the last 14 days." } }] } },
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
       { path: "/api/design-scanner/scan", method: "POST", status: 200, body: {
         ok: true, niche: "teacher", overall: "Partial visual-pattern alignment",
@@ -325,7 +365,20 @@ export const stateFixtures = (): StateFixture[] => [
     what: "Almost nothing on the canvas. Said plainly rather than measured into a verdict.",
     replies: [
       { path: "/api/design-scanner/scan", method: "GET", status: 200,
-        body: { scans: [], scansLeftToday: 7 } },
+        /* The same result in the saved list, so the state is reachable the
+           way a member reaches it — by reopening a scan — rather than only
+           by uploading a file the preview cannot supply. */
+        body: { scansLeftToday: 6, scans: [{ id: "q-empty", niche: "teacher",
+          artworkHash: "a1-preview", createdAt: secondsAgo(7_200),
+          result: {
+          ok: false, niche: "teacher", overall: "Not enough verified evidence",
+          scansLeftToday: 6, warm: false, trademark: null,
+          refusal: { kind: "thin-cohort",
+            because: "Only 4 listings in this niche have confirmed movement, which is "
+              + "too few to compare against." },
+          imageQuality: { contrast: "fail", sharpness: "unverified", thumbnailReadable: "fail",
+            emptiness: "fail",
+            notes: ["This design is empty or almost empty."] } } }] } },
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
       { path: "/api/design-scanner/scan", method: "POST", status: 200, body: {
         ok: false, niche: "teacher", overall: "Not enough verified evidence",
