@@ -43,4 +43,8 @@
   margin-top: 10px; color: var(--muted); font-size: 0.88rem; background: var(--paper);
 }
 .empty { border: 1px dashed var(--line); border-radius: 14px; padding: 18px; color: var(--muted); background: #fff; }
+.empty { display: grid; gap: 12px; justify-items: start; }
+.empty p { margin: 0; }
+/* A real target on a phone, not a word in a sentence. */
+.empty .p-button { min-height: 44px; padding: 0 16px; }
 .conn .error { color: var(--risk); font-size: 0.92rem; }

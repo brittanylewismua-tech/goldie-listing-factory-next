@@ -143,6 +143,13 @@ async function sweepOne(state: string, width: number): Promise<string[]> {
   return [...new Set(found)];
 }
 
+const summarise = (seen: Map<string, Set<string>>) =>
+  [...seen.entries()].map(([line, where]) => {
+    const places = [...where];
+    return places.length === 1 ? `${line} (${places[0]})`
+      : `${line} (${places.length} places, e.g. ${places[0]})`;
+  });
+
 export default function StatePreviewClient({ initial }: { initial: string }) {
   const all = useMemo(() => stateFixtures(), []);
   const [key, setKey] = useState(initial || all[0].key);
@@ -176,16 +183,26 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
   const runSweep = async () => {
     const total = all.length * PHONE_WIDTHS.length;
     setSweep({ running: true, done: 0, total, problems: [] });
-    const problems: string[] = [];
+    /*
+      GROUPED BY THE PROBLEM, NOT BY THE MEASUREMENT.
+
+      One 19px link on Connections reported as six lines — two states times
+      three widths — and the first run read as eighteen problems when there
+      were two. A list long enough to scroll past is a list nobody reads.
+    */
+    const seen = new Map<string, Set<string>>();
     let done = 0;
     for (const width of PHONE_WIDTHS)
       for (const entry of all) {
-        for (const line of await sweepOne(entry.key, width))
-          problems.push(`${entry.key} @${width}: ${line}`);
+        for (const line of await sweepOne(entry.key, width)) {
+          const where = seen.get(line) ?? new Set<string>();
+          where.add(`${entry.key} @${width}`);
+          seen.set(line, where);
+        }
         done += 1;
-        setSweep({ running: true, done, total, problems: [...problems] });
+        setSweep({ running: true, done, total, problems: summarise(seen) });
       }
-    setSweep({ running: false, done: total, total, problems });
+    setSweep({ running: false, done: total, total, problems: summarise(seen) });
   };
 
   return <div className="state-preview">

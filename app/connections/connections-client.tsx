@@ -109,10 +109,15 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
         </div>
       )}
       {loaded && !failed && shops.length === 0 && (
-        <p className="empty">
-          No Etsy shop connected yet. <a href="/api/etsy/connect">Connect your shop</a> to
-          start using it.
-        </p>
+        /*
+          D1633 · The one thing to do here was a word inside a sentence — a
+          19px tap target at 375px wide, found by the phone-width sweep. The
+          action is the point of this state, so it is an action.
+        */
+        <div className="empty">
+          <p>No Etsy shop connected yet. Connecting it is what everything else here uses.</p>
+          <a className="p-button p-button-primary" href="/api/etsy/connect">Connect your shop</a>
+        </div>
       )}
       {shops.map(shop => (
         <div className="shop" key={shop.shopId}>
