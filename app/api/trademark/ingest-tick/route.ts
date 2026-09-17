@@ -289,9 +289,24 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
   try {
     return await runTick(db, request);
   } catch (error) {
+    /*
+      THE STACK, TO THE OWNER, FOR THIS ONE CLASS OF FAILURE.
+
+      "Cannot access 'c' before initialization" is a minified temporal dead
+      zone error: a module read a const during initialisation before it was
+      assigned. The message names a letter. Without the stack there is nothing
+      to work from but guesses about which module, and I have already spent
+      two rounds guessing — one of them wrongly blaming source order in this
+      file, which a clean run on the next build disproved.
+
+      Owner-only route, and the stack is the product's own code.
+    */
+    const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error),
-        where: "before the file read" }, { status: 500 });
+      { error: message, where: "before the file read",
+        stack: error instanceof Error
+          ? (error.stack ?? "").split("\n").slice(0, 12) : undefined },
+      { status: 500 });
   }
 });
 
