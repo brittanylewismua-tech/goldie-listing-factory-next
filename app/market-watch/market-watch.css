@@ -204,7 +204,14 @@
 }
 .pattern p { margin: 0 0 4px; overflow-wrap: anywhere; }
 .pattern .support { color: var(--muted); font-size: 0.82rem; }
-.pattern a { display: inline-block; min-height: 44px; line-height: 44px; color: var(--ink); font-size: 0.88rem; }
+/* D1625 · The evidence line and this link shared a line, and a 44px tap
+   target laid over the text beside it. The finding, the reasoning, the
+   evidence and the way out are four things in order, not a row. */
+.pattern a {
+  display: block; width: fit-content; margin-top: 4px;
+  min-height: 44px; line-height: 44px;
+  color: var(--ink); font-size: 0.88rem; font-weight: 600;
+}
 
 .empty, .note {
   border: 1px dashed var(--line);
@@ -225,7 +232,7 @@
    the reasoning. */
 .pattern .pattern-headline{margin:0;font-size:14px;font-weight:700;line-height:1.35;color:var(--ink)}
 .pattern .pattern-because{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
-.pattern .support{display:inline-block;margin-top:8px;font-size:11px;color:var(--muted);opacity:.85}
+.pattern .support{display:block;margin-top:8px;font-size:11px;color:var(--muted);opacity:.85}
 
 /* ------------------------------------------------- waiting and failure
 

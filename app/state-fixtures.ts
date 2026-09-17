@@ -183,6 +183,68 @@ export const stateFixtures = (): StateFixture[] => [
         shopId: 4471, shopName: "a-quiet-shop", etsy: "", gettingAttention: [],
         whatBuyersLove: [], whatBuyersDislike: [], whatChanged: [] }] } }] },
 
+  { key: "market-watch-niche-evidence", label: "Niche detail — evidence", surface: "market-watch",
+    what: "Open 'bachelorette'. Listings are the subject, each with what confirmed it and when.",
+    replies: [
+      { path: "/api/market-watch/niches?key=", status: 200, body: {
+        key: "bachelorette", phrase: "bachelorette",
+        summary: { meaningfulMomentum: true, moving: 14, repeated: 5,
+          newSinceLastBrief: 3, shops: 9 },
+        window: "last 14 days",
+        visualPatterns: ["Script lettering on a plain ground.",
+          "The date set below the name, much smaller."],
+        listings: [
+          { listingId: 1234567890, title: "Bachelorette Party Shirt · Custom Name",
+            imageUrl: "", etsyUrl: "https://www.etsy.com/listing/1234567890",
+            state: "moving", label: "Moving", confirmedAt: secondsAgo(4_200),
+            reviewsOnThisListing: 3, displayFresh: false },
+          { listingId: 1234567891, title: "Last Disco Bachelorette Tee",
+            imageUrl: "", etsyUrl: "https://www.etsy.com/listing/1234567891",
+            state: "repeated", label: "Moving again", confirmedAt: secondsAgo(90_000),
+            reviewsOnThisListing: 0, displayFresh: false }] } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [
+        { key: "bachelorette", phrase: "bachelorette", moving: 14, repeated: 5, shops: 9,
+          lastCheckedAt: secondsAgo(4_200), stale: false }] } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
+      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+
+  { key: "market-watch-niche-gathering", label: "Niche detail — still gathering", surface: "market-watch",
+    what: "Watched, nothing confirmed yet. Silence is explained and counted, not left blank.",
+    replies: [
+      { path: "/api/market-watch/niches?key=", status: 200, body: {
+        key: "dog-mom", phrase: "dog mom", listings: [],
+        gathering: "Market Watch has not confirmed movement in this niche yet.",
+        candidates: { watching: 412, shops: 37 } } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [
+        { key: "dog-mom", phrase: "dog mom", moving: 0, repeated: 0, shops: 0,
+          lastCheckedAt: secondsAgo(3_000), stale: false }] } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
+      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+
+  { key: "market-watch-niche-stale", label: "Niche detail — refresh failed", surface: "market-watch",
+    what: "Today's refresh failed. The last confirmed reading is shown and labelled as old.",
+    replies: [
+      { path: "/api/market-watch/niches?key=", status: 200, body: {
+        key: "bachelorette", phrase: "bachelorette", stale: true, listings: [],
+        summary: { meaningfulMomentum: true, moving: 11, repeated: 4,
+          newSinceLastBrief: 0, shops: 7 },
+        lastCheckedAt: secondsAgo(190_000) } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [
+        { key: "bachelorette", phrase: "bachelorette", moving: 11, repeated: 4, shops: 7,
+          lastCheckedAt: secondsAgo(190_000), stale: true }] } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
+      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+
+  { key: "market-watch-niche-failed", label: "Niche detail — could not open", surface: "market-watch",
+    what: "The evidence read failed outright. The saved list must stay intact behind it.",
+    replies: [
+      { path: "/api/market-watch/niches?key=", status: 500, body: { error: "upstream" } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [
+        { key: "bachelorette", phrase: "bachelorette", moving: 14, repeated: 5, shops: 9,
+          lastCheckedAt: secondsAgo(4_200), stale: false }] } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
+      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+
   { key: "market-watch-unsupported", label: "Niche refused", surface: "market-watch",
     what: "A phrase with nothing to search on. The refusal says what is wrong with it.",
     replies: [
@@ -289,11 +351,26 @@ export function replyFor(
   fixture: StateFixture, url: string, method = "GET",
 ): FixtureReply | null {
   let path = url;
-  try { path = new URL(url, "https://example.invalid").pathname; } catch { /* already a path */ }
+  let full = url;
+  try {
+    const parsed = new URL(url, "https://example.invalid");
+    path = parsed.pathname;
+    full = parsed.pathname + parsed.search;
+  } catch { /* already a path */ }
   const verb = method.toUpperCase();
-  const matches = fixture.replies.filter(reply => path.startsWith(reply.path));
-  /* A reply that names the method wins over one that takes any. */
-  return matches.find(reply => reply.method === verb)
-    ?? matches.find(reply => !reply.method)
-    ?? null;
+  /*
+    A PATH MAY CARRY A QUERY, AND THEN THE QUERY IS PART OF THE MATCH.
+
+    Market Watch reads its saved list and one niche's evidence from the same
+    route, told apart only by `?key=`. Without this, a fixture for the detail
+    view also answered the list behind it and neither state could be shown.
+  */
+  const matches = fixture.replies.filter(reply =>
+    reply.path.includes("?") ? full.startsWith(reply.path) : path.startsWith(reply.path));
+  /* Most specific first: a reply that names the method, then one that names
+     a query, then the general one. */
+  const rank = (reply: FixtureReply) =>
+    (reply.method === verb ? 2 : 0) + (reply.path.includes("?") ? 1 : 0);
+  const usable = matches.filter(reply => !reply.method || reply.method === verb);
+  return usable.sort((a, b) => rank(b) - rank(a))[0] ?? null;
 }
