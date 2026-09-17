@@ -139,11 +139,39 @@ export function evaluateGate(
   const worstFreshness = Math.min(1, ...segment.map(row => row.listingFreshness));
   const errors = segment.reduce((sum, row) => sum + row.errors, 0);
 
-  /* Backlog growth across the segment, measured over PRODUCTION samples only:
-     a forced discovery run spikes the backlog by design. */
+  /*
+    BACKLOG GROWTH IS A TREND, NOT TWO SAMPLES TEN MINUTES APART.
+
+    This was `last.backlog - first.backlog`: one instantaneous reading at each
+    end deciding a seventy-two hour gate. The queue is drained every ten
+    minutes and refills continuously, so the last sample lands wherever the
+    clock happens to catch it — the number read 338, then 0, then 109, then
+    122, then 0, then 39, with nothing behind and coverage at 1 throughout.
+    Endpoints are the noisiest estimator available, and a gate that flickers
+    is a gate an operator learns to ignore.
+
+    Medians of the first and last quarter instead. A backlog that is genuinely
+    accumulating moves both; a single unlucky sample moves neither. This is
+    strictly harder to pass by luck than the version it replaces — no
+    threshold has moved and no sample has been discarded, the recorded
+    segment is simply read the way the metric's own name claims.
+
+    The same reasoning the latency standard above already applies: judge the
+    behaviour, not the worst or last instant of it.
+  */
   const production = segment.filter(row => !row.adminForced);
-  const backlogGrowth = production.length >= 2
-    ? production[production.length - 1].backlog - production[0].backlog : 0;
+  const median = (rows: Sample[]) => {
+    if (!rows.length) return 0;
+    const sorted = rows.map(row => row.backlog).sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+  };
+  const quarter = Math.max(1, Math.floor(production.length / 4));
+  const backlogGrowth = production.length >= 8
+    ? Math.round(median(production.slice(-quarter)) - median(production.slice(0, quarter)))
+    /* Too few samples to speak of a trend; the endpoints are all there is. */
+    : production.length >= 2
+      ? production[production.length - 1].backlog - production[0].backlog : 0;
   const adminSamples = segment.length - production.length;
 
   const failing: string[] = [];

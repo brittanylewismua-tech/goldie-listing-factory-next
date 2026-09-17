@@ -345,3 +345,34 @@ test("the backfile gets a turn once the daily queue is empty", () => {
   /* Daily still wins while any daily file is waiting. */
   assert.match(tick, /WHERE state = 'waiting' AND priority <= 2/);
 });
+
+test("one unlucky sample does not fail the backlog condition", () => {
+  /*
+    backlogGrowth was last.backlog - first.backlog: two instantaneous readings
+    ten minutes apart deciding a seventy-two hour gate. Measured on production
+    across one segment, with nothing actually behind and coverage at 1
+    throughout, the number read 338, then 0, then 109, then 122, then 0, then
+    39 — depending only on whether the sampler caught the queue before or
+    after the ten-minute drain.
+  */
+  const samples = window(80).map(row => ({ ...row, backlog: 0 }));
+  samples[samples.length - 1].backlog = 400;
+  const gate = evaluateGate(samples, NOW);
+  assert.ok(!gate.failing.some(line => /backlog grew/.test(line)),
+    "a single spiky reading at the end must not decide the gate");
+});
+
+test("a backlog that is genuinely accumulating still fails", () => {
+  /* The condition must be harder to pass by luck, not easier. */
+  const samples = window(80).map((row, index) => ({ ...row, backlog: index * 12 }));
+  const gate = evaluateGate(samples, NOW);
+  assert.ok(gate.failing.some(line => /backlog grew/.test(line)),
+    "a rising backlog must still fail");
+});
+
+test("a backlog that drains to nothing is not called growth", () => {
+  /* The mirror case: a segment that starts badly and recovers. */
+  const samples = window(80).map((row, index) => ({ ...row, backlog: Math.max(0, 400 - index * 8) }));
+  const gate = evaluateGate(samples, NOW);
+  assert.ok(!gate.failing.some(line => /backlog grew/.test(line)));
+});
