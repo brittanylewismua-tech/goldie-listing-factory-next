@@ -151,9 +151,60 @@ export async function singleEntryDeflateStream(
 
   /* The platform types for these transforms disagree about the exact byte
      view; the runtime pair is correct, so the cast stays narrow. */
-  return compressed.pipeThrough(
+  const inflated = compressed.pipeThrough(
     new DecompressionStream("deflate-raw") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>,
   );
+  return endsCleanlyOnTrailingBytes(inflated);
+}
+
+/*
+ * THE COMMENT ABOVE WAS WRONG, AND IT COST THE WHOLE BACKFILE.
+ *
+ * "Everything after the entry sits past the deflate stream's own end, and the
+ * decompressor stops there on its own, so it costs nothing to ignore." It does
+ * not stop. DecompressionStream reads the trailing data descriptor and central
+ * directory and throws "Trailing bytes after end of compressed data".
+ *
+ * That only happens when the local header declares a compressed size of zero —
+ * a zip written as a stream, with the size in a descriptor after the data — so
+ * the bound that protects every other file does not exist and everything is
+ * fed through. Most USPTO daily files carry a real size and were fine. The
+ * historical backfile does not, so every one of the 88 waiting files failed
+ * this way, was classified as a transient error, went back in the queue in the
+ * same order, and was retried forever. The register looked like it was
+ * progressing because the daily files kept landing behind it.
+ *
+ * The error arrives AFTER the decompressor has emitted every byte of real
+ * output — the deflate stream ends exactly where the entry does, and the
+ * complaint is about what follows. So the honest reading is: the entry is
+ * complete, and the bytes after it are not ours. Anything else — a truncated
+ * stream, a corrupt entry — still throws, because it throws before or instead
+ * of producing the output.
+ */
+const TRAILING = /trailing bytes after end/i;
+
+export function endsCleanlyOnTrailingBytes(
+  stream: ReadableStream<Uint8Array>,
+): ReadableStream<Uint8Array> {
+  const reader = stream.getReader();
+  let produced = false;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        const { value, done } = await reader.read();
+        if (done) { controller.close(); return; }
+        if (value?.length) { produced = true; controller.enqueue(value); }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        /* Only after real output, and only for this one complaint. A stream
+           that produced nothing and then said this is a broken entry, not a
+           complete one with a directory behind it. */
+        if (produced && TRAILING.test(message)) { controller.close(); return; }
+        throw error;
+      }
+    },
+    cancel(reason) { return reader.cancel(reason); },
+  });
 }
 
 /**

@@ -27,6 +27,10 @@ const key = () => (env as unknown as { USPTO_API_KEY?: string }).USPTO_API_KEY?.
 
 /* Enough recent days to cover a gap of a fortnight without a special path. */
 const DAILY_DAYS = 21;
+/* How many identical failures before a file is parked regardless of what its
+   error says. Three is enough to rule out a bad minute and small enough that
+   one bad file cannot cost the queue a day. */
+const REPEATED_FAILURE_LIMIT = 3;
 const DEADLINE_MS = 120_000;
 
 const isoDay = (offsetDays: number) =>
@@ -128,9 +132,10 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
   */
   const resuming = await db
     .prepare(
-      `SELECT name, product, url, done_records, strikes FROM tm_ingest_files
+      `SELECT name, product, url, done_records, strikes, repeats, note FROM tm_ingest_files
         WHERE state = 'partial' ORDER BY priority ASC, name DESC LIMIT 1`)
-    .first<{ name: string; product: string; url: string; done_records: number; strikes: number }>();
+    .first<{ name: string; product: string; url: string; done_records: number;
+      strikes: number; repeats: number; note: string }>();
 
   /*
     RESUMING A PARTIAL FILE WAS NOT ENOUGH.
@@ -163,17 +168,18 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
         /* A file under backoff is not available. Skipping it lets the rest of
            the queue advance instead of the whole backfile stopping behind one
            refusal. */
-        ? `SELECT name, product, url, done_records, strikes FROM tm_ingest_files
+        ? `SELECT name, product, url, done_records, strikes, repeats, note FROM tm_ingest_files
             WHERE state = 'waiting' AND (retry_after IS NULL OR retry_after <= ?)
             ORDER BY priority DESC, name DESC
             LIMIT 1`
-        : `SELECT name, product, url, done_records, strikes FROM tm_ingest_files
+        : `SELECT name, product, url, done_records, strikes, repeats, note FROM tm_ingest_files
             WHERE state = 'waiting' AND (retry_after IS NULL OR retry_after <= ?)
             ORDER BY priority ASC, name DESC
             LIMIT 1`,
     )
     .bind(new Date().toISOString())
-    .first<{ name: string; product: string; url: string; done_records: number; strikes: number }>();
+    .first<{ name: string; product: string; url: string; done_records: number;
+      strikes: number; repeats: number; note: string }>();
 
   if (!next) return NextResponse.json({ added, idle: true, ...(await registerSize(db)) });
 
@@ -217,6 +223,23 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
     */
     const permanent = /Not a zip|not deflate|Truncated zip/i.test(note);
     /*
+      AND A FAILURE NOBODY LISTED IS STILL A FAILURE.
+
+      The list above is a list of error strings somebody thought of, and this
+      is the second error to walk past it. "Trailing bytes after end of
+      compressed data" matched nothing, so every one of the 88 historical
+      files was classified transient, went back in the queue in the same
+      order, and was retried forever — the exact failure the comment below
+      already describes, reached through a message the pattern did not know.
+
+      A file that has failed the same way repeatedly is parked whatever it
+      says. The note stays visible, so a wrongly parked file is findable
+      rather than lost.
+    */
+    const sameAgain = (next.note ?? "").slice(0, 300) === note.slice(0, 300);
+    const repeats = sameAgain ? Number(next.repeats ?? 0) + 1 : 1;
+    const exhausted = !limited && repeats >= REPEATED_FAILURE_LIMIT;
+    /*
       AND A RATE LIMIT IS NEITHER.
 
       429 is the other side asking for time. Putting the file straight back in
@@ -229,12 +252,13 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
     await db
       .prepare(
         `UPDATE tm_ingest_files
-            SET state = ?, note = ?, retry_after = ?, strikes = ?
+            SET state = ?, note = ?, retry_after = ?, strikes = ?, repeats = ?
           WHERE name = ?`)
-      .bind(permanent ? "skipped" : "waiting", note.slice(0, 300),
-        limited ? retryAfter(strikes) : null, strikes, next.name)
+      .bind(permanent || exhausted ? "skipped" : "waiting", note.slice(0, 300),
+        limited ? retryAfter(strikes) : null, strikes, repeats, next.name)
       .run();
-    return NextResponse.json({ added, file: next.name, error: note,
+    return NextResponse.json({ added, file: next.name, error: note, repeats,
+      parked: permanent || exhausted,
       ...(limited ? { rateLimited: true, strikes, retryAfter: retryAfter(strikes) } : {}) },
       { status: 500 });
   }
