@@ -6,6 +6,7 @@ import { env } from "cloudflare:workers";
 import { memberUsage } from "@/app/spend-guard";
 import { registerSize } from "@/app/trademark-register";
 import { watchesFor } from "@/app/niche-watch-store";
+import { dayInShopTimezone, isStale } from "@/app/finance-freshness";
 
 /**
  * STATUS WORTH A MEMBER'S ATTENTION, AND NOTHING ELSE.
@@ -26,6 +27,14 @@ export const GET = withErrorLog("home-status", async () => {
   const owner = isOwner(user);
   const now = Math.floor(Date.now() / 1000);
   const blocks: Record<string, unknown> = {};
+
+  /* The shop's own timezone, so a date on Home reads the same as the same
+     date on Shop Map rather than shifting by a day. */
+  const timezoneForMember = String((await db.prepare(
+    `SELECT timezone FROM etsy_connections
+      WHERE user_id = ? AND is_active = 1 LIMIT 1`)
+    .bind(user.userId).first<{ timezone: string }>()
+    .catch(() => null))?.timezone ?? "UTC");
 
   /* Connections: only mentioned when something needs the member's attention. */
   try {
@@ -58,9 +67,11 @@ export const GET = withErrorLog("home-status", async () => {
       dropped the block, and Home has never once shown This Month.
     */
     const row = await db.prepare(
-      `SELECT payload_json AS payload, month FROM finance_rollups
+      `SELECT payload_json AS payload, month, computed_at AS computedAt
+         FROM finance_rollups
         WHERE user_id = ? ORDER BY month DESC LIMIT 1`)
-      .bind(user.userId).first<{ payload: string; month: string }>();
+      .bind(user.userId)
+      .first<{ payload: string; month: string; computedAt: number }>();
     if (row) {
       /*
         THE NAMES THE ROLLUP ACTUALLY WRITES.
@@ -84,6 +95,17 @@ export const GET = withErrorLog("home-status", async () => {
         /* Null unless every completeness condition held. Never zero. */
         profitMinor: profit ?? null,
         profitAvailable: profit !== null && profit !== undefined,
+        /*
+          THE SAME FIGURE IN TWO PLACES, ONE OF THEM HONEST ABOUT ITS AGE.
+
+          Home reads the rollup; Shop Map computes from the imported sales.
+          They agree today, but they are different ages, and only Shop Map
+          said so. A rollup is built when the shop is reconciled, not on a
+          clock, so this line can be days old and look like a figure computed
+          a second ago.
+        */
+        stale: isStale(Number(row.computedAt ?? 0), Math.floor(Date.now() / 1_000)),
+        asOfDay: dayInShopTimezone(Number(row.computedAt ?? 0), timezoneForMember),
       };
     }
   } catch { /* Shop Map may not be set up for this member */ }

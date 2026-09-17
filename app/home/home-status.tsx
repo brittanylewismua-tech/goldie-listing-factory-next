@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 type Blocks = {
   connections?: { needs: string | null; say?: string; activeShop?: string; shops?: string[] };
   thisMonth?: { revenueMinor: number; currency: string; orders: number;
+    stale?: boolean; asOfDay?: string;
     profitMinor: number | null; profitAvailable: boolean };
   niches?: Array<{ phrase: string; newly: number }>;
   scansLeft?: { remaining: number; limit: number };
@@ -49,6 +50,14 @@ export default function HomeStatus() {
       {blocks.thisMonth.profitAvailable
         ? ` · profit ${money(blocks.thisMonth.profitMinor ?? 0, blocks.thisMonth.currency)}`
         : " · profit unavailable"}
+      {/*
+        D1688 · The same figure sat on two pages at two different ages and
+        only one of them said so. Home reads the rollup, which is built when
+        the shop is reconciled rather than on a clock.
+      */}
+      {blocks.thisMonth.stale && blocks.thisMonth.asOfDay
+        ? <span className="status-asof"> · worked out {blocks.thisMonth.asOfDay}</span>
+        : null}
     </a>);
 
   if (blocks.niches?.length)

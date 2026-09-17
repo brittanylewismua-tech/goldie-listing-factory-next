@@ -91,3 +91,19 @@ test("the sentence is built on the server and rendered beside the figure", () =>
   assert.ok(accuracy > -1 && fresh > accuracy && fresh - accuracy < 900,
     "the currency of a figure belongs next to the figure");
 });
+
+test("the same figure does not sit on two pages at two different ages", () => {
+  const home = src("../app/api/home/route.ts");
+  assert.match(home, /computed_at AS computedAt/,
+    "Home reads the rollup, so the rollup's own age is what it must report");
+  assert.match(home, /stale: isStale\(Number\(row\.computedAt \?\? 0\)/);
+  assert.match(home, /dayInShopTimezone\(Number\(row\.computedAt \?\? 0\), timezoneForMember\)/,
+    "a date on Home must read as the same date on Shop Map, not shift by a day");
+  const status = src("../app/home/home-status.tsx");
+  assert.match(status, /blocks\.thisMonth\.stale && blocks\.thisMonth\.asOfDay/,
+    "a current figure needs no note; a stale one does");
+  /* Both pages decide staleness with one rule. */
+  const map = src("../app/api/shop-map/map/route.ts");
+  for (const file of [home, map])
+    assert.match(file, /from "@\/app\/finance-freshness"/);
+});
