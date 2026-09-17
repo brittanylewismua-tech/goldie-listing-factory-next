@@ -75,8 +75,16 @@ export const TONAL_RANGE_MIN = 0.25;
 export const SHARPNESS_MIN = 0.35;
 /* An artwork whose ink covers less than this is empty or nearly so. */
 export const MIN_INK_SHARE = 0.005;
-/* The size a listing is actually first seen at. */
-export const THUMBNAIL_EDGE = 64;
+/*
+  THE SIZE A LISTING IS ACTUALLY FIRST SEEN AT.
+
+  64px was a guess and a harsh one — smaller than anything Etsy renders, so a
+  perfectly legible design failed a test no buyer would ever apply. Etsy's
+  search grid serves around 170-300px on the long edge depending on breakpoint
+  and density; 170 is the small end of what a member's listing is really shown
+  at, which is the right place to judge it.
+*/
+export const THUMBNAIL_EDGE = 170;
 
 const at = (pixels: Pixels, x: number, y: number) => {
   const index = (y * pixels.width + x) * 4;
