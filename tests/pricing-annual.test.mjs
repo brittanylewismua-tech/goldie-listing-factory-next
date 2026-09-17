@@ -66,7 +66,7 @@ test('trial reminder uses actual annual or legacy price and the correct period',
   const annual=trialReminderHtml({plan:'pro',chargeAt:1800000000,interval:'year',amount:24900});assert.match(annual,/\$249\.00/);assert.match(annual,/first year/);assert.doesNotMatch(annual,/first month/);
   const legacy=trialReminderHtml({plan:'goldie',chargeAt:1800000000,amount:2900});assert.match(legacy,/\$29\.00/);
 });
-const Signup=load('../app/signup/signup-client.tsx',{useEffect:React.useEffect,useRef:React.useRef,useState:React.useState,PLANS,GoldieWordmark:()=>React.createElement('span',null,'Goldie')}).default;
+const Signup=load('../app/signup/signup-client.tsx',{useEffect:React.useEffect,useRef:React.useRef,useState:React.useState,PLANS,ListingFactoryWordmark:()=>React.createElement('span',null,'Goldie')}).default;
 test('homepage renders clear navigation, existing copy, and correct monthly prices',()=>{
   const html=renderToStaticMarkup(React.createElement(Signup,{signedIn:false}));
   for(const text of ['Pricing','Login','Start for free','never seen before','finished Etsy listings, in bulk','14.99','24.99','39.99','Best for most shops','Card required'])assert.ok(html.includes(text),text);

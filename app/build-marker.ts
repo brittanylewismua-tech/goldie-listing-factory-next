@@ -171,7 +171,11 @@
    Watch, Design Scanner, the Trademark Checker and Shop Map at it. Market
    Watch had a private palette including a legacy gold; Shop Map's loading
    state was one sentence on white. */
-export const BUILD_MARKER = "D1605";
+/* D1606 stops the shared sign-in page calling itself the Listing Factory.
+   It carried that wordmark and read "Sign in to your Listing Factory" for
+   every member, whichever feature they were heading for — somebody bounced
+   from Market Watch was told they were signing in to something else. */
+export const BUILD_MARKER = "D1606";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

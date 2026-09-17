@@ -2,9 +2,11 @@
 
 import { FormEvent, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/app/supabase-auth";
-import GoldieWordmark from "@/app/goldie-wordmark";
+import ListingFactoryWordmark from "@/app/goldie-wordmark";
 
 export default function SignInClient({ returnTo, initialError = "" }: { returnTo: string; initialError?: string }) {
+  /* Where they were going decides what this page may call itself. */
+  const listingFactoryBound = /^\/(listing-factory|batches|keywords)\b/.test(returnTo || "");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState<"email" | "google" | null>(null);
   const [message, setMessage] = useState("");
@@ -41,8 +43,21 @@ export default function SignInClient({ returnTo, initialError = "" }: { returnTo
   }
 
   return <main className="account-page" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",paddingBottom:24}}><section className="account-card">
-    <div className="account-wordmark"><GoldieWordmark /></div>
-    <p className="account-eyebrow">WELCOME</p><h1>Sign in to your Listing Factory.</h1>
+    {/*
+      D1606 · THE SIGN-IN PAGE IS NOT INSIDE THE LISTING FACTORY.
+
+      It carried the Listing Factory's wordmark and read "Sign in to your
+      Listing Factory" for every member, whichever feature they were heading
+      for — somebody bounced from Market Watch was told they were signing in
+      to something else. The wordmark belongs on the Listing Factory's own
+      pages, so it appears here only when that is genuinely where they are
+      going; otherwise the page says what it is and nothing more.
+    */}
+    {listingFactoryBound && (
+      <div className="account-wordmark"><ListingFactoryWordmark /></div>
+    )}
+    <p className="account-eyebrow">WELCOME</p>
+    <h1>{listingFactoryBound ? "Sign in to your Listing Factory." : "Sign in."}</h1>
     <p className="account-intro">Choose the easiest option for you. Your saved products, batches, keyword banks, and plan stay with your account.</p>
     <button className="account-provider" type="button" onClick={() => void googleSignIn()} disabled={Boolean(busy)}><b className="google-mark">G</b><span>{busy === "google" ? "Opening Google…" : "Continue with Google"}</span></button>
     <div className="account-divider"><span>or</span></div>

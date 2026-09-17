@@ -55,7 +55,7 @@ import { leavingImagesIssues, navigationIssues, type NavigationGateState } from 
 import { GoldieCommandBar } from "./returning-command-center";
 import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
-import GoldieWordmark from "./goldie-wordmark";
+import ListingFactoryWordmark from "./goldie-wordmark";
 import { NAV } from "./factory-shell";
 import MobileGate from "./mobile-gate";
 import { productFamily, productOptionAxis } from "./product-type-utils";
@@ -5528,7 +5528,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       <MobileGate />
       <header className="topbar">
         <div className="brand-lockup">
-          <GoldieWordmark className="approved-brand" />
+          <ListingFactoryWordmark className="approved-brand" />
         </div>
         <div className="top-actions">
           <nav className="top-nav" aria-label="Listing Factory navigation">

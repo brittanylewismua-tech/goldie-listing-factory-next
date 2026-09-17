@@ -127,7 +127,7 @@ test("serves the closed notice at home, with no prices anywhere in the payload",
   const pageSource = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
   const globalCss = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const approvedCss = await Promise.all([readFile(new URL("../app/approved-functional.css",import.meta.url),"utf8"),readFile(new URL("../app/interface-v2.css",import.meta.url),"utf8")]).then(x=>x.join("\n"));
-  assert.match(pageSource, /<GoldieWordmark className="approved-brand"/);
+  assert.match(pageSource, /<ListingFactoryWordmark className="approved-brand"/);
   assert.match(pageSource, /Connect Printify/);
   assert.match(pageSource, /Secure connection/);
   assert.match(pageSource, /Prepare your product in Printify/);
@@ -145,7 +145,14 @@ test("offers real account sign-in choices and preserves the selected destination
   const response = await render("/account/sign-in?return_to=%2Fmastermind");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /Sign in to your Listing Factory/);
+  /*
+    D1606 · The sign-in page is not inside the Listing Factory, so it only
+    calls itself that when that is genuinely where the member is heading.
+    This destination is /mastermind, so it says "Sign in." and shows no
+    Listing Factory wordmark.
+  */
+  assert.match(html, /Sign in\./);
+  assert.doesNotMatch(html, /Sign in to your Listing Factory/);
   assert.match(html, /Continue with Google/);
   assert.match(html, /Email me a sign-in link/);
   assert.doesNotMatch(html, /Continue with ChatGPT/);

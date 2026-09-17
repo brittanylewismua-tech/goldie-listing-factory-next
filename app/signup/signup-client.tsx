@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PLANS, type PlanKey, type BillingInterval } from "@/app/plan-limits";
-import GoldieWordmark from "@/app/goldie-wordmark";
+import ListingFactoryWordmark from "@/app/goldie-wordmark";
 
 type OfferKey = "trial" | PlanKey;
 
@@ -58,7 +58,7 @@ export default function SignupClient({ signedIn, signedInEmail, checkout, return
     : <a className={className} href={signInUrl("trial")}>Start for free</a>;
 
   return <main className="signup-page">
-    <header className="signup-topbar"><a className="signup-brand" href="/" aria-label="Listing Factory home"><GoldieWordmark /></a><nav className="signup-nav" aria-label="Main navigation"><a href="#pricing">Pricing</a><a href={`/account/sign-in?return_to=${encodeURIComponent(returnTo)}`}>Login</a>{freeAction("signup-nav-start")}</nav></header>
+    <header className="signup-topbar"><a className="signup-brand" href="/" aria-label="Listing Factory home"><ListingFactoryWordmark /></a><nav className="signup-nav" aria-label="Main navigation"><a href="#pricing">Pricing</a><a href={`/account/sign-in?return_to=${encodeURIComponent(returnTo)}`}>Login</a>{freeAction("signup-nav-start")}</nav></header>
     {signedIn && <div className="signup-account-strip"><span className="signup-account-dot" aria-hidden="true">✓</span><span>{signedInEmail || "Signed in"}</span><a href={`/account/sign-out?return_to=${encodeURIComponent(`/account/sign-in?return_to=${returnTo}`)}`}>Use a different account</a></div>}
     <section className="signup-hero"><span className="signup-eyebrow">THE GOLDIE LISTING FACTORY</span><h1>Automated Etsy listings like you’ve <span>never seen before</span>.</h1><p className="signup-hero-tagline">Turn one design into finished Etsy listings, in bulk.</p><div className="signup-proof"><span>Listing creation</span><span>Pricing + Etsy details</span><span>Your own listing photos</span></div><div className="signup-hero-action">{freeAction("signup-start-button")}<p>10 listing creations · 3 days free<br/>Card required. Then ${PLANS.goldie.price}/month. Cancel before your trial ends to avoid a charge.</p></div></section>
     {checkout === "success" && <div className="signup-notice success"><b>Your Listing Factory access is being activated.</b><span>If this is your first subscription, your three-day trial starts now. Stripe is confirming everything securely.</span><a href={returnTo}>Open Listing Factory</a></div>}
