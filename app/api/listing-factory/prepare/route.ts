@@ -224,6 +224,8 @@ export const GET = withErrorLog("listing-factory-prepare-sample", async (request
     if (params.get("probe") === "1") return await probe();
     if (params.get("reset")) return await reset(params.get("reset") ?? "");
     if (params.get("printify") === "preflight") return await printifyPreflight();
+    if (params.get("printify") === "find")
+      return await findInternalTestProducts(params.get("shopId") ?? "");
     if (params.get("printify") === "read")
       return await printifyProduct(params.get("shopId") ?? "", params.get("productId") ?? "", false);
     if (params.get("printify") === "delete")
@@ -471,4 +473,54 @@ async function printifyProduct(shopId: string, productId: string, remove: boolea
     deleteStatus: deleteResponse.status,
     confirmedGone: confirm.status === 404,
     confirmStatus: confirm.status });
+}
+
+
+/**
+ * IS THERE AN ORPHAN, AND WHERE?
+ *
+ * The walkthrough's draft creation reported a failure while the batch row
+ * claimed a draft count of one, so whether Printify actually holds a product
+ * could not be answered from Goldie's own records. The id taken from the
+ * batch thumbnail turned out to be the SOURCE TEMPLATE — a real product of
+ * the member's, linked to a live Etsy listing — which is exactly the kind of
+ * mistake the title guard on removal exists to stop.
+ *
+ * So the shop is asked directly, and only products whose title marks them as
+ * internal tests are reported.
+ */
+async function findInternalTestProducts(shopId: string) {
+  const user = await getChatGPTUser();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  if (!/^\d+$/.test(shopId))
+    return NextResponse.json({ error: "A numeric shop id is required." }, { status: 400 });
+
+  const runtime = env as unknown as { DB: D1Database; PRINTIFY_TOKEN_KEY: string };
+  const connection = await runtime.DB.prepare(
+    `SELECT encrypted_token FROM printify_connections WHERE user_id = ?`)
+    .bind(user.userId).first<{ encrypted_token: string }>();
+  if (!connection) return NextResponse.json({ error: "Printify is not connected." }, { status: 409 });
+  const token = await decryptPrintifyToken(connection.encrypted_token, runtime.PRINTIFY_TOKEN_KEY);
+  const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
+
+  const response = await fetch(
+    `https://api.printify.com/v1/shops/${shopId}/products.json?limit=50`,
+    { headers, signal: AbortSignal.timeout(20_000) });
+  if (!response.ok)
+    return NextResponse.json({ error: `Printify answered ${response.status}.` }, { status: 502 });
+  const page = await response.json() as
+    { data?: Array<{ id: string; title: string; visible?: boolean; created_at?: string;
+      external?: { id?: string } }> };
+  const all = page.data ?? [];
+  return NextResponse.json({
+    shopId: Number(shopId),
+    scanned: all.length,
+    internalTests: all
+      .filter(entry => String(entry.title ?? "").trim().toUpperCase().startsWith(INTERNAL_TEST_PREFIX))
+      .map(entry => ({ id: entry.id, title: entry.title, visible: entry.visible,
+        createdAt: entry.created_at, linkedToSalesChannel: entry.external?.id ?? null })),
+    /* For orientation only — titles, never anything that could identify a buyer. */
+    newestTitles: all.slice(0, 5).map(entry => ({ title: entry.title, createdAt: entry.created_at })),
+  });
 }
