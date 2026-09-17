@@ -67,37 +67,17 @@ async function seed(db: D1Database): Promise<number> {
   return added;
 }
 
-export const GET = withErrorLog("trademark-ingest-tick", async (request: Request) => {
-  /* The clock reaches this with no cf-connecting-ip, which is proof of origin
-     nobody outside can forge. An owner may also run a file by hand, which is
-     what makes a stuck ingest debuggable instead of a mystery. */
-  if (request.headers.get("cf-connecting-ip") !== null) {
-    const user = await getChatGPTUser();
-    if (!user || !isOwner(user)) return NextResponse.json({ error: "Not found." }, { status: 404 });
-  }
-  if (!key()) return NextResponse.json({ skipped: "No USPTO key." });
+/*
+  DECLARED BEFORE THE HANDLER THAT CALLS IT, NOT AFTER.
 
-  const db = (env as unknown as { DB: D1Database }).DB;
-
-  /*
-    THE WHOLE HANDLER REPORTS ITS OWN FAILURES, NOT JUST THE INGEST.
-
-    Only the file read was wrapped, so anything that went wrong before it —
-    a migration, the seed, the queue query — escaped to the generic wrapper
-    and reached the owner as "Something went wrong." That is precisely the
-    mystery the detailed error below exists to prevent, and it cost a
-    debugging round on the first run after the queue was unblocked.
-  */
-  try {
-    return await run(db, request);
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error),
-        where: "before the file read" }, { status: 500 });
-  }
-});
-
-async function run(db: D1Database, request: Request) {
+  D1646 moved the body into a function below the GET export and relied on
+  hoisting. The bundler rewrites it as a const arrow, which does not hoist, so
+  every firing threw "Cannot access 'c' before initialization" before reaching
+  the file read — and the ingest froze at 32 files for as long as that build
+  was live. The detailed error added in the same commit is the only reason it
+  was visible at all rather than another silent stall.
+*/
+async function runTick(db: D1Database, request: Request) {
   void request;
   await ensureRegisterTables(db);
 
@@ -284,3 +264,34 @@ async function run(db: D1Database, request: Request) {
       { status: 500 });
   }
 }
+
+export const GET = withErrorLog("trademark-ingest-tick", async (request: Request) => {
+  /* The clock reaches this with no cf-connecting-ip, which is proof of origin
+     nobody outside can forge. An owner may also run a file by hand, which is
+     what makes a stuck ingest debuggable instead of a mystery. */
+  if (request.headers.get("cf-connecting-ip") !== null) {
+    const user = await getChatGPTUser();
+    if (!user || !isOwner(user)) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+  if (!key()) return NextResponse.json({ skipped: "No USPTO key." });
+
+  const db = (env as unknown as { DB: D1Database }).DB;
+
+  /*
+    THE WHOLE HANDLER REPORTS ITS OWN FAILURES, NOT JUST THE INGEST.
+
+    Only the file read was wrapped, so anything that went wrong before it —
+    a migration, the seed, the queue query — escaped to the generic wrapper
+    and reached the owner as "Something went wrong." That is precisely the
+    mystery the detailed error below exists to prevent, and it cost a
+    debugging round on the first run after the queue was unblocked.
+  */
+  try {
+    return await runTick(db, request);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : String(error),
+        where: "before the file read" }, { status: 500 });
+  }
+});
+

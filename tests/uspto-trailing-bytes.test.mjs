@@ -123,3 +123,24 @@ test("the health probe measures the backfile on its own", () => {
   assert.match(route, /: backfileStalled \? "broken"/,
     "a dead backfile must read as broken, not ok");
 });
+
+test("the tick's worker is declared before the handler that calls it", () => {
+  /*
+    D1646 moved the handler body into a function below the GET export and
+    relied on hoisting. The bundler rewrites it as a const arrow, which does
+    not hoist, so every firing threw "Cannot access 'c' before initialization"
+    before reaching the file read and the ingest froze at 32 files for as long
+    as that build was live.
+
+    A source-order rule rather than a comment, because the failure only
+    appears in the bundled output and never in a local run.
+  */
+  const route = readFileSync(new URL(
+    "../app/api/trademark/ingest-tick/route.ts", import.meta.url), "utf8");
+  const worker = route.indexOf("async function runTick");
+  const handler = route.indexOf("export const GET");
+  assert.ok(worker > -1, "the worker function is missing");
+  assert.ok(handler > -1, "the handler is missing");
+  assert.ok(worker < handler,
+    "the worker must be declared before the handler, not hoisted into it");
+});
