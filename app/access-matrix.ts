@@ -159,7 +159,7 @@ export const OWNER_PREFIXES = [
   "/api/market-watch/budget",         /* capacity model, not a member view */
   "/api/market/correlate", "/api/market/observe", "/api/market/discover",
   "/api/market/reconcile-pools",
-  "/api/market/backlog-audit",
+  "/api/market/backlog-audit", "/api/market/niche-audit",
   "/api/design-scanner/corpus", "/api/design-scanner/recover-images",
   "/api/design-scanner/analyze-references", "/api/design-scanner/niche-probe",
   "/api/design-scanner/precision-audit", "/api/design-scanner/review-audit",
