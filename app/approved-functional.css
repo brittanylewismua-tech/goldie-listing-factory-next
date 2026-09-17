@@ -564,6 +564,15 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
     Removed rather than scoped. The gate's card is 100vh, so it has nothing
     to scroll either way; and a page that cannot scroll is never the safer
     default.
+
+    CORRECTION, same day: the commit for this said content below the first
+    viewport was UNREACHABLE. That was wrong, and measuring on a real device
+    is what showed it. `.app-shell>.factory-main` in interface-v2.css carries
+    `height:100vh; overflow:hidden auto`, so it is itself a scroll container
+    and the content was reachable inside it all along. Removing this line is
+    still right — a document that cannot scroll is a bad default, and the
+    gate card is slightly taller than some viewports — but it fixed a smaller
+    problem than claimed. The real defect on those surfaces was D1680 below.
   */
   html,body{min-height:100%;background:#e8b1c8 url('/goldie-background-reference.jpg') center/cover fixed no-repeat}
   .app-shell{display:block;min-height:100vh;padding:0}
@@ -575,8 +584,26 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
      bottom bar is the navigation, so the rail goes and the content fills —
      with room at the bottom for the bar it is navigating with. */
   .responsive-shell{display:block;min-height:100vh;background:var(--lf-paper,#fbfaff)}
-  .responsive-shell>.topbar{display:none}
-  .responsive-shell>.factory-main{padding:16px 16px 96px}
+  /*
+    D1680 · THESE TWO RULES WERE DEAD, AND THE DESKTOP RAIL SHIPPED TO PHONES.
+
+    `.responsive-shell>.topbar` and `.responsive-shell>.factory-main` are both
+    two classes — the same specificity as `.app-shell>.topbar` and
+    `.app-shell>.factory-main` in interface-v2.css, which layout.tsx imports
+    AFTER this file. On a tie the later sheet wins, so neither of these ever
+    applied.
+
+    Measured on a real 375px touch device with the shipped stylesheet: the
+    topbar rendered 288px wide and 812px tall — the whole desktop rail, a
+    full screen of it, ahead of the content — and .factory-main had no
+    padding, so the page ended underneath the global bottom bar.
+
+    Adding `.app-shell` makes each three classes, which wins on specificity
+    rather than on import order. No !important: the aim is for the right rule
+    to win, not for this one to shout.
+  */
+  .app-shell.responsive-shell>.topbar{display:none}
+  .app-shell.responsive-shell>.factory-main{padding:16px 16px 96px}
   .mobile-gate{position:relative;z-index:3;display:flex;min-height:100vh;flex-direction:column;padding:28px 22px 24px;color:var(--ink)}
   .mobile-brand{text-align:center}.mobile-brand .approved-wm{font-size:34px}
   .mobile-card{margin:auto 0;padding:38px 26px 34px;border:1px solid rgba(255,255,255,.84);border-radius:16px;background:linear-gradient(158deg,rgba(255,255,255,.66),rgba(255,252,255,.52)),url('/goldie-background-reference.jpg') center/cover fixed no-repeat;box-shadow:0 1px 0 rgba(255,255,255,.95) inset,0 34px 70px -36px rgba(74,42,62,.35);text-align:center}

@@ -58,6 +58,44 @@ test("no coarse-pointer rule stops the document scrolling", () => {
   }
 });
 
+test("the phone-first rules out-specify the desktop ones they must beat", () => {
+  /*
+    D1680 · Both of these were dead. `.responsive-shell>.topbar` and
+    `.responsive-shell>.factory-main` are two classes each — the same
+    specificity as `.app-shell>.topbar` and `.app-shell>.factory-main` in
+    interface-v2.css, which layout.tsx imports AFTER approved-functional.css.
+    On a tie the later sheet wins, so neither ever applied.
+
+    Measured on a real 375px touch device with the shipped stylesheet: the
+    topbar rendered 288px wide and 812px tall — the whole desktop rail ahead
+    of the content — and .factory-main had no padding, so the page ended
+    underneath the global bottom bar.
+
+    A specificity rule rather than a comment, because the failure is
+    invisible in either file on its own: each rule reads correctly, and only
+    the pair plus the import order is wrong.
+  */
+  const css = strip(read("approved-functional.css"));
+  for (const selector of [
+    /\.app-shell\.responsive-shell>\.topbar\{display:none\}/,
+    /\.app-shell\.responsive-shell>\.factory-main\{padding:16px 16px 96px\}/,
+  ]) assert.match(css, selector,
+    "the phone-first rule must carry .app-shell too, or the desktop rule wins");
+
+  /* And the rules it has to beat are still there, unchanged, in the file
+     that is imported later. */
+  const later = strip(read("interface-v2.css"));
+  assert.match(later, /\.app-shell > \.topbar \{/);
+  assert.match(later, /\.app-shell > \.factory-main \{/);
+
+  /* The import order this depends on. If it ever flips, the specificity fix
+     is still correct — but this records why it was needed. */
+  const layout = readFileSync(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  assert.ok(layout.indexOf('import "./approved-functional.css"')
+    < layout.indexOf('import "./interface-v2.css"'),
+    "interface-v2.css is imported later, which is why the tie mattered");
+});
+
 test("the gate still hides the shell only for the surfaces it owns", () => {
   /* The fix must not have loosened the gate itself. */
   const css = strip(read("approved-functional.css"));
@@ -69,6 +107,6 @@ test("the gate still hides the shell only for the surfaces it owns", () => {
 
 test("the phone-first surfaces leave room for the bar they navigate with", () => {
   const css = strip(read("approved-functional.css"));
-  assert.match(css, /\.responsive-shell\s*>\s*\.factory-main\s*\{\s*padding:\s*16px\s+16px\s+96px\s*\}/,
+  assert.match(css, /\.app-shell\.responsive-shell>\.factory-main\{padding:16px 16px 96px\}/,
     "content must not end underneath the global bottom bar");
 });
