@@ -304,3 +304,66 @@ Scans left today: 6 of 10 (the daily cap is a real constraint on running 17
 cases; reuse of the same artwork is free and warm).
 
 NEXT: verify cases 2/4 now discriminate on D1599, then cases 7-17.
+
+
+## Design Scanner — 13 of 17 run, 3 defects found, 2 fixed
+
+| # | case | expected | actual | paid | cost | cache | pass |
+|---|---|---|---|---|---|---|---|
+| 1 | matching bachelorette | aligns | Strong, on-subject | 1 | $0.00083 | cold | yes |
+| 2 | unrelated vs bachelorette | differs from #1 | was IDENTICAL -> now off-subject | 1 | $0.00070 | cold | fixed D1599 |
+| 3 | matching dog mom | aligns | Moderate, on-subject | 1 | $0.00070 | cold | yes |
+| 4 | unrelated vs dog mom | differs from #3 | was IDENTICAL -> now off-subject | 0 | $0 | warm | fixed D1599 |
+| 5 | matching halloween | evidence-gated | refused: cohort-too-small, 0 listings | 1 | $0.00069 | cold | yes |
+| 6 | unrelated vs halloween | refused | refused, warm | 0 | $0 | warm | yes |
+| 7 | one design, two niches | different verdicts | Strong/on-subject vs Moderate/off-subject | 0 | $0 | warm | yes |
+| 8 | degraded readability | flagged | "stays readable at thumbnail size" | 1 | $0.00074 | cold | **NO** |
+| 9 | weak contrast | flagged | "contrast matches the high look" | 1 | $0.00069 | cold | **NO** |
+| 10 | long wording | flagged | flagged correctly in opportunity | 1 | $0.00074 | cold | yes |
+| 11 | exact repeat upload | free, warm | warm, 0 paid | 0 | $0 | warm | yes |
+| 12 | same artwork, niche changed | free, re-compared | warm, honest refusal | 0 | $0 | warm | yes |
+| 13 | unsupported niche | clear stop | refused cohort-too-small | 0 | $0 | warm | partial |
+| 17 | simultaneous identical uploads | one call | was TWO calls, two scans burned | 2 | $0.00140 | cold | fixed D1600 |
+
+NOT RUN: 14 stale reference image, 15 changed reference image, 16 provider
+failure. **Blocked today by the 10-scan daily cap** (1 left). The cap is a
+standing constraint and must not be raised.
+
+### Defect 1 (FIXED D1599) — subject was never checked
+"Vintage Tractor Parts Since 1947" vs bachelorette returned output
+byte-for-byte identical to a real bachelorette design. The scanner compares
+how a design is BUILT and never asks whether it is about the niche, while its
+wording reads as niche fit. `app/design-niche-relevance.ts` now returns
+on-subject / off-subject / unreadable from the design's own transcribed
+wording; an off-subject design is told so BEFORE the verdict and the visual
+comparison is re-scoped to construction. Verified live: off-subject now leads
+with "This design does not appear to be about bachelorette."
+
+### Defect 2 (FIXED D1600) — simultaneous uploads billed twice
+Two identical uploads at once made two paid calls and took two of ten daily
+scans for one design. The route CLAIMED the reservation fingerprint collapsed
+them into one job; the fingerprint is recorded, not enforced. Now leased with
+the same `work-lease` module the Listing Factory uses; losers wait for the
+winner's stored analysis and come back warm.
+
+### Defect 3 (NOT FIXED) — readability and contrast are asserted, not measured
+A 7px-blurred design and a near-invisible light-grey-on-white design both
+returned "It stays readable at thumbnail size" and "Its contrast matches the
+high look that is doing well here."
+
+`design-compare.ts` is CORRECT — both lines are gated on
+`design.thumbnailReadability === "readable"` and there is a gap branch for
+unreadable. The fault is upstream: the vision model classified both as
+readable/high-contrast. The prompt does ask for it
+(`thumbnailReadability: one of readable, tight, crowded, illegible`).
+
+This is a model-accuracy limit producing a confidently FALSE statement about
+artwork a member cannot sell. Proposed fix, not yet built: measure contrast and
+edge-sharpness deterministically from the pixels instead of asking a model —
+arithmetic, not judgement. `artwork-fingerprint.ts` already decodes images.
+
+### Minor: unsupported niche wording
+An untracked niche ("underwater basket weaving") is refused as
+`cohort-too-small` — "Only 0 listings in this niche show verified movement so
+far", which invites waiting for evidence that will never arrive. A niche that
+is not tracked at all should say so.
