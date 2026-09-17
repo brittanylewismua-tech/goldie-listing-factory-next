@@ -108,10 +108,12 @@
   was made blind. The lookup is a read and is styled as one: quieter than the
   move it precedes, and visually a statement rather than a control.
 */
-.shop-map-look{min-height:44px;padding:10px 16px;border-radius:10px;
+/* .shop-map-move button (0,1,1) outranks a bare class, so the quiet button
+   rendered in the primary red and the card showed two primary actions. */
+.shop-map-move button.shop-map-look{min-height:44px;padding:10px 16px;border-radius:10px;
   border:1px solid var(--p-line);background:#fff;color:var(--p-ink);
   font-size:14px;font-weight:700;cursor:pointer;justify-self:start}
-.shop-map-look:disabled{opacity:.5;cursor:default}
+.shop-map-move button.shop-map-look:disabled{opacity:.5;cursor:default}
 .shop-map-placement{border:1px solid var(--p-line);border-radius:12px;
   padding:12px 14px;background:var(--p-card-quiet);display:grid;gap:6px}
 .shop-map-placement-title{margin:0;font-size:14px;font-weight:700;color:var(--p-ink)}
@@ -123,8 +125,10 @@
   looked exactly like one computed a minute ago.
 */
 .shop-map-freshness{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--p-muted)}
-.shop-map-freshness[data-stale="yes"]{color:#6b4a06;font-weight:600}
-.shop-map-clear-correction{min-height:44px;padding:10px 14px;border-radius:10px;
+/* Distinguished by weight and darkness, not a new hue. #6b4a06 reads brown
+   at 12px, and brown has been rejected. */
+.shop-map-freshness[data-stale="yes"]{color:var(--p-ink);font-weight:600}
+.shop-map-move button.shop-map-clear-correction{min-height:44px;padding:10px 14px;border-radius:10px;
   border:1px solid var(--p-line);background:transparent;color:var(--p-ink-soft);
   font-size:13px;font-weight:600;cursor:pointer;justify-self:start;margin-top:4px}
-.shop-map-clear-correction:disabled{opacity:.5;cursor:default}
+.shop-map-move button.shop-map-clear-correction:disabled{opacity:.5;cursor:default}
