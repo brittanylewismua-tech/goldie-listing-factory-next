@@ -267,7 +267,10 @@ export default function MarketWatchClient(
                   ? "Opening…"
                   : watch.stale
                     ? "Last update could not be refreshed — showing the last confirmed reading"
-                    : `${watch.moving} moving · ${watch.repeated} repeated · ${watch.shops} shops`}
+                    /* D1674 · "feminist · 1 moving · 1 repeated · 1 shops" on
+                       the live page. The counts are genuinely often one. */
+                    : `${watch.moving} moving · ${watch.repeated} repeated · `
+                      + `${watch.shops} ${watch.shops === 1 ? "shop" : "shops"}`}
               </span>
             </button>
           ))}
@@ -339,8 +342,10 @@ function NicheDetail({ view, onBack }: { view: NicheView; onBack: () => void }) 
       {summary && (
         <p className="summary">
           {summary.meaningfulMomentum
-            ? `${summary.moving} listings moving · ${summary.repeated} with repeated momentum · `
-              + `${summary.shops} shops`
+            /* Same rule as the list row: these counts are often one. */
+            ? `${summary.moving} ${summary.moving === 1 ? "listing" : "listings"} moving · `
+              + `${summary.repeated} with repeated momentum · `
+              + `${summary.shops} ${summary.shops === 1 ? "shop" : "shops"}`
             : "Not enough verified evidence in this niche yet."}
           {view.window ? ` · ${view.window}` : ""}
           {summary.newSinceLastBrief > 0
@@ -431,6 +436,21 @@ function ShopCard({ shop }: { shop: ShopView }) {
       {sections.map(([name, cards]) => cards.length === 0 ? null : (
         <div key={name} className="section">
           <h3 className="section-name">{name}</h3>
+          {/*
+            D1674 · SAID ONCE, NOT ON EVERY CARD.
+
+            Every attention card carried this warning in full, so three cards
+            in a row repeated the same forty words verbatim. It is true of
+            review evidence generally rather than of any one listing, so it
+            belongs to the section — read once, and still read before any of
+            the findings under it.
+          */}
+          {name === "Getting attention" && (
+            <p className="section-caveat">
+              Reviews are not sales, and a buyer can leave one up to a hundred days
+              after delivery.
+            </p>
+          )}
           {cards.map((card, index) => (
             <div className="pattern" key={`${name}-${index}`}>
               <p className="pattern-headline">{card.pattern}</p>

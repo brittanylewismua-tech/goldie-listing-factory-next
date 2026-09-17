@@ -264,3 +264,5 @@
 .mw .watch[aria-busy="true"] .meta { color: var(--gold); }
 .mw .watch:disabled { cursor: default; }
 .mw .watch:disabled:not([aria-busy="true"]) { opacity: .55; }
+/* D1674 · The caveat that belongs to the section rather than to each card. */
+.mw .section-caveat{margin:0 0 10px;color:var(--muted);font-size:11px;line-height:1.5;max-width:60ch}

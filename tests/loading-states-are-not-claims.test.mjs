@@ -643,3 +643,36 @@ test("a product whose details could not be read says so, with a way to retry", (
     tools.indexOf('activeId&&!bundleForm&&<div className="selected-summary-block"') + 900);
   assert.match(block, /props\.loadingTemplate\?[\s\S]*?:props\.templateUrl&&!props\.templateVerified\?/);
 });
+
+test("the review caveat is said once per section, not on every card", () => {
+  /*
+    Measured on the live Shop Watch: three cards in a row repeating the same
+    forty words verbatim — the shop-wide baseline and the reviews-are-not-
+    sales warning — on a section whose only job is to be read.
+
+    What differs per listing stays on the card. What is true of review
+    evidence generally moved to the section, where it is read once and still
+    read before any finding under it.
+  */
+  const patterns = read("shop-watch-patterns.ts");
+  const attention = patterns.slice(patterns.indexOf("export function gettingAttention"),
+    patterns.indexOf("export function whatChanged"));
+  assert.ok(!/Reviews are not/.test(attention),
+    "the universal caveat must not be repeated into every card");
+  /* The per-listing comparison is what the card is for. */
+  assert.match(attention, /against an average of \$\{evenShare\.toFixed\(1\)\} for a/);
+
+  const client = read("market-watch/market-watch-client.tsx");
+  assert.match(client, /name === "Getting attention" &&/);
+  assert.match(client, /Reviews are not sales, and a buyer can leave one up to a hundred days/);
+  assert.match(client, /section-caveat/);
+});
+
+test("counts of one are not written as plurals", () => {
+  /* "feminist · 1 moving · 1 repeated · 1 shops" on the live page. */
+  const client = read("market-watch/market-watch-client.tsx");
+  assert.match(client, /\$\{watch\.shops === 1 \? "shop" : "shops"\}/);
+  assert.match(client, /\$\{summary\.shops === 1 \? "shop" : "shops"\}/);
+  assert.match(client, /\$\{summary\.moving === 1 \? "listing" : "listings"\}/);
+  assert.ok(!/\$\{watch\.shops\} shops/.test(client));
+});

@@ -93,10 +93,19 @@ export function gettingAttention(reviews: Review[], now: number): Pattern[] {
       /* Says reviews, because reviews is what was counted. */
       headline: `This listing is drawing ${(group.length / evenShare).toFixed(1)}× `
         + `its share of this shop's recent reviews`,
+      /*
+        D1674 · THE CARD KEEPS WHAT IS ITS OWN. THE CAVEAT IS SAID ONCE.
+
+        This sentence carried the shop-wide baseline and the reviews-are-not-
+        sales warning on EVERY card. Measured on the live page: three cards in
+        a row repeating the same forty words verbatim, on a section whose only
+        job is to be read. The numbers that differ per listing stay here; what
+        is true of the whole shop moved up to the section, where it is read
+        once and still read before any of these.
+      */
       because: `${group.length} of the last ${recent.length} reviews in this shop are for `
-        + `this one listing. Those reviews are spread across ${byListing.size} listings, so `
-        + `an average reviewed listing here has ${evenShare.toFixed(1)}. Reviews are not `
-        + `sales, and a buyer can leave one up to a hundred days after delivery.`,
+        + `this one listing, against an average of ${evenShare.toFixed(1)} for a `
+        + `reviewed listing here.`,
       listingId,
       evidenceClass: "confirmed-review-activity" as const,
       supportingReviewIds: group.map(review => review.transactionId),
