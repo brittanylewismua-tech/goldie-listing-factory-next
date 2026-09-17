@@ -187,17 +187,39 @@ export async function currentCorrelationHealth(
     `SELECT MAX(correlated_at) AS at FROM correlations WHERE rule_version = ?`)
     .bind(CORRELATION_RULE_VERSION).first<{ at: number }>().catch(() => null);
 
-  /* Growth from the two most recent observations, so it is a rate rather than
-     a level. */
-  const samples = await db().prepare(
-    `SELECT at, backlog FROM market_observations ORDER BY at DESC LIMIT 2`)
+  /*
+    A RATE OVER SIX HOURS, NOT THE DIFFERENCE BETWEEN THE LAST TWO READINGS.
+
+    This took two consecutive observations and divided by the ten minutes
+    between them — multiplying whatever noise was in that one difference by
+    six. The queue fills continuously and is drained every ten minutes, so
+    two adjacent samples differ by a few hundred at random, and the operator
+    view read "backlog growing 5,027 an hour" while the backlog was flat and
+    nothing had ever expired.
+
+    A least-squares slope over the last six hours instead: the same question,
+    asked of enough readings to have an answer.
+  */
+  const rateFrom = now - 6 * 3_600;
+  const recent = await db().prepare(
+    `SELECT at, backlog FROM market_observations WHERE at >= ? ORDER BY at ASC`)
+    .bind(rateFrom)
     .all<{ at: number; backlog: number }>()
     .catch(() => ({ results: [] as Array<{ at: number; backlog: number }> }));
-  const two = samples.results ?? [];
-  const growth = two.length === 2 && two[0].at !== two[1].at
-    ? ((Number(two[0].backlog) - Number(two[1].backlog))
-        / ((Number(two[0].at) - Number(two[1].at)) / 3_600))
-    : null;
+  const points = (recent.results ?? []).map(row =>
+    ({ hours: (Number(row.at) - rateFrom) / 3_600, backlog: Number(row.backlog) }));
+  let growth: number | null = null;
+  if (points.length >= 6) {
+    const n = points.length;
+    const meanX = points.reduce((sum, p) => sum + p.hours, 0) / n;
+    const meanY = points.reduce((sum, p) => sum + p.backlog, 0) / n;
+    let top = 0, bottom = 0;
+    for (const point of points) {
+      top += (point.hours - meanX) * (point.backlog - meanY);
+      bottom += (point.hours - meanX) ** 2;
+    }
+    growth = bottom > 0 ? top / bottom : null;
+  }
 
   const pastEarliest = Number(open?.pastEarliest ?? 0);
   const lastAt = Number(last?.at ?? 0);
