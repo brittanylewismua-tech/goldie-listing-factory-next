@@ -33,7 +33,7 @@ import { LEASE_TTL_SECONDS } from "./work-lease-rules.ts";
 export { LEASE_TTL_SECONDS, LEASE_WAIT_MS, LEASE_POLL_MS, leaseHolds }
   from "./work-lease-rules.ts";
 
-export type LeaseKind = "design-intelligence" | "family-copy";
+export type LeaseKind = "design-intelligence" | "family-copy" | "design-scan";
 
 export type Lease =
   | { held: true; kind: LeaseKind; key: string; token: string; because: string }

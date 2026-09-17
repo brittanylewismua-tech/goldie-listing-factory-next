@@ -13,6 +13,7 @@ import {
 import { compare } from "@/app/design-compare";
 import { normalizeNiche, intersect, type Candidate } from "@/app/niche-cohort";
 import { relevanceOf, relevanceNotice } from "@/app/design-niche-relevance";
+import { acquireLease, releaseLease, LEASE_WAIT_MS, LEASE_POLL_MS } from "@/app/work-lease";
 import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 import { evidenceLine } from "@/app/evidence-window";
 import { isFresh } from "@/app/reference-images";
@@ -86,6 +87,9 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
   let upload: UploadIntelligence | null = held
     ? JSON.parse(held.payload) as UploadIntelligence : null;
   const warm = Boolean(upload);
+  /* Held across the two blocks below: the request that wins the lease is the
+     one that pays, and it must release it on every exit. */
+  let leaseToken = "";
 
   if (!upload) {
     if (!body?.imageDataUrl)
@@ -93,19 +97,53 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
         { status: 400 });
 
     /*
-      RESERVED BEFORE THE CALL, NOT AFTER.
+      ONE ANALYSIS PER DESIGN, EVEN WHEN TWO UPLOADS ARRIVE AT ONCE.
 
-      `fingerprint` is the member and the artwork, so two identical uploads
-      arriving at once collapse into one provider job rather than two.
+      This carried a comment claiming the reservation `fingerprint` made two
+      identical uploads "collapse into one provider job". It does not — the
+      fingerprint is recorded, not enforced. Measured against production: two
+      simultaneous uploads of one design made TWO paid vision calls and took
+      TWO of the member's ten daily scans for a single design.
+
+      A lease decides who pays. The other request waits for the winner's stored
+      analysis and comes back warm; if the winner never lands, the waiter takes
+      the lease itself rather than failing.
     */
+    const leaseKey = `${user.userId}|${artworkHash}|${UPLOAD_ANALYSIS_VERSION}`;
+    const lease = await acquireLease("design-scan", leaseKey);
+    if (lease.held) leaseToken = lease.token;
+    if (!lease.held) {
+      const until = Date.now() + LEASE_WAIT_MS;
+      while (Date.now() < until) {
+        await new Promise(resolve => setTimeout(resolve, LEASE_POLL_MS));
+        const landed = await db.prepare(
+          `SELECT payload_json AS payload FROM scan_uploads
+            WHERE user_id = ? AND artwork_hash = ? AND version = ?`)
+          .bind(user.userId, artworkHash, UPLOAD_ANALYSIS_VERSION)
+          .first<Stored>().catch(() => null);
+        if (landed) { upload = JSON.parse(landed.payload) as UploadIntelligence; break; }
+      }
+      if (!upload)
+        return NextResponse.json(
+          { error: "This design is already being analyzed. Try again in a moment." },
+          { status: 409 });
+    }
+  }
+
+  if (!upload) {
+    const leaseKey = `${user.userId}|${artworkHash}|${UPLOAD_ANALYSIS_VERSION}`;
+    const done = async () => { if (leaseToken) await releaseLease("design-scan", leaseKey, leaseToken).catch(() => {}); };
     const reservation = await reserveSpend({ workloadKey: WORKLOAD, userId: user.userId,
       fingerprint: `${user.userId}:${artworkHash}` });
-    if (!reservation.allowed)
+    if (!reservation.allowed) {
+      await done();
       return NextResponse.json({ error: reservation.message, limited: true }, { status: 429 });
+    }
 
     const key = process.env.FAL_KEY ?? "";
     if (!key) {
       await releaseSpend(reservation.id);
+      await done();
       return NextResponse.json({ error: "Scanning is not available right now." }, { status: 503 });
     }
 
@@ -140,6 +178,7 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
       }
     } catch {
       await failSpend(reservation.id, { billed: 0 });
+      await done();
       return NextResponse.json(
         { error: "That scan did not complete. It has not been counted against your daily scans." },
         { status: 502 });
@@ -148,6 +187,7 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
     const parsed = parseAnalysis(String(payload.output ?? ""));
     if (!parsed.ok) {
       await failSpend(reservation.id, { billed: cost });
+      await done();
       return NextResponse.json(
         { error: "That design could not be read. It has not been counted against your daily scans." },
         { status: 502 });
@@ -168,6 +208,8 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
       .bind(user.userId, artworkHash, UPLOAD_ANALYSIS_VERSION,
         JSON.stringify(upload), cost, now).run();
     await settleSpend(reservation.id, cost);
+    /* Stored and paid for. The waiters can stop watching. */
+    await done();
   }
 
   /* --------------------------------------------------------- the cohort */

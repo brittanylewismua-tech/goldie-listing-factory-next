@@ -71,3 +71,31 @@ test("the construction verdict is never deleted or softened", () => {
   assert.match(route, /overall: alignment\.overall/);
   assert.match(route, /working: alignment\.working/);
 });
+
+test("two simultaneous uploads of one design pay once", () => {
+  /*
+    Measured against production: two identical uploads sent at the same moment
+    made TWO paid vision calls and consumed TWO of the member's ten daily
+    scans for a single design. The route carried a comment claiming the
+    reservation `fingerprint` made them "collapse into one provider job" — the
+    fingerprint is recorded, not enforced.
+  */
+  const route = readFileSync(new URL(
+    "../app/api/design-scanner/scan/route.ts", import.meta.url), "utf8");
+  assert.match(route, /acquireLease\("design-scan", leaseKey\)/);
+  /* The lease is taken before the reservation and before the provider call. */
+  const leaseAt = route.indexOf('acquireLease("design-scan"');
+  const reserveAt = route.indexOf("reserveSpend({ workloadKey: WORKLOAD");
+  const fetchAt = route.indexOf("https://fal.run/openrouter/router/vision");
+  assert.ok(leaseAt > 0 && leaseAt < reserveAt && reserveAt < fetchAt,
+    "lease, then reserve, then call — any other order pays twice");
+  /* A loser waits for the winner's stored analysis rather than paying. */
+  assert.match(route, /SELECT payload_json AS payload FROM scan_uploads/);
+  assert.match(route, /already being analyzed/);
+  /* And the winner releases on every exit, or the next scan of that design
+     would be refused until the lease expired. */
+  assert.ok((route.match(/await done\(\);/g) || []).length >= 5,
+    "the lease must be released on every exit, including success");
+  assert.doesNotMatch(route, /collapse into one provider job rather than two/,
+    "the claim that was measured false must not remain in the file");
+});
