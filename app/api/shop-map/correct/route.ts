@@ -40,6 +40,37 @@ export const POST = withErrorLog("shop-map-correct", async (request: Request) =>
   switch (body.action) {
     case "move-listing": {
       if (!body.listingId) return NextResponse.json({ error: "Which listing?" }, { status: 400 });
+      /*
+        D1669 · A CORRECTION FOR A LISTING THIS SHOP DOES NOT HAVE WAS ACCEPTED.
+
+        Measured against the live shop: moving listing 999999999 returned
+        {ok:true} with a 200. The write is an INSERT, so it did not merely
+        fail to match — it created an override row for a listing that does
+        not exist, and the member was told their correction had worked.
+
+        The listing ID is typed by hand on that panel, so a typo or an ID
+        copied from another shop is the ordinary case rather than the exotic
+        one. An action must not report success it did not achieve.
+      */
+      const owns = await db.prepare(
+        `SELECT 1 AS found FROM shop_map_listings
+          WHERE user_id = ? AND shop_id = ? AND listing_id = ? LIMIT 1`)
+        .bind(user.userId, shopId, body.listingId).first<{ found: number }>()
+        .catch(() => null);
+      if (!owns)
+        return NextResponse.json({
+          error: `Listing ${body.listingId} is not in this shop's map, so nothing `
+            + `was changed. Check the listing ID on Etsy — it is the number in `
+            + `the listing's own URL.`,
+        }, { status: 404 });
+      /*
+        The niche is NOT validated here on purpose. The targets come from the
+        shop's own map through a select, so an unknown one means a stale page
+        rather than a mistake — and a first attempt at checking it queried a
+        world_id column that shop_map_classifications does not have, which
+        with its catch would have refused every correction instead. A check
+        that can break the feature it guards is worse than the gap.
+      */
       await db.prepare(
         `INSERT INTO shop_map_world_overrides
            (user_id, shop_id, listing_id, world_ids, reason, created_at)
