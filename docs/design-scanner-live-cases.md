@@ -36,8 +36,39 @@ vision calls and took two of the member's ten daily scans.
 pass, thumbnail readable pass, no notes — the D1618 independence work holding
 on a real upload, with no false positive against sparse crisp text.
 
+## Readability, verified on screen
+
+The contrast and edge-softness measurements were computed on every scan,
+returned by the API and rendered nowhere until D1626. Verified on the
+deployed build through the state harness, each state opened by reopening a
+saved scan — the path a member actually uses:
+
+| state | notes shown |
+|---|---|
+| faint, crisp edges | one, about contrast. Nothing about blur. |
+| strong contrast, soft edges | one, about softness. Nothing about contrast. |
+| faint AND soft | **both**, neither written as the cause of the other. |
+| near-empty artwork | "This design is empty or almost empty." |
+
+The near-empty case also proves the measurement survives a refused
+comparison: the cohort refusal and the readability note render together,
+which is the half a member can act on when the comparison cannot be made.
+
+And on the real upload in case 17 — crisp black-on-white text — contrast,
+sharpness and thumbnail readability all passed with no notes, so the fix for
+the false positive against sparse crisp artwork holds on production input.
+
+## Phone widths
+
+42 states at 375, 390 and 430 — 126 measurements — with no horizontal
+scrolling, nothing wider than the screen, no tap target under 40px and no
+request left unanswered by a fixture. It is a control on the harness rather
+than something done by hand, because the first hand-run found two real
+defects and a hand-run happens once.
+
 ### Still open
 
-Cases 14–16 (stale reference image, changed reference image, provider failure)
-need a cold scan each and the allowance is at 10 of 10. One slot returns as
-the oldest scan leaves the rolling window.
+Cases 14–16 (stale reference image, changed reference image, provider
+failure) need a cold scan each and the allowance is at 10 of 10. The next
+slot returns at 2026-09-18T02:15Z as the oldest scan leaves the rolling
+window; the three cases need three slots, which arrive over several hours.
