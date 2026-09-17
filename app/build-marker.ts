@@ -207,7 +207,7 @@
    retry, and per-step counts as evidence. Exercised against a seeded store and
    a disposable identity; the owner's own account is refused while the product
    is being finished. */
-export const BUILD_MARKER = "D1633";
+export const BUILD_MARKER = "D1634";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

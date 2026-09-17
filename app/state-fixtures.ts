@@ -410,8 +410,9 @@ export const stateFixtures = (): StateFixture[] => [
       { path: "/api/design-scanner/scan", method: "GET", status: 200,
         body: { scans: [], scansLeftToday: 7 } },
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },{ path: "/api/design-scanner/scan", method: "POST", status: 429,
-      body: { error: "You have used all 10 scans for today. One becomes available again shortly. "
-        + "Your saved results stay open and reopening them is free.", limited: true } }] },
+      body: { error: "You have used all 10 scans for today. One becomes available again "
+        + "in about 6 hours. Your saved results stay open and reopening them is free.",
+        limited: true } }] },
 
   { key: "scanner-provider-error", label: "Provider failure", surface: "design-scanner",
     what: "The model failed. Nothing counted against the allowance.",

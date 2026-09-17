@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { workload, type Workload } from "@/app/paid-workloads";
+import { whenFreed } from "@/app/member-time";
 
 /**
  * RESERVE BEFORE SPENDING, RECONCILE AFTER.
@@ -169,7 +170,7 @@ export async function reserveSpend(
     if (consumesAllowance && usage.remaining !== null && usage.remaining <= 0)
       return { allowed: false, reason: "member-limit",
         message: `You have used all ${usage.limit} scans for today. `
-          + `One becomes available again at ${usage.oldestLeavesWindowAt ?? "shortly"}. `
+          + `One becomes available again ${whenFreed(usage.oldestLeavesWindowAt)}. `
           + `Your saved results stay open and reopening them is free.` };
     if (usage.attemptsRemaining !== null && usage.attemptsRemaining <= 0)
       return { allowed: false, reason: "member-attempts",
