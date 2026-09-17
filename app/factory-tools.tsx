@@ -377,7 +377,19 @@ export function SavedWorkflow(props: WorkflowProps) {
          Adding is the case where a seller is most likely to have clicked by
          mistake. */}
 {editing&&<button type="button" className="secondary-action" onClick={()=>{setEditing(false);setEditingId("");setName("");setKeywordListId("");setMessage("")}}>Cancel</button>}</div>}
-    {activeId&&!bundleForm&&<div className="selected-summary-block">{props.selectedSummary??(props.loadingTemplate?<div className="selected-product-loading" role="status"><span className="goldie-spinner" aria-hidden="true"/>Loading product details…</div>:null)}</div>}
+    {/*
+      D1664 · A SPINNER AND AN INSTRUCTION TO ACT CANNOT BOTH BE TRUE.
+
+      This rendered "Loading product details…" purely from `loadingTemplate`,
+      so it sat directly above "Connect its Printify template to continue" —
+      on the deployed build, indefinitely, with no error between them. The
+      member could not tell whether to wait or to do something.
+
+      A load that is no longer in flight and produced no details did not
+      finish quietly; it failed. Saying so, with the way to try again, is the
+      third state this had no room for.
+    */}
+    {activeId&&!bundleForm&&<div className="selected-summary-block">{props.selectedSummary??(props.loadingTemplate?<div className="selected-product-loading" role="status"><span className="goldie-spinner" aria-hidden="true"/>Loading product details…</div>:props.templateUrl&&!props.templateVerified?<div className="selected-product-loading" role="alert">This product’s details could not be read from Printify. Nothing about the product has changed.<button type="button" className="secondary-action" onClick={()=>void props.onVerifyTemplate(props.templateUrl)}>Try again</button></div>:null)}</div>}
     {/* Once a bundle is the current selection its members are already listed above,
         so re-showing the bundle grid underneath just offered the same bundle again. */}
     {!editing&&usableBundles.length>0&&(!activeId||showLibrary)&&<><div className="recipe-library-head bundle-card-heading"><span>Saved bundles</span>{/* D304 · "Bundles are selected exactly like individual products" removed — it described the mechanism, not anything the seller needs to decide. */}</div><div className="recipe-grid unified-bundle-grid">{usableBundles.map(bundle=>{const included=bundle.recipeIds.map(id=>recipes.find(recipe=>recipe.id===id)).filter(Boolean) as Recipe[],selecting=pendingAction===`bundle:${bundle.id}`,selected=activeId===`bundle:${bundle.id}`,blocked=bundleBlockers(bundle);return <article className={`recipe-tile bundle-as-product ${selected?"selected":""} ${blocked.away.length?"other-shop":""}`} aria-busy={selecting} key={bundle.id}><button className="recipe-use" title={`Choose ${bundle.name}`} aria-label={`Choose ${bundle.name}`} disabled={included.length<2||blocked.away.length>0||Boolean(pendingAction)} onClick={()=>void chooseBundle(bundle)}><span className="recipe-icon">{included.length}</span><span className="recipe-copy"><b>{bundle.name}</b><small>{selecting?<span className="bundle-loading"><span className="goldie-spinner" aria-hidden="true"/>Preparing {included.length} products</span>:included.map(recipe=>recipe.name).join(" · ")||"Saved products missing"}</small>{selecting?<em>Preparing bundle…</em>:blocked.away.length?<em>Different Etsy shop</em>:null}

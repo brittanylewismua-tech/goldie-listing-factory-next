@@ -1121,7 +1121,27 @@ export default function ListingFactoryApp() {
     return printifyProductLabel(templateDetails);
   }, [templateDetails]);
   const [templateError, setTemplateError] = useState("");
-  const [loadingTemplate, setLoadingTemplate] = useState(false);
+  /*
+    D1664 · WHICH REQUEST IS LOADING, NOT WHETHER SOMETHING IS.
+
+    This was a plain boolean beside `templateLoadVersion`, and the two could
+    desync. Every exit from loadTemplateUrl is guarded by
+    `requestVersion === templateLoadVersion.current`, so a superseded request
+    clears neither the flag nor the error — correct, because a newer request
+    owns them — but any path that bumps the version without starting a load
+    leaves the flag true with nothing left to clear it.
+
+    Seen on the deployed build during the desktop walkthrough: "Loading
+    product details…" sat on screen indefinitely, with no error, directly
+    above "Connect its Printify template to continue" — a spinner and an
+    instruction to act, at the same time, and no way for the member to tell
+    which was true.
+
+    Holding the version instead makes the flag derived: it is loading only
+    while the version that set it is still the current one, so it cannot
+    outlive its own request.
+  */
+  const [loadingTemplateVersion, setLoadingTemplateVersion] = useState(0);
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<DesignFile[]>([]);
   const preparationScope=JSON.stringify([batchIdRef.current,templateDetails?.id]);
@@ -2735,7 +2755,7 @@ export default function ListingFactoryApp() {
     setBundleApproved({});setBundlePrices({});setBundlePricing({});setBundleShipping({});
     setBundleSizeChoices({});setBundleMockupChoices({});setBundleKeywordChoices({});setBundleLoadErrors({});
     setSelectedSizeIds([]);setResumeProcessing(false);resumeAttempted.current=false;
-    templateLoadVersion.current+=1;setLoadingTemplate(false);setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setPreparationCompleted(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setBatchKeywords([]);setTitleJoiner(", ");setTitleBuilderMode("ai");setAutoTitleBank(null);setAutoTitleBankId("");setManualKeywordBankId("");setActiveDesign("");setUploadNoticeOpen(false);setPrintifyImageIndices([]);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setSelectedColorIds([]);setColorsRemembered(false);setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");syncedListingSignatures.current.clear();
+    templateLoadVersion.current+=1;setLoadingTemplateVersion(0);setFiles([]);setFileError("");setDrafts([]);setProcessed(0);setPreparationCompleted(0);setRunTotal(0);setComplete(false);setOpenedDrafts([]);setOpenAllMessage("");setBulkTitles("");setBatchKeywords([]);setTitleJoiner(", ");setTitleBuilderMode("ai");setAutoTitleBank(null);setAutoTitleBankId("");setManualKeywordBankId("");setActiveDesign("");setUploadNoticeOpen(false);setPrintifyImageIndices([]);setPrintifyImageSelections({});setSharedMockups(undefined);setPreparedMockupCounts({});setFinishPhase("details");setVariantPrices({});setSelectedColorIds([]);setColorsRemembered(false);setPricingApproved(false);setSizeGuideName("");setSizeGuideStatus("");setBatchReceipt(null);setPublishMessage("");syncedListingSignatures.current.clear();
     if(clearProduct){setTemplate("");setTemplateDetails(null);setTemplateError("");setDescription("");setMockupTheme("");setActiveRecipe(null);setActiveBundle(null);setBundleRecipes([]);setBundleIndex(0);setBundleColorProducts({});setBundleBatchIds({});setBundleColorChoices({});setBundleQualityDecisions({});setPricing(current=>({...current,targetProfit:DEFAULT_PRICING.targetProfit,shippingCost:0,shippingCharged:0}))}
     if (folderPicker.current) folderPicker.current.value = "";
     if (imagePicker.current) imagePicker.current.value = "";
@@ -4676,7 +4696,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
 
   async function loadTemplateUrl(productUrl = template, pricingOverride?:Pricing, savedShippingProfileId=0,rememberedColorIds:number[]=[],rememberedSizeIds:number[]=[]):Promise<TemplateDetails|null> {
     const requestVersion=++templateLoadVersion.current;
-    setLoadingTemplate(true); setTemplateError(""); setTemplateDetails(null);
+    setLoadingTemplateVersion(requestVersion); setTemplateError(""); setTemplateDetails(null);
     try {
       const response = await fetchWithDeadline("/api/printify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productUrl,savedShippingProfileId }) }, 90000);
       const result = await response.json() as { product?: TemplateDetails; error?: string;issues?:string[];title?:string;shop?:{id:number;title:string;count?:number} };
@@ -4746,7 +4766,10 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
    cleared for a product that has none saved, which is the case it was for. */
 setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecipe?.defaultProfitTarget,etsyShippingProfileId:activeRecipe?.etsyShippingProfileId})); return result.product;
     } catch (error) { if(requestVersion===templateLoadVersion.current)setTemplateError(error instanceof Error ? error.message : "The template could not be loaded."); return null; }
-    finally { if(requestVersion===templateLoadVersion.current)setLoadingTemplate(false); }
+    /* Clears only if this request still owns the flag. The newest request
+       always does, and its finally always runs — the deadline guarantees the
+       fetch settles — so the flag can never be left set. */
+    finally { setLoadingTemplateVersion(current=>current===requestVersion?0:current); }
   }
 
   /* A saved batch contains the product snapshot that existed when it was last
@@ -5905,7 +5928,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
           <div inert={running||Boolean(bundleRun)} className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}>{/* D763 · Panel 01. The facets below number from 02, and until now
             there was no 01 - the picker sat in the old card while the settings
-            under it had already become panels. */}<FactoryPanel index={1} title={bundleCreationMode?"Create a product bundle":productFormMode?"Add a saved product":showProductLibrary||(!productSelected&&!bundleSelected)?"Saved products and bundles":bundleSelected?"Products for this batch":productSelected?"Product for this batch":"Choose a product or bundle"} description={bundleCreationMode?"Name it, then choose 2 to 4 products":productFormMode?"Connect one completed Printify product":showProductLibrary||(!productSelected&&!bundleSelected)?undefined:"Selected for this batch"} state={failedBundleNames().length?"Needs a look":undefined} headerActions={bundleCreationMode||productFormMode?undefined:showProductLibrary||(!productSelected&&!bundleSelected)?<>{showProductLibrary&&(productSelected||bundleSelected)&&<button type="button" className="panel-create-action" onClick={()=>setShowProductLibrary(false)}>Back to this batch</button>}<button type="button" className="panel-create-action" onClick={()=>setAddProductRequest(value=>value+1)}>＋ Add a new product</button>{bundleCreationAvailable&&<button type="button" className="panel-create-action" onClick={()=>setCreateBundleRequest(value=>value+1)}>＋ Create a new bundle</button>}</>:bundleSelected?<button type="button" className="panel-create-action" onClick={()=>setShowProductLibrary(true)}>Choose a different bundle</button>:<button type="button" className="panel-create-action" onClick={()=>setShowProductLibrary(true)}>Choose a different product</button>} tone={failedBundleNames().length?"attention":productSelected||bundleSelected?"done":undefined} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplate} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} showLibrary={showProductLibrary} onShowLibraryChange={setShowProductLibrary} addProductRequest={addProductRequest} createBundleRequest={createBundleRequest} onBundleAvailabilityChange={setBundleCreationAvailable} onBundleModeChange={setBundleCreationMode} onProductModeChange={setProductFormMode} selectedSummary={templateDetails?<div className="template-proof recipe-proof selected-product-header">{/* D834 · This drew the words "YOUR ART" in a box. The product's own
+            under it had already become panels. */}<FactoryPanel index={1} title={bundleCreationMode?"Create a product bundle":productFormMode?"Add a saved product":showProductLibrary||(!productSelected&&!bundleSelected)?"Saved products and bundles":bundleSelected?"Products for this batch":productSelected?"Product for this batch":"Choose a product or bundle"} description={bundleCreationMode?"Name it, then choose 2 to 4 products":productFormMode?"Connect one completed Printify product":showProductLibrary||(!productSelected&&!bundleSelected)?undefined:"Selected for this batch"} state={failedBundleNames().length?"Needs a look":undefined} headerActions={bundleCreationMode||productFormMode?undefined:showProductLibrary||(!productSelected&&!bundleSelected)?<>{showProductLibrary&&(productSelected||bundleSelected)&&<button type="button" className="panel-create-action" onClick={()=>setShowProductLibrary(false)}>Back to this batch</button>}<button type="button" className="panel-create-action" onClick={()=>setAddProductRequest(value=>value+1)}>＋ Add a new product</button>{bundleCreationAvailable&&<button type="button" className="panel-create-action" onClick={()=>setCreateBundleRequest(value=>value+1)}>＋ Create a new bundle</button>}</>:bundleSelected?<button type="button" className="panel-create-action" onClick={()=>setShowProductLibrary(true)}>Choose a different bundle</button>:<button type="button" className="panel-create-action" onClick={()=>setShowProductLibrary(true)}>Choose a different product</button>} tone={failedBundleNames().length?"attention":productSelected||bundleSelected?"done":undefined} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplateVersion===templateLoadVersion.current&&loadingTemplateVersion>0} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} showLibrary={showProductLibrary} onShowLibraryChange={setShowProductLibrary} addProductRequest={addProductRequest} createBundleRequest={createBundleRequest} onBundleAvailabilityChange={setBundleCreationAvailable} onBundleModeChange={setBundleCreationMode} onProductModeChange={setProductFormMode} selectedSummary={templateDetails?<div className="template-proof recipe-proof selected-product-header">{/* D834 · This drew the words "YOUR ART" in a box. The product's own
                    Printify flatlay is available here - pickProductPhoto scores the
                    previews and returns the best one - and showing it is what the
                    panel is for: she is confirming which garment this batch prints
@@ -5914,7 +5937,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 {(()=>{const photo=activeRecipe?.previewImage||(templateDetails?pickProductPhoto(templateDetails):"")||"";
                   return photo
                     ? <img className="product-thumb bundle-product-photo" src={photo} alt={templateDetails?.blueprintTitle||"Product"} decoding="async"/>
-                    : <div className="product-thumb product-photo-loading" aria-label="Loading product photo"><span className="goldie-spinner" aria-hidden="true"/></div>})()}<div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own product choices, photos, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe),templateDetails.blueprintTitle)}</span><span>✓ Product, placement, {productOptionAxis(templateDetails.blueprintTitle).label.toLowerCase()}, and shipping profile imported</span></>}</div></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplate(false);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>
+                    : <div className="product-thumb product-photo-loading" aria-label="Loading product photo"><span className="goldie-spinner" aria-hidden="true"/></div>})()}<div className="template-info">{bundleSelected?<><b>{activeBundle?.name}</b><span>{bundleRecipes.length} products · {bundleRecipes.map(item=>item.name).join(" · ")}</span><span>✓ Each product keeps its own product choices, photos, and keywords</span></>:<><b>{templateDetails.blueprintTitle}</b><span>{templateDetails.provider} · {variantSummary(summaryAxes(templateDetails,activeRecipe),templateDetails.blueprintTitle)}</span><span>✓ Product, placement, {productOptionAxis(templateDetails.blueprintTitle).label.toLowerCase()}, and shipping profile imported</span></>}</div></div>:null} verifiedShippingProfileId={Number(templateDetails?.shippingTemplateId)||0} onTemplateUrl={(value) => { templateLoadVersion.current+=1;setLoadingTemplateVersion(0);setTemplate(value);setTemplateDetails(null);setTemplateError(""); }} onUseRecipe={chooseRecipe} onUseBundle={useBundle} onStartNewProduct={startNewProduct} onChangeProduct={changeProduct} onVerifyTemplate={loadTemplateUrl} /></FactoryPanel>
           {localPreview&&!templateDetails&&<button className="preview-demo-button" onClick={()=>void loadPreviewDemo()}>Load a complete poster demo to review every step</button>}
           {workflowStep==="setup"&&files.length===0&&!bundleCreationMode&&!productFormMode&&<FactoryFooter status={`${missingRequirement} to continue`}><button className="workflow-next" type="button" disabled>{missingRequirement}</button></FactoryFooter>}
           {templateError && <p className="field-error recipe-error" role="alert">{templateError}</p>}

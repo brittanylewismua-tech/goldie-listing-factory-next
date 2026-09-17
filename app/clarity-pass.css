@@ -3193,3 +3193,13 @@ body{min-width:0}
   line-height:1.55;
 }
 .etsy-category-guess b{color:#b53838}
+
+/* D1664 · The failed-read state needs its own look; it used to share the
+   loading row's styling because the loading row was the only state there. */
+.app-shell .selected-product-loading[role="alert"]{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  color:#b53838;
+}
+.app-shell .selected-product-loading[role="alert"] .secondary-action{
+  min-height:44px;padding:0 14px;
+}

@@ -580,3 +580,48 @@ test("a plan allowance that could not be read blocks creation rather than being 
   assert.match(shell, /usageFailed \? "Allowance unavailable"/);
   assert.match(shell, /if \(!response\.ok\) throw new Error\("usage"\)/);
 });
+
+test("the product loader cannot outlive its own request", () => {
+  /*
+    Seen on the deployed build during the desktop walkthrough: selecting a
+    saved product left "Loading product details…" on screen indefinitely,
+    with no error, directly above "Connect its Printify template to
+    continue" — a spinner and an instruction to act at the same time, and no
+    way for the member to tell which was true. Still there minutes later.
+
+    `loadingTemplate` was a plain boolean beside `templateLoadVersion`, and
+    every exit from loadTemplateUrl is guarded by
+    `requestVersion === templateLoadVersion.current`. That guard is right —
+    a superseded request must not clear a newer one's flag — but it means the
+    flag has no owner, so any path that bumps the version without starting a
+    load leaves it set with nothing left to clear it.
+  */
+  const source = read("listing-factory-app.tsx");
+  assert.match(source,
+    /const \[loadingTemplateVersion, setLoadingTemplateVersion\] = useState\(0\)/,
+    "the flag must hold the request that set it, not a bare boolean");
+  assert.ok(!/setLoadingTemplate\(/.test(source),
+    "the desyncable boolean must be gone entirely");
+  /* Set to this request's version, and cleared only if it still owns it. */
+  assert.match(source, /setLoadingTemplateVersion\(requestVersion\)/);
+  assert.match(source,
+    /setLoadingTemplateVersion\(current=>current===requestVersion\?0:current\)/);
+  /* And it is loading only while that version is still the current one. */
+  assert.match(source,
+    /loadingTemplate=\{loadingTemplateVersion===templateLoadVersion\.current&&loadingTemplateVersion>0\}/);
+});
+
+test("a product whose details could not be read says so, with a way to retry", () => {
+  /* The third state this had no room for: not loading, and no details. That
+     is a failure, not a quiet finish. */
+  const tools = read("factory-tools.tsx");
+  assert.match(tools, /could not be read from Printify/);
+  assert.match(tools, /Nothing about the product has changed/);
+  assert.match(tools, /role="alert"/);
+  assert.match(tools, /onVerifyTemplate\(props\.templateUrl\)\}>Try again/);
+  /* The spinner and the failure are mutually exclusive branches of one
+     expression, so they can never both render. */
+  const block = tools.slice(tools.indexOf('activeId&&!bundleForm&&<div className="selected-summary-block"'),
+    tools.indexOf('activeId&&!bundleForm&&<div className="selected-summary-block"') + 900);
+  assert.match(block, /props\.loadingTemplate\?[\s\S]*?:props\.templateUrl&&!props\.templateVerified\?/);
+});
