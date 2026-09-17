@@ -225,23 +225,46 @@ export function measureQuality(pixels: Pixels): ImageQuality {
     meaningful share, and anything rarer than that share is the stray pixel
     the percentile was there to ignore.
   */
+  /*
+    CONTRAST AND SOFTNESS MUST BE ABLE TO FAIL SEPARATELY.
+
+    A first version found the ink by looking for a single histogram bucket,
+    far from the ground, holding at least half a per cent of the pixels. Heavy
+    blur spreads a stroke across many tones, so no single bucket cleared the
+    floor and the ink was read as sitting on the ground: a blurred black-on-
+    white design failed CONTRAST and passed SHARPNESS, and the member was told
+    to fix the wrong thing.
+
+    The ink is a population, not a bucket. Everything meaningfully away from
+    the ground is ink, however it is spread, and the ink's own darkest fifth
+    is what the ground is compared against — blurred strokes still have dark
+    centres, so tonal range survives blur exactly as it does in the eye.
+  */
   const BUCKETS = 64;
   const histogram = new Array<number>(BUCKETS).fill(0);
   for (const value of luminances)
     histogram[Math.min(BUCKETS - 1, Math.max(0, Math.round(value * (BUCKETS - 1))))] += 1;
-  const groundBucket = histogram.indexOf(Math.max(...histogram));
-  const floor = Math.max(1, luminances.length * MIN_INK_SHARE);
-  let inkBucket = groundBucket;
-  for (let bucket = 0; bucket < BUCKETS; bucket += 1)
-    if (histogram[bucket] >= floor
-      && Math.abs(bucket - groundBucket) > Math.abs(inkBucket - groundBucket))
-      inkBucket = bucket;
-  const ground = groundBucket / (BUCKETS - 1);
-  const ink = inkBucket / (BUCKETS - 1);
+  const ground = histogram.indexOf(Math.max(...histogram)) / (BUCKETS - 1);
+
+  /* Far enough from the ground to be the design rather than the paper. */
+  const INK_DISTANCE = 0.03;
+  const inkTones = luminances
+    .filter(value => Math.abs(value - ground) > INK_DISTANCE)
+    .sort((a, b) => Math.abs(b - ground) - Math.abs(a - ground));
+  const inkPresent = inkTones.length / Math.max(1, luminances.length);
+
+  /*
+    The darkest (or lightest) fifth of the ink, so a spread-out stroke still
+    counts — but only once there is enough ink to be a design at all. One
+    black pixel on a grey field is not contrast, and taking a percentile of a
+    one-element population would say it was.
+  */
+  const enoughInk = inkPresent >= MIN_INK_SHARE;
+  const ink = enoughInk ? inkTones[Math.floor(inkTones.length * 0.2)] : ground;
   const ratio = contrastRatio(ground, ink);
   const range = Math.abs(ink - ground);
 
-  const empty = inkShare < MIN_INK_SHARE;
+  const empty = inkShare < MIN_INK_SHARE || inkPresent < MIN_INK_SHARE;
   if (empty) notes.push("This design is empty or almost empty.");
 
   const contrast: QualityVerdict = ratio >= CONTRAST_HIGH ? "pass" : "fail";
@@ -272,14 +295,13 @@ export function measureQuality(pixels: Pixels): ImageQuality {
   const thumbHistogram = new Array<number>(BUCKETS).fill(0);
   for (const value of thumbFlat.luminances)
     thumbHistogram[Math.min(BUCKETS - 1, Math.max(0, Math.round(value * (BUCKETS - 1))))] += 1;
-  const thumbGround = thumbHistogram.indexOf(Math.max(...thumbHistogram));
-  const thumbFloor = Math.max(1, thumbFlat.luminances.length * MIN_INK_SHARE);
-  let thumbInk = thumbGround;
-  for (let bucket = 0; bucket < BUCKETS; bucket += 1)
-    if (thumbHistogram[bucket] >= thumbFloor
-      && Math.abs(bucket - thumbGround) > Math.abs(thumbInk - thumbGround))
-      thumbInk = bucket;
-  const thumbRatio = contrastRatio(thumbGround / (BUCKETS - 1), thumbInk / (BUCKETS - 1));
+  const thumbGround = thumbHistogram.indexOf(Math.max(...thumbHistogram)) / (BUCKETS - 1);
+  const thumbInkTones = thumbFlat.luminances
+    .filter(value => Math.abs(value - thumbGround) > INK_DISTANCE)
+    .sort((a, b) => Math.abs(b - thumbGround) - Math.abs(a - thumbGround));
+  const thumbInk = thumbInkTones.length
+    ? thumbInkTones[Math.floor(thumbInkTones.length * 0.2)] : thumbGround;
+  const thumbRatio = contrastRatio(thumbGround, thumbInk);
   const survivesReduction = thumbRatio >= CONTRAST_FLOOR;
   if (!survivesReduction && contrast === "pass")
     notes.push("This design loses its contrast when it is shrunk to thumbnail size, "

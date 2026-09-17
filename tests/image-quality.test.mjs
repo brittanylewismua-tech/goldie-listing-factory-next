@@ -288,3 +288,60 @@ test("sharpness does not depend on which way the ink runs", () => {
   assert.equal(horizontal.sharpness, "pass");
   assert.equal(vertical.sharpness, "pass");
 });
+
+
+/*
+  CONTRAST AND SOFTNESS ARE DIFFERENT PROBLEMS WITH DIFFERENT FIXES.
+
+  A heavily blurred black-on-white design used to fail CONTRAST and pass
+  SHARPNESS, so the member was told their light and dark areas were too close
+  together when the real problem was softness. The cause: the ink was found by
+  looking for one histogram bucket holding half a per cent of the pixels, and
+  blur spreads a stroke across many tones so no single bucket cleared the
+  floor. The ink is a population now, and its own darkest fifth is what the
+  ground is compared against — blurred strokes keep dark centres, so tonal
+  range survives blur exactly as it does in the eye.
+*/
+const MATRIX = [
+  ["crisp, high contrast", () => strokes(BLACK, WHITE), "pass", "pass"],
+  ["crisp, low contrast", () => strokes(FAINT, WHITE), "fail", "pass"],
+  ["blurred, high tonal range", () => strokes(BLACK, WHITE, { blur: 10 }), "pass", "fail"],
+  ["blurred, low contrast", () => strokes(FAINT, WHITE, { blur: 10 }), "fail", "fail"],
+  ["sparse crisp text", () => strokes(BLACK, WHITE, { rows: 4, thick: 3 }), "pass", "pass"],
+  ["dense crisp bars", () => bars(BLACK, WHITE, { period: 40 }), "pass", "pass"],
+];
+
+test("every combination of contrast and softness is told apart", () => {
+  for (const [label, make, contrast, sharpness] of MATRIX) {
+    const quality = measureQuality(make());
+    assert.equal(quality.contrast, contrast, `${label}: contrast`);
+    assert.equal(quality.sharpness, sharpness, `${label}: sharpness`);
+  }
+});
+
+test("when both fail, both are said — neither explains the other", () => {
+  const blurredOnly = measureQuality(strokes(BLACK, WHITE, { blur: 10 }));
+  assert.equal(blurredOnly.notes.length, 1);
+  assert.match(blurredOnly.notes[0], /edges in this design are soft/);
+
+  const faintOnly = measureQuality(strokes(FAINT, WHITE));
+  assert.equal(faintOnly.notes.length, 1);
+  assert.match(faintOnly.notes[0], /too close together/);
+
+  const both = measureQuality(strokes(FAINT, WHITE, { blur: 10 }));
+  assert.equal(both.notes.length, 2, "a design with two problems must be told about two");
+  assert.ok(both.notes.some(note => /too close together/.test(note)));
+  assert.ok(both.notes.some(note => /edges in this design are soft/.test(note)));
+});
+
+test("transparent and near-empty artwork are refused a readability claim", () => {
+  /* A ghost on white: present in the file, invisible on a shirt. */
+  const ghost = strokes(WHITE, WHITE, { alpha: 18 });
+  const ghostQuality = measureQuality(ghost);
+  assert.equal(ghostQuality.mayClaimReadable, false);
+  assert.equal(ghostQuality.mayClaimHighContrast, false);
+
+  const blank = measureQuality(canvas(255, 255, 255));
+  assert.equal(blank.emptiness, "fail");
+  assert.equal(blank.mayClaimReadable, false);
+});

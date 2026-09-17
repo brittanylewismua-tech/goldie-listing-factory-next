@@ -196,7 +196,13 @@
    crisp black text on white measured 1.0:1 — the member was told good artwork
    could not be read. Ink against ground now, and sharpness measured on actual
    transitions in both directions. */
-export const BUILD_MARKER = "D1617";
+/* D1618 makes contrast and edge softness fail independently. A heavily
+   blurred black-on-white design failed CONTRAST and passed SHARPNESS, so the
+   member was told their tones were too close together when the real problem
+   was softness — the ink was found by looking for one histogram bucket, and
+   blur spreads a stroke across many. The ink is a population now. When both
+   are wrong, both are said. */
+export const BUILD_MARKER = "D1618";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
