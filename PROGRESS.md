@@ -598,3 +598,57 @@ Three pages had the same defect independently: a single sentence as the whole
 loading state (Shop Map, Batch History, and the batch-restore path). Any page
 that waits on Printify or Etsy needs the shape of what is coming, or it jumps
 when the answer lands.
+
+
+## SLICE 1 — NAVIGATION AND ACCOUNT (D1608-D1610)
+
+### /more redesigned as Tools & settings
+The real complaint was not empty height or the Sign out treatment — those were
+secondary. The page was a NAVIGATION LABEL promoted to a hero heading over
+four oversized cards in a full-height black field with a decorative gear. A
+heading that repeats the tab you just pressed tells a member nothing, and
+feature-sized cards for four links read as a page whose content was never
+designed.
+
+Now: title "Tools & settings", supporting line "Manage your tools, shop
+connections, and account.", three groups (Tools / Shop setup / Account) of
+COMPACT ROWS at the Listing Factory's own density — icon, label, one line of
+description, chevron — on the same white-over-pink-grid paper as every feature
+page, inside the shell. Sign out is a quiet standalone action below a rule.
+The bottom tab stays "More"; a five-tab bar has no room for more.
+
+No Help group: support is a component inside the workflow, not a route, and
+privacy/delete have no routes either. Three links to nowhere would look more
+complete and be worse. The group appears when the routes do.
+
+Icons come from the shared `nav-icons.tsx` map. The trademark icon I first
+added was a shield-with-check — identical to the existing `usage` icon, so two
+rows read as the same destination. It is a magnifier now.
+
+### Connections — a FUNCTIONAL defect, not a visual one
+Measured on the deployed build: for about six seconds the page showed
+**"No Etsy shop connected yet"** and **"Not connected"** — on an account where
+both are connected and the Listing Factory was publishing to that very shop.
+The page had no loading state, so "we have not asked yet" and "the answer is
+none" were the same screen.
+
+An empty state is a CLAIM. A member reading that would reasonably go and
+reconnect a shop that was never disconnected. Fixed with a `loaded` flag set
+in a `finally` (so a failed request does not wait forever), skeletons until
+there is an answer, and an error that says "Nothing has changed".
+
+Connections also had its own private palette and system font stack, like
+Market Watch did, and no `min-height` — so the grid stopped halfway down the
+page. Re-pointed at the product system, given the shell.
+
+### Also in this slice
+- /usage: bare "Loading your usage…" -> skeletons; route layout added so the
+  tab says "Plan and limits" instead of falling through to the neutral
+  fallback (metadata is silently ignored in a "use client" page).
+- /connections: route layout for the same reason.
+- Guard added: `tests/loading-states-are-not-claims.test.mjs` — the empty state
+  may only be shown once there is an answer, loading states are announced with
+  role="status", and every client-component route carries a layout title.
+
+FOUR pages had the shallow version of this defect (a sentence as the whole
+loading state) and one had the dangerous version (a false claim).
