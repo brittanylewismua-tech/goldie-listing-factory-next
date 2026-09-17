@@ -4,7 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { ensureListingTables } from "@/app/shop-map-listings";
-import { reasonIsMemberSafe } from "@/app/listing-placement";
+import { quoteIsFromTheListing } from "@/app/listing-placement";
 
 /**
  * ARE THERE ANY CORRECTIONS POINTING AT NOTHING?
@@ -93,11 +93,16 @@ export const GET = withErrorLog("shop-map-override-audit", async (request: Reque
       is not a bug — it means the panel is mostly explaining how placement
       works — but it should be known rather than discovered by a member.
     */
-    const reasons = await all<{ evidence: string }>(
-      `SELECT evidence FROM shop_map_classifications
-        WHERE user_id = ? AND shop_id = ? AND primary_niche <> ''`,
+    const reasons = await all<{ evidence: string; title: string; tags: string }>(
+      `SELECT c.evidence AS evidence, l.title AS title, l.tags AS tags
+         FROM shop_map_classifications c
+         LEFT JOIN shop_map_listings l
+           ON l.user_id = c.user_id AND l.shop_id = c.shop_id
+          AND l.listing_id = c.listing_id
+        WHERE c.user_id = ? AND c.shop_id = ? AND c.primary_niche <> ''`,
       user.userId, shopId);
-    const usable = reasons.filter(row => reasonIsMemberSafe(String(row.evidence ?? "")));
+    const usable = reasons.filter(row => quoteIsFromTheListing(
+      String(row.evidence ?? ""), String(row.title ?? ""), String(row.tags ?? "")));
 
     let repaired = 0;
     if (repair && orphans.length) {
@@ -130,7 +135,7 @@ export const GET = withErrorLog("shop-map-override-audit", async (request: Reque
       duplicatedRows: duplicated,
       storedReasons: {
         classified: reasons.length,
-        shownAsWritten: usable.length,
+        shownAsTheMembersOwnWords: usable.length,
         replacedWithTheGeneralExplanation: reasons.length - usable.length,
         empty: reasons.filter(row => !String(row.evidence ?? "").trim()).length,
       },

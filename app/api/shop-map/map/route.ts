@@ -525,6 +525,7 @@ async function buildMap(request: Request) {
     placement: asked ? (askedFound ? describePlacement({
       listingId: asked,
       title: listings.find(row => row.listingId === asked)?.title ?? "",
+      tags: String(rows.find(row => Number(row.listing_id) === asked)?.tags ?? ""),
       nicheId: askedFound.world?.id ?? "",
       nicheLabel: askedFound.world?.label ?? "",
       corrected: correctedIds.has(asked),

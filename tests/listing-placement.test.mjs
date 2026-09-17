@@ -23,52 +23,68 @@ execFileSync("npx", ["tsc", "--target", "es2022", "--module", "es2022",
   "--outDir", dir, "--skipLibCheck", "app/listing-placement.ts"],
   { cwd: new URL("..", import.meta.url).pathname, stdio: "pipe" });
 const mod = await import(join(dir, "listing-placement.js"));
-const { reasonIsMemberSafe, describePlacement,
+const { quoteIsFromTheListing, describePlacement, reasonFromQuote,
   GENERIC_REASON, CORRECTED_REASON, UNPLACED_REASON } = mod;
 
-test("machinery in a stored reason is replaced, never shown or edited", () => {
-  const leaks = [
+const TITLE = "Feminist Slogan Tee - Womens Rights Shirt";
+const TAGS = "feminist,slogan,tee,protest,equality";
+
+test("a reason that is not the member's own words is replaced, never edited", () => {
+  const notTheirs = [
     "Confidence: high. This is a feminist slogan tee.",
-    '{"primary_niche":"Feminist","secondary":""}',
+    '{"primary_niche":"Feminist"}',
     "The classifier assigned this to Feminist.",
-    "Matched the canonical label Feminist with score 0.92.",
-    "The model output listed feminist keywords.",
-    "GPT read the title and chose Feminist.",
-    "primary_niche = Feminist",
-    "Feminist",                       /* not a sentence */
-    "ok.",                            /* too short */
-    "x".repeat(400) + ".",            /* not a sentence a person wrote */
+    "a shirt about womens empowerment",     /* plausible, but not in the listing */
+    "activism",                             /* a word the listing never uses */
+    "",
+    "feminist slogan tee womens rights shirt protest equality feminist slogan tee more words here",
   ];
-  for (const leak of leaks) {
-    assert.equal(reasonIsMemberSafe(leak), false, `passed through: ${leak.slice(0, 60)}`);
-    const shown = describePlacement({ listingId: 1, title: "t", nicheId: "niche:feminist",
-      nicheLabel: "Feminist", corrected: false, storedReason: leak }).why;
+  for (const reason of notTheirs) {
+    assert.equal(quoteIsFromTheListing(reason, TITLE, TAGS), false,
+      `passed through: ${reason.slice(0, 50)}`);
+    const shown = describePlacement({ listingId: 1, title: TITLE, tags: TAGS,
+      nicheId: "niche:feminist", nicheLabel: "Feminist", corrected: false,
+      storedReason: reason }).why;
     assert.equal(shown, GENERIC_REASON,
       "a refused reason must be replaced whole, not trimmed or quoted");
-    /* The refused text must not survive in any part of what is shown. */
-    assert.ok(!shown.includes(leak.slice(0, 20)), "fragment of a refused reason leaked");
+    if (reason) assert.ok(!shown.includes(reason.slice(0, 20)),
+      "fragment of a refused reason leaked");
   }
 });
 
-test("a reason a shop owner would recognise is shown as written", () => {
-  const good = "The title and tags describe feminist slogans, which is what "
-    + "the other listings in this niche are.";
-  assert.equal(reasonIsMemberSafe(good), true);
-  assert.equal(describePlacement({ listingId: 1, title: "t", nicheId: "niche:feminist",
-    nicheLabel: "Feminist", corrected: false, storedReason: good }).why, good);
+test("the member's own words are quoted back inside our sentence", () => {
+  /*
+    D1682 tested the stored reason for the shape of prose and replaced all 256
+    of them, so nobody ever saw a real reason. It is a quote, not a sentence.
+  */
+  for (const quote of ["feminist slogan tee", "Womens Rights", "protest"]) {
+    assert.equal(quoteIsFromTheListing(quote, TITLE, TAGS), true, quote);
+    const shown = describePlacement({ listingId: 1, title: TITLE, tags: TAGS,
+      nicheId: "niche:feminist", nicheLabel: "Feminist", corrected: false,
+      storedReason: quote }).why;
+    assert.equal(shown, reasonFromQuote(quote, "Feminist"));
+    assert.ok(shown.includes(quote), "the quote must be shown as the member wrote it");
+    assert.match(shown, /^Placed in Feminist because its listing says /);
+  }
+});
+
+test("a quote is checked against the listing it belongs to, not any listing", () => {
+  assert.equal(quoteIsFromTheListing("feminist slogan tee",
+    "Dog Mom Mug", "dog,mug,pet"), false,
+    "a quote from another listing would explain the wrong listing");
 });
 
 test("a member's own correction is described as theirs, not as a judgement", () => {
-  const out = describePlacement({ listingId: 1, title: "t", nicheId: "niche:feminist",
-    nicheLabel: "Feminist", corrected: true,
-    storedReason: "The classifier said Feminist." });
+  const out = describePlacement({ listingId: 1, title: TITLE, tags: TAGS,
+    nicheId: "niche:feminist", nicheLabel: "Feminist", corrected: true,
+    storedReason: "feminist slogan tee" });
   assert.equal(out.why, CORRECTED_REASON);
   assert.ok(!/classif/i.test(out.why));
 });
 
 test("an unplaced listing says so instead of naming a niche", () => {
-  const out = describePlacement({ listingId: 1, title: "t", nicheId: "",
-    nicheLabel: "", corrected: false, storedReason: "" });
+  const out = describePlacement({ listingId: 1, title: TITLE, tags: TAGS,
+    nicheId: "", nicheLabel: "", corrected: false, storedReason: "" });
   assert.equal(out.nicheId, "unclassified");
   assert.equal(out.nicheLabel, "Unclassified");
   assert.equal(out.why, UNPLACED_REASON);
@@ -78,6 +94,9 @@ test("no reason shown to a member carries machinery vocabulary", () => {
   for (const sentence of [GENERIC_REASON, CORRECTED_REASON, UNPLACED_REASON])
     assert.ok(!/classif|confidence|model|prompt|token|label|score|canonical/i.test(sentence),
       `machinery in a shipped sentence: ${sentence}`);
+  /* Our wrapper sentence carries only the niche label and the member's quote. */
+  assert.equal(reasonFromQuote("feminist slogan tee", "Feminist"),
+    "Placed in Feminist because its listing says “feminist slogan tee”.");
 });
 
 /* ------------------------------------- no duplicated listings or money */
