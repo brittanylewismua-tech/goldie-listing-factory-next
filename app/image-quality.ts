@@ -24,6 +24,25 @@
  * honest answer is that readability was not verified.
  */
 
+/**
+ * THE VERSION OF THE RULES THAT PRODUCED A VERDICT.
+ *
+ * A measurement is cached with the design it describes, so a member reopening
+ * a scan sees what was actually measured rather than "not verified". That
+ * cache is only honest while the rules have not changed: a stored "contrast:
+ * pass" from the version that measured contrast as the 5th-to-95th percentile
+ * of the whole image — which read crisp black-on-white artwork as 1.0:1 and
+ * told members good designs were unreadable — must never be served as a pass
+ * under the rules that replaced it.
+ *
+ * So every cached verdict carries this, and one that does not match is
+ * re-measured from the pixels or reported as unmeasured. Bump it for ANY
+ * change to a threshold or to how a verdict is reached. A test fingerprints
+ * the thresholds and fails if they move without this moving, so the bump
+ * cannot be forgotten quietly.
+ */
+export const QUALITY_RULE_VERSION = 3;
+
 export type Pixels = { width: number; height: number; rgba: Uint8Array };
 
 export type QualityVerdict = "pass" | "fail" | "unverified";
@@ -39,6 +58,9 @@ export type ImageQuality = {
   /* What the scanner is permitted to claim after measuring. */
   mayClaimReadable: boolean;
   mayClaimHighContrast: boolean;
+  /* Which rules produced this. Absent on verdicts stored before versioning,
+     which is exactly the case that must not be trusted. */
+  ruleVersion?: number;
 };
 
 /* Perceived lightness, 0..1. */
@@ -201,7 +223,8 @@ function sharpness(pixels: Pixels, luminances: number[], range: number) {
 export function measureQuality(pixels: Pixels): ImageQuality {
   const notes: string[] = [];
   if (!pixels.width || !pixels.height || pixels.rgba.length < 16) {
-    return { contrast: "unverified", tonalRange: "unverified", sharpness: "unverified",
+    return { ruleVersion: QUALITY_RULE_VERSION,
+      contrast: "unverified", tonalRange: "unverified", sharpness: "unverified",
       thumbnailReadable: "unverified", emptiness: "unverified",
       notes: ["This design could not be measured, so its readability was not verified."],
       mayClaimReadable: false, mayClaimHighContrast: false };
@@ -314,6 +337,7 @@ export function measureQuality(pixels: Pixels): ImageQuality {
     : (contrast === "pass" && sharp === "pass" && survivesReduction) ? "pass" : "fail";
 
   return {
+    ruleVersion: QUALITY_RULE_VERSION,
     contrast, tonalRange, sharpness: sharp,
     thumbnailReadable, emptiness: empty ? "fail" : "pass", notes,
     /* The gate. A model's description can never turn these back on. */

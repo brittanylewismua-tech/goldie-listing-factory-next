@@ -472,8 +472,10 @@ test("a readability measurement is kept with the design, not thrown away", () =>
     for rendering what you measure.
   */
   const route = read("api/design-scanner/scan/route.ts");
-  assert.match(route, /let measured: ImageQuality \| undefined =[\s\S]{0,60}?\(upload as/,
+  assert.match(route, /const cached = \(upload as \{ imageQuality\?: ImageQuality \}\)\?\.imageQuality/,
     "a warm scan must read the measurement it already has");
+  /* D1653 · and only at the version that produced it. */
+  assert.match(route, /cached\?\.ruleVersion === QUALITY_RULE_VERSION \? cached : undefined/);
   assert.match(route, /if \(!measured && body\?\.imageDataUrl\)/,
     "the pixels are only measured when there is nothing stored");
   assert.match(route, /UPDATE scan_uploads SET payload_json = \?/,

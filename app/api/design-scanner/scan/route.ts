@@ -15,7 +15,8 @@ import { normalizeNiche, intersect, type Candidate } from "@/app/niche-cohort";
 import { relevanceOf, relevanceNotice } from "@/app/design-niche-relevance";
 import { acquireLease, releaseLease, LEASE_WAIT_MS, LEASE_POLL_MS } from "@/app/work-lease";
 import { decodeTinyPng } from "@/app/artwork-fingerprint";
-import { measureQuality, type ImageQuality } from "@/app/image-quality";
+import { measureQuality, QUALITY_RULE_VERSION, type ImageQuality }
+  from "@/app/image-quality";
 import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 import { evidenceLine } from "@/app/evidence-window";
 import { isFresh } from "@/app/reference-images";
@@ -403,8 +404,19 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
     when present and written there when it is taken. Invisible until D1626
     rendered any of this, which is the argument for rendering what you measure.
   */
+  /*
+    A CACHED VERDICT IS ONLY REUSED UNDER THE RULES THAT PRODUCED IT.
+
+    The first version of this reuse trusted anything stored. A stored
+    "contrast: pass" from the version that measured contrast across the whole
+    image — which read crisp black-on-white artwork as 1.0:1 and told members
+    good designs were unreadable — would have been served as a pass under the
+    rules that replaced it, and the fix for that defect would have quietly
+    stopped applying to every design already scanned.
+  */
+  const cached = (upload as { imageQuality?: ImageQuality })?.imageQuality;
   let measured: ImageQuality | undefined =
-    (upload as { imageQuality?: ImageQuality })?.imageQuality;
+    cached?.ruleVersion === QUALITY_RULE_VERSION ? cached : undefined;
   if (!measured && body?.imageDataUrl) {
     try {
       const base64 = body.imageDataUrl.slice(body.imageDataUrl.indexOf(",") + 1);
