@@ -14,6 +14,11 @@
  * reviewed. It is not a sale, it is not dated when the sale happened, and a
  * count of reviews is never presented as a count of sales.
  */
+/* A shop counter in the millions is unreadable without separators, and these
+   two sentences are the only place a raw one reached a member. */
+const count = (value: number | null | undefined) =>
+  Number(value ?? 0).toLocaleString("en-US");
+
 export type Review = {
   transactionId: number;
   listingId: number | null;
@@ -233,8 +238,8 @@ export function whatChanged(
       headline: moved > 0
         ? `This shop sold ${moved} more item${moved === 1 ? "" : "s"} since yesterday`
         : `This shop's sales total fell by ${Math.abs(moved)} since yesterday`,
-      because: `Etsy's own shop sales counter moved from ${previous.saleCount} to `
-        + `${current.saleCount} between two observations a day apart. This is the one `
+      because: `Etsy's own shop sales counter moved from ${count(previous.saleCount)} to `
+        + `${count(current.saleCount)} between two observations a day apart. This is the one `
         + `number here that is actually sales rather than reviews.`,
       listingId: null, evidenceClass: "confirmed-shop-total",
       supportingReviewIds: [], sampleSize: 1, windowFrom: now - 86_400, windowTo: now,
@@ -253,7 +258,7 @@ export function whatChanged(
         headline: moved > 0
           ? `${moved} people favourited this shop since yesterday`
           : `This shop lost ${Math.abs(moved)} favourites since yesterday`,
-        because: `Favourites moved from ${previous.favorites} to ${current.favorites} in a `
+        because: `Favourites moved from ${count(previous.favorites)} to ${count(current.favorites)} in a `
           + `day — ${(Math.abs(share) * 100).toFixed(1)}% of where it started. Favourites `
           + `are interest, not purchases.`,
         listingId: null, evidenceClass: "confirmed-shop-total",

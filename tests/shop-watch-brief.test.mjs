@@ -199,3 +199,37 @@ test("a change to what a card says invalidates the stored brief", () => {
   assert.match(brief, /\$\{now\.toISOString\(\)\.slice\(0, 10\)\}#v\$\{BRIEF_CARD_VERSION\}/,
     "the cache key must carry the card version");
 });
+
+test("D1689: a card that is not built from reviews does not claim a review count", () => {
+  const route = readFileSync(new URL("../app/api/shop-watch/brief/route.ts",
+    import.meta.url), "utf8");
+  /*
+    "This shop sold 11 more items since yesterday" — a card whose own sentence
+    says it is "the one number here that is actually sales rather than
+    reviews" — carried the footer "1 review · 1 days", where the 1 was a
+    placeholder sample size never meant to be shown.
+  */
+  assert.match(route, /evidence: weight\s*\|\|/,
+    "a caller-supplied weight must be able to replace the review count");
+  assert.match(route, /card\.evidenceClass === "confirmed-shop-total"/,
+    "the two counter cards are the ones that are not review-based");
+  assert.match(route, /Etsy's own shop counter/);
+  /* The internal class is translated by the caller; `present` never sees it. */
+  const present = route.slice(route.indexOf("function present(card: {"));
+  assert.doesNotMatch(present, /evidenceClass|supportingReviewIds|confidence|score/);
+});
+
+test("D1689: one day is not '1 days'", () => {
+  const route = readFileSync(new URL("../app/api/shop-watch/brief/route.ts",
+    import.meta.url), "utf8");
+  assert.match(route, /\$\{days\} day\$\{days === 1 \? "" : "s"\}/);
+  assert.doesNotMatch(route, /\/ 86_400\)\} days`/);
+});
+
+test("D1689: a shop counter in the millions is readable", () => {
+  const patterns = readFileSync(new URL("../app/shop-watch-patterns.ts",
+    import.meta.url), "utf8");
+  assert.match(patterns, /toLocaleString\("en-US"\)/);
+  assert.match(patterns, /counter moved from \$\{count\(previous\.saleCount\)\}/);
+  assert.match(patterns, /Favourites moved from \$\{count\(previous\.favorites\)\}/);
+});

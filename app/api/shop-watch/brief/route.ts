@@ -64,7 +64,15 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
       gettingAttention: (brief.attention ?? []).map(card => present(card, row.shop_name)),
       whatBuyersLove: (brief.love ?? []).map(card => present(card, row.shop_name)),
       whatBuyersDislike: (brief.dislike ?? []).map(card => present(card, row.shop_name)),
-      whatChanged: (brief.changed ?? []).map(card => present(card, row.shop_name)),
+      /*
+        The two cards in this section are not built from reviews, so the
+        weight of their evidence is not a review count. The translation
+        happens here, where the internal class still exists; `present` is
+        handed a member's sentence and never sees the class at all.
+      */
+      whatChanged: (brief.changed ?? []).map(card => present(card, row.shop_name,
+        card.evidenceClass === "confirmed-shop-total"
+          ? "Etsy's own shop counter" : "")),
       lastRefreshed: brief.freshness,
       reviewsConsidered: brief.reviewsConsidered,
       builtFresh: brief.regenerated,
@@ -87,7 +95,7 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
 function present(card: {
   headline: string; because: string; listingId: number | null; sampleSize: number;
   windowFrom: number; windowTo: number;
-}, shopName: string) {
+}, shopName: string, weight = "") {
   return {
     pattern: card.headline,
     /* The reasoning, which the selection rule computed and then discarded.
@@ -98,7 +106,22 @@ function present(card: {
     listing: card.listingId
       ? { id: card.listingId, url: `https://www.etsy.com/listing/${card.listingId}` }
       : { id: null, url: `https://www.etsy.com/shop/${encodeURIComponent(shopName)}` },
-    evidence: `${card.sampleSize} review${card.sampleSize === 1 ? "" : "s"}`,
-    window: `${Math.round((card.windowTo - card.windowFrom) / 86_400)} days`,
+    /*
+      D1689 · A SALES CARD THAT LABELLED ITSELF "1 REVIEW".
+
+      Every card's evidence line was built as a review count, including the
+      two that are not built from reviews at all. "This shop sold 11 more
+      items since yesterday" — whose own sentence says it is "the one number
+      here that is actually sales rather than reviews" — carried the footer
+      "1 review · 1 days", where the 1 is a placeholder sample size that was
+      never meant to be shown. It contradicted the card above it and put a
+      fabricated review count under a sales figure.
+    */
+    evidence: weight
+      || `${card.sampleSize} review${card.sampleSize === 1 ? "" : "s"}`,
+    window: (() => {
+      const days = Math.round((card.windowTo - card.windowFrom) / 86_400);
+      return `${days} day${days === 1 ? "" : "s"}`;
+    })(),
   };
 }
