@@ -373,6 +373,42 @@ test("the observation sample is taken after the work it measures", () => {
   assert.match(sequenced, /await app\.fetch\(new Request\(site \+ "\/api\/market\/correlate"\)/);
 });
 
+test("the sweep says what it proved, and does not call narrow layout mobile", async () => {
+  /*
+    An iframe 375 CSS pixels wide makes the width media queries fire. It does
+    not make the browser report a touch device, and this product's mobile
+    rules need both halves — (max-width:820px) and (pointer:coarse) is what
+    hides the Listing Factory shell behind the desktop gate. A sweep that
+    satisfies one half proves narrow-width layout and nothing about touch.
+  */
+  const source = read("sweep-conditions.ts");
+  assert.match(source, /export const MOBILE_GATE = "\(max-width: 820px\) and \(pointer: coarse\)"/);
+  /* The quoted rule must still be the rule the stylesheet enforces. */
+  const css = read("approved-functional.css");
+  assert.match(css, /@media\(max-width:820px\) and \(pointer:coarse\)/,
+    "the sweep quotes a gate the product no longer uses");
+
+  const { conditionsOf } = await import("../app/sweep-conditions.ts");
+  const reading = (over = { }) => ({ state: "x", askedWidth: 375, innerWidth: 375,
+    clientWidth: 375, coarsePointer: false, mobileGateMatches: false,
+    horizontalOverflow: 0, undersizedTargets: [], problems: [], ...over });
+
+  const narrow = conditionsOf([reading(), reading()]);
+  assert.equal(narrow.label, "narrow-layout verified",
+    "a fine pointer can never be labelled mobile verification");
+  assert.equal(narrow.coarsePointer, false);
+  assert.equal(narrow.mobileGateMatched, false);
+
+  const touch = conditionsOf([reading({ coarsePointer: true, mobileGateMatches: true })]);
+  assert.equal(touch.label, "mobile verified");
+
+  /* Every fact the reading must carry, so the result cannot be read as more
+     than it is. */
+  for (const field of ["innerWidth", "clientWidth", "coarsePointer",
+    "mobileGateMatches", "horizontalOverflow", "undersizedTargets"])
+    assert.ok(source.includes(`${field}:`), `the sweep does not report ${field}`);
+});
+
 test("the phone-width sweep is a control, not something done by hand once", () => {
   /*
     Twenty-two states were checked at 375, 390 and 430 by hand — sixty-six
@@ -381,7 +417,7 @@ test("the phone-width sweep is a control, not something done by hand once", () =
     wrong at phone width rather than being a screenshot somebody eyeballed.
   */
   const source = read("dev/state-preview/preview-client.tsx");
-  assert.match(source, /const PHONE_WIDTHS = \[375, 390, 430\]/);
+  assert.match(read("sweep-conditions.ts"), /export const PHONE_WIDTHS = \[375, 390, 430\]/);
   assert.match(source, /scrolls sideways by/);
   assert.match(source, /wider than the screen/);
   assert.match(source, /tap target/);

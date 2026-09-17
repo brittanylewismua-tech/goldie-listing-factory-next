@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { stateFixtures, fixtureFor, replyFor, type StateFixture } from "@/app/state-fixtures";
+import { conditionsOf, MOBILE_GATE, PHONE_WIDTHS,
+  type SweepReading, type SweepConditions } from "@/app/sweep-conditions";
 /* The feature stylesheets are imported by each ROUTE, not by the component, so
    mounting a component directly gives unstyled markup. The preview imports the
    same files the routes do — not copies of them. */
@@ -94,22 +96,31 @@ const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
 };
 
 /*
-  EVERY STATE, EVERY PHONE WIDTH, IN ONE PASS.
+  EVERY STATE, EVERY PHONE WIDTH — AND AN HONEST LABEL ON WHAT THAT PROVES.
 
-  The states were swept by hand once — twenty-two of them at 375, 390 and
-  430 — and a sweep done by hand is a sweep done once. Each state is loaded
-  into an iframe of that exact width, which gives the page a real CSS
-  viewport and makes its media queries fire, and is then measured for the
-  four things that actually go wrong at phone width: the page scrolling
-  sideways, an element wider than the screen, a tap target under 40px, and a
-  request no fixture answered.
+  An iframe 375 CSS pixels wide gives the page a real narrow viewport and
+  makes its width media queries fire. It does NOT make the browser report a
+  touch device, and this product's mobile rules require BOTH halves:
 
-  It reads; it changes nothing. The previews it opens have their own closed
-  network, so this cannot reach anything either.
+    @media (max-width: 820px) and (pointer: coarse)
+
+  is what hides the Listing Factory shell behind the desktop gate. A sweep
+  that satisfies the width and not the pointer proves narrow-width layout and
+  nothing about touch behaviour, so it says so rather than calling itself
+  mobile verification. Real mobile verification is the in-app browser's
+  device emulation, and authenticated mobile states stay unverified until
+  there is a safe authenticated emulation path.
+
+  Every run reports the conditions it actually ran under — the viewport the
+  page saw, whether the pointer was coarse, and whether the product's own
+  mobile gate matched — so the result can never be read as more than it is.
+
+  Chrome's window resize is not an alternative: the page stays 1440 CSS
+  pixels wide however small the window gets, which is why narrow-width checks
+  through it have never measured anything.
 */
-const PHONE_WIDTHS = [375, 390, 430];
 
-async function sweepOne(state: string, width: number): Promise<string[]> {
+async function sweepOne(state: string, width: number): Promise<SweepReading> {
   const frame = document.createElement("iframe");
   frame.style.cssText =
     `position:fixed;left:-9999px;top:0;width:${width}px;height:900px;border:0`;
@@ -117,30 +128,43 @@ async function sweepOne(state: string, width: number): Promise<string[]> {
   document.body.appendChild(frame);
   await new Promise(resolve => { frame.onload = resolve; setTimeout(resolve, 6_000); });
   await new Promise(resolve => setTimeout(resolve, 350));
-  const found: string[] = [];
+
+  const reading: SweepReading = { state, askedWidth: width, innerWidth: null,
+    clientWidth: null, coarsePointer: null, mobileGateMatches: null,
+    horizontalOverflow: null, undersizedTargets: [], problems: [] };
   try {
     const doc = frame.contentDocument!;
     const view = frame.contentWindow!;
+    reading.innerWidth = view.innerWidth;
+    reading.clientWidth = doc.documentElement.clientWidth;
+    reading.coarsePointer = view.matchMedia("(pointer: coarse)").matches;
+    reading.mobileGateMatches = view.matchMedia(MOBILE_GATE).matches;
+
     const main = doc.querySelector("main");
-    if (!main) found.push("nothing rendered");
+    if (!main) reading.problems.push("nothing rendered");
     else {
-      const over = main.scrollWidth - view.innerWidth;
-      if (over > 0) found.push(`scrolls sideways by ${over}px`);
+      reading.horizontalOverflow = main.scrollWidth - view.innerWidth;
+      if (reading.horizontalOverflow > 0)
+        reading.problems.push(`scrolls sideways by ${reading.horizontalOverflow}px`);
       for (const node of main.querySelectorAll("*"))
         if (node.getBoundingClientRect().width > view.innerWidth + 1)
-          found.push(`wider than the screen: ${node.tagName.toLowerCase()}`);
+          reading.problems.push(`wider than the screen: ${node.tagName.toLowerCase()}`);
       for (const node of main.querySelectorAll("button, a, select")) {
         const box = node.getBoundingClientRect();
-        if (box.width > 0 && box.height > 0 && box.height < 40)
-          found.push(`${Math.round(box.height)}px tap target: `
-            + `${(node.textContent ?? "").trim().slice(0, 24)}`);
+        if (box.width > 0 && box.height > 0 && box.height < 40) {
+          const said = `${Math.round(box.height)}px tap target: `
+            + `${(node.textContent ?? "").trim().slice(0, 24)}`;
+          reading.undersizedTargets.push(said);
+          reading.problems.push(said);
+        }
       }
     }
     const refused = doc.querySelector(".sp-refused")?.textContent?.trim();
-    if (refused) found.push(refused.slice(0, 80));
-  } catch { found.push("could not be measured"); }
+    if (refused) reading.problems.push(refused.slice(0, 80));
+  } catch { reading.problems.push("could not be measured"); }
   frame.remove();
-  return [...new Set(found)];
+  reading.problems = [...new Set(reading.problems)];
+  return reading;
 }
 
 const summarise = (seen: Map<string, Set<string>>) =>
@@ -171,7 +195,7 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
   const Surface = fixture ? SURFACES[fixture.surface] : null;
 
   const [sweep, setSweep] = useState<{ running: boolean; done: number; total: number;
-    problems: string[] } | null>(null);
+    problems: string[]; conditions: SweepConditions | null } | null>(null);
   /*
     The sweep opens each state in an iframe, and those iframes render this
     same component. Set after mount rather than read during render, because
@@ -182,7 +206,7 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
 
   const runSweep = async () => {
     const total = all.length * PHONE_WIDTHS.length;
-    setSweep({ running: true, done: 0, total, problems: [] });
+    setSweep({ running: true, done: 0, total, problems: [], conditions: null });
     /*
       GROUPED BY THE PROBLEM, NOT BY THE MEASUREMENT.
 
@@ -191,18 +215,23 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
       were two. A list long enough to scroll past is a list nobody reads.
     */
     const seen = new Map<string, Set<string>>();
+    const readings: SweepReading[] = [];
     let done = 0;
     for (const width of PHONE_WIDTHS)
       for (const entry of all) {
-        for (const line of await sweepOne(entry.key, width)) {
+        const reading = await sweepOne(entry.key, width);
+        readings.push(reading);
+        for (const line of reading.problems) {
           const where = seen.get(line) ?? new Set<string>();
           where.add(`${entry.key} @${width}`);
           seen.set(line, where);
         }
         done += 1;
-        setSweep({ running: true, done, total, problems: summarise(seen) });
+        setSweep({ running: true, done, total, problems: summarise(seen),
+          conditions: conditionsOf(readings) });
       }
-    setSweep({ running: false, done: total, total, problems: summarise(seen) });
+    setSweep({ running: false, done: total, total, problems: summarise(seen),
+      conditions: conditionsOf(readings) });
   };
 
   return <div className="state-preview">
@@ -231,16 +260,38 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
             ? `Checking ${sweep.done} of ${sweep.total}…`
             : "Check every state at phone widths"}
         </button>
-        {sweep && !sweep.running && (sweep.problems.length === 0
-          ? <span className="sp-sweep-ok">
-              {sweep.total} checks clean — nothing scrolls sideways, nothing is wider
-              than the screen, no tap target under 40px, no unanswered request.
+        {sweep && !sweep.running && sweep.conditions && (
+          <>
+            <span className={sweep.problems.length === 0 ? "sp-sweep-ok" : "sp-sweep-bad"}>
+              {sweep.problems.length === 0
+                ? `${sweep.total} checks clean.`
+                : `${sweep.problems.length} problem`
+                  + `${sweep.problems.length === 1 ? "" : "s"}: `
+                  + sweep.problems.slice(0, 6).join(" · ")
+                  + (sweep.problems.length > 6 ? " …" : "")}
             </span>
-          : <span className="sp-sweep-bad">
-              {sweep.problems.length} problem{sweep.problems.length === 1 ? "" : "s"}:{" "}
-              {sweep.problems.slice(0, 6).join(" · ")}
-              {sweep.problems.length > 6 ? " …" : ""}
-            </span>)}
+            {/* The conditions, every run, so nothing here reads as more than
+                it is. `label` is the honest name for what was proved. */}
+            <span className="sp-sweep-conditions">
+              <b>{sweep.conditions.label}</b>
+              {" · widths asked "}{sweep.conditions.widths.join("/")}
+              {" · viewport "}{sweep.conditions.viewports.join("/")}
+              {" · clientWidth "}{sweep.conditions.clientWidths.join("/")}
+              {" · pointer:coarse "}{String(sweep.conditions.coarsePointer)}
+              {" · mobile gate "}
+              {sweep.conditions.mobileGateMatched ? "matched" : "never matched"}
+              {" · worst horizontal overflow "}{sweep.conditions.worstOverflow}{"px"}
+              {" · undersized targets "}{sweep.conditions.undersized}
+            </span>
+            {!sweep.conditions.coarsePointer && (
+              <span className="sp-sweep-caveat">
+                The pointer was never coarse, so this proves narrow-width layout
+                only. Touch behaviour and the desktop gate are verified in the
+                in-app browser&apos;s device emulation, not here.
+              </span>
+            )}
+          </>
+        )}
       </p>
     )}
     {refused.length > 0 && (

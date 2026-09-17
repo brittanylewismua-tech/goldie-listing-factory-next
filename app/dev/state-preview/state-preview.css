@@ -34,3 +34,7 @@
 .sp-sweep .p-button{min-height:44px;padding:0 12px}
 .sp-sweep-ok{color:var(--p-good)}
 .sp-sweep-bad{color:var(--p-bad);overflow-wrap:anywhere}
+.sp-sweep-conditions{flex-basis:100%;color:var(--p-muted);font-size:11px;
+  overflow-wrap:anywhere}
+.sp-sweep-conditions b{color:var(--p-ink)}
+.sp-sweep-caveat{flex-basis:100%;color:var(--p-warn);font-size:11px;max-width:70ch}
