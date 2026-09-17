@@ -34,6 +34,17 @@ const MEMBER_SURFACES = [
   "market-watch/market-watch-client.tsx", "shop-map/shop-map-client.tsx",
   "shop-map/costs/costs-client.tsx", "design-scanner/design-scanner-client.tsx",
   "trademark/page.tsx", "production-cost.ts", "deletion-plan.ts",
+  /*
+    D1663 · THE BIGGEST MEMBER-FACING FILE IN THE PRODUCT WAS NOT ON THIS LIST.
+
+    listing-factory-app.tsx renders the workflow a member spends nearly all
+    their time in, and it shipped a footer reading "GOLDIE LISTING FACTORY"
+    through the whole branding pass. Found by reading the deployed page, not
+    by any check. These were missing too.
+  */
+  "listing-factory-app.tsx", "mastermind/code-gate.tsx", "mastermind/page.tsx",
+  "trial-reminder.ts", "support-chat.tsx", "batches/page.tsx",
+  "keywords/page.tsx", "account/settings/account-client.tsx",
 ];
 
 /*
@@ -53,15 +64,84 @@ const MEMBER_SURFACES = [
   bindings, the domain, and the asset files themselves.
 */
 
-/** Strip comments, then find the word used in a sentence rather than in code. */
+/*
+  THE WORD USED AS A NAME, IN ANY CASE — NOT JUST IN A LOWERCASE SENTENCE.
+
+  The first version required the name to be followed by a space and a
+  LOWERCASE word, an apostrophe, or sentence punctuation. That catches
+  "Goldie found three listings" and misses the loudest use there is: a
+  wordmark. "GOLDIE LISTING FACTORY" is all caps and followed by a capital,
+  so it matched nothing — and sat in the workflow footer, on the signup hero,
+  on the beta gate and in a trial reminder email, right through a pass whose
+  whole purpose was removing it.
+
+  So the match is the word standing alone, case-insensitively, and the
+  distinction between copy and code is drawn where it actually lies: an
+  identifier runs the word into adjacent letters (GoldieStatus, goldieHosts,
+  goldie-g.png), a name does not. The few remaining non-copy uses are named
+  individually with a reason, because each one is a real thing a member never
+  reads rather than a hole in the rule.
+*/
+const NOT_COPY = [
+  /* A User-Agent this worker sends to the USPTO. Seen by their servers. */
+  /"Goldie\/[\d.]+/,
+  /* Real addresses. A domain and a mailbox are not a product name. */
+  /goldie@beawolfbiz\.com/,
+  /thegoldiesuite\.com/,
+  /* A DOM event name, shared across chunks by construction. */
+  /"goldie:[a-z-]+"/,
+  /* A window property used to hold the install prompt. */
+  /goldie(?:Install|Hosts)[A-Za-z]*/,
+  /* The Stripe plan key, which is data in an account row. */
+  /PLANS\[?\.?["']?goldie/,
+  /* A history event the shell listens for. */
+  /"goldie-history-loaded"/,
+  /*
+    A SENTINEL THAT MUST NOT BE RENAMED.
+
+    The image-id test route refuses to delete anything whose title does not
+    start with "GOLDIE INTERNAL". That prefix is the guard which, earlier in
+    this project, refused to delete a real customer product — the ID had come
+    from a batch thumbnail and turned out to be the live source template.
+
+    Test drafts already sitting in the shop carry that exact title, so
+    changing the prefix would stop the guard recognising them and turn a
+    safety catch into a no-op. It is never published and no member ever reads
+    it. This is the case the branding instruction reserves: a legacy internal
+    identifier where renaming creates risk.
+  */
+  /"GOLDIE INTERNAL/,
+  /startsWith\("GOLDIE INTERNAL"\)/,
+];
+
 function brandingProse(source) {
   const text = source
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/^\s*\/\/.*$/gm, "");
-  /* Preceded by a space, quote or > (start of prose), and followed by a space
-     and a lowercase word, an apostrophe, or sentence-ending punctuation. */
-  const prose = /[\s>"'`(]Goldie(?:&apos;s|'s)?(?=[\s][a-z]|[.,!?;:]|$)/gm;
-  return [...text.matchAll(prose)].map(match => match[0].trim());
+  const found = [];
+  /*
+    The word standing alone. Identifier punctuation on either side means code,
+    and it means code in every form this repo actually uses: module paths
+    ("./goldie-ui"), event names ("goldie-publish-selection"), storage keys
+    (`goldie-colors-${id}`), query params (goldie_retry), domains, mailboxes
+    and version strings. One rule instead of an allowlist that kept growing.
+  */
+  for (const match of text.matchAll(/(?<![A-Za-z0-9_\-./@:])goldie(?![A-Za-z0-9_\-./@:])/gi)) {
+    const context = text.slice(Math.max(0, match.index - 60), match.index + 60);
+    if (NOT_COPY.some(pattern => pattern.test(context))) continue;
+    /*
+      A quoted string that is EXACTLY the lowercase word is a key, not copy:
+      the Stripe plan key, the PlanKey union, the comparisons against it. A
+      quoted string containing the word among OTHER words is copy — which is
+      what keeps "GOLDIE LISTING FACTORY" caught while `"goldie"` is not.
+    */
+    const before = text[match.index - 1];
+    const after = text[match.index + match[0].length];
+    const quote = ch => ch === '"' || ch === "'" || ch === "`";
+    if (quote(before) && quote(after) && match[0] === "goldie") continue;
+    found.push(text.slice(Math.max(0, match.index - 20), match.index + 30).trim());
+  }
+  return found;
 }
 
 test("no member-facing surface names the old product", () => {

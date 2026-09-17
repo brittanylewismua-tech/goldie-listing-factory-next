@@ -35,7 +35,7 @@ export default function AdminControl({ initialActive, memberCount, initialDiagno
 
   return <div className="access-shell admin-access-shell"><div className="admin-dashboard">
     <div className="access-card">
-      <Image src="/goldie-wordmark.webp" width={236} height={120} alt="Goldie" />
+      <Image src="/goldie-wordmark.webp" width={236} height={120} alt="Owner console" />
       <p className="mini-label">OWNER CONTROL</p>
       <h1>Mastermind testing</h1>
       <p><b>{active ? "Access is ON" : "Access is OFF"}</b><br />{memberCount} ChatGPT account{memberCount === 1 ? "" : "s"} redeemed the code.</p>

@@ -6421,7 +6421,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               if(undecided.length){decideAllQuality("include");beginDraftCreation();return}
               if(complete){void goToStep("finish",false,true)}else{document.querySelector(".launch-panel")?.scrollIntoView({block:"start"})}}}>Proceed anyway</button></div></section></div>}
 
-      <footer><span>GOLDIE LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>
+      <footer><span>LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>
       <SupportChat screen={workflowScreen(workflowStep,finishPhase,complete)} />
             </div>
       </div>

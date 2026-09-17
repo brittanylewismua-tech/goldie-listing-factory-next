@@ -5,11 +5,11 @@ import CodeGate from "./code-gate";
 import "./mastermind.css";
 
 function Brand() {
-  return <div className="beta-brand" aria-label="Goldie Listing Factory"><span>Gold<span className="beta-i">ı<i>✦</i></span>e</span><b>LISTING FACTORY</b></div>;
+  return <div className="beta-brand" aria-label="Listing Factory"><span>Gold<span className="beta-i">ı<i>✦</i></span>e</span><b>LISTING FACTORY</b></div>;
 }
 
 function BetaShell({ children }: { children: React.ReactNode }) {
-  return <main className="beta-shell"><div className="beta-orb beta-orb-one"/><div className="beta-orb beta-orb-two"/><Brand/><section className="beta-card">{children}</section><p className="beta-powered">POWERED BY GOLDIE AI · © 2026 BE A WOLF BIZ</p></main>;
+  return <main className="beta-shell"><div className="beta-orb beta-orb-one"/><div className="beta-orb beta-orb-two"/><Brand/><section className="beta-card">{children}</section><p className="beta-powered">© 2026 BE A WOLF BIZ</p></main>;
 }
 
 function WelcomeScreen() {
