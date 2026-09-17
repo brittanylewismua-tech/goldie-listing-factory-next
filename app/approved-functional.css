@@ -543,7 +543,29 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    narrow window: a mouse reports `fine`, a finger reports `coarse`. Both
    conditions must hold now. */
 @media(max-width:820px) and (pointer:coarse){
-  html,body{min-height:100%;overflow:hidden;background:#e8b1c8 url('/goldie-background-reference.jpg') center/cover fixed no-repeat}
+  /*
+    D1679 · `overflow:hidden` HERE MADE THE PHONE-FIRST PAGES UNSCROLLABLE.
+
+    This rule belongs to the desktop gate, whose card is exactly 100vh and
+    has nothing to scroll. When D1575 let the phone-first surfaces opt out of
+    the gate, the opt-out covered which children stay visible — the
+    `:not(.responsive-shell)` selector below — but not this line, which is
+    unconditional inside the block. So Shop Map, Market Watch and Design
+    Scanner rendered on a real phone with `html,body{overflow:hidden}` and
+    no scroll container anywhere inside the gate: everything below the first
+    viewport was unreachable.
+
+    Invisible to every narrow-width test, because an iframe 375px wide still
+    reports a fine pointer and none of this applies. Found by reading this
+    page's own CSSOM on the authenticated Shop Map and looking for what the
+    gate would do — the only overflow declaration in all 25 of its rules was
+    this one.
+
+    Removed rather than scoped. The gate's card is 100vh, so it has nothing
+    to scroll either way; and a page that cannot scroll is never the safer
+    default.
+  */
+  html,body{min-height:100%;background:#e8b1c8 url('/goldie-background-reference.jpg') center/cover fixed no-repeat}
   .app-shell{display:block;min-height:100vh;padding:0}
   /* D1575 · the gate belongs to the Listing Factory, not to the chrome.
      Design Scanner and Shop Map wear the same shell and are phone-first, so
