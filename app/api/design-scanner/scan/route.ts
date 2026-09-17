@@ -14,6 +14,8 @@ import { compare } from "@/app/design-compare";
 import { normalizeNiche, intersect, type Candidate } from "@/app/niche-cohort";
 import { relevanceOf, relevanceNotice } from "@/app/design-niche-relevance";
 import { acquireLease, releaseLease, LEASE_WAIT_MS, LEASE_POLL_MS } from "@/app/work-lease";
+import { decodeTinyPng } from "@/app/artwork-fingerprint";
+import { measureQuality, type ImageQuality } from "@/app/image-quality";
 import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 import { evidenceLine } from "@/app/evidence-window";
 import { isFresh } from "@/app/reference-images";
@@ -376,10 +378,39 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
   /* Construction fields only, both sides. No model call. */
   const references = cohort.map(row =>
     JSON.parse(byImage.get(Number(row.imageId))!) as Record<string, unknown>);
+  /*
+    MEASURED PIXELS, NOT A MODEL'S OPINION, DECIDE WHAT MAY BE CLAIMED.
+
+    A vision model told a member that a 7px-blurred design and a near-invisible
+    grey-on-white design both "stay readable at thumbnail size" and had
+    contrast matching the listings that are selling. Contrast, tonal range and
+    blur are arithmetic; they were never a thing to ask a model about.
+
+    A decode that fails yields `unverified`, which blocks the positive claim
+    without inventing a negative one.
+  */
+  let measured: ImageQuality | undefined;
+  if (body?.imageDataUrl) {
+    try {
+      const base64 = body.imageDataUrl.slice(body.imageDataUrl.indexOf(",") + 1);
+      const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
+      const decoded = await decodeTinyPng(bytes.buffer as ArrayBuffer);
+      if (decoded.ok) {
+        const { width, height, rgb } = decoded.image;
+        const rgba = new Uint8Array(width * height * 4);
+        for (let index = 0, source = 0; index < rgba.length; index += 4, source += 3) {
+          rgba[index] = rgb[source]; rgba[index + 1] = rgb[source + 1];
+          rgba[index + 2] = rgb[source + 2]; rgba[index + 3] = 255;
+        }
+        measured = measureQuality({ width, height, rgba });
+      }
+    } catch { /* unverified is the honest answer; it blocks the claim. */ }
+  }
+
   const alignment = compare(
     constructionOnly(upload) as never,
     references as never,
-    { minimum: THRESHOLD.listings });
+    { minimum: THRESHOLD.listings, measured });
 
   let earliest = Infinity, latest = 0;
   for (const row of cohort) {
@@ -415,6 +446,15 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
     scope: notice ? `${notice} ${alignment.scope}` : alignment.scope,
     subject: { verdict: relevance.verdict, matched: relevance.matched,
       because: relevance.because },
+    /* Kept separate from niche relevance in the result model as well as in the
+       wording: construction and subject are different questions. */
+    imageQuality: measured
+      ? { contrast: measured.contrast, sharpness: measured.sharpness,
+          thumbnailReadable: measured.thumbnailReadable,
+          notes: measured.notes }
+      : { contrast: "unverified", sharpness: "unverified",
+          thumbnailReadable: "unverified",
+          notes: ["This design's readability could not be verified."] },
     evidence: line, scanId: id };
   await db.prepare(
     `INSERT INTO scan_history (id, user_id, artwork_hash, niche, result_json, created_at)

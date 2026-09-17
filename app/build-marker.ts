@@ -156,7 +156,12 @@
    scan route claimed its reservation fingerprint collapsed them into one job;
    measured, it made two paid calls and took two of ten daily scans for a
    single design. It leases the work now, like the Listing Factory does. */
-export const BUILD_MARKER = "D1601";
+/* D1602 measures contrast, tonal range, blur and emptiness from the pixels and
+   lets those measurements decide whether Goldie may call a design readable or
+   high contrast. A vision model had said both about a 7px-blurred design and a
+   near-invisible one. An image-only design is now "unknown" on subject rather
+   than off-subject. */
+export const BUILD_MARKER = "D1602";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

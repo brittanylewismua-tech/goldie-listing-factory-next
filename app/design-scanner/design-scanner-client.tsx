@@ -31,7 +31,7 @@ type Result = {
   scope?: string;
   /* Whether the design is about the niche at all, as distinct from whether it
      is built like the listings that are moving in it. */
-  subject?: { verdict: "on-subject" | "off-subject" | "unreadable"; matched: string[]; because: string };
+  subject?: { verdict: "on-subject" | "off-subject" | "unknown"; matched: string[]; because: string };
   trademark: Trademark | null;
   scansLeftToday: number | null;
   niche: string;
@@ -277,8 +277,8 @@ function ScanResult({ result }: { result: Result }) {
               built from a value cannot be checked against the stylesheet, and
               the guard that catches dead rules is worth keeping able to see. */}
           {result.subject && result.subject.verdict !== "on-subject" && (
-            <p className={result.subject.verdict === "unreadable"
-              ? "subject-warning subject-unreadable" : "subject-warning subject-off"}
+            <p className={result.subject.verdict === "unknown"
+              ? "subject-warning subject-unknown" : "subject-warning subject-off"}
               role="status">
               {result.subject.because}
             </p>

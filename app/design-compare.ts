@@ -67,7 +67,12 @@ const SHARED = 0.55;
 const article = (word: string) => /^[aeiou]/i.test(word.trim()) ? "an" : "a";
 
 export function compare(
-  design: Ingredients, cohort: Ingredients[], { minimum = 12 }: { minimum?: number } = {},
+  design: Ingredients, cohort: Ingredients[],
+  { minimum = 12, measured }:
+    { minimum?: number;
+      /* Measured pixel facts. When present they overrule the model on
+         readability and contrast — never the other way round. */
+      measured?: import("./image-quality.ts").ImageQuality } = {},
 ): Alignment {
   if (cohort.length < minimum)
     return { overall: "Not enough verified evidence", working: [],
@@ -89,12 +94,27 @@ export function compare(
         + `worth testing that direction in your own words.` });
   }
 
-  /* Thumbnail readability is the one that costs a sale silently. */
+  /*
+    Thumbnail readability is the one that costs a sale silently.
+
+    MEASURED PIXELS OVERRULE THE MODEL. A vision model told a member that a
+    7px-blurred design and a near-invisible grey-on-white design both "stay
+    readable at thumbnail size". The gate below was always correct; its input
+    was an opinion. `measured` is arithmetic, and when it says the design
+    cannot be read, no description can turn the positive claim back on.
+  */
   const readable = cohort.filter(row => row.thumbnailReadability === "readable").length
     / cohort.length;
-  if (design.thumbnailReadability === "readable" && readable >= SHARED)
+  const measuredBlocksReadable = measured ? !measured.mayClaimReadable : false;
+  const measuredUnverified = measured
+    ? measured.thumbnailReadable === "unverified" : false;
+  if (design.thumbnailReadability === "readable" && readable >= SHARED
+      && !measuredBlocksReadable && !measuredUnverified)
     working.push("It stays readable at thumbnail size, like the listings that are moving.");
-  else if (design.thumbnailReadability !== "readable")
+  else if (measuredUnverified)
+    gaps.push({ weight: 2, say: "Goldie could not verify how this design reads at "
+      + "thumbnail size, so treat the comparison below as being about its construction." });
+  else if (design.thumbnailReadability !== "readable" || measuredBlocksReadable)
     gaps.push({ weight: 5, say: "It gets hard to read at thumbnail size. That is where "
       + "buyers see it first, and it is the single biggest thing to fix here." });
 
@@ -119,8 +139,15 @@ export function compare(
     working.push("It fills the print area about as much as the listings that are moving.");
 
   const contrast = commonest(cohort.map(row => row.contrast));
-  if (contrast && contrast.share >= SHARED && design.contrast === contrast.value)
+  /* Same rule as readability: a measured contrast failure blocks the claim,
+     whatever the model called it. "Its contrast matches the high look that is
+     doing well here" was said about a design that was very nearly invisible. */
+  if (contrast && contrast.share >= SHARED && design.contrast === contrast.value
+      && (!measured || measured.mayClaimHighContrast))
     working.push(`Its contrast matches the ${contrast.value} look that is doing well here.`);
+  else if (measured && measured.contrast === "fail")
+    gaps.push({ weight: 5, say: measured.notes.find(note => note.includes("read easily"))
+      ?? "The light and dark areas in this design are too close together to read easily." });
 
   gaps.sort((a, b) => b.weight - a.weight);
 

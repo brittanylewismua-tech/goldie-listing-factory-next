@@ -45,12 +45,16 @@ test("any niche term is enough — calling a real design off-subject is the cost
   assert.ok(result.matched.length >= 1);
 });
 
-test("artwork with no words says so rather than guessing either way", () => {
+test("an image-only design is unknown, never off-subject", () => {
+  /* A mascot or an illustrated scene has not FAILED the subject test — it has
+     not taken it. Calling it off-subject would tell a seller their perfectly
+     good illustrated dog design is "not about dog mom". */
   const result = relevanceOf("", terms("halloween"));
-  assert.equal(result.verdict, "unreadable");
+  assert.equal(result.verdict, "unknown");
+  assert.notEqual(result.verdict, "off-subject");
   const notice = relevanceNotice(result, "halloween");
-  assert.match(notice, /no readable text/);
-  assert.match(notice, /not a judgement about whether the subject fits/);
+  assert.match(notice, /no readable words/);
+  assert.match(notice, /not a judgement about the subject either way/);
 });
 
 test("the scan puts the re-scoping before the construction sentence", () => {

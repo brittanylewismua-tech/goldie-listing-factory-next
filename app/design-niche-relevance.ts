@@ -26,7 +26,17 @@ import { wordsOf } from "./niche-cohort.ts";
 export type Relevance =
   | { verdict: "on-subject"; matched: string[]; because: string }
   | { verdict: "off-subject"; matched: string[]; because: string }
-  | { verdict: "unreadable"; matched: never[]; because: string };
+  /*
+    AN IMAGE-ONLY DESIGN IS UNKNOWN, NOT OFF-SUBJECT.
+
+    Relevance here is judged from the design's own transcribed WORDING. A
+    design carrying no words — a mascot, an illustrated scene, a pattern — has
+    not failed the test; it has not taken it. Calling it off-subject would tell
+    a seller their perfectly good illustrated dog design is "not about dog
+    mom", which is both wrong and the kind of confident error that makes a
+    tool untrustworthy.
+  */
+  | { verdict: "unknown"; matched: never[]; because: string };
 
 /**
  * Compare the design's own words against the niche's.
@@ -43,11 +53,11 @@ export function relevanceOf(
 ): Relevance {
   const text = String(visibleWording ?? "").trim();
   if (!text)
-    return { verdict: "unreadable", matched: [],
-      because: "This design has no readable words, so there is no way to tell "
-        + "from the artwork alone whether it is about this niche." };
+    return { verdict: "unknown", matched: [],
+      because: "This design has no readable words, so whether it is about this niche "
+        + "cannot be judged from the artwork alone." };
   if (!nicheTerms.length)
-    return { verdict: "unreadable", matched: [],
+    return { verdict: "unknown", matched: [],
       because: "This niche phrase carried no usable terms to check against." };
 
   const words = wordsOf(text);
@@ -67,11 +77,11 @@ export function relevanceOf(
  */
 export function relevanceNotice(relevance: Relevance, niche: string) {
   if (relevance.verdict === "on-subject") return "";
-  if (relevance.verdict === "unreadable")
-    return `This design has no readable text, so Design Scanner cannot tell whether it is `
-      + `about ${niche}. Everything below compares how the design is BUILT — its layout, `
-      + `contrast and readability — against listings that are moving. It is not a judgement `
-      + `about whether the subject fits.`;
+  if (relevance.verdict === "unknown")
+    return `This design has no readable words, so whether it suits ${niche} is not something `
+      + `Design Scanner can tell from the artwork. Everything below compares how the design `
+      + `is BUILT — its layout, contrast and readability — against listings that are moving. `
+      + `It is not a judgement about the subject either way.`;
   return `This design does not appear to be about ${niche}. Everything below compares how it `
     + `is BUILT — its layout, contrast and readability — against listings that are moving in `
     + `that niche. A design can match every one of those patterns and still not belong in the `
