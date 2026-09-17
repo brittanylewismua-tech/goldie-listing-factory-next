@@ -291,3 +291,21 @@ test("no object store is reported as not done, never as done", async () => {
     assert.match(step.failed, /no object store/);
   assert.equal(store.objects.size, OBJECT_PREFIXES.length * 4, "nothing was removed");
 });
+
+test("the confirmation renders the lists its own sentence promises", () => {
+  /*
+    The route sent `incomplete` and `kept`; the component destructured neither,
+    so a partial deletion rendered "Some of it could not be removed and is
+    listed below" above nothing at all. Seen in the state harness on the
+    deployed build. A promise of a list is worse than no list, because the
+    member is left believing something is missing from the page rather than
+    knowing what could not be removed.
+  */
+  const client = readFileSync(new URL(
+    "../app/account/settings/account-client.tsx", import.meta.url), "utf8");
+  assert.match(client, /incomplete\?: \{ say: string \}\[\]; kept\?: string\[\]/);
+  assert.match(client, /incomplete: answer\.incomplete \?\? \[\]/);
+  assert.match(client, /kept: answer\.kept \?\? \[\]/);
+  assert.match(client, /done\.incomplete!\.map/);
+  assert.match(client, /done\.kept!\.map/);
+});

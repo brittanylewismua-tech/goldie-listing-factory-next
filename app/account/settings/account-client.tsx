@@ -140,12 +140,19 @@ function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void 
                 });
                 const answer = await response.json() as {
                   deleted?: boolean; removed?: { say: string; changed: number }[];
+                  /* D1651 · The route sends these and the component dropped
+                     them on the floor, so the success message said "listed
+                     below" above nothing at all. A promise of a list is
+                     worse than no list. */
+                  incomplete?: { say: string }[]; kept?: string[];
                   say?: string; error?: string };
                 if (!response.ok || !answer.deleted) {
                   setError(answer.error || "That did not go through. Nothing was changed.");
                   return;
                 }
-                setDone({ removed: answer.removed ?? [], say: answer.say ?? "Your data has been removed." });
+                setDone({ removed: answer.removed ?? [],
+                  incomplete: answer.incomplete ?? [], kept: answer.kept ?? [],
+                  say: answer.say ?? "Your data has been removed." });
                 onDone();
               } catch {
                 setError("That did not go through. Nothing was changed.");
