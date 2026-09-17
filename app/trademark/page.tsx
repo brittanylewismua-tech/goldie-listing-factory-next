@@ -113,13 +113,22 @@ export default function TrademarkPage() {
           {verdict.risk === "high" ? "High risk"
             : verdict.risk === "caution" ? "Partly owned" : "Nothing found"}
         </span>
-        <p className="tm-headline">
-          {verdict.risk === "high"
-            ? "Do not print this"
-            : verdict.risk === "caution"
-              ? "Somebody owns part of this"
-              : "Nothing found"}
-        </p>
+        {/*
+          D1691 · The clear result said "Nothing found" twice — once as the
+          badge, once as the headline directly beneath it. The other two risks
+          use the badge for the verdict and the headline for what to do about
+          it ("High risk" → "Do not print this"), and a clear result has no
+          instruction to give: the only honest thing to add would be
+          encouragement to go ahead, which this tool cannot give. So it has no
+          headline rather than an echo of its own badge.
+        */}
+        {verdict.risk !== "clear" && (
+          <p className="tm-headline">
+            {verdict.risk === "high"
+              ? "Do not print this"
+              : "Somebody owns part of this"}
+          </p>
+        )}
         <p className="tm-phrase">{marked()}</p>
         <p>{verdict.summary}</p>
 
