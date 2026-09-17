@@ -101,3 +101,25 @@ test("a failure nobody listed stops being retried forever", () => {
   /* And the note stays, so a wrongly parked file is findable. */
   assert.match(route, /SET state = \?, note = \?, retry_after = \?, strikes = \?, repeats = \?/);
 });
+
+test("the health probe measures the backfile on its own", () => {
+  /*
+    "When did a file last finish" cannot tell a daily file from a historical
+    one, and a daily file arrives every day — so the probe reported
+    progressing: true for days while 88 historical files failed identically
+    every twenty minutes and not one ever completed. The probe answered the
+    question it was asked; the question pooled two queues with completely
+    different cadences.
+  */
+  const route = readFileSync(new URL(
+    "../app/api/operations/health/route.ts", import.meta.url), "utf8");
+  assert.match(route, /state = 'done' AND priority > 2/,
+    "the backfile's own last completion must be measured");
+  assert.match(route, /state IN \('waiting','partial'\) AND priority > 2/);
+  assert.match(route, /backfileStalled/);
+  /* A tick runs every twenty minutes; six hours of nothing with work waiting
+     is a stall, not a slow patch. */
+  assert.match(route, /backfileSince > 6 \* 3_600/);
+  assert.match(route, /: backfileStalled \? "broken"/,
+    "a dead backfile must read as broken, not ok");
+});

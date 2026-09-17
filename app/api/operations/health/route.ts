@@ -219,16 +219,52 @@ export const GET = withErrorLog("operations-health", async () => {
     const lastAt = seconds(lastDone?.at);
     const sinceLast = lastAt ? now - lastAt : 0;
 
+    /*
+      THE DAILY FILE KEPT THIS PROBE GREEN WHILE THE BACKFILE WAS DEAD.
+
+      "When did a file last finish" cannot tell a daily file from a historical
+      one, and a daily file arrives every day — so `progressing` read true for
+      days while 88 historical files failed identically every twenty minutes
+      and not one of them ever completed. The probe answered the question it
+      was asked; the question was wrong.
+
+      The backfile is measured on its own. A tick runs every twenty minutes,
+      so six hours without a historical file finishing, while historical files
+      are waiting, is a stall rather than a slow patch.
+    */
+    const lastHistorical = await db.prepare(
+      `SELECT MAX(finished) AS at FROM tm_ingest_files
+        WHERE state = 'done' AND priority > 2`)
+      .first<{ at: string }>();
+    const historicalWaiting = await db.prepare(
+      `SELECT COUNT(*) AS n FROM tm_ingest_files
+        WHERE state IN ('waiting','partial') AND priority > 2`)
+      .first<{ n: number }>();
+    const backfileAt = seconds(lastHistorical?.at);
+    const backfileSince = backfileAt ? now - backfileAt : 0;
+    const backfileWaiting = Number(historicalWaiting?.n ?? 0);
+    const backfileStalled = backfileWaiting > 0
+      && (!backfileAt || backfileSince > 6 * 3_600);
+
     return {
       state: (byState.failed ?? 0) > 0 ? "broken"
         /* Nothing finished in a day and work is queued: genuinely stalled. */
         : incomplete && lastAt && sinceLast > 36 * 3_600 ? "broken"
+        /* Or the historical queue has stopped while the daily one carries on,
+           which is invisible in any measure that pools the two. */
+        : backfileStalled ? "broken"
         : incomplete ? "ok"
         : "ok",
       detail: { marks: Number(marks?.n ?? 0), files: byState,
         lastCompletedAt: lastAt,
         hoursSinceLastFile: lastAt ? Math.round(sinceLast / 3_600) : null,
         progressing: Boolean(lastAt && sinceLast < 36 * 3_600),
+        backfile: {
+          waiting: backfileWaiting,
+          lastCompletedAt: backfileAt,
+          hoursSinceLastFile: backfileAt ? Math.round(backfileSince / 3_600) : null,
+          stalled: backfileStalled,
+        },
         /* While anything is waiting or partial, no check may read as clean. */
         registerComplete: incomplete === 0 && Number(marks?.n ?? 0) > 0 } };
   });
