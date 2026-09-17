@@ -21,7 +21,7 @@ import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 import { evidenceLine } from "@/app/evidence-window";
 import { isFresh } from "@/app/reference-images";
 import { reserveSpend, settleSpend, failSpend, releaseSpend, memberUsage } from "@/app/spend-guard";
-import { check, withRegister, type RegisterMatch } from "@/app/trademark-check";
+import { check, withRegister, registerIsReady, type RegisterMatch } from "@/app/trademark-check";
 import { lookup, normalize, registerSize } from "@/app/trademark-register";
 import { etsyApiCredential, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import { classify } from "@/app/reference-recovery";
@@ -347,8 +347,9 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
   const verdict = check(phrase);
   try {
     const [size, hits] = await Promise.all([registerSize(db), lookup(db, phrase)]);
-    const ready = size.marks > 0
-      && !size.files.some(file => file.state === "waiting" || file.state === "partial");
+    /* The rule lives in one place now; three call sites had written it out
+       and a fourth had got it wrong. */
+    const ready = registerIsReady(size);
     const normalized = normalize(phrase);
     const matches: RegisterMatch[] = hits.map(hit => ({
       mark: hit.mark, owner: hit.owner, registration: hit.registration,

@@ -418,6 +418,56 @@ export type FullVerdict = Verdict & {
 
 const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 
+/*
+  ONE PLACE THAT DECIDES WHETHER THE REGISTER IS COMPLETE.
+
+  Four call sites computed this. Three of them wrote the same two-line rule by
+  hand; the fourth — the LISTING FACTORY'S PUBLISH-TIME CHECK — passed the
+  size object itself where the boolean goes:
+
+    withRegister(check(phrase), hits, size)
+
+  An object is always truthy, so the path that runs when a member is about to
+  publish has been reporting a COMPLETE federal register search, in those
+  words, while 79 of 113 bulk files were still waiting. The one screen where
+  the limitation matters most is the one screen that hid it.
+
+  `size` is exactly what registerSize returns, so the shape cannot be passed
+  to the wrong parameter any more — it is the parameter.
+*/
+export type RegisterSize = { marks: number; files: { state: string; count: number }[] };
+
+export function registerIsReady(size: RegisterSize | null | undefined) {
+  if (!size || !(size.marks > 0)) return false;
+  return !size.files.some(file => file.state === "waiting" || file.state === "partial");
+}
+
+/*
+  AND ONE PLACE THAT SHAPES A HIT INTO A MATCH.
+
+  The same call site passed raw lookup rows straight in, so `exact` was
+  undefined on every one of them. `serious` requires exact OR a multi-word
+  mark, which means an EXACT SINGLE-WORD registered trademark was quietly
+  downgraded from high risk to a minor mention — on the publish path.
+*/
+export function toMatches(
+  hits: Array<{ mark: string; owner?: string; registration?: string;
+    classes?: string; registered?: boolean }>,
+  phrase: string,
+  /* Injected rather than imported: the normaliser lives beside the register
+     reader, and this module stays free of anything that touches a database.
+     Named distinctly so the import-integrity guard can tell a parameter from
+     a symbol borrowed off another module. */
+  normalizeMark: (value: string) => string,
+): RegisterMatch[] {
+  const wanted = normalizeMark(phrase);
+  return hits.map(hit => ({
+    mark: hit.mark, owner: hit.owner, registration: hit.registration,
+    classes: hit.classes, registered: hit.registered,
+    exact: normalizeMark(hit.mark) === wanted,
+  })) as RegisterMatch[];
+}
+
 export function withRegister(
   verdict: Verdict,
   matches: RegisterMatch[],

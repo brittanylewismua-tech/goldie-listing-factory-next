@@ -11,7 +11,7 @@ import { familyCopyKey, fallbackCopy, COPY_PROMPT_VERSION, COPY_MODEL_VERSION }
   from "@/app/family-copy";
 import { readDesignIntelligence, EXTRACTION_SCHEMA_VERSION, DESIGN_MODEL_VERSION,
   DESIGN_PROMPT_VERSION } from "@/app/design-intelligence";
-import { check, withRegister, type RegisterMatch } from "@/app/trademark-check";
+import { check, withRegister, registerIsReady, type RegisterMatch } from "@/app/trademark-check";
 import { lookup, normalize, registerSize } from "@/app/trademark-register";
 import { canaryFor } from "@/app/listing-flow-canary";
 /* One composition module, so the audited dry run and the production path
@@ -129,8 +129,9 @@ async function run(request: Request, user: { userId: string; email: string }) {
   let trademark: unknown;
   try {
     const [size, hits] = await Promise.all([registerSize(db), lookup(db, phrase)]);
-    const ready = size.marks > 0
-      && !size.files.some(file => file.state === "waiting" || file.state === "partial");
+    /* The rule lives in one place now; three call sites had written it out
+       and a fourth had got it wrong. */
+    const ready = registerIsReady(size);
     const normalized = normalize(phrase);
     const matches: RegisterMatch[] = hits.map(hit => ({
       mark: hit.mark, owner: hit.owner, registration: hit.registration,

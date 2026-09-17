@@ -12,8 +12,8 @@ import { POD_LISTING_FIELDS, LISTING_FIELD_FOR_PROPERTY } from "@/app/pod-listin
 import { artworkHashOfBytes, artworkHashOfDataUrl } from "@/app/artwork-identity";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { INTERNAL_VALIDATION_MARKER, isInternalValidationProduct } from "@/app/printify-validation-marker";
-import { check, withRegister } from "@/app/trademark-check";
-import { lookup, registerSize } from "@/app/trademark-register";
+import { check, withRegister, registerIsReady, toMatches } from "@/app/trademark-check";
+import { lookup, normalize, registerSize } from "@/app/trademark-register";
 import { env } from "cloudflare:workers";
 import { isOwner } from "@/app/mastermind/access";
 
@@ -151,7 +151,13 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
   let trademark: unknown = { verdict: check(phrase) };
   try {
     const [size, hits] = await Promise.all([registerSize(db), lookup(db, phrase)]);
-    trademark = withRegister(check(phrase), hits, size);
+    /* D1655 · `size` was passed where the readiness boolean belongs — always
+       truthy — so this path claimed a complete register search throughout the
+       backfill. And the raw hits went in unmapped, leaving `exact` undefined
+       on every one, which downgraded an exact single-word registered mark
+       from high risk to a minor mention. */
+    trademark = withRegister(check(phrase), toMatches(hits, phrase, normalize),
+      registerIsReady(size));
   } catch { /* the verdict without the register is still a verdict */ }
 
   /* Steps 10-12: composed, not generated. */

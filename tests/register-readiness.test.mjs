@@ -1,0 +1,85 @@
+/*
+  THE ONE SCREEN WHERE THE LIMITATION MATTERS MOST WAS THE ONE SCREEN THAT
+  HID IT.
+
+  Four call sites decided whether the federal register is complete enough to
+  call a "no match" result a clean search. Three wrote the same two-line rule
+  by hand. The fourth — the Listing Factory's publish-time check, which runs
+  when a member is about to put a design on Etsy — passed the size OBJECT
+  where the boolean goes:
+
+    withRegister(check(phrase), hits, size)
+
+  An object is always truthy, so that path reported a complete federal
+  register search, in those words, while 79 of 113 bulk files were waiting.
+
+  The same call also passed raw lookup rows straight in, so `exact` was
+  undefined on every match. `serious` requires exact OR a multi-word mark,
+  which downgraded an EXACT SINGLE-WORD registered trademark from high risk
+  to a minor mention — again, on the publish path.
+*/
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { registerIsReady, toMatches, withRegister, check }
+  from "../app/trademark-check.ts";
+
+const normalize = value => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+test("the register is only ready when nothing is still waiting", () => {
+  assert.equal(registerIsReady({ marks: 190_000, files: [{ state: "done", count: 34 }] }), true);
+  assert.equal(registerIsReady({ marks: 190_000,
+    files: [{ state: "done", count: 34 }, { state: "waiting", count: 79 }] }), false);
+  assert.equal(registerIsReady({ marks: 190_000,
+    files: [{ state: "done", count: 34 }, { state: "partial", count: 1 }] }), false);
+  /* A skipped file is a file deliberately parked, not one still coming. */
+  assert.equal(registerIsReady({ marks: 190_000,
+    files: [{ state: "done", count: 34 }, { state: "skipped", count: 3 }] }), true);
+  /* An empty register is never ready, however few files are queued. */
+  assert.equal(registerIsReady({ marks: 0, files: [] }), false);
+  assert.equal(registerIsReady(null), false);
+  /* And the shape that caused this: an object is not a yes. */
+  assert.equal(registerIsReady({ marks: 1, files: [{ state: "waiting", count: 1 }] }), false);
+});
+
+test("an incomplete register never produces the complete-search wording", () => {
+  const clean = check("bride tribe squad");
+  const loading = withRegister(clean, [], false);
+  const done = withRegister(clean, [], true);
+  assert.match(loading.summary, /trademark records currently loaded/);
+  assert.ok(!/current federal/.test(loading.summary),
+    "an incomplete register must not claim the current federal register");
+  assert.match(done.summary, /current federal/);
+  assert.equal(loading.registerReady, false);
+});
+
+test("an exact single-word registered mark is serious, not a mention", () => {
+  const hits = [{ mark: "Stanley", owner: "PMI", registration: "1", registered: true }];
+  const matches = toMatches(hits, "stanley", normalize);
+  assert.equal(matches[0].exact, true, "exact must be computed, not left undefined");
+  const verdict = withRegister(check("stanley"), matches, true);
+  assert.equal(verdict.risk, "high");
+  /* Unmapped rows are what produced the downgrade. */
+  const unmapped = withRegister(check("stanley"), hits, true);
+  assert.notEqual(unmapped.risk, "high",
+    "this is the behaviour the publish path had, kept here as the reason for toMatches");
+});
+
+test("no route computes register readiness by hand any more", () => {
+  const routes = [];
+  const walk = dir => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) walk(new URL(`${entry.name}/`, dir));
+      else if (entry.name === "route.ts") routes.push(new URL(entry.name, dir));
+    }
+  };
+  walk(new URL("../app/api/", import.meta.url));
+  for (const file of routes) {
+    const source = readFileSync(file, "utf8");
+    if (!/withRegister/.test(source)) continue;
+    assert.ok(!/state === "waiting" \|\| file\.state === "partial"/.test(source),
+      `${file.pathname} still writes the readiness rule by hand`);
+    assert.match(source, /registerIsReady\(/,
+      `${file.pathname} must use the shared rule`);
+  }
+});

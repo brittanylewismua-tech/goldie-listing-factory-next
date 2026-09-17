@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
 import { env } from "cloudflare:workers";
-import { check, withRegister, type RegisterMatch } from "@/app/trademark-check";
+import { check, withRegister, registerIsReady, type RegisterMatch } from "@/app/trademark-check";
 import { lookup, normalize, registerSize } from "@/app/trademark-register";
 
 /**
@@ -30,7 +30,7 @@ export const GET = withErrorLog("trademark", async (request: Request) => {
   let matches: RegisterMatch[] = [];
   try {
     const [size, hits] = await Promise.all([registerSize(db), lookup(db, phrase)]);
-    ready = size.marks > 0 && !size.files.some(file => file.state === "waiting" || file.state === "partial");
+    ready = registerIsReady(size);
     const normalized = normalize(phrase);
     matches = hits.map(hit => ({
       mark: hit.mark,
