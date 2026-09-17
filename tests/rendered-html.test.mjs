@@ -3285,8 +3285,31 @@ test("every confirmation uses the app's own dialog — D452", async () => {
 
   // Escape and the backdrop both mean no, and refusing is the default answer.
   assert.match(dialog, /event\.key === "Escape"/);
-  assert.match(dialog, /if \(!announce\) return Promise\.resolve\(false\)/,
+  /*
+    D1594 · This asserted `if (!announce) return Promise.resolve(false)` — fail
+    closed, which was right, and SILENTLY, which was not. A caller could not
+    tell "the person said no" from "the dialog could not be opened", so a
+    guarded control became a button that does nothing.
+
+    D528 had already moved the host to the root layout after the same shape of
+    failure. It came back anyway, because a module-level singleton is only a
+    singleton while every caller shares one instance of the module — measured
+    on the deployed build: the identical call worked on Batch History and
+    silently returned false inside the Listing Factory workflow.
+
+    The request is a window event now, so there is no instance to share, and an
+    unanswered request is reported rather than swallowed.
+  */
+  assert.match(dialog, /window\.dispatchEvent\(new CustomEvent\(CONFIRM_REQUEST_EVENT/,
+    "a confirmation request must not depend on module instance identity");
+  assert.match(dialog, /if \(!detail\.handled\)/,
+    "an unanswered request must be detected");
+  assert.match(dialog, /once\(false\)/,
     "with no dialog mounted, a destructive action must not proceed");
+  assert.match(dialog, /confirmationUnavailableMessage/,
+    "and the person must be told, rather than watching a dead control");
+  assert.doesNotMatch(dialog, /let announce: \(\(pending/,
+    "the module-level singleton is what broke twice");
   assert.match(dialog, /autoFocus/, "focus lands on Cancel, not the destructive action");
 
   // Destructive confirmations use the muted rose, never an alarm red.

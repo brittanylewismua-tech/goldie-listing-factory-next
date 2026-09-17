@@ -29,21 +29,86 @@ type ConfirmRequest = {
 
 type Pending = ConfirmRequest & { resolve: (answer: boolean) => void };
 
-let announce: ((pending: Pending | null) => void) | null = null;
+/* ===========================================================================
+ * D1594 · A MODULE-LEVEL SINGLETON IS NOT A SINGLETON.
+ *
+ * `announce` was a module variable: `ConfirmHost` set it on mount and
+ * `confirmAction` read it. That works only while every caller and the host
+ * share ONE instance of this module, and nothing guarantees that. Measured on
+ * the deployed build: the identical call showed a dialog on Batch History and
+ * silently returned false inside the Listing Factory workflow, reproducibly,
+ * with no console error and one shared chunk on disk.
+ *
+ * The failure mode was the worst available. `confirmAction` answered "the
+ * person said no", so every guarded control became a button that does nothing:
+ * "Reload saved batch here" was the ONLY way out of a paused batch, and it did
+ * nothing at all. A member in that state was stuck with no way forward and no
+ * message explaining why.
+ *
+ * So the coupling is gone rather than patched. A request is a DOM event on
+ * `window` — one object per page, shared by every module instance, every
+ * chunk and every React root by construction. Whoever is mounted answers.
+ *
+ * AND IT FAILS CLOSED, LOUDLY. If nothing answers, the action still does not
+ * run — but the person is told, instead of watching a button do nothing.
+ * ======================================================================== */
+export const CONFIRM_REQUEST_EVENT = "goldie:confirm-request";
+
+type ConfirmEventDetail = ConfirmRequest & {
+  resolve: (answer: boolean) => void;
+  /* Set by a mounted host. If it is still false after dispatch, nothing was
+     listening and the caller must not proceed. */
+  handled: boolean;
+};
+
+/** Shown when the confirmation UI is unreachable. Never silently cancelled. */
+export function confirmationUnavailableMessage(title: string) {
+  return `"${title}" needs a confirmation step, and it could not be opened. `
+    + "Nothing was changed. Reload the page and try again.";
+}
+
+let reportUnavailable: ((message: string) => void) | null = null;
 
 export function confirmAction(request: ConfirmRequest): Promise<boolean> {
-  // Without the host mounted there is nothing to ask with, and silently
-  // proceeding with a destructive action would be the worst possible answer.
-  if (!announce) return Promise.resolve(false);
-  return new Promise<boolean>((resolve) => announce?.({ ...request, resolve }));
+  if (typeof window === "undefined") return Promise.resolve(false);
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const once = (answer: boolean) => { if (!settled) { settled = true; resolve(answer) } };
+    const detail: ConfirmEventDetail = { ...request, resolve: once, handled: false };
+    window.dispatchEvent(new CustomEvent(CONFIRM_REQUEST_EVENT, { detail }));
+    if (!detail.handled) {
+      /* Nothing is mounted to ask with. The action does not run, and the
+         person is told why rather than left pressing a dead control. */
+      const message = confirmationUnavailableMessage(request.title);
+      if (reportUnavailable) reportUnavailable(message);
+      else if (typeof alert === "function") alert(message);
+      once(false);
+    }
+  });
 }
 
 export default function ConfirmHost() {
   const [pending, setPending] = useState<Pending | null>(null);
 
+  const [unavailable, setUnavailable] = useState("");
+
   useEffect(() => {
-    announce = setPending;
-    return () => { announce = null };
+    const onRequest = (event: Event) => {
+      const detail = (event as CustomEvent<Pending & { handled: boolean }>).detail;
+      if (!detail || detail.handled) return;
+      /* Claimed synchronously, inside the dispatch, so the caller knows before
+         it returns that somebody will answer. */
+      detail.handled = true;
+      setPending(detail);
+    };
+    window.addEventListener(CONFIRM_REQUEST_EVENT, onRequest);
+    reportUnavailable = setUnavailable;
+    /* Only surrender the reporter if it is still ours: two hosts mounting and
+       one unmounting must not leave the survivor unable to report. */
+    return () => {
+      window.removeEventListener(CONFIRM_REQUEST_EVENT, onRequest);
+      if (reportUnavailable === setUnavailable) reportUnavailable = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -55,7 +120,30 @@ export default function ConfirmHost() {
     return () => window.removeEventListener("keydown", onKey);
   }, [pending]);
 
-  if (!pending || typeof document === "undefined") return null;
+  if (typeof document === "undefined") return null;
+
+  /* The fail-closed notice. It exists so a confirmation that cannot be shown
+     is visible rather than silent; nothing has been changed when it appears. */
+  if (!pending && unavailable)
+    return createPortal(
+      <div className="publish-confirm-backdrop" role="presentation"
+        onMouseDown={(event) => { if (event.target === event.currentTarget) setUnavailable("") }}>
+        <section className="publish-confirm confirm-action-modal" role="alertdialog" aria-modal="true">
+          <span className="publish-confirm-icon" aria-hidden="true">!</span>
+          <p className="mini-label">NOTHING WAS CHANGED</p>
+          <h2>This needs a confirmation step</h2>
+          <p>{unavailable}</p>
+          <div className="confirm-action-actions">
+            <button type="button" className="confirm-action-go" onClick={() => setUnavailable("")}>
+              Close
+            </button>
+          </div>
+        </section>
+      </div>,
+      document.body,
+    );
+
+  if (!pending) return null;
   const settle = (answer: boolean) => { pending.resolve(answer); setPending(null) };
 
   return createPortal(

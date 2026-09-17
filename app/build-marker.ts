@@ -143,7 +143,12 @@
    is printed. "Gift for none" was fixed in the title composer, which left the
    word "none" in stored design intelligence for the description, the tags and
    the bank ranking to use next. */
-export const BUILD_MARKER = "D1593";
+/* D1594 makes a confirmation request a window event instead of a module-level
+   variable. Measured: the identical call opened a dialog on Batch History and
+   silently returned false inside the Listing Factory workflow, so every
+   guarded control there — including the only way out of a paused batch — was
+   a button that did nothing. It fails closed and says so now. */
+export const BUILD_MARKER = "D1594";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
