@@ -22,7 +22,7 @@
  */
 export type ShellSection =
   | "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords"
-  | "usage" | "connections" | "market-watch" | "shop-map" | "design-scanner";
+  | "usage" | "connections" | "market-watch" | "shop-map" | "design-scanner" | "more";
 
 /** The Listing Factory's own pages — the only place its wordmark appears. */
 const LISTING_FACTORY_PAGES = new Set<ShellSection>(["factory", "batches", "keywords"]);
@@ -49,6 +49,7 @@ export const TAB_TITLES: Record<ShellSection, string> = {
   hotlist: "Hot List",
   usage: "Usage and Plan",
   connections: "Connections",
+  more: "Tools and settings",
 };
 
 /**

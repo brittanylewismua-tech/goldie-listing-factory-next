@@ -42,7 +42,14 @@ export default function UsagePage(){
   return <FactoryShell active="usage" title="Usage + Plan"><div className="usage-page interior-page">
     
     <header><p className="mini-label">USAGE + PLAN</p><h1>Your Listing Factory plan</h1><p>Successful listing creations use your allowance. Failed attempts do not.</p></header>
-    {loadError?<section className="usage-load-error" role="alert"><h2>Sign in to view your plan and usage</h2><p>{loadError}</p><a href="/listing-factory">Return to Listing Factory</a></section>:!data?<p>Loading your usage…</p>:<>
+    {loadError?<section className="usage-load-error" role="alert"><h2>Sign in to view your plan and usage</h2><p>{loadError}</p><a href="/listing-factory">Return to Listing Factory</a></section>:!data?(
+      /* D1609 · the fourth page to use a bare sentence as its whole loading
+         state. This one waits on billing and the allowance ledger. */
+      <div className="p-stack" role="status" aria-label="Loading your plan and usage">
+        <div className="p-skeleton p-skeleton-card" />
+        <div className="p-skeleton p-skeleton-card" />
+      </div>
+    ):<>
       <section className="plan-banner"><div><span>CURRENT PLAN</span><h2>{data.plan.name}</h2><p>{data.plan.key==="owner_test"?"Testing access":data.plan.price?currentPrice:data.plan.key==="mastermind_beta"?"Private beta":"Free trial"}</p></div><div><p>{data.plan.key==="mastermind_beta"?"Access stays open until Brittany closes testing. No automatic credit reset.":data.plan.key==="trial"&&data.billing?.subscription?.status==="trialing"&&data.billing.subscription.currentPeriodEnd?`Trial ends ${new Date(data.billing.subscription.currentPeriodEnd*1000).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}`:`Monthly credits reset ${new Date(data.resetAt!).toLocaleDateString(undefined,{month:"long",day:"numeric",year:"numeric"})}`}</p>{data.billing?.active&&<button onClick={()=>void manageBilling()}>Manage billing</button>}{billingMessage&&<small role="status">{billingMessage}</small>}</div></section>
       <section className="usage-grid"><Meter label={data.plan.key==="mastermind_beta"?"Beta listing creations":"Monthly listing creations"} used={data.usage.drafts} limit={data.plan.drafts}/></section>
       <p className="usage-note">A credit is used only after The Listing Factory successfully creates a unique unpublished Printify draft. Failed attempts and retries do not count again.</p>

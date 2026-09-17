@@ -180,7 +180,12 @@
    full-height black field with a decorative gear. It is compact grouped rows
    at the Listing Factory's own density now, on the same paper as every
    feature page, and it says what it holds. */
-export const BUILD_MARKER = "D1608";
+/* D1609 stops Connections telling a member their shop is disconnected while
+   it is still looking. For about six seconds it showed "No Etsy shop
+   connected yet" on an account publishing to that very shop: the empty state
+   and the not-yet-asked state were the same screen. An empty state is a claim.
+   Plan and limits, and two tab titles, fixed in the same pass. */
+export const BUILD_MARKER = "D1609";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

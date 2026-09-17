@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireChatGPTUser } from "@/app/chatgpt-auth";
 import { NavIcon } from "@/app/nav-icons";
+import FactoryShell from "@/app/factory-shell";
 import "@/app/tools-settings.css";
 
 /*
@@ -64,7 +65,13 @@ const GROUPS: Group[] = [
 
 export default async function MorePage() {
   await requireChatGPTUser("/more");
-  return <main className="tools-settings p-grid">
+  /*
+    The rail comes too. On a phone this is the fifth tab and the bottom bar is
+    the navigation, so the shell opts out of the desktop gate; on a desktop a
+    member who lands here without it has no way anywhere else.
+  */
+  return <FactoryShell active="more" title="Tools and settings" desktopOnly={false}>
+    <main className="tools-settings p-grid">
     <div className="p-page">
       <header className="p-head">
         <h1>Tools &amp; settings</h1>
@@ -98,5 +105,6 @@ export default async function MorePage() {
         <Link href="/account/sign-out">Sign out</Link>
       </div>
     </div>
-  </main>;
+    </main>
+  </FactoryShell>;
 }

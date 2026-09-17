@@ -44,6 +44,19 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
   const [printify, setPrintify] = useState<Printify | null>(null);
   const [showEffect, setShowEffect] = useState<number | null>(null);
   const [error, setError] = useState("");
+  /*
+    D1609 · "NO ETSY SHOP CONNECTED YET" WAS SHOWN WHILE LOADING.
+
+    The empty state and the not-yet-answered state were the same thing, so for
+    the seconds this page takes to read two connection endpoints it told the
+    member their shop was disconnected. Measured on the deployed build: about
+    six seconds of "No Etsy shop connected yet" and "Not connected", on an
+    account where both are connected and the Listing Factory was publishing to
+    that very shop.
+
+    An empty state is a CLAIM. It may only be made once there is an answer.
+  */
+  const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -53,21 +66,34 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
       ]);
       if (etsy.ok) setShops(((await etsy.json()) as { connections: Connection[] }).connections ?? []);
       if (print.ok) setPrintify(await print.json() as Printify);
-    } catch { setError("Your connections could not be loaded just now."); }
+      if (!etsy.ok && !print.ok)
+        setError("Your connections could not be loaded just now. Nothing has changed — "
+          + "reload the page to try again.");
+    } catch {
+      setError("Your connections could not be loaded just now. Nothing has changed — "
+        + "reload the page to try again.");
+    } finally { setLoaded(true); }
   }, []);
 
   useEffect(() => { void load(); }, [load]);
 
   return (
-    <main className="conn">
+    <main className="conn p-grid">
       <h1>Connections</h1>
       <p className="lede">
         The Listing Factory reads your Etsy shop so it can build listings and show you what
         they earned. It never changes a listing you did not ask it to.
       </p>
 
+      {error && <p className="p-notice p-notice-bad" role="alert">{error}</p>}
+
       <h2>Etsy</h2>
-      {shops.length === 0 && (
+      {!loaded && (
+        <div className="p-stack" role="status" aria-label="Checking your connections">
+          <div className="p-skeleton p-skeleton-card" />
+        </div>
+      )}
+      {loaded && shops.length === 0 && (
         <p className="empty">
           No Etsy shop connected yet. <a href="/api/etsy/connect">Connect your shop</a> to
           start using it.
@@ -129,7 +155,12 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
       ))}
 
       <h2>Printify</h2>
-      <div className="shop">
+      {!loaded && (
+        <div className="p-stack" role="status" aria-label="Checking your Printify connection">
+          <div className="p-skeleton p-skeleton-card" />
+        </div>
+      )}
+      {loaded && <div className="shop">
         <span className="name">{printify?.connected ? (printify.shopName || "Connected") : "Not connected"}</span>
         <p className="fact">
           {printify?.connected
@@ -141,7 +172,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
             ? <a href="/api/printify/connect">Reconnect</a>
             : <a href="/api/printify/connect">Connect Printify</a>}
         </div>
-      </div>
+      </div>}
 
       {error && <p className="error">{error}</p>}
     </main>

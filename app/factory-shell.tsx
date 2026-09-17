@@ -29,7 +29,7 @@ import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
 export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "usage"
-  | "connections" | "market-watch" | "shop-map" | "design-scanner";
+  | "connections" | "market-watch" | "shop-map" | "design-scanner" | "more";
 
 /* D834 · Usage + Plan and Connections moved into the account menu, where the
    account itself already lives. The rail is the three places work happens. */

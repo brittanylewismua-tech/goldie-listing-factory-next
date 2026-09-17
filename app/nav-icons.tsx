@@ -54,7 +54,10 @@ export function NavIcon({ name }: { name: NavKey }) {
     /* D1608 · Tools & settings lists the Trademark Checker and the goal, and
        an icon invented at the call site is how two icon sets begin. */
     case "trademark":
-      return <svg {...ICON}><path d="M12 3l7.5 3v5.2c0 4.3-3 8.1-7.5 9.3-4.5-1.2-7.5-5-7.5-9.3V6L12 3z"/><path d="M9.4 11.8l1.8 1.8 3.6-3.6"/></svg>;
+      /* A magnifier, not a shield: the `usage` icon is already a shield with a
+         check, and two shields side by side in Tools & settings read as the
+         same destination twice. This one is about LOOKING something up. */
+      return <svg {...ICON}><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.6-4.6"/><path d="M8.6 8.8h4.8M11 8.8V14"/></svg>;
     case "goals":
       return <svg {...ICON}><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></svg>;
     case "operations":
