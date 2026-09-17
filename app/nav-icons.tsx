@@ -9,7 +9,7 @@
  * and leave the two free to drift again on the next change. The icons live here
  * instead, keyed by destination, and both navigations render from this map — so
  * an icon added or changed in one place is added or changed in both. */
-export type NavKey = "listingFactory" | "batches" | "keywords" | "mockups" | "usage" | "operations" | "connections" | "trademark" | "goals";
+export type NavKey = "listingFactory" | "batches" | "keywords" | "mockups" | "usage" | "operations" | "connections" | "trademark" | "goals" | "account";
 
 
 /* D246 · D203 centralised the icon MARKUP so the two navigations could not
@@ -58,6 +58,8 @@ export function NavIcon({ name }: { name: NavKey }) {
          check, and two shields side by side in Tools & settings read as the
          same destination twice. This one is about LOOKING something up. */
       return <svg {...ICON}><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.6-4.6"/><path d="M8.6 8.8h4.8M11 8.8V14"/></svg>;
+    case "account":
+      return <svg {...ICON}><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 19.5a7.5 7.5 0 0115 0"/></svg>;
     case "goals":
       return <svg {...ICON}><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3"/></svg>;
     case "operations":
