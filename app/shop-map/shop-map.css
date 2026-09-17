@@ -101,3 +101,19 @@
 .shop-map-basis-chip{display:inline-flex;align-items:center;border-radius:999px;
   border:1px solid #e0b64f;background:#fff6e0;padding:3px 10px;
   color:#6b4a06;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+
+/*
+  D1682 · Looking up a listing before moving it. The panel let a member move
+  a listing without ever telling them where it sat or why, so the correction
+  was made blind. The lookup is a read and is styled as one: quieter than the
+  move it precedes, and visually a statement rather than a control.
+*/
+.shop-map-look{min-height:44px;padding:10px 16px;border-radius:10px;
+  border:1px solid var(--p-line);background:#fff;color:var(--p-ink);
+  font-size:14px;font-weight:700;cursor:pointer;justify-self:start}
+.shop-map-look:disabled{opacity:.5;cursor:default}
+.shop-map-placement{border:1px solid var(--p-line);border-radius:12px;
+  padding:12px 14px;background:var(--p-card-quiet);display:grid;gap:6px}
+.shop-map-placement-title{margin:0;font-size:14px;font-weight:700;color:var(--p-ink)}
+.shop-map-placement-where{margin:0;font-size:13px;color:var(--p-ink)}
+.shop-map-placement-why{margin:0;font-size:13px;line-height:1.55;color:var(--p-ink-soft)}

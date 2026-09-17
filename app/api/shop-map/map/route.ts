@@ -13,6 +13,7 @@ import { resolveCost, profitState, type CostRule } from "@/app/shop-map-cost-rul
 import { monthWindow, monthOf } from "@/app/finance-month";
 import { shopTimezone } from "@/app/finance-store";
 import { explainGrouping } from "@/app/niche-grouping-explained";
+import { describePlacement } from "@/app/listing-placement";
 
 /**
  * THE MAP.
@@ -107,6 +108,14 @@ async function buildMap(request: Request) {
     catch { /* an unreadable override is simply not applied */ }
 
   /*
+    Captured here, before the classifier loop writes its own results into
+    the same map. After that line every classified listing looks like an
+    override, and a listing the member never touched would be described
+    back to them as their own correction.
+  */
+  const correctedIds = new Set(overrides.keys());
+
+  /*
     A CLASSIFIER RESULT OUTRANKS THE LEXICON.
 
     The deterministic pass found two broad niches because it can only see
@@ -169,6 +178,25 @@ async function buildMap(request: Request) {
   for (const row of ((labelRows.results ?? []) as Array<{ world_id: string; label: string; merged_into: string }>)) {
     if (row.merged_into) worlds = mergeWorlds(worlds, row.merged_into, row.world_id);
     else if (row.label) worlds = renameWorld(worlds, row.world_id, row.label);
+  }
+
+  /* --------------------------------------------- one listing, if asked for */
+  const askedRaw = new URL(request.url).searchParams.get("listingId") ?? "";
+  const asked = /^[0-9]{1,15}$/.test(askedRaw) ? Number(askedRaw) : 0;
+  const askedFound = asked
+    ? (() => {
+        const world = worlds.find(row => row.listingIds.includes(asked));
+        const known = listings.some(row => row.listingId === asked);
+        return known ? { world } : null;
+      })()
+    : null;
+  const reasonFor = new Map<number, string>();
+  if (asked && askedFound) {
+    const stored = await db.prepare(
+      `SELECT evidence FROM shop_map_classifications
+        WHERE user_id = ? AND shop_id = ? AND listing_id = ? LIMIT 1`)
+      .bind(user.userId, shopId, asked).first<{ evidence: string }>();
+    if (stored?.evidence) reasonFor.set(asked, String(stored.evidence));
   }
 
   const activeIds = new Set(rows.filter(row => String(row.state) === "active")
@@ -463,6 +491,25 @@ async function buildMap(request: Request) {
       no internal rule wording. Built on the server so the page never
       handles that vocabulary at all.
     */
+    /*
+      ONE LISTING, AND WHY IT SITS WHERE IT SITS.
+
+      Deliberately answered by the map itself rather than by an endpoint of
+      its own. A second pipeline that resolved placement separately could
+      disagree with the map it is explaining — a member told a listing is in
+      one niche while the niche beside it counts the listing somewhere else —
+      and that is a worse failure than the extra work of recomputing. The
+      answer below is read out of the same worlds the page renders, after
+      every override, rename and merge has been applied.
+    */
+    placement: asked ? (askedFound ? describePlacement({
+      listingId: asked,
+      title: listings.find(row => row.listingId === asked)?.title ?? "",
+      nicheId: askedFound.world?.id ?? "",
+      nicheLabel: askedFound.world?.label ?? "",
+      corrected: correctedIds.has(asked),
+      storedReason: reasonFor.get(asked) ?? "",
+    }) : null) : undefined,
     grouping: {
       found: rawCounts.size,
       shown: collapse.kept.length,

@@ -427,7 +427,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       <section className="shop-map-card">
         <h2>Fix a listing</h2>
         <p className="shop-map-reason">
-          Put a listing in the right niche. Its orders and revenue move with it.
+          Look up a listing to see which niche it is in and why, then move it if
+          that is wrong. Its orders and revenue move with it.
         </p>
         {correctionFailed && (
           <p className="p-notice p-notice-bad shop-map-correction-failed" role="alert">
@@ -441,20 +442,82 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   );
 }
 
+type Placement = { listingId: number; title: string; nicheId: string;
+  nicheLabel: string; corrected: boolean; why: string };
+
 function MoveControl(
   { niches, busy, onMove }:
   { niches: Niche[]; busy: string; onMove: (listingId: number, nicheId: string) => Promise<void> },
 ) {
   const [listingId, setListingId] = useState("");
   const [nicheId, setNicheId] = useState("unclassified");
+  /*
+    CORRECTING SOMETHING YOU CANNOT SEE THE REASON FOR IS GUESSING.
+
+    A member could already move a listing, but nothing on the page told them
+    where the listing currently sits or why. Looking it up first is a read:
+    it changes nothing, and the sentence it shows is built on the server so
+    this component never handles the wording behind a placement.
+  */
+  const [placement, setPlacement] = useState<Placement | null>(null);
+  const [lookupFailed, setLookupFailed] = useState("");
+  const [looking, setLooking] = useState(false);
+
+  const look = async (id: string) => {
+    setLooking(true);
+    setPlacement(null);
+    setLookupFailed("");
+    try {
+      const response = await fetch(`/api/shop-map/map?listingId=${encodeURIComponent(id)}`);
+      if (!response.ok) {
+        setLookupFailed("That listing could not be looked up just now. Nothing was changed.");
+      } else {
+        const body = await response.json() as { placement?: Placement | null };
+        if (body.placement) {
+          setPlacement(body.placement);
+          setNicheId(body.placement.nicheId || "unclassified");
+        } else {
+          setLookupFailed(`Listing ${id} is not in this shop's map. Check the ID on `
+            + `Etsy — it is the number in the listing's own URL.`);
+        }
+      }
+    } catch {
+      setLookupFailed("That listing could not be looked up just now. Nothing was changed.");
+    }
+    setLooking(false);
+  };
+
   const working = busy.startsWith("move:");
   return (
     <div className="shop-map-move">
       <label>
         <span>Etsy listing ID</span>
         <input inputMode="numeric" value={listingId} placeholder="e.g. 1234567890"
-          onChange={event => setListingId(event.target.value.replace(/[^0-9]/g, ""))} />
+          onChange={event => {
+            setListingId(event.target.value.replace(/[^0-9]/g, ""));
+            setPlacement(null);
+            setLookupFailed("");
+          }} />
       </label>
+      <button type="button" className="shop-map-look" disabled={!listingId || looking}
+        onClick={() => void look(listingId)}>
+        {looking ? "Looking…" : "Where is it now?"}
+      </button>
+      {lookupFailed && (
+        <p className="p-notice p-notice-bad shop-map-lookup-failed" role="alert">
+          {lookupFailed}
+        </p>
+      )}
+      {placement && (
+        <div className="shop-map-placement">
+          {placement.title && <p className="shop-map-placement-title">{placement.title}</p>}
+          <p className="shop-map-placement-where">
+            In <strong>{placement.nicheLabel}</strong>
+            {placement.corrected ? " — your correction" : ""}
+          </p>
+          <p className="shop-map-placement-why">{placement.why}</p>
+        </div>
+      )}
       <label>
         <span>Move to</span>
         <select value={nicheId} onChange={event => setNicheId(event.target.value)}>
@@ -464,7 +527,15 @@ function MoveControl(
         </select>
       </label>
       <button type="button" disabled={!listingId || working}
-        onClick={() => void onMove(Number(listingId), nicheId)}>
+        onClick={() => void (async () => {
+          await onMove(Number(listingId), nicheId);
+          /*
+            The panel above described where the listing WAS. Leaving it there
+            after a move would state the old niche beside a map that now
+            shows the new one, so it is read again rather than kept.
+          */
+          if (placement) await look(listingId);
+        })()}>
         {working ? "Moving…" : "Move listing"}
       </button>
     </div>
