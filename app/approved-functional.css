@@ -930,7 +930,17 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 @media(max-width:1100px){.app-shell .post-draft-workspace .draft-card>*{grid-column:1!important}}
 
 /* Audit pass 2: make the returning workflow honest and action-led. */
-.app-shell .disconnect-link{min-height:0!important;padding:2px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;color:#7b526e!important;font-size:10px!important;text-decoration:none!important}
+/*
+  D1673 · 16px, and it disconnects a shop.
+
+  `min-height:0` with 2px of padding made this the smallest control in the
+  product — measured by the phone-width sweep at 16px tall — on the one
+  action in the connect step that takes something away. It is a quiet link
+  by design and stays one; a quiet link can still be tall enough to hit.
+  The confirmation dialog behind it makes a misclick recoverable, which is
+  why this is worth fixing rather than urgent.
+*/
+.app-shell .disconnect-link{min-height:40px!important;display:inline-flex!important;align-items:center!important;padding:2px 0!important;border:0!important;background:transparent!important;box-shadow:none!important;color:#7b526e!important;font-size:10px!important;text-decoration:none!important}
 .app-shell .disconnect-link:hover{color:#4a2a3e!important;text-decoration:underline!important}
 .app-shell .connect-step .connection-row>button.disconnect-link{width:auto!important;min-width:0!important;max-width:none!important;background:transparent!important;color:#7b526e!important}
 .app-shell .saved-product-batch-page .product-color-selector .mini-label,.app-shell .saved-product-batch-page .mockup-default-block .mini-label{display:none!important}

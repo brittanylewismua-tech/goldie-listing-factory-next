@@ -309,8 +309,10 @@
    card) and a 210px plum pill on step 2 (where it sits inside one). A
    positional rule was deciding a semantic treatment. The rail-forward button
    now looks the same everywhere; this rule keeps the utility save button. */
+/* D1673 · 38px, two short of the house minimum, on the primary action of the
+   product step. Nothing about the design needed the two pixels. */
 .app-shell :is(.step-card,.recipe-card) .save-recipe{
-  min-height:38px!important;
+  min-height:40px!important;
   padding:0 20px!important;
   border:0!important;
   border-radius:16px!important;
