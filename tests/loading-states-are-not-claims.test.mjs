@@ -70,3 +70,42 @@ test("client-component pages carry a route layout so the tab has a name", () => 
       `${route} has no route layout, so its tab has no name`);
   }
 });
+
+test("the account page never shows a raw field name to a member", () => {
+  /*
+    The data counts rendered straight from the API: "designAnalyses",
+    "capturedArtwork", "etsyShops" — internal identifiers, in camelCase, on an
+    account page. Styled database output, not an interface.
+  */
+  const source = read("account/settings/account-client.tsx");
+  assert.match(source, /const COUNT_LABELS: Record<string, string>/);
+  assert.match(source, /labelFor\(name\)/, "counts must be rendered through the label map");
+  /* An unknown key is humanised rather than dropped, so a count added to the
+     API later appears as words instead of vanishing. */
+  assert.match(source, /replace\(\/\(\[a-z\]\)\(\[A-Z\]\)\/g, "\$1 \$2"\)/);
+  for (const raw of ["designAnalyses", "capturedArtwork", "etsyShops"])
+    assert.ok(source.includes(`${raw}:`), `${raw} has no human label`);
+});
+
+test("access is read from the plan, not from the subscription", () => {
+  /*
+    A first version keyed the access line on `billing.active` and told an
+    account with full access that it had "No active plan" — its plan was
+    "Owner testing", which needs no subscription. Billing describes a
+    subscription; the plan describes what the member can do.
+  */
+  const source = read("account/settings/account-client.tsx");
+  const accessLine = source.slice(source.indexOf("<span>Access</span>"),
+    source.indexOf("<span>Subscription</span>"));
+  assert.match(accessLine, /usage\?\.plan\?\.name/);
+  assert.ok(!accessLine.includes("billing?.active"),
+    "access must not be decided by whether Stripe has an active subscription");
+});
+
+test("deletion is described honestly rather than faked with a dead control", () => {
+  const source = read("account/settings/account-client.tsx");
+  assert.match(source, /data\?\.note/, "the beta deletion note must reach the page");
+  /* No button that does nothing, and no button that deletes unattended. */
+  assert.ok(!/Delete my (account|data)/i.test(source),
+    "a delete control must not appear while deletion is carried out by hand");
+});
