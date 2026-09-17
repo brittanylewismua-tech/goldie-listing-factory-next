@@ -59,6 +59,15 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
     An empty state is a CLAIM. It may only be made once there is an answer.
   */
   const [loaded, setLoaded] = useState(false);
+  /*
+    AND A FAILED LOAD IS NOT AN EMPTY ONE EITHER.
+
+    Found with the state preview on the `connections-api-error` fixture: when
+    both endpoints fail, `loaded` becomes true with `shops` still empty, so the
+    page showed the error notice AND "No Etsy shop connected yet" underneath
+    it. The same false claim as before, reached through the other door.
+  */
+  const [failed, setFailed] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -68,10 +77,13 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
       ]);
       if (etsy.ok) setShops(((await etsy.json()) as { connections: Connection[] }).connections ?? []);
       if (print.ok) setPrintify(await print.json() as Printify);
-      if (!etsy.ok && !print.ok)
+      if (!etsy.ok && !print.ok) {
+        setFailed(true);
         setError("Your connections could not be loaded just now. Nothing has changed — "
           + "reload the page to try again.");
+      }
     } catch {
+      setFailed(true);
       setError("Your connections could not be loaded just now. Nothing has changed — "
         + "reload the page to try again.");
     } finally { setLoaded(true); }
@@ -96,7 +108,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
           <div className="p-skeleton p-skeleton-card" />
         </div>
       )}
-      {loaded && shops.length === 0 && (
+      {loaded && !failed && shops.length === 0 && (
         <p className="empty">
           No Etsy shop connected yet. <a href="/api/etsy/connect">Connect your shop</a> to
           start using it.
@@ -163,7 +175,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
           <div className="p-skeleton p-skeleton-card" />
         </div>
       )}
-      {loaded && <div className="shop">
+      {loaded && !failed && <div className="shop">
         <span className="name">{printify?.connected ? (printify.shopName || "Connected") : "Not connected"}</span>
         <p className="fact">
           {printify?.connected

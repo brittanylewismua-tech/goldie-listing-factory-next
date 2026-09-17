@@ -27,10 +27,20 @@ test("connections never claims a shop is disconnected before it has looked", () 
   assert.match(source, /finally \{ setLoaded\(true\); \}/,
     "loaded must be set even when the request fails, or the page waits forever");
   /* The empty state is gated on having an answer. */
-  assert.match(source, /\{loaded && shops\.length === 0 && \(/);
+  assert.match(source, /\{loaded && !failed && shops\.length === 0 && \(/);
   assert.match(source, /\{!loaded && \(/);
   /* And the Printify block too — it made the same claim. */
-  assert.match(source, /\{loaded && <div className="shop">/);
+  assert.match(source, /\{loaded && !failed && <div className="shop">/);
+  /*
+    A FAILED LOAD IS NOT AN EMPTY ONE.
+
+    Found with the state preview on `connections-api-error`: with both
+    endpoints failing, `loaded` became true while `shops` was still empty, so
+    the page showed the error AND "No Etsy shop connected yet" beneath it —
+    the same false claim reached through the other door.
+  */
+  assert.match(source, /const \[failed, setFailed\] = useState\(false\)/);
+  assert.match(source, /setFailed\(true\)/);
 });
 
 test("a failed load says nothing changed, rather than showing an empty shop", () => {
