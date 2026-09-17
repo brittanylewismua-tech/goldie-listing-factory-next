@@ -106,13 +106,14 @@ test("the account page never shows a raw field name to a member", () => {
     account page. Styled database output, not an interface.
   */
   const source = read("account/settings/account-client.tsx");
-  assert.match(source, /const COUNT_LABELS: Record<string, string>/);
-  assert.match(source, /labelFor\(name\)/, "counts must be rendered through the label map");
+  assert.match(source, /const COUNT_LABELS: Record<string, \{ one: string; many: string \}>/);
+  assert.match(source, /labelFor\(name, Number\(count\)\)/,
+    "counts must be rendered through the label map");
   /* An unknown key is humanised rather than dropped, so a count added to the
      API later appears as words instead of vanishing. */
   assert.match(source, /replace\(\/\(\[a-z\]\)\(\[A-Z\]\)\/g, "\$1 \$2"\)/);
   for (const raw of ["designAnalyses", "capturedArtwork", "etsyShops"])
-    assert.ok(source.includes(`${raw}:`), `${raw} has no human label`);
+    assert.ok(source.includes(`${raw}: {`), `${raw} has no human label`);
 });
 
 test("access is read from the plan, not from the subscription", () => {
@@ -700,4 +701,22 @@ test("a niche page never denies the evidence it is showing", () => {
   /* And the bar itself is untouched — this is not a threshold change. */
   const watch = read("niche-watch.ts");
   assert.match(watch, /meaningfulMomentum: live\.length >= minimumListings\s*\n?\s*&& shops\.size >= minimumShops && repeated >= minimumRepeated/);
+});
+
+test("account counts and the subscription line read correctly at one", () => {
+  /*
+    On the live account page: "1 shops watched", "1 Etsy shops connected",
+    and "Cancelled · ends 8 days ago" for a period that had already passed.
+    One Etsy shop is the normal case for this product, not the edge.
+  */
+  const client = read("account/settings/account-client.tsx");
+  assert.match(client, /etsyShops: \{ one: "Etsy shop connected", many: "Etsy shops connected" \}/);
+  assert.match(client, /shopWatches: \{ one: "shop watched", many: "shops watched" \}/);
+  assert.match(client, /labelFor\(name, Number\(count\)\)/);
+  assert.match(client, /count === 1 \? known\.one : known\.many/);
+  /* An unknown key still becomes words rather than vanishing. */
+  assert.match(client, /replace\(\/\(\[a-z\]\)\(\[A-Z\]\)\/g, "\$1 \$2"\)/);
+  /* And a date already past ended; it does not end. */
+  assert.match(client, /< Date\.now\(\)\s*\n?\s*\? "ended" : "ends"/);
+  assert.match(client, /\? "expired" : "renews"/);
 });

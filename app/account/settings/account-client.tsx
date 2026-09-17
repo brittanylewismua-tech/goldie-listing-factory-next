@@ -24,19 +24,31 @@ type Usage = {
   Unknown keys are humanised rather than hidden, so a new count added to the
   API appears as readable words instead of disappearing from the page.
 */
-const COUNT_LABELS: Record<string, string> = {
-  scans: "design scans",
-  designAnalyses: "stored design analyses",
-  nicheWatches: "niches watched",
-  shopWatches: "shops watched",
-  capturedArtwork: "print files kept",
-  etsyShops: "Etsy shops connected",
-  printifyShops: "Printify shops connected",
-  batches: "saved batches",
-  keywordBanks: "keyword banks",
+/*
+  D1681 · "1 shops watched" AND "1 Etsy shops connected".
+
+  The labels were fixed plurals, and these counts are very often one — one
+  Etsy shop is the normal case, not the edge. Each label carries both forms;
+  the singular is only used when the count is exactly one.
+*/
+const COUNT_LABELS: Record<string, { one: string; many: string }> = {
+  scans: { one: "design scan", many: "design scans" },
+  designAnalyses: { one: "stored design analysis", many: "stored design analyses" },
+  nicheWatches: { one: "niche watched", many: "niches watched" },
+  shopWatches: { one: "shop watched", many: "shops watched" },
+  capturedArtwork: { one: "print file kept", many: "print files kept" },
+  etsyShops: { one: "Etsy shop connected", many: "Etsy shops connected" },
+  printifyShops: { one: "Printify shop connected", many: "Printify shops connected" },
+  batches: { one: "saved batch", many: "saved batches" },
+  keywordBanks: { one: "keyword bank", many: "keyword banks" },
 };
-const labelFor = (key: string) => COUNT_LABELS[key]
-  ?? key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, first => first.toLowerCase());
+const labelFor = (key: string, count: number) => {
+  const known = COUNT_LABELS[key];
+  if (known) return count === 1 ? known.one : known.many;
+  /* An unknown key is still humanised rather than dropped, so a count added
+     to the API later reads as words instead of vanishing. */
+  return key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, first => first.toLowerCase());
+};
 
 const when = (seconds?: number | null) => {
   if (!seconds) return "";
@@ -265,7 +277,14 @@ export default function AccountClient({ email }: { email: string }) {
               <b>
                 {subscriptionLabel(usage.billing.subscription.status)}
                 {usage.billing.subscription.currentPeriodEnd
-                  ? ` · ${usage.billing.subscription.cancelAtPeriodEnd ? "ends" : "renews"} `
+                  /* D1681 · "Cancelled · ends 8 days ago" — a date already
+                     past does not "end", it ended. `when` renders both
+                     directions, so the verb has to follow it. */
+                  ? ` · ${usage.billing.subscription.cancelAtPeriodEnd
+                      ? (usage.billing.subscription.currentPeriodEnd * 1000 < Date.now()
+                        ? "ended" : "ends")
+                      : (usage.billing.subscription.currentPeriodEnd * 1000 < Date.now()
+                        ? "expired" : "renews")} `
                     + when(usage.billing.subscription.currentPeriodEnd)
                   : ""}
               </b>
@@ -285,7 +304,7 @@ export default function AccountClient({ email }: { email: string }) {
           {loaded && rows.length > 0 && (
             <ul className="acc-counts">
               {rows.map(([name, count]) => (
-                <li key={name}><b>{count.toLocaleString()}</b> <span>{labelFor(name)}</span></li>
+                <li key={name}><b>{count.toLocaleString()}</b> <span>{labelFor(name, Number(count))}</span></li>
               ))}
             </ul>
           )}
