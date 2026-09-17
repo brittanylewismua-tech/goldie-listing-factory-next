@@ -38,6 +38,7 @@ export async function ensureObservationTables() {
     p50_delay INTEGER NOT NULL DEFAULT 0,
     p95_delay INTEGER NOT NULL DEFAULT 0,
     backlog INTEGER NOT NULL DEFAULT 0,
+    approaching_expiry INTEGER NOT NULL DEFAULT 0,
     attributed_units INTEGER NOT NULL DEFAULT 0,
     unresolved_units INTEGER NOT NULL DEFAULT 0,
     listing_freshness REAL NOT NULL DEFAULT 0,
@@ -46,6 +47,16 @@ export async function ensureObservationTables() {
     cohorts_ok INTEGER NOT NULL DEFAULT 0,
     briefs_ok INTEGER NOT NULL DEFAULT 0,
     payload_json TEXT NOT NULL DEFAULT '')`).run();
+  /*
+    CREATE TABLE IF NOT EXISTS does nothing to a table that already exists, so
+    a column added to the definition above never reaches a live database. The
+    existing rows keep 0, which is what they measured: the column records
+    intervals that reached three-quarters of their evidence window
+    uncorrelated, and nothing was ever counting them before.
+  */
+  await db().prepare(
+    `ALTER TABLE market_observations ADD COLUMN approaching_expiry INTEGER NOT NULL DEFAULT 0`)
+    .run().catch(() => {});
   await db().prepare(
     `CREATE INDEX IF NOT EXISTS market_observations_at ON market_observations (at DESC)`)
     .run();
@@ -260,15 +271,16 @@ export async function recordSample(sample: SampleShape) {
   await db().prepare(
     `INSERT INTO market_observations
       (at, build, rule_version, sensor_ok, sweep_ok, correlation_ok, eligible,
-       correlated, expired_new, p50_delay, p95_delay, backlog, attributed_units,
-       unresolved_units, listing_freshness, etsy_calls, errors, cohorts_ok,
-       briefs_ok, payload_json)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+       correlated, expired_new, p50_delay, p95_delay, backlog, approaching_expiry,
+       attributed_units, unresolved_units, listing_freshness, etsy_calls, errors,
+       cohorts_ok, briefs_ok, payload_json)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(at) DO NOTHING`)
     .bind(sample.at, sample.build, sample.ruleVersion,
       sample.sensorOk ? 1 : 0, sample.sweepOk ? 1 : 0, sample.correlationOk ? 1 : 0,
       sample.eligible, sample.correlated, sample.expiredNew, sample.p50, sample.p95,
-      sample.backlog, sample.attributedUnits, sample.unresolvedUnits,
+      sample.backlog, sample.approachingExpiry ?? 0,
+      sample.attributedUnits, sample.unresolvedUnits,
       sample.listingFreshness, sample.etsyCalls, sample.errors,
       sample.cohortsOk ? 1 : 0, sample.briefsOk ? 1 : 0, JSON.stringify(sample))
     .run();

@@ -31,6 +31,30 @@ export const GATE_STANDARD = {
   maxEtsyCallsPerDay: 80_000,
   minListingFreshness: 0.9,
   /*
+    SAFEGUARDS A MEDIAN CANNOT HIDE.
+
+    Backlog growth became a trend of medians, which is the right way to read a
+    queue that fills continuously and drains every ten minutes — and a median
+    is exactly the wrong instrument for a burst. So the trend does not stand
+    alone. Each of these fails on a single bad sample, by design:
+
+      maxBacklogPeak       one moment where the queue ran away. Normal fill
+                           between drains peaks near 350; the correlator
+                           handles 400 a pass and clears 122 in under a
+                           second, so this is far above working behaviour and
+                           nowhere near a real stall.
+      maxApproachingExpiry evidence age. An interval that reaches
+                           three-quarters of its useful window still
+                           uncorrelated is a miss whether or not it later
+                           lands, and no average can absorb it.
+      maxExpiredIntervals  the count, not the ratio. Coverage is a share, so
+                           a large enough denominator keeps it above 0.95
+                           while real intervals are lost.
+  */
+  maxBacklogPeak: 2_000,
+  maxApproachingExpiry: 0,
+  maxExpiredIntervals: 0,
+  /*
     LATENCY IS JUDGED ON RECENT BEHAVIOUR, NOT ON THE WORST HOUR EVER SEEN.
 
     p95 was taken as the maximum across the whole segment, so the original
@@ -57,6 +81,14 @@ export type Sample = {
   sensorOk: boolean; sweepOk: boolean; correlationOk: boolean;
   eligible: number; correlated: number; expiredNew: number;
   p50: number; p95: number; backlog: number;
+  /*
+    Intervals past three-quarters of their useful evidence window and still
+    uncorrelated. Added after the backlog metric became a trend: the trend
+    answers "is work accumulating", this answers "did anything sit too long",
+    and only the second one catches a burst. Samples written before this
+    existed carry 0, which is what they measured.
+  */
+  approachingExpiry?: number;
   attributedUnits: number; unresolvedUnits: number;
   listingFreshness: number; etsyCalls: number; errors: number;
   cohortsOk: boolean; briefsOk: boolean;
@@ -174,6 +206,14 @@ export function evaluateGate(
       ? production[production.length - 1].backlog - production[0].backlog : 0;
   const adminSamples = segment.length - production.length;
 
+  /* Peaks and totals, each judged on its own worst moment rather than on the
+     segment's average behaviour. */
+  const peakBacklog = Math.max(0, ...production.map(row => row.backlog));
+  const worstApproachingExpiry = Math.max(0,
+    ...segment.map(row => row.approachingExpiry ?? 0));
+  const totalUnresolvedUnits = segment.reduce((sum, row) => sum + row.unresolvedUnits, 0);
+  const totalAttributedUnits = segment.reduce((sum, row) => sum + row.attributedUnits, 0);
+
   const failing: string[] = [];
   if (hours < standard.minimumHours)
     failing.push(`${hours.toFixed(1)} of ${standard.minimumHours} hours observed`);
@@ -193,6 +233,14 @@ export function evaluateGate(
       + `too little headroom before evidence starts expiring`);
   if (backlogGrowth > 0 && segment.length >= 3)
     failing.push(`backlog grew by ${backlogGrowth} across the observation`);
+  /* The trend is the shape; these are the moments it cannot describe. */
+  if (peakBacklog > standard.maxBacklogPeak)
+    failing.push(`backlog peaked at ${peakBacklog}, past ${standard.maxBacklogPeak}`);
+  if (worstApproachingExpiry > standard.maxApproachingExpiry)
+    failing.push(`${worstApproachingExpiry} intervals reached three-quarters of `
+      + `their evidence window uncorrelated`);
+  if (totalExpired > standard.maxExpiredIntervals)
+    failing.push(`${totalExpired} intervals expired before correlation`);
   if (errors > 0) failing.push(`${errors} errors recorded`);
   if (peakEtsy > standard.maxEtsyCallsPerDay)
     failing.push(`Etsy usage peaked at ${peakEtsy}`);
@@ -200,6 +248,15 @@ export function evaluateGate(
     failing.push(`listing freshness fell to ${Math.round(worstFreshness * 100)}%`);
   if (segment.some(row => !row.cohortsOk)) failing.push("cohort recomputation failed");
   if (segment.some(row => !row.briefsOk)) failing.push("a morning brief failed to build");
+
+  /*
+    UNRESOLVED UNITS ARE REPORTED, NOT GATED.
+
+    A sale that matched no listing change is a real and honest outcome, not a
+    fault — gating on it would fail the system for telling the truth. It is
+    surfaced beside attributed units so a shift in the ratio is visible to
+    somebody reading the gate, which is what it is actually evidence of.
+  */
 
   /* Which builds produced this window, for audit. Several is normal and
      healthy: it means unrelated work shipped without disturbing the clock. */
@@ -217,6 +274,15 @@ export function evaluateGate(
       correlationCoverage: coverage === null ? null : Number(coverage.toFixed(3)),
       worstP95DelaySeconds: worstP95,
       backlogGrowth,
+      /* The burst safeguards, reported whether or not they failed, so the
+         trend is never the only backlog number anyone sees. */
+      peakBacklog,
+      worstApproachingExpiry,
+      expiredIntervals: totalExpired,
+      /* Reported, not gated: a sale matching no listing change is an honest
+         outcome. The ratio is what a reader should watch. */
+      unresolvedUnits: totalUnresolvedUnits,
+      attributedUnits: totalAttributedUnits,
       peakEtsyCallsPerDay: peakEtsy,
       worstListingFreshness: Number(worstFreshness.toFixed(3)),
       errors,

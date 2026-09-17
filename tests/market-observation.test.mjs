@@ -376,3 +376,64 @@ test("a backlog that drains to nothing is not called growth", () => {
   const gate = evaluateGate(samples, NOW);
   assert.ok(!gate.failing.some(line => /backlog grew/.test(line)));
 });
+
+test("a burst the median hides still fails the gate", () => {
+  /*
+    The whole risk of turning backlog growth into a trend of medians: a median
+    is the wrong instrument for a burst. Each of these fails on one bad
+    sample, which is exactly what the trend cannot do.
+  */
+  const flat = () => window(80).map(row => ({ ...row, backlog: 0 }));
+
+  const runaway = flat();
+  runaway[40].backlog = 9_000;
+  let gate = evaluateGate(runaway, NOW);
+  assert.ok(!gate.failing.some(line => /backlog grew/.test(line)),
+    "the trend correctly sees no growth");
+  assert.ok(gate.failing.some(line => /backlog peaked at 9000/.test(line)),
+    "one moment where the queue ran away must still fail");
+
+  const aged = flat();
+  aged[12].approachingExpiry = 37;
+  gate = evaluateGate(aged, NOW);
+  assert.ok(gate.failing.some(line =>
+    /37 intervals reached three-quarters of their evidence window/.test(line)),
+    "evidence that sat too long must fail whether or not it later landed");
+
+  const lost = flat();
+  lost[60].expiredNew = 4;
+  gate = evaluateGate(lost, NOW);
+  assert.ok(gate.failing.some(line => /4 intervals expired before correlation/.test(line)),
+    "a count of lost intervals must fail even while the coverage share stays high");
+});
+
+test("coverage as a share cannot absorb real losses", () => {
+  /* 60 lost intervals against a large denominator keeps coverage at 0.99 —
+     above the 0.95 standard — while sixty pieces of evidence are gone. */
+  const samples = window(80).map(row => ({ ...row, backlog: 0,
+    eligible: 500, correlated: 500, expiredNew: 0 }));
+  samples[30].expiredNew = 60;
+  const gate = evaluateGate(samples, NOW);
+  assert.ok(gate.measured.correlationCoverage > 0.95, "coverage stays above the bar");
+  assert.ok(gate.failing.some(line => /60 intervals expired before correlation/.test(line)),
+    "the count must fail where the ratio does not");
+});
+
+test("unresolved units are reported, never gated", () => {
+  /* A sale matching no listing change is an honest outcome. Failing the gate
+     on it would fail the system for telling the truth. */
+  const samples = window(80).map(row => ({ ...row, backlog: 0,
+    unresolvedUnits: 900, attributedUnits: 10 }));
+  const gate = evaluateGate(samples, NOW);
+  assert.ok(!gate.failing.some(line => /unresolved/i.test(line)));
+  assert.equal(gate.measured.unresolvedUnits, 900 * 80);
+  assert.equal(gate.measured.attributedUnits, 10 * 80);
+});
+
+test("every safeguard the trend cannot see is reported, failing or not", () => {
+  const gate = evaluateGate(window(80).map(row => ({ ...row, backlog: 0 })), NOW);
+  for (const field of ["backlogGrowth", "peakBacklog", "worstApproachingExpiry",
+    "expiredIntervals", "correlationCoverage", "worstP95DelaySeconds",
+    "worstListingFreshness", "unresolvedUnits", "errors"])
+    assert.ok(field in gate.measured, `${field} is not reported`);
+});

@@ -99,6 +99,9 @@ export const GET = withErrorLog("market-observe", async (request: Request) => {
     expiredNew: health.expiredUnderNewArchitecture,
     p50: health.p50DelaySeconds, p95: health.p95DelaySeconds,
     backlog: health.pastEarliest,
+    /* The burst safeguard beside the trend: work sitting long enough to be at
+       risk, which an average of a draining queue cannot show. */
+    approachingExpiry: health.approachingExpiry,
     attributedUnits: Number(units?.attributed ?? 0),
     unresolvedUnits: Number(units?.unresolved ?? 0),
     listingFreshness: total ? Number(fresh?.fresh ?? 0) / total : 1,
