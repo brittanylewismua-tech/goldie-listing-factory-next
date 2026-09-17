@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { notFound } from "next/navigation";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import StatePreviewClient from "./preview-client";
@@ -22,8 +22,19 @@ export default async function StatePreviewPage(
   { searchParams }: { searchParams: Promise<{ state?: string }> },
 ) {
   const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
-    return NextResponse.json({ error: "Not found." }, { status: 404 }) as never;
+  /*
+    A PAGE REFUSES BY NOT EXISTING, NOT BY RETURNING A RESPONSE OBJECT.
+
+    This returned `NextResponse.json({ error: "Not found." }) as never`. A page
+    component has to return JSX or throw a navigation signal; returning a
+    Response throws during render, so every signed-out visit to this route
+    answered 500 and rendered the crash boundary — "The page hit a startup
+    problem" — instead of a clean 404. The `as never` is the tell: it silenced
+    the type error that was saying exactly this.
+
+    Found from a signed-out browser, which is the only place it is visible.
+  */
+  if (!user || !isOwner(user)) notFound();
   const initial = (await searchParams).state ?? "";
   return <StatePreviewClient initial={initial} />;
 }

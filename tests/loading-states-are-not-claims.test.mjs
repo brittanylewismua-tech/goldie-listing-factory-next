@@ -16,7 +16,7 @@
 */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 const read = name => readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
 
@@ -319,4 +319,31 @@ test("the readability fixtures prove contrast and softness stay independent", as
   assert.ok(!/close together/.test(notesOf(soft)[0]), "a blurred design is not told it is faint");
 
   assert.equal(notesOf(both).length, 2, "when both fail, say both");
+});
+
+test("no page component refuses by returning a Response", () => {
+  /*
+    app/dev/state-preview/page.tsx returned NextResponse.json({error:"Not
+    found."}) cast `as never`. A page must return JSX or throw a navigation
+    signal, so every signed-out request to that route answered 500 and
+    rendered the crash boundary rather than a 404 — visible only from a
+    signed-out browser, which is why it survived.
+  */
+  const root = new URL("../app/", import.meta.url);
+  const pages = [];
+  const walk = dir => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) walk(new URL(`${entry.name}/`, dir));
+      else if (entry.name === "page.tsx") pages.push(new URL(entry.name, dir));
+    }
+  };
+  walk(root);
+  assert.ok(pages.length > 5, "no pages found — the guard would pass blindly");
+  for (const file of pages) {
+    /* Comments may name it; code may not. */
+    const source = readFileSync(file, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    assert.ok(!/NextResponse/.test(source),
+      `${file.pathname} returns a Response from a page component, which throws at render`);
+  }
 });
