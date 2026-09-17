@@ -19,6 +19,15 @@ type ShopMap = {
     coverage?: { verified: number; estimated: number; unavailable: number } };
   standout?: { hasStandout: boolean; headline: string; nextStep: string };
   whereToFocus?: Focus[];
+  /*
+    Plain sentences about how the niches were organised, written on the
+    server. This page never sees the wording they were built from.
+  */
+  grouping?: {
+    found?: number;
+    shown?: number;
+    notes?: Array<{ kind: "grouped" | "left-out"; sentence: string }>;
+  };
   worlds?: Niche[];
   unclassifiedCard?: Niche;
   worldsPeriod?: string;
@@ -268,6 +277,40 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
               </p>
             );
           })()}
+        </section>
+      )}
+
+      {/*
+        2c · HOW THESE NICHES WERE ORGANIZED.
+
+        Closed by default: it answers a question a member only sometimes has,
+        and an open block of reasoning above their actual niches would bury
+        them. Open, it is the difference between a grouping they can check
+        and one they can only accept — and the control to disagree with it
+        sits directly below.
+      */}
+      {(shown.grouping?.notes ?? []).length > 0 && (
+        <section className="shop-map-card">
+          <details className="shop-map-grouping">
+            <summary>
+              <span>How these niches were organized</span>
+              <span className="shop-map-grouping-chevron" aria-hidden="true">⌄</span>
+            </summary>
+            <p className="shop-map-reason">
+              Your listings suggested {shown.grouping?.found} groupings. Shop Map
+              shows {shown.grouping?.shown}, because some of them describe the same
+              thing.
+            </p>
+            <ul className="shop-map-grouping-notes">
+              {(shown.grouping?.notes ?? []).map(note => (
+                <li key={note.sentence} data-kind={note.kind}>{note.sentence}</li>
+              ))}
+            </ul>
+            <p className="shop-map-reason">
+              If any of this is wrong, move a listing below and its orders and
+              revenue move with it.
+            </p>
+          </details>
         </section>
       )}
 

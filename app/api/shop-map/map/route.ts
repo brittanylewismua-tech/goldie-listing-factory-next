@@ -12,6 +12,7 @@ import { rejectAsNiche } from "@/app/shop-map-identity";
 import { resolveCost, profitState, type CostRule } from "@/app/shop-map-cost-rules";
 import { monthWindow, monthOf } from "@/app/finance-month";
 import { shopTimezone } from "@/app/finance-store";
+import { explainGrouping } from "@/app/niche-grouping-explained";
 
 /**
  * THE MAP.
@@ -443,6 +444,19 @@ async function buildMap(request: Request) {
       rawNiches: [...rawCounts.keys()],
       collapsed: collapse.merged,
       usedNiches: collapse.kept,
+    },
+    /*
+      THE SAME DECISIONS, WRITTEN FOR THE PERSON WHOSE SHOP IT IS.
+
+      `classifier` above is the operator's view and stays that way. This is
+      the member's: plain sentences, no prompts, no model names, no scores,
+      no internal rule wording. Built on the server so the page never
+      handles that vocabulary at all.
+    */
+    grouping: {
+      found: rawCounts.size,
+      shown: collapse.kept.length,
+      notes: explainGrouping(collapse.merged),
     },
     counts: { listings: rows.length, niches: worlds.length,
       listingsWithSales: [...performance.keys()].length },

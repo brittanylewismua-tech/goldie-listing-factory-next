@@ -77,3 +77,17 @@
 .shop-map-focus:last-of-type{margin-bottom:0}
 .shop-map-advice{margin:4px 0 0;font-size:13px;font-weight:650;color:var(--p-ink)}
 .shop-map-thin{margin-top:14px;padding-top:12px;border-top:1px solid var(--p-line)}
+
+/*
+  D1676 · How the niches were organized. Closed by default: it answers a
+  question a member only sometimes has, and an open block of reasoning above
+  their actual niches would bury them.
+*/
+.shop-map-grouping>summary{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;cursor:pointer;list-style:none;font-size:14px;font-weight:700;color:var(--p-ink)}
+.shop-map-grouping>summary::-webkit-details-marker{display:none}
+.shop-map-grouping[open]>summary .shop-map-grouping-chevron{transform:rotate(180deg)}
+.shop-map-grouping-chevron{transition:transform .15s ease;color:var(--p-muted)}
+.shop-map-grouping-notes{margin:10px 0;padding-left:18px;display:grid;gap:8px}
+.shop-map-grouping-notes li{font-size:13px;line-height:1.55;color:var(--p-ink-soft)}
+.shop-map-grouping-notes li[data-kind="left-out"]{color:var(--p-muted)}

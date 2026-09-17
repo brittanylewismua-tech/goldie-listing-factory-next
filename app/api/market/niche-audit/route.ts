@@ -29,24 +29,35 @@ export const GET = withErrorLog("market-niche-audit", async (request: Request) =
   const db = (env as unknown as { DB: D1Database }).DB;
 
   /*
-    AN AUDIT THAT SWALLOWS ITS OWN QUERY ERRORS IS NOT AN AUDIT.
+    AN AUDIT THAT CANNOT COMPLETE SAYS SO. IT DOES NOT ANSWER.
 
-    The first version caught every failure into an empty result, so a
-    parameter-count mismatch in the per-niche query returned no pools — and
-    the two reconciliation checks that read those pools reported FALSE, as
-    though the data were wrong. The data was fine; the instrument was broken
-    and said so in the voice of a finding.
+    Two versions of this were wrong in the same direction. The first caught
+    every query failure into an empty result, so a parameter-count mismatch
+    returned no pools and the checks reading those pools reported FALSE — the
+    instrument broken, speaking in the voice of a finding. The second
+    collected the failures and still returned a 200 with a `trustworthy`
+    flag, which is better only if somebody reads the flag.
 
-    Failures are collected and returned instead.
+    There is no partial answer here. Every query is required; if any of them
+    fails the whole response is an error, because a reconciliation report
+    that is missing a query is not a weaker report — it is not a report.
   */
-  const failures: string[] = [];
+  class AuditIncomplete extends Error {}
   const ask = async <T>(label: string, sql: string, ...bind: unknown[]) => {
     try { return await db.prepare(sql).bind(...bind).all<T>(); }
     catch (error) {
-      failures.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
-      return { results: [] as T[] };
+      throw new AuditIncomplete(
+        `${label}: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
+  const one = async <T>(label: string, sql: string, ...bind: unknown[]) => {
+    try { return await db.prepare(sql).bind(...bind).first<T>(); }
+    catch (error) {
+      throw new AuditIncomplete(
+        `${label}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+  try {
 
   /* The watched set is what a cap is a cap ON. */
   const WATCHED = ["awaiting-baseline", "monitoring", "momentum", "repeated-momentum"];
@@ -89,20 +100,17 @@ export const GET = withErrorLog("market-niche-audit", async (request: Request) =
        FROM niche_candidates GROUP BY niche_key, listing_id HAVING COUNT(*) > 1
       LIMIT 20`);
 
-  const totals = await db.prepare(
+  const totals = await one<{ rows: number; listings: number; shops: number }>("totals",
     `SELECT COUNT(*) AS rows, COUNT(DISTINCT listing_id) AS listings,
-            COUNT(DISTINCT shop_id) AS shops FROM niche_candidates`)
-    .first<{ rows: number; listings: number; shops: number }>()
-    .catch(() => null);
+            COUNT(DISTINCT shop_id) AS shops FROM niche_candidates`);
 
   /* The same listing legitimately appears in more than one niche; this says
      how much of the corpus that accounts for, so a listing total that looks
      short against the row total has an explanation rather than a mystery. */
-  const shared = await db.prepare(
+  const shared = await one<{ n: number }>("shared-listings",
     `SELECT COUNT(*) AS n FROM (
        SELECT listing_id FROM niche_candidates
-        GROUP BY listing_id HAVING COUNT(DISTINCT niche_key) > 1)`)
-    .first<{ n: number }>().catch(() => null);
+        GROUP BY listing_id HAVING COUNT(DISTINCT niche_key) > 1)`);
 
   const pools = (perNiche.results ?? []).map(row => ({
     nicheKey: row.nicheKey,
@@ -151,9 +159,13 @@ export const GET = withErrorLog("market-niche-audit", async (request: Request) =
     },
     watchedTotal,
     cap: GROWTH.maxCandidatesPerNiche,
-    /* Empty on a clean run. Anything here means a check below it could not be
-       trusted, rather than that the data failed it. */
-    queryFailures: failures,
-    trustworthy: failures.length === 0,
   });
+  } catch (error) {
+    if (error instanceof AuditIncomplete)
+      return NextResponse.json({
+        error: "This audit could not be completed, so no reconciliation is reported.",
+        because: error.message,
+      }, { status: 500 });
+    throw error;
+  }
 });
