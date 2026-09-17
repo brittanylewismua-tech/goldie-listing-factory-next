@@ -495,3 +495,32 @@ Home, Listing Factory workflow (already the source of truth, but needs a pass),
 Batch History, Niche Watch, Shop Watch cards, Connections, Account/More, and
 every access/limit/error state. Then the Chrome state matrix at desktop and
 375/390/430.
+
+
+## CHROME VERIFICATION — DESKTOP DONE, PHONE BLOCKED BY TOOLING
+
+Verified on the deployed build at 1440px:
+- Market Watch: product heading scale, pink-edged TODAY card, product tabs
+  (dark active pill), grid ground, consistent card corners, 860px column.
+- Trademark Checker: grid, product input and dark Check button, eyebrow,
+  status badge on the verdict.
+- Design Scanner: grid, real empty state, product controls.
+- Shop Map: skeleton loading in the shape of what arrives.
+
+Two defects found by LOOKING and fixed (D1605):
+- Design Scanner drew a bordered empty card inside the already-bordered stage —
+  a box inside a box around a large empty area. The empty state is the stage now.
+- `.p-button[disabled]` was pale grey on pale grey and read as a rendering
+  fault next to the input. Now lavender with a border: clearly "not yet"
+  rather than broken.
+
+**PHONE VERIFICATION IS BLOCKED.** `resize_window` in this tooling resizes the
+OS window but does not emulate a device viewport: after resizing to 390x844 the
+page still reports `clientWidth: 1440` and `matchMedia('(pointer:coarse)')` is
+false. The mobile rules are gated on `(max-width:820px) and (pointer:coarse)`
+— deliberately, from D1037, so a narrow desktop window is not mistaken for a
+phone — so narrow-window testing does not exercise them.
+
+I have NOT verified 375/390/430 and will not claim to have. What is asserted by
+test rather than by eye: touch targets at 46px in the mobile block, the
+responsive-shell opt-out, and the global bottom bar.
