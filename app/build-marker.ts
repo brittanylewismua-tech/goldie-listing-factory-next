@@ -185,7 +185,12 @@
    connected yet" on an account publishing to that very shop: the empty state
    and the not-yet-asked state were the same screen. An empty state is a claim.
    Plan and limits, and two tab titles, fixed in the same pass. */
-export const BUILD_MARKER = "D1610";
+/* D1611 adds the owner-only state-preview harness: the shipping components
+   rendered against fixtures with the network closed, so a state is inspected
+   instead of waited for. And Tools & settings now explains itself when a
+   member is redirected there for lacking access — it ignored ?needs=
+   entirely, which is a door closing with no sign on it. */
+export const BUILD_MARKER = "D1611";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

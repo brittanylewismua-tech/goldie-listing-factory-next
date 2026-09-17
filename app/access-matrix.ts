@@ -147,6 +147,9 @@ export const ACCESS: Record<string, Rule> = {
  */
 export const OWNER_PREFIXES = [
   "/api/operations", "/operations",
+  /* The state-preview harness: renders shipping components against fixtures
+     with the network closed. Owner-only because it is a diagnostic surface. */
+  "/dev/",
   "/api/mastermind", "/mastermind", "/mastermind-admin", "/mastermind-beta",
   "/api/market/",                     /* cron and detector controls */
   "/api/market-watch/budget",         /* capacity model, not a member view */

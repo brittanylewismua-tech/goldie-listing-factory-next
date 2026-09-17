@@ -46,3 +46,7 @@
   .ts-row{grid-template-columns:38px minmax(0,1fr) 20px;padding:14px var(--p-3);min-height:60px}
   .ts-group{margin-top:var(--p-5)}
 }
+
+/* The notice a member sees when they were redirected here for lacking access.
+   It sits above the groups because it explains why they are looking at them. */
+.tools-settings .ts-needs{margin-bottom:var(--p-5)}

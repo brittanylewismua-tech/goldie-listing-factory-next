@@ -1,0 +1,14 @@
+/* The harness chrome. Deliberately plain and clearly not product surface, so
+   nothing here can be mistaken for the interface being inspected. */
+.state-preview{min-height:100vh;background:#f4f1f6}
+.sp-bar{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 20px;background:#19191c;color:#fff}
+.sp-title{display:grid;gap:2px}
+.sp-title b{font-size:13px}
+.sp-title span{font-size:11px;color:rgba(255,255,255,.6)}
+.sp-pick{display:flex;align-items:center;gap:8px;font-size:11px;
+  text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.7)}
+.sp-pick select{min-width:280px}
+.sp-what{margin:0;padding:10px 20px;background:#efe4f4;color:#5f3458;font-size:12px}
+.sp-refused{margin:0;padding:10px 20px;background:#fff1f4;color:#9b3f52;font-size:12px}
+.sp-stage{background:#fff}

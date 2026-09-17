@@ -63,8 +63,30 @@ const GROUPS: Group[] = [
   },
 ];
 
-export default async function MorePage() {
+/*
+  D1611 · THIS PAGE IS WHERE A MEMBER WITHOUT ACCESS IS SENT.
+
+  `requireFeaturePage` redirects to `/more?needs=<feature>` when somebody opens
+  a feature their plan does not include. This page ignored the parameter
+  entirely, so that member landed on a list of tools with no explanation of why
+  they were moved, what they had tried to open, or what to do about it — the
+  navigation equivalent of a door closing with no sign on it.
+*/
+const FEATURE_NAMES: Record<string, string> = {
+  listingFactory: "the Listing Factory",
+  designScanner: "Design Scanner",
+  marketWatch: "Market Watch",
+  shopMap: "Shop Map",
+  trademarkStandalone: "the Trademark Checker",
+  trademarkAtPublish: "the trademark check at publish",
+};
+
+export default async function MorePage(
+  { searchParams }: { searchParams: Promise<{ needs?: string }> },
+) {
   await requireChatGPTUser("/more");
+  const needs = (await searchParams).needs ?? "";
+  const needsName = FEATURE_NAMES[needs] ?? "";
   /*
     The rail comes too. On a phone this is the fifth tab and the bottom bar is
     the navigation, so the shell opts out of the desktop gate; on a desktop a
@@ -77,6 +99,14 @@ export default async function MorePage() {
         <h1>Tools &amp; settings</h1>
         <p>Manage your tools, shop connections, and account.</p>
       </header>
+
+      {needsName && (
+        <p className="p-notice p-notice-bad ts-needs" role="status">
+          <b>{needsName.charAt(0).toUpperCase() + needsName.slice(1)} is not part of your plan.</b>
+          You were brought here because that is where plan and access live. Nothing
+          about your shops or saved work has changed.
+        </p>
+      )}
 
       {GROUPS.map(group => (
         <section className="ts-group" key={group.heading}>
