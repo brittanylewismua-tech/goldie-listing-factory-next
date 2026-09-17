@@ -148,7 +148,7 @@
    silently returned false inside the Listing Factory workflow, so every
    guarded control there — including the only way out of a paused batch — was
    a button that did nothing. It fails closed and says so now. */
-export const BUILD_MARKER = "D1595";
+export const BUILD_MARKER = "D1596";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

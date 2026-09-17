@@ -224,6 +224,10 @@ export const GET = withErrorLog("listing-factory-prepare-sample", async (request
     if (params.get("probe") === "1") return await probe();
     if (params.get("reset")) return await reset(params.get("reset") ?? "");
     if (params.get("printify") === "preflight") return await printifyPreflight();
+    if (params.get("printify") === "read")
+      return await printifyProduct(params.get("shopId") ?? "", params.get("productId") ?? "", false);
+    if (params.get("printify") === "delete")
+      return await printifyProduct(params.get("shopId") ?? "", params.get("productId") ?? "", true);
     return await sample(new URL(request.url).searchParams.get("n") ?? "0");
   } catch (error) {
     /* The real message, to the owner. This endpoint has no member audience and
@@ -405,4 +409,66 @@ async function printifyPreflight() {
       authorisedToDelete: deleteStatus === 404 || deleteStatus === 200,
     },
   });
+}
+
+
+/**
+ * READ OR REMOVE ONE INTERNAL TEST PRODUCT.
+ *
+ * The single authorised validation product has to be removable again, and the
+ * ordinary cleanup path cannot reach it: `cleanupLaunchListings` selects on
+ * `printify_draft_results.status = 'succeeded'`, and this product's row was
+ * NOT recorded as succeeded even though Printify created it — which is the
+ * defect the walkthrough found, and also the reason an orphan exists at all.
+ *
+ * THE GUARD IS THE TITLE, NOT A LIST OF IDS. The product is read first, and a
+ * delete only proceeds when its title begins with "INTERNAL TEST". A customer
+ * product cannot be removed by this route however the id is supplied, because
+ * no customer product is titled that way.
+ */
+const INTERNAL_TEST_PREFIX = "INTERNAL TEST";
+
+async function printifyProduct(shopId: string, productId: string, remove: boolean) {
+  const user = await getChatGPTUser();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  if (!/^\d+$/.test(shopId) || !/^[a-f0-9]{24}$/.test(productId))
+    return NextResponse.json({ error: "A numeric shop id and a 24-character product id are required." },
+      { status: 400 });
+
+  const runtime = env as unknown as { DB: D1Database; PRINTIFY_TOKEN_KEY: string };
+  const connection = await runtime.DB.prepare(
+    `SELECT encrypted_token FROM printify_connections WHERE user_id = ?`)
+    .bind(user.userId).first<{ encrypted_token: string }>();
+  if (!connection) return NextResponse.json({ error: "Printify is not connected." }, { status: 409 });
+  const token = await decryptPrintifyToken(connection.encrypted_token, runtime.PRINTIFY_TOKEN_KEY);
+  const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
+  const url = `https://api.printify.com/v1/shops/${shopId}/products/${productId}.json`;
+
+  const readResponse = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+  if (readResponse.status === 404)
+    return NextResponse.json({ productId, exists: false,
+      note: "Printify has no product with this id in this shop." });
+  if (!readResponse.ok)
+    return NextResponse.json({ error: `Printify answered ${readResponse.status}.` }, { status: 502 });
+  const product = await readResponse.json() as
+    { title?: string; visible?: boolean; is_locked?: boolean; external?: { id?: string } };
+
+  if (!remove)
+    return NextResponse.json({ productId, exists: true, title: product.title,
+      visible: product.visible, locked: product.is_locked,
+      linkedToSalesChannel: product.external?.id ?? null });
+
+  if (!String(product.title ?? "").trim().toUpperCase().startsWith(INTERNAL_TEST_PREFIX))
+    return NextResponse.json({ error: "Refused: this route only removes INTERNAL TEST products.",
+      title: product.title }, { status: 409 });
+
+  const deleteResponse = await fetch(url, { method: "DELETE", headers,
+    signal: AbortSignal.timeout(15_000) });
+  /* Confirm by reading again rather than trusting the delete's own answer. */
+  const confirm = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+  return NextResponse.json({ productId, title: product.title,
+    deleteStatus: deleteResponse.status,
+    confirmedGone: confirm.status === 404,
+    confirmStatus: confirm.status });
 }
