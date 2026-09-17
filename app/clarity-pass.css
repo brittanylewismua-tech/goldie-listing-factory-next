@@ -3139,3 +3139,31 @@ body{min-width:0}
    "Reload the saved product to renew this batch connection" — the only
    sentence that would have helped. */
 .recipe-listing-card .recipe-listing-failure{margin:0 0 8px;padding:9px 11px;border:1px solid #e4cedb;border-radius:9px;background:#fff1ef;color:#8b3346;font-size:11px;line-height:1.45}
+
+/*
+  D1649 · THREE TAP TARGETS UNDER THE HOUSE MINIMUM ON BATCH HISTORY.
+
+  Found by the phone-width sweep at 375, 390 and 430: "Permanently remove from
+  history" at 36px, "Reload history" at 38px, and the sign-in link inside the
+  error notice at 14px — a bare inline link in a sentence, which is the third
+  time that exact shape has been the smallest thing on a screen.
+
+  These sit inside the Listing Factory shell, which is desktop-gated on a real
+  touch device, so a phone never reaches them. A narrow desktop window does,
+  and 14px is a poor target whatever is pointing at it. The house rule is 40px
+  and these are brought to it rather than the rule being bent to them.
+*/
+.management-page .remove-batch,
+.batch-history .remove-batch{
+  min-height:44px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+}
+.app-shell .batch-restore-notice a,
+.app-shell .batch-restore-notice button.secondary-action{
+  min-height:44px;
+  display:inline-flex;
+  align-items:center;
+  padding-inline:12px;
+}
+.app-shell .batch-restore-notice a{padding-inline:0}
