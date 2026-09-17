@@ -28,9 +28,25 @@ export const GET = withErrorLog("market-niche-audit", async (request: Request) =
   }
   const db = (env as unknown as { DB: D1Database }).DB;
 
-  const ask = <T>(sql: string, ...bind: unknown[]) =>
-    db.prepare(sql).bind(...bind).all<T>()
-      .catch(() => ({ results: [] as T[] }));
+  /*
+    AN AUDIT THAT SWALLOWS ITS OWN QUERY ERRORS IS NOT AN AUDIT.
+
+    The first version caught every failure into an empty result, so a
+    parameter-count mismatch in the per-niche query returned no pools — and
+    the two reconciliation checks that read those pools reported FALSE, as
+    though the data were wrong. The data was fine; the instrument was broken
+    and said so in the voice of a finding.
+
+    Failures are collected and returned instead.
+  */
+  const failures: string[] = [];
+  const ask = async <T>(label: string, sql: string, ...bind: unknown[]) => {
+    try { return await db.prepare(sql).bind(...bind).all<T>(); }
+    catch (error) {
+      failures.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+      return { results: [] as T[] };
+    }
+  };
 
   /* The watched set is what a cap is a cap ON. */
   const WATCHED = ["awaiting-baseline", "monitoring", "momentum", "repeated-momentum"];
@@ -40,7 +56,7 @@ export const GET = withErrorLog("market-niche-audit", async (request: Request) =
     nicheKey: string; rows: number; listings: number; shops: number;
     watched: number; watchedShops: number;
     missingPhrase: number; missingQuery: number; missingDiscoveredAt: number;
-  }>(
+  }>("per-niche",
     `SELECT niche_key AS nicheKey,
             COUNT(*) AS rows,
             COUNT(DISTINCT listing_id) AS listings,
@@ -55,9 +71,12 @@ export const GET = withErrorLog("market-niche-audit", async (request: Request) =
                      THEN 1 ELSE 0 END) AS missingDiscoveredAt
        FROM niche_candidates
       GROUP BY niche_key
-      ORDER BY niche_key`, ...WATCHED, ...WATCHED, ...WATCHED);
+      ORDER BY niche_key`,
+    /* Two uses of `marks` above, so two sets of bindings. The first version
+       bound three and the whole query failed. */
+    ...WATCHED, ...WATCHED);
 
-  const byState = await ask<{ state: string; n: number }>(
+  const byState = await ask<{ state: string; n: number }>("by-state",
     `SELECT state, COUNT(*) AS n FROM niche_candidates GROUP BY state ORDER BY state`);
 
   /*
@@ -65,7 +84,7 @@ export const GET = withErrorLog("market-niche-audit", async (request: Request) =
     impossible, so a non-zero answer means the key is not what it is believed
     to be — which is worth asking rather than assuming.
   */
-  const duplicates = await ask<{ nicheKey: string; listingId: number; n: number }>(
+  const duplicates = await ask<{ nicheKey: string; listingId: number; n: number }>("duplicates",
     `SELECT niche_key AS nicheKey, listing_id AS listingId, COUNT(*) AS n
        FROM niche_candidates GROUP BY niche_key, listing_id HAVING COUNT(*) > 1
       LIMIT 20`);
@@ -132,5 +151,9 @@ export const GET = withErrorLog("market-niche-audit", async (request: Request) =
     },
     watchedTotal,
     cap: GROWTH.maxCandidatesPerNiche,
+    /* Empty on a clean run. Anything here means a check below it could not be
+       trusted, rather than that the data failed it. */
+    queryFailures: failures,
+    trustworthy: failures.length === 0,
   });
 });
