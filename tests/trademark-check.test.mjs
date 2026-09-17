@@ -26,3 +26,17 @@ test("D1691: a clear result never encourages printing", () => {
   assert.doesNotMatch(page,
     /safe to (print|use|sell)|good to go|you can print|clear to print/i);
 });
+
+test("D1693: no menu promises a complete register search", () => {
+  /*
+    The checker says "the trademark records currently loaded" and the register
+    is still ingesting. A menu entry reading "the federal register" promises a
+    completeness the page it opens does not claim.
+  */
+  const more = readFileSync(new URL("../app/more/page.tsx", import.meta.url), "utf8");
+  const shown = more.match(/what: "[^"]*"/g) ?? [];
+  for (const line of shown)
+    assert.doesNotMatch(line, /federal register/i,
+      `a menu entry claims a complete search: ${line}`);
+  assert.match(more, /Check a phrase against US trademark records and known risks\./);
+});

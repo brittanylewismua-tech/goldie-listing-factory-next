@@ -40,7 +40,11 @@ const GROUPS: Group[] = [
     heading: "Tools",
     rows: [
       { href: "/trademark", name: "Trademark Checker", icon: "trademark",
-        what: "Check a phrase against the federal register and known risks." },
+        /* D1693 · "the federal register" claims a complete search. The tool
+           itself says "the trademark records currently loaded", and the
+           register is still ingesting. The menu should not promise more
+           than the page it opens. */
+        what: "Check a phrase against US trademark records and known risks." },
       { href: "/keywords", name: "Keyword Banks", icon: "keywords",
         what: "The phrases your titles and tags are built from." },
     ],
