@@ -78,6 +78,27 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
   if (!key()) return NextResponse.json({ skipped: "No USPTO key." });
 
   const db = (env as unknown as { DB: D1Database }).DB;
+
+  /*
+    THE WHOLE HANDLER REPORTS ITS OWN FAILURES, NOT JUST THE INGEST.
+
+    Only the file read was wrapped, so anything that went wrong before it —
+    a migration, the seed, the queue query — escaped to the generic wrapper
+    and reached the owner as "Something went wrong." That is precisely the
+    mystery the detailed error below exists to prevent, and it cost a
+    debugging round on the first run after the queue was unblocked.
+  */
+  try {
+    return await run(db, request);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : String(error),
+        where: "before the file read" }, { status: 500 });
+  }
+});
+
+async function run(db: D1Database, request: Request) {
+  void request;
   await ensureRegisterTables(db);
 
   /* Re-seeding is cheap and idempotent, and it is what picks up yesterday's
@@ -262,4 +283,4 @@ export const GET = withErrorLog("trademark-ingest-tick", async (request: Request
       ...(limited ? { rateLimited: true, strikes, retryAfter: retryAfter(strikes) } : {}) },
       { status: 500 });
   }
-});
+}
