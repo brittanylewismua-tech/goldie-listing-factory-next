@@ -329,3 +329,39 @@ test("the layered details answer comes from tables, not from a picture", () => {
   assert.ok(!layered.includes("image_urls"),
     "the details answer must not send the image again");
 });
+
+test("a model's refusal is never stored or shown as a value", () => {
+  /*
+    "Gift for none" was one symptom. A model asked for a field it cannot fill
+    says so IN WORDS, and picks different words each time — so the rule is
+    general, and it runs where the answer arrives rather than where it is
+    printed. Fixing only the title composer left the word "none" sitting in
+    stored design intelligence, ready for the description, the tags, the bank
+    ranking and anything added later.
+  */
+  const { isRealValue, realValues } = composition;
+  const refusals = [
+    "none", "None", "NONE", "n/a", "N/A", "na", "null", "nil", "unknown",
+    "unspecified", "not applicable", "not specified", "no audience", "no text",
+    "none found", "none visible", "general", "everyone", "anyone", "various",
+    "other", "-", "--", "—", "tbd", "blank", "empty", "undefined",
+    "[none]", "(n/a)", '"unknown"', "none.", "None!", " none ",
+    "no occasion cues", "none apparent", "not applicable to this design",
+  ];
+  for (const refusal of refusals)
+    assert.equal(isRealValue(refusal), false, `"${refusal}" was treated as a value`);
+
+  /* And it must not eat real words that merely start the same way. */
+  for (const real of ["nostalgic", "novelty", "notebook", "nautical", "nurse",
+    "no worries club", "generation x", "noodle lover"])
+    assert.equal(isRealValue(real), true, `"${real}" was wrongly discarded`);
+
+  assert.deepEqual(realValues(["dog moms", "none", "n/a", "teachers"]),
+    ["dog moms", "teachers"]);
+
+  /* Applied at the point the model's answer is parsed. */
+  const flow = read("listing-flow.ts");
+  const parser = flow.slice(flow.indexOf("function readDesign"), flow.indexOf("type Usage"));
+  assert.match(parser, /realValues\(/, "list fields are not filtered");
+  assert.match(parser, /isRealValue\(value\)/, "single-line fields are not filtered");
+});

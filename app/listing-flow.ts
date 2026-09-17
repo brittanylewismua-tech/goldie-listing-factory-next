@@ -9,6 +9,7 @@ import { acquireLease, releaseLease, stillHolds, LEASE_WAIT_MS, LEASE_POLL_MS }
   from "./work-lease.ts";
 import { reserveSpend, settleSpend, failSpend } from "./spend-guard.ts";
 import { recordFalUsage } from "./fal-usage.ts";
+import { isRealValue, realValues } from "./listing-composition.ts";
 
 /**
  * THE LAYERED FLOW, CONNECTED TO THINGS THAT ACTUALLY COST MONEY.
@@ -61,9 +62,18 @@ function readDesign(text: string): DesignIntelligence | null {
   let raw: Record<string, unknown>;
   try { raw = JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>; }
   catch { return null; }
+  /*
+    ABSENCE IS FILTERED WHERE THE ANSWER ARRIVES, NOT WHERE IT IS PRINTED.
+
+    "Gift for none" was fixed in the title composer, which fixed the title and
+    left the word "none" sitting in stored design intelligence — ready to be
+    used by the description, the tags, the bank ranking and anything added
+    later. A model's refusal is not data, so it is dropped at the door.
+  */
   const list = (value: unknown) => Array.isArray(value)
-    ? value.map(entry => String(entry).trim()).filter(Boolean).slice(0, 16) : [];
-  const line = (value: unknown) => typeof value === "string" ? value.trim().slice(0, 200) : "";
+    ? realValues(value.map(entry => String(entry))).slice(0, 16) : [];
+  const line = (value: unknown) => typeof value === "string" && isRealValue(value)
+    ? value.trim().slice(0, 200) : "";
   const ratio = Number(raw.textToArtRatio);
   return {
     wording: list(raw.wording),
@@ -80,6 +90,7 @@ function readDesign(text: string): DesignIntelligence | null {
     optionalFieldEvidence: raw.optionalFieldEvidence
       && typeof raw.optionalFieldEvidence === "object"
       ? Object.fromEntries(Object.entries(raw.optionalFieldEvidence as Record<string, unknown>)
+        .filter(([, value]) => isRealValue(String(value)))
         .map(([name, value]) => [name, String(value).slice(0, 200)]).slice(0, 12))
       : {},
   };

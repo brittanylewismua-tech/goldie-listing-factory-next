@@ -139,7 +139,11 @@
    the canary route used the stored provenance hash — same design, two cache
    keys, two paid analyses, and a "cold" run that made no call because the warm
    entry was under the other key. */
-export const BUILD_MARKER = "D1592";
+/* D1593 drops a model's refusal where the answer arrives rather than where it
+   is printed. "Gift for none" was fixed in the title composer, which left the
+   word "none" in stored design intelligence for the description, the tags and
+   the bank ranking to use next. */
+export const BUILD_MARKER = "D1593";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
