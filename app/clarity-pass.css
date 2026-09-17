@@ -3167,3 +3167,29 @@ body{min-width:0}
   padding-inline:12px;
 }
 .app-shell .batch-restore-notice a{padding-inline:0}
+
+/*
+  D1660 · A category the factory guessed, marked as a guess.
+
+  An unsupported blueprint returns a plausible-looking category and no
+  attributes. Without this it reads exactly like a confident mapping, which
+  is how a wrong category reaches a live Etsy listing.
+*/
+/*
+  The needs-attention colour this product already uses everywhere else
+  (#b53838 on rgba(217,79,79,.12)) rather than a new one. A first version
+  reached for a brown that has been rejected three times and a house guard
+  caught it, which is the guard doing exactly its job.
+*/
+.etsy-category-guess{
+  margin:0 0 12px;
+  border:1px solid rgba(217,79,79,.28);
+  border-left:3px solid #d94f4f;
+  border-radius:10px;
+  background:rgba(217,79,79,.08);
+  padding:10px 12px;
+  color:#7a4450;
+  font-size:12px;
+  line-height:1.55;
+}
+.etsy-category-guess b{color:#b53838}
