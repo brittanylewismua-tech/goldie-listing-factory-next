@@ -157,3 +157,41 @@ test("every required apparel property has an allowed value", () => {
         `${family} has no allowed value for ${property}`);
   }
 });
+
+test("no cached layer can be served across a change to what produced it", () => {
+  /*
+    THE INVARIANT THAT MAKES THIS CACHE SAFE TO HAVE AT ALL.
+
+    Every cached layer is answerable to five things: the extraction schema,
+    the design prompt, the design model, the copy prompt and the copy model.
+    If any of them changes and the key does not, the cache serves output the
+    current code would never produce — and the change silently stops applying
+    to every design already processed.
+
+    This product has already paid for that lesson elsewhere: the readability
+    measurement was cached with no version at all, so a stored "contrast:
+    pass" from the rule that read crisp black-on-white artwork as 1.0:1 would
+    have outlived the fix (D1653). Here it was done right, and this is what
+    keeps it that way.
+  */
+  const flow = readFileSync(new URL("../app/listing-flow.ts", import.meta.url), "utf8");
+  const store = readFileSync(new URL("../app/family-copy-store.ts", import.meta.url), "utf8");
+
+  /* The design layer's key composes all three of its own inputs. */
+  assert.match(flow,
+    /DESIGN_VERSION =\s*\n?\s*`\$\{EXTRACTION_SCHEMA_VERSION\}:\$\{DESIGN_PROMPT_VERSION\}:\$\{DESIGN_MODEL_VERSION\}`/,
+    "the design cache key must cover schema, prompt and model");
+
+  /* The copy layer is keyed on the design version AND on its own prompt and
+     model — a copy prompt change must not be served from a cache keyed only
+     on the design that fed it. */
+  const read = store.slice(store.indexOf("export async function readFamilyCopy"),
+    store.indexOf("export async function writeFamilyCopy"));
+  assert.match(read, /AND design_version = \?/);
+  assert.match(read, /AND prompt_version = \? AND model_version = \?/);
+  assert.match(read, /COPY_PROMPT_VERSION, COPY_MODEL_VERSION/);
+
+  /* And the lease that decides who pays is keyed the same way, so two
+     requests under different versions never collapse onto one another. */
+  assert.match(flow, /const leaseKey = \[userId, artworkHash, DESIGN_VERSION/);
+});
