@@ -10,7 +10,37 @@ Update it as sections land. It records what is PROVEN, not what is intended.
 
 ---
 
-## 1. Layered flow — orchestrator PROVEN, member workflow NOT YET WIRED
+## 1. Layered flow — WIRED INTO THE MEMBER WORKFLOW (D1591-D1593)
+
+`/api/listing-intelligence` — the route the Listing Factory workflow itself
+calls twice per listing — now branches on the canary. No owner-only route
+involved. Measured through that member route, in production:
+
+| Member-route run | Paid calls | Billed |
+|---|---|---|
+| Cold (tee) | 1 vision + 1 copy | $0.00149 |
+| Identical warm repeat | 0 | $0 |
+| Same family, other product | 0 | $0 |
+| New family (mug) | 1 copy only | $0.00016 |
+| Title mode, design known | **0** | $0 |
+| Two simultaneous, same artwork | **1 vision total** | $0.0005 |
+| Unsupported blueprint | 0 | $0, no guessed category |
+
+The title stopped being a paid call at all: the legacy path made a fresh
+uncached vision call every time a title was requested.
+
+Fixed along the way:
+- D1592 — the member route hashed the image, the canary route used the stored
+  provenance hash: one design, two cache keys, two charges. One module now.
+- D1593 — a model's refusal ("none", "n/a", "no occasion cues") is dropped
+  where the answer is parsed, not where it is printed.
+- Strict bank ranking on the layered path: a phrase appears only if it shares
+  a stem with the design. No bank-order padding (D544/D414 stay honoured).
+
+STILL OPEN in section 1: the ten-step Chrome walkthrough of the real
+interface (upload → variants → final review → return and edit).
+
+## 1b. Earlier canary-route measurements (kept for reference)
 
 `/api/listing-factory/prepare` (canary-gated) runs the real layers and stops
 before Etsy. Measured against production, real money:
