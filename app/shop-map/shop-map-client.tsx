@@ -89,7 +89,27 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       Shop Map could not load just now. Nothing has changed — try again in a moment.
     </p></main>;
   if (!shown)
-    return <main className="shop-map"><p className="shop-map-state">Organizing your shop…</p></main>;
+    /*
+      D1604 · A sentence on a white page was the whole loading state, and Shop
+      Map takes a few seconds to read a shop. The shape of what is coming is
+      drawn instead, so the wait has somewhere to land and the page does not
+      jump when it arrives.
+    */
+    return <main className="shop-map p-grid">
+      <div className="p-page">
+        <div className="p-head">
+          <p className="p-eyebrow">Shop Map</p>
+          <div className="p-skeleton p-skeleton-line" style={{ width: "40%", height: 26 }} />
+          <div className="p-skeleton p-skeleton-line" style={{ width: "62%" }} />
+        </div>
+        <p className="shop-map-state" role="status">Organizing your shop…</p>
+        <div className="p-stack" aria-hidden="true">
+          <div className="p-skeleton p-skeleton-card" />
+          <div className="p-skeleton p-skeleton-card" />
+          <div className="p-skeleton p-skeleton-card" />
+        </div>
+      </div>
+    </main>;
 
   const month = shown.thisMonth;
   const niches = [...(shown.worlds ?? [])];

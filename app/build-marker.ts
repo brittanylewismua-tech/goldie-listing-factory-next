@@ -166,7 +166,12 @@
    footer. Code identifiers stay: a Stripe plan key, CSS class names, a
    User-Agent. The guard now detects the word used as PROSE rather than
    maintaining an allowlist of identifiers that kept needing new entries. */
-export const BUILD_MARKER = "D1603";
+/* D1604 gives the suite one active design system taken from the Listing
+   Factory — its pink, its grid, its corners and depth — and points Market
+   Watch, Design Scanner, the Trademark Checker and Shop Map at it. Market
+   Watch had a private palette including a legacy gold; Shop Map's loading
+   state was one sentence on white. */
+export const BUILD_MARKER = "D1604";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

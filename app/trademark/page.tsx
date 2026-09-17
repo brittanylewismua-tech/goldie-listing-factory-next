@@ -70,22 +70,24 @@ export default function TrademarkPage() {
   };
 
   const body = (<>
-    <div className="tm-page interior-page">
+    <div className="tm-page interior-page p-grid">
       <header className="drop-head">
-        <p className="mini-label">TRADEMARK CHECK</p>
+        <p className="mini-label p-eyebrow">TRADEMARK CHECK</p>
         <h1>Check it before you print it</h1>
         <p>Names, characters and brands that get listings removed.</p>
       </header>
 
       <form className="tm-form" onSubmit={event => { event.preventDefault(); run(phrase); }}>
         <input
+          className="p-input"
           type="search"
           value={phrase}
           onChange={event => setPhrase(event.target.value)}
           placeholder="Type a title, phrase or design idea"
           aria-label="Phrase to check"
         />
-        <button type="submit" disabled={!phrase.trim() || checking}>
+        <button className="p-button p-button-primary" type="submit"
+          disabled={!phrase.trim() || checking}>
           {checking ? "Checking" : "Check"}
         </button>
       </form>
@@ -98,12 +100,19 @@ export default function TrademarkPage() {
             onClick={() => { setPhrase(example); run(example); }}>{example}</button>)}
       </div>
 
-      {error && <section className="drop-error" role="alert">
+      {error && <section className="drop-error p-notice p-notice-bad" role="alert">
         <h2>This could not be checked</h2>
         <p>{error}</p>
       </section>}
 
       {verdict && <section className={`tm-verdict ${verdict.risk}`} aria-live="polite">
+        {/* The verdict wears the product's status treatment, so risk reads the
+            same here as everywhere else in the suite. */}
+        <span className={verdict.risk === "high" ? "p-badge p-badge-bad"
+          : verdict.risk === "caution" ? "p-badge p-badge-warn" : "p-badge p-badge-good"}>
+          {verdict.risk === "high" ? "High risk"
+            : verdict.risk === "caution" ? "Partly owned" : "Nothing found"}
+        </span>
         <p className="tm-headline">
           {verdict.risk === "high"
             ? "Do not print this"
@@ -126,7 +135,7 @@ export default function TrademarkPage() {
         {/* The register's own findings, kept visually separate from the
             curated list: they are a different kind of fact and a seller
             should be able to tell which one is talking. */}
-        {(verdict.register ?? []).length > 0 && <ul className="tm-hits tm-register">
+        {(verdict.register ?? []).length > 0 && <ul className="tm-hits tm-register p-card-quiet">
           {(verdict.register ?? []).map(match =>
             <li key={match.registration || match.mark} className="tm-hit">
               <b>{match.mark}</b>

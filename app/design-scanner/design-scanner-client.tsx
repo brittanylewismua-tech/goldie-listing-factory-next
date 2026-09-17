@@ -190,7 +190,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
     [artworkHash, niche, scanning]);
 
   return (
-    <main className="scanner">
+    <main className="scanner p-grid">
       <h1>Design Scanner</h1>
       <p className="lede">
         See how your design compares with listings that have actually been
@@ -200,7 +200,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
       <div className="stage">
         {preview
           ? <img src={preview} alt="Your design" />
-          : <p className="empty">Your design will show here.</p>}
+          : <div className="empty p-empty"><b>No design yet</b><p>Choose a design and Design Scanner will compare how it is built with listings that are actually moving in your niche.</p></div>}
         {scanning && <div className="beam" aria-hidden="true" />}
       </div>
 
@@ -224,7 +224,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
         )}
       </div>
 
-      <button className="go" onClick={() => void scan()} disabled={!ready}>
+      <button className="go p-button p-button-primary" onClick={() => void scan()} disabled={!ready}>
         {scanning ? "Scanning…" : "Scan"}
       </button>
 
@@ -237,15 +237,15 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
       )}
 
       {left !== null && !scanning && (
-        <p className="left">{left} scan{left === 1 ? "" : "s"} left today</p>
+        <p className="left p-badge">{left} scan{left === 1 ? "" : "s"} left today</p>
       )}
 
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error p-notice p-notice-bad" role="alert">{error}</p>}
 
       {result && <ScanResult result={result} />}
 
       {history.length > 0 && (
-        <section className="history">
+        <section className="history p-card-quiet">
           <h2>Your scans</h2>
           {history.map(row => (
             <button key={row.id} onClick={() => { setResult(row.result); setNiche(row.niche); }}>
@@ -266,7 +266,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
 
 function ScanResult({ result }: { result: Result }) {
   return (
-    <section className="result">
+    <section className="result p-card">
       <p className="overall">{currentLabel(result.overall)}</p>
 
       {result.ok ? (

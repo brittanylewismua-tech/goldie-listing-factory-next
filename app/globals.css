@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* The one active customer-facing design system, taken from the Listing
+   Factory. Imported first so a page can override a token deliberately rather
+   than by accident of order. */
+@import "./product-tokens.css";
 @import "./support.css";
 @import "./factory-tools.css";
 @import "./batch-history.css";

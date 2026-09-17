@@ -152,20 +152,20 @@ export default function MarketWatchClient({ signedInEmail }: { signedInEmail: st
         </section>
       )}
 
-      <div className="tabs" role="tablist">
-        <button role="tab" aria-selected={tab === "niches"} onClick={() => setTab("niches")}>
+      <div className="tabs p-tabs" role="tablist">
+        <button className="p-tab" role="tab" aria-selected={tab === "niches"} onClick={() => setTab("niches")}>
           Niche Watch
         </button>
-        <button role="tab" aria-selected={tab === "shops"} onClick={() => setTab("shops")}>
+        <button className="p-tab" role="tab" aria-selected={tab === "shops"} onClick={() => setTab("shops")}>
           Shop Watch
         </button>
       </div>
 
       <div className="add">
-        <input type="text" value={input} onChange={event => setInput(event.target.value)}
+        <input className="p-input" type="text" value={input} onChange={event => setInput(event.target.value)}
           aria-label={tab === "niches" ? "Niche to watch" : "Shop to watch"}
           placeholder={tab === "niches" ? "bachelorette, dog mom…" : "Etsy shop link or name"} />
-        <button onClick={() => void add()} disabled={busy || !input.trim()}>
+        <button className="p-button p-button-primary" onClick={() => void add()} disabled={busy || !input.trim()}>
           {busy ? "Saving…" : "Watch"}
         </button>
       </div>
@@ -203,7 +203,7 @@ function NicheDetail({ view, onBack }: { view: NicheView; onBack: () => void }) 
   const summary = view.summary;
   return (
     <main className="mw">
-      <button className="back" onClick={onBack}>← All watches</button>
+      <button className="back p-button p-button-quiet" onClick={onBack}>← All watches</button>
       <h1>{view.phrase}</h1>
 
       {view.stale && (

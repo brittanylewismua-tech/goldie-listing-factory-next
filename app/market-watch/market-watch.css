@@ -4,24 +4,34 @@
   Listings are the subject of Niche Watch, so the cards are the biggest thing
   on the page. Shops are evidence sources and read as text.
 */
-.mw {
-  --ink: #1b1b1f;
-  --muted: #6b6b76;
-  --line: #e6e4e0;
-  --paper: #fbfaf8;
-  --gold: #c9a227;
-  --live: #2f7d59;
-  --stale: #9a6a12;
-  --gone: #8a8a93;
-  max-width: 620px;
-  margin: 0 auto;
-  padding: 24px 20px 72px;
-  color: var(--ink);
-  font: 16px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
+/*
+  D1604 · POINTED AT THE PRODUCT'S OWN SYSTEM.
 
-.mw h1 { font-size: 1.4rem; margin: 0 0 4px; letter-spacing: -0.01em; }
-.mw .lede { color: var(--muted); margin: 0 0 20px; font-size: 0.95rem; }
+  This carried a private palette — including `--gold: #c9a227`, a survivor of
+  an art direction the product left behind — and a system font stack, so the
+  page rendered as a different piece of software from the Listing Factory
+  beside it. The local names are kept so the rest of the file is untouched;
+  only what they point at has changed.
+*/
+.mw {
+  --ink: var(--p-ink);
+  --muted: var(--p-muted);
+  --line: var(--p-line);
+  --paper: var(--p-card-quiet);
+  --gold: var(--p-pink);
+  --live: var(--p-good);
+  --stale: var(--p-warn);
+  --gone: var(--p-muted);
+  max-width: 860px;
+  margin: 0 auto;
+  padding: var(--p-6) var(--p-5) 96px;
+  color: var(--ink);
+  font: 15px/1.55 inherit;
+}
+@media (max-width: 820px){ .mw { padding: var(--p-4) var(--p-4) 96px; } }
+
+.mw h1 { font-size: clamp(24px, 2.6vw, 34px); margin: 0 0 8px; letter-spacing: -0.02em; font-weight: 750; line-height: 1.1; }
+.mw .lede { color: var(--muted); margin: 0 0 24px; font-size: 14px; line-height: 1.55; max-width: 62ch; }
 
 /* --------------------------------------------------------------- tabs */
 .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
@@ -30,9 +40,9 @@
   min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fff;
+  background: var(--p-card);
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: 14px;
   cursor: pointer;
 }
 .tabs button[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
@@ -41,13 +51,13 @@
 .update {
   border: 1px solid var(--line);
   border-left: 3px solid var(--gold);
-  border-radius: 14px;
-  background: #fff;
+  border-radius: 18px;
+  background: var(--p-card);
   padding: 16px 18px;
   margin-bottom: 24px;
 }
 .update h2 {
-  font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+  font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--muted); margin: 0 0 8px; font-weight: 600;
 }
 .update ul { margin: 0; padding-left: 18px; }
@@ -64,13 +74,13 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   font-size: 16px;
-  background: #fff;
+  background: var(--p-card);
   color: var(--ink);
 }
 .add button {
   min-height: 48px; min-width: 88px; padding: 0 18px;
   border: 0; border-radius: 12px; background: var(--ink); color: #fff;
-  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  font-size: 14px; font-weight: 600; cursor: pointer;
 }
 .add button[disabled] { opacity: 0.4; }
 
@@ -79,8 +89,8 @@
   width: 100%;
   text-align: left;
   border: 1px solid var(--line);
-  border-radius: 14px;
-  background: #fff;
+  border-radius: 18px;
+  background: var(--p-card);
   padding: 14px 16px;
   margin-bottom: 10px;
   min-height: 48px;
@@ -94,7 +104,7 @@
   overflow-wrap: anywhere;
   display: block;
 }
-.watch .meta { color: var(--muted); font-size: 0.85rem; }
+.watch .meta { color: var(--muted); font-size: 13px; }
 .watch[data-stale="yes"] .meta { color: var(--stale); }
 
 /* -------------------------------------------------------- listing cards */
@@ -103,8 +113,8 @@
 
 .card {
   border: 1px solid var(--line);
-  border-radius: 14px;
-  background: #fff;
+  border-radius: 18px;
+  background: var(--p-card);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -152,7 +162,7 @@
 .tag[data-state="momentum"] { color: var(--ink); }
 .tag[data-state="stale"] { color: var(--stale); border-color: var(--stale); }
 .tag[data-state="no-longer-qualifies"] { color: var(--gone); }
-.card .when { color: var(--muted); font-size: 0.8rem; }
+.card .when { color: var(--muted); font-size: 13px; }
 .card a {
   min-height: 44px;
   line-height: 44px;
@@ -160,20 +170,20 @@
   border-top: 1px solid var(--line);
   color: var(--ink);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 14px;
   margin-top: auto;
 }
 
 /* ------------------------------------------------------------ patterns */
 .patterns {
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 18px;
   background: var(--paper);
   padding: 14px 16px;
   margin: 18px 0;
 }
 .patterns h2 {
-  font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+  font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--muted); margin: 0 0 8px; font-weight: 600;
 }
 .patterns ul { margin: 0; padding-left: 18px; }
@@ -182,13 +192,13 @@
 /* -------------------------------------------------------- shop sections */
 .section { margin-bottom: 24px; }
 .section h3 {
-  font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+  font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--muted); margin: 0 0 10px; font-weight: 600;
 }
 .pattern {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fff;
+  background: var(--p-card);
   padding: 12px 14px;
   margin-bottom: 8px;
 }
@@ -198,14 +208,14 @@
 
 .empty, .note {
   border: 1px dashed var(--line);
-  border-radius: 14px;
+  border-radius: 18px;
   padding: 18px;
   color: var(--muted);
-  background: #fff;
+  background: var(--p-card);
 }
-.stale-flag { color: var(--stale); font-size: 0.85rem; margin: 10px 0 0; }
-.summary { color: var(--muted); font-size: 0.9rem; margin: 0 0 14px; }
-.back { min-height: 44px; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0; font-size: 0.9rem; }
+.stale-flag { color: var(--stale); font-size: 13px; margin: 10px 0 0; }
+.summary { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+.back { min-height: 44px; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0; font-size: 14px; }
 .error { color: #a33a3a; font-size: 0.92rem; }
 
 /* D1586 · A card states the finding, then the evidence under it.
