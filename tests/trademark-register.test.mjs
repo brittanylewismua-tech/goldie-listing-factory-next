@@ -133,5 +133,9 @@ test("only data files are queued, and a file that cannot be read is parked", asy
   const { readFileSync } = await import("node:fs");
   const tick = readFileSync(new URL("../app/api/trademark/ingest-tick/route.ts", import.meta.url), "utf8");
   assert.match(tick, /A RETRY IS FOR A BAD MINUTE, NOT A BAD FILE/);
-  assert.match(tick, /permanent \? "skipped" : "waiting"/);
+  /* D1644 · and a failure nobody put on the list is parked too, after three
+     identical attempts. The list caught "Not a zip"; it did not catch
+     "Trailing bytes after end of compressed data", and 88 files were retried
+     forever behind it. */
+  assert.match(tick, /permanent \|\| exhausted \? "skipped" : "waiting"/);
 });
