@@ -91,3 +91,13 @@
 .shop-map-grouping-notes{margin:10px 0;padding-left:18px;display:grid;gap:8px}
 .shop-map-grouping-notes li{font-size:13px;line-height:1.55;color:var(--p-ink-soft)}
 .shop-map-grouping-notes li[data-kind="left-out"]{color:var(--p-muted)}
+
+/*
+  D1677 · An estimate marked on the figure itself. It was distinguishable
+  only by a word in the headline above it, and a member reading the number
+  first saw nothing telling them it was provisional.
+*/
+.shop-map-figure[data-basis="estimated"]{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.shop-map-basis-chip{display:inline-flex;align-items:center;border-radius:999px;
+  border:1px solid #e0b64f;background:#fff6e0;padding:3px 10px;
+  color:#6b4a06;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}

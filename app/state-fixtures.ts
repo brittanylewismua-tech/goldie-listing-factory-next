@@ -825,6 +825,57 @@ export const stateFixtures = (): StateFixture[] => [
           reviews: { recent: 3, lifetimeHeld: 51 } }],
       shopTotals: { listings: 52, orders: 80 } } }] },
 
+  /*
+    ESTIMATED COSTS, WRITTEN FROM verdictFor() RATHER THAN FROM MEMORY.
+
+    `verdictFor` in production-cost.ts is deliberately pessimistic: one
+    estimate makes the whole month an estimate, and it emits exactly this
+    label, headline and sentence. The arithmetic below is real too —
+    1,842.50 revenue less 221.10 fees less 714.00 production is 907.40 — so
+    the state can be checked rather than only looked at.
+  */
+  { key: "shop-map-estimated", label: "Estimated profit", surface: "shop-map",
+    what: "One estimated cost makes the month an estimate. It must never read as a "
+      + "verified figure: the chip is on the figure, not only in the headline.",
+    replies: [{ path: "/api/shop-map/map", status: 200, body: {
+      shop: { shopName: "a-connected-shop" }, month: "2026-09",
+      thisMonth: { revenueMinor: 184_250, etsyFeesMinor: -22_110,
+        productionCostMinor: 71_400, profitMinor: 90_740, orders: 47,
+        label: "estimated", headline: "Estimated profit",
+        accuracy: "12 of 47 production costs come from your saved estimates, "
+          + "so this is an estimate.",
+        coverage: { verified: 35, estimated: 12, unavailable: 0 } },
+      worldsPeriod: "last 90 days",
+      worlds: [
+        { worldId: "bachelorette", label: "Bachelorette", listings: 14, activeListings: 9,
+          period: "last 90 days", orders: 61, revenueMinor: 241_900,
+          lifetimeOrders: 318, lifetimeRevenueMinor: 1_182_400,
+          evidence: "61 orders across 9 active listings.",
+          productFamilies: [{ family: "Comfort Colors tee", listings: 9 }],
+          reviews: { recent: 12, lifetimeHeld: 96 } }],
+      shopTotals: { listings: 52, orders: 80 } } }] },
+
+  { key: "shop-map-verified-mixed", label: "Verified, some entered by you", surface: "shop-map",
+    what: "Costs you entered by hand still count as verified. The figure carries no "
+      + "estimate chip, and the sentence says where the numbers came from.",
+    replies: [{ path: "/api/shop-map/map", status: 200, body: {
+      shop: { shopName: "a-connected-shop" }, month: "2026-09",
+      thisMonth: { revenueMinor: 184_250, etsyFeesMinor: -22_110,
+        productionCostMinor: 71_400, profitMinor: 90_740, orders: 47,
+        label: "verified", headline: "Profit",
+        accuracy: "3 of 47 production costs were entered by you; the rest came "
+          + "from Printify.",
+        coverage: { verified: 47, estimated: 0, unavailable: 0 } },
+      worldsPeriod: "last 90 days",
+      worlds: [
+        { worldId: "bachelorette", label: "Bachelorette", listings: 14, activeListings: 9,
+          period: "last 90 days", orders: 61, revenueMinor: 241_900,
+          lifetimeOrders: 318, lifetimeRevenueMinor: 1_182_400,
+          evidence: "61 orders across 9 active listings.",
+          productFamilies: [{ family: "Comfort Colors tee", listings: 9 }],
+          reviews: { recent: 12, lifetimeHeld: 96 } }],
+      shopTotals: { listings: 52, orders: 80 } } }] },
+
   { key: "shop-map-guidance", label: "Guidance and attention", surface: "shop-map",
     what: "Where to focus, and a niche carrying more listings than its orders justify.",
     replies: [{ path: "/api/shop-map/map", status: 200, body: {

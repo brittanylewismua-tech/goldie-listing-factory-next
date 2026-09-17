@@ -15,7 +15,10 @@ type ShopMap = {
   month?: string;
   thisMonth?: { revenueMinor: number; etsyFeesMinor: number; productionCostMinor: number;
     headline: string; profitMinor: number | null; accuracy: string; orders: number;
-    /* Declared twice in the same type literal, identically. */
+    /* What this month's figures may be called. An estimate must never be
+       able to read as a verified figure, so the distinction is structural
+       rather than a word inside `headline`. */
+    label?: "verified" | "estimated" | "unavailable";
     coverage?: { verified: number; estimated: number; unavailable: number } };
   standout?: { hasStandout: boolean; headline: string; nextStep: string };
   whereToFocus?: Focus[];
@@ -41,6 +44,23 @@ type ShopMap = {
   timezoneNeeded?: boolean;
   error?: string;
 };
+
+/*
+  Whether this month's profit is an exact figure or an estimate. The label
+  the server computes is authoritative; the cost coverage is the fallback for
+  a response saved before the label was sent, so an older cached month still
+  cannot present an estimate as verified.
+*/
+function monthBasis(month: { label?: string;
+  coverage?: { estimated: number; unavailable: number } } | undefined) {
+  if (!month) return "unknown";
+  if (month.label === "estimated") return "estimated";
+  if (month.label === "verified") return "verified";
+  if (month.label === "unavailable") return "unavailable";
+  if ((month.coverage?.unavailable ?? 0) > 0) return "unavailable";
+  if ((month.coverage?.estimated ?? 0) > 0) return "estimated";
+  return "verified";
+}
 
 const money = (minor: number | null | undefined) =>
   minor === null || minor === undefined ? "—"
@@ -183,7 +203,23 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
                 unavailable", which reads as a broken value rather than an
                 absent one. */}
             {month?.profitMinor !== null && month?.profitMinor !== undefined && (
-              <p className="shop-map-figure">{money(month.profitMinor)}</p>
+              <p className="shop-map-figure" data-basis={monthBasis(month)}>
+                {money(month.profitMinor)}
+                {/*
+                  D1677 · ON THE FIGURE, NOT ONLY IN THE SENTENCE ABOVE IT.
+
+                  An estimate was distinguishable only by the word
+                  "Estimated" in the headline. A member reading the number
+                  first — which is what a number that size invites — saw
+                  nothing marking it as provisional. The mark sits on the
+                  figure, and it is driven by the verdict's own label with
+                  the cost coverage as a fallback, so it cannot be lost to a
+                  copy change.
+                */}
+                {monthBasis(month) === "estimated" && (
+                  <span className="shop-map-basis-chip">Estimate</span>
+                )}
+              </p>
             )}
             <p className="shop-map-accuracy">{month?.accuracy}</p>
             <dl className="shop-map-rows">

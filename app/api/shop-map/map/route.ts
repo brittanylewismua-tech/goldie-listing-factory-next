@@ -356,6 +356,16 @@ async function buildMap(request: Request) {
       etsyFeesMinor: Number(feeRow?.fees ?? 0),
       productionCostMinor: costs.reduce((sum, cost) => sum + cost.costMinor, 0),
       headline: state.headline,
+      /*
+        D1677 · THE LABEL TRAVELS, NOT JUST THE SENTENCE.
+
+        The page could only tell an estimate from a verified figure by the
+        word "Estimated" inside `headline`. That makes the difference between
+        a number a member can bank on and one they cannot a matter of copy —
+        one reworded string away from an estimate reading as fact. The
+        verdict already computes the label; it was simply not sent.
+      */
+      label: state.label,
       profitMinor: state.profitMinor,
       accuracy: state.accuracy,
       coverage: { verified: state.verifiedShare, estimated: state.estimatedShare,
