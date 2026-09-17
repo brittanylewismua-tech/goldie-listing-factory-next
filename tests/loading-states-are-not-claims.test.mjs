@@ -676,3 +676,28 @@ test("counts of one are not written as plurals", () => {
   assert.match(client, /\$\{summary\.moving === 1 \? "listing" : "listings"\}/);
   assert.ok(!/\$\{watch\.shops\} shops/.test(client));
 });
+
+test("a niche page never denies the evidence it is showing", () => {
+  /*
+    "Not enough verified evidence in this niche yet" sat directly above
+    listings labelled "Repeated momentum" and "Momentum detected". Seen on
+    the live page for girl power, which has confirmations but has not
+    reached the bar.
+
+    meaningfulMomentum is a threshold on listings, shops and repeat
+    movement — deliberately the same bar Design Scanner uses so the two
+    features cannot disagree about a niche. It is NOT changed here. Only the
+    sentence is, so it stops contradicting what sits underneath it.
+  */
+  const client = read("market-watch/market-watch-client.tsx");
+  assert.match(client, /: listings\.length\s*\n?\s*\?/,
+    "the thin-but-confirmed case needs its own sentence");
+  assert.match(client, /not yet enough across enough shops to read as a/);
+  assert.match(client, /Each one below is a confirmed movement on its own/);
+  /* The flat denial survives only for the case where there is nothing below. */
+  assert.match(client, /: "Not enough verified evidence in this niche yet\."/);
+
+  /* And the bar itself is untouched — this is not a threshold change. */
+  const watch = read("niche-watch.ts");
+  assert.match(watch, /meaningfulMomentum: live\.length >= minimumListings\s*\n?\s*&& shops\.size >= minimumShops && repeated >= minimumRepeated/);
+});

@@ -346,7 +346,25 @@ function NicheDetail({ view, onBack }: { view: NicheView; onBack: () => void }) 
             ? `${summary.moving} ${summary.moving === 1 ? "listing" : "listings"} moving · `
               + `${summary.repeated} with repeated momentum · `
               + `${summary.shops} ${summary.shops === 1 ? "shop" : "shops"}`
-            : "Not enough verified evidence in this niche yet."}
+            /*
+              D1675 · THE PAGE DENIED THE EVIDENCE IT WAS SHOWING.
+
+              "Not enough verified evidence in this niche yet" sat directly
+              above listings labelled "Repeated momentum" and "Momentum
+              detected". Seen on the live page for girl power, which has
+              confirmations but has not reached the bar.
+
+              `meaningfulMomentum` is a threshold on listings, shops and
+              repeat movement — deliberately the same bar Design Scanner
+              uses, so the two features cannot disagree about a niche. That
+              bar is not changed here. Only the sentence is, so it stops
+              contradicting what is underneath it.
+            */
+            : listings.length
+              ? `${listings.length} ${listings.length === 1 ? "listing" : "listings"} `
+                + `confirmed, but not yet enough across enough shops to read as a `
+                + `pattern. Each one below is a confirmed movement on its own.`
+              : "Not enough verified evidence in this niche yet."}
           {view.window ? ` · ${view.window}` : ""}
           {summary.newSinceLastBrief > 0
             ? ` · ${summary.newSinceLastBrief} new since you last looked` : ""}
