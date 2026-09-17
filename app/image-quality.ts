@@ -36,7 +36,7 @@ export type ImageQuality = {
   emptiness: QualityVerdict;
   /* One sentence per measurement, in the member's terms. */
   notes: string[];
-  /* What Goldie is permitted to claim after measuring. */
+  /* What the scanner is permitted to claim after measuring. */
   mayClaimReadable: boolean;
   mayClaimHighContrast: boolean;
 };

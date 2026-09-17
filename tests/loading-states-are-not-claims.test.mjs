@@ -261,3 +261,62 @@ test("a fixture that lives in a sub-view opens in that sub-view", async () => {
   assert.match(client, /const tabFromUrl = /);
   assert.match(client, /url\.searchParams\.set\("tab", "shops"\)/);
 });
+
+test("the scanner shows what it measured about the artwork", () => {
+  /*
+    contrast, sharpness and thumbnail survival were measured on every scan,
+    returned by the API, and rendered NOWHERE. A member was told how their
+    design compares with what is moving and nothing about whether it is
+    legible at the size a buyer first sees it — the measurement existed,
+    was unit tested, and never reached a screen.
+  */
+  const source = read("design-scanner/design-scanner-client.tsx");
+  assert.match(source, /function ImageQuality\(/);
+  assert.match(source, /imageQuality\?: \{/, "the result type must carry the measurement");
+  /* Rendered on BOTH branches: a refused comparison still measured the art. */
+  const uses = source.match(/<ImageQuality quality=\{result\.imageQuality\} \/>/g) ?? [];
+  assert.equal(uses.length, 2, "the measurement must survive a refused comparison");
+  /* Every note is its own line — one measurement never explains the other. */
+  assert.match(source, /notes\.map\(note => <li key=\{note\}>\{note\}<\/li>\)/);
+  /* And a clean scan says nothing rather than ticking every box. */
+  assert.match(source, /if \(!notes\.length && !unverified\) return null;/);
+});
+
+test("the scanner's saved list tells a failed load from an empty one", () => {
+  const source = read("design-scanner/design-scanner-client.tsx");
+  assert.match(source, /const \[historyFailed, setHistoryFailed\] = useState\(false\)/);
+  /* Scoped to the history loader: the saved-niche dropdown beside it is a
+     convenience with a working fallback — the field still accepts anything
+     typed — so its failure is allowed to be quiet. The saved scans are not. */
+  const loader = source.slice(source.indexOf("const loadHistory"),
+    source.indexOf("useEffect(() => { void loadHistory"));
+  assert.ok(!/return;\s*\}\s*$/m.test(loader.split("setHistoryFailed(true); return;")[0]
+    .split("if (!response.ok)")[1] ?? ""), "the history loader must record a failure");
+  assert.match(loader, /if \(!response\.ok\) \{ setHistoryFailed\(true\); return; \}/);
+  assert.match(source, /None of them have been changed/);
+});
+
+test("the readability fixtures prove contrast and softness stay independent", async () => {
+  /*
+    The defect this guards was a correction that did not match the problem:
+    a blurred design was told its contrast was wrong. These three states are
+    the proof that each measurement speaks for itself, and that when both
+    fail the member is told both.
+  */
+  const { fixtureFor } = await import("../app/state-fixtures.ts");
+  const faint = fixtureFor("scanner-quality-faint");
+  const soft = fixtureFor("scanner-quality-soft");
+  const both = fixtureFor("scanner-quality-both");
+  const notesOf = one => one.replies
+    .find(reply => reply.method === "POST").body.imageQuality.notes;
+
+  assert.equal(notesOf(faint).length, 1);
+  assert.match(notesOf(faint)[0], /too close together/);
+  assert.ok(!/edges/.test(notesOf(faint)[0]), "a faint design is not told it is blurred");
+
+  assert.equal(notesOf(soft).length, 1);
+  assert.match(notesOf(soft)[0], /edges/);
+  assert.ok(!/close together/.test(notesOf(soft)[0]), "a blurred design is not told it is faint");
+
+  assert.equal(notesOf(both).length, 2, "when both fail, say both");
+});

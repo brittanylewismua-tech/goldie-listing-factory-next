@@ -272,20 +272,108 @@ export const stateFixtures = (): StateFixture[] => [
       { path: "/api/market-watch/update", status: 500, body: { error: "upstream" } }] },
 
   /* ------------------------------------------------------- design scanner */
+  { key: "scanner-quality-faint", label: "Readability — faint only", surface: "design-scanner",
+    what: "Low contrast, crisp edges. ONE note, about contrast. Nothing about blur.",
+    replies: [
+      { path: "/api/design-scanner/scan", method: "GET", status: 200,
+        body: { scans: [], scansLeftToday: 7 } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
+      { path: "/api/design-scanner/scan", method: "POST", status: 200, body: {
+        ok: true, niche: "bachelorette", overall: "Partial visual-pattern alignment",
+        scansLeftToday: 6, warm: false, trademark: null,
+        imageQuality: { contrast: "fail", sharpness: "pass", thumbnailReadable: "fail",
+          notes: ["The design's light and dark areas are too close together to read "
+            + "easily (measured 2.1:1; around 4.5:1 is where text stays comfortable)."] },
+        working: ["Script lettering, which most of the moving listings use."],
+        opportunity: "The moving listings set the date much smaller than the name.",
+        evidence: "Compared with 23 listings confirmed moving in the last 14 days." } }] },
+
+  { key: "scanner-quality-soft", label: "Readability — soft edges only", surface: "design-scanner",
+    what: "Strong contrast, soft edges. ONE note, about softness. Nothing about contrast.",
+    replies: [
+      { path: "/api/design-scanner/scan", method: "GET", status: 200,
+        body: { scans: [], scansLeftToday: 7 } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
+      { path: "/api/design-scanner/scan", method: "POST", status: 200, body: {
+        ok: true, niche: "dog mom", overall: "Strong visual-pattern alignment",
+        scansLeftToday: 6, warm: false, trademark: null,
+        imageQuality: { contrast: "pass", sharpness: "fail", thumbnailReadable: "pass",
+          notes: ["The edges in this design are soft. At the size buyers first see it, "
+            + "that reads as a blurry picture rather than a soft style."] },
+        working: ["Heavy slab lettering, like the listings that keep moving."],
+        opportunity: "Most moving listings put the animal above the words, not beside them.",
+        evidence: "Compared with 31 listings confirmed moving in the last 14 days." } }] },
+
+  { key: "scanner-quality-both", label: "Readability — faint AND soft", surface: "design-scanner",
+    what: "Both measurements fail. BOTH notes appear. Neither is written as the cause of the other.",
+    replies: [
+      { path: "/api/design-scanner/scan", method: "GET", status: 200,
+        body: { scans: [], scansLeftToday: 7 } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
+      { path: "/api/design-scanner/scan", method: "POST", status: 200, body: {
+        ok: true, niche: "teacher", overall: "Partial visual-pattern alignment",
+        scansLeftToday: 6, warm: false, trademark: null,
+        imageQuality: { contrast: "fail", sharpness: "fail", thumbnailReadable: "fail",
+          notes: ["The design's light and dark areas are too close together to read "
+            + "easily (measured 1.8:1; around 4.5:1 is where text stays comfortable).",
+            "The edges in this design are soft. At the size buyers first see it, "
+            + "that reads as a blurry picture rather than a soft style."] },
+        working: [], opportunity: "",
+        evidence: "Compared with 18 listings confirmed moving in the last 14 days." } }] },
+
+  { key: "scanner-quality-empty", label: "Readability — near-empty artwork", surface: "design-scanner",
+    what: "Almost nothing on the canvas. Said plainly rather than measured into a verdict.",
+    replies: [
+      { path: "/api/design-scanner/scan", method: "GET", status: 200,
+        body: { scans: [], scansLeftToday: 7 } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
+      { path: "/api/design-scanner/scan", method: "POST", status: 200, body: {
+        ok: false, niche: "teacher", overall: "Not enough verified evidence",
+        scansLeftToday: 6, warm: false, trademark: null,
+        refusal: { kind: "thin-cohort",
+          because: "Only 4 listings in this niche have confirmed movement, which is "
+            + "too few to compare against." },
+        imageQuality: { contrast: "fail", sharpness: "unverified", thumbnailReadable: "fail",
+          emptiness: "fail",
+          notes: ["This design is empty or almost empty."] } } }] },
+
+  { key: "scanner-first-use", label: "First use", surface: "design-scanner",
+    what: "No design chosen and no saved scans. The page invites rather than looking broken.",
+    replies: [
+      { path: "/api/design-scanner/scan", method: "GET", status: 200,
+        body: { scans: [], scansLeftToday: 7 } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
+    ] },
+
+  { key: "scanner-history-failed", label: "Saved scans failed to load", surface: "design-scanner",
+    what: "History unavailable. Must not read as a member who has never scanned.",
+    replies: [
+      { path: "/api/design-scanner/scan", method: "GET", status: 500, body: { error: "upstream" } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } }] },
+
   { key: "scanner-daily-limit", label: "Daily limit reached", surface: "design-scanner",
     what: "The allowance is spent. Saved results stay open and reopening is free.",
-    replies: [{ path: "/api/design-scanner/scan", status: 429,
+    replies: [
+      { path: "/api/design-scanner/scan", method: "GET", status: 200,
+        body: { scans: [], scansLeftToday: 7 } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },{ path: "/api/design-scanner/scan", method: "POST", status: 429,
       body: { error: "You have used all 10 scans for today. One becomes available again shortly. "
         + "Your saved results stay open and reopening them is free.", limited: true } }] },
 
   { key: "scanner-provider-error", label: "Provider failure", surface: "design-scanner",
     what: "The model failed. Nothing counted against the allowance.",
-    replies: [{ path: "/api/design-scanner/scan", status: 502,
+    replies: [
+      { path: "/api/design-scanner/scan", method: "GET", status: 200,
+        body: { scans: [], scansLeftToday: 7 } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },{ path: "/api/design-scanner/scan", method: "POST", status: 502,
       body: { error: "That scan did not complete. It has not been counted against your daily scans." } }] },
 
   { key: "scanner-global-ceiling", label: "Global ceiling reached", surface: "design-scanner",
     what: "Capacity, not the member's own use. Must not read as their fault.",
-    replies: [{ path: "/api/design-scanner/scan", status: 429,
+    replies: [
+      { path: "/api/design-scanner/scan", method: "GET", status: 200,
+        body: { scans: [], scansLeftToday: 7 } },
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },{ path: "/api/design-scanner/scan", method: "POST", status: 429,
       body: { error: "Analysis capacity is temporarily full. Your design is saved — try again a little later.",
         limited: true } }] },
 

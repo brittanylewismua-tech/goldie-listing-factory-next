@@ -206,3 +206,17 @@
   border-radius:var(--p-radius);background:#fff;color:var(--p-ink);
   font-weight:750;font-size:13px;cursor:pointer}
 .pick:hover{background:var(--p-lavender);border-color:var(--p-pink)}
+
+/* ------------------------------------------------- readability measurement
+
+   D1626 · Contrast, edge softness and thumbnail survival were measured on
+   every scan and shown nowhere. Each note is its own line because each is its
+   own measurement: a design that is both faint and blurred gets both
+   sentences, and neither is written as the cause of the other.
+*/
+.scanner .quality { border-left: 3px solid var(--p-warn); padding-left: 14px; }
+.scanner .quality-notes { margin: 0; padding-left: 18px; }
+.scanner .quality-notes li { margin-bottom: 6px; line-height: 1.5; }
+.scanner .quality-notes li:last-child { margin-bottom: 0; }
+.scanner .quality-note { margin: 0; line-height: 1.5; color: var(--p-muted); }
+.scanner .p-notice .p-button { justify-self: start; min-height: 44px; padding: 0 12px; }

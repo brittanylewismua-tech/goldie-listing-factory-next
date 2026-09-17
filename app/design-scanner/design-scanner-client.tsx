@@ -32,6 +32,19 @@ type Result = {
   /* Whether the design is about the niche at all, as distinct from whether it
      is built like the listings that are moving in it. */
   subject?: { verdict: "on-subject" | "off-subject" | "unknown"; matched: string[]; because: string };
+  /*
+    WHAT THE PIXELS THEMSELVES SAY.
+
+    Measured on every scan, returned by the API since the measurement was
+    built, and rendered nowhere: contrast, edge softness and whether either
+    survives being shrunk to the size a buyer first sees. A member was told
+    how their design compares with what is moving while being told nothing
+    about whether it is legible at all.
+  */
+  imageQuality?: {
+    contrast: string; sharpness: string; thumbnailReadable: string;
+    emptiness?: string; notes?: string[];
+  };
   trademark: Trademark | null;
   scansLeftToday: number | null;
   niche: string;
@@ -104,18 +117,23 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
   const [history, setHistory] = useState<HistoryRow[]>([]);
+  /* A saved scan that failed to load is not a member who has never
+     scanned, and the allowance count is not "unlimited" because the
+     request that carries it fell over. */
+  const [historyFailed, setHistoryFailed] = useState(false);
   const [left, setLeft] = useState<number | null>(null);
   const timers = useRef<number[]>([]);
 
   const loadHistory = useCallback(async () => {
     try {
       const response = await fetch("/api/design-scanner/scan");
-      if (!response.ok) return;
+      if (!response.ok) { setHistoryFailed(true); return; }
       const body = await response.json() as
         { scans: HistoryRow[]; scansLeftToday: number | null };
       setHistory(body.scans ?? []);
       setLeft(body.scansLeftToday);
-    } catch { /* history is a convenience, never a blocker */ }
+      setHistoryFailed(false);
+    } catch { setHistoryFailed(true); }
   }, []);
 
   useEffect(() => { void loadHistory(); }, [loadHistory]);
@@ -244,6 +262,14 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
 
       {result && <ScanResult result={result} />}
 
+      {historyFailed && history.length === 0 && (
+        <p className="p-notice" role="status">
+          Your saved scans could not be loaded. None of them have been changed.{" "}
+          <button type="button" className="p-button p-button-quiet"
+            onClick={() => void loadHistory()}>Try again</button>
+        </p>
+      )}
+
       {history.length > 0 && (
         <section className="history p-card-quiet">
           <h2>Your scans</h2>
@@ -261,6 +287,36 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
         </section>
       )}
     </main>
+  );
+}
+
+/*
+  ONE MEASUREMENT, ONE SENTENCE, AND NEVER ONE EXPLAINING THE OTHER.
+
+  Contrast and edge softness are measured independently, so a design that is
+  both faint and blurred is told both things. An earlier version folded one
+  into the other and handed back a correction that did not match the problem.
+
+  A design that passes everything says nothing here: a green tick on every
+  scan trains the member to stop reading the section that matters.
+*/
+function ImageQuality({ quality }: { quality?: Result["imageQuality"] }) {
+  if (!quality) return null;
+  const notes = quality.notes ?? [];
+  const unverified = [quality.contrast, quality.sharpness, quality.thumbnailReadable]
+    .includes("unverified");
+  if (!notes.length && !unverified) return null;
+  return (
+    <div className="block quality" role="status">
+      <h2>Before you list this</h2>
+      {unverified && notes.length === 0
+        ? <p className="quality-note">
+            This design could not be measured, so its readability was not checked.
+          </p>
+        : <ul className="quality-notes">
+            {notes.map(note => <li key={note}>{note}</li>)}
+          </ul>}
+    </div>
   );
 }
 
@@ -283,6 +339,7 @@ function ScanResult({ result }: { result: Result }) {
               {result.subject.because}
             </p>
           )}
+          <ImageQuality quality={result.imageQuality} />
           {result.scope && <p className="scope">{result.scope}</p>}
           {result.working && result.working.length > 0 && (
             <div className="block">
@@ -299,6 +356,9 @@ function ScanResult({ result }: { result: Result }) {
         </>
       ) : (
         <div className="block">
+          {/* A refused comparison still measured the artwork, and that
+              measurement is often the more useful half. */}
+          <ImageQuality quality={result.imageQuality} />
           <div className="refusal"><p>{result.refusal?.because}</p></div>
         </div>
       )}
