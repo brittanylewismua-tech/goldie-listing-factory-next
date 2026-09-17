@@ -652,3 +652,74 @@ page. Re-pointed at the product system, given the shell.
 
 FOUR pages had the shallow version of this defect (a sentence as the whole
 loading state) and one had the dangerous version (a false claim).
+
+
+## COMPLETION LABELS (use these from now on)
+built · behaviorally tested · live verified · state-complete · visually complete · blocked
+
+## SLICE 1 — NAVIGATION AND ACCOUNT
+
+| dimension | status |
+|---|---|
+| /more redesigned as Tools & settings | live verified, visually complete |
+| Account destination created | live verified, visually complete |
+| Connections | live verified; state-complete for loading / empty / error / reconnect |
+| Entitlement redirect (?needs=) | live verified |
+| Deletion lifecycle | built (preview + counts); execution deliberately NOT wired |
+| Sign out | built; NOT tested — see below |
+| Authenticated mobile | blocked (credentials) |
+| Expired / grace / tier states | built; fixtures not yet written |
+
+CORE PATH VERIFIED. STATE COVERAGE INCOMPLETE. Not "slice complete".
+
+### Sign out is deliberately untested
+Clicking it destroys the only authenticated production session, and sign-in is
+Google OAuth or an emailed one-time link — neither of which this session can
+complete. Testing it would cost every remaining authenticated verification.
+It needs a second controlled account or a behavioural harness.
+
+### The Account destination did not exist
+"Plan and limits" was a usage meter. Everything else a member might want about
+their own account — which address they are signed in as, whether access is
+active, what data is held, how to leave — was elsewhere or nowhere.
+`/account/settings` now carries: signed-in email, access (from the PLAN),
+subscription status and end date, data counts with human labels, what would be
+kept and why, the honest beta deletion note, and sign out.
+
+Deletion: the plan, scoped SQL, confirmation phrase and recent-auth rule all
+exist and are tested. The BUTTON is deliberately not wired — an irreversible
+bulk delete running unattended should not ship on a code review, and
+`/api/account/data` already says so in the member's own words. A disabled
+control would be worse than the sentence.
+
+## THE STATE PREVIEW HARNESS (D1611, D1614) — the reusable foundation
+
+`/dev/state-preview` (owner-only). Mounts the SHIPPING components — no
+duplicated markup — and answers their requests from `app/state-fixtures.ts`
+with the network CLOSED: anything the table does not cover is refused in the
+browser and never leaves it, so a preview cannot reach Etsy, Printify, Stripe
+or a provider, and cannot write anything.
+
+Two defects in the harness itself, both found by looking at it:
+- It patched `fetch` in a `useEffect`. React runs a CHILD's effects before its
+  parent's, so components had already fired REAL requests — the preview showed
+  live production data wearing a fixture's label. Patching happens during the
+  parent's render now.
+- Feature stylesheets are imported by each ROUTE, not by the component, so
+  mounting a component directly gave unstyled markup. The preview imports the
+  same files the routes do.
+
+Verified: `connections-etsy-disconnected` shows the fixture, leaks no real
+data, is correctly styled, and reports the one unfixtured request rather than
+silently allowing it.
+
+### It immediately earned itself
+`connections-api-error` exposed a defect the live walkthrough could not reach:
+with both endpoints failing, `loaded` became true while `shops` was empty, so
+the page showed the error AND "No Etsy shop connected yet" beneath it — the
+same false claim as D1609, through the other door. Fixed in D1615.
+
+States covered so far: connections (loading, etsy-disconnected,
+printify-disconnected, both-disconnected, needs-reconnect, api-error),
+market-watch (empty, api-error), design-scanner (daily limit, provider error,
+global ceiling), shop-map (loading, api-error).
