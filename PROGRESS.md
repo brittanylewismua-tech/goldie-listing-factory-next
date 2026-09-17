@@ -367,3 +367,76 @@ An untracked niche ("underwater basket weaving") is refused as
 `cohort-too-small` — "Only 0 listings in this niche show verified movement so
 far", which invites waiting for evidence that will never arrive. A niche that
 is not tracked at all should say so.
+
+## PRINTIFY JOURNEY — COMPLETE AND CLEANED UP
+
+Marker changed to `[gv9f3a1c]` (D1601). A hyphen would not have survived the
+title derivation `.replace(/[_-]+/g," ")`, arriving as "[gv 9f3a1c]" and
+leaving a product nothing could identify or remove.
+
+### Attempt 2 — provider rejection, nothing created
+Batch cd427534. Title "INTERNAL TEST DO NOT ORDER [gv9f3a1c]".
+Printify 400, code 61003: **"Product is invalid. Title contains excessive
+caps."** Stage: PROVIDER REJECTION (clean 4xx, nothing created). Status
+recorded `NeedsRetry`. The reason was VISIBLE on screen — D1598 working; before
+that fix this was a bare "Retry listing".
+
+Worth knowing: Printify rejects all-caps titles. Any member naming a design in
+caps hits this.
+
+### Attempt 3 — created, verified, removed
+Batch 7e73a007. Title "Internal Test Do Not Order [gv9f3a1c]" (mixed case).
+2400x2400 artwork (the 97 DPI gate correctly demanded approval at 1200px).
+
+- **Product id `6aab5c8e46a737eb220ed381`**, taken from the Printify product
+  listing filtered by marker — never from a thumbnail, mockup, template or
+  preview.
+- Title on the provider: `Internal Test Do Not Order [gv9f3a1c]` — exact,
+  marker intact in the OUTGOING title.
+- `linkedToSalesChannel: ""` — never published to Etsy.
+- Screens walked: review checklist (placement, colors & sizes, pricing &
+  shipping, photos, title & tags, description, Etsy details), title editor,
+  keyword-bank picker.
+- Title generation exercised the LAYERED route from the member interface and
+  correctly REFUSED: "This keyword bank does not match this design. Choose a
+  bank that describes the artwork, or write the title yourself." The dachshund
+  bank against an internal-test design — D414 protection holding, strict
+  ranking, no padded title.
+- **Deleted**: deleteStatus 200, `confirmedGone: true`, confirm read 404,
+  follow-up read `exists: false`, shop scan `internalTests: []`.
+
+Nothing remains in Printify. Nothing was created on Etsy at any point.
+
+## SCANNER IMAGE-QUALITY GATE — BUILT (D1602), NO PAID CALLS USED
+
+`app/image-quality.ts` measures from the pixels:
+- contrast (WCAG ratio, 5th/95th percentile so one stray pixel is not contrast)
+- tonal range
+- sharpness: PEAK gradient normalised by tonal range. A first version used the
+  MEAN, which measures edge DENSITY — a striped design stayed "sharp" however
+  blurred. Calibrated across a blur sweep (0,2,4 pass / 6,10,20 fail), not to
+  the one reported example.
+- thumbnail readability at an AREA-AVERAGED 64px reduction. Nearest-neighbour
+  resampling reconstructed hard edges from blurred pixels.
+- emptiness and transparency (composited onto white first, because a
+  transparent PNG measured raw reads as superb contrast and is invisible on a
+  white shirt)
+
+`measureQuality` gates `mayClaimReadable` / `mayClaimHighContrast`.
+`design-compare.ts` now requires those before emitting "stays readable at
+thumbnail size" or "contrast matches". A failed decode yields `unverified`,
+which blocks the positive claim without inventing a negative one and tells the
+member readability was not verified. Low contrast and blur stay SEPARATE
+failures — telling someone to sharpen a faint design sends them to fix the
+wrong thing.
+
+Relevance tightened: an image-only design is now `unknown`, never
+`off-subject`. Subject and construction are separate in the result model
+(`subject` and `imageQuality`) and in the wording.
+
+NOT re-run: cases 8, 9, 14-17 need the scanner allowance, which resets
+naturally. Re-run then, including proof that two simultaneous identical
+uploads make ONE provider call and consume ONE allowance (D1600).
+
+### STILL NOT DONE
+Visual migration across member pages, and the full Chrome state matrix.
