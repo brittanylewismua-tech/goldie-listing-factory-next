@@ -14,6 +14,7 @@ import "@/app/shop-map/shop-map.css";
 import ConnectionsClient from "@/app/connections/connections-client";
 import MarketWatchClient from "@/app/market-watch/market-watch-client";
 import BatchesPage from "@/app/batches/page";
+import ListingFactoryApp from "@/app/listing-factory-app";
 import DesignScannerClient from "@/app/design-scanner/design-scanner-client";
 import ShopMapClient from "@/app/shop-map/shop-map-client";
 import AccountClient from "@/app/account/settings/account-client";
@@ -96,6 +97,9 @@ const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
   "shop-map": () => <ShopMapClient signedInEmail="preview@example.invalid" />,
   account: () => <AccountClient email="preview@example.invalid" />,
   batches: () => <BatchesPage />,
+  /* The whole workflow, mounted against a closed network. Its own
+     stylesheets come in through the shell imports above. */
+  "listing-factory": () => <ListingFactoryApp />,
 };
 
 /*

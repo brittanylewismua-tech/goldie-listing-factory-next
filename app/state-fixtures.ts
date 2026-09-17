@@ -46,7 +46,7 @@ export type StateFixture = {
   label: string;
   /* Which component the preview should mount. */
   surface: "connections" | "market-watch" | "design-scanner" | "shop-map" | "account"
-    | "batches";
+    | "batches" | "listing-factory";
   /*
     Which sub-view of that surface the state lives in. Two shop fixtures
     rendered Market Watch's niche tab and were called verified: the state they
@@ -590,6 +590,98 @@ export const stateFixtures = (): StateFixture[] => [
     what: "The list loads, the daily listing count does not. Said, not shown as zero.",
     replies: [{ path: "/api/batches", status: 200, body: { preparedAvailable: false,
       batches: [{ id: "b-1", status: "complete", step: "results", setup_name: "Bachelorette set", product_title: "Bachelorette Party Shirt", design_count: 6, created_at: "2026-09-16 14:02:11", updated_at: "2026-09-17 09:14:02", display_name: "Bachelorette Party Shirt", thumbnail_url: "", published_count: 0 }] } }] },
+
+
+  /* -------------------------------------------------------- listing factory */
+  { key: "factory-connect-checking", label: "Checking connections", surface: "listing-factory",
+    what: "Neither answer has arrived. Nothing may say 'Not connected yet'.",
+    replies: [
+      { path: "/api/printify", status: 200, body: { connected: true }, delayMs: 60_000 },
+      { path: "/api/etsy", status: 200, body: { connected: true }, delayMs: 60_000 },
+      { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
+      { path: "/api/keyword-lists", status: 200, body: { lists: [] } },
+      { path: "/api/product-recipes", status: 200, body: { recipes: [] } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite",
+        drafts: 10_000, dailyListings: 1_000 }, usage: { drafts: 12 } } },
+      { path: "/api/batches", status: 200, body: { batches: [], prepared: [],
+        preparedAvailable: true } },
+    ] },
+
+  { key: "factory-connect-none", label: "Neither account connected", surface: "listing-factory",
+    what: "A genuinely new member. The connect step is correct here.",
+    replies: [
+      { path: "/api/printify", status: 200, body: { connected: false } },
+      { path: "/api/etsy", status: 200, body: { connected: false } },
+      { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
+      { path: "/api/keyword-lists", status: 200, body: { lists: [] } },
+      { path: "/api/product-recipes", status: 200, body: { recipes: [] } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite",
+        drafts: 10_000, dailyListings: 1_000 }, usage: { drafts: 12 } } },
+      { path: "/api/batches", status: 200, body: { batches: [], prepared: [],
+        preparedAvailable: true } },
+    ] },
+
+  { key: "factory-check-failed", label: "Connection check failed", surface: "listing-factory",
+    what: "Both checks fail on an account that IS connected. It must not say "
+      + "'Not connected yet', and it must not move the member.",
+    replies: [
+      { path: "/api/printify", status: 500, body: { error: "upstream" } },
+      { path: "/api/etsy", status: 500, body: { error: "upstream" } },
+      { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
+      { path: "/api/keyword-lists", status: 200, body: { lists: [] } },
+      { path: "/api/product-recipes", status: 200, body: { recipes: [] } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite",
+        drafts: 10_000, dailyListings: 1_000 }, usage: { drafts: 12 } } },
+      { path: "/api/batches", status: 200, body: { batches: [], prepared: [],
+        preparedAvailable: true } },
+    ] },
+
+  { key: "factory-etsy-lapsed", label: "Etsy access lapsed", surface: "listing-factory",
+    what: "Printify fine, Etsy's token gone. Reconnecting must not read as a first connection.",
+    replies: [
+      { path: "/api/printify", status: 200, body: { connected: true } },
+      { path: "/api/etsy", status: 200, body: { connected: false,
+        error: "Your Etsy access has expired. Reconnect the shop to continue." } },
+      { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
+      { path: "/api/keyword-lists", status: 200, body: { lists: [] } },
+      { path: "/api/product-recipes", status: 200, body: { recipes: [] } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite",
+        drafts: 10_000, dailyListings: 1_000 }, usage: { drafts: 12 } } },
+      { path: "/api/batches", status: 200, body: { batches: [], prepared: [],
+        preparedAvailable: true } },
+    ] },
+
+  { key: "factory-ready", label: "Connected, no product chosen", surface: "listing-factory",
+    what: "Both connected and nothing built yet. The next thing to do must be obvious.",
+    replies: [
+      { path: "/api/printify", status: 200, body: { connected: true, owner: true } },
+      { path: "/api/etsy", status: 200, body: { connected: true, shopName: "a-connected-shop" } },
+      { path: "/api/etsy/shipping-profiles", status: 200, body: { profiles: [
+        { id: 1, title: "Standard" }] } },
+      { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
+      { path: "/api/keyword-lists", status: 200, body: { lists: [] } },
+      { path: "/api/product-recipes", status: 200, body: { recipes: [] } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite",
+        drafts: 10_000, dailyListings: 1_000 }, usage: { drafts: 12 } } },
+      { path: "/api/batches", status: 200, body: { batches: [], prepared: [],
+        preparedAvailable: true } },
+    ] },
+
+  { key: "factory-plan-exhausted", label: "Draft allowance spent", surface: "listing-factory",
+    what: "The plan's drafts are used up. A limit is not an error and not the member's fault.",
+    replies: [
+      { path: "/api/printify", status: 200, body: { connected: true, owner: true } },
+      { path: "/api/etsy", status: 200, body: { connected: true, shopName: "a-connected-shop" } },
+      { path: "/api/etsy/shipping-profiles", status: 200, body: { profiles: [
+        { id: 1, title: "Standard" }] } },
+      { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
+      { path: "/api/keyword-lists", status: 200, body: { lists: [] } },
+      { path: "/api/product-recipes", status: 200, body: { recipes: [] } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Starter", drafts: 50 },
+        usage: { drafts: 50 } } },
+      { path: "/api/batches", status: 200, body: { batches: [], prepared: [],
+        preparedAvailable: true } },
+    ] },
 
   /* -------------------------------------------------------------- shop map */
   { key: "shop-map-loading", label: "Loading", surface: "shop-map",
