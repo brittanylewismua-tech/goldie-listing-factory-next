@@ -92,16 +92,83 @@ export const stateFixtures = (): StateFixture[] => [
     replies: [{ path: "/api/shop-map/connections", status: 500, body: { error: "upstream" } },
       { path: "/api/connections/printify", status: 500, body: { error: "upstream" } }] },
 
-  /* -------------------------------------------------------- market watch */
+  /* --------------------------------------------------------- market watch
+
+     THESE TWO POINTED AT A PATH THE PAGE NEVER CALLS.
+
+     Both named `/api/market/shop-watch`, the worker's refresh route. The
+     client calls `/api/shop-watch/brief`. The interceptor refuses anything
+     unfixtured, so the shops request threw on every preview — and the page
+     swallowed it into an empty list, which is exactly the defect these
+     fixtures exist to catch. A fixture aimed at the wrong door proves
+     nothing, twice over.
+  */
+  { key: "market-watch-loading", label: "Loading", surface: "market-watch",
+    what: "Nothing may claim the member has no watches while the answer is still in flight.",
+    replies: [
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] }, delayMs: 60_000 },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] }, delayMs: 60_000 },
+      { path: "/api/market-watch/update", status: 200, body: { lines: [] }, delayMs: 60_000 }] },
+
   { key: "market-watch-empty", label: "Nothing watched", surface: "market-watch",
     what: "A member who has not started. The page has to invite, not apologise.",
-    replies: [{ path: "/api/market-watch/niches", status: 200, body: { niches: [], watches: [] } },
-      { path: "/api/market/shop-watch", status: 200, body: { watches: [] } }] },
+    replies: [{ path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
+      { path: "/api/market-watch/update", status: 200,
+        body: { lines: [], message: null } }] },
+
+  { key: "market-watch-saved", label: "Saved niches", surface: "market-watch",
+    what: "The ordinary loaded state: watches with evidence, and today's lines.",
+    replies: [
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [
+        { key: "bachelorette", phrase: "bachelorette", moving: 14, repeated: 5, shops: 9,
+          lastCheckedAt: secondsAgo(5_400), stale: false },
+        { key: "dog-mom", phrase: "dog mom", moving: 6, repeated: 2, shops: 4,
+          lastCheckedAt: secondsAgo(9_000), stale: false }] } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
+      { path: "/api/market-watch/update", status: 200, body: { lines: [
+        "3 listings in bachelorette moved again today.",
+        "dog mom has 1 new shop showing repeated movement."], message: null } }] },
+
+  { key: "market-watch-stale", label: "Refresh failed (stale reading)", surface: "market-watch",
+    what: "Today's update could not be built. The last confirmed reading is labelled, not hidden.",
+    replies: [
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [
+        { key: "bachelorette", phrase: "bachelorette", moving: 14, repeated: 5, shops: 9,
+          lastCheckedAt: secondsAgo(190_000), stale: true }] } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
+      { path: "/api/market-watch/update", status: 500, body: { error: "upstream" } }] },
+
+  { key: "market-watch-shop-patterns", label: "Shop Watch patterns", surface: "market-watch",
+    what: "A shop brief with a finding, its reasoning and its evidence — not a bare count.",
+    replies: [
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
+      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [{
+        shopId: 4471, shopName: "a-watched-shop", etsy: "https://www.etsy.com/shop/a-watched-shop",
+        gettingAttention: [{ pattern: "One listing is drawing most of this shop's recent reviews.",
+          because: "9 of the last 496 reviews are for it, where an average listing here draws 2.",
+          evidence: "9 reviews", window: "last 30 days",
+          listing: { id: 1234567890, url: "https://www.etsy.com/listing/1234567890" } }],
+        whatBuyersLove: [{ pattern: "Buyers repeatedly mention the print quality.",
+          because: "Named in 31 of 44 five-star reviews, more than any other subject.",
+          evidence: "31 reviews", window: "last 90 days", listing: { id: null, url: "" } }],
+        whatBuyersDislike: [], whatChanged: [] }] } }] },
+
+  { key: "market-watch-shop-empty", label: "Shop watched, nothing confirmed", surface: "market-watch",
+    what: "A shop is followed but has no confirmed pattern. Silence has to be explained.",
+    replies: [
+      { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
+      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [{
+        shopId: 4471, shopName: "a-quiet-shop", etsy: "", gettingAttention: [],
+        whatBuyersLove: [], whatBuyersDislike: [], whatChanged: [] }] } }] },
 
   { key: "market-watch-api-error", label: "API failure", surface: "market-watch",
-    what: "Evidence unavailable. Must not read as 'nothing is moving'.",
+    what: "Evidence unavailable. Must not read as 'nothing is moving' or 'you watch nothing'.",
     replies: [{ path: "/api/market-watch/niches", status: 500, body: { error: "upstream" } },
-      { path: "/api/market/shop-watch", status: 500, body: { error: "upstream" } }] },
+      { path: "/api/shop-watch/brief", status: 500, body: { error: "upstream" } },
+      { path: "/api/market-watch/update", status: 500, body: { error: "upstream" } }] },
 
   /* ------------------------------------------------------- design scanner */
   { key: "scanner-daily-limit", label: "Daily limit reached", surface: "design-scanner",

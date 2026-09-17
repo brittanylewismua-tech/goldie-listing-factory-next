@@ -131,3 +131,74 @@ test("deletion is a real flow, with no sentence apologising for itself", () => {
   /* And no permanent note explaining that the feature is unfinished. */
   assert.ok(!/carried out by hand/.test(source));
 });
+
+test("market watch tells waiting, broken and genuinely empty apart", () => {
+  /*
+    The third page in this product to ship the Connections defect. Both
+    loaders did `if (!response.ok) return;` and swallowed a thrown request,
+    leaving the list at its initial `[]` — so a member whose watches failed to
+    load was shown the new-member invitation, and that same invitation flashed
+    on every load before the data arrived.
+  */
+  const source = read("market-watch/market-watch-client.tsx");
+  assert.match(source, /type Load<T> = \{ status: "loading" \| "ready" \| "failed"; data: T \}/);
+  /* No loader may return without recording which of the three happened. */
+  assert.ok(!/if \(!response\.ok\) return;/.test(source),
+    "a failed response must set the failed state, not fall through to empty");
+  /* The empty sentence is reachable only through the state machine. */
+  assert.match(source, /function WatchList\(/);
+  assert.match(source, /load\.data\.length === 0 \? <p className="empty">\{empty\}<\/p> : children/);
+  assert.match(source, /load\.status === "loading" && load\.data\.length === 0/);
+  assert.match(source, /load\.status === "failed" && load\.data\.length === 0/);
+  /* A failed refresh over data already on screen keeps the data. */
+  assert.match(source, /Showing what was loaded before/);
+  assert.match(source, /p-skeleton/, "the wait must draw the shape of what is coming");
+});
+
+test("a shop card's sections sit under the shop, not beside it", () => {
+  /* The shop name and every section heading were both <h3>, so nothing in the
+     document structure said which shop a section belonged to. */
+  const source = read("market-watch/market-watch-client.tsx");
+  assert.match(source, /<h2 className="shop-name">\{shop\.shopName\}<\/h2>/);
+  assert.match(source, /<h3 className="section-name">\{name\}<\/h3>/);
+});
+
+test("every state fixture answers the endpoints its surface actually calls", () => {
+  /*
+    BOTH MARKET WATCH FIXTURES NAMED A PATH THE PAGE NEVER CALLS.
+
+    They answered `/api/market/shop-watch` — the worker's refresh route —
+    while the client fetches `/api/shop-watch/brief`. The interceptor refuses
+    anything unfixtured, so the shops request threw in every preview and the
+    page swallowed it into an empty list: the fixture demonstrated the very
+    defect it existed to catch, and agreed with it.
+
+    So the fixtures are checked against the client's own fetch calls rather
+    than against somebody's memory of them.
+  */
+  const fixtures = read("state-fixtures.ts");
+  const surfaces = {
+    "connections": "connections/connections-client.tsx",
+    "market-watch": "market-watch/market-watch-client.tsx",
+    "shop-map": "shop-map/shop-map-client.tsx",
+    "account": "account/settings/account-client.tsx",
+  };
+  for (const [surface, file] of Object.entries(surfaces)) {
+    const client = read(file);
+    const called = new Set();
+    for (const [, path] of client.matchAll(/fetch\(\s*[`"'](\/api\/[^`"'?${\s]+)/g))
+      called.add(path);
+    assert.ok(called.size > 0, `${surface}: no fetch calls found — the guard would pass blindly`);
+
+    /* Every reply path declared for this surface, across all its fixtures. */
+    const answered = new Set();
+    for (const block of fixtures.split(/\{ key: "/).slice(1)) {
+      if (!block.includes(`surface: "${surface}"`)) continue;
+      for (const [, path] of block.matchAll(/path: "(\/api\/[^"]+)"/g)) answered.add(path);
+    }
+
+    for (const path of answered)
+      assert.ok([...called].some(one => one.startsWith(path) || path.startsWith(one)),
+        `${surface} fixtures answer ${path}, which the page never calls`);
+  }
+});

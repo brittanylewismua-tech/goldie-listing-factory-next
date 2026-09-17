@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 /**
  * MARKET WATCH.
@@ -64,46 +64,69 @@ const ago = (seconds: number) => {
   return `confirmed ${Math.round(gap / 86_400)} days ago`;
 };
 
+/*
+  THREE STATES, NOT TWO.
+
+  Both loaders used to `return` on a failed response and swallow a thrown one,
+  leaving the list at its initial `[]`. A member whose watches failed to load
+  was told "Watch a niche and Market Watch starts collecting evidence" — the
+  new-member invitation, shown to somebody with seven saved niches. And with
+  no loading state, that same sentence flashed on every single page load
+  before the data arrived.
+
+  This is the third page in this product to ship that defect, so the states
+  are modelled once here rather than described in prose again: nothing on
+  screen claims a list is empty until a response actually said so.
+*/
+type Load<T> = { status: "loading" | "ready" | "failed"; data: T };
+
 export default function MarketWatchClient({ signedInEmail }: { signedInEmail: string }) {
   void signedInEmail;
   const [tab, setTab] = useState<"niches" | "shops">("niches");
-  const [update, setUpdate] = useState<{ lines: string[]; message: string | null } | null>(null);
-  const [watches, setWatches] = useState<WatchRow[]>([]);
+  const [update, setUpdate] = useState<Load<{ lines: string[]; message: string | null } | null>>(
+    { status: "loading", data: null });
+  const [watches, setWatches] = useState<Load<WatchRow[]>>({ status: "loading", data: [] });
   const [open, setOpen] = useState<NicheView | null>(null);
-  const [shops, setShops] = useState<ShopView[]>([]);
+  const [shops, setShops] = useState<Load<ShopView[]>>({ status: "loading", data: [] });
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const loadNiches = useCallback(async () => {
+  const loadNiches = useCallback(async (quiet = false) => {
+    if (!quiet) setWatches(was => ({ ...was, status: "loading" }));
     try {
       const response = await fetch("/api/market-watch/niches");
-      if (!response.ok) return;
+      if (!response.ok) { setWatches(was => ({ status: "failed", data: was.data })); return; }
       const body = await response.json() as { watches: WatchRow[] };
-      setWatches(body.watches ?? []);
-    } catch { /* the saved list is a convenience */ }
+      setWatches({ status: "ready", data: body.watches ?? [] });
+    } catch { setWatches(was => ({ status: "failed", data: was.data })); }
   }, []);
 
-  const loadShops = useCallback(async () => {
+  const loadShops = useCallback(async (quiet = false) => {
+    if (!quiet) setShops(was => ({ ...was, status: "loading" }));
     try {
       const response = await fetch("/api/shop-watch/brief");
-      if (!response.ok) return;
+      if (!response.ok) { setShops(was => ({ status: "failed", data: was.data })); return; }
       const body = await response.json() as { shops: ShopView[] };
-      setShops(body.shops ?? []);
-    } catch { /* same */ }
+      setShops({ status: "ready", data: body.shops ?? [] });
+    } catch { setShops(was => ({ status: "failed", data: was.data })); }
+  }, []);
+
+  const loadUpdate = useCallback(async () => {
+    setUpdate(was => ({ ...was, status: "loading" }));
+    try {
+      const response = await fetch("/api/market-watch/update");
+      if (!response.ok) { setUpdate(was => ({ status: "failed", data: was.data })); return; }
+      setUpdate({ status: "ready", data: await response.json() as
+        { lines: string[]; message: string | null } });
+    } catch { setUpdate(was => ({ status: "failed", data: was.data })); }
   }, []);
 
   useEffect(() => {
     void loadNiches();
     void loadShops();
-    (async () => {
-      try {
-        const response = await fetch("/api/market-watch/update");
-        if (response.ok) setUpdate(await response.json() as
-          { lines: string[]; message: string | null });
-      } catch { /* the update is not load-bearing */ }
-    })();
-  }, [loadNiches, loadShops]);
+    void loadUpdate();
+  }, [loadNiches, loadShops, loadUpdate]);
 
   const add = async () => {
     const value = input.trim();
@@ -119,8 +142,8 @@ export default function MarketWatchClient({ signedInEmail }: { signedInEmail: st
       if (!response.ok) setError(body.error ?? "That could not be saved.");
       else {
         setInput("");
-        if (tab === "niches") { setOpen(body); void loadNiches(); }
-        else void loadShops();
+        if (tab === "niches") { setOpen(body); void loadNiches(true); }
+        else void loadShops(true);
       }
     } catch { setError("That could not be saved."); }
     finally { setBusy(false); }
@@ -136,27 +159,45 @@ export default function MarketWatchClient({ signedInEmail }: { signedInEmail: st
     } catch { setError("That watch could not be opened."); }
   };
 
-  if (open) return <NicheDetail view={open} onBack={() => { setOpen(null); void loadNiches(); }} />;
+  if (open) return <NicheDetail view={open} onBack={() => { setOpen(null); void loadNiches(true); }} />;
 
   return (
     <main className="mw">
       <h1>Market Watch</h1>
       <p className="lede">What is actually moving in the niches and shops you follow.</p>
 
-      {update && (
-        <section className="update">
-          <h2>Today</h2>
-          {update.lines.length > 0
-            ? <ul>{update.lines.map(line => <li key={line}>{line}</li>)}</ul>
-            : <p>{update.message}</p>}
-        </section>
-      )}
+      <section className="update">
+        <h2>Today</h2>
+        {update.status === "loading" && (
+          <div className="update-wait" aria-hidden="true">
+            <span className="p-skeleton" /><span className="p-skeleton" />
+          </div>
+        )}
+        {update.status === "failed" && (
+          <p className="update-failed">
+            Today&apos;s update could not be loaded. Nothing has changed in what is being
+            watched.{" "}
+            <button type="button" className="p-button p-button-quiet" onClick={() => void loadUpdate()}>
+              Try again
+            </button>
+          </p>
+        )}
+        {update.status === "ready" && (
+          (update.data?.lines ?? []).length > 0
+            ? <ul>{update.data!.lines.map(line => <li key={line}>{line}</li>)}</ul>
+            /* `message` can be null. Rendering it bare left an empty paragraph
+               under a "Today" heading — a section that looked broken rather
+               than quiet. */
+            : <p>{update.data?.message
+                || "Nothing confirmed since your last visit. This fills in as evidence arrives."}</p>
+        )}
+      </section>
 
       <div className="tabs p-tabs" role="tablist">
-        <button className="p-tab" role="tab" aria-selected={tab === "niches"} onClick={() => setTab("niches")}>
+        <button className="p-tab" role="tab" aria-selected={tab === "niches"} onClick={() => { setTab("niches"); setError(""); }}>
           Niche Watch
         </button>
-        <button className="p-tab" role="tab" aria-selected={tab === "shops"} onClick={() => setTab("shops")}>
+        <button className="p-tab" role="tab" aria-selected={tab === "shops"} onClick={() => { setTab("shops"); setError(""); }}>
           Shop Watch
         </button>
       </div>
@@ -173,28 +214,72 @@ export default function MarketWatchClient({ signedInEmail }: { signedInEmail: st
       {error && <p className="error">{error}</p>}
 
       {tab === "niches" ? (
-        watches.length === 0
-          ? <p className="empty">
-              Watch a niche and Market Watch starts collecting evidence for it. Come back
-              tomorrow to see what changed.
-            </p>
-          : watches.map(watch => (
-              <button key={watch.key} className="watch" data-stale={watch.stale ? "yes" : "no"}
-                onClick={() => void openNiche(watch.key)}>
-                <span className="name">{watch.phrase}</span>
-                <span className="meta">
-                  {watch.stale
-                    ? "Last update could not be refreshed — showing the last confirmed reading"
-                    : `${watch.moving} moving · ${watch.repeated} repeated · ${watch.shops} shops`}
-                </span>
-              </button>
-            ))
+        <WatchList
+          load={watches}
+          onRetry={() => void loadNiches()}
+          failure="Your saved niches could not be loaded. They have not been changed."
+          empty="Watch a niche and Market Watch starts collecting evidence for it. Come back
+                 tomorrow to see what changed."
+        >
+          {watches.data.map(watch => (
+            <button key={watch.key} className="watch" data-stale={watch.stale ? "yes" : "no"}
+              onClick={() => void openNiche(watch.key)}>
+              <span className="name">{watch.phrase}</span>
+              <span className="meta">
+                {watch.stale
+                  ? "Last update could not be refreshed — showing the last confirmed reading"
+                  : `${watch.moving} moving · ${watch.repeated} repeated · ${watch.shops} shops`}
+              </span>
+            </button>
+          ))}
+        </WatchList>
       ) : (
-        shops.length === 0
-          ? <p className="empty">Add a shop to follow what its buyers are saying.</p>
-          : shops.map(shop => <ShopCard key={shop.shopId} shop={shop} />)
+        <WatchList
+          load={shops}
+          onRetry={() => void loadShops()}
+          failure="The shop brief could not be loaded. The shops you follow have not been changed."
+          empty="Add a shop to follow what its buyers are saying."
+        >
+          {shops.data.map(shop => <ShopCard key={shop.shopId} shop={shop} />)}
+        </WatchList>
       )}
     </main>
+  );
+}
+
+/*
+  ONE PLACE THAT DECIDES BETWEEN WAITING, BROKEN AND GENUINELY EMPTY.
+
+  Both tabs render the same three states, and writing them twice is how the
+  two drifted apart everywhere else in this product.
+*/
+function WatchList({ load, onRetry, failure, empty, children }: {
+  load: { status: "loading" | "ready" | "failed"; data: unknown[] };
+  onRetry: () => void; failure: string; empty: string; children: ReactNode;
+}) {
+  if (load.status === "loading" && load.data.length === 0) return (
+    <div className="watch-wait" aria-label="Loading">
+      <span className="p-skeleton" /><span className="p-skeleton" /><span className="p-skeleton" />
+    </div>
+  );
+  if (load.status === "failed" && load.data.length === 0) return (
+    <p className="p-notice failed">
+      {failure}{" "}
+      <button type="button" className="p-button p-button-quiet" onClick={onRetry}>Try again</button>
+    </p>
+  );
+  return (
+    <>
+      {/* A refresh that failed while something is already on screen must not
+          blank it. The stale list stays, labelled. */}
+      {load.status === "failed" && (
+        <p className="p-notice failed">
+          {failure} Showing what was loaded before.{" "}
+          <button type="button" className="p-button p-button-quiet" onClick={onRetry}>Try again</button>
+        </p>
+      )}
+      {load.data.length === 0 ? <p className="empty">{empty}</p> : children}
+    </>
   );
 }
 
@@ -297,8 +382,8 @@ function ShopCard({ shop }: { shop: ShopView }) {
   ];
   const anything = sections.some(([, cards]) => cards.length > 0);
   return (
-    <section className="section">
-      <h3>{shop.shopName}</h3>
+    <section className="shop">
+      <h2 className="shop-name">{shop.shopName}</h2>
       {!anything && (
         <p className="empty">
           Nothing confirmed for this shop yet. Shop Watch checks it daily.
@@ -306,7 +391,7 @@ function ShopCard({ shop }: { shop: ShopView }) {
       )}
       {sections.map(([name, cards]) => cards.length === 0 ? null : (
         <div key={name} className="section">
-          <h3>{name}</h3>
+          <h3 className="section-name">{name}</h3>
           {cards.map((card, index) => (
             <div className="pattern" key={`${name}-${index}`}>
               <p className="pattern-headline">{card.pattern}</p>

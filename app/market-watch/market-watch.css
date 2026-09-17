@@ -223,6 +223,34 @@
    whole card: true, and impossible to act on without knowing what an average
    listing there draws. The headline carries the finding now and this carries
    the reasoning. */
-.pattern .pattern-headline{margin:0;font-size:14px;font-weight:700;line-height:1.35;color:var(--g-ink,#211725)}
-.pattern .pattern-because{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--g-copy,#645a68)}
-.pattern .support{display:inline-block;margin-top:8px;font-size:11px;color:var(--g-copy,#645a68);opacity:.85}
+.pattern .pattern-headline{margin:0;font-size:14px;font-weight:700;line-height:1.35;color:var(--ink)}
+.pattern .pattern-because{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
+.pattern .support{display:inline-block;margin-top:8px;font-size:11px;color:var(--muted);opacity:.85}
+
+/* ------------------------------------------------- waiting and failure
+
+   D1622 · Three states where there were two. The list skeletons are sized to
+   the rows they stand in for, so the page does not jump when real data lands —
+   a placeholder of the wrong height is its own small defect.
+*/
+.mw .watch-wait { display: grid; gap: 8px; margin-bottom: 8px; }
+.mw .watch-wait .p-skeleton { height: 66px; }
+.mw .update-wait { display: grid; gap: 6px; }
+.mw .update-wait .p-skeleton { height: 13px; }
+.mw .update-wait .p-skeleton:last-child { width: 62%; }
+
+.mw .p-notice.failed { margin: 0 0 12px; }
+.mw .p-notice.failed .p-button { justify-self: start; min-height: 44px; padding: 0 12px; }
+.mw .update-failed { margin: 0; color: var(--muted); }
+.mw .update-failed .p-button { min-height: 44px; padding: 0 12px; }
+
+/* ----------------------------------------------------- shop card headings
+
+   The shop name and each of its sections were both <h3>, so nothing in the
+   structure said the sections belonged to the shop.
+*/
+.mw .shop { margin-bottom: 28px; }
+.mw .shop-name {
+  font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
+  color: var(--ink); margin: 0 0 12px;
+}
