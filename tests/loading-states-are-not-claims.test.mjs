@@ -454,3 +454,33 @@ test("a subscription status is translated, never shown raw", async () => {
   assert.match(source, /replace\(\/_\/g, " "\)/);
   void subscriptionLabel;
 });
+
+test("a readability measurement is kept with the design, not thrown away", () => {
+  /*
+    The measurement only ran when the request carried image bytes — the first
+    scan of a design. Every scan after it is warm and sends no bytes, so a
+    member reopening a design they scanned an hour ago was told "this design's
+    readability could not be verified" about artwork that had measured clean
+    on contrast, sharpness and thumbnail readability.
+
+    Measured on the deployed build: a warm scan of the design from case 17
+    returned contrast/sharpness/thumbnailReadable all "unverified", where the
+    cold scan of the same hash had returned pass/pass/pass.
+
+    The scan result was cached; the one thing taken from the pixels was not.
+    Invisible until the measurement was rendered at all, which is the argument
+    for rendering what you measure.
+  */
+  const route = read("api/design-scanner/scan/route.ts");
+  assert.match(route, /let measured: ImageQuality \| undefined =[\s\S]{0,60}?\(upload as/,
+    "a warm scan must read the measurement it already has");
+  assert.match(route, /if \(!measured && body\?\.imageDataUrl\)/,
+    "the pixels are only measured when there is nothing stored");
+  assert.match(route, /UPDATE scan_uploads SET payload_json = \?/,
+    "a fresh measurement must be stored with the analysis it belongs to");
+  /* And the honest fallback no longer implies a failure that did not happen.
+     Comments may quote the old sentence; served strings may not. */
+  const served = route.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(!/readability could not be verified/.test(served));
+  assert.match(route, /has not been measured/);
+});

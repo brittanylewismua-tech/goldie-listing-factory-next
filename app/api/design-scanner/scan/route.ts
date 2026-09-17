@@ -389,8 +389,23 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
     A decode that fails yields `unverified`, which blocks the positive claim
     without inventing a negative one.
   */
-  let measured: ImageQuality | undefined;
-  if (body?.imageDataUrl) {
+  /*
+    MEASURED ONCE, REMEMBERED WITH THE DESIGN.
+
+    This only ran when the request carried image bytes — that is, on the first
+    scan of a design. Every scan after it is warm and sends no bytes, so a
+    member reopening a design they scanned an hour ago was told "this design's
+    readability could not be verified" about artwork that had measured clean.
+    The scan itself was cached; the one measurement taken from the pixels was
+    thrown away and re-reported as unknown.
+
+    It belongs with the rest of the cached analysis, so it is read from there
+    when present and written there when it is taken. Invisible until D1626
+    rendered any of this, which is the argument for rendering what you measure.
+  */
+  let measured: ImageQuality | undefined =
+    (upload as { imageQuality?: ImageQuality })?.imageQuality;
+  if (!measured && body?.imageDataUrl) {
     try {
       const base64 = body.imageDataUrl.slice(body.imageDataUrl.indexOf(",") + 1);
       const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
@@ -405,6 +420,19 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
         measured = measureQuality({ width, height, rgba });
       }
     } catch { /* unverified is the honest answer; it blocks the claim. */ }
+
+    /*
+      Stored beside the analysis it belongs to, under the same key, so the
+      next warm scan of this design reports what was actually measured.
+    */
+    if (measured) {
+      const kept = { ...(upload as object), imageQuality: measured };
+      await db.prepare(
+        `UPDATE scan_uploads SET payload_json = ?
+          WHERE user_id = ? AND artwork_hash = ? AND version = ?`)
+        .bind(JSON.stringify(kept), user.userId, artworkHash, UPLOAD_ANALYSIS_VERSION)
+        .run().catch(() => {});
+    }
   }
 
   const alignment = compare(
@@ -452,9 +480,12 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
       ? { contrast: measured.contrast, sharpness: measured.sharpness,
           thumbnailReadable: measured.thumbnailReadable,
           notes: measured.notes }
+      /* Reached only by a design measured before this was stored, or one
+         whose pixels could not be decoded. Both are honestly unknown. */
       : { contrast: "unverified", sharpness: "unverified",
           thumbnailReadable: "unverified",
-          notes: ["This design's readability could not be verified."] },
+          notes: ["This design's readability has not been measured. Scan it "
+            + "again with the file to check it."] },
     evidence: line, scanId: id };
   await db.prepare(
     `INSERT INTO scan_history (id, user_id, artwork_hash, niche, result_json, created_at)
