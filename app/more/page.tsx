@@ -17,12 +17,20 @@ const ITEMS = [
     what: "Your Etsy shops and Printify, and what can be seen." },
   { href: "/usage", name: "Limits and usage",
     what: "What you have used today and what is left." },
-  { href: "/account/sign-out", name: "Sign out", what: "" },
 ];
+
+/*
+  D1607 · SIGN OUT WAS A TILE LIKE ANY OTHER.
+
+  It sat in the same grid as Trademark Checker and Connections, in the same
+  card, at the same weight — so the one item that ends the session looked
+  exactly like the ones that open a feature. It leaves the grid and sits on
+  its own below it.
+*/
 
 export default async function MorePage() {
   await requireChatGPTUser("/more");
-  return <main className="hub">
+  return <main className="hub hub-short">
     <header className="hub-head"><h1>More</h1></header>
     <section className="hub-grid">
       {ITEMS.map(item => (
@@ -31,6 +39,9 @@ export default async function MorePage() {
           {item.what && <span className="hub-what">{item.what}</span>}
         </Link>
       ))}
+    </section>
+    <section className="hub-foot">
+      <Link className="hub-signout" href="/account/sign-out">Sign out</Link>
     </section>
   </main>;
 }

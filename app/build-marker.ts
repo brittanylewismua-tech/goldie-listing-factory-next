@@ -175,7 +175,7 @@
    It carried that wordmark and read "Sign in to your Listing Factory" for
    every member, whichever feature they were heading for — somebody bounced
    from Market Watch was told they were signing in to something else. */
-export const BUILD_MARKER = "D1606";
+export const BUILD_MARKER = "D1607";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

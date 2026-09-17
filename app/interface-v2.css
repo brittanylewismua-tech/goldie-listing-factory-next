@@ -4664,3 +4664,17 @@ html, body { background: var(--lf-paper); }
 .admin-access-shell .revoke-hard{background:none;border:1px solid #c9505f;
   color:#a33b49;margin-top:8px;font-size:13px}
 .admin-access-shell .revoke-hard:hover{background:#fdf3f4}
+
+/* D1607 · MORE WAS A SMALL GRID ON A FULL BLACK SCREEN.
+   `.hub` is min-height:100vh because Home fills it — status cards, tools, a
+   footer. More has four links, so the same rule left most of the page as an
+   empty expanse with a gear in the corner. It gets the height it needs. */
+.hub.hub-short{min-height:auto;padding-bottom:64px}
+.hub .hub-foot{margin-top:32px;padding-top:24px;border-top:1px solid rgba(255,255,255,.12)}
+/* Sign out ends the session; it does not open a feature, so it does not wear
+   a feature's card. */
+.hub .hub-signout{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;
+  border:1px solid rgba(255,255,255,.28);border-radius:12px;background:transparent;
+  color:var(--lf-rail-dim,rgba(255,255,255,.62));font-weight:750;font-size:13px;
+  text-decoration:none}
+.hub .hub-signout:hover{border-color:var(--lf-pink);color:#fff}
