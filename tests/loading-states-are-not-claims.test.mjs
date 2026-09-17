@@ -112,10 +112,22 @@ test("access is read from the plan, not from the subscription", () => {
     "access must not be decided by whether Stripe has an active subscription");
 });
 
-test("deletion is described honestly rather than faked with a dead control", () => {
+test("deletion is a real flow, with no sentence apologising for itself", () => {
+  /*
+    This used to assert the OPPOSITE: that no delete control existed, because
+    execution was withheld during the beta and the page carried a sentence
+    saying so. The backend path is proven now — scoped plan, append-only audit,
+    idempotent retry, exercised against a seeded store and a disposable
+    identity — so the control is wired and the apology is gone.
+  */
   const source = read("account/settings/account-client.tsx");
-  assert.match(source, /data\?\.note/, "the beta deletion note must reach the page");
-  /* No button that does nothing, and no button that deletes unattended. */
-  assert.ok(!/Delete my (account|data)/i.test(source),
-    "a delete control must not appear while deletion is carried out by hand");
+  assert.match(source, /Delete my data/);
+  assert.match(source, /DELETE MY DATA/, "the exact phrase must be required");
+  assert.match(source, /phrase\.trim\(\) !== "DELETE MY DATA"/,
+    "the confirm control stays disabled until the phrase matches exactly");
+  assert.match(source, /This cannot be undone/);
+  /* Success states the counts rather than reassuring. */
+  assert.match(source, /done\.removed\.map/);
+  /* And no permanent note explaining that the feature is unfinished. */
+  assert.ok(!/carried out by hand/.test(source));
 });

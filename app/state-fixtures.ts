@@ -32,7 +32,7 @@ export type StateFixture = {
   key: string;
   label: string;
   /* Which component the preview should mount. */
-  surface: "connections" | "market-watch" | "design-scanner" | "shop-map" | "tools-settings";
+  surface: "connections" | "market-watch" | "design-scanner" | "shop-map" | "account";
   what: string;
   replies: FixtureReply[];
 };
@@ -120,6 +120,48 @@ export const stateFixtures = (): StateFixture[] => [
     replies: [{ path: "/api/design-scanner/scan", status: 429,
       body: { error: "Analysis capacity is temporarily full. Your design is saved — try again a little later.",
         limited: true } }] },
+
+  /* --------------------------------------------------------------- account */
+  { key: "account-delete-refused", label: "Deletion refused (wrong phrase)", surface: "account",
+    what: "The server refuses and says nothing was changed.",
+    replies: [
+      { path: "/api/account/data", status: 200,
+        body: { yours: { scans: 3, nicheWatches: 1 }, kept: [], note: "" } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite" } } },
+      { path: "/api/account/delete", status: 400,
+        body: { error: "Type DELETE MY DATA exactly to confirm." } }] },
+
+  { key: "account-delete-stale-auth", label: "Deletion refused (stale sign-in)", surface: "account",
+    what: "Recent authentication is required. The member is told why, not just no.",
+    replies: [
+      { path: "/api/account/data", status: 200,
+        body: { yours: { scans: 3 }, kept: [], note: "" } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite" } } },
+      { path: "/api/account/delete", status: 400,
+        body: { error: "Sign in again before deleting your data. This is deliberate: it "
+          + "means somebody using your open laptop cannot do this." } }] },
+
+  { key: "account-deleted", label: "Deletion complete", surface: "account",
+    what: "Counts as evidence, not a reassurance, and a way to finish.",
+    replies: [
+      { path: "/api/account/data", status: 200,
+        body: { yours: { scans: 27, nicheWatches: 7 }, kept: [], note: "" } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite" } } },
+      { path: "/api/account/delete", status: 200,
+        body: { deleted: true, alreadyDone: false,
+          say: "Your data has been removed and your connections switched off.",
+          removed: [{ table: "scan_history", changed: 27 },
+            { table: "niche_watches", changed: 7 },
+            { table: "etsy_connections", changed: 1 }] } }] },
+
+  { key: "account-delete-already", label: "Deletion already done", surface: "account",
+    what: "A retry reports the same completion and runs nothing.",
+    replies: [
+      { path: "/api/account/data", status: 200, body: { yours: {}, kept: [], note: "" } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite" } } },
+      { path: "/api/account/delete", status: 200,
+        body: { deleted: true, alreadyDone: true, removed: [],
+          say: "This account's data was already removed. Nothing further was changed." } }] },
 
   /* -------------------------------------------------------------- shop map */
   { key: "shop-map-loading", label: "Loading", surface: "shop-map",

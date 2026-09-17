@@ -12,6 +12,8 @@ import ConnectionsClient from "@/app/connections/connections-client";
 import MarketWatchClient from "@/app/market-watch/market-watch-client";
 import DesignScannerClient from "@/app/design-scanner/design-scanner-client";
 import ShopMapClient from "@/app/shop-map/shop-map-client";
+import AccountClient from "@/app/account/settings/account-client";
+import "@/app/account/settings/account.css";
 
 /**
  * THE REAL COMPONENT, IN A STATE THAT WOULD OTHERWISE HAVE TO BE WAITED FOR.
@@ -84,7 +86,7 @@ const SURFACES = {
   "market-watch": () => <MarketWatchClient signedInEmail="preview@example.invalid" />,
   "design-scanner": () => <DesignScannerClient signedInEmail="preview@example.invalid" />,
   "shop-map": () => <ShopMapClient signedInEmail="preview@example.invalid" />,
-  "tools-settings": () => null,
+  account: () => <AccountClient email="preview@example.invalid" />,
 } as const;
 
 export default function StatePreviewClient({ initial }: { initial: string }) {

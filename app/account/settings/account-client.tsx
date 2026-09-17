@@ -47,6 +47,95 @@ const when = (seconds?: number | null) => {
   return `${Math.abs(days)} days ago`;
 };
 
+/*
+  DELETION, IN THE MEMBER'S HANDS.
+
+  Deliberately several steps rather than one red button: the preview is already
+  above this, the phrase has to be typed exactly, and the server independently
+  requires recent authentication. None of those is a formality — each one is a
+  place where somebody who did not mean this can stop.
+
+  The success state is the important one. "Your data has been removed" with
+  nothing under it is a reassurance; the counts are what make it a statement.
+*/
+function DeleteAccount({ counts }: { counts: number }) {
+  const [open, setOpen] = useState(false);
+  const [phrase, setPhrase] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState<{ removed: { table: string; changed: number }[];
+    say: string } | null>(null);
+
+  if (done) return (
+    <div className="acc-deleted" role="status">
+      <b>{done.say}</b>
+      {done.removed.length > 0 && (
+        <ul>{done.removed.map(step => (
+          <li key={step.table}>{step.changed.toLocaleString()} from {step.table}</li>
+        ))}</ul>
+      )}
+      <p>Your connections are switched off and their keys destroyed. Sign out to finish.</p>
+      <Link href="/account/sign-out">Sign out</Link>
+    </div>
+  );
+
+  return <div className="acc-delete">
+    {!open && (
+      <button type="button" className="acc-delete-open" onClick={() => setOpen(true)}>
+        Delete my data
+      </button>
+    )}
+    {open && (
+      <div className="acc-delete-confirm">
+        <b>This cannot be undone.</b>
+        <p>
+          Everything listed above is removed{counts > 0 ? "" : ""}, and your Etsy and
+          Printify connections are switched off with their keys destroyed. Type{" "}
+          <code>DELETE MY DATA</code> to confirm.
+        </p>
+        <input
+          className="p-input"
+          value={phrase}
+          onChange={event => setPhrase(event.target.value)}
+          placeholder="DELETE MY DATA"
+          aria-label="Type DELETE MY DATA to confirm"
+          autoComplete="off"
+        />
+        {error && <p className="p-notice p-notice-bad" role="alert">{error}</p>}
+        <div className="acc-delete-actions">
+          <button type="button" className="p-button p-button-quiet"
+            onClick={() => { setOpen(false); setPhrase(""); setError(""); }}>
+            Keep my data
+          </button>
+          <button type="button" className="p-button acc-delete-go"
+            disabled={busy || phrase.trim() !== "DELETE MY DATA"}
+            onClick={async () => {
+              setBusy(true); setError("");
+              try {
+                const response = await fetch("/api/account/delete", {
+                  method: "POST", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ phrase }),
+                });
+                const answer = await response.json() as {
+                  deleted?: boolean; removed?: { table: string; changed: number }[];
+                  say?: string; error?: string };
+                if (!response.ok || !answer.deleted) {
+                  setError(answer.error || "That did not go through. Nothing was changed.");
+                  return;
+                }
+                setDone({ removed: answer.removed ?? [], say: answer.say ?? "Your data has been removed." });
+              } catch {
+                setError("That did not go through. Nothing was changed.");
+              } finally { setBusy(false); }
+            }}>
+            {busy ? "Removing…" : "Delete my data"}
+          </button>
+        </div>
+      </div>
+    )}
+  </div>;
+}
+
 export default function AccountClient({ email }: { email: string }) {
   const [data, setData] = useState<DataView | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
@@ -144,17 +233,7 @@ export default function AccountClient({ email }: { email: string }) {
               ))}</ul>
             </details>
           )}
-          {/*
-            DELETION IS NOT SELF-SERVE DURING THE BETA, AND SAYS SO.
-
-            The plan, the scoped SQL, the confirmation phrase and the
-            recent-authentication rule all exist and are tested. What is
-            deliberately not wired is the button: an irreversible bulk delete
-            running unattended is the one thing that should not ship on the
-            strength of a code review. Pretending otherwise with a disabled
-            control would be worse than saying it plainly.
-          */}
-          {loaded && data?.note && <p className="acc-note">{data.note}</p>}
+          {loaded && <DeleteAccount counts={rows.length} />}
         </div>
       </section>
 
