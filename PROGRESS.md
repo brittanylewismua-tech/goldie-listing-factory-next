@@ -723,3 +723,50 @@ States covered so far: connections (loading, etsy-disconnected,
 printify-disconnected, both-disconnected, needs-reconnect, api-error),
 market-watch (empty, api-error), design-scanner (daily limit, provider error,
 global ceiling), shop-map (loading, api-error).
+
+
+## DESIGN SCANNER QUALITY GATE — live verified (D1616, D1617)
+
+| case | contrast/sharp/readable | "stays readable" claim | overall | paid |
+|---|---|---|---|---|
+| crisp black on white | pass / pass / pass | YES (correct) | Strong | 0 |
+| 9 weak contrast | fail / pass / fail | no | Moderate | 0 |
+| 8 blurred | fail / pass / fail | no | Moderate | 0 |
+
+All three warm, so the whole verification cost nothing and left the allowance
+at 1 of 10.
+
+### I shipped a worse bug than the one I fixed, and caught it
+D1602 measured contrast as the 5th against the 95th percentile of the WHOLE
+image. On a print design the ink covers a few per cent of the canvas, so both
+percentiles landed on the background: crisp black text on white measured
+**1.0:1** and the member was told good artwork could not be read and looked
+blurred. Condemning good work is worse than flattering bad work.
+
+It passed its unit tests because every fixture was 50%-coverage stripes. The
+fixtures now include sparse strokes at ~4% coverage — the shape real artwork
+has — and horizontal ones specifically, because the sharpness pass scanned
+rows only and scored them zero.
+
+Three separate flaws, all from the same assumption that ink is abundant:
+- contrast: percentiles of the whole image -> ink measured against ground via
+  a 64-bucket histogram (ground = most populated tone, ink = furthest tone
+  still covering >=0.5%, which keeps the stray-pixel guard the percentile gave)
+- sharpness: 95th percentile of every adjacent pair, rows only -> 90th
+  percentile of actual transitions (>0.01), stepped in BOTH directions
+- thumbnail: 64px, harsher than anything Etsy renders -> 170px, the small end
+  of the real search grid
+
+### Known imperfection, recorded rather than papered over
+A heavily blurred design reports contrast-fail rather than sharpness-fail.
+Heavy blur genuinely does merge ink toward the ground, so the verdict is not
+false and the member-facing outcome is right (no readability claim). But the
+NOTE would point them at contrast when the real fix is sharpness. Attribution,
+not correctness. Worth fixing when the blur metric is revisited.
+
+## TRADEMARK — daily advancing, historical still blocked
+27 files done (was 26): `apc260916.zip`, a DAILY file, 68,935 records.
+192,319 marks (+7,016). The historical backfile is still stuck at chunk 89
+from 2026-09-14. `nextUp` moved 88 -> 85, which is the backoff working: three
+chunks were tried, refused with 429, and deferred rather than hammered.
+No historical completion. External blocker unchanged.
