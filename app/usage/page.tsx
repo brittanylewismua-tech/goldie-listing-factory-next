@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import "../pricing-profile.css";
 import FactoryShell from "../factory-shell";
 import { PLANS, type BillingInterval } from "../plan-limits";
+import { checkoutOpen, CLOSED_HEADLINE, CLOSED_BODY } from "@/app/checkout-gate";
 type PlanKey="trial"|"goldie"|"pro"|"scale"|"mastermind_beta"|"owner_test";
 type Data={plan:{key:PlanKey;name:string;price:number;drafts:number;dailyListings:number;mockupSets:number;mockupsPerSet:number};resetAt:string|null;usage:{drafts:number;mockupSets:number;publishedToday:number;publishing:number};streak?:{count:number;target:number;window:number;days:string[];listedToday:boolean;hit:boolean;message:string};billing?:{active:boolean;terms?:{amount:number;currency:string;interval:string;intervalCount:number}|null;subscription?:{status:string;currentPeriodEnd:number|null;cancelAtPeriodEnd:number}|null}};
 type Fees={etsyFeePercent:number;fixedFee:number;listingFee:number};
@@ -97,6 +98,35 @@ export default function UsagePage(){
       {goalMessage&&<p className="listing-goal-message" role="status">{goalMessage}</p>}
     </section>
     <section className="pricing-profile"><div><p className="mini-label">SAVED ONCE · USED IN EVERY LISTING SETUP</p><h2>Etsy fee profile</h2><p>The US defaults are 6.5% Etsy transaction + 3% Etsy Payments, $0.25 payment processing, and $0.20 listing/renewal. If your bank is outside the US, enter Etsy’s rates for your country once here.</p></div><div className="pricing-profile-grid"><label>Combined percentage fee<DecimalField value={fees.etsyFeePercent} min={0} max={40} step="0.1" label="Etsy fee percent" onCommit={next=>setFees({...fees,etsyFeePercent:next})}/><small>Transaction + payment processing + any regulatory fee</small></label><label>Fixed payment fee<DecimalField value={fees.fixedFee} min={0} step="0.01" label="Fixed fee" onCommit={next=>setFees({...fees,fixedFee:next})}/></label><label>Listing / renewal fee<DecimalField value={fees.listingFee} min={0} step="0.01" label="Listing fee" onCommit={next=>setFees({...fees,listingFee:next})}/></label></div><button onClick={()=>void saveFees()}>Save pricing profile</button>{feeMessage&&<span role="status">{feeMessage}</span>}<small className="pricing-caveat">The Listing Factory calculates item prices from each variant’s live Printify product cost and this Etsy fee profile. Shipping is configured and charged separately, so it is not deducted from the item-profit figures shown on the pricing page.</small></section>
+      {/*
+        D1692 · TWO ANSWERS TO "IS GOLDIE ON SALE", WHICH IS WHAT THE GATE
+        EXISTS TO PREVENT.
+
+        checkout-gate.ts says in its own comment that the checkout route and
+        the signup page both read it "so there is a single answer rather than
+        two that can drift apart". This page never read it. So /signup said
+        "There's nothing to buy right now, and no plans or prices are
+        available yet" while Plan and limits showed three plans, their prices,
+        a monthly/yearly toggle and three enabled Choose buttons — buttons
+        whose only possible outcome is the route's 503.
+
+        No member could be charged: the server gate is first and closed by
+        default. But a page that offers a purchase it cannot complete is the
+        thing this product does not do, and it contradicted the sentence the
+        same module supplies.
+
+        Limits and usage stay. Only the purchase surface reads the gate.
+      */}
+      {!checkoutOpen() ? (
+        <section className="usage-plan-chooser usage-plan-closed"
+          aria-labelledby="usage-plan-heading">
+          <div className="usage-plan-heading">
+            <p className="mini-label">PLANS + BILLING</p>
+            <h2 id="usage-plan-heading">{CLOSED_HEADLINE}</h2>
+            <p>{CLOSED_BODY}</p>
+          </div>
+        </section>
+      ) : (
       <section className="usage-plan-chooser" aria-labelledby="usage-plan-heading">
         <div className="usage-plan-heading"><p className="mini-label">PLANS + BILLING</p><h2 id="usage-plan-heading">Choose the plan that fits your listing volume</h2><p>Upgrade, downgrade, or manage your subscription whenever you need to.</p></div>
         <div className="usage-billing-frequency" role="group" aria-label="Billing frequency"><button type="button" aria-pressed={interval === "month"} onClick={()=>setInterval("month")}>Monthly</button><button type="button" aria-pressed={interval === "year"} onClick={()=>setInterval("year")}>Yearly · Save 17%</button></div>
@@ -106,6 +136,7 @@ export default function UsagePage(){
         <p className="usage-plan-fineprint">Each unique unpublished Printify draft successfully created by The Listing Factory uses one listing creation. A product bundle uses one creation for each distinct draft it generates. The Listing Factory never publishes to Etsy; Etsy charges its listing fee only when you publish the draft in Etsy.</p>
         {billingMessage&&<p className="usage-billing-message" role="status">{billingMessage}</p>}
       </section>
+      )}
     </>}
   </div></FactoryShell>
 }

@@ -76,3 +76,33 @@ test("one switch, closed by default, shared by the page and the route", () => {
   const page = readFileSync(new URL("../app/signup/page.tsx", import.meta.url), "utf8");
   assert.match(page, /checkoutOpen/);
 });
+
+test("D1692: every purchase surface reads the one gate", () => {
+  /*
+    checkout-gate.ts says the checkout route and the signup page both read it
+    "so there is a single answer to 'is Goldie on sale' rather than two that
+    can drift apart". Plan and limits never read it: /signup said nothing was
+    for sale while /usage showed three plans, their prices, a billing toggle
+    and three enabled Choose buttons whose only possible outcome is a 503.
+  */
+  const usage = readFileSync(new URL("../app/usage/page.tsx", import.meta.url), "utf8");
+  assert.match(usage, /from "@\/app\/checkout-gate"/);
+  assert.match(usage, /\{!checkoutOpen\(\) \? \(/,
+    "the purchase surface must be behind the same gate as the route");
+  /* The closed sentence is the module's, not a second wording of it. */
+  assert.match(usage, /\{CLOSED_HEADLINE\}/);
+  assert.match(usage, /\{CLOSED_BODY\}/);
+  /* The plan grid and its Choose buttons sit inside the open branch only. */
+  const closedAt = usage.indexOf("usage-plan-closed");
+  const gridAt = usage.indexOf("usage-plan-grid");
+  assert.ok(closedAt > -1 && gridAt > closedAt,
+    "prices and Choose buttons must not render while checkout is closed");
+});
+
+test("D1692: limits and usage are not hidden with the prices", () => {
+  const usage = readFileSync(new URL("../app/usage/page.tsx", import.meta.url), "utf8");
+  const closedAt = usage.indexOf("usage-plan-closed");
+  /* The meters a member needs are above the purchase surface and untouched. */
+  assert.ok(usage.indexOf("usage-grid") < closedAt);
+  assert.ok(usage.indexOf("plan-banner") < closedAt);
+});
