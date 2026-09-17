@@ -524,3 +524,50 @@ phone — so narrow-window testing does not exercise them.
 I have NOT verified 375/390/430 and will not claim to have. What is asserted by
 test rather than by eye: touch targets at 46px in the mobile block, the
 responsive-shell opt-out, and the global bottom bar.
+
+
+## MOBILE EMULATION — SOLVED. USE THE IN-APP BROWSER, NOT THE CHROME CONTROLLER
+
+The Chrome controller (`mcp__claude-in-chrome__resize_window`) resizes the OS
+window only: the page still reports `clientWidth: 1440` and
+`matchMedia('(pointer:coarse)')` stays false, so the mobile rules — gated on
+`(max-width:820px) and (pointer:coarse)` — are never exercised.
+
+The IN-APP browser (`mcp__Claude_Browser__*`) does real device emulation.
+`resize_window` with an explicit width/height under 768 turns on touch.
+PROVEN FROM INSIDE THE PAGE, deployed build:
+
+| viewport | innerWidth | clientWidth | pointer:coarse | gate matches | overflow | targets < 44px |
+|---|---|---|---|---|---|---|
+| 375x812 | 375 | 375 | true | true | none | none |
+| 390x844 | 390 | 390 | true | true | none | — |
+| 430x932 | 430 | 430 | true | true | none | none |
+
+Note: `preset: "mobile"` PINS 375x812 and ignores width/height. Pass explicit
+width/height instead for 390 and 430.
+
+The coarse-pointer rule was NOT weakened to make testing easier.
+
+### The remaining limit is credentials, not tooling
+The in-app browser has its own profile and is not signed in. Sign-in offers
+Google OAuth or an emailed one-time link; I can do neither. So authenticated
+pages cannot be rendered in the emulating browser, and authenticated MOBILE
+verification is blocked on that, not on device emulation.
+
+What this browser CAN verify at all three widths: every signed-out and public
+route — sign-in, signup, pricing, and the marketing surfaces.
+
+## SIGNED-OUT STATE — VERIFIED AT 375 / 390 / 430
+Sign-in page: grid ground, correct hierarchy, 44px+ targets, no overflow at
+any width, neutral footer, no old-brand wording.
+
+Defect found by looking and fixed (D1606): the SHARED sign-in page carried the
+Listing Factory wordmark and read "Sign in to your Listing Factory" for every
+member, whichever feature they were heading for — somebody bounced out of
+Market Watch was told they were signing in to something else. It now shows
+that wordmark and wording only when the destination is genuinely the Listing
+Factory (`/listing-factory`, `/batches`, `/keywords`); otherwise it says
+"Sign in." and shows no wordmark.
+
+Also renamed the component `GoldieWordmark` -> `ListingFactoryWordmark`
+everywhere it is used, since that is what it renders.
