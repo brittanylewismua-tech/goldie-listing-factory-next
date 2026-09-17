@@ -440,3 +440,58 @@ uploads make ONE provider call and consume ONE allowance (D1600).
 
 ### STILL NOT DONE
 Visual migration across member pages, and the full Chrome state matrix.
+
+
+## BRANDING AUDIT — DONE (D1603)
+
+The old product name is gone from member-facing copy: notices, errors, access
+states, Connections, emails, the account footer, the checkout-closed headline,
+Market Watch counts, the trademark summary.
+
+Kept deliberately (code identifiers, not prose): the Stripe plan key
+`"goldie"` (the member sees "Starter"; renaming breaks live subscriptions),
+CSS class names, component names, the `Goldie/1.0` User-Agent, the
+`X-Goldie-AI-Reused` header, storage keys, event names, the domain.
+
+The guard was rewritten: it now detects the word used as PROSE (followed by a
+space and a lowercase word, or ending a sentence) instead of maintaining an
+allowlist of identifiers that kept needing new entries. Two tests — the listed
+member surfaces, and a sweep of every .ts/.tsx in app/.
+
+## VISUAL SYSTEM — TOKENS BUILT AND FIRST PAGES MIGRATED (D1604)
+
+`app/product-tokens.css` is the one active customer-facing system, taken from
+the Listing Factory's real values (`--lf-pink #ff4fc3`, its grid, black rail,
+white paper) rather than invented, extended with the quieter plum/lilac/
+lavender/peach family for surfaces you sit in front of.
+
+Provides: `.p-grid`, `.p-page`, `.p-head`, `.p-eyebrow`, `.p-card`,
+`.p-card-quiet`, `.p-stack`, `.p-row`, `.p-button` (+primary/quiet),
+`.p-input`, `.p-select`, `.p-tabs`/`.p-tab`, `.p-badge` (+good/warn/bad),
+`.p-notice` (+bad), `.p-empty`, `.p-skeleton`, `.p-figure`, and a mobile block
+holding touch targets at 46px.
+
+Migrated so far:
+- **Market Watch** — had a PRIVATE palette including `--gold: #c9a227`, a
+  survivor of the retired art direction, plus a system font stack. Local names
+  kept, values re-pointed at the product system; rem type converted to the
+  house px scale; cards given the product's corners and depth; width raised
+  from 620px so it is not a phone column on a desktop.
+- **Design Scanner** — grid ground, real empty state, product button, error as
+  a notice, result and history as cards, allowance as a badge.
+- **Trademark Checker** — grid ground, product input and button, risk verdict
+  now wears the shared status badge (good / warn / bad).
+- **Shop Map** — loading was ONE SENTENCE on white; now skeletons in the shape
+  of what is coming, so the page does not jump when it arrives.
+
+Two house guards shaped this and were obeyed rather than worked around:
+- the radius scale (0,6,7,8,9,10,12,14,16,22) — pills use 16 and 8, not 999
+- the liveness guard — `.p-meter` and the good/warn notice variants were
+  written ahead of any caller and REMOVED; they return with their first real
+  use. CSS with no caller is CSS nobody maintains.
+
+### STILL TO MIGRATE
+Home, Listing Factory workflow (already the source of truth, but needs a pass),
+Batch History, Niche Watch, Shop Watch cards, Connections, Account/More, and
+every access/limit/error state. Then the Chrome state matrix at desktop and
+375/390/430.
