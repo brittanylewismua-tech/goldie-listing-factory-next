@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
+import { env } from "cloudflare:workers";
+import { previewTicketValid } from "@/app/preview-ticket";
 import StatePreviewClient from "./preview-client";
 import "@/app/dev/state-preview/state-preview.css";
 
@@ -19,7 +21,7 @@ import "@/app/dev/state-preview/state-preview.css";
 export const metadata = { title: "State preview" };
 
 export default async function StatePreviewPage(
-  { searchParams }: { searchParams: Promise<{ state?: string }> },
+  { searchParams }: { searchParams: Promise<{ state?: string; ticket?: string }> },
 ) {
   const user = await getChatGPTUser();
   /*
@@ -34,7 +36,24 @@ export default async function StatePreviewPage(
 
     Found from a signed-out browser, which is the only place it is visible.
   */
-  if (!user || !isOwner(user)) notFound();
-  const initial = (await searchParams).state ?? "";
+  const asked = await searchParams;
+  /*
+    THE OWNER, OR A TICKET THE OWNER MINTED MINUTES AGO.
+
+    The second path exists because some of this product's mobile rules need a
+    coarse pointer as well as a narrow viewport, and the only tool here with
+    real device emulation is a second browser with no session. A ticket
+    admits its holder to THIS PAGE and nothing else; the page answers every
+    request from fixtures behind a closed network, so it reads no member data
+    and can reach no provider. See app/api/dev/preview-ticket/route.ts.
+  */
+  if (!user || !isOwner(user)) {
+    const db = (env as unknown as { DB: D1Database }).DB;
+    const admitted = db
+      ? await previewTicketValid(db, asked.ticket).catch(() => false)
+      : false;
+    if (!admitted) notFound();
+  }
+  const initial = asked.state ?? "";
   return <StatePreviewClient initial={initial} />;
 }
