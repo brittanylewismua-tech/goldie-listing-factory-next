@@ -1094,6 +1094,9 @@ export default function ListingFactoryApp() {
   const [token, setToken] = useState("");
   const [showTokenForm, setShowTokenForm] = useState(false);
   const [connectionError, setConnectionError] = useState("");
+  /* Whether the last check COULD NOT be made, as distinct from its answer. */
+  const [connectionCheckFailed, setConnectionCheckFailed] = useState(false);
+  const [etsyCheckFailed, setEtsyCheckFailed] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [checkingConnection, setCheckingConnection] = useState(true);
   const [checkingEtsyConnection, setCheckingEtsyConnection] = useState(true);
@@ -2189,7 +2192,7 @@ export default function ListingFactoryApp() {
      her account that the drafts themselves were fine - three batches, two drafts
      each - so this was navigation, not loss. A run in progress is not a broken
      state to recover from. */
-  useEffect(()=>{if(localPreview||checkingConnection||checkingEtsyConnection||restoringBatch||runInProgress.current||canOpenStep(workflowStep))return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);
+  useEffect(()=>{if(localPreview||checkingConnection||checkingEtsyConnection||restoringBatch||runInProgress.current||canOpenStep(workflowStep))return;/* A check that could not be made must never relocate the member. */if(connectionCheckFailed||etsyCheckFailed)return;const fallback=!connected||!etsyConnected?"connect":!templateLoaded?"setup":!files.length?"designs":!complete?"review":"finish";goToStep(fallback,true,true);
   },[localPreview,checkingConnection,checkingEtsyConnection,restoringBatch,connected,etsyConnected,templateLoaded,files.length,complete,workflowStep]);
 
   useEffect(()=>{if(restoringBatch)return;const url=new URL(window.location.href);if(url.searchParams.get("open")!=="results")return;const hasCreatedDrafts=complete&&drafts.some(draft=>draft.status==="Created");url.searchParams.delete("open");if(!hasCreatedDrafts){window.history.replaceState({},"",url);return}url.searchParams.set("step","finish");url.searchParams.set("phase",finishPhase||"details");setWorkflowStep("finish");window.history.replaceState({},"",url);window.scrollTo({top:0,behavior:"auto"})},[restoringBatch,complete,drafts,pricingApproved,finishPhase]);
@@ -2505,7 +2508,25 @@ export default function ListingFactoryApp() {
     const result=await response.json() as {connected?:boolean;owner?:boolean;reason?:string;warning?:string;error?:string};
     if(!response.ok)throw Error(result.error||"Printify connection could not be checked. Try checking again.");
     setConnected(Boolean(result.connected));setOwner(Boolean(result.owner));setConnectionError(result.reason||result.warning||"");
-  }catch(error){setConnected(false);setConnectionError(error instanceof Error?error.message:"Printify connection could not be checked. Try checking again.")}finally{setCheckingConnection(false)}}
+    setConnectionCheckFailed(false);
+  }catch(error){
+    /*
+      D1650 · A CHECK THAT FAILED IS NOT AN ACCOUNT THAT IS GONE.
+
+      This set connected=false whenever the check itself failed, so a bad
+      minute — a 500, a timeout, a dropped request — made the whole workflow
+      believe the member had no Printify account. The step gate then read
+      "Not connected yet", the copy invited a first-time connection, and the
+      fallback navigation MOVED the member back to the connect step, away
+      from the batch they were in the middle of.
+
+      A failed check leaves the last known answer alone and says the check
+      failed. The initial value is already false, so a member who has never
+      connected still lands on the connect step correctly.
+    */
+    setConnectionCheckFailed(true);
+    setConnectionError(error instanceof Error?error.message:"Printify connection could not be checked. Try checking again.")
+  }finally{setCheckingConnection(false)}}
   useEffect(()=>{void checkPrintifyConnection()},[]);
 
   useEffect(()=>{(fetch("/api/seller-preferences").then(response=>response.json()) as Promise<{pricing?:Partial<Pricing>|null}>).then((result:{pricing?:Partial<Pricing>|null})=>{if(!result.pricing)return;setPricing(current=>({...current,etsyFeePercent:Number(result.pricing?.etsyFeePercent??current.etsyFeePercent),fixedFee:Number(result.pricing?.fixedFee??current.fixedFee),listingFee:Number(result.pricing?.listingFee??current.listingFee)}))}).catch(()=>undefined)},[]);
@@ -2514,7 +2535,12 @@ export default function ListingFactoryApp() {
     const response=await fetchWithDeadline("/api/etsy",{},25000),result=await response.json() as {connected?:boolean;shopName?:string;error?:string};
     if(!response.ok)throw Error(result.error||"Etsy connection could not be checked. Try checking again.");
     setEtsyConnected(Boolean(result.connected));setEtsyShop(result.shopName||"");setEtsyError(result.error||"");
-  }catch(error){setEtsyConnected(false);setEtsyError(error instanceof Error?error.message:"Etsy connection could not be checked. Try checking again.")}finally{setCheckingEtsyConnection(false)}}
+    setEtsyCheckFailed(false);
+  }catch(error){
+    /* Same rule as Printify above: an unanswered question is not a no. */
+    setEtsyCheckFailed(true);
+    setEtsyError(error instanceof Error?error.message:"Etsy connection could not be checked. Try checking again.")
+  }finally{setCheckingEtsyConnection(false)}}
   useEffect(()=>{let alive=true;const url=new URL(window.location.href),message=url.searchParams.get("etsy");void checkEtsyConnection().then(()=>{if(alive&&message&&message!=="connected")setEtsyError(message)});if(message){url.searchParams.delete("etsy");window.history.replaceState({},"",url)}return()=>{alive=false}},[]);
   async function loadEtsyShippingProfiles(preselect=0){setShippingProfilesLoading(true);setShippingProfilesError("");try{const response=await fetchWithDeadline("/api/etsy/shipping-profiles",{},25000),result=await response.json() as {profiles?:EtsyShippingProfile[];error?:string};if(!response.ok)throw new Error(result.error||"Your Etsy shipping profiles could not be loaded.");const profiles=(result.profiles||[]).map(profile=>({...profile,title:profile.title.replace(/\.{2,}$/,"…")}));setEtsyShippingProfiles(profiles);setEtsyShippingProfileId(current=>{const wanted=preselect||current;return wanted&&profiles.some(profile=>profile.id===wanted)?wanted:0})}catch(error){setShippingProfilesError(error instanceof Error?error.message:"Your Etsy shipping profiles could not be loaded.")}finally{setShippingProfilesLoading(false)}}
   useEffect(()=>{if(etsyConnected)void loadEtsyShippingProfiles()},[etsyConnected]);
@@ -5481,7 +5507,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   const [creatingEtsyDrafts,setCreatingEtsyDrafts]=useState(false);
   const [etsyDraftTransferState,setEtsyDraftTransferState]=useState<'idle'|'working'|'complete'|'attention'>('idle');
   const checkingConnections=checkingConnection||checkingEtsyConnection;
-  const connectStatus = checkingConnections?"Checking saved connections":connected&&etsyConnected?"Both accounts connected":connected?"Printify connected":etsyConnected?"Etsy connected":"Not connected yet";
+  const connectStatus = checkingConnections?"Checking saved connections"
+    :connected&&etsyConnected?"Both accounts connected"
+    /* An unanswered check is reported as unanswered rather than as a no. */
+    :connectionCheckFailed||etsyCheckFailed?"Your connections could not be checked"
+    :connected?"Printify connected":etsyConnected?"Etsy connected":"Not connected yet";
   /* D760 · On Connect the status belongs on the card it describes, not in the
      page head's far corner. Her words: "they're not connected yet should be on
      the card and not way off in the far right". */

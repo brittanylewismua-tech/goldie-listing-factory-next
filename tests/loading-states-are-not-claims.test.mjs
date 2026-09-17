@@ -521,3 +521,29 @@ test("an uncertain draft creation is answered, not polled through", () => {
     "an unknown creation outcome must not be answered with 'try again'");
   assert.match(loop, /a second attempt could duplicate it/);
 });
+
+test("a failed connection check does not disconnect the member or move them", () => {
+  /*
+    The worst instance of this defect in the product. checkPrintifyConnection
+    and checkEtsyConnection both set connected=false when the CHECK failed, so
+    a 500, a timeout or a dropped request made the whole workflow believe the
+    member had no accounts: the step gate read "Not connected yet", the copy
+    invited a first-time connection, and the fallback navigation moved them
+    back to the connect step — away from the batch they were in the middle of.
+  */
+  const source = read("listing-factory-app.tsx");
+  assert.match(source, /const \[connectionCheckFailed, setConnectionCheckFailed\] = useState\(false\)/);
+  assert.match(source, /const \[etsyCheckFailed, setEtsyCheckFailed\] = useState\(false\)/);
+  /* Neither catch may assert a disconnection it did not establish. */
+  const printify = source.slice(source.indexOf("async function checkPrintifyConnection"),
+    source.indexOf("useEffect(()=>{void checkPrintifyConnection()"));
+  assert.ok(!/catch\(error\)\{setConnected\(false\)/.test(printify));
+  assert.match(printify, /setConnectionCheckFailed\(true\)/);
+  const etsy = source.slice(source.indexOf("async function checkEtsyConnection"),
+    source.indexOf("async function loadEtsyShippingProfiles"));
+  assert.ok(!/catch\(error\)\{setEtsyConnected\(false\)/.test(etsy));
+  assert.match(etsy, /setEtsyCheckFailed\(true\)/);
+  /* And an unanswered check must never relocate the member. */
+  assert.match(source, /if\(connectionCheckFailed\|\|etsyCheckFailed\)return;const fallback=/);
+  assert.match(source, /:connectionCheckFailed\|\|etsyCheckFailed\?"Your connections could not be checked"/);
+});
