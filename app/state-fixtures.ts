@@ -463,8 +463,31 @@ export const stateFixtures = (): StateFixture[] => [
           removed: [
             { say: "Your design scans and their results.", changed: 27 },
             { say: "The niches you were watching.", changed: 7 },
+            { say: "The print files you uploaded.", changed: 112 },
             { say: "Your Etsy connection is switched off and its access keys destroyed.",
-              changed: 1 }] } }] },
+              changed: 1 }],
+          incomplete: [],
+          kept: ["Your billing record with the payment processor.",
+            "The record of which plan you held."] } }] },
+
+  { key: "account-delete-partial", label: "Deletion partly failed", surface: "account",
+    what: "Forty-odd steps, one of which could not run. The member is told which, not reassured.",
+    replies: [
+      { path: "/api/account/data", status: 200,
+        body: { yours: { scans: 27, nicheWatches: 7 }, kept: [], note: "" } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite" } } },
+      { path: "/api/account/delete", status: 200,
+        body: { deleted: true, alreadyDone: false,
+          say: "Most of your data has been removed and your connections switched off. "
+            + "Some of it could not be removed and is listed below — it has been "
+            + "recorded, and asking again will finish it.",
+          removed: [
+            { say: "Your design scans and their results.", changed: 27 },
+            { say: "The niches you were watching.", changed: 7 },
+            { say: "The print files you uploaded.", changed: 112 }],
+          incomplete: [{ say: "Your mockup templates." }],
+          kept: ["Your billing record with the payment processor.",
+            "The record of what you subscribed to and when."] } }] },
 
   { key: "account-delete-already", label: "Deletion already done", surface: "account",
     what: "A retry reports the same completion and runs nothing.",

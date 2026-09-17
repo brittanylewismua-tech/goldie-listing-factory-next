@@ -64,6 +64,11 @@ function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ removed: { say: string; changed: number }[];
+    /* What could not be carried out, and what is kept on purpose. With forty
+       steps a partial failure is real, and a member told "your data has been
+       removed" when some of it was not has been misled about the one thing
+       they cannot check for themselves. */
+    incomplete?: { say: string }[]; kept?: string[];
     say: string } | null>(null);
 
   if (done) return (
@@ -73,6 +78,23 @@ function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void 
         <ul>{done.removed.map(step => (
           <li key={step.say}>{step.say} <em>({step.changed.toLocaleString()})</em></li>
         ))}</ul>
+      )}
+      {(done.incomplete ?? []).length > 0 && (
+        <div className="acc-incomplete">
+          <b>This could not be removed</b>
+          <ul>{done.incomplete!.map(step => <li key={step.say}>{step.say}</li>)}</ul>
+          <p>
+            It has been recorded. Asking again will finish it — nothing that was
+            already removed is affected.
+          </p>
+        </div>
+      )}
+      {(done.kept ?? []).length > 0 && (
+        <div className="acc-kept">
+          <b>Kept, because it has to be</b>
+          <ul>{done.kept!.map(line => <li key={line}>{line}</li>)}</ul>
+          <p>Billing records are kept for the period the law requires.</p>
+        </div>
       )}
       <p>Your connections are switched off and their keys destroyed. Sign out to finish.</p>
       <Link href="/account/sign-out">Sign out</Link>

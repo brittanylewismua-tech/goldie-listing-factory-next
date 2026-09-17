@@ -54,3 +54,13 @@
 .acc-deleted ul{margin:0;padding-left:20px;font-size:13px;line-height:1.6}
 .acc-deleted p{margin:0;font-size:13px}
 .acc-deleted a{color:var(--p-good);font-weight:750}
+
+/* D1641 · A deletion with forty-odd steps can partly fail, and the member is
+   the one person who cannot check. Both lists are stated, not implied. */
+.acc-incomplete,.acc-kept{display:grid;gap:var(--p-2);margin-top:var(--p-4);
+  padding:var(--p-4);border-radius:var(--p-radius);border:1px solid var(--p-line);
+  font-size:13px;line-height:1.55}
+.acc-incomplete{border-color:#e4cedb;background:var(--p-bad-soft)}
+.acc-kept{background:var(--p-card-quiet)}
+.acc-incomplete ul,.acc-kept ul{margin:0;padding-left:18px}
+.acc-incomplete p,.acc-kept p{margin:0;color:var(--p-muted);font-size:12px}
