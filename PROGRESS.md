@@ -183,3 +183,55 @@ A purpose-built safeguarded cleanup already exists: `cleanupLaunchListings`
 takes 1-8 exact owner-owned batch ids, verifies ownership, and cannot select a
 customer product. That is the mechanism to use for the temporary draft.
 Live token/permission check NOT yet performed.
+
+## Printify validation journey — PERMISSION PROVEN, CLEANUP UNCONFIRMED
+
+Resume here.
+
+### Safeguard 1 — permission, verified before creating anything (D1595)
+`GET /api/listing-factory/prepare?printify=preflight` (owner only):
+- shops readable: yes. She's A Wolf Clothing = **1374648** (etsy).
+  Others: 1325072 The Bohipstian, 20191756 GODISAGIRLAPPAREL,
+  26761995 THE FIRE SHOP (shopify).
+- delete probe: `DELETE /v1/shops/1374648/products/000000000000000000000000.json`
+  answered **404** -> authorised to delete, nothing written.
+
+### The attempt
+Batch `6aa23db3-41de-4e90-9e9d-788f093c579e`, display name
+"INTERNAL TEST DO NOT ORDER", product Gildan Tee / Unisex Heavy Cotton Tee,
+one design uploaded (4500x5400). Clicked "Create 1 Printify draft" ONCE.
+
+Goldie recorded a FAILURE. Four independent signals say no Printify product
+was created:
+1. `/api/batches?id=` -> no succeeded child, "failed" present.
+2. batch `thumbnail_url` fell back to the TEMPLATE's preview image, which only
+   happens when no draft has a previewUrl.
+3. `launch-check` (requires a succeeded draft row) -> "does not belong to this
+   account".
+4. the only 24-hex id anywhere was `6a860ca48acd77c37807c14b`, which is the
+   SOURCE TEMPLATE: title "Unisex Heavy Cotton Tee", linked to live Etsy
+   listing 4558927057. NOT the created product.
+
+**NOT YET CONFIRMED THROUGH PRINTIFY.** D1597 adds
+`?printify=find&shopId=1374648`, which lists products whose title starts with
+"INTERNAL TEST". Commit bd3ebffd is on the remote; the deploy had not produced
+D1597 after ~14 minutes against a usual ~4. FIRST ACTION NEXT SESSION: wait for
+D1597, run the find, and if an orphan exists delete it with
+`?printify=delete&shopId=1374648&productId=<id>` and confirm `confirmedGone`.
+
+### Removal path (D1596, live)
+`?printify=read` / `?printify=delete` — owner only. Delete reads the product
+first and REFUSES unless the title starts with "INTERNAL TEST", then confirms
+by re-reading and reporting `confirmedGone`. This guard already earned itself:
+it would have refused `6a860ca48acd77c37807c14b`, the real customer product I
+briefly mistook for mine.
+
+### New defects found (both unfixed)
+- **Duplicate-creation risk.** After the failed creation, reopening the batch
+  shows "Create 1 Printify draft" and "1 listing will be created" again, with
+  no sign one was already attempted. A member retrying would create a second
+  Printify product each time. `draft_count` counts client draft ENTRIES
+  including failures, so it cannot be used to tell.
+- **The batch thumbnail is the template's mockup URL**, which reads exactly
+  like the created product's id. That is what nearly sent a delete at a real
+  customer product.
