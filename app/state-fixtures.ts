@@ -750,9 +750,9 @@ export const stateFixtures = (): StateFixture[] => [
     what: "The ordinary map: a month, niches with evidence behind them, somewhere to focus.",
     replies: [{ path: "/api/shop-map/map", status: 200, body: {
       shop: { shopName: "a-connected-shop" }, month: "September 2026",
-      thisMonth: { revenueMinor: 184_250, etsyFeesMinor: 22_110,
+      thisMonth: { revenueMinor: 184_250, etsyFeesMinor: -22_110,
         productionCostMinor: 71_400, profitMinor: 90_740, orders: 47,
-        headline: "47 orders so far this month.", accuracy: "verified",
+        headline: "47 orders so far this month.", accuracy: "Every production cost came from Printify.",
         coverage: { verified: 44, estimated: 3, unavailable: 0 } },
       standout: { hasStandout: true,
         headline: "Bachelorette shirts are carrying the month.",
@@ -786,7 +786,7 @@ export const stateFixtures = (): StateFixture[] => [
     replies: [{ path: "/api/shop-map/map", status: 200, body: {
       shop: { shopName: "a-connected-shop" }, month: "September 2026",
       thisMonth: { revenueMinor: 0, etsyFeesMinor: 0, productionCostMinor: 0,
-        profitMinor: null, orders: 0, accuracy: "unavailable",
+        profitMinor: null, orders: 0, accuracy: "This month's orders could not be read, so nothing is costed yet.",
         headline: "This month's figures could not be read from Etsy.",
         coverage: { verified: 0, estimated: 0, unavailable: 47 } },
       worldsPeriod: "last 90 days",
@@ -804,7 +804,7 @@ export const stateFixtures = (): StateFixture[] => [
     what: "An unknown cost is not zero. Profit must read 'Not available', with the way to fix it.",
     replies: [{ path: "/api/shop-map/map", status: 200, body: {
       shop: { shopName: "a-connected-shop" }, month: "September 2026",
-      thisMonth: { revenueMinor: 184_250, etsyFeesMinor: 22_110,
+      thisMonth: { revenueMinor: 184_250, etsyFeesMinor: -22_110,
         productionCostMinor: 0, profitMinor: null, orders: 47,
         headline: "47 orders so far this month.",
         accuracy: "Production costs missing for 12 of 47 orders.",
@@ -829,9 +829,9 @@ export const stateFixtures = (): StateFixture[] => [
     what: "Where to focus, and a niche carrying more listings than its orders justify.",
     replies: [{ path: "/api/shop-map/map", status: 200, body: {
       shop: { shopName: "a-connected-shop" }, month: "September 2026",
-      thisMonth: { revenueMinor: 184_250, etsyFeesMinor: 22_110,
+      thisMonth: { revenueMinor: 184_250, etsyFeesMinor: -22_110,
         productionCostMinor: 71_400, profitMinor: 90_740, orders: 47,
-        headline: "47 orders so far this month.", accuracy: "verified",
+        headline: "47 orders so far this month.", accuracy: "Every production cost came from Printify.",
         coverage: { verified: 47, estimated: 0, unavailable: 0 } },
       standout: { hasStandout: true,
         headline: "Bachelorette shirts are carrying the month.",

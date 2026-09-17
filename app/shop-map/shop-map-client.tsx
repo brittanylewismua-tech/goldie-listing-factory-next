@@ -190,9 +190,20 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
                   contradicting each other, and the zero is the one a member
                   would believe. It now says what is true.
                 */}
+                {/*
+                  D1672 · AND NO MONTH AT ALL IS NOT ZERO EITHER.
+
+                  The fix above caught the case where coverage says the cost
+                  is unavailable. With no `thisMonth` in the payload — a shop
+                  read before its first month closed — the fallback was a
+                  literal 0, so Production read "$0.00" in a list where
+                  Revenue and Etsy fees both read "—". The same wrong claim,
+                  reached through the other door: money(undefined) already
+                  renders the dash every other row uses.
+                */}
                 <dd>{month?.coverage?.unavailable
                   ? "Not available"
-                  : money(month ? -month.productionCostMinor : 0)}</dd>
+                  : money(month ? -month.productionCostMinor : undefined)}</dd>
               </div>
               <div><dt>Orders</dt><dd>{month?.orders ?? 0}</dd></div>
             </dl>
