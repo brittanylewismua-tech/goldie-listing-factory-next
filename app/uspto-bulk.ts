@@ -15,9 +15,26 @@
  */
 
 /** Where the product's file list lives. */
-export const productFilesUrl = (product: string, from: string, to: string) =>
-  `https://api.uspto.gov/api/v1/datasets/products/${product}` +
-  `?fileDataFromDate=${from}&fileDataToDate=${to}`;
+/*
+  D1665 · HOISTED, NOT A CONST ARROW.
+
+  The ingest tick fails intermittently with "Cannot access 'c' before
+  initialization" — a temporal dead zone in the bundled chunk, thrown before
+  the file read, on some isolate cold starts and not others. There is no
+  import cycle anywhere in app/ (checked), so this is not module ordering in
+  the source. It is the emitted bundle: D1652 established that this
+  bundler rewrites a hoisted declaration as a const arrow, and a const arrow
+  is exactly what can be read before it is assigned.
+
+  `seed()` in the ingest route calls this function before anything else,
+  which matches the failure's own report of where it happened. A function
+  DECLARATION is initialised before any code in its module runs and cannot
+  sit in a dead zone, whatever order the bundle emits.
+*/
+export function productFilesUrl(product: string, from: string, to: string) {
+  return `https://api.uspto.gov/api/v1/datasets/products/${product}`
+    + `?fileDataFromDate=${from}&fileDataToDate=${to}`;
+}
 
 export type BulkFile = {
   name: string;
@@ -243,10 +260,15 @@ export async function* blocks(
 }
 
 /** First value of a simple element, or "" — the register nests, so scope it. */
-export const field = (xml: string, tag: string): string => {
+/* Declarations, not const arrows, for the reason recorded on
+   productFilesUrl above: these are read from another module during a
+   request and must not depend on the bundle's emitted order. */
+export function field(xml: string, tag: string): string {
   const match = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
   return match ? match[1].trim() : "";
-};
+}
 
-export const allFields = (xml: string, tag: string): string[] =>
-  [...xml.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "g"))].map(m => m[1].trim());
+export function allFields(xml: string, tag: string): string[] {
+  return [...xml.matchAll(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "g"))]
+    .map(m => m[1].trim());
+}

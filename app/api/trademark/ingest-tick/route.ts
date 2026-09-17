@@ -23,7 +23,11 @@ import { isRateLimit, retryAfter } from "@/app/uspto-backoff";
  * Same authentication as the sweep: a request the worker built for itself
  * carries no cf-connecting-ip, and no caller on the internet can strip one.
  */
-const key = () => (env as unknown as { USPTO_API_KEY?: string }).USPTO_API_KEY?.trim() || "";
+/* Declarations rather than const arrows — see productFilesUrl in
+   app/uspto-bulk.ts. These run at the very start of the request. */
+function key() {
+  return (env as unknown as { USPTO_API_KEY?: string }).USPTO_API_KEY?.trim() || "";
+}
 
 /* Enough recent days to cover a gap of a fortnight without a special path. */
 const DAILY_DAYS = 21;
@@ -33,8 +37,9 @@ const DAILY_DAYS = 21;
 const REPEATED_FAILURE_LIMIT = 3;
 const DEADLINE_MS = 120_000;
 
-const isoDay = (offsetDays: number) =>
-  new Date(Date.now() - offsetDays * 86_400_000).toISOString().slice(0, 10);
+function isoDay(offsetDays: number) {
+  return new Date(Date.now() - offsetDays * 86_400_000).toISOString().slice(0, 10);
+}
 
 async function seed(db: D1Database): Promise<number> {
   const apiKey = key();
@@ -237,9 +242,6 @@ async function runTick(db: D1Database, request: Request) {
       says. The note stays visible, so a wrongly parked file is findable
       rather than lost.
     */
-    const sameAgain = (next.note ?? "").slice(0, 300) === note.slice(0, 300);
-    const repeats = sameAgain ? Number(next.repeats ?? 0) + 1 : 1;
-    const exhausted = !limited && repeats >= REPEATED_FAILURE_LIMIT;
     /*
       AND A RATE LIMIT IS NEITHER.
 
@@ -249,6 +251,29 @@ async function runTick(db: D1Database, request: Request) {
       refusals continue.
     */
     const limited = isRateLimit(note);
+    /*
+      D1665 · `exhausted` READ `limited` BEFORE IT WAS DECLARED.
+
+      D1644 inserted these three lines above the `const limited` they depend
+      on, so every time a file's ingest threw, this catch threw its own
+      ReferenceError — "Cannot access 'c' before initialization" in the
+      minified bundle — instead of parking the file. The real error was
+      swallowed, the file was never classified, and the backfile stopped
+      advancing again.
+
+      It read as intermittent because it only fires when a file FAILS, and it
+      read as happening "before the file read" because that is what the
+      handler's own wrapper labels anything thrown from here. Both readings
+      sent me looking for an import cycle that does not exist.
+
+      `tsc` names it in one line: "Block-scoped variable 'limited' used before
+      its declaration." I had been skipping that output because this file
+      also reports cloudflare:workers and D1Database as unresolved under a
+      bare tsc, and the real error was three lines below the noise.
+    */
+    const sameAgain = (next.note ?? "").slice(0, 300) === note.slice(0, 300);
+    const repeats = sameAgain ? Number(next.repeats ?? 0) + 1 : 1;
+    const exhausted = !limited && repeats >= REPEATED_FAILURE_LIMIT;
     const strikes = limited ? Number(next.strikes ?? 0) + 1 : 0;
     await db
       .prepare(

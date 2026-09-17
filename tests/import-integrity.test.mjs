@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 
 /**
  * A MISSING IMPORT SHIPPED AND TOOK THE BOARD DOWN.
@@ -89,4 +90,41 @@ test("a symbol from another module is imported where it is used", () => {
 
   assert.deepEqual(missing, [],
     `an undefined identifier compiles and ships — the build does not typecheck:\n${missing.join("\n")}`);
+});
+
+/*
+  AND A VARIABLE USED BEFORE IT IS DECLARED.
+
+  Same gap, one step further in. `npm run build` does not typecheck, so
+  rolldown happily compiled this:
+
+      const exhausted = !limited && repeats >= REPEATED_FAILURE_LIMIT;
+      ...
+      const limited = isRateLimit(note);
+
+  in the trademark ingest's catch block. Every time a file's ingest threw,
+  that catch threw its OWN ReferenceError instead of parking the file — so
+  the real error was swallowed, nothing was classified, and the historical
+  backfile stopped advancing. It read as intermittent because it only fires
+  when a file fails.
+
+  Nothing caught it for two days of work. It took three rounds of wrong
+  theories — source order, an import cycle, a bundler rewrite — and `tsc`
+  named it in one line the whole time.
+
+  This is a narrow, reliable check: TS2448 and TS2454 are true regardless of
+  whether the Workers types resolve, so the cloudflare:workers and D1Database
+  noise that made me stop reading tsc's output cannot hide them.
+*/
+test("no variable is used before it is declared", () => {
+  const out = spawnSync("npx",
+    ["tsc", "--noEmit", "-p", "tsconfig.json"],
+    { cwd: new URL("..", import.meta.url).pathname, encoding: "utf8", timeout: 240_000 });
+  const text = `${out.stdout ?? ""}${out.stderr ?? ""}`;
+  assert.ok(text.length > 0 || out.status === 0, "tsc produced no output at all");
+  /* Used before declaration, and used before assignment. Both are runtime
+     ReferenceErrors waiting to happen, and neither depends on lib types. */
+  const deadZone = text.split("\n").filter(line => /error TS(2448|2454):/.test(line));
+  assert.deepEqual(deadZone, [],
+    `these are runtime ReferenceErrors the build will ship:\n${deadZone.join("\n")}`);
 });

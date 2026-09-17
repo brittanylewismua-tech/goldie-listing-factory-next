@@ -81,6 +81,26 @@ export async function addCandidates(
     for (const row of rows.results ?? []) known.add(Number(row.listingId));
   }
 
+  /*
+    D1665 · THE CAP IS COMPUTED HERE, BECAUSE THE GUARD BELOW READS IT.
+
+    `if (!selected.length)` sat above `const selected`, so every call that
+    reached it threw a ReferenceError — a temporal dead zone, on a path
+    taken whenever a discovery run returns listings. The cap was added to
+    this function later than the guard and its declaration was placed with
+    the code that uses it rather than with the code that tests it.
+
+    Found by a new tsc check for TS2448 on its first run, alongside the one
+    in the trademark ingest that had been swallowing real errors for days.
+    `npm run build` compiles both without complaint.
+  */
+  const held = await db().prepare(
+    `SELECT COUNT(*) AS n FROM niche_candidates
+      WHERE niche_key = ? AND state IN
+            ('discovered','awaiting-baseline','monitoring','momentum','repeated-momentum')`)
+    .bind(nicheKey).first<{ n: number }>().catch(() => null);
+  const room = Math.max(0, GROWTH.maxCandidatesPerNiche - Number(held?.n ?? 0));
+  const selected = found.slice(0, room);
   if (!selected.length)
     return { added: 0, alreadyKnown: known.size, selected: 0, selectedShops: 0,
       insertedShops: 0, atCap: true };
@@ -116,13 +136,6 @@ export async function addCandidates(
     reports shop counts from the set that was actually kept — the mix-up that
     described a 200-listing pool as spanning 211 shops.
   */
-  const held = await db().prepare(
-    `SELECT COUNT(*) AS n FROM niche_candidates
-      WHERE niche_key = ? AND state IN
-            ('discovered','awaiting-baseline','monitoring','momentum','repeated-momentum')`)
-    .bind(nicheKey).first<{ n: number }>().catch(() => null);
-  const room = Math.max(0, GROWTH.maxCandidatesPerNiche - Number(held?.n ?? 0));
-  const selected = found.slice(0, room);
   const statements = selected.map(row =>
     insert.bind(nicheKey, row.listingId, row.shopId, phrase, query, now, row.page,
       row.state,
