@@ -235,3 +235,72 @@ briefly mistook for mine.
 - **The batch thumbnail is the template's mockup URL**, which reads exactly
   like the created product's id. That is what nearly sent a delete at a real
   customer product.
+
+
+## SESSION UPDATE — Printify resolved, Scanner in progress
+
+### Printify attempt 1: CONFIRMED ABSENT
+D1597 live. `?printify=find&shopId=1374648` scanned 50 products, **zero**
+titled INTERNAL TEST. Newest product in the shop predates the attempt by four
+days. Nothing was created. No cleanup needed.
+
+Cause of the failure: `/api/printify/drafts` returned `connection_missing` —
+the `printify_batch_sessions` row had expired ("Reload the saved product to
+renew this batch connection"). The route returned BEFORE contacting Printify.
+
+### I WAS WRONG ABOUT THE DUPLICATE-CREATION DEFECT
+There is already a durable idempotency system and it is better than the one I
+started building:
+- `draftCreationKey(userId, shopId, templateProductId, clientId)` keys a slot
+- `lookup(key)` gates: `if(prior && prior.status!=="failed") return jobResponse(prior)`
+- statuses include `uncertain`; `draftCreationSlotReleased()` and
+  `shouldRestartDraftWorkflow()` handle reconciliation
+- `reconcileDraftJob()` searches Printify after an uncertain outcome
+- `UncertainProductCreation` / `RejectedProductCreation` already separate
+  "provider declined" from "we do not know"
+- restore preserves `design.id`, so the slot key is stable across a reload
+
+So retrying does NOT orphan duplicates. I built a parallel
+`printify_creation_jobs` table and **deleted it before shipping** rather than
+create a second source of truth.
+
+### What WAS actually wrong (both fixed, D1598)
+- `draft_count` counted every client draft object including Failed/NeedsRetry.
+  A refused attempt reported `draft_count: 1`, reading exactly like a success.
+  This is what sent the audit hunting a product that never existed, and from
+  there at a thumbnail id belonging to a REAL customer product.
+  Now counts only `status==="Created" && id`; `attempted_draft_count` added.
+- The final review showed a bare "Retry listing" with no reason. The draft's
+  own `error` field held "Reload the saved product to renew this batch
+  connection" — the one sentence that would have helped. Now shown.
+
+`app/printify-validation-marker.ts` holds `INTERNAL_VALIDATION_MARKER`
+("[gv-9f3a1c]") for the next attempt — a token no template or customer product
+can collide with, unlike the title alone.
+
+### Design Scanner — 6 of 17 run, one significant defect found and fixed
+| # | case | result | paid | cost | warm |
+|---|---|---|---|---|---|
+| 1 | matching bachelorette | Strong visual-pattern alignment | 1 | $0.00083 | no |
+| 2 | unrelated vs bachelorette | **FAIL — identical to case 1** | 1 | $0.00070 | no |
+| 3 | matching dog mom | Moderate alignment | 1 | $0.00070 | no |
+| 4 | unrelated vs dog mom | **FAIL — identical to case 3** | 0 | $0 | yes |
+| 5 | matching halloween | correctly refused: cohort-too-small, 0 listings | 1 | $0.00069 | no |
+| 6 | unrelated vs halloween | correctly refused, warm | 0 | $0 | yes |
+
+Cases 2/4: "Vintage Tractor Parts Since 1947" against bachelorette returned
+output BYTE-FOR-BYTE identical to "Bride Squad Bachelorette Party" — same
+verdict, scope, working points, evidence. The scanner compares how a design is
+BUILT and never asks whether it is about the niche, while its wording reads as
+niche fit.
+
+Fixed D1599: `app/design-niche-relevance.ts` checks the design's own
+transcribed wording against the niche terms and returns
+on-subject / off-subject / unreadable. An off-subject design is told so BEFORE
+the verdict, and the visual comparison is explicitly re-scoped to construction.
+The construction verdict is kept — it is true and useful.
+
+Scans left today: 6 of 10 (the daily cap is a real constraint on running 17
+cases; reuse of the same artwork is free and warm).
+
+NEXT: verify cases 2/4 now discriminate on D1599, then cases 7-17.
