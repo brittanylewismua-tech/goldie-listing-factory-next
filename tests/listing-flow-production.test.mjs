@@ -146,8 +146,17 @@ test("the production path stops before Etsy", () => {
     a model, not a write to her shop — so what is guarded is the shops.
   */
   const get = route.slice(route.indexOf("export const GET"));
-  for (const host of ["etsy.com", "printify.com", "etsyFetch", "/listings"])
+  /*
+    The owner endpoint may talk to Printify — the preflight deliberately
+    exercises DELETE against an id that cannot exist, to establish permission
+    BEFORE anything is created. What it must never touch is Etsy.
+  */
+  for (const host of ["etsy.com", "etsyFetch", "/listings"])
     assert.ok(!get.includes(host), `the owner endpoint reaches ${host}`);
+  const preflight = route.slice(route.indexOf("async function printifyPreflight"));
+  assert.match(preflight, /createdNothing: true/);
+  assert.match(preflight, /"0"\.repeat\(24\)/,
+    "the delete probe must target an id that cannot belong to a real product");
   assert.match(get, /isOwner\(user\)/, "the owner endpoint must be owner-gated");
   assert.match(get, /artwork_provenance/,
     "the sample must read the member's own stored artwork");

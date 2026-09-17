@@ -10,6 +10,7 @@ import { composeTitle, composeTags } from "@/app/listing-composition";
 import { ensureDesign, ensureFamilyCopy, DESIGN_VERSION } from "@/app/listing-flow";
 import { POD_LISTING_FIELDS, LISTING_FIELD_FOR_PROPERTY } from "@/app/pod-listing-fields";
 import { artworkHashOfBytes, artworkHashOfDataUrl } from "@/app/artwork-identity";
+import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { check, withRegister } from "@/app/trademark-check";
 import { lookup, registerSize } from "@/app/trademark-register";
 import { env } from "cloudflare:workers";
@@ -222,6 +223,7 @@ export const GET = withErrorLog("listing-factory-prepare-sample", async (request
     const params = new URL(request.url).searchParams;
     if (params.get("probe") === "1") return await probe();
     if (params.get("reset")) return await reset(params.get("reset") ?? "");
+    if (params.get("printify") === "preflight") return await printifyPreflight();
     return await sample(new URL(request.url).searchParams.get("n") ?? "0");
   } catch (error) {
     /* The real message, to the owner. This endpoint has no member audience and
@@ -346,4 +348,61 @@ async function reset(artworkHash: string) {
     designRowsCleared: design.meta.changes, copyRowsCleared: copy.meta.changes,
     leasesCleared: leases.meta.changes,
     scope: "This member's own cached analysis only. No listing or shop data touched." });
+}
+
+
+/**
+ * CAN THIS TOKEN DELETE, BEFORE ANYTHING IS CREATED?
+ *
+ * Creating a product to find out whether it can be removed again is the wrong
+ * order: a create that succeeds and a delete that is refused leaves a real
+ * product in a real shop with no way to take it back from here.
+ *
+ * So the delete is exercised FIRST, against a syntactically valid product id
+ * that cannot exist. Printify answers 404 when the caller is authorised and
+ * the product is simply absent, and 401/403 when it is not authorised at all —
+ * which is the whole question, answered without writing anything.
+ */
+async function printifyPreflight() {
+  const user = await getChatGPTUser();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+
+  const runtime = env as unknown as { DB: D1Database; PRINTIFY_TOKEN_KEY: string };
+  const connection = await runtime.DB.prepare(
+    `SELECT encrypted_token FROM printify_connections WHERE user_id = ?`)
+    .bind(user.userId).first<{ encrypted_token: string }>();
+  if (!connection) return NextResponse.json({ error: "Printify is not connected." }, { status: 409 });
+  const token = await decryptPrintifyToken(connection.encrypted_token, runtime.PRINTIFY_TOKEN_KEY);
+  const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
+
+  const shopsResponse = await fetch("https://api.printify.com/v1/shops.json",
+    { headers, signal: AbortSignal.timeout(15_000) });
+  const shops = shopsResponse.ok
+    ? await shopsResponse.json() as Array<{ id: number; title: string; sales_channel?: string }> : [];
+  const shop = shops[0];
+
+  /* A valid-shaped id that cannot belong to anything. */
+  const absent = "0".repeat(24);
+  let deleteStatus = 0;
+  if (shop) {
+    const attempt = await fetch(
+      `https://api.printify.com/v1/shops/${shop.id}/products/${absent}.json`,
+      { method: "DELETE", headers, signal: AbortSignal.timeout(15_000) });
+    deleteStatus = attempt.status;
+  }
+
+  return NextResponse.json({
+    preflight: true,
+    createdNothing: true,
+    shopsReadable: shopsResponse.ok,
+    shops: shops.map(entry => ({ id: entry.id, title: entry.title, channel: entry.sales_channel })),
+    deleteProbe: {
+      endpoint: "DELETE https://api.printify.com/v1/shops/{shopId}/products/{productId}.json",
+      productId: absent,
+      status: deleteStatus,
+      /* 404: authorised, nothing there. 401/403: not authorised to delete. */
+      authorisedToDelete: deleteStatus === 404 || deleteStatus === 200,
+    },
+  });
 }
