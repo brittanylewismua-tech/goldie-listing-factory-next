@@ -1434,16 +1434,30 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   the same treatment the batch selectors got.
 */
 @media (max-width: 767px) {
-  .usage-page button,
-  .usage-page a.p-button,
-  .usage-page input:not([type="checkbox"]):not([type="radio"]),
-  .usage-page select,
-  .keyword-page button,
-  .keyword-page input:not([type="checkbox"]):not([type="radio"]),
-  .keyword-page select {
+  /*
+    Specificity, learned the hard way. The first version of this rule was
+    (0,1,1) and lost to .keyword-page .bank-grid .edit-bank at (0,3,0) in
+    interface-v2.css, so Delete stayed 34px and Edit bank 36px while the rule
+    appeared to be doing its job. Re-measured against the live DOM rather
+    than assumed.
+  */
+  .app-shell .usage-page button,
+  .app-shell .usage-page a,
+  .app-shell .usage-page input:not([type="checkbox"]):not([type="radio"]),
+  .app-shell .usage-page select,
+  .app-shell .keyword-page button,
+  .app-shell .keyword-page .bank-grid .edit-bank,
+  .app-shell .keyword-page .bank-delete,
+  .app-shell .keyword-page .bank-keyword-toggle,
+  .app-shell .keyword-page input:not([type="checkbox"]):not([type="radio"]),
+  .app-shell .keyword-page select {
     min-height: 44px;
   }
-  .usage-page .listing-goal-switch {
+  /* An inline link in a sentence is not a button and must not become one. */
+  .app-shell .usage-page p > a:not(.p-button) {
+    min-height: 0;
+  }
+  .app-shell .usage-page .listing-goal-switch {
     display: flex;
     align-items: center;
     gap: 10px;
