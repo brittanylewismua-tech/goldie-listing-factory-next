@@ -12,6 +12,30 @@ Update it as sections land. It records what is PROVEN, not what is intended.
 
 ---
 
+# PRESENTATION IS FROZEN
+
+The approved visual redesign lives in a separate Sites project and will
+replace the current presentation after the coding work is finished:
+https://goldie-suite-redesign.brittany-lewis.chatgpt.site/
+
+From 2026-09-18, work here is functional completion, data integrity,
+security, error handling, accessibility and verification. Visual issues are
+in scope ONLY when they are functional — hidden or unreachable controls,
+broken scrolling, overflow, unreadable text, misleading loading or error
+states, undersized touch targets, missing success or failure feedback, and
+layout defects that stop someone finishing a task.
+
+Not in scope: composition, hierarchy, colour, type, card styles, icons,
+spacing systems, shadows, decoration, navigation aesthetics, branding. Do not
+redesign pages to match any other page, and do not start a CSS refactor Sites
+will immediately replace.
+
+Every member-facing route, its states, its controls and the data it needs are
+in DESIGN_HANDOFF.md, so the Sites implementation can be applied without
+rediscovering the behaviour.
+
+---
+
 # FINAL REVIEW PROCEDURE — run this first in the next session
 
 Two clocks were still running when this was written. The product records
