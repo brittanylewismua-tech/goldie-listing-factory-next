@@ -76,11 +76,10 @@ Those are not the same claim. Labelled properly:
 |---|---|
 | cold scan, billing, allowance, caching | **live verified** (below) |
 | changed-reference-image handling | **deterministic fixture verified** — `tests/reference-refresh-outcomes.test.mjs` |
-| changed-reference-image handling in the deployed production path | **still unobserved** |
+| changed-reference-image handling in the deployed production path | **live verified** — D1709, see below |
 
-The third is not closed and is not being called closed. A real Etsy listing
-will not be modified to force it; the canary route at the end of this section
-is the way to close it without writing to Etsy.
+The third was unobserved when case 15 first ran, and is now closed by a
+controlled canary rather than by modifying a real Etsy listing.
 
 ### The part that is live verified — a cold scan, its cost, and the same design again
 
@@ -204,3 +203,46 @@ there's nothing to buy right now", which is checkout staying closed.
 Authenticated mobile states. The in-app browser has real device emulation but
 no session, and signing it in means handling credentials. Every authenticated
 surface is narrow-layout verified only.
+
+## Case 15, third claim — the changed-image branch in the deployed path
+
+D1709, 2026-09-18T04:08Z, via `POST /api/design-scanner/reference-change-canary`
+(owner only). Nothing was written to Etsy. The canary makes OUR CACHE disagree
+with Etsy — a synthetic image id and a retrieved_at pushed seven hours back —
+and lets the product's own six-hour refresh rule discover it.
+
+Target: listing 4540080515 in the `bachelorette` cohort, image id 8316763937
+presented to the refresh as 8316763938.
+
+| | before | after |
+|---|---|---|
+| cohort listings | **42** | **41** |
+| cohort shops | 39 | 38 |
+| repeated movement | 42 | 41 |
+| with usable image | 42 | 41 |
+
+| what had to be true | result |
+|---|---|
+| the old analysis is rejected | **pass** — `droppedOnRefresh.imageChanged: 1` |
+| the changed image cannot inherit the old evidence | **pass** — the cohort shrank |
+| the cohort is recalculated correctly | **pass** — 41 is exactly 42 − 1 |
+| provider spend occurs only when fresh analysis is needed | **pass** — warm, 0 calls, $0, ledger unmoved at $0.0015 |
+
+- One real Etsy call was made: `etsyRefreshCalls: 1`. That is the refresh
+  itself, which is the path under test.
+- The reference row was restored and the restore was VERIFIED, not assumed:
+  `restored: true` compares both image id and retrieved_at against the values
+  read before the change.
+- `GET` on the same route afterwards: `clean: true`, no residue. It looks for
+  the shape this canary writes — an image id the analysis table has never
+  seen whose id minus one it has — because an image id with no analysis is
+  ordinary on its own with the analyser backlog thousands deep.
+
+Two earlier runs are worth recording because they were both my errors, not the
+product's. The first returned a 500: the canary invoked the scan by fetching
+its own URL, which a worker cannot do to itself. It failed at the baseline
+scan, before any mutation, and the integrity check confirmed nothing was left
+behind. The second fired the branch correctly but reported two proofs false,
+because a successful scan did not return its cohort at all — only a refused
+one did. That was a real gap in the product and is fixed in D1709: the case
+where a comparison is actually made now says what it rests on.

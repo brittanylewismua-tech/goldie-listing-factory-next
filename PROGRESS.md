@@ -4,7 +4,7 @@ Kept in the repo so a new session can pick this up without re-deriving it.
 Update it as sections land. It records what is PROVEN, not what is intended.
 
 ## Build / test state
-- Build marker: D1706. Tests 3,330 passing, 0 failing.
+- Build marker: D1709. Tests 3,336 passing, 0 failing.
 - Canary: `listingFactoryLayeredFlow` ON for the owner account only, globally OFF.
 - Checkout disabled. Nobody invited. No Etsy listing or draft created.
 - Approved by Brittany for her own review. NOT member-ready until the two
@@ -111,10 +111,11 @@ rewrote every D-number in the file's prose), push, then verify
   has not arisen. Do NOT force it by writing false timestamps into production
   reference data. The refresh logic is covered by fixtures
   (`tests/reference-refresh-outcomes.test.mjs`).
-- **Changed-reference-image handling in the deployed path** — fixture
-  verified, not production verified. See the canary section of
-  `docs/design-scanner-live-cases.md` for the owner-only route that exercises
-  it without touching Etsy.
+- ~~Changed-reference-image handling in the deployed path~~ — **CLOSED**,
+  D1709. All four proofs passed in production via the owner-only canary at
+  `POST /api/design-scanner/reference-change-canary`, cohort 42 → 41 with zero
+  provider spend and the reference row restored and verified. Full table in
+  `docs/design-scanner-live-cases.md`.
 - **Listing Factory at phone widths** — 22 controls under 40px, left
   deliberately. It is the one tool the product labels DESKTOP.
 - **Authenticated mobile** — narrow-layout verified only. The in-app browser
