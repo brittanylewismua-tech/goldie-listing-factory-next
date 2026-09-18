@@ -139,3 +139,24 @@ test("the canary is owner-only", () => {
   const matrix = readFileSync(new URL("../app/access-matrix.ts", import.meta.url), "utf8");
   assert.ok(matrix.includes('"/api/design-scanner/reference-change-canary"'));
 });
+
+test("the canary picks a reference from the scanned niche's own cohort", () => {
+  const canary = readFileSync(new URL(
+    "../app/api/design-scanner/reference-change-canary/route.ts",
+    import.meta.url), "utf8");
+  /*
+    The refresh only re-reads references inside the scanned niche's cohort. A
+    target picked globally would be left untouched, the branch would never
+    fire, and all four proofs would read false — which would look like a
+    defect in the product rather than in the canary's aim.
+  */
+  assert.match(canary, /JOIN \(SELECT DISTINCT listing_id FROM listing_sales_activity/,
+    "cohort membership requires momentum evidence");
+  assert.match(canary, /r\.title LIKE \? OR r\.tags LIKE \?/,
+    "and the niche's wording in the reference's own title or tags");
+  assert.match(canary, /const \{ terms \} = normalizeNiche\(niche\)/,
+    "the terms must come from the same function the scan uses, or this drifts "
+    + "from the real matcher");
+  /* A miss is reported as a canary problem, not a product one. */
+  assert.match(canary, /pickLandedInCohort: imageChanged >= 1/);
+});

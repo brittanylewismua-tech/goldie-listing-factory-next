@@ -3,6 +3,8 @@ import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
+import { normalizeNiche } from "@/app/niche-cohort";
+import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 
 /**
  * CASE 15, THROUGH THE REAL PIPELINE, WITHOUT TOUCHING ETSY.
@@ -82,18 +84,45 @@ export const POST = withErrorLog("reference-change-canary", async (request: Requ
   const before = await scan();
   const cohortBefore = (before.body.cohort ?? {}) as Record<string, number>;
 
-  /* A reference this niche's cohort actually uses, and one we hold analysis
-     for — otherwise dropping it would change nothing observable. */
+  /*
+    A reference THIS NICHE'S COHORT ACTUALLY USES.
+
+    The refresh only re-reads references inside the scanned niche's cohort, so
+    a target picked globally would be left untouched and the branch would
+    never fire — the canary would report all four proofs false and look like a
+    defect in the product rather than in its own aim.
+
+    Cohort membership is: recent sales activity, plus the niche's terms
+    appearing in the reference's own title or tags. The terms come from
+    normalizeNiche, the same function the scan uses, so this cannot drift from
+    the real matcher. It is a looser filter than `intersect` on purpose —
+    picking a candidate is all it has to do, and whether the pick landed is
+    then read from the scan's own answer rather than assumed.
+  */
+  const { terms } = normalizeNiche(niche);
+  if (!terms.length)
+    return NextResponse.json({ error: "That niche has no usable terms." }, { status: 400 });
+  const since = new Date(
+    (Math.floor(Date.now() / 1_000) - EVIDENCE_FRESH_DAYS * 86_400) * 1_000).toISOString();
+  const like = terms.map(() => `(r.title LIKE ? OR r.tags LIKE ?)`).join(" OR ");
+  const binds = terms.flatMap(term => [`%${term}%`, `%${term}%`]);
   const target = await db.prepare(
     `SELECT r.listing_id, r.image_id, r.image_url, r.retrieved_at, r.outcome
        FROM reference_images r
        JOIN reference_analysis a ON a.image_id = r.image_id
+       JOIN (SELECT DISTINCT listing_id FROM listing_sales_activity
+              WHERE interval_id IS NOT NULL AND observed_at >= ?) s
+         ON s.listing_id = r.listing_id
       WHERE r.outcome = 'recovered' AND r.image_id IS NOT NULL
+        AND (${like})
       ORDER BY r.retrieved_at DESC LIMIT 1`)
+    .bind(since, ...binds)
     .first<Row>();
   if (!target)
     return NextResponse.json({
-      error: "No analysed reference available to use as the canary.",
+      error: `No analysed reference in the ${niche} cohort to use as the canary. `
+        + `The canary needs one reference that has momentum evidence, stored `
+        + `analysis, and this niche's wording in its own title or tags.`,
     }, { status: 409 });
 
   const originalImageId = Number(target.image_id);
@@ -145,6 +174,10 @@ export const POST = withErrorLog("reference-change-canary", async (request: Requ
           && Number(after.body.cost ?? -1) === 0
           && after.body.warm === true,
       },
+      /* Whether the pick landed in the cohort at all, said separately from
+         whether the branch behaved — a miss is a canary problem, not a
+         product one, and the two must not be confused. */
+      pickLandedInCohort: imageChanged >= 1,
       observed: {
         etsyRefreshCalls: after.body.etsyRefreshCalls,
         droppedOnRefresh: dropped,
