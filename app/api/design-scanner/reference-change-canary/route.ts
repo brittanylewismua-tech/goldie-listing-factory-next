@@ -5,6 +5,7 @@ import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { normalizeNiche } from "@/app/niche-cohort";
 import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
+import { POST as runScan } from "../scan/route";
 
 /**
  * CASE 15, THROUGH THE REAL PIPELINE, WITHOUT TOUCHING ETSY.
@@ -70,13 +71,22 @@ export const POST = withErrorLog("reference-change-canary", async (request: Requ
         + "canary is only meaningful on a warm design.",
     }, { status: 400 });
 
+  /*
+    D1708 · IN PROCESS, NOT OVER THE NETWORK.
+
+    This called the scan by fetching its own URL. A worker sub-request to
+    itself is not a supported shape: the first live run returned a 500 before
+    the canary had touched anything. Calling the handler directly removes the
+    network hop entirely — and because getChatGPTUser reads the ambient
+    request's cookies, the scan runs as the same signed-in owner without a
+    credential being copied anywhere.
+  */
   const scan = async () => {
-    const response = await fetch(new URL("/api/design-scanner/scan", request.url), {
+    const response = await runScan(new Request("https://internal/api/design-scanner/scan", {
       method: "POST",
-      headers: { "Content-Type": "application/json",
-        cookie: request.headers.get("cookie") ?? "" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ artworkHash, niche }),
-    });
+    }));
     return { status: response.status, body: await response.json() as Record<string, unknown> };
   };
 
@@ -200,4 +210,64 @@ export const POST = withErrorLog("reference-change-canary", async (request: Requ
         .bind(originalImageId, target.image_url, Number(target.retrieved_at),
           target.outcome, target.listing_id).run().catch(() => {});
   }
+});
+
+/**
+ * DID ANY RUN OF THIS LEAVE A ROW WRONG?
+ *
+ * The canary's whole risk is that it mutates a reference row and fails to put
+ * it back. The restore runs on the success path and again in a finally, and
+ * the success path verifies itself — but "verified on the path that worked" is
+ * not the same as "nothing was left behind", and the first live run of the
+ * canary returned a 500.
+ *
+ * A synthetic image id is one the analysis table has never seen, so that is
+ * what this looks for. It reports rather than repairs: the refresh path
+ * rewrites a stale row from Etsy's own answer, so a row found here heals on
+ * its next scan, and silently rewriting production data to make a check pass
+ * is the habit this endpoint exists to guard against.
+ */
+export const GET = withErrorLog("reference-change-canary-integrity", async () => {
+  const user = await getChatGPTUser();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const orphaned = await db.prepare(
+    `SELECT r.listing_id AS listingId, r.image_id AS imageId, r.retrieved_at AS retrievedAt
+       FROM reference_images r
+       LEFT JOIN reference_analysis a ON a.image_id = r.image_id
+      WHERE r.outcome = 'recovered' AND r.image_id IS NOT NULL AND a.image_id IS NULL
+      ORDER BY r.retrieved_at DESC LIMIT 50`)
+    .all<{ listingId: number; imageId: number; retrievedAt: number }>();
+
+  const totals = await db.prepare(
+    `SELECT COUNT(*) AS held,
+            SUM(CASE WHEN outcome = 'recovered' THEN 1 ELSE 0 END) AS recovered
+       FROM reference_images`).first<{ held: number; recovered: number }>();
+
+  /*
+    An image id with no analysis is NORMAL for a reference the analyser has
+    not reached yet — the backlog is thousands deep. What would not be normal
+    is one whose id is exactly another row's id plus one AND whose
+    retrieved_at was pushed into the past, which is the shape this canary
+    writes.
+  */
+  const rows = (orphaned.results ?? []) as Array<{ listingId: number; imageId: number; retrievedAt: number }>;
+  const suspects = [] as Array<{ listingId: number; imageId: number }>;
+  for (const row of rows) {
+    const neighbour = await db.prepare(
+      `SELECT 1 AS found FROM reference_analysis WHERE image_id = ? LIMIT 1`)
+      .bind(Number(row.imageId) - 1).first<{ found: number }>();
+    if (neighbour) suspects.push({ listingId: row.listingId, imageId: row.imageId });
+  }
+
+  return NextResponse.json({
+    held: Number(totals?.held ?? 0),
+    recovered: Number(totals?.recovered ?? 0),
+    withoutAnalysis: rows.length,
+    /* The only list that matters: rows shaped like this canary's own writes. */
+    looksLikeCanaryResidue: suspects,
+    clean: suspects.length === 0,
+  });
 });
