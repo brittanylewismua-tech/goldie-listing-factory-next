@@ -92,6 +92,11 @@ export const POST = withErrorLog("reference-change-canary", async (request: Requ
 
   /* ------------------------------------------------- 1. the baseline scan */
   const before = await scan();
+  /*
+    D1709 · The cohort shape used to travel only on a refusal, so a
+    successful baseline reported nothing to compare against and two of the
+    four proofs below read false on a run that had actually worked.
+  */
   const cohortBefore = (before.body.cohort ?? {}) as Record<string, number>;
 
   /*
@@ -188,6 +193,9 @@ export const POST = withErrorLog("reference-change-canary", async (request: Requ
          whether the branch behaved — a miss is a canary problem, not a
          product one, and the two must not be confused. */
       pickLandedInCohort: imageChanged >= 1,
+      /* Stated so a missing cohort cannot be mistaken for a cohort of zero. */
+      cohortReported: typeof cohortBefore.listings === "number"
+        && typeof cohortAfter.listings === "number",
       observed: {
         etsyRefreshCalls: after.body.etsyRefreshCalls,
         droppedOnRefresh: dropped,

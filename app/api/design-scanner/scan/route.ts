@@ -513,6 +513,19 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
           thumbnailReadable: "unverified",
           notes: ["This design's readability has not been measured. Scan it "
             + "again with the file to check it."] },
+    /*
+      D1709 · THE SUCCESS PATH WAS LESS TRANSPARENT THAN THE REFUSAL.
+
+      A refused scan returns `cohort` — how many listings, how many shops, how
+      many showed repeated movement — because the whole point of the refusal
+      is that the evidence was too thin to compare against. A scan that
+      SUCCEEDED returned none of it, so the one case where a comparison is
+      actually being made was the case that did not say what it rests on.
+
+      It was already computed for the threshold a line above. Nothing new is
+      measured here; the number simply travels now.
+    */
+    cohort: shape,
     evidence: line, scanId: id };
   await db.prepare(
     `INSERT INTO scan_history (id, user_id, artwork_hash, niche, result_json, created_at)
