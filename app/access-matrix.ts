@@ -170,6 +170,7 @@ export const OWNER_PREFIXES = [
   "/api/shop-map/connection-forensics", "/api/shop-map/financial-survey",
   "/api/shop-map/financial/audit", "/api/shop-map/image-id-test",
   "/api/shop-map/override-audit",
+  "/api/design-scanner/reference-change-canary",
   "/api/shop-map/printify-probe", "/api/shop-map/printify-audit",
   "/api/shop-map/capture-tick",
   "/api/trademark/ingest-tick", "/api/listing-factory/",

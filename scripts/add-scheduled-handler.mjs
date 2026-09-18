@@ -147,6 +147,20 @@ export default {
     /* The corpus sweep, which is what keeps discovery going. */
     run("/api/sold-overnight/cron");
     /*
+      AND THE TWO CLOCKS RECORD THEMSELVES.
+
+      The 72-hour gate and the USPTO backfile both finish on their own
+      schedule. Reading them from a health view means the moment either
+      finished is only captured if somebody happened to be looking, and a
+      desktop reminder that needs an app left open is not automation.
+
+      Last in the queue on purpose: it is two reads and two small writes, it
+      must never delay the work it is measuring, and a tick it misses is one
+      twenty-minute gap in a history rather than a lost outcome — the outcome
+      row is written the first time the condition holds, whenever that is.
+    */
+    run("/api/operations/evidence-tick");
+    /*
       Whole-shop enumeration is NOT on the clock. The estimate killed it as a
       production path — a median of 695 listings per shop and one with 11,202
       and for the modified-order experiment; nothing schedules it.

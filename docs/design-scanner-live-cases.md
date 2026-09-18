@@ -66,7 +66,23 @@ request left unanswered by a fixture. It is a control on the harness rather
 than something done by hand, because the first hand-run found two real
 defects and a hand-run happens once.
 
-## Case 15 — a cold scan, its cost, and the same design scanned again
+## Case 15 — THREE CLAIMS, AND ONLY TWO OF THEM ARE LIVE
+
+Case 15 is the changed-reference-image path. I ran a cold scan, reported that
+the branch never fired, and then presented the whole case as live verified.
+Those are not the same claim. Labelled properly:
+
+| claim | status |
+|---|---|
+| cold scan, billing, allowance, caching | **live verified** (below) |
+| changed-reference-image handling | **deterministic fixture verified** — `tests/reference-refresh-outcomes.test.mjs` |
+| changed-reference-image handling in the deployed production path | **still unobserved** |
+
+The third is not closed and is not being called closed. A real Etsy listing
+will not be modified to force it; the canary route at the end of this section
+is the way to close it without writing to Etsy.
+
+### The part that is live verified — a cold scan, its cost, and the same design again
 
 D1702, 2026-09-18T02:15Z. The allowance opened with three slots rather than
 one; several scans left the rolling window together.
@@ -97,8 +113,9 @@ white, 1200x1200, 96 KB, `b518275d…` — scanned against `teacher`.
 - Trademark on the design's own wording: clear, 0 hits, register correctly
   reported as not ready.
 - Every reference in the cohort was fresh, so no Etsy refresh ran and nothing
-  was dropped. The changed-image branch did not occur naturally; it is covered
-  by D1701's fixtures rather than claimed here.
+  was dropped. `etsyRefreshCalls: 0`, `droppedOnRefresh: {gone: 0, inactive: 0,
+  imageChanged: 0}`. The changed-image branch did not execute at all, in
+  production or anywhere else, during this run.
 
 ## Case 16 — provider failure
 

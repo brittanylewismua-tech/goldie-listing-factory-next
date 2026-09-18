@@ -78,3 +78,64 @@ test("refreshing references is never charged to the member's scan allowance", ()
     "the refresh runs inside a scan already paid for, not as its own charge");
   assert.doesNotMatch(refresh, /reserveSpend|settleSpend/);
 });
+
+/* ------------------------------------------------ the production-path canary */
+
+test("the canary never writes to Etsy", () => {
+  const canary = readFileSync(new URL(
+    "../app/api/design-scanner/reference-change-canary/route.ts",
+    import.meta.url), "utf8");
+  assert.doesNotMatch(canary, /openapi\.etsy\.com/,
+    "it makes our own cache disagree with Etsy; it must not touch Etsy");
+  /* The only tables it writes are our cache of Etsy's data. */
+  const writes = [...canary.matchAll(/UPDATE (\w+)|INSERT INTO (\w+)|DELETE FROM (\w+)/g)]
+    .map(match => match[1] ?? match[2] ?? match[3]);
+  assert.deepEqual([...new Set(writes)], ["reference_images"],
+    `the canary writes to ${[...new Set(writes)].join(", ")}`);
+});
+
+test("the canary restores the row on every path", () => {
+  const canary = readFileSync(new URL(
+    "../app/api/design-scanner/reference-change-canary/route.ts",
+    import.meta.url), "utf8");
+  assert.match(canary, /\} finally \{/,
+    "a canary that leaves the cache wrong is worse than no canary");
+  assert.match(canary, /if \(!restored\)/,
+    "the finally must not undo a restore that already happened");
+  /* And it verifies the restore rather than assuming it. */
+  assert.match(canary, /restored: Number\(check\?\.image_id\) === originalImageId/);
+  assert.match(canary, /Number\(check\?\.retrieved_at\) === Number\(target\.retrieved_at\)/);
+});
+
+test("the canary costs nothing, and refuses if it would", () => {
+  const canary = readFileSync(new URL(
+    "../app/api/design-scanner/reference-change-canary/route.ts",
+    import.meta.url), "utf8");
+  assert.match(canary, /FROM scan_uploads WHERE user_id = \? AND artwork_hash = \?/,
+    "a cold design would pay for a provider call and prove the opposite");
+  assert.match(canary, /only meaningful on a warm design/);
+  assert.match(canary, /noProviderSpend: Number\(after\.body\.paidCalls \?\? -1\) === 0/);
+});
+
+test("the canary states its four proofs separately", () => {
+  const canary = readFileSync(new URL(
+    "../app/api/design-scanner/reference-change-canary/route.ts",
+    import.meta.url), "utf8");
+  for (const proof of ["oldAnalysisRejected", "changedImageDidNotInheritEvidence",
+    "cohortRecalculated", "noProviderSpend"])
+    assert.ok(canary.includes(proof), `missing proof: ${proof}`);
+  /* A single boolean would let a partial result read as a pass. */
+  assert.match(canary, /so a partial result cannot read as a pass/);
+  assert.match(canary,
+    /cohortRecalculated: listingsAfter === listingsBefore - imageChanged/,
+    "the cohort must shrink by exactly the number dropped, not merely shrink");
+});
+
+test("the canary is owner-only", () => {
+  const canary = readFileSync(new URL(
+    "../app/api/design-scanner/reference-change-canary/route.ts",
+    import.meta.url), "utf8");
+  assert.match(canary, /if \(!user \|\| !isOwner\(user\)\)/);
+  const matrix = readFileSync(new URL("../app/access-matrix.ts", import.meta.url), "utf8");
+  assert.ok(matrix.includes('"/api/design-scanner/reference-change-canary"'));
+});

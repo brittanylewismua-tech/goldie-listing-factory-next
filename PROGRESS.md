@@ -4,9 +4,128 @@ Kept in the repo so a new session can pick this up without re-deriving it.
 Update it as sections land. It records what is PROVEN, not what is intended.
 
 ## Build / test state
-- Build marker: D1590. Tests 3,080 passing, 0 failing.
+- Build marker: D1706. Tests 3,330 passing, 0 failing.
 - Canary: `listingFactoryLayeredFlow` ON for the owner account only, globally OFF.
 - Checkout disabled. Nobody invited. No Etsy listing or draft created.
+- Approved by Brittany for her own review. NOT member-ready until the two
+  clocks below finish.
+
+---
+
+# FINAL REVIEW PROCEDURE — run this first in the next session
+
+Two clocks were still running when this was written. The product records
+their outcomes itself; nothing needs to have been watched.
+
+## Step 1 — ask the product whether the clocks finished
+
+    GET /api/operations/evidence        (owner; add ?samples=60 for history)
+
+`outcomes` holds one row per clock, written the FIRST time that clock finished
+and never restated. `samples` is the twenty-minute history behind it, so a
+pass can be checked against what was true at the time.
+
+- `settled: 0` — neither has finished. Read `samples[0]` for current hours and
+  file counts, and stop. Do not re-run the review.
+- An outcome with `clock: "observation-gate"` — the gate reached 72 hours.
+  `passed` is the gate's own verdict. If false, `evidence.failing` is the
+  exact list of safeguards that failed, and `evidence.measured` is every value
+  at that moment. Report the failure verbatim; do not re-run the gate to get a
+  different answer, and do not reset the segment.
+- An outcome with `clock: "trademark-backfile"` — every file reached a final
+  state. `passed` means the register is COMPLETE (nothing left out).
+  `passed: false` with `unfinished: 0` means it is FINAL but some files could
+  never be read; `evidence.parkedFiles` is how many, and each carries its
+  reason in its note. That is an acceptable end state — it is what
+  registerIsComplete distinguishes — but the member sentence changes, so say
+  which one happened.
+
+Cross-check once against `GET /api/operations/health` (`observationGate` and
+`trademarkIngest` probes). If the live probe and the recorded outcome
+disagree, the outcome row is the evidence and the disagreement is the defect:
+investigate before reporting anything.
+
+Confirm `evidence.segmentStartedAt` is **1789527636** in every sample. A
+different value means the segment was reset and the 72 hours do not count.
+
+## Step 2 — only if BOTH clocks have settled, run the regression suite
+
+    cd /tmp && rm -rf lf && cp -r "<connected goldie repos>/goldie-trial" lf
+    cd /tmp/lf && npm test
+
+Expect 3,330 passing, 0 failing, and note the number. `npm test` builds first,
+so a build break shows up here.
+
+## Step 3 — deployed walkthrough, in Chrome, signed in as the owner
+
+Walk, in this order, and read what a member would read:
+Home, Listing Factory, Design Scanner, Trademark Checker, Market Watch,
+Shop Watch (the `?tab=shops` tab), Shop Map, Shop Map > Production costs,
+Connections, Plan and limits, Account, Tools & settings, Batch History,
+Keyword Banks.
+
+Cover these states, not just the happy one: loading, empty, populated,
+refused, stale, limit reached, expired access, API failure, provider failure,
+correction success, correction refusal, recovery.
+
+Two that are easy to forget and were real defects:
+- Clicking a `ref_N` from a stale `find` often misses. Drive React inputs with
+  the native value setter plus an `input` event, or dispatch a real
+  MouseEvent, and verify the state changed before believing the click landed.
+- A narrow-width iframe measurement must count the LABEL wrapping a checkbox,
+  not the box inside it, or it reports targets as undersized when they are
+  not. See D1696.
+
+## Step 4 — confirm these still hold before reporting
+
+| Check | Where | Expected |
+|---|---|---|
+| Checkout closed | `/usage` | "Not open yet", no prices, no Choose buttons |
+| No retired plans | any member page | no 14.99 / 24.99 / 39.99, no Starter/Pro/Scale |
+| Roster empty, canary only | `/api/operations/capabilities` | unchanged |
+| No Etsy writes | — | no listing or draft created |
+| Nothing of ours in her shop | `/api/shop-map/override-audit` | `clean: true`, `active: 0`, `orphaned: 0` |
+| Shop totals at baseline | `/api/shop-map/map` | 293 listings, 83 active, 3,737 orders, $92,324.21, 58 unclassified |
+| Member vocabulary clean | `npm test` | member-visible-vocabulary + retired-plan-structure pass |
+
+## Step 5 — report
+
+The true final ledger: every feature, every remaining state, desktop and
+mobile verification, costs, the two clock outcomes with their exact verdicts,
+anything still blocked, and a direct answer on member readiness. Report only
+material regressions found and fixed. Do not ask her to activate monitoring.
+
+### Deploying a fix during the review
+Follow DEPLOY_GUIDE.md exactly. Copy the repo to /tmp, author commits as
+brittanylewismua@gmail.com, bump the marker with a LINE-ADDRESSED sed
+(`sed -i '210s/OLD/NEW/' app/build-marker.ts` — a bare pattern replace once
+rewrote every D-number in the file's prose), push, then verify
+`GET /api/version` reports the new marker.
+
+---
+
+# KNOWN-OPEN, and why
+
+- **Design Scanner case 14 (stale reference image)** — needs a cohort holding
+  a reference older than six hours. The poller keeps freshness at 0.99, so it
+  has not arisen. Do NOT force it by writing false timestamps into production
+  reference data. The refresh logic is covered by fixtures
+  (`tests/reference-refresh-outcomes.test.mjs`).
+- **Changed-reference-image handling in the deployed path** — fixture
+  verified, not production verified. See the canary section of
+  `docs/design-scanner-live-cases.md` for the owner-only route that exercises
+  it without touching Etsy.
+- **Listing Factory at phone widths** — 22 controls under 40px, left
+  deliberately. It is the one tool the product labels DESKTOP.
+- **Authenticated mobile** — narrow-layout verified only. The in-app browser
+  has real device emulation but no session, and signing it in means handling
+  credentials. Do not weaken authentication to close this.
+- **Umbrella product name** — undecided. Do not introduce one, and do not use
+  "Goldie": that name belongs to a different product. No member surface or
+  operator screen renders it; only pre-existing code comments mention it.
+- **Pricing** — the $14.99/$24.99/$39.99 structure is retired. Intended
+  direction is a $19 Listing Factory plan and a $47 full-suite plan; yearly is
+  undecided. Do not restore the old pricing page, including for the owner.
 
 ---
 
