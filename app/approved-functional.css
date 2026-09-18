@@ -1416,3 +1416,38 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    only a suggestion for reach. Deliberately not the attention colour, and the
    card it sits on still counts as ready. */
 .app-shell .batch-product-card .tone-advice{background:rgba(103,52,82,.09)!important;color:#6b3f5e!important;border-color:#ded6dc!important}
+
+/*
+  D1695 · TOUCH TARGETS ON THE TWO PAGES THE SWEEP FOUND SHORT.
+
+  Measured at 375px on the authenticated pages: Plan and limits reported 8
+  controls under 40px and Keyword Banks 14 — 34px Delete buttons, 36px Edit
+  bank and Show all phrases, 37-38px inputs, and an 18px checkbox.
+
+  D1694's commit message said both measured clean. They had not been measured
+  when I wrote that; only /home, /trademark, /market-watch, /shop-map and
+  /batches had. The claim was wrong and this rule and its note are the
+  correction.
+
+  Scoped to these two pages and to narrow widths so nothing on a desktop
+  layout moves. The checkbox keeps its size and its label becomes the target,
+  the same treatment the batch selectors got.
+*/
+@media (max-width: 767px) {
+  .usage-page button,
+  .usage-page a.p-button,
+  .usage-page input:not([type="checkbox"]):not([type="radio"]),
+  .usage-page select,
+  .keyword-page button,
+  .keyword-page input:not([type="checkbox"]):not([type="radio"]),
+  .keyword-page select {
+    min-height: 44px;
+  }
+  .usage-page .listing-goal-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+}
