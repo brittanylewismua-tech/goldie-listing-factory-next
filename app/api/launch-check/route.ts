@@ -31,7 +31,10 @@ export async function POST(request:Request){
     }
     if(body.action!=="send")return NextResponse.json({error:"Choose a check."},{status:400});
     // Only the signed-in owner receives a labelled test. No arbitrary recipients.
-    const id=await scheduleTrialReminder({email:user.email,plan:"goldie",trialEnd:Math.floor(Date.now()/1000)+86400+90,test:true});
+    /* D1699 · The delivery check proves the email sends, so its amount is an
+       explicit stated figure rather than a plan constant that no longer
+       describes anything on sale. */
+    const id=await scheduleTrialReminder({email:user.email,trialEnd:Math.floor(Date.now()/1000)+86400+90,test:true,amount:100,currency:"usd"});
     if(id)await billingRuntime().DB.prepare("INSERT INTO error_log (id,area,severity,user_id,message) VALUES (?,'launch/email-test','warning',?,'Owner-requested labelled email delivery check')").bind(id,user.userId).run();
     return NextResponse.json({id,scheduled:true,message:"Labelled test scheduled to your signed-in email for about 90 seconds from now."});
   }catch(error){const message=error instanceof Error?error.message:String(error);await logError({area:"launch/email-check",message,userId:user.userId});return NextResponse.json({error:message},{status:502});}

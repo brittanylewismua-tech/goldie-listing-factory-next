@@ -50,7 +50,10 @@ export async function POST(request:Request){
         const customerRecord=await db.prepare("SELECT email FROM billing_customers WHERE user_id=?").bind(userId).first<{email:string}>();
         try{
           const price=object.items?.data?.[0]?.price;
-          const reminderId=await scheduleTrialReminder({email:customerRecord?.email||"",plan,trialEnd:object.trial_end,amount:price?.unit_amount??undefined,currency:price?.currency,interval:price?.recurring?.interval==="year"?"year":"month"});
+          /* D1699 · No Stripe amount means no reminder. An email that guesses
+             the figure a card is about to be charged is worse than none. */
+          if(!(Number(price?.unit_amount)>0))throw new Error("Stripe did not report the trial's charge amount, so no reminder was scheduled.");
+          const reminderId=await scheduleTrialReminder({email:customerRecord?.email||"",plan,trialEnd:object.trial_end,amount:Number(price?.unit_amount),currency:price?.currency,interval:price?.recurring?.interval==="year"?"year":"month"});
           if(reminderId)await db.prepare("INSERT INTO trial_reminder_emails (user_id,subscription_id,resend_email_id,scheduled_for) VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET subscription_id=excluded.subscription_id,resend_email_id=excluded.resend_email_id,scheduled_for=excluded.scheduled_for,canceled_at=NULL,updated_at=CURRENT_TIMESTAMP").bind(userId,object.id,reminderId,object.trial_end-86400).run();
         }catch(error){await logError({area:"billing/trial-reminder",message:error instanceof Error?error.message:String(error),userId});}
       }

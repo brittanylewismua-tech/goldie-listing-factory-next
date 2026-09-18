@@ -62,9 +62,9 @@ test('annual entitlement uses monthly buckets with no rollover',()=>{
   const usage=readFileSync(new URL('../app/api/usage/route.ts',import.meta.url),'utf8');assert.match(usage,/const month = monthKey\(\)/);assert.match(usage,/substr\(COALESCE\(created_at,updated_at\),1,7\)=\?/);
 });
 test('trial reminder uses actual annual or legacy price and the correct period',()=>{
-  const {trialReminderHtml}=load('../app/trial-reminder.ts',{planAmount,billingRuntime:()=>({})});
-  const annual=trialReminderHtml({plan:'pro',chargeAt:1800000000,interval:'year',amount:24900});assert.match(annual,/\$249\.00/);assert.match(annual,/first year/);assert.doesNotMatch(annual,/first month/);
-  const legacy=trialReminderHtml({plan:'goldie',chargeAt:1800000000,amount:2900});assert.match(legacy,/\$29\.00/);
+  const {trialReminderHtml}=load('../app/trial-reminder.ts',{billingRuntime:()=>({})});
+  const annual=trialReminderHtml({chargeAt:1800000000,interval:'year',amount:24900});assert.match(annual,/\$249\.00/);assert.match(annual,/first year/);assert.doesNotMatch(annual,/first month/);
+  const legacy=trialReminderHtml({chargeAt:1800000000,amount:2900});assert.match(legacy,/\$29\.00/);
 });
 const Signup=load('../app/signup/signup-client.tsx',{useEffect:React.useEffect,useRef:React.useRef,useState:React.useState,PLANS,ListingFactoryWordmark:()=>React.createElement('span',null,'Goldie')}).default;
 test('homepage renders clear navigation, existing copy, and correct monthly prices',()=>{
