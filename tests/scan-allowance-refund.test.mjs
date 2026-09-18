@@ -64,3 +64,28 @@ test("a refused reservation never reaches the provider", () => {
   /* The comment above it is the promise; this pins the ordering it claims. */
   assert.match(guard, /Checked before the upload is sent anywhere and before the provider is/);
 });
+
+test("D1702: every exit inside the lease releases it", () => {
+  /*
+    The block's own comment says the request that wins the lease "must release
+    it on every exit". The provider-HTTP-error exit did not, so a provider
+    failure left the lease held until it expired and a member retrying the
+    same design waited the full timeout.
+  */
+  const block = scan.slice(scan.indexOf("const done = async ()"),
+    scan.indexOf("const parsed = parseAnalysis"));
+  const exits = [...block.matchAll(/return NextResponse\.json\(/g)].length;
+  const releases = [...block.matchAll(/await done\(\);/g)].length;
+  assert.ok(exits > 0, "expected the lease block to have exits");
+  assert.equal(releases, exits,
+    `${exits} exits inside the lease but ${releases} releases`);
+});
+
+test("D1702: a failed scan tells the member it was not counted", () => {
+  const messages = [...scan.matchAll(/error: "That (?:scan did not complete|design could not be read)\.([^"]*)"/g)]
+    .map(m => m[1]);
+  assert.ok(messages.length >= 3, `expected every failure message, saw ${messages.length}`);
+  for (const message of messages)
+    assert.match(message, /has not been counted against your daily scans/,
+      "a member who lost nothing must be told they lost nothing");
+});

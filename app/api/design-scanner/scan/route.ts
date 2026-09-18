@@ -175,6 +175,19 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
       if (!response.ok) {
         /* Billed or not, the member keeps their scan; the money still settles. */
         await failSpend(reservation.id, { billed: cost });
+        /*
+          D1702 · THE ONE EXIT THAT DID NOT RELEASE THE LEASE.
+
+          The comment above this block says the winner "must release it on
+          every exit". This exit did not. A provider HTTP error left the lease
+          for that design held until it expired, so a member retrying the same
+          design straight away waited the full lease timeout and then fell
+          through the waiter path — after the failure that already told them
+          their scan had not been counted.
+
+          Found while building case 16, which is this exact path.
+        */
+        await done();
         return NextResponse.json(
           { error: "That scan did not complete. It has not been counted against your daily scans." },
           { status: 502 });
