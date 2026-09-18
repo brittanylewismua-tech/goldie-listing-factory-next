@@ -157,7 +157,7 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
        on every one, which downgraded an exact single-word registered mark
        from high risk to a minor mention. */
     trademark = withRegister(check(phrase), toMatches(hits, phrase, normalize),
-      registerIsReady(size));
+      size);
   } catch { /* the verdict without the register is still a verdict */ }
 
   /* Steps 10-12: composed, not generated. */

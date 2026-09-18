@@ -97,7 +97,7 @@ test("a failure nobody listed stops being retried forever", () => {
   /* A rate limit is not a repeat: the other side asking for time must keep
      its escalating backoff rather than being parked after three refusals. */
   assert.match(route, /!limited && repeats/);
-  assert.match(route, /permanent \|\| exhausted \? "skipped" : "waiting"/);
+  assert.match(route, /permanent \|\| exhausted \|\| givenUp \? "skipped" : "waiting"/);
   /* And the note stays, so a wrongly parked file is findable. */
   assert.match(route, /SET state = \?, note = \?, retry_after = \?, strikes = \?, repeats = \?/);
 });

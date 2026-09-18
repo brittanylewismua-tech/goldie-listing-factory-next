@@ -575,6 +575,15 @@ test("the article agrees with the word after it", () => {
 /* ------------------------------------------------- claim scope and trademark */
 import { check as tmCheck, withRegister as tmWithRegister } from "../app/trademark-check.ts";
 
+/* D1705 · withRegister takes the size object, not a boolean. LOADED is a
+   register that finished with nothing left out; LOADING has files waiting. */
+const LOADED = { marks: 201000, files: [{ state: "done", count: 118 }] };
+const LOADING = { marks: 201000, files: [{ state: "done", count: 49 },
+  { state: "waiting", count: 69 }] };
+const PARKED = { marks: 201000, files: [{ state: "done", count: 115 },
+  { state: "skipped", count: 3 }] };
+
+
 test("no label claims more than construction was compared", () => {
   for (const design of [ingredients(), ingredients({ mechanism: "minimal icon" }),
     ingredients({ thumbnailReadability: "crowded" })]) {
@@ -596,7 +605,7 @@ test("the result says in one line what was compared", () => {
 });
 
 test("an incomplete register can never read as a clean result", () => {
-  const loading = tmWithRegister(tmCheck("Bride Tribe"), [], false);
+  const loading = tmWithRegister(tmCheck("Bride Tribe"), [], LOADING);
   assert.equal(loading.registerReady, false);
   assert.match(loading.summary, /records currently loaded/);
   /* It must not assert anything about brands, characters or franchises.
@@ -611,7 +620,7 @@ test("an incomplete register can never read as a clean result", () => {
 });
 
 test("a complete register describes exactly what was searched", () => {
-  const ready = tmWithRegister(tmCheck("Bride Tribe"), [], true);
+  const ready = tmWithRegister(tmCheck("Bride Tribe"), [], LOADED);
   assert.equal(ready.registerReady, true);
   assert.match(ready.summary,
     /No exact or contained match was found in the current federal trademark register or the curated risk list/);
@@ -631,7 +640,7 @@ test("the checker never claims to have checked characters or franchises", () => 
 test("a real risk still reports as a risk whatever the register state", () => {
   const known = tmCheck("Mickey Mouse");
   if (known.risk === "high") {
-    const loading = tmWithRegister(known, [], false);
+    const loading = tmWithRegister(known, [], LOADING);
     assert.equal(loading.risk, "high");
     assert.equal(loading.summary, known.summary);
   }

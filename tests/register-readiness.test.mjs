@@ -21,8 +21,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { registerIsReady, toMatches, withRegister, check }
-  from "../app/trademark-check.ts";
+import { registerIsReady, registerIsComplete, registerParkedFiles, toMatches,
+  withRegister, check } from "../app/trademark-check.ts";
+
+/* D1705 · withRegister takes the size object, not a boolean — see the comment
+   above registerIsReady for what a derived boolean cost last time. LOADED
+   finished with nothing left out; LOADING still has files waiting; PARKED
+   finished but could not read three of them. */
+const LOADED = { marks: 201000, files: [{ state: "done", count: 118 }] };
+const LOADING = { marks: 201000, files: [{ state: "done", count: 49 },
+  { state: "waiting", count: 69 }] };
+const PARKED = { marks: 201000, files: [{ state: "done", count: 115 },
+  { state: "skipped", count: 3 }] };
 
 const normalize = value => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -44,8 +54,8 @@ test("the register is only ready when nothing is still waiting", () => {
 
 test("an incomplete register never produces the complete-search wording", () => {
   const clean = check("bride tribe squad");
-  const loading = withRegister(clean, [], false);
-  const done = withRegister(clean, [], true);
+  const loading = withRegister(clean, [], LOADING);
+  const done = withRegister(clean, [], LOADED);
   assert.match(loading.summary, /trademark records currently loaded/);
   assert.ok(!/current federal/.test(loading.summary),
     "an incomplete register must not claim the current federal register");
@@ -57,10 +67,10 @@ test("an exact single-word registered mark is serious, not a mention", () => {
   const hits = [{ mark: "Stanley", owner: "PMI", registration: "1", registered: true }];
   const matches = toMatches(hits, "stanley", normalize);
   assert.equal(matches[0].exact, true, "exact must be computed, not left undefined");
-  const verdict = withRegister(check("stanley"), matches, true);
+  const verdict = withRegister(check("stanley"), matches, LOADED);
   assert.equal(verdict.risk, "high");
   /* Unmapped rows are what produced the downgrade. */
-  const unmapped = withRegister(check("stanley"), hits, true);
+  const unmapped = withRegister(check("stanley"), hits, LOADED);
   assert.notEqual(unmapped.risk, "high",
     "this is the behaviour the publish path had, kept here as the reason for toMatches");
 });
@@ -79,7 +89,51 @@ test("no route computes register readiness by hand any more", () => {
     if (!/withRegister/.test(source)) continue;
     assert.ok(!/state === "waiting" \|\| file\.state === "partial"/.test(source),
       `${file.pathname} still writes the readiness rule by hand`);
-    assert.match(source, /registerIsReady\(/,
-      `${file.pathname} must use the shared rule`);
+    /*
+      D1705 · Stronger than "use the shared rule": no route derives the
+      booleans at all any more. withRegister takes the size object and works
+      both facts out itself, so a call site cannot pass the wrong one — which
+      is exactly what the publish path did.
+    */
+    for (const call of source.matchAll(/withRegister\([\s\S]{0,200}?\)/g))
+      assert.ok(!/,\s*(?:true|false)\s*\)$/.test(call[0]),
+        `${file.pathname} passes a boolean to withRegister: ${call[0].slice(0, 80)}`);
   }
+});
+
+test("D1705: final is not the same as complete", () => {
+  /*
+    registerIsReady asks whether the queue stopped moving; it ignores skipped,
+    which is right for its purpose. It was also driving the sentence a member
+    reads on a clean result — so the moment the queue emptied, that sentence
+    would have claimed a search of the whole federal register while the marks
+    from every parked file were missing from it.
+  */
+  assert.equal(registerIsReady(PARKED), true, "the queue has stopped");
+  assert.equal(registerIsComplete(PARKED), false, "but three files never loaded");
+  assert.equal(registerIsComplete(LOADED), true);
+  assert.equal(registerIsComplete(LOADING), false);
+  assert.equal(registerIsComplete(null), false);
+  assert.equal(registerParkedFiles(PARKED), 3);
+  assert.equal(registerParkedFiles(LOADED), 0);
+});
+
+test("D1705: only a register with nothing left out names the whole register", () => {
+  const complete = withRegister(check("mountains at dawn"), [], LOADED);
+  assert.match(complete.summary,
+    /current federal trademark register or the curated risk list/);
+
+  const parked = withRegister(check("mountains at dawn"), [], PARKED);
+  assert.equal(parked.registerReady, true);
+  assert.match(parked.summary, /trademark records that could be read/);
+  assert.match(parked.summary, /not the whole register/);
+  assert.ok(!/current federal trademark register/.test(parked.summary),
+    "a register missing files must not name itself as the register");
+
+  const loading = withRegister(check("mountains at dawn"), [], LOADING);
+  assert.match(loading.summary, /records currently loaded/);
+
+  /* All three still refuse to read as clearance. */
+  for (const verdict of [complete, parked, loading])
+    assert.match(verdict.summary, /screening information, not legal clearance/);
 });

@@ -369,10 +369,10 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
       classes: hit.classes, registered: hit.registered,
       exact: normalize(hit.mark) === normalized,
     }));
-    trademark = withRegister(verdict, matches, ready);
+    trademark = withRegister(verdict, matches, size);
   } catch {
     /* An incomplete register is never reported as a clean search. */
-    trademark = withRegister(verdict, [], false);
+    trademark = withRegister(verdict, [], null);
   }
 
   const usage = await memberUsage(user.userId, WORKLOAD);

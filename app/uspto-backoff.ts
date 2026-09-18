@@ -56,3 +56,35 @@ export function blockedExplanation(note: string, retryAfterIso: string) {
   if (!isRateLimit(note)) return "";
   return `USPTO is rate limiting bulk downloads. Next attempt ${retryAfterIso}.`;
 }
+
+/**
+ * WHEN A RATE LIMIT STOPS BEING A BAD MINUTE.
+ *
+ * A 429 is the other side asking for time, so it deliberately does NOT count
+ * toward the repeated-failure limit — a throttled file goes back in the queue
+ * with a longer delay each time instead of being parked.
+ *
+ * Which left a file that USPTO refuses indefinitely with no terminal state at
+ * all. It sat at "waiting" forever, and "waiting" is not an outcome: a
+ * backfile cannot be called accounted for while any file is in a state that
+ * means "we will ask again, someday".
+ *
+ * So the escalation has a ceiling. Past it the file is parked with the reason
+ * and the elapsed time written into its note, which keeps it findable and
+ * retryable by hand rather than lost. The cap is high on purpose: at the
+ * capped backoff this is a bit over a day of continuous refusal, so a nightly
+ * quota or a weekend outage cannot trip it.
+ */
+export const RATE_LIMIT_STRIKE_CEILING = 24;
+
+export function throttledOut(strikes: number) {
+  return strikes >= RATE_LIMIT_STRIKE_CEILING;
+}
+
+export function throttledOutNote(strikes: number) {
+  const hours = Math.round(
+    Array.from({ length: strikes }, (_, at) => backoffMinutes(at + 1))
+      .reduce((total, minutes) => total + minutes, 0) / 60);
+  return `USPTO refused this file ${strikes} times across about ${hours} hours. `
+    + `Parked so the backfile has a final answer for it; it can be requeued by hand.`;
+}

@@ -443,6 +443,40 @@ export function registerIsReady(size: RegisterSize | null | undefined) {
 }
 
 /*
+  D1705 · READY IS NOT THE SAME AS COMPLETE.
+
+  registerIsReady asks whether the queue has stopped moving. It ignores
+  `skipped`, which is correct for its purpose — a file that can never be read
+  must not hold the queue open forever — but it was also driving the sentence
+  a member reads on a clean result:
+
+    "No exact or contained match was found in the CURRENT FEDERAL TRADEMARK
+     REGISTER or the curated risk list."
+
+  Three files are already parked as unreadable, and D1704 gives indefinitely
+  throttled files the same terminal state so the backfile can finish at all.
+  So the moment the queue empties, that sentence would claim a search of the
+  whole register while the marks from every parked file were missing from it —
+  the same overstatement D1693 removed from a menu, reached instead through a
+  state change nobody would have looked at again.
+
+  Final and complete are different facts and now have different names. The
+  member gets the stronger sentence only when nothing was left out.
+*/
+export function registerIsComplete(size: RegisterSize | null | undefined) {
+  if (!registerIsReady(size)) return false;
+  return !size!.files.some(file => file.state === "skipped" && file.count > 0);
+}
+
+/** How many files the register could not read, for the sentence below. */
+export function registerParkedFiles(size: RegisterSize | null | undefined) {
+  if (!size) return 0;
+  return size.files
+    .filter(file => file.state === "skipped")
+    .reduce((total, file) => total + Number(file.count ?? 0), 0);
+}
+
+/*
   AND ONE PLACE THAT SHAPES A HIT INTO A MATCH.
 
   The same call site passed raw lookup rows straight in, so `exact` was
@@ -471,8 +505,23 @@ export function toMatches(
 export function withRegister(
   verdict: Verdict,
   matches: RegisterMatch[],
-  registerReady: boolean,
+  /*
+    D1705 · The size object, not a boolean derived from it.
+
+    This parameter used to be `registerReady: boolean`, and the comment above
+    registerIsReady records what that cost: one call site passed the size
+    object where the boolean went, an object is always truthy, and the
+    publish-time check reported a complete federal register search while 79 of
+    113 files were still waiting.
+
+    Two booleans are now needed rather than one, and adding a second would
+    double that risk. So the shape that cannot be got wrong is the parameter,
+    and both facts are derived here.
+  */
+  size: RegisterSize | null | undefined,
 ): FullVerdict {
+  const registerReady = registerIsReady(size);
+  const registerComplete = registerIsComplete(size);
   const serious = matches.filter(
     match => match.registered && (match.exact || words(match.mark) > 1),
   );
@@ -495,9 +544,18 @@ export function withRegister(
       registerReady,
       summary: verdict.risk === "clear"
         ? (registerReady
-          ? "No exact or contained match was found in the current federal "
-            + "trademark register or the curated risk list. This is "
-            + "screening information, not legal clearance."
+          ? (registerComplete
+            ? "No exact or contained match was found in the current federal "
+              + "trademark register or the curated risk list. This is "
+              + "screening information, not legal clearance."
+            /* Final, but with files the register could never read. The
+               sentence says what was searched and does not name the whole
+               register. */
+            : "No exact or contained match was found in the trademark records "
+              + "that could be read, or the curated risk list. A few records "
+              + "could not be loaded at all, so this is not the whole "
+              + "register. This is screening information, not legal "
+              + "clearance.")
           : "No match was found in the trademark records currently loaded. "
             + "This is screening information, not legal clearance.")
         : verdict.summary,

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
 import { env } from "cloudflare:workers";
-import { check, withRegister, registerIsReady, type RegisterMatch } from "@/app/trademark-check";
+import { check, withRegister, type RegisterMatch } from "@/app/trademark-check";
 import { lookup, normalize, registerSize } from "@/app/trademark-register";
 
 /**
@@ -22,15 +22,18 @@ export const GET = withErrorLog("trademark", async (request: Request) => {
   const verdict = check(phrase);
 
   const db = (env as unknown as { DB?: D1Database }).DB;
-  if (!db) return NextResponse.json(withRegister(verdict, [], false));
+  if (!db) return NextResponse.json(withRegister(verdict, [], null));
 
   /* A register that is still loading must never be reported as a clean
      search, so its readiness travels with the answer. */
-  let ready = false;
+  /* D1705 · The size object travels, not a boolean derived from it, so the
+     summary can tell "the queue has stopped" apart from "nothing was left
+     out". */
+  let size: Awaited<ReturnType<typeof registerSize>> | null = null;
   let matches: RegisterMatch[] = [];
   try {
-    const [size, hits] = await Promise.all([registerSize(db), lookup(db, phrase)]);
-    ready = registerIsReady(size);
+    const [held, hits] = await Promise.all([registerSize(db), lookup(db, phrase)]);
+    size = held;
     const normalized = normalize(phrase);
     matches = hits.map(hit => ({
       mark: hit.mark,
@@ -44,5 +47,5 @@ export const GET = withErrorLog("trademark", async (request: Request) => {
     /* The curated answer is still worth giving. */
   }
 
-  return NextResponse.json(withRegister(verdict, matches, ready));
+  return NextResponse.json(withRegister(verdict, matches, size));
 });

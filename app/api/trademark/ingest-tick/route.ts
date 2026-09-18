@@ -5,7 +5,7 @@ import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { filesFromProduct, productFilesUrl } from "@/app/uspto-bulk";
 import { ensureRegisterTables, ingestFile, registerSize } from "@/app/trademark-register";
-import { isRateLimit, retryAfter } from "@/app/uspto-backoff";
+import { isRateLimit, retryAfter, throttledOut, throttledOutNote } from "@/app/uspto-backoff";
 
 /**
  * ONE BULK FILE PER FIRING.
@@ -275,16 +275,34 @@ async function runTick(db: D1Database, request: Request) {
     const repeats = sameAgain ? Number(next.repeats ?? 0) + 1 : 1;
     const exhausted = !limited && repeats >= REPEATED_FAILURE_LIMIT;
     const strikes = limited ? Number(next.strikes ?? 0) + 1 : 0;
+    /*
+      D1704 · "WAITING" WAS NOT AN OUTCOME.
+
+      A rate limit is correctly excluded from the repeated-failure limit, so a
+      throttled file goes back in the queue with a longer delay rather than
+      being parked. That left a file USPTO refuses indefinitely with no
+      terminal state at all: it sat at "waiting" forever, and the backfile
+      could never be called accounted for while any file meant "we will ask
+      again, someday".
+
+      The escalation now has a ceiling. Past it the file is parked with the
+      reason and elapsed time in its note — findable and requeueable by hand,
+      rather than lost. The ceiling is high enough that a nightly quota or a
+      weekend outage cannot reach it.
+    */
+    const givenUp = limited && throttledOut(strikes);
+    const parkedNote = givenUp ? throttledOutNote(strikes) : note.slice(0, 300);
     await db
       .prepare(
         `UPDATE tm_ingest_files
             SET state = ?, note = ?, retry_after = ?, strikes = ?, repeats = ?
           WHERE name = ?`)
-      .bind(permanent || exhausted ? "skipped" : "waiting", note.slice(0, 300),
-        limited ? retryAfter(strikes) : null, strikes, repeats, next.name)
+      .bind(permanent || exhausted || givenUp ? "skipped" : "waiting", parkedNote,
+        limited && !givenUp ? retryAfter(strikes) : null, strikes, repeats, next.name)
       .run();
     return NextResponse.json({ added, file: next.name, error: note, repeats,
-      parked: permanent || exhausted,
+      parked: permanent || exhausted || givenUp,
+      ...(givenUp ? { throttledOut: true, note: parkedNote } : {}),
       ...(limited ? { rateLimited: true, strikes, retryAfter: retryAfter(strikes) } : {}) },
       { status: 500 });
   }

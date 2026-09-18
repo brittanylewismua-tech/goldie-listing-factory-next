@@ -137,5 +137,5 @@ test("only data files are queued, and a file that cannot be read is parked", asy
      identical attempts. The list caught "Not a zip"; it did not catch
      "Trailing bytes after end of compressed data", and 88 files were retried
      forever behind it. */
-  assert.match(tick, /permanent \|\| exhausted \? "skipped" : "waiting"/);
+  assert.match(tick, /permanent \|\| exhausted \|\| givenUp \? "skipped" : "waiting"/);
 });

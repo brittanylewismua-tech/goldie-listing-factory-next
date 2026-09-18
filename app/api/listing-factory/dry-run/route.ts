@@ -138,8 +138,8 @@ async function run(request: Request, user: { userId: string; email: string }) {
       classes: hit.classes, registered: hit.registered,
       exact: normalize(hit.mark) === normalized,
     }));
-    trademark = withRegister(verdict, matches, ready);
-  } catch { trademark = withRegister(verdict, [], false); }
+    trademark = withRegister(verdict, matches, size);
+  } catch { trademark = withRegister(verdict, [], null); }
 
   const perBlueprint = blueprints.map(blueprint => {
     const classification = classifyBlueprint(blueprint.title);
