@@ -66,12 +66,73 @@ request left unanswered by a fixture. It is a control on the harness rather
 than something done by hand, because the first hand-run found two real
 defects and a hand-run happens once.
 
+## Case 15 — a cold scan, its cost, and the same design scanned again
+
+D1702, 2026-09-18T02:15Z. The allowance opened with three slots rather than
+one; several scans left the rolling window together.
+
+A design generated in the browser and never seen before — crisp black text on
+white, 1200x1200, 96 KB, `b518275d…` — scanned against `teacher`.
+
+| | cold | same design again | again, no image sent |
+|---|---|---|---|
+| status | 200 | 200 | 200 |
+| warm | **false** | **true** | **true** |
+| provider calls | **1** | **0** | **0** |
+| provider cost | **$0.00084** | $0 | $0 |
+| wall clock | 3,639 ms | 2,043 ms | — |
+| verdict | identical across all three | | |
+
+- Dollar ledger moved $0.0043 → $0.0051. One call billed, matching the
+  reported cost. Neither warm scan moved it at all.
+- Member allowance: the cold scan reserved and settled; the warm scans
+  reserved nothing. `reserveSpend` is inside `if (!upload)`, so a repeat
+  upload cannot cost a slot. Remaining read 3 throughout because scans were
+  ageing out of the rolling window at the same time — `nextScanAt` advanced
+  02:16:10 → 02:28:12 across the run.
+- Result: a **refusal, not a verdict**. "Not enough verified evidence — only
+  1 listing in this niche show verified movement so far. Design Scanner needs
+  at least 12 before it will compare anything." The scanner declined to
+  compare rather than producing a confident-looking number from one listing.
+- Trademark on the design's own wording: clear, 0 hits, register correctly
+  reported as not ready.
+- Every reference in the cohort was fresh, so no Etsy refresh ran and nothing
+  was dropped. The changed-image branch did not occur naturally; it is covered
+  by D1701's fixtures rather than claimed here.
+
+## Case 16 — provider failure
+
+D1702, 2026-09-18T02:23Z. A valid PNG signature followed by 4 KB of noise:
+accepted by the route, unreadable by the provider.
+
+| | first attempt | immediate retry, same design |
+|---|---|---|
+| status | **502** | **502** |
+| wall clock | 2,847 ms | 2,542 ms |
+| member allowance | 3 → **3** | 3 → **3** |
+| dollar ledger | $0.0051 → **$0.0051** | unchanged |
+
+The member is told: "That scan did not complete. It has not been counted
+against your daily scans." Nothing about the provider, the status code or the
+reason it could not be read.
+
+- **The scan was refunded.** The allowance did not move across two failures.
+- **Nothing was billed.** The provider rejected the image before charging, so
+  the reservation released rather than settling as failed-billed.
+- **The lease was released.** This is the D1702 fix, and the retry is its
+  proof: `LEASE_WAIT_MS` is 15,000 ms, so a leaked lease would have made the
+  retry wait fifteen seconds before answering. It answered in 2,542 ms —
+  indistinguishable from the first attempt. Before the fix, the
+  provider-HTTP-error exit was the one exit of the lease block that did not
+  release, and it is the likeliest of the three.
+
 ### Still open
 
-Cases 14–16 (stale reference image, changed reference image, provider
-failure) need a cold scan each and the allowance is at 10 of 10. The next
-slot returns at 2026-09-18T02:15Z as the oldest scan leaves the rolling
-window; the three cases need three slots, which arrive over several hours.
+Case 14 (stale reference image) needs a cohort holding a reference older than
+six hours. The poller keeps freshness at 0.99, so it did not arise during
+case 15 and cannot be forced without writing false timestamps into production
+reference data. The refresh logic it would exercise is covered by D1701.
+
 
 ---
 
