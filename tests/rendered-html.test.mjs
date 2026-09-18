@@ -7624,3 +7624,26 @@ test("a published batch keeps its receipt when it is reopened — D703", async (
   assert.match(app, /batchReceipt\?:BatchReceipt\|null\}/,
     "and the restored-state type has to declare it or the read is silently dropped");
 });
+
+test("D1694: the batch select controls are touch targets, not 17px boxes", async () => {
+  /*
+    Measured on the deployed Batch History at 375px: 21 controls under 40px,
+    the select checkboxes at 21x17. Selecting a design to delete is exactly
+    the action that must not be hit by accident or missed three times.
+    The box stays small; the label around it is the target.
+  */
+  const css = await readFile(new URL("../app/clarity-pass.css", import.meta.url), "utf8");
+  const rule = (selector) => {
+    const at = css.indexOf(selector + "{");
+    assert.ok(at > -1, `missing rule ${selector}`);
+    return css.slice(at, css.indexOf("}", at));
+  };
+  const select = rule(".batch-select");
+  assert.match(select, /min-width:44px/);
+  assert.match(select, /min-height:44px/);
+  assert.match(rule(".batch-select-all"), /min-height:44px/);
+  /* The delete action beside them was 36px. */
+  assert.match(rule(".batch-delete-selected"), /min-height:44px/);
+  /* The visible box is deliberately still small — that is the point. */
+  assert.match(css, /\.batch-select-all input,\.batch-select input\{width:17px;height:17px/);
+});

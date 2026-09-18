@@ -1949,16 +1949,27 @@ body{min-width:0}
   border:0;border-bottom:1px solid #eee8ec;background:none;
 }
 .batch-row-actions{display:flex;align-items:center;gap:8px;padding:0;border:0;background:none}
+/*
+  D1694 · A 17px CHECKBOX IS NOT A TOUCH TARGET.
+
+  Measured on Batch History at 375px: 21 controls under 40px, the select
+  checkboxes among them at 21x17. The box wants to stay small — a 44px
+  checkbox would dominate a row of designs — so the LABEL becomes the target
+  and the box keeps its size inside it. Selecting a design to delete is
+  exactly the action that must not be hit by accident or missed three times.
+*/
 .batch-select-all{display:flex;align-items:center;gap:10px;cursor:pointer;
+  min-height:44px;
   font:800 12px/1 "Manrope",system-ui,sans-serif;color:#4c293f}
 .batch-select-all input,.batch-select input{width:17px;height:17px;accent-color:#71416a;cursor:pointer}
 .batch-delete-selected{
-  min-height:36px;padding:0 15px;border:1px solid rgba(157,80,130,.4);border-radius:16px;
+  min-height:44px;padding:0 15px;border:1px solid rgba(157,80,130,.4);border-radius:16px;
   background:#fdf2f8;color:#8a3f52;cursor:pointer;
   font:800 11px/1 "Manrope",system-ui,sans-serif;
 }
 .batch-delete-selected:disabled{opacity:.6;cursor:progress}
-.batch-select{display:flex;align-items:center;padding-right:4px}
+.batch-select{display:flex;align-items:center;justify-content:center;
+  min-width:44px;min-height:44px;cursor:pointer;margin-left:-10px}
 .batch-history article.selected{
   border-color:rgba(157,80,130,.42)!important;
 }
