@@ -1316,8 +1316,12 @@
 /* D268 · Deleting a keyword bank was a bare red text link, while deleting a
    saved product is a bordered button. Same destructiveness, two weights — and
    the bare link is the easier of the two to hit by accident. */
+/* D1697 · 34px, and !important, so every attempt to raise it from another
+   sheet silently lost. Deleting a keyword bank is destructive and was the
+   smallest target on the page. Changed at the source rather than by stacking
+   a second !important on top of the first. */
 .bank-delete{
-  min-height:34px!important;
+  min-height:44px!important;
   padding:0 13px!important;
   border:1px solid #ded5db!important;
   border-radius:16px!important;
