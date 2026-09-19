@@ -1,4 +1,4 @@
-import { reportCeilingReached } from "@/app/log-scrubbing";
+import { reportCeilingReached, reporterKey } from "@/app/log-scrubbing";
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
@@ -28,7 +28,8 @@ export async function POST(request: Request) {
      body, which is why the beacon does not send it. */
   /* D1724 · Unauthenticated by necessity, so bounded before the write. */
   const db = (env as unknown as { DB?: { prepare: (sql: string) => { bind: (...v: unknown[]) => { first: <T>() => Promise<T | null> } } } }).DB;
-  if (db && await reportCeilingReached(db, "browser/"))
+  const source = await reporterKey(request);
+  if (db && await reportCeilingReached(db, "browser/", source))
     return NextResponse.json({ received: true });
 
   const user = await getChatGPTUser().catch(() => null);
@@ -42,6 +43,8 @@ export async function POST(request: Request) {
     url: payload.url || safe.source,
     userAgent: request.headers.get("user-agent"),
     context: {
+      /* D1727 · see log-scrubbing: the per-source ceiling counts this. */
+      src: source,
       source: safe.source,
       line: safe.line,
       column: safe.column,

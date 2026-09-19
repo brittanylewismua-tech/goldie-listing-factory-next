@@ -1,3 +1,4 @@
+import { fetchTrustedImage } from "@/app/trusted-image-fetch";
 import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
@@ -55,12 +56,28 @@ async function falJson(path: string, key: string, body: unknown, timeout = 45_00
   return payload;
 }
 
+/*
+  D1726 · A MEMBER-REACHABLE ROUTE FETCHING AN AI SERVICE'S URL.
+
+  The mask and depth layers come back from fal as addresses, and this fetched
+  each one with nothing but a timeout: any protocol, any host, redirects
+  followed wherever they led, and the entire body buffered into R2 before
+  anything measured it.
+
+  There is no prior trusted host to pin to here — the address IS the
+  provider's answer — so "same-host" is the honest constraint: https only, no
+  credentials in the URL, a redirect may not leave the host it arrived from,
+  a real content type, and a ceiling that aborts the stream.
+*/
 async function storeRemoteAsset(url: string | undefined, key: string) {
   if (!url) return undefined;
-  const response = await fetch(url, { signal: AbortSignal.timeout(45_000) });
-  if (!response.ok) throw new Error("A prepared scene layer could not be saved.");
-  const contentType = response.headers.get("content-type") || "image/png";
-  await env.ARTWORK.put(key, await response.arrayBuffer(), { httpMetadata: { contentType } });
+  const read = await fetchTrustedImage(url,
+    { host: "same-host", timeoutMs: 45_000, maxBytes: 25 * 1024 * 1024 })
+    .catch((error: unknown) => {
+      throw new Error(`A prepared scene layer could not be saved: ${
+        error instanceof Error ? error.message : "unreadable"}`);
+    });
+  await env.ARTWORK.put(key, read.bytes, { httpMetadata: { contentType: read.type } });
   return key;
 }
 

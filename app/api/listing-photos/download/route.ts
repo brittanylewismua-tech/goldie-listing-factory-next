@@ -1,3 +1,4 @@
+import { fetchTrustedImage } from "@/app/trusted-image-fetch";
 import { env } from "cloudflare:workers";
 import { zipSync } from "fflate";
 import { NextResponse } from "next/server";
@@ -27,7 +28,10 @@ export async function POST(request:Request){
   const photos=orderedPackagePhotos(available,(body.printifyImageIndices||[]).map(Number),objects.objects,prefix,order);
   let files:Record<string,Uint8Array>;
   try{files=await loadPhotoPackage(photos,async photo=>{
-    if(photo.src){const response=await fetch(photo.src);if(!response.ok)throw new Error("A selected Printify photo could not be downloaded. Try again.");return {bytes:new Uint8Array(await response.arrayBuffer()),extension:extension(response.headers.get("content-type")||"",photo.src)}}
+    /* D1726 · This was a bare fetch of a provider URL on a MEMBER-facing
+       route — no protocol check, no redirect control, no size ceiling, and
+       the whole body buffered before anything looked at it. */
+    if(photo.src){const read=await fetchTrustedImage(photo.src,{host:"same-host"});return {bytes:read.bytes,extension:extension(read.type,photo.src)};}
     const stored=await runtime().ARTWORK.get(photo.key!);if(!stored)throw new Error("A listing photo is no longer available. Refresh the photo list and try again.");
     return {bytes:new Uint8Array(await stored.arrayBuffer()),extension:extension(stored.httpMetadata?.contentType||"",photo.key!)};
   })}catch(error){const message=error instanceof Error?error.message:"These photos could not be downloaded.";return NextResponse.json({error:message},{status:message.includes("too large")?413:502})}

@@ -1,4 +1,4 @@
-import { reportCeilingReached } from "@/app/log-scrubbing";
+import { reportCeilingReached, reporterKey } from "@/app/log-scrubbing";
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { logError } from "@/app/error-log";
@@ -23,7 +23,8 @@ export async function POST(request: Request) {
     member's broken publish lives in can be buried by a script.
   */
   const db = (env as unknown as { DB?: { prepare: (sql: string) => { bind: (...v: unknown[]) => { first: <T>() => Promise<T | null> } } } }).DB;
-  if (db && await reportCeilingReached(db, "csp-report"))
+  const source = await reporterKey(request);
+  if (db && await reportCeilingReached(db, "csp-report", source))
     return new NextResponse(null, { status: 204 });
 
   const body = await request.json().catch(() => null) as
@@ -40,10 +41,15 @@ export async function POST(request: Request) {
   await logError({
     area: "csp-report",
     severity: "warning",
+
     message: `${keep(report["effective-directive"] ?? report.effectiveDirective, 40)
       || "unknown-directive"} blocked ${keep(report["blocked-uri"] ?? report.blockedURI, 120)
       || "unknown"}`,
     context: {
+      /* D1727 · What the per-source ceiling counts. A six-byte hash of
+         address and client hint — enough to tell two reporters apart for an
+         hour, not enough to be a record of who visited. */
+      src: source,
       documentUri: keep(report["document-uri"] ?? report.documentURI, 200),
       directive: keep(report["effective-directive"] ?? report.effectiveDirective, 40),
     },

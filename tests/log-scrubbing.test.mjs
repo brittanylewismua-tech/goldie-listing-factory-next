@@ -85,12 +85,48 @@ test("scrubbing is applied to every free-text column, not just the message", asy
 
 /* ------------------------------------------- what an open endpoint may write */
 
-const { reportCeilingReached, REPORTS_PER_HOUR } =
-  await import(join(dir, "log-scrubbing.js"));
+const { reportCeilingReached, reporterKey, REPORTS_PER_SOURCE_PER_HOUR,
+  REPORTS_PER_AREA_PER_HOUR } = await import(join(dir, "log-scrubbing.js"));
 
-const counter = (n) => ({
-  prepare: () => ({ bind: () => ({ first: async () => (n === null ? null : { n }) }) }),
+/* Answers the per-source count first, then the per-area count. */
+const counter = (mine, area = 0) => {
+  let call = 0;
+  return { prepare: () => ({ bind: () => ({ first: async () => {
+    call += 1;
+    return call === 1 ? { n: mine } : { n: area };
+  } }) }) };
+};
+
+test("one noisy reporter spends only its own allowance", async () => {
+  /*
+    The first version of this ceiling was per area only, which meant a single
+    script posting 500 reports used up the hour for everybody and silenced
+    every genuine violation after it — a mute button, handed to exactly the
+    person who wants one.
+  */
+  assert.equal(await reportCeilingReached(counter(REPORTS_PER_SOURCE_PER_HOUR, 0), "csp-report", "noisy"), true);
+  /* And a different reporter, with the area nowhere near its own ceiling,
+     is still heard. */
+  assert.equal(await reportCeilingReached(counter(0, REPORTS_PER_SOURCE_PER_HOUR), "csp-report", "quiet"), false);
 });
+
+test("the area ceiling still stops a distributed flood", async () => {
+  assert.equal(await reportCeilingReached(counter(0, REPORTS_PER_AREA_PER_HOUR), "csp-report", "anyone"), true);
+  assert.ok(REPORTS_PER_AREA_PER_HOUR > REPORTS_PER_SOURCE_PER_HOUR * 10,
+    "the total must be far above one source's share, or it is the same mute button");
+});
+
+test("a source key tells reporters apart without recording who they are", async () => {
+  const a = await reporterKey(new Request("https://x.test", { headers: { "cf-connecting-ip": "1.2.3.4", "user-agent": "A" } }));
+  const b = await reporterKey(new Request("https://x.test", { headers: { "cf-connecting-ip": "5.6.7.8", "user-agent": "A" } }));
+  const again = await reporterKey(new Request("https://x.test", { headers: { "cf-connecting-ip": "1.2.3.4", "user-agent": "A" } }));
+  assert.notEqual(a, b, "two sources must be distinguishable");
+  assert.equal(a, again, "the same source must be stable within the hour");
+  assert.ok(!a.includes("1.2.3.4"), "the address itself must not be stored");
+  assert.match(a, /^[0-9a-f]{12}$/, "short enough not to be a record of who visited");
+});
+
+
 
 test("an open report endpoint stops writing once the hour is full", async () => {
   /*
@@ -98,16 +134,16 @@ test("an open report endpoint stops writing once the hour is full", async () => 
     to the same table a member's broken publish lands in. A script posting in
     a loop could bury every real failure under noise.
   */
-  assert.equal(await reportCeilingReached(counter(0), "csp-report"), false);
-  assert.equal(await reportCeilingReached(counter(REPORTS_PER_HOUR - 1), "csp-report"), false);
-  assert.equal(await reportCeilingReached(counter(REPORTS_PER_HOUR), "csp-report"), true);
-  assert.equal(await reportCeilingReached(counter(REPORTS_PER_HOUR * 10), "csp-report"), true);
+  assert.equal(await reportCeilingReached(counter(0, 0), "csp-report", "someone"), false);
+  assert.equal(await reportCeilingReached(counter(0, REPORTS_PER_AREA_PER_HOUR - 1), "csp-report", "someone"), false);
+  assert.equal(await reportCeilingReached(counter(0, REPORTS_PER_AREA_PER_HOUR), "csp-report", "someone"), true);
+  assert.equal(await reportCeilingReached(counter(0, REPORTS_PER_AREA_PER_HOUR * 10), "csp-report", "someone"), true);
 });
 
 test("a counter that cannot be read does not silence real reports", async () => {
   /* Failing closed here would mean one broken query hides every error the
      product is trying to tell us about. */
-  assert.equal(await reportCeilingReached(counter(null), "csp-report"), false);
+  assert.equal(await reportCeilingReached(counter(null, null), "csp-report", "someone"), false);
   const throws = { prepare: () => ({ bind: () => ({ first: async () => { throw new Error("no table"); } }) }) };
   assert.equal(await reportCeilingReached(throws, "csp-report"), false);
 });
