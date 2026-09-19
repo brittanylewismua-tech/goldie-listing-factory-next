@@ -3080,8 +3080,23 @@ test("every failure is recorded against a person, and Brittany is emailed — D4
   assert.doesNotMatch(log, /RESEND_API_KEY[\s\S]{0,200}fetch\(/, "nor reach a mailer any other way");
 
   // Tokens must not be written into a log that gets emailed around.
-  assert.match(log, /export function scrubSecrets/);
-  assert.match(log, /Bearer\\s\+\[\\w\.\\-\]\+/);
+  /*
+    D1714 · This asserted the literal text "export function scrubSecrets" in
+    error-log.ts, and broke the moment the function moved into its own module
+    so it could be tested by running it — a refactor that changed no
+    behaviour at all. What matters is that the log scrubs, not where the
+    scrubber is declared. tests/log-scrubbing.test.mjs exercises what it
+    actually removes.
+  */
+  assert.match(log, /scrubSecrets/, "the log must scrub what it writes");
+  /* The pattern itself moved with the function; what this test cares about
+     is that the log has a scrubber at all. What it removes is proven by
+     running it, in tests/log-scrubbing.test.mjs. */
+  {
+    const scrubber = await readFile(
+      new URL("../app/log-scrubbing.ts", import.meta.url), "utf8");
+    assert.match(scrubber, /Bearer/, "bearer tokens must still be redacted");
+  }
 
   /* D845 · The 15-minute throttle went with the emailer it throttled. */
 

@@ -46,9 +46,8 @@ const cut = (value: unknown, max: number) => String(value ?? "").replace(/\s+/g,
    Printify unreachable, Etsy tokens broken, the queue itself faulting. These
    patterns are the seller's own to fix and are recorded silently. */
 
-/* Tokens and keys must never be written into a log we then email around. */
-const SECRETS = /\b(Bearer\s+[\w.\-]+|sk-[\w-]{8,}|key-[\w-]{8,}|gld-admin-[\w-]+|eyJ[\w.-]{20,})/gi;
-export function scrubSecrets(value: string) { return value.replace(SECRETS, "[redacted]"); }
+export { scrubSecrets } from "./log-scrubbing";
+import { scrubSecrets } from "./log-scrubbing";
 
 export async function ensureErrorLog(db: D1Database) {
   await db.batch([
