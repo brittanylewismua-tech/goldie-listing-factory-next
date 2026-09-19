@@ -10,6 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { stripComments } from "./strip-comments.mjs";
 
 /*
   Comments stripped. Counting ".catch(" in raw source counted the one inside
@@ -17,9 +18,7 @@ import { readFileSync } from "node:fs";
   to trip on its own explanation. Any test that greps source strips comments
   first; the reasons live in comments and the reasons quote the rules.
 */
-const strip = (s) => s
-  .replace(/\/\*[\s\S]*?\*\//g, " ")
-  .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+const strip = stripComments;
 const read = (p) => strip(readFileSync(new URL(p, import.meta.url), "utf8"));
 const tick = read("../app/api/operations/evidence-tick/route.ts");
 const view = read("../app/api/operations/evidence/route.ts");

@@ -11,6 +11,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
+import { stripComments } from "./strip-comments.mjs";
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 const matrix = read("../app/access-matrix.ts");
@@ -25,9 +26,6 @@ const isOwnerOnly = (route) => ownerBlock.includes(`"${route}"`);
 /* Comments are where the reasons live, and the reasons quote the very
    phrases these tests forbid. Strip them, or the file's own explanation of a
    rule trips the rule. */
-const stripComments = (source) => source
-  .replace(/\/\*[\s\S]*?\*\//g, " ")
-  .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
 
 const routes = [];
 const walk = (dir) => {

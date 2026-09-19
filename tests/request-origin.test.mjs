@@ -10,6 +10,7 @@ import { readFileSync, readdirSync, mkdtempSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { stripComments } from "./strip-comments.mjs";
 
 const dir = mkdtempSync(join(tmpdir(), "origin-"));
 execFileSync("npx", ["tsc", "--target", "es2022", "--module", "es2022",
@@ -89,9 +90,7 @@ test("the deployed headers are configured, and script-src is not faked", () => {
     comments; the reasons live in comments and the reasons quote the rules.
   */
   const raw = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
-  const config = raw
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  const config = stripComments(raw);
   for (const h of ["Content-Security-Policy", "X-Frame-Options",
     "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy",
     "Strict-Transport-Security"])
@@ -120,7 +119,7 @@ test("D1716: no route runs work on a GET", () => {
   };
   walk("../app/api");
 
-  const strip = (x) => x.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  const strip = stripComments;
   const offences = [];
   for (const file of routes) {
     const s = strip(readFileSync(new URL(file, import.meta.url), "utf8"));
@@ -182,4 +181,28 @@ test("D1716: the cron posts its jobs", () => {
     assert.ok(at > -1, `${path} missing from the cron`);
     assert.match(cron.slice(at, at + 90), /method: "POST"/, `${path} still a GET`);
   }
+});
+
+test("D1721: the content policy is enforcing, with no unsafe-inline for scripts", () => {
+  const raw = readFileSync(new URL("../scripts/add-scheduled-handler.mjs",
+    import.meta.url), "utf8");
+  const src = stripComments(raw);
+  assert.match(src, /const CSP_REPORT_ONLY = false/,
+    "report-only was the rollout, not the destination");
+  /* Every directive she named must be present. */
+  for (const directive of ["default-src", "script-src", "style-src", "img-src",
+    "font-src", "connect-src", "frame-ancestors", "object-src", "base-uri",
+    "form-action"])
+    assert.ok(src.includes(directive), `missing directive: ${directive}`);
+  /* The one prohibition that is absolute. */
+  const scriptLine = src.split("\n").find(l => l.includes("script-src"));
+  assert.ok(!/unsafe-inline|unsafe-eval/.test(scriptLine),
+    `script-src must never be inline-permissive: ${scriptLine}`);
+  /* And no wildcard that erases the protection. */
+  assert.ok(!/script-src[^`]*\*[^.]/.test(scriptLine),
+    "a wildcard host in script-src would erase the policy");
+  /* The nonce must be per request, not a constant. */
+  assert.match(src, /getRandomValues/, "a fixed nonce is not a nonce");
+  assert.match(src, /new HTMLRewriter\(\)[\s\S]{0,200}setAttribute\("nonce"/,
+    "every delivered script tag must carry it");
 });

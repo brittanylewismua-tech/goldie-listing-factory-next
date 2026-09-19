@@ -63,11 +63,18 @@ export { DraftCreationWorkflow, PhotoDeliveryWorkflow };
   style attributes are throughout the app, and unsafe-inline for STYLE does
   not let an attacker run code.
 
-  REPORT-ONLY for now. It reports to /api/csp-report and enforces nothing, so
-  the full walkthrough can be run against real pages and real violations
-  collected before anything is blocked.
+  ENFORCING, as of D1721. It shipped report-only first and that was not a
+  formality: the first policy used 'strict-dynamic' and the walkthrough
+  produced forty distinct violations, every one a Next route chunk, which
+  enforced would have broken client-side navigation on every page. The
+  corrected policy was then walked across nine routes and recorded ZERO new
+  violations — same total, same newest timestamp, before and after. That is
+  what made it safe to enforce.
+
+  report-uri stays. A policy that starts reporting again is telling us
+  something changed.
 */
-const CSP_REPORT_ONLY = true;
+const CSP_REPORT_ONLY = false;
 
 const policy = nonce => [
   "default-src 'self'",
