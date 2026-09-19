@@ -77,6 +77,26 @@ export const GET = withErrorLog("trademark-register-status", async (request: Req
          FROM tm_marks ORDER BY LENGTH(normalized) DESC LIMIT 1`)
       .first<{ serial: string; length: number; updated: string }>()
       .catch(() => null),
+    /*
+      Owner diagnostic: is a specific serial in the corpus yet? The
+      member-facing answer deliberately drops serials — they are internal
+      detail — so there is otherwise no way to confirm that a named
+      registration has actually landed during a rebuild.
+    */
+    serials: await (async () => {
+      const asked = (new URL(request.url).searchParams.get("serials") ?? "")
+        .split(",").map(one => one.trim()).filter(Boolean).slice(0, 10);
+      if (!asked.length) return null;
+      const found: Record<string, unknown> = {};
+      for (const serial of asked) {
+        const row = await db.prepare(
+          `SELECT serial, mark, owner, classes, status_code AS status
+             FROM tm_marks WHERE serial = ?`)
+          .bind(serial).first<Record<string, unknown>>();
+        found[serial] = row ?? false;
+      }
+      return found;
+    })(),
     lookupProbe: await lookup(db, "dream spun")
       .then(hits => ({ ok: true, hits: hits.length }))
       .catch(error => ({ ok: false,
