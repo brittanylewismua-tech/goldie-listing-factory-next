@@ -38,8 +38,18 @@ export { DraftCreationWorkflow, PhotoDeliveryWorkflow };
   scripts, which are inline and numerous, without threading a nonce through
   the framework by hand.
 
-  'strict-dynamic' is what makes that enough: a script we trusted by nonce may
-  load the chunks it needs, and nothing else may.
+  'strict-dynamic' WAS the plan, and report-only is why it is not. Under
+  strict-dynamic a host source is ignored entirely, and Next's client-side
+  router injects route chunks in a way that does not inherit the trust — the
+  walkthrough produced 40 distinct script-src-elem violations, every one of
+  them our own /_next/static/chunks. Enforcing that would have broken every
+  client-side navigation in the product.
+
+  So: 'self' rather than 'strict-dynamic'. An inline script still needs the
+  nonce, which is the whole point — an injected <script> has no nonce and
+  does not run, and that is the path from an XSS to the session cookie. What
+  'self' additionally permits is loading a .js from our own origin, and this
+  app hosts no user-supplied JavaScript, so there is nothing there to load.
 
   static.cloudflareinsights.com is named explicitly. Cloudflare injects it at
   the edge, AFTER this worker has run, so it can never carry our nonce — it is
@@ -61,7 +71,7 @@ const CSP_REPORT_ONLY = true;
 
 const policy = nonce => [
   "default-src 'self'",
-  \`script-src 'nonce-\${nonce}' 'strict-dynamic' https://static.cloudflareinsights.com\`,
+  \`script-src 'nonce-\${nonce}' 'self' https://static.cloudflareinsights.com\`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
