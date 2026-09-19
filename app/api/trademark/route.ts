@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
 import { env } from "cloudflare:workers";
-import { check, withRegister, type RegisterMatch } from "@/app/trademark-check";
+import { check, toMatches, withRegister, type RegisterMatch } from "@/app/trademark-check";
 import { logError } from "@/app/error-log";
-import { lookup, normalize, registerSize } from "@/app/trademark-register";
+import { lookup, normalize, squeeze, registerSize } from "@/app/trademark-register";
 
 /**
  * Check a phrase before it goes on a product.
@@ -36,15 +36,10 @@ export const GET = withErrorLog("trademark", async (request: Request) => {
   try {
     const [held, hits] = await Promise.all([registerSize(db), lookup(db, phrase)]);
     size = held;
-    const normalized = normalize(phrase);
-    matches = hits.map(hit => ({
-      mark: hit.mark,
-      owner: hit.owner,
-      registration: hit.registration,
-      classes: hit.classes,
-      registered: hit.registered,
-      exact: normalize(hit.mark) === normalized,
-    }));
+    /* toMatches rather than a second copy of it here: this route had its own
+       inline mapping, which is how `exact` ended up computed two different
+       ways in two places. */
+    matches = toMatches(hits, phrase, normalize, squeeze);
   } catch (error) {
     /*
       A FAILED REGISTER READ IS NOT A CLEAN RESULT.

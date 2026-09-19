@@ -14,7 +14,7 @@ import { artworkHashOfBytes, artworkHashOfDataUrl } from "@/app/artwork-identity
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { INTERNAL_VALIDATION_MARKER, isInternalValidationProduct } from "@/app/printify-validation-marker";
 import { check, withRegister, registerIsReady, toMatches } from "@/app/trademark-check";
-import { lookup, normalize, registerSize } from "@/app/trademark-register";
+import { lookup, normalize, registerSize, squeeze } from "@/app/trademark-register";
 import { env } from "cloudflare:workers";
 import { isOwner } from "@/app/mastermind/access";
 
@@ -179,7 +179,7 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
        backfill. And the raw hits went in unmapped, leaving `exact` undefined
        on every one, which downgraded an exact single-word registered mark
        from high risk to a minor mention. */
-    trademark = withRegister(check(phrase), toMatches(hits, phrase, normalize),
+    trademark = withRegister(check(phrase), toMatches(hits, phrase, normalize, squeeze),
       size);
   } catch { /* the verdict without the register is still a verdict */ }
 

@@ -214,3 +214,30 @@ test('a single-word mark at the head of a phrase is still found', async () => {
   assert.equal(hits.length, 1, 'a single-word mark heading the phrase was lost');
   assert.equal(hits[0].mark, 'BLUEY');
 });
+
+test('the joined spelling is graded exactly like the spaced one', async () => {
+  const { toMatches, withRegister, check } = await import('../app/trademark-check.ts');
+  const hit = [{ mark: 'HAUS LABS', owner: 'Ate My Heart Inc.', registration: 'R1',
+    classes: ['003'], registered: true }];
+  const ready = { marks: 10, files: [{ state: 'done', count: 1 }] };
+
+  for (const phrase of ['Haus Labs', 'Hauslabs', 'HAUSLABS', 'haus-labs']) {
+    const matches = toMatches(hit, phrase, normalize, squeeze);
+    assert.equal(matches[0].exact, true, `"${phrase}" was not treated as the mark itself`);
+    assert.equal(withRegister(check(phrase), matches, ready).risk, 'high',
+      `"${phrase}" was graded softer than the spaced spelling`);
+  }
+});
+
+test('a pending application is never described as a registration', async () => {
+  const { toMatches, withRegister, check } = await import('../app/trademark-check.ts');
+  const ready = { marks: 10, files: [{ state: 'done', count: 1 }] };
+  const pending = toMatches(
+    [{ mark: 'HAUS LABS', owner: 'Ate My Heart Inc.', registration: '',
+       classes: ['021'], registered: false }],
+    'something else entirely', normalize, squeeze);
+  const verdict = withRegister(check('something else entirely'), pending, ready);
+  assert.equal(/\bis registered by\b/.test(verdict.summary), false,
+    'an application that has not been granted is called a registration');
+  assert.match(verdict.summary, /has been filed/);
+});

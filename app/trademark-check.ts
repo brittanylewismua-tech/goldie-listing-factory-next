@@ -496,20 +496,37 @@ export function registerParkedFiles(size: RegisterSize | null | undefined) {
   downgraded from high risk to a minor mention — on the publish path.
 */
 export function toMatches(
+  /* classes is the array the register returns. It was typed as a string here
+     and the mismatch was papered over with a cast, which is why the two
+     callers could disagree about the shape without anything complaining. */
   hits: Array<{ mark: string; owner?: string; registration?: string;
-    classes?: string; registered?: boolean }>,
+    classes?: string[]; registered?: boolean }>,
   phrase: string,
   /* Injected rather than imported: the normaliser lives beside the register
      reader, and this module stays free of anything that touches a database.
      Named distinctly so the import-integrity guard can tell a parameter from
      a symbol borrowed off another module. */
   normalizeMark: (value: string) => string,
+  /* The joined form, injected for the same reason as the normaliser. Optional
+     so an older caller still compiles; without it "Hauslabs" and "HAUS LABS"
+     are not recognised as one mark. */
+  squeezeMark?: (value: string) => string,
 ): RegisterMatch[] {
   const wanted = normalizeMark(phrase);
+  const squeezed = squeezeMark ? squeezeMark(phrase) : null;
   return hits.map(hit => ({
     mark: hit.mark, owner: hit.owner, registration: hit.registration,
-    classes: hit.classes, registered: hit.registered,
-    exact: normalizeMark(hit.mark) === wanted,
+    classes: hit.classes ?? [], registered: hit.registered,
+    /*
+      "EXACT" MEANS THE PHRASE IS THE MARK, NOT THAT IT IS SPELLED THE SAME.
+
+      This compared normalised forms only, so "Hauslabs" against HAUS LABS came
+      back exact: false — and `serious` leans on exact, so the joined spelling
+      was quietly graded softer than the spaced one. The whole point of the
+      squeezed form is that those are one mark.
+    */
+    exact: normalizeMark(hit.mark) === wanted
+      || (squeezed !== null && squeezeMark!(hit.mark) === squeezed),
   })) as RegisterMatch[];
 }
 
@@ -643,6 +660,18 @@ export function withRegister(
     risk: "caution",
     register: relevant,
     registerReady,
-    summary: `No famous brands here, but ${named} ${minor.length > 1 ? "are" : "is"} registered by somebody else. A registration on an ordinary word does not stop you using it, and it does mean the owner can object — worth a look before you scale it.`,
+    /*
+      SAY WHICH IT IS. IT USED TO SAY "registered" FOR BOTH.
+
+      `minor` holds pending applications as well as registrations, and this
+      sentence called all of them registered — so a live application read as a
+      granted right, and the advice that followed ("a registration on an
+      ordinary word...") described something that had not happened.
+    */
+    summary: `No famous brands here, but ${named} ${minor.every(match => match.registered)
+      ? `${minor.length > 1 ? "are" : "is"} registered by somebody else`
+      : `${minor.length > 1 ? "have been filed" : "has been filed"} by somebody else`}. `
+      + `That does not stop you using it, and it does mean the owner can object — `
+      + `worth a look before you scale it.`,
   };
 }
