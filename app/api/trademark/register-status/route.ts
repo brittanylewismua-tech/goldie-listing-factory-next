@@ -3,7 +3,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { withErrorLog } from "@/app/error-log";
 import { env } from "cloudflare:workers";
-import { ensureRegisterTables, registerSize } from "@/app/trademark-register";
+import { ensureRegisterTables, lookup, registerSize } from "@/app/trademark-register";
 import { blockedExplanation } from "@/app/uspto-backoff";
 
 /**
@@ -64,6 +64,13 @@ export const GET = withErrorLog("trademark-register-status", async (request: Req
 
   return NextResponse.json({
     ...(await registerSize(db)),
+    /* Owner diagnostic: does a real lookup actually succeed? A clean result
+       and an unreadable register produced the same answer for long enough
+       that this is worth being able to see directly. */
+    lookupProbe: await lookup(db, "dream spun")
+      .then(hits => ({ ok: true, hits: hits.length }))
+      .catch(error => ({ ok: false,
+        error: error instanceof Error ? error.message : String(error) })),
     sample,
     recent: recent.results ?? [],
     nextUp: waiting.results ?? [],
