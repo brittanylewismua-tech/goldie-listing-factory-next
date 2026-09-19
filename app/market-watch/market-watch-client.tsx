@@ -160,7 +160,11 @@ export default function MarketWatchClient(
       const response = await fetch(path, { method: "POST",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const body = await response.json() as
-        { error?: string; alreadyWatched?: boolean; shop?: { shopName?: string } } & NicheView;
+        /* The shops route answers shopName at the top level; the niches
+           route has no shop at all. Read both rather than only the shape one
+           of them happens to use. */
+        { error?: string; alreadyWatched?: boolean; shopName?: string;
+          shop?: { shopName?: string } } & NicheView;
       if (!response.ok) setError(body.error ?? "That could not be saved.");
       else {
         setInput("");
@@ -172,7 +176,7 @@ export default function MarketWatchClient(
           to count the rows. The reply carries alreadyWatched; this says it.
         */
         setNotice(body.alreadyWatched
-          ? `${body.shop?.shopName ?? "That shop"} is already on your watch list.`
+          ? `${body.shopName ?? body.shop?.shopName ?? "That shop"} is already on your watch list.`
           : "");
         if (tab === "niches") { setOpen(body); void loadNiches(true); }
         else void loadShops(true);

@@ -17,6 +17,9 @@ test('the already-watched reply reaches the member', () => {
   assert.match(client, /alreadyWatched/,
     'the client still ignores the field the server sends');
   assert.match(client, /already on your watch list/);
+  /* The shops route answers shopName at the top level, so the notice names
+     the shop instead of falling back to "That shop". */
+  assert.match(client, /body\.shopName \?\? body\.shop\?\.shopName/);
 });
 
 test('a notice is not rendered as a failure', () => {
