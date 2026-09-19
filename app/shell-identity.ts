@@ -60,4 +60,4 @@ export const TAB_TITLES: Record<ShellSection, string> = {
  * the moment the umbrella name exists — it is referenced from the layout
  * metadata and the web manifest, and nowhere else.
  */
-export const NEUTRAL_FALLBACK_TITLE = "Etsy seller tools";
+export const NEUTRAL_FALLBACK_TITLE = "Goldie Suite";

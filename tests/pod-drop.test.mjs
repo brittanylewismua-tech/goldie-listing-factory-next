@@ -322,10 +322,11 @@ test("the two rails cannot disagree about what is on them", () => {
   assert.match(shell, /export const NAV/, "the rail's links must be exported to be shared");
   assert.match(app, /import \{ NAV \} from "\.\/factory-shell"/,
     "the workflow rail must render the shared list, not a copy of it");
-  assert.match(app, /NAV\.map\(item =>/, "the workflow rail must render every shared link");
+  assert.equal((app.match(/NAV\.filter\(item => item\.group === "(?:work|library)"\)\.map\(item =>/g) ?? []).length, 2,
+    "the workflow rail must render both groups from the shared list");
   /* Every top-level feature, in the one list both rails draw from. */
-  for (const label of ["Home", "New listing project", "Batch History", "Keyword Banks",
-    "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker"])
+  for (const label of ["Home", "Listing Factory", "Batch History", "Keyword Banks",
+    "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker", "Tools & settings"])
     assert.ok(shell.includes(`label: "${label}"`), `${label} missing from the shared rail`);
   /* And neither may carry a way into the Hot List: it is not part of making a
      listing, and it is reached from Home with the other tools. */

@@ -18,6 +18,7 @@ import "./interface-v2.css";
 import ReliableNavigation from "./reliable-navigation";
 import MobileShell from "./mobile-shell";
 import "./mobile-shell.css";
+import "./suite-redesign.css";
 import { NEUTRAL_FALLBACK_TITLE } from "./shell-identity";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -41,7 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
     + "your own shop's numbers, and a trademark check before you print.";
   return {
     metadataBase: new URL(origin),
-    title,
+    title: { default: title, template: `%s | ${title}` },
     description,
     /*
       THE FAVICON WAS THE GOLDIE MARK.

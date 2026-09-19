@@ -261,7 +261,13 @@ export function SavedWorkflow(props: WorkflowProps) {
     }).catch(()=>undefined);
   }
 
-  useEffect(() => { reload(); fetch("/api/keyword-lists").then(r=>r.json() as Promise<{lists?:KeywordList[]}>).then(r=>setKeywordLists(r.lists||[])); }, []);
+  useEffect(() => {
+    reload();
+    fetch("/api/keyword-lists")
+      .then(async r => r.ok ? await r.json() as {lists?:KeywordList[]} : {lists:[]})
+      .then(r => setKeywordLists(r.lists || []))
+      .catch(() => setKeywordLists([]));
+  }, []);
   /* Establishing colors, sizes, mockups or a keyword bank saves straight to the
      recipe, but the tiles above were loaded once on mount. Picking 4 colors and
      8 sizes on the hoodie persisted correctly and its card still read "No

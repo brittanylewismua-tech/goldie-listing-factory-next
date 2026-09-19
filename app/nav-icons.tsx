@@ -9,7 +9,9 @@
  * and leave the two free to drift again on the next change. The icons live here
  * instead, keyed by destination, and both navigations render from this map — so
  * an icon added or changed in one place is added or changed in both. */
-export type NavKey = "listingFactory" | "batches" | "keywords" | "mockups" | "usage" | "operations" | "connections" | "trademark" | "goals" | "account";
+export type NavKey = "home" | "listingFactory" | "marketWatch" | "shopMap" | "designScanner"
+  | "batches" | "keywords" | "mockups" | "usage" | "operations" | "connections"
+  | "trademark" | "goals" | "account" | "more";
 
 
 /* D246 · D203 centralised the icon MARKUP so the two navigations could not
@@ -35,6 +37,16 @@ const ICON = {
 
 export function NavIcon({ name }: { name: NavKey }) {
   switch (name) {
+    case "home":
+      return <svg {...ICON}><path d="M3.5 11.2L12 4l8.5 7.2"/><path d="M5.5 10v10h13V10M9.5 20v-6h5v6"/></svg>;
+    case "marketWatch":
+      return <svg {...ICON}><path d="M4 18l5.2-5.2 3.6 3.6L20 8"/><path d="M14 8h6v6"/></svg>;
+    case "shopMap":
+      return <svg {...ICON}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>;
+    case "designScanner":
+      return <svg {...ICON}><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M8 21H5a2 2 0 01-2-2v-3"/><circle cx="12" cy="12" r="4"/></svg>;
+    case "more":
+      return <svg {...ICON}><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>;
     case "listingFactory":
       return <svg {...ICON}><path d="M3 9l1-4h16l1 4M3 9h18M3 9v10a1 1 0 001 1h16a1 1 0 001-1V9M9 13h6"/></svg>;
     /* D639 · Once Printify and Etsy were connected the connect screen was

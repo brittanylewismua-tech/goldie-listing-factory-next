@@ -167,12 +167,12 @@ test("the Trademark Checker renders as itself at every width", () => {
   assert.ok(!code.includes("MobileGate"), "the checker still carries a desktop gate");
 });
 
-test("the factory's own controls appear only on factory pages", () => {
-  /* The batch button, the listings counter and the prepared-listings goal are
-     the Listing Factory's, not Goldie's. Putting them on every page is what
-     made the checker look like a factory screen. */
+test("the suite CTA is universal while factory metrics stay on factory pages", () => {
+  /* Starting a batch is the suite's primary call to action. Usage and goal
+     metrics still belong only to the Listing Factory surfaces. */
   const shell = strip(read("app/factory-shell.tsx"));
-  for (const control of ["Start a new batch", "approved-usage", "listing-goal-side"]) {
+  assert.ok(shell.includes("Start a new batch"), "the primary suite CTA is missing");
+  for (const control of ["approved-usage", "listing-goal-side"]) {
     const at = shell.indexOf(control);
     assert.ok(at > 0, `${control} is missing from the shell`);
     assert.ok(shell.lastIndexOf("FACTORY_PAGES.has(active)", at) > shell.lastIndexOf("<header", at) - 2000
@@ -239,33 +239,14 @@ test("the service worker never caches an API response or a page", () => {
   assert.match(bail, /cacheable = \/\\\.\(\?:png/);
 });
 
-test("the installed app carries no product name and no branded icon", () => {
-  /*
-    THIS ASSERTED A SUITE NAME AND A 512px ICON.
-
-    The manifest said "Goldie Suite" / "Goldie" and pointed at the Goldie
-    icons — a product name and a mark, in the two places a member sees them
-    most permanently: the home-screen tile and the app switcher. The umbrella
-    product has not been named, so neither can stand.
-
-    THE COST, STATED RATHER THAN HIDDEN: Chrome requires a 192px and a 512px
-    icon before it will offer to install. With the icons gone the install
-    prompt will not appear, so home-screen install is off until there is a
-    brand to put on the tile. That is a deliberate trade — a placeholder mark
-    on somebody's home screen is exactly how a stand-in becomes the name — and
-    it reverses by adding the icons back.
-
-    The files themselves are untouched in public/.
-  */
+test("the installed app carries the chosen Goldie Suite identity", () => {
   const manifest = JSON.parse(readFileSync(
     new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
   assert.equal(manifest.display, "standalone");
   assert.match(manifest.start_url, /^\/home/);
-  assert.deepEqual(manifest.icons, [],
-    "an icon in the manifest is a mark on a home screen");
-  for (const field of ["name", "short_name", "description"])
-    assert.doesNotMatch(String(manifest[field] ?? ""), /goldie/i,
-      `the manifest ${field} still names the old product`);
+  assert.equal(manifest.name, "Goldie Suite");
+  assert.equal(manifest.short_name, "Goldie");
+  assert.match(manifest.description, /Goldie Suite/);
 });
 
 test("the connections screen reports a real last sync", () => {

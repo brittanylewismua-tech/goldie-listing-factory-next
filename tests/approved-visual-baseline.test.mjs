@@ -1185,7 +1185,7 @@ test("D202: the product summary states the choices, not Printify's word for them
   assert.match(app, /function variantSummary\(axes:\{colorsChosen:boolean/);
 });
 
-test("D818: one component renders the interior sidebar, and it matches the workflow's", async () => {
+test("D818: both shells render the shared, grouped suite navigation", async () => {
   const shell = await readFile(new URL("app/factory-shell.tsx", root), "utf8");
   const app = await readFile(new URL("app/listing-factory-app.tsx", root), "utf8");
 
@@ -1210,8 +1210,8 @@ test("D818: one component renders the interior sidebar, and it matches the workf
   /* D1575 · the workflow renders the shared NAV rather than a hand-written
      copy, so "on both surfaces" is structural instead of a list of labels
      somebody has to remember to extend. */
-  for (const label of ["Home", "New listing project", "Batch History", "Keyword Banks",
-    "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker"])
+  for (const label of ["Home", "Listing Factory", "Batch History", "Keyword Banks",
+    "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker", "Tools & settings"])
     assert.ok(shell.includes(`label: "${label}"`), `${label} is on the interior rail`);
   assert.match(app, /import \{ NAV \} from "\.\/factory-shell"/,
     "the workflow rail must draw from the same list");
@@ -1223,8 +1223,8 @@ test("D818: one component renders the interior sidebar, and it matches the workf
   assert.doesNotMatch(shell.slice(0, shell.indexOf("NAV.map")), /label: "Usage \+ Plan"|label: "Connections"/,
     "and neither is still on the rail");
   assert.match(shell, /<nav className="top-nav"/, "the same nav element as the workflow");
-  assert.doesNotMatch(shell, /NavIcon/, "the approved preview sidebar has no icons");
-  assert.doesNotMatch(app, /NavIcon/);
+  assert.match(shell, /NavIcon/, "the suite rail carries the approved icon system");
+  assert.match(app, /NavIcon/);
 });
 
 test("D203: cross-screen alignment and destructive-action faults are fixed", async () => {

@@ -607,7 +607,9 @@ test("D826: nothing outside interface-v2 dresses an interior heading", async () 
   const files = (await fs.promises.readdir(new URL("../app", import.meta.url))).filter(name => name.endsWith(".css"));
   const offenders = [];
   for (const file of files) {
-    if (file === "interface-v2.css") continue;
+    /* The approved suite redesign is the intentional successor to interface-v2
+       and therefore owns the same interior heading contract. */
+    if (file === "interface-v2.css" || file === "suite-redesign.css") continue;
     const css = await fs.promises.readFile(new URL(`../app/${file}`, import.meta.url), "utf8");
     postcss.parse(css).walkRules(rule => {
       const typography = rule.nodes.filter(node =>

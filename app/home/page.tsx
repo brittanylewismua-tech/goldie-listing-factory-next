@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { accountSignInPath, getChatGPTUser } from "@/app/chatgpt-auth";
 import HomeStatus from "./home-status";
+import FactoryShell from "@/app/factory-shell";
 
 /* The tab says what this page is. There is no product name to append, and
    a placeholder in a tab title is how a stand-in becomes permanent. */
@@ -71,7 +72,8 @@ export default async function HomePage() {
   if (!user)
     return <main className="hub-auth"><Link href={accountSignInPath("/home")}>Sign in</Link></main>;
 
-  return <main className="hub">
+  return <FactoryShell active="home" title="Home" desktopOnly={false}>
+  <main className="hub p-grid">
     <header className="hub-head">
       {/*
         NO MARK HERE.
@@ -85,19 +87,23 @@ export default async function HomePage() {
       {/* No name. The only one available is the part of an email address
           before the @, and "Good to see you, shesawolfclothing" is worse than
           not trying. */}
-      <h1>Good to see you</h1>
+      <p className="hub-eyebrow"><span /> YOUR SELLER COMMAND CENTER</p>
+      <h1>Good to see you.<br/><em>Your next move is here.</em></h1>
+      <p className="hub-intro">The clearest signals across your shop, watched markets, and listing workflow, all in one place.</p>
     </header>
 
     <HomeStatus />
 
-    <p className="mini-label">YOUR TOOLS</p>
+    <div className="hub-section-head"><div><p className="mini-label">YOUR TOOLS</p><h2>Everything you need to move the shop forward.</h2></div><a href="/listing-factory">Create listings <span aria-hidden="true">↗</span></a></div>
     <section className="hub-grid">
       {TOOLS.map(tool => (
         <Link key={tool.name} className="hub-tool" href={tool.href}>
           <span className="hub-icon" aria-hidden="true">{tool.icon}</span>
+          <span className="hub-tool-number">0{TOOLS.indexOf(tool) + 1}</span>
           <b>{tool.name}</b>
           <span className="hub-what">{tool.what}</span>
           {tool.desktopOnly && <span className="hub-desktop">Desktop</span>}
+          <span className="hub-open" aria-hidden="true">↗</span>
         </Link>
       ))}
     </section>
@@ -108,5 +114,6 @@ export default async function HomePage() {
         Etsy API but is not endorsed or certified by Etsy, Inc.
       </p>
     </footer>
-  </main>;
+  </main>
+  </FactoryShell>;
 }

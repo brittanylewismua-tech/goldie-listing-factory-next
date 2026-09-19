@@ -1,5 +1,6 @@
 import { requireFeaturePage } from "@/app/require-feature";
 import CostsClient from "./costs-client";
+import FactoryShell from "@/app/factory-shell";
 import "./costs.css";
 
 /*
@@ -13,5 +14,7 @@ import "./costs.css";
 export const metadata = { title: "Production costs" };
 export default async function CostsPage() {
   const user = await requireFeaturePage("shopMap", "/shop-map/costs");
-  return <CostsClient signedInEmail={user.email} />;
+  return <FactoryShell active="shop-map" title="Production costs" desktopOnly={false}>
+    <CostsClient signedInEmail={user.email} />
+  </FactoryShell>;
 }

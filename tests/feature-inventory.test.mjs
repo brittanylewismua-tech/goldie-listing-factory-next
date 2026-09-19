@@ -25,7 +25,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 const RENDERED_COMPONENTS = [
   "ActionReceipt", "BatchPreferencesPortal", "ContextHelp", "DownloadListingPhotos",
   "EtsyDetailsEditor", "FinalListingReview", "GoldieCommandBar",
-  "ListingFactoryWordmark",
+  "SuiteBrand",
   "UploadedListingPhotos", "KeywordBank", "ListingPhotoOrder", 
   "OutcomeReceipt", "PersonalizationEditor", "PriceField", "PricingReview",
   "PrintifyImagePicker", "ProductColorSelector", "ProductSizeSelector", "SavedWorkflow",

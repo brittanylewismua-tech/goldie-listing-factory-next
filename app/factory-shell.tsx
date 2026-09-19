@@ -23,8 +23,8 @@
  * ==========================================================================*/
 import { useEffect, useState } from "react";
 import {readBatchHistory,preparedDaysFromHistory} from "./batch-history-read";
-import ListingFactoryWordmark from "./goldie-wordmark";
-import { showsListingFactoryWordmark } from "./shell-identity";
+import SuiteBrand from "./suite-brand";
+import { NavIcon, type NavKey as NavIconKey } from "./nav-icons";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
@@ -56,15 +56,16 @@ export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | 
   to anything. A member who opened Market Watch could reach the rest of the
   product only with the browser's back button.
 */
-export const NAV: { key: NavKey; label: string; href: string }[] = [
-  { key: "home", label: "Home", href: "/home" },
-  { key: "factory", label: "New listing project", href: "/listing-factory" },
-  { key: "market-watch", label: "Market Watch", href: "/market-watch" },
-  { key: "shop-map", label: "Shop Map", href: "/shop-map" },
-  { key: "design-scanner", label: "Design Scanner", href: "/design-scanner" },
-  { key: "trademark", label: "Trademark Checker", href: "/trademark" },
-  { key: "batches", label: "Batch History", href: "/batches" },
-  { key: "keywords", label: "Keyword Banks", href: "/keywords" },
+export const NAV: { key: NavKey; label: string; href: string; icon: NavIconKey; group: "work" | "library" }[] = [
+  { key: "home", label: "Home", href: "/home", icon: "home", group: "work" },
+  { key: "factory", label: "Listing Factory", href: "/listing-factory", icon: "listingFactory", group: "work" },
+  { key: "market-watch", label: "Market Watch", href: "/market-watch", icon: "marketWatch", group: "work" },
+  { key: "design-scanner", label: "Design Scanner", href: "/design-scanner", icon: "designScanner", group: "work" },
+  { key: "shop-map", label: "Shop Map", href: "/shop-map", icon: "shopMap", group: "work" },
+  { key: "trademark", label: "Trademark Checker", href: "/trademark", icon: "trademark", group: "work" },
+  { key: "batches", label: "Batch History", href: "/batches", icon: "batches", group: "library" },
+  { key: "keywords", label: "Keyword Banks", href: "/keywords", icon: "keywords", group: "library" },
+  { key: "more", label: "Tools & settings", href: "/more", icon: "more", group: "library" },
 ];
 
 /*
@@ -171,13 +172,15 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
         temporary name becomes the real one. The topbar already names the page,
         so nothing is lost by the slot being empty.
       */}
-      {showsListingFactoryWordmark(active) && (
-        <div className="brand-lockup"><ListingFactoryWordmark className="approved-brand" /></div>
-      )}
+      <div className="brand-lockup"><SuiteBrand /></div>
       <div className="top-actions">
-        <nav className="top-nav" aria-label="Listing Factory navigation">
-          {NAV.map(item => <a key={item.key} className={item.key === active ? "active" : undefined}
-            href={item.href} aria-current={item.key === active ? "page" : undefined}>{item.label}</a>)}
+        <nav className="top-nav" aria-label="Goldie Suite navigation">
+          <span className="suite-nav-label">Command center</span>
+          {NAV.filter(item => item.group === "work").map(item => <a key={item.key} className={item.key === active ? "active" : undefined}
+            href={item.href} aria-current={item.key === active ? "page" : undefined}><NavIcon name={item.icon}/><span>{item.label}</span>{item.key === "market-watch" && <small>LIVE</small>}</a>)}
+          <span className="suite-nav-label suite-nav-label-library">Library &amp; settings</span>
+          {NAV.filter(item => item.group === "library").map(item => <a key={item.key} className={item.key === active ? "active" : undefined}
+            href={item.href} aria-current={item.key === active ? "page" : undefined}><NavIcon name={item.icon}/><span>{item.label}</span></a>)}
         </nav>
         {/* D818 · on the workflow this is a button because it has to clear live
             batch state first. There is no batch to clear here, so the same
@@ -185,7 +188,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
         {/* Above the primary action, because that is the order of the morning:
             see what moved, then go and list. Styled quieter than Start a new
             batch so the money action keeps its weight. */}
-        {FACTORY_PAGES.has(active) && <a className="workflow-restart-button" href="/listing-factory">
+        {active !== "factory" && <a className="workflow-restart-button" href="/listing-factory">
           <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" /><path d="M3 21v-5h5" /></svg> Start a new batch</a>}
       </div>
       <div className="approved-sidebar-footer">
@@ -204,7 +207,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
 
     <div className="factory-main">
       <header className="factory-top">
-        <b className="factory-top-batch">{title}</b>
+        <div className="factory-breadcrumb"><span>Suite</span><i aria-hidden="true">›</i><b className="factory-top-batch">{title}</b></div>
         <div className="factory-top-right">
           <div className="factory-account-wrap">
             <button type="button" className="factory-account" aria-haspopup="menu"
