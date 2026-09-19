@@ -11,7 +11,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+/*
+  Comments stripped. Counting ".catch(" in raw source counted the one inside
+  the comment explaining why a catch was removed — the fourth guard tonight
+  to trip on its own explanation. Any test that greps source strips comments
+  first; the reasons live in comments and the reasons quote the rules.
+*/
+const strip = (s) => s
+  .replace(/\/\*[\s\S]*?\*\//g, " ")
+  .replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+const read = (p) => strip(readFileSync(new URL(p, import.meta.url), "utf8"));
 const tick = read("../app/api/operations/evidence-tick/route.ts");
 const view = read("../app/api/operations/evidence/route.ts");
 const cron = read("../scripts/add-scheduled-handler.mjs");
@@ -20,7 +29,9 @@ const matrix = read("../app/access-matrix.ts");
 test("the tick runs on the worker's own clock, not a person's", () => {
   assert.match(cron, /run\("\/api\/operations\/evidence-tick"\)/);
   /* The slow clock, and last, so it cannot delay the work it measures. */
-  const slowClock = cron.slice(cron.indexOf("SCHEMA FIRST"));
+  /* The slow clock begins where the ten-minute branch returns. Anchored on
+     code rather than on a comment heading, which stripping removed. */
+  const slowClock = cron.slice(cron.indexOf("/api/operations/migrate"));
   assert.ok(slowClock.includes("/api/operations/evidence-tick"));
   assert.ok(slowClock.indexOf("/api/operations/evidence-tick")
     > slowClock.indexOf("/api/trademark/ingest-tick"),
@@ -49,7 +60,11 @@ test("the tick records the gate's verdict rather than forming its own", () => {
   /* No threshold arithmetic of its own — that would be a second opinion
      competing with the gate. */
   assert.doesNotMatch(tick, /GATE_STANDARD|>=\s*0\.9|p95\s*[<>]/);
-  assert.match(tick, /It deliberately does not judge/);
+  /* The property: it forwards the gate's own verdict and never recomputes
+     one. Previously this matched the sentence in the comment that says so. */
+  assert.match(tick, /failing: gate\.failing/);
+  assert.doesNotMatch(tick, /hoursObserved\s*>=\s*\d+\s*&&/,
+    "a second pass/fail rule here would compete with the gate");
 });
 
 test("the gate only settles at the full standard, read from the gate itself", () => {
@@ -91,5 +106,7 @@ test("the view refuses rather than reporting an empty record it could not read",
 
 test("nothing settled yet is a state, not an error", () => {
   assert.match(view, /settled: outcomes\.length/);
-  assert.match(view, /Nothing settled yet is a state, not an error/);
+  /* An empty outcome list must be reported as a count, not as an error. */
+  assert.doesNotMatch(view, /outcomes\.length === 0[\s\S]{0,80}status: (4|5)\d\d/,
+    "no outcomes yet must not become a failure response");
 });

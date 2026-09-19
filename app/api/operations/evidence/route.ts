@@ -40,6 +40,21 @@ export const GET = withErrorLog("operations-evidence", async (request: Request) 
     const outcomes = await all<{ kind: string; decided_at: number; passed: number; payload_json: string }>(
       `SELECT kind, decided_at, passed, payload_json FROM evidence_outcomes
         ORDER BY decided_at ASC`);
+    /*
+      D1719 · While the CSP is report-only, what it WOULD have blocked is
+      evidence too. Read from the same place everything else is, rather than
+      building a second viewer for a temporary question.
+
+      No catch on this one. The first version had `.catch(() => [])`, which
+      this endpoint's own test refused — and rightly: an audit that swallows
+      a failed read reports "no violations" when what happened is "nothing
+      was read", which is the one answer it must never give.
+    */
+    const csp = await all<{ message: string; context: string; created_at: string }>(
+      `SELECT message, context, created_at FROM error_log
+        WHERE area = 'csp-report'
+        ORDER BY created_at DESC LIMIT 100`);
+
     const samples = await all<{ at: number; kind: string; payload_json: string }>(
       `SELECT at, kind, payload_json FROM evidence_samples
         ORDER BY at DESC LIMIT ?`, limit);
@@ -59,6 +74,13 @@ export const GET = withErrorLog("operations-evidence", async (request: Request) 
       /* Nothing settled yet is a state, not an error. */
       settled: outcomes.length,
       samples: samples.map(row => ({ at: row.at, clock: row.kind, evidence: read(row) })),
+      cspReportOnly: {
+        violations: csp.length,
+        /* Grouped, because one bad directive on a page a walkthrough visits
+           forty times is one finding, not forty. */
+        distinct: [...new Set(csp.map(row => row.message))].slice(0, 40),
+        newest: csp[0]?.created_at ?? null,
+      },
     });
   } catch (error) {
     if (error instanceof EvidenceUnavailable)
