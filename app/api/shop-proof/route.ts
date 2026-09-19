@@ -1,3 +1,4 @@
+import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner, runtime } from "@/app/mastermind/access";
@@ -64,6 +65,7 @@ async function etsy(path: string) {
 }
 
 export const GET = withErrorLog("shop-proof", async (request: Request) => {
+  if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });

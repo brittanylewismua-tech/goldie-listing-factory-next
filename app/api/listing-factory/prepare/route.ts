@@ -1,3 +1,4 @@
+import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
@@ -226,6 +227,7 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
  * thing.
  */
 export const GET = withErrorLog("listing-factory-prepare-sample", async (request: Request) => {
+  if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   try {
     const params = new URL(request.url).searchParams;
     if (params.get("probe") === "1") return await probe();

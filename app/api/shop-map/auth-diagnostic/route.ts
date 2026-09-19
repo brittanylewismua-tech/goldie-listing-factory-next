@@ -1,3 +1,4 @@
+import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
@@ -18,7 +19,8 @@ import { ensureScopeColumn } from "@/app/shop-map-auth";
  * It reads one receipt's worth of metadata at most, and reports no buyer
  * fields — only the status, and the count Etsy reports.
  */
-export const GET = withErrorLog("shop-map-auth-diagnostic", async () => {
+export const GET = withErrorLog("shop-map-auth-diagnostic", async (request: Request) => {
+  if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });

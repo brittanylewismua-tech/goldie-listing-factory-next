@@ -1,3 +1,4 @@
+import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { storeWarning } from "@/app/printify-store-warning";
 import { env } from "cloudflare:workers";
 import { DELETE_UNUSED_TEMPLATE_SESSIONS } from "./retention";
@@ -131,7 +132,8 @@ function productIdFromUrl(value: string) {
   return /^[a-f0-9]{20,32}$/i.test(bare) ? bare : "";
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   try {

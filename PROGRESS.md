@@ -130,6 +130,19 @@ rewrote every D-number in the file's prose), push, then verify
 
 # KNOWN-OPEN, and why
 
+- **CSP `script-src` is not set.** D1715 shipped the headers that cannot break
+  a working page — frame-ancestors, object-src, base-uri, form-action, nosniff,
+  Referrer-Policy, Permissions-Policy, HSTS, COOP. A real `script-src` needs a
+  nonce threaded through the root layout's inline error beacon and Next's own
+  inline bootstrap. Shipping `'unsafe-inline'` instead would be a header that
+  looks like a CSP and defends nothing, so it was left off and named here. This
+  matters more than usual because @supabase/ssr writes the session to a cookie
+  its browser client must read, so the session is readable by page scripts.
+- **The Supabase session cookie is not HttpOnly.** That is the library's design
+  (`httpOnly: false` in its own defaults), not a choice this app made, and it
+  cannot be changed without moving to server-only sessions. SameSite is `lax`,
+  so CSRF is covered; the exposure is that an XSS would be session theft.
+
 - **Design Scanner case 14 (stale reference image)** — needs a cohort holding
   a reference older than six hours. The poller keeps freshness at 0.99, so it
   has not arisen. Do NOT force it by writing false timestamps into production

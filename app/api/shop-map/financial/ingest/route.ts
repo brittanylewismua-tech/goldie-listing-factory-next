@@ -1,3 +1,4 @@
+import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
@@ -28,6 +29,7 @@ import { ensureFinanceTables } from "@/app/finance-store";
 const EARLIEST = Math.floor(Date.parse("2023-01-01T00:00:00Z") / 1_000);
 
 export const GET = withErrorLog("shop-map-financial-ingest", async (request: Request) => {
+  if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });

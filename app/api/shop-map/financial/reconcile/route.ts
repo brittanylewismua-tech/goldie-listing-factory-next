@@ -1,3 +1,4 @@
+import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
@@ -20,7 +21,8 @@ import { ensureFinanceTables, shopTimezone } from "@/app/finance-store";
  * Nothing is written to the source tables except the match result, and no
  * manual adjustment is created.
  */
-export const GET = withErrorLog("shop-map-financial-reconcile", async () => {
+export const GET = withErrorLog("shop-map-financial-reconcile", async (request: Request) => {
+  if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
