@@ -10,7 +10,7 @@ import {
   UPLOAD_ANALYSIS_VERSION, constructionOnly, meetsThreshold, THRESHOLD,
   type UploadIntelligence,
 } from "@/app/scan-record";
-import { compare } from "@/app/design-compare";
+import { compare, gateStoredResult, COMPARISON_VERSION } from "@/app/design-compare";
 import { normalizeNiche, intersect, type Candidate } from "@/app/niche-cohort";
 import { relevanceOf, relevanceNotice } from "@/app/design-niche-relevance";
 import { acquireLease, releaseLease, LEASE_WAIT_MS, LEASE_POLL_MS } from "@/app/work-lease";
@@ -539,7 +539,10 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
       measured here; the number simply travels now.
     */
     cohort: shape,
-    evidence: line, scanId: id };
+    evidence: line, scanId: id,
+    /* Stamped so a later reader knows which gate produced these sentences.
+       An unstamped or older result is re-gated on the way out. */
+    comparisonVersion: COMPARISON_VERSION };
   await db.prepare(
     `INSERT INTO scan_history (id, user_id, artwork_hash, niche, result_json, created_at)
      VALUES (?,?,?,?,?,?)`)
@@ -562,6 +565,43 @@ export const GET = withErrorLog("design-scanner-history", async () => {
     .bind(user.userId).all<{ id: string; niche: string; result: string;
       createdAt: number; artworkHash: string }>().catch(() => ({ results: [] }));
   const usage = await memberUsage(user.userId, WORKLOAD);
+
+  /*
+    D1754 · RE-GATE ANYTHING THE CURRENT GATE DID NOT WRITE.
+
+    Reopening a saved scan replayed its stored sentences verbatim, so results
+    written before D1751 still carried "It stays readable at thumbnail size"
+    beside a panel saying the readability had never been measured. The fix for
+    new scans did nothing for the ones already saved.
+
+    The measurement is read back from the analysis already stored for that
+    artwork — one indexed SELECT against rows that exist. No provider call, no
+    decode, no allowance: reopening a saved scan stays free.
+  */
+  const parsed = (rows.results ?? []).map(row => ({ row,
+    result: JSON.parse(row.result) as { comparisonVersion?: number } }));
+  const stale = parsed.filter(entry => entry.result?.comparisonVersion !== COMPARISON_VERSION);
+  const measurements = new Map<string, ImageQuality | undefined>();
+  if (stale.length) {
+    const hashes = [...new Set(stale.map(entry => entry.row.artworkHash))];
+    const stored = await db.prepare(
+      `SELECT artwork_hash AS artworkHash, payload_json AS payload FROM scan_uploads
+        WHERE user_id = ? AND version = ?
+          AND artwork_hash IN (${hashes.map(() => "?").join(",")})`)
+      .bind(user.userId, UPLOAD_ANALYSIS_VERSION, ...hashes)
+      .all<{ artworkHash: string; payload: string }>().catch(() => ({ results: [] }));
+    for (const entry of stored.results ?? []) {
+      try {
+        const quality = (JSON.parse(entry.payload) as { imageQuality?: ImageQuality })
+          ?.imageQuality;
+        /* A verdict from a superseded rule is not a measurement. Unknown is
+           the honest answer, and unknown claims nothing in either direction. */
+        measurements.set(entry.artworkHash,
+          quality?.ruleVersion === QUALITY_RULE_VERSION ? quality : undefined);
+      } catch { /* unreadable analysis: the measurement stays unknown */ }
+    }
+  }
+
   return NextResponse.json({
     scansLeftToday: usage.remaining, dailyLimit: usage.limit,
     /* At the limit, when one comes back is the only useful thing left to
@@ -569,9 +609,12 @@ export const GET = withErrorLog("design-scanner-history", async () => {
        when the oldest scan ages out, which was already computed and
        simply never sent. */
     nextScanAt: usage.oldestLeavesWindowAt,
-    scans: (rows.results ?? []).map(row => ({
+    scans: parsed.map(({ row, result }) => ({
       id: row.id, niche: row.niche, artworkHash: row.artworkHash,
-      createdAt: row.createdAt, result: JSON.parse(row.result) as unknown,
+      createdAt: row.createdAt,
+      result: (result as { comparisonVersion?: number })?.comparisonVersion === COMPARISON_VERSION
+        ? result as unknown
+        : gateStoredResult(result as never, measurements.get(row.artworkHash)).result as unknown,
     })),
   });
 });

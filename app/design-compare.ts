@@ -10,6 +10,8 @@
  * content. Nothing here reads a reference's wording, and nothing it produces
  * can name one.
  */
+import { QUALITY_RULE_VERSION } from "./image-quality.ts";
+
 export type Ingredients = {
   wordCount: number;
   typography: string;
@@ -66,13 +68,139 @@ const SHARED = 0.55;
 /* "a illustrated scene" shipped to a member once. It will not again. */
 const article = (word: string) => /^[aeiou]/i.test(word.trim()) ? "an" : "a";
 
+/*
+  THE SENTENCES THAT ARE CLAIMS ABOUT A MEASUREMENT.
+
+  Named once, used both by the live comparison and by the gate that re-checks
+  a stored result on the way out, so a stored claim cannot drift away from the
+  rule that is supposed to govern it.
+*/
+export const CLAIM_READABLE =
+  "It stays readable at thumbnail size, like the listings that are moving.";
+export const CLAIM_HARD_TO_READ = "It gets hard to read at thumbnail size. That is where "
+  + "buyers see it first, and it is the single biggest thing to fix here.";
+export const CLAIM_LOW_CONTRAST =
+  "The light and dark areas in this design are too close together to read easily.";
+export const NOTE_UNMEASURED = "Readability at thumbnail size could not be measured "
+  + "from this file, so nothing below is a claim about how it reads — treat the "
+  + "comparison as being about construction.";
+export const NO_GAP = "No clear visual-construction issue surfaced in this comparison.";
+
+/*
+  D1754 · A STORED RESULT IS NOT GOVERNED BY THE GATE THAT WROTE IT.
+
+  The gate corrected in D1751 runs while a scan is being produced. Results
+  written before it kept their text verbatim in `scan_history`, so reopening an
+  old scan replayed exactly the contradiction the gate exists to prevent — "It
+  stays readable at thumbnail size" beside "this design's readability has not
+  been measured". Correct new scans do not make old ones safe.
+
+  So every stored result is versioned, and any result not carrying the current
+  version is re-gated against the measurement as it stands now, read from the
+  stored analysis. No provider call, no allowance, no re-scan: the only inputs
+  are rows that already exist.
+*/
+export const COMPARISON_VERSION = 2;
+
+type MeasuredQuality = import("./image-quality.ts").ImageQuality;
+
+export type MeasuredState = { pass: boolean; fail: boolean; unknown: boolean };
+
+/* A verdict produced by rules that have since been replaced is not a
+   measurement. Checked here as well as at the read, so neither layer alone is
+   load-bearing. */
+const current = (measured?: MeasuredQuality) =>
+  measured && measured.ruleVersion === QUALITY_RULE_VERSION ? measured : undefined;
+
+export const readableState = (given?: MeasuredQuality): MeasuredState => {
+  const measured = current(given);
+  const unknown = !measured || measured.thumbnailReadable === "unverified";
+  return { unknown, pass: !unknown && !!measured?.mayClaimReadable,
+    fail: !unknown && !measured?.mayClaimReadable };
+};
+export const contrastState = (given?: MeasuredQuality): MeasuredState => {
+  const measured = current(given);
+  const unknown = !measured || measured.contrast === "unverified";
+  return { unknown, pass: !unknown && !!measured?.mayClaimHighContrast,
+    fail: !unknown && !measured?.mayClaimHighContrast };
+};
+
+type StoredResult = {
+  overall?: string; working?: string[]; opportunity?: string;
+  comparisonVersion?: number;
+  imageQuality?: { contrast?: string; sharpness?: string;
+    thumbnailReadable?: string; notes?: string[] };
+};
+
+const CLAIMS_READ_PASS = /stays readable at thumbnail size/i;
+const CLAIMS_CONTRAST_PASS = /contrast matches the .* look/i;
+const CLAIMS_READ_FAIL = /hard to read at thumbnail size/i;
+const CLAIMS_CONTRAST_FAIL = /too close together to read easily|light and dark areas/i;
+
+/**
+ * Re-gate a stored result against the measurement that exists now.
+ *
+ * A positive claim survives only on a measured pass; a warning survives only
+ * on a measured fail; an unknown measurement leaves neither, and says so. The
+ * verdict label is recomputed from what is left, because a "Strong" label
+ * resting on a claim that has just been removed is the same contradiction one
+ * step further up the page.
+ */
+export function gateStoredResult(stored: StoredResult, given?: MeasuredQuality) {
+  const measured = current(given);
+  const read = readableState(measured), contrast = contrastState(measured);
+  const before = JSON.stringify([stored.working ?? [], stored.opportunity ?? "",
+    stored.overall ?? "", stored.imageQuality ?? null]);
+
+  const working = (stored.working ?? []).filter(line =>
+    !(CLAIMS_READ_PASS.test(line) && !read.pass)
+    && !(CLAIMS_CONTRAST_PASS.test(line) && !contrast.pass));
+
+  let opportunity = stored.opportunity ?? "";
+  const unfoundedWarning =
+    (CLAIMS_READ_FAIL.test(opportunity) && !read.fail)
+    || (CLAIMS_CONTRAST_FAIL.test(opportunity) && !contrast.fail);
+  /* A stale "could not be measured" note is equally a claim: it is right only
+     while the measurement is still unknown. */
+  const staleNote = opportunity.includes("could not be measured")
+    && !(read.unknown || contrast.unknown);
+  if (unfoundedWarning || staleNote)
+    opportunity = read.unknown || contrast.unknown ? NOTE_UNMEASURED : NO_GAP;
+  /* Nothing on the page says the measurement is missing: say it. */
+  else if ((read.unknown || contrast.unknown) && !opportunity.includes("could not be measured")
+    && working.length !== (stored.working ?? []).length)
+    opportunity = NOTE_UNMEASURED;
+
+  let overall = stored.overall ?? "";
+  if (overall !== "Not enough verified evidence") {
+    if (working.length === 0) overall = "Weak visual-pattern alignment";
+    else if (working.length < 2 && overall === "Strong visual-pattern alignment")
+      overall = "Moderate visual-pattern alignment";
+  }
+
+  /* The panel that reports the measurement is rewritten from the measurement
+     itself, so it can never disagree with the sentences above it. */
+  const imageQuality = measured
+    ? { contrast: measured.contrast, sharpness: measured.sharpness,
+        thumbnailReadable: measured.thumbnailReadable, notes: measured.notes }
+    : { contrast: "unverified", sharpness: "unverified",
+        thumbnailReadable: "unverified",
+        notes: ["This design's readability has not been measured. Scan it "
+          + "again with the file to check it."] };
+
+  const result = { ...stored, overall, working, opportunity, imageQuality,
+    comparisonVersion: COMPARISON_VERSION };
+  return { result,
+    changed: JSON.stringify([working, opportunity, overall, imageQuality]) !== before };
+}
+
 export function compare(
   design: Ingredients, cohort: Ingredients[],
   { minimum = 12, measured }:
     { minimum?: number;
       /* Measured pixel facts. When present they overrule the model on
          readability and contrast — never the other way round. */
-      measured?: import("./image-quality.ts").ImageQuality } = {},
+      measured?: MeasuredQuality } = {},
 ): Alignment {
   if (cohort.length < minimum)
     return { overall: "Not enough verified evidence", working: [],
@@ -131,14 +259,11 @@ export function compare(
 
   if (quality === "pass"
       && design.thumbnailReadability === "readable" && readable >= SHARED)
-    working.push("It stays readable at thumbnail size, like the listings that are moving.");
+    working.push(CLAIM_READABLE);
   else if (quality === "fail")
-    gaps.push({ weight: 5, say: "It gets hard to read at thumbnail size. That is where "
-      + "buyers see it first, and it is the single biggest thing to fix here." });
+    gaps.push({ weight: 5, say: CLAIM_HARD_TO_READ });
   else if (quality === "unknown")
-    gaps.push({ weight: 2, say: "Readability at thumbnail size could not be measured "
-      + "from this file, so nothing below is a claim about how it reads — treat the "
-      + "comparison as being about construction." });
+    gaps.push({ weight: 2, say: NOTE_UNMEASURED });
 
   /* Wording length: a strategy, not a phrase. */
   const words = median(cohort.map(row => row.wordCount));
@@ -181,7 +306,7 @@ export function compare(
     working.push(`Its contrast matches the ${contrast.value} look that is doing well here.`);
   else if (contrastQuality === "fail")
     gaps.push({ weight: 5, say: measured?.notes.find(note => note.includes("read easily"))
-      ?? "The light and dark areas in this design are too close together to read easily." });
+      ?? CLAIM_LOW_CONTRAST });
 
   gaps.sort((a, b) => b.weight - a.weight);
 
@@ -209,7 +334,7 @@ export function compare(
       lands with these buyers is exactly the thing this comparison never saw.
     */
     opportunity: gaps[0]?.say
-      ?? "No clear visual-construction issue surfaced in this comparison.",
+      ?? NO_GAP,
     scope: "Your design shares several visual construction patterns with "
       + "listings currently showing verified momentum in this niche.",
   };
