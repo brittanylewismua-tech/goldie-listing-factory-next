@@ -95,7 +95,8 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
   };
 
   if (error && !data)
-    return <main className="costs"><h1>Production costs</h1><p className="error">{error}</p></main>;
+    return <main className="costs"><h1>Production costs</h1>
+      <p className="error" role="alert">{error}</p></main>;
   if (!data) return <main className="costs"><h1>Production costs</h1></main>;
 
   const unresolved = data.orders.filter(order => order.costBasis === "unavailable");
@@ -146,7 +147,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
             <>
               <div className="actions">
                 {order.linkCandidate && (
-                  <button className="primary" disabled={busy}
+                  <button className="primary" disabled={busy} aria-busy={busy}
                     onClick={() => void save(order.receiptId, "link")}>
                     Use the Printify order from {day(order.linkCandidate.createdAt)}
                     {" "}({money(order.linkCandidate.costMinor, order.linkCandidate.currency)})
@@ -193,7 +194,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
                         change it later.
                       </p>
                       <div className="actions">
-                        <button className="primary" disabled={busy}
+                        <button className="primary" disabled={busy} aria-busy={busy}
                           onClick={() => void save(order.receiptId, "manual")}>
                           {busy ? "Saving…" : "Yes, save it"}
                         </button>
@@ -208,7 +209,13 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
         </article>
       ))}
 
-      {error && <p className="error">{error}</p>}
+      {/*
+        D1712 · Saving a production cost is the one thing a member does TO
+        their money on this page, and neither its failure nor its progress
+        was announced. A screen reader user pressed save and heard nothing at
+        all — not the error, not the saving state, not the result.
+      */}
+      {error && <p className="error" role="alert">{error}</p>}
     </main>
   );
 }

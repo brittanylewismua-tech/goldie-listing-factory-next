@@ -230,10 +230,14 @@ export default function MarketWatchClient(
       </section>
 
       <div className="tabs p-tabs" role="tablist">
-        <button className="p-tab" role="tab" aria-selected={tab === "niches"} onClick={() => chooseTab("niches")}>
+        <button className="p-tab" role="tab" aria-selected={tab === "niches"}
+          id="mw-tab-niches" aria-controls="mw-panel"
+          onClick={() => chooseTab("niches")}>
           Niche Watch
         </button>
-        <button className="p-tab" role="tab" aria-selected={tab === "shops"} onClick={() => chooseTab("shops")}>
+        <button className="p-tab" role="tab" aria-selected={tab === "shops"}
+          id="mw-tab-shops" aria-controls="mw-panel"
+          onClick={() => chooseTab("shops")}>
           Shop Watch
         </button>
       </div>
@@ -247,8 +251,23 @@ export default function MarketWatchClient(
         </button>
       </div>
 
-      {error && <p className="error">{error}</p>}
+      {/*
+        D1712 · This page announced nothing. It was the only member page with
+        no live region at all, and the one where the content swaps under the
+        member: choosing a tab replaces the whole list asynchronously, and a
+        failed watch or update wrote a sentence nobody using a screen reader
+        would ever hear.
+      */}
+      {error && <p className="error" role="alert">{error}</p>}
 
+      {/*
+        The tabs carried role="tab" and aria-selected but controlled nothing —
+        there was no tabpanel on the page at all, so a screen reader announced
+        a tab that governs no region. One panel, named by whichever tab is
+        selected, because both tabs swap the same region.
+      */}
+      <div id="mw-panel" role="tabpanel"
+        aria-labelledby={tab === "niches" ? "mw-tab-niches" : "mw-tab-shops"}>
       {tab === "niches" ? (
         <WatchList
           load={watches}
@@ -285,6 +304,7 @@ export default function MarketWatchClient(
           {shops.data.map(shop => <ShopCard key={shop.shopId} shop={shop} />)}
         </WatchList>
       )}
+      </div>
     </main>
   );
 }
