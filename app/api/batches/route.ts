@@ -375,7 +375,44 @@ export async function POST(request:Request){const user=await getChatGPTUser();if
   const parentBatchId=String(body.parentBatchId||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80)||null;
   const saved=await database.prepare("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,parent_batch_id,revision,updated_at) VALUES (?,?,?,?,?,?,?,?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET revision=listing_batches.revision+1,parent_batch_id=COALESCE(excluded.parent_batch_id,listing_batches.parent_batch_id),status=excluded.status,step=excluded.step,setup_name=excluded.setup_name,product_title=excluded.product_title,design_count=excluded.design_count,state_json=CASE WHEN length(trim(COALESCE(json_extract(listing_batches.state_json,'$.batchDisplayName'),'')))>0 THEN json_set(excluded.state_json,'$.batchDisplayName',json_extract(listing_batches.state_json,'$.batchDisplayName')) ELSE excluded.state_json END,updated_at=CURRENT_TIMESTAMP WHERE user_id=excluded.user_id AND listing_batches.revision=? AND (json_extract(listing_batches.state_json,'$.activeRecipe.id') IS NULL OR json_extract(listing_batches.state_json,'$.activeRecipe.id')=json_extract(excluded.state_json,'$.activeRecipe.id')) RETURNING revision").bind(id,user.userId,status,step,String(body.setupName||"").slice(0,160),String(body.productTitle||"").slice(0,200),Math.max(0,Math.min(20,Number(body.designCount||0))),stateJson,parentBatchId,expectedRevision).all<{revision:number}>();if(!saved.results.length)return NextResponse.json({code:"BATCH_SAVE_CONFLICT",error:"This batch changed since you opened it. Reload the saved batch before continuing."},{status:409});return NextResponse.json({id,saved:true,revision:saved.results[0].revision})}
 
-export async function DELETE(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const id=String(new URL(request.url).searchParams.get("id")||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);if(!id)return NextResponse.json({error:"Choose a batch to clear."},{status:400});/* D871 · Deleting a run deletes the run. A child is the run's own record for
+/**
+ * REMOVE A STORED OBJECT THAT NO BATCH REFERENCES ANY MORE.
+ *
+ * Deleting a batch row leaves its product-template snapshot behind: R2 objects
+ * are content-addressed and can be shared by two batches built from the same
+ * saved product, so the row delete cannot safely remove them on its own.
+ *
+ * This removes exactly one named object, and only when all four hold:
+ *   - it sits under THIS member's own prefix,
+ *   - it is a batch-template snapshot and nothing else,
+ *   - no remaining row of theirs references its content hash,
+ *   - the caller is the owner and named the key explicitly.
+ *
+ * It never scans, never removes more than the one key it was given, and
+ * refuses rather than guessing.
+ */
+async function removeOrphanTemplate(database:D1Database,userId:string,key:string){
+  const prefix=`batch-templates/${encodeURIComponent(userId)}/`;
+  const shape=new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}([a-f0-9]{64})\\.json\\.gz$`);
+  const match=shape.exec(key);
+  if(!match)return {removed:false,reason:"That key is not a batch template belonging to you."};
+  const sha=match[1];
+  const referencing=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND state_json LIKE ?")
+    .bind(userId,`%${sha}%`).all<{id:string}>().catch(()=>null);
+  if(!referencing)return {removed:false,reason:"The references could not be checked, so nothing was removed."};
+  if((referencing.results??[]).length)
+    return {removed:false,reason:"Still referenced by a saved batch.",
+      referencedBy:(referencing.results??[]).map(row=>row.id)};
+  const bucket=(env as unknown as {ARTWORK:{delete(key:string):Promise<unknown>;get(key:string):Promise<unknown>}}).ARTWORK;
+  const before=Boolean(await bucket.get(key));
+  if(!before)return {removed:false,reason:"No such object; nothing to remove.",existed:false};
+  await bucket.delete(key);
+  /* Confirmed by reading it back, not by trusting the delete. */
+  const after=Boolean(await bucket.get(key));
+  return {removed:!after,existed:true,confirmedGone:!after,key,sha256:sha};
+}
+
+export async function DELETE(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const id=String(new URL(request.url).searchParams.get("id")||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const orphanTemplate=new URL(request.url).searchParams.get("orphanTemplate");if(orphanTemplate){if(!isOwner(user))return NextResponse.json({error:"Not authorized."},{status:403});return NextResponse.json(await removeOrphanTemplate(database,user.userId,String(orphanTemplate).slice(0,300)));}if(!id)return NextResponse.json({error:"Choose a batch to clear."},{status:400});/* D871 · Deleting a run deletes the run. A child is the run's own record for
      one of its products, not a separate job the seller can keep. */
   await database.prepare("DELETE FROM listing_batches WHERE user_id=? AND parent_batch_id=?").bind(user.userId,id).run().catch(()=>undefined);
   await database.prepare("DELETE FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).run();
