@@ -108,6 +108,9 @@ export default function MarketWatchClient(
   const [busy, setBusy] = useState(false);
   const [opening, setOpening] = useState("");
   const [error, setError] = useState("");
+  /* Not every outcome is a failure. Saving something already saved is a
+     perfectly good answer, and the member still needs to be told. */
+  const [notice, setNotice] = useState("");
 
   const loadNiches = useCallback(async (quiet = false) => {
     if (!quiet) setWatches(was => ({ ...was, status: "loading" }));
@@ -150,15 +153,27 @@ export default function MarketWatchClient(
     if (!value || busy) return;
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       const path = tab === "niches" ? "/api/market-watch/niches" : "/api/market-watch/shops";
       const payload = tab === "niches" ? { phrase: value } : { input: value };
       const response = await fetch(path, { method: "POST",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      const body = await response.json() as { error?: string } & NicheView;
+      const body = await response.json() as
+        { error?: string; alreadyWatched?: boolean; shop?: { shopName?: string } } & NicheView;
       if (!response.ok) setError(body.error ?? "That could not be saved.");
       else {
         setInput("");
+        /*
+          THE SERVER SAID "already watched" AND THE PAGE SAID NOTHING.
+
+          Adding a shop that was already on the list cleared the box and gave
+          no answer at all, so the only way to tell whether it had worked was
+          to count the rows. The reply carries alreadyWatched; this says it.
+        */
+        setNotice(body.alreadyWatched
+          ? `${body.shop?.shopName ?? "That shop"} is already on your watch list.`
+          : "");
         if (tab === "niches") { setOpen(body); void loadNiches(true); }
         else void loadShops(true);
       }
@@ -176,6 +191,7 @@ export default function MarketWatchClient(
   const chooseTab = (next: "niches" | "shops") => {
     setTab(next);
     setError("");
+    setNotice("");
     if (typeof window === "undefined" || startTab) return;
     const url = new URL(window.location.href);
     if (next === "shops") url.searchParams.set("tab", "shops");
@@ -259,6 +275,7 @@ export default function MarketWatchClient(
         would ever hear.
       */}
       {error && <p className="error" role="alert">{error}</p>}
+      {!error && notice && <p className="p-notice" role="status">{notice}</p>}
 
       {/*
         The tabs carried role="tab" and aria-selected but controlled nothing —
