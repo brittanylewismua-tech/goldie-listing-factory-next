@@ -148,7 +148,8 @@ export default function TrademarkPage() {
           {(verdict.register ?? []).map(match =>
             <li key={match.registration || match.mark} className="tm-hit">
               <b>{match.mark}</b>
-              {match.owner && <span className="tm-owner">registered to {match.owner}</span>}
+              {match.owner && <span className="tm-owner">
+                {match.registered ? "registered to" : "filed by"} {match.owner}</span>}
               <span className="tm-cat">
                 {match.registered ? "live registration" : "pending application"}
                 {match.classes.length ? ` · class ${match.classes.join(", ")}` : ""}
@@ -160,8 +161,8 @@ export default function TrademarkPage() {
       <p className="tm-note">
         <strong>What this checks.</strong> Two things. The brands, characters, franchises,
         teams and artists that listings actually get removed for — and live US trademark
-        registrations in the classes print-on-demand sellers sell into, taken from USPTO's
-        own published data.{" "}
+        records, taken from USPTO's own published data. Marks outside the classes
+        print-on-demand sellers use are counted when the phrase is the brand itself.{" "}
         {verdict && verdict.registerReady === false &&
           <strong>The register is still loading, so treat a clean result as incomplete today.</strong>}
         {" "}It is not legal advice, and a clean result means nothing was found rather than
