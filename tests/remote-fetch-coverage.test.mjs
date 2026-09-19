@@ -95,3 +95,69 @@ test("the member-facing ones are the guarded ones", () => {
       `${key} fetches a provider-supplied URL and is not owner-only`);
   }
 });
+
+/*
+  A SECOND CLASS OF REMOTE FETCH: THE ONE WE DO NOT PERFORM.
+
+  The classification above covers server-side fetch() calls. It cannot see the
+  other way a member-controlled address reaches the network: handing it to a
+  provider as an image URL and letting the PROVIDER fetch it. There is no
+  fetch() at the call site, so nothing above would have flagged it — and the
+  request leaves from the provider's network, on the far side of our own SSRF
+  guard, returning whatever it found as analysis.
+
+  One of these was unguarded when this was written: the design scanner checked
+  only that imageDataUrl was PRESENT before forwarding it.
+*/
+const DELEGATED = {
+  "api/design-scanner/scan/route.ts":
+    "decodeImageDataUrl: must be an inline image, bytes verified, before a scan is spent",
+  "api/mockups/analyze/route.ts":
+    "allowedImageUrl: a data: image, or https on our own origin",
+  "api/mockups/print-area/route.ts":
+    "allowedImage: a data: image only",
+  "api/mockups/library/[id]/prepare/route.ts":
+    "the URL is a data: URL this route builds from bytes it read from R2",
+  "api/listing-intelligence/route.ts":
+    "validImage: a data: image under 18MB, checked before any provider call",
+  "api/design-scanner/analyze-references/route.ts":
+    "provider-derived: the address is an Etsy image URL already stored in our own table",
+  "listing-flow.ts":
+    "internal: imageUrl is a parameter, validated by the entry point that passes it",
+};
+
+test("every address handed to a provider to fetch is classified", () => {
+  const unclassified = [];
+  for (const file of files) {
+    const text = readFileSync(new URL(file, import.meta.url), "utf8");
+    // A call passes an array or a value; a type declaration names a type.
+    const passes = [...text.matchAll(/\bimage_urls?\b\s*:\s*([^,;\n]+)/g)]
+      .some(([, value]) => !/^\s*(string|number|boolean|unknown|any)\b/.test(value));
+    if (!passes) continue;
+    const name = file.replace("../app/", "");
+    if (!(name in DELEGATED)) unclassified.push(name);
+  }
+  assert.deepEqual(unclassified, [],
+    `these hand a URL to a provider to fetch and are not classified:\n  `
+    + unclassified.join("\n  "));
+});
+
+test("no delegated classification is stale", () => {
+  for (const name of Object.keys(DELEGATED)) {
+    const text = readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
+    assert.match(text, /\bimage_urls?\b\s*:/,
+      `${name} no longer hands a URL to a provider; remove its entry`);
+  }
+});
+
+test("each delegated site names the check that stands in front of it", () => {
+  const guards = {
+    "api/design-scanner/scan/route.ts": /decodeImageDataUrl\(/,
+    "api/mockups/analyze/route.ts": /allowedImageUrl\(/,
+    "api/mockups/print-area/route.ts": /allowedImage\(/,
+  };
+  for (const [name, guard] of Object.entries(guards)) {
+    const text = readFileSync(new URL(`../app/${name}`, import.meta.url), "utf8");
+    assert.match(text, guard, `${name} lost the check its classification claims`);
+  }
+});
