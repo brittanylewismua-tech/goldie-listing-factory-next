@@ -397,9 +397,15 @@ async function removeOrphanTemplate(database:D1Database,userId:string,key:string
   const match=shape.exec(key);
   if(!match)return {removed:false,reason:"That key is not a batch template belonging to you."};
   const sha=match[1];
-  const referencing=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND state_json LIKE ?")
-    .bind(userId,`%${sha}%`).all<{id:string}>().catch(()=>null);
-  if(!referencing)return {removed:false,reason:"The references could not be checked, so nothing was removed."};
+  /* A failure here is reported rather than swallowed: "could not be checked"
+     with no reason is the shape that makes a guard impossible to debug. */
+  let referencing:{results?:Array<{id:string}>}|null=null;
+  let checkError="";
+  try{referencing=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND state_json LIKE ?")
+    .bind(userId,`%${sha}%`).all<{id:string}>();}
+  catch(error){checkError=error instanceof Error?error.message:String(error)}
+  if(!referencing)return {removed:false,
+    reason:"The references could not be checked, so nothing was removed.",detail:checkError};
   if((referencing.results??[]).length)
     return {removed:false,reason:"Still referenced by a saved batch.",
       referencedBy:(referencing.results??[]).map(row=>row.id)};
