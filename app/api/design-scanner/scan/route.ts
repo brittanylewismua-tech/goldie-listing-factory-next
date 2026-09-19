@@ -15,6 +15,7 @@ import { normalizeNiche, intersect, type Candidate } from "@/app/niche-cohort";
 import { relevanceOf, relevanceNotice } from "@/app/design-niche-relevance";
 import { acquireLease, releaseLease, LEASE_WAIT_MS, LEASE_POLL_MS } from "@/app/work-lease";
 import { decodeTinyPng } from "@/app/artwork-fingerprint";
+import { decodeImageDataUrl, UploadRefused } from "@/app/image-signature";
 import { measureQuality, QUALITY_RULE_VERSION, type ImageQuality }
   from "@/app/image-quality";
 import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
@@ -98,6 +99,18 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
     if (!body?.imageDataUrl)
       return NextResponse.json({ error: "Send the design the first time it is scanned." },
         { status: 400 });
+
+    /*
+      The value below is forwarded to the vision provider as an image URL.
+      It is confirmed to be an inline image here, before it is forwarded and
+      before any of the member's daily scans is spent on it.
+    */
+    try { decodeImageDataUrl(body.imageDataUrl); }
+    catch (error) {
+      if (error instanceof UploadRefused)
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      throw error;
+    }
 
     /*
       ONE ANALYSIS PER DESIGN, EVEN WHEN TWO UPLOADS ARRIVE AT ONCE.

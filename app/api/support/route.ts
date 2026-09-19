@@ -1,3 +1,4 @@
+import { checkImageUpload, UploadRefused } from "@/app/image-signature";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { customerLaunchBlock } from "@/app/customer-launch-gate";
@@ -19,8 +20,18 @@ export async function POST(request: Request) {
     const conversation = String(input.get("conversation") ?? "").slice(-12000);
     const screenshot = input.get("attachment");
     if (!/^\S+@\S+\.\S+$/.test(email) || message.length < 5) return NextResponse.json({ error: "Enter a valid email and describe what happened." }, { status: 400 });
-    if (screenshot instanceof File && (screenshot.size > MAX_SCREENSHOT_BYTES || !/^image\/(png|jpeg|webp)$/i.test(screenshot.type))) {
-      return NextResponse.json({ error: "The optional screenshot must be a PNG, JPG or WebP no larger than 5 MB." }, { status: 400 });
+    /*
+      The screenshot is forwarded to the support provider under the type it
+      declares, so the declaration is verified against the bytes rather than
+      taken at its word.
+    */
+    if (screenshot instanceof File && screenshot.size) {
+      try { checkImageUpload(new Uint8Array(await screenshot.arrayBuffer()), { maxBytes: MAX_SCREENSHOT_BYTES }); }
+      catch (error) {
+        if (error instanceof UploadRefused)
+          return NextResponse.json({ error: "The optional screenshot must be a PNG, JPG or WebP no larger than 5 MB." }, { status: 400 });
+        throw error;
+      }
     }
     const outbound = new FormData();
     outbound.append("access_key", accessKey);

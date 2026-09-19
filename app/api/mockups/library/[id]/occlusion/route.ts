@@ -1,3 +1,4 @@
+import { checkImageUpload, UploadRefused } from "@/app/image-signature";
 import { env } from "cloudflare:workers";
 import { NextRequest, NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
@@ -68,8 +69,21 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     return NextResponse.json({ ok: true, cleared: true });
   }
   if (file.size > 8_000_000) return NextResponse.json({ error: "That mask is too large to save." }, { status: 400 });
+
+  /*
+    This route previously stored whatever arrived and labelled it image/png.
+    The mask is read back and drawn later, so an unreadable file became a
+    failure at draw time rather than an answer here.
+  */
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let mask;
+  try { mask = checkImageUpload(bytes, { allow: ["image/png"], maxBytes: 8_000_000 }); }
+  catch (error) {
+    if (error instanceof UploadRefused) return NextResponse.json({ error: error.message }, { status: 400 });
+    throw error;
+  }
   const key = `mockup-occlusion/${user.userId}/${id}.png`;
-  await env.ARTWORK.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: "image/png" } });
+  await env.ARTWORK.put(key, bytes as unknown as ArrayBuffer, { httpMetadata: { contentType: mask.type } });
   await getDb().update(mockupTemplates)
     .set({ occlusionKey: key, occlusionConfirmed: 1, updatedAt: new Date().toISOString() })
     .where(and(eq(mockupTemplates.id, id), eq(mockupTemplates.userId, user.userId)));

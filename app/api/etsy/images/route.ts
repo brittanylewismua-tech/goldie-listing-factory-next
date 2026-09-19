@@ -1,10 +1,18 @@
 import { env } from "cloudflare:workers";
+import { checkImageUpload, UploadRefused } from "@/app/image-signature";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 
 type Runtime={DB:D1Database;ARTWORK:R2Bucket};
 const runtime=()=>env as unknown as Runtime;
-const safeName=(value:string)=>value.replace(/[^a-z0-9._-]+/gi,"-").slice(0,100)||"listing-image.jpg";
+/*
+  GET and DELETE both refuse any key ending "order.json", because that is the
+  ordering manifest. A member who uploaded a file with that name therefore
+  created an object they could never read back or remove. The name is
+  flattened first (no separators survive, so nothing can traverse), then the
+  reserved suffix is broken.
+*/
+const safeName=(value:string)=>{const flat=value.replace(/[^a-z0-9._-]+/gi,"-").slice(0,100)||"listing-image.jpg";return /order\.json$/i.test(flat)?`${flat}-image`:flat};
 const basePrefix=(userId:string,productId:string)=>`etsy-listing-images/${userId}/${productId}/`;
 const ownsDraft=(userId:string,productId:string)=>runtime().DB.prepare("SELECT 1 FROM printify_draft_results WHERE user_id=? AND status='succeeded' AND json_extract(response_json,'$.id')=? LIMIT 1").bind(userId,productId).first();
 
@@ -32,7 +40,7 @@ export async function PUT(request:Request){
 export async function POST(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to save listing images."},{status:401});
   const form=await request.formData(),productId=String(form.get("productId")||""),requestedKind=String(form.get("kind")||"mockup"),kind=requestedKind==="size-guide"?"size-guide":requestedKind==="upload"?"upload":"mockup",replace=String(form.get("replace")||"")==="true",files=form.getAll("file").filter((value):value is File=>value instanceof File);
-  if(!productId||!files.length||files.some(file=>!/^image\/(png|jpeg|webp)$/i.test(file.type)))return NextResponse.json({error:"Choose PNG, JPG, or WEBP listing images."},{status:400});
+  if(!productId||!files.length)return NextResponse.json({error:"Choose PNG, JPG, or WEBP listing images."},{status:400});
   if(files.length>20)return NextResponse.json({error:"Etsy allows up to 20 photos on one listing."},{status:409});
   if(files.some(file=>file.size>20*1024*1024))return NextResponse.json({error:"Each Etsy listing image must be 20 MB or smaller."},{status:413});
   const owned=await ownsDraft(user.userId,productId);
@@ -41,7 +49,16 @@ export async function POST(request:Request){
   const existing=await runtime().ARTWORK.list({prefix,limit:25,include:["customMetadata"]});
   if(kind!=="size-guide"&&!replace){const all=await runtime().ARTWORK.list({prefix:basePrefix(user.userId,productId),limit:30});const photoCount=all.objects.filter(object=>!object.key.endsWith("order.json")&&!object.key.includes("/size-guide/")).length;if(photoCount+files.length>20)return NextResponse.json({error:"Etsy allows up to 20 photos on one listing. Remove a photo before adding another."},{status:409})}
   const saved:string[]=[];
-  try{for(const file of files){const key=`${prefix}${crypto.randomUUID()}-${safeName(file.name)}`;await runtime().ARTWORK.put(key,await file.arrayBuffer(),{httpMetadata:{contentType:file.type},customMetadata:{name:safeName(file.name)}});saved.push(key)}
+  try{
+    /* Every file is read and checked BEFORE any of them is stored, so a bad
+       file in the middle of a batch cannot leave earlier ones written. */
+    const checked:{bytes:Uint8Array;type:string;name:string}[]=[];
+    for(const file of files){
+      const bytes=new Uint8Array(await file.arrayBuffer());
+      try{const {type}=checkImageUpload(bytes,{maxBytes:20*1024*1024});checked.push({bytes,type,name:safeName(file.name)})}
+      catch(error){if(error instanceof UploadRefused)return NextResponse.json({error:error.message},{status:400});throw error}
+    }
+    for(const file of checked){const key=`${prefix}${crypto.randomUUID()}-${file.name}`;await runtime().ARTWORK.put(key,file.bytes as unknown as ArrayBuffer,{httpMetadata:{contentType:file.type},customMetadata:{name:file.name}});saved.push(key)}
     if(kind==="size-guide"||replace)await Promise.all(existing.objects.map(object=>runtime().ARTWORK.delete(object.key)));
   }catch(error){await Promise.all(saved.map(key=>runtime().ARTWORK.delete(key)));throw error}
   return NextResponse.json({ok:true,key:saved[0],keys:saved,names:files.map(file=>file.name)});
