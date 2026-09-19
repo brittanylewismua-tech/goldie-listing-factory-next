@@ -53,6 +53,11 @@ const day = (seconds: number) =>
   seconds ? new Date(seconds * 1000).toLocaleDateString(undefined,
     { day: "numeric", month: "short", year: "numeric" }) : "";
 
+const memberError = (value?: string) =>
+  value && !/(D1_|SQLITE|\bSQL\b|stack|exception)/i.test(value)
+    ? value
+    : "Production costs could not be loaded right now. Reload the page to try again.";
+
 export default function CostsClient({ signedInEmail }: { signedInEmail: string }) {
   void signedInEmail;
   const [data, setData] = useState<Payload | null>(null);
@@ -67,7 +72,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
     try {
       const response = await fetch("/api/shop-map/production-cost");
       const body = await response.json() as Payload;
-      if (!response.ok) setError(body.error ?? "These orders could not be loaded.");
+      if (!response.ok) setError(memberError(body.error));
       else { setData(body); setCurrency(body.currency?.currency ?? "USD"); }
     } catch { setError("These orders could not be loaded."); }
   }, []);
@@ -85,7 +90,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
           : { receiptId, kind: "link" }),
       });
       const body = await response.json() as { error?: string };
-      if (!response.ok) setError(body.error ?? "That could not be saved.");
+      if (!response.ok) setError(memberError(body.error));
       else {
         setEditing(null); setConfirming(false); setAmount("");
         await load();

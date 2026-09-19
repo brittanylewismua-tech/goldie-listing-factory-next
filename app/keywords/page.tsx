@@ -9,6 +9,11 @@ type List = { id: string; name: string; keywords: string[] };
 type ProductUse = { id:string; name:string; keywordListId?:string };
 type Notice = { kind:"success"|"error"; title:string; detail:string } | null;
 const SHIRT_CONTEXT=/\b(tee|tees|shirt|shirts|t-?shirt|apparel)\b/i;
+async function responseJson<T>(response:Response):Promise<T>{
+  const text=await response.text();
+  if(!text.trim())throw new Error("The server returned an empty response.");
+  return JSON.parse(text) as T;
+}
 /* One source of truth. This check used to be a second, hand-written regex that
  * drifted from the one the title generator uses — the page caught "koozies"
  * while the generator did not, so a phrase blocked here still reached a title.
@@ -30,8 +35,8 @@ export default function KeywordBanks() {
     const form=document.querySelector(".management-create");
     if(form)window.scrollTo(0,form.getBoundingClientRect().top+window.scrollY-20);
   },[scrollToEditor,savedId]);
-  const reload=()=>fetch("/api/keyword-lists").then(r=>r.json() as Promise<{lists?:List[]}>).then(r=>setLists(r.lists||[]));
-  useEffect(()=>{void reload();fetch("/api/product-recipes").then(r=>r.json() as Promise<{recipes?:ProductUse[]}>).then(r=>setProducts(r.recipes||[])).catch(()=>setProducts([]));const batch=window.localStorage.getItem("goldie-active-batch");setReturnHref(batch?`/?batch=${encodeURIComponent(batch)}`:"/")},[]);
+  const reload=()=>fetch("/api/keyword-lists").then(r=>responseJson<{lists?:List[]}>(r)).then(r=>setLists(r.lists||[])).catch(()=>{setLists([]);setNotice({kind:"error",title:"Keyword banks could not be loaded",detail:"Reload the page to try again. Nothing was changed."})});
+  useEffect(()=>{void reload();fetch("/api/product-recipes").then(r=>responseJson<{recipes?:ProductUse[]}>(r)).then(r=>setProducts(r.recipes||[])).catch(()=>setProducts([]));const batch=window.localStorage.getItem("goldie-active-batch");setReturnHref(batch?`/?batch=${encodeURIComponent(batch)}`:"/")},[]);
   useEffect(()=>{if(!notice)return;const timer=window.setTimeout(()=>setNotice(null),5000);return()=>window.clearTimeout(timer)},[notice]);
   const words=useMemo(()=>phrasesFromErank(raw.replace(/;/g,"\n")),[raw]);
   const associatedProducts=products.filter(product=>product.keywordListId===savedId);
@@ -45,7 +50,7 @@ export default function KeywordBanks() {
     if(mismatchedWords.length){setNotice({kind:"error",title:"Fix wrong-product phrases before saving",detail:`This shirt bank contains ${mismatchedWords.length} phrase${mismatchedWords.length===1?"":"s"} for another product: ${mismatchedWords.slice(0,4).join(", ")}${mismatchedWords.length>4?"…":""}`});return}
     setSaving(true);
     const response=await fetch("/api/keyword-lists",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:editingId||undefined,name:savedName,keywords:savedWords})});
-    const payload=await response.json() as {id?:string;error?:string};
+    const payload=await responseJson<{id?:string;error?:string}>(response).catch(()=>({error:"The server returned an unreadable response. Please try again."}));
     setSaving(false);
     if(!response.ok){setNotice({kind:"error",title:"Keyword bank not saved",detail:payload.error||"Please try again."});return}
     setNotice({kind:"success",title:editingId?`“${savedName}” was updated`:`“${savedName}” was created`,detail:`${savedWords.length} keyword ${savedWords.length===1?"phrase":"phrases"} are ready to use in Listing Factory.`});

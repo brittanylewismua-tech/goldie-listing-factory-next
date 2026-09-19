@@ -8,6 +8,11 @@ type PlanKey="trial"|"goldie"|"pro"|"scale"|"mastermind_beta"|"owner_test";
 type Data={plan:{key:PlanKey;name:string;price:number;drafts:number;dailyListings:number;mockupSets:number;mockupsPerSet:number};resetAt:string|null;usage:{drafts:number;mockupSets:number;publishedToday:number;publishing:number};streak?:{count:number;target:number;window:number;days:string[];listedToday:boolean;hit:boolean;message:string};billing?:{active:boolean;terms?:{amount:number;currency:string;interval:string;intervalCount:number}|null;subscription?:{status:string;currentPeriodEnd:number|null;cancelAtPeriodEnd:number}|null}};
 type Fees={etsyFeePercent:number;fixedFee:number;listingFee:number};
 type Goal={enabled:boolean;period:"week"|"month";target:number};
+async function responseJson<T>(response:Response):Promise<T>{
+  const text=await response.text();
+  if(!text.trim())throw new Error("The server returned an empty response.");
+  return JSON.parse(text) as T;
+}
 /* D422 · Bound straight to the number, so clearing the box made Number("") = 0,
    React wrote the 0 back, and everything typed after it landed behind the zero.
    These three set the fees every price in the app is calculated from, so a
@@ -25,7 +30,7 @@ function Meter({label,used,limit,period="month"}:{label:string;used:number;limit
 export default function UsagePage(){
   const [interval, setInterval] = useState<BillingInterval>("month");
   const[data,setData]=useState<Data|null>(null),[loadError,setLoadError]=useState(""),[fees,setFees]=useState<Fees>({etsyFeePercent:9.5,fixedFee:.25,listingFee:.20}),[goal,setGoal]=useState<Goal>({enabled:true,period:"week",target:20}),[goalMessage,setGoalMessage]=useState(""),[feeMessage,setFeeMessage]=useState(""),[billingMessage,setBillingMessage]=useState(""),[checkoutPlan,setCheckoutPlan]=useState<"goldie"|"pro"|"scale"|null>(null);
-  useEffect(()=>{fetch("/api/usage").then(async response=>{const result=await response.json() as Partial<Data>&{error?:string};if(!response.ok||!result.plan||!result.usage||!result.resetAt)throw new Error(result.error||"Your usage could not be loaded.");setData(result as Data)}).catch(error=>setLoadError(error instanceof Error?error.message:"Your usage could not be loaded."));fetch("/api/seller-preferences").then(r=>r.json() as Promise<{pricing?:Partial<Fees>;listingGoal?:Goal}>).then(r=>{if(r.pricing)setFees(current=>({...current,...r.pricing}));if(r.listingGoal)setGoal(r.listingGoal)}).catch(()=>undefined)},[]);
+  useEffect(()=>{fetch("/api/usage").then(async response=>{const result=await responseJson<Partial<Data>&{error?:string}>(response);if(!response.ok||!result.plan||!result.usage||!result.resetAt)throw new Error(result.error||"Your usage could not be loaded.");setData(result as Data)}).catch(()=>setLoadError("Your plan and usage could not be loaded. Reload the page to try again."));fetch("/api/seller-preferences").then(r=>responseJson<{pricing?:Partial<Fees>;listingGoal?:Goal}>(r)).then(r=>{if(r.pricing)setFees(current=>({...current,...r.pricing}));if(r.listingGoal)setGoal(r.listingGoal)}).catch(()=>undefined)},[]);
   /* D341 · One switch. The sidebar bar and the receipt line are the same
      feature seen twice, so they cannot be turned on independently — half a
      progress display is more confusing than none. */
@@ -43,7 +48,7 @@ export default function UsagePage(){
   return <FactoryShell active="usage" title="Usage + Plan"><div className="usage-page interior-page">
     
     <header><p className="mini-label">USAGE + PLAN</p><h1>Your Listing Factory plan</h1><p>Successful listing creations use your allowance. Failed attempts do not.</p></header>
-    {loadError?<section className="usage-load-error" role="alert"><h2>Sign in to view your plan and usage</h2><p>{loadError}</p><a href="/listing-factory">Return to Listing Factory</a></section>:!data?(
+    {loadError?<section className="usage-load-error" role="alert"><h2>Your plan and usage could not be loaded</h2><p>{loadError}</p><button type="button" onClick={()=>window.location.reload()}>Reload this page</button></section>:!data?(
       /* D1609 · the fourth page to use a bare sentence as its whole loading
          state. This one waits on billing and the allowance ledger. */
       <div className="p-stack" role="status" aria-label="Loading your plan and usage">

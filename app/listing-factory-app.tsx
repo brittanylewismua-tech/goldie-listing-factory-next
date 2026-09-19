@@ -984,6 +984,20 @@ async function fetchWithDeadline(input: RequestInfo | URL, init: RequestInit, mi
   } finally { window.clearTimeout(timeout); }
 }
 
+async function responseJson<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  if (!text.trim()) return {} as T;
+  try { return JSON.parse(text) as T; }
+  catch { return {} as T; }
+}
+
+function connectionCheckMessage(value: unknown, fallback: string) {
+  const message = value instanceof Error ? value.message : String(value ?? "");
+  if (!message || /D1_|SQLITE|\bSQL\b|Unexpected end of JSON|Failed to execute 'json'|stack|exception/i.test(message))
+    return fallback;
+  return message;
+}
+
 function friendlyUploadError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");
   const supportReference = message.match(/Support reference:\s*([A-Z0-9-]+)/i)?.[1];
@@ -2538,9 +2552,11 @@ export default function ListingFactoryApp() {
 
   async function checkPrintifyConnection(){setCheckingConnection(true);setConnectionError("");try{
     const response=await fetchWithDeadline("/api/printify",{},25000);
-    const result=await response.json() as {connected?:boolean;owner?:boolean;reason?:string;warning?:string;error?:string};
-    if(!response.ok)throw Error(result.error||"Printify connection could not be checked. Try checking again.");
-    setConnected(Boolean(result.connected));setOwner(Boolean(result.owner));setConnectionError(result.reason||result.warning||"");
+    const result=await responseJson<{connected?:boolean;owner?:boolean;reason?:string;warning?:string;error?:string}>(response);
+    if(!response.ok)throw Error(connectionCheckMessage(result.error,"Printify connection could not be checked. Try checking again."));
+    setConnected(Boolean(result.connected));setOwner(Boolean(result.owner));
+    const note=result.reason||result.warning||"";
+    setConnectionError(note?connectionCheckMessage(note,"Printify connection could not be checked. Try checking again."):"");
     setConnectionCheckFailed(false);
   }catch(error){
     /*
@@ -2558,21 +2574,21 @@ export default function ListingFactoryApp() {
       connected still lands on the connect step correctly.
     */
     setConnectionCheckFailed(true);
-    setConnectionError(error instanceof Error?error.message:"Printify connection could not be checked. Try checking again.")
+    setConnectionError(connectionCheckMessage(error,"Printify connection could not be checked. Try checking again."))
   }finally{setCheckingConnection(false)}}
   useEffect(()=>{void checkPrintifyConnection()},[]);
 
   useEffect(()=>{(fetch("/api/seller-preferences").then(response=>response.json()) as Promise<{pricing?:Partial<Pricing>|null}>).then((result:{pricing?:Partial<Pricing>|null})=>{if(!result.pricing)return;setPricing(current=>({...current,etsyFeePercent:Number(result.pricing?.etsyFeePercent??current.etsyFeePercent),fixedFee:Number(result.pricing?.fixedFee??current.fixedFee),listingFee:Number(result.pricing?.listingFee??current.listingFee)}))}).catch(()=>undefined)},[]);
 
   async function checkEtsyConnection(){setCheckingEtsyConnection(true);setEtsyError("");try{
-    const response=await fetchWithDeadline("/api/etsy",{},25000),result=await response.json() as {connected?:boolean;shopName?:string;error?:string};
-    if(!response.ok)throw Error(result.error||"Etsy connection could not be checked. Try checking again.");
+    const response=await fetchWithDeadline("/api/etsy",{},25000),result=await responseJson<{connected?:boolean;shopName?:string;error?:string}>(response);
+    if(!response.ok)throw Error(connectionCheckMessage(result.error,"Etsy connection could not be checked. Try checking again."));
     setEtsyConnected(Boolean(result.connected));setEtsyShop(result.shopName||"");setEtsyError(result.error||"");
     setEtsyCheckFailed(false);
   }catch(error){
     /* Same rule as Printify above: an unanswered question is not a no. */
     setEtsyCheckFailed(true);
-    setEtsyError(error instanceof Error?error.message:"Etsy connection could not be checked. Try checking again.")
+    setEtsyError(connectionCheckMessage(error,"Etsy connection could not be checked. Try checking again."))
   }finally{setCheckingEtsyConnection(false)}}
   useEffect(()=>{let alive=true;const url=new URL(window.location.href),message=url.searchParams.get("etsy");void checkEtsyConnection().then(()=>{if(alive&&message&&message!=="connected")setEtsyError(message)});if(message){url.searchParams.delete("etsy");window.history.replaceState({},"",url)}return()=>{alive=false}},[]);
   async function loadEtsyShippingProfiles(preselect=0){setShippingProfilesLoading(true);setShippingProfilesError("");try{const response=await fetchWithDeadline("/api/etsy/shipping-profiles",{},25000),result=await response.json() as {profiles?:EtsyShippingProfile[];error?:string};if(!response.ok)throw new Error(result.error||"Your Etsy shipping profiles could not be loaded.");const profiles=(result.profiles||[]).map(profile=>({...profile,title:profile.title.replace(/\.{2,}$/,"…")}));setEtsyShippingProfiles(profiles);setEtsyShippingProfileId(current=>{const wanted=preselect||current;return wanted&&profiles.some(profile=>profile.id===wanted)?wanted:0})}catch(error){setShippingProfilesError(error instanceof Error?error.message:"Your Etsy shipping profiles could not be loaded.")}finally{setShippingProfilesLoading(false)}}

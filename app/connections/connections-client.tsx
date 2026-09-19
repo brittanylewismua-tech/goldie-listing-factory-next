@@ -194,12 +194,6 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
         </div>
       </div>}
 
-      {/*
-        D1712 · Two error renders on this page, and only one was an alert.
-        This is the one shown after a connect or disconnect attempt — the
-        moment a member most needs to know it failed.
-      */}
-      {error && <p className="error" role="alert">{error}</p>}
     </main>
     </FactoryShell>
   );

@@ -84,18 +84,25 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell .p-notice{border-radius:8px}
 
 /* Home */
-.hub{width:100%;max-width:none;margin:0;padding:8px 0 50px;background:transparent}
+.app-shell .factory-work>.hub{
+  width:100%;max-width:none;min-height:0;margin:0;padding:8px 0 50px;
+  background-color:#fff9fc!important;
+  background-image:linear-gradient(var(--suite-grid) 1px,transparent 1px),linear-gradient(90deg,var(--suite-grid) 1px,transparent 1px)!important;
+  background-size:42px 42px!important;
+  color:var(--suite-ink)!important;
+  overflow:visible!important
+}
 .hub-head{position:relative;margin:0 0 28px;padding:0 2px 30px;border-bottom:1px solid rgba(218,203,212,.8)}
 .hub-eyebrow{display:flex;align-items:center;gap:9px;margin:0 0 13px;color:#766a71;font-size:9px;font-weight:900;letter-spacing:.14em}
 .hub-eyebrow>span{width:7px;height:7px;border-radius:50%;background:var(--suite-pink);box-shadow:0 0 0 4px rgba(255,44,166,.13)}
 .hub-head h1{max-width:790px;margin:0;color:#111;font-size:clamp(40px,5vw,64px);font-weight:900;line-height:.98;letter-spacing:-.06em}
 .hub-head h1 em{color:var(--suite-pink-deep);font-style:normal}
 .hub-intro{max-width:680px;margin:18px 0 0;color:#6f636a;font-size:14px;line-height:1.6}
-.status-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin:0 0 30px;border:1px solid #111;border-radius:10px;background:#fff;box-shadow:5px 5px 0 #111;overflow:hidden}
-.status-line{position:relative;display:flex;align-items:center;min-height:88px;padding:18px 20px;border-right:1px solid var(--suite-line);color:#171316;text-decoration:none;font-size:12px;font-weight:800;line-height:1.45}
+.app-shell .hub .status-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin:0 0 30px;border:1px solid #111;border-radius:10px;background:#fff!important;box-shadow:5px 5px 0 #111;overflow:hidden}
+.app-shell .hub .status-line{position:relative;display:flex;align-items:center;min-height:88px;padding:18px 20px;border-right:1px solid var(--suite-line);background:#fff!important;color:#171316!important;text-decoration:none;font-size:12px;font-weight:800;line-height:1.45}
 .status-line::before{content:"";width:8px;height:8px;flex:0 0 8px;margin-right:10px;border-radius:50%;background:var(--suite-pink)}
 .status-line.act::before{box-shadow:0 0 0 5px rgba(255,44,166,.13)}
-.status-line.quiet{color:#776b72;font-weight:600}
+.app-shell .hub .status-line.quiet{color:#776b72!important;font-weight:600}
 .status-asof{color:#897d84;font-size:10px}
 .hub-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin:0 0 17px}
 .hub-section-head .mini-label{margin:0 0 7px}
@@ -406,7 +413,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .ts-signout a{color:#887a82;font-size:11px;font-weight:900}
 
 /* Public sign-in and closed signup */
-.hub-auth,.account-page,.signup-closed{
+.hub-auth,.account-page,.signup-closed-screen{
   min-height:100vh!important;display:grid!important;place-items:center!important;padding:28px!important;background-color:#fff9fc!important;
   background-image:linear-gradient(var(--suite-grid) 1px,transparent 1px),linear-gradient(90deg,var(--suite-grid) 1px,transparent 1px)!important;background-size:42px 42px!important
 }
@@ -474,4 +481,90 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
   .tm-page .tm-form{display:grid}
   .tm-page .tm-form input{min-width:0;width:100%}
   .shop-map-money .shop-map-figure{font-size:38px}
+}
+
+/* Final visual QA pass. These rules deliberately sit last so legacy feature
+   styles cannot reintroduce unreadable dark-on-dark controls or phantom card
+   surfaces inside the shared suite shell. */
+.app-shell .factory-main,
+.app-shell .factory-work{color:var(--suite-ink)}
+
+.app-shell .status-strip{overflow:hidden;background:#fff}
+.app-shell .status-strip .status-line{
+  min-height:64px;border:0;border-right:1px solid var(--suite-line);border-radius:0;
+  background:#fff;color:#171316
+}
+.app-shell .status-strip .status-line:hover{background:#fff8fc}
+.app-shell .status-strip .status-line.quiet{color:#71666d;border-style:solid}
+.app-shell .status-strip .status-asof{color:#776b72}
+.app-shell .hub-tool-number{color:#7d496f!important}
+
+.app-shell .tools-settings .ts-group .ts-rows{
+  border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;overflow:visible!important
+}
+
+.app-shell :is(
+  .p-card,.p-card-quiet,.management-create,.bank-library,.batch-history,
+  .usage-card,.pricing-profile,.usage-plan-chooser,.acc-card,.conn .shop,
+  .conn .empty,.shop-map-card,.scanner>.field,.scanner>.history,.scanner>.result,
+  .mw .card,.mw .patterns,.mw .pattern,.drop-card,.drop-card-surface,
+  .hot-search,.goals-history,.goals-empty,.goals-off
+){color:#171316}
+
+.app-shell :is(input,textarea,select){color:#171316;background-color:#fff}
+.app-shell :is(input,textarea)::placeholder{color:#8a7f86;opacity:1}
+
+.app-shell button:disabled,
+.app-shell button[aria-disabled="true"]{
+  border-color:#d8cdd3!important;background:#e9e2e6!important;color:#6f646b!important;
+  opacity:1!important;text-shadow:none!important;box-shadow:none!important
+}
+.app-shell .tm-page .tm-form button:disabled{
+  border-color:#52484e!important;background:#52484e!important;color:#fff!important
+}
+.app-shell :is(.mw>.update,.shop-map-money,.listing-streak,.plan-banner) :is(h1,h2,h3,h4,p,li,dt,dd,b,strong,span,small){
+  color:inherit
+}
+
+.app-shell :is(.p-notice-bad,.usage-load-error,.update-failed,.refusal,[role="alert"]){
+  color:#7f263d
+}
+.app-shell .save-toast.error{
+  background:#151214!important;border-color:#e58ca8!important;color:#fff!important
+}
+.app-shell .save-toast.error :is(b,small,span,button){color:#fff!important}
+.app-shell .drop-error{
+  max-width:760px;padding:24px;border:1px solid #d8c9d0;border-radius:12px;
+  background:#fff;box-shadow:7px 7px 0 rgba(245,29,139,.16);color:#171316
+}
+.app-shell .drop-error h2{margin:0 0 8px;color:#3c2433}
+.app-shell .drop-error p{margin:0 0 18px;color:#684b5d}
+.app-shell .drop-error button{
+  min-height:42px;padding:0 18px;border:1px solid #151214;border-radius:8px;
+  background:#151214;color:#fff;font-weight:800
+}
+.app-shell .usage-load-error h2{color:#2a2026}
+.app-shell .usage-load-error :is(a,button){
+  display:inline-flex;align-items:center;justify-content:center;min-height:42px;margin-top:8px;
+  padding:0 16px;border:1px solid #111;border-radius:7px;background:#111;color:#fff;
+  text-decoration:none;font-size:11px;font-weight:900;box-shadow:3px 3px 0 var(--suite-pink)
+}
+
+.app-shell .not-found-page{
+  width:min(720px,100%);margin:34px auto;padding:34px;border:1px solid #111;border-radius:10px;
+  background:#fff;box-shadow:7px 7px 0 var(--suite-pink)
+}
+.app-shell .not-found-page header{margin:0;padding:0;border:0}
+.app-shell .not-found-page h1{color:#111;font-size:clamp(32px,4vw,48px);line-height:1;letter-spacing:-.05em}
+
+.signup-closed{
+  width:min(520px,calc(100% - 40px))!important;min-height:0!important;margin:auto!important;
+  padding:36px!important;align-self:center!important;text-align:left!important
+}
+.signup-closed .mini-label{color:var(--suite-pink-deep)!important}
+
+@media(max-width:820px){
+  .app-shell .status-strip .status-line{border-right:0}
+  .app-shell .not-found-page{margin:16px auto;padding:25px}
 }

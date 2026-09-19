@@ -21,11 +21,12 @@ export default async function SignupPage(
 
   if (!checkoutOpen())
     return (
-      <main className="signup-closed" style={{
-        maxWidth: "34rem", margin: "0 auto", padding: "4rem 1.25rem", textAlign: "center",
-      }}>
-        <h1 style={{ fontSize: "1.6rem", marginBottom: "0.75rem" }}>{CLOSED_HEADLINE}</h1>
-        <p style={{ lineHeight: 1.6, opacity: 0.85 }}>{CLOSED_BODY}</p>
+      <main className="signup-closed-screen">
+        <section className="signup-closed">
+          <p className="mini-label">GOLDIE SUITE</p>
+          <h1>{CLOSED_HEADLINE}</h1>
+          <p>{CLOSED_BODY}</p>
+        </section>
       </main>
     );
 
