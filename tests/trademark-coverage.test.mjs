@@ -229,15 +229,23 @@ test('the joined spelling is graded exactly like the spaced one', async () => {
   }
 });
 
-test('a pending application is never described as a registration', async () => {
+test('an exact pending application is serious, and worded as filed', async () => {
   const { toMatches, withRegister, check } = await import('../app/trademark-check.ts');
   const ready = { marks: 10, files: [{ state: 'done', count: 1 }] };
   const pending = toMatches(
     [{ mark: 'HAUS LABS', owner: 'Ate My Heart Inc.', registration: '',
        classes: ['021'], registered: false }],
-    'something else entirely', normalize, squeeze);
-  const verdict = withRegister(check('something else entirely'), pending, ready);
-  assert.equal(/\bis registered by\b/.test(verdict.summary), false,
-    'an application that has not been granted is called a registration');
-  assert.match(verdict.summary, /has been filed/);
+    'Hauslabs', normalize, squeeze);
+
+  const verdict = withRegister(check('Hauslabs'), pending, ready);
+  // Not softened merely because the certificate has not issued.
+  assert.equal(verdict.risk, 'high',
+    'an exact match on a live application was demoted because it is pending');
+  // But never described as a registration, and never as owned.
+  assert.ok(!/registered trademark/.test(verdict.summary));
+  assert.ok(!/\bowned by\b/.test(verdict.summary));
+  assert.ok(!/\bowns\b/.test(verdict.summary),
+    'the headline implies ownership of a record that is only filed');
+  assert.match(verdict.summary, /filed by Ate My Heart Inc\./);
+  assert.match(verdict.summary, /not registered yet/);
 });

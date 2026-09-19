@@ -586,8 +586,23 @@ export function withRegister(
     return match.exact && words(match.mark) > 1;
   });
 
+  /*
+    PENDING IS NOT HARMLESS.
+
+    `serious` required match.registered, so an exact match on a live
+    APPLICATION was demoted to a passing mention — and the caution headline
+    that carried it said "Somebody owns part of this", which is wrong twice
+    over: not partly, and not owned.
+
+    Everything in the corpus is live; worthKeeping drops dead marks and the
+    ingest deletes marks that have since died. So `registered` does not
+    separate real from irrelevant here — it separates GRANTED from FILED, and
+    that belongs in the wording, not in the severity. A company that has filed
+    for a mark and is trading under it will police it whether or not the
+    certificate has issued, and the listing comes down either way.
+  */
   const serious = relevant.filter(
-    match => match.registered && (match.exact || words(match.mark) > 1),
+    match => match.exact || words(match.mark) > 1,
   );
   const minor = relevant.filter(match => !serious.includes(match));
 
@@ -648,9 +663,19 @@ export function withRegister(
       risk: "high",
       register: relevant,
       registerReady,
-      summary: first.exact
-        ? `“${first.mark}” is a live registered trademark${first.owner ? `, owned by ${first.owner}` : ""}. Using it as the phrase on a product is what gets a listing removed.`
-        : `This phrase contains “${first.mark}”, a live registered trademark${first.owner ? ` owned by ${first.owner}` : ""}. Printing it risks the listing being removed.`,
+      /*
+        The headline may not imply ownership for a record that is only filed.
+        "registered trademark ... owned by" becomes "pending trademark
+        application ... filed by", and the consequence is stated either way
+        because it is the same consequence.
+      */
+      summary: first.registered
+        ? (first.exact
+          ? `“${first.mark}” is a live registered trademark${first.owner ? `, owned by ${first.owner}` : ""}. Using it as the phrase on a product is what gets a listing removed.`
+          : `This phrase contains “${first.mark}”, a live registered trademark${first.owner ? ` owned by ${first.owner}` : ""}. Printing it risks the listing being removed.`)
+        : (first.exact
+          ? `“${first.mark}” is a live trademark application${first.owner ? `, filed by ${first.owner}` : ""}. It is not registered yet, and an applicant trading under a name still gets listings removed for it.`
+          : `This phrase contains “${first.mark}”, a live trademark application${first.owner ? ` filed by ${first.owner}` : ""}. It is not registered yet, and the applicant can still object.`),
     };
   }
 

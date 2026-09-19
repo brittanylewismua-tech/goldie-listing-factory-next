@@ -1,6 +1,6 @@
 import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
-import { withErrorLog } from "@/app/error-log";
+import { withErrorLog, logError } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { canaryFor } from "@/app/listing-flow-canary";
 import { classifyBlueprint, validateMapping } from "@/app/blueprint-registry";
@@ -179,9 +179,26 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
        backfill. And the raw hits went in unmapped, leaving `exact` undefined
        on every one, which downgraded an exact single-word registered mark
        from high risk to a minor mention. */
-    trademark = withRegister(check(phrase), toMatches(hits, phrase, normalize, squeeze),
-      size);
-  } catch { /* the verdict without the register is still a verdict */ }
+    trademark = { ...withRegister(check(phrase), toMatches(hits, phrase, normalize, squeeze),
+      size), registerRead: true };
+  } catch (error) {
+    /*
+      A FAILED REGISTER READ TRAVELS. IT DOES NOT VANISH.
+
+      This was a bare catch, and the comment said the verdict without the
+      register is still a verdict — which is true, and it is a DIFFERENT
+      verdict. The register lookup was failing globally for months on the
+      other route for exactly this reason: the failure was indistinguishable
+      from a clean search. A batch that could not read the register must say
+      so rather than quietly screen on the curated list alone.
+    */
+    trademark = { ...withRegister(check(phrase), [], null), registerRead: false };
+    await logError({
+      area: "trademark/register-read",
+      message: error instanceof Error ? error.message : String(error),
+      userId: user.userId,
+    }).catch(() => {});
+  }
 
   /* Steps 10-12: composed, not generated. */
   const listings = supported.map(entry => {
