@@ -3,14 +3,15 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { logError } from "@/app/error-log";
+import { boundedReportBody } from "@/app/log-scrubbing";
 
 export async function POST(request: Request) {
   let payload: { message?: string; source?: string; line?: number; column?: number; kind?: string; digest?: string; url?: string; stack?: string } = {};
-  try {
-    payload = await request.json() as typeof payload;
-  } catch {
+  /* Bounded: the fields are truncated below, but only after a body is read. */
+  const body = await boundedReportBody(request);
+  if (!body || typeof body !== "object")
     return NextResponse.json({ ok: false }, { status: 400 });
-  }
+  payload = body as typeof payload;
   const safe = {
     kind: String(payload.kind || "error").slice(0, 40),
     message: String(payload.message || "Unknown browser startup error").slice(0, 500),

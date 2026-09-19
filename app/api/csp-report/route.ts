@@ -1,3 +1,4 @@
+import { boundedReportBody } from "@/app/log-scrubbing";
 import { reportCeilingReached, reporterKey } from "@/app/log-scrubbing";
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
   if (db && await reportCeilingReached(db, "csp-report", source))
     return new NextResponse(null, { status: 204 });
 
-  const body = await request.json().catch(() => null) as
+  const body = await boundedReportBody(request) as
     { "csp-report"?: Record<string, unknown> } | Record<string, unknown> | null;
   const report = (body && typeof body === "object"
     ? ((body as { "csp-report"?: Record<string, unknown> })["csp-report"] ?? body)

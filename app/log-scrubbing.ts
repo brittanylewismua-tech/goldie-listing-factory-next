@@ -63,6 +63,12 @@ export function scrubSecrets(value: string) {
 export const REPORTS_PER_SOURCE_PER_HOUR = 60;
 export const REPORTS_PER_AREA_PER_HOUR = 5_000;
 
+/*
+  Past the area ceiling, a source is still heard until it has sent this many
+  this hour. It is what stops a flood from one place silencing everyone else.
+*/
+export const QUIET_REPORTER_RESERVE = 3;
+
 export type CountableDb = {
   prepare: (sql: string) => {
     bind: (...v: unknown[]) => { first: <T>() => Promise<T | null> };
@@ -121,5 +127,68 @@ export async function reportCeilingReached(
     .catch(() => null);
   /* A counter that will not read is not a reason to drop a real report. */
   if (!row) return false;
-  return Number(row.n ?? 0) >= perArea;
+  if (Number(row.n ?? 0) < perArea) return false;
+
+  /*
+    THE AREA CEILING MUST NOT BE A MUTE BUTTON.
+
+    A ceiling on the area as a whole bounds storage, but on its own it hands
+    an attacker a way to silence everybody: fill the hour from rotating
+    sources, and every real report after that is dropped — the product goes
+    quiet at exactly the moment it is under attack, and the quiet looks like
+    health.
+
+    So past the ceiling the area stops accepting VOLUME, not reporters. A
+    source that has said little this hour is still heard, because a reporter
+    who has sent two reports is not the one who filled it. Only sources
+    already over the reserve are turned away.
+  */
+  if (!source) return true;
+  const mine = await db.prepare(
+    `SELECT COUNT(*) AS n FROM error_log
+      WHERE area LIKE ? AND context LIKE ?
+        AND created_at >= datetime('now', '-1 hour')`)
+    .bind(`${areaPrefix}%`, `%"src":"${source}"%`).first<{ n: number }>()
+    .catch(() => null);
+  if (!mine) return false;
+  return Number(mine.n ?? 0) >= QUIET_REPORTER_RESERVE;
+}
+
+/** The most a browser report may weigh. Reports are small; nothing legitimate is near this. */
+export const MAX_REPORT_BYTES = 16 * 1024;
+
+/**
+ * Read a report body without agreeing to read any size of it.
+ *
+ * The fields were already truncated, but truncation happens AFTER the body is
+ * parsed — so an unbounded body was still read and parsed in full before
+ * anything shortened it. These endpoints are unauthenticated by necessity,
+ * which makes the body the cheapest thing in the product to make enormous.
+ */
+export async function boundedReportBody(
+  request: Request, maxBytes = MAX_REPORT_BYTES,
+): Promise<unknown | null> {
+  const declared = Number(request.headers.get("content-length") ?? "0");
+  if (declared > maxBytes) return null;
+
+  const body = request.body;
+  if (!body) return null;
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      /* A missing or lying Content-Length is why this counts as it reads. */
+      if (total > maxBytes) { await reader.cancel(); return null; }
+      chunks.push(value);
+    }
+  } catch { return null; }
+
+  const joined = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) { joined.set(chunk, at); at += chunk.byteLength; }
+  try { return JSON.parse(new TextDecoder().decode(joined)); } catch { return null; }
 }

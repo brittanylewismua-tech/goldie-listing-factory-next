@@ -27,6 +27,7 @@
  * column error and nothing else.
  */
 import { ensureCleanupQueue } from "@/app/connection-cleanup";
+import { ensureRequestLimits } from "@/app/request-limits";
 import { env } from "cloudflare:workers";
 import { ensureErrorLog } from "@/app/error-log";
 import { ensureBillingTables } from "@/app/billing";
@@ -122,6 +123,13 @@ export const MIGRATIONS: Step[] = [
 
   { name: "trademark_register", run: () => ensureRegisterTables(database()) },
   { name: "connection_cleanup_queue", run: () => ensureCleanupQueue(database()) },
+  /*
+    The request limiter runs on every API call, so this table must exist before
+    the first one — not be created by it. A limiter whose table is missing
+    fails open, which is the safe behaviour for an outage and the wrong
+    behaviour for a deploy.
+  */
+  { name: "request_limits", run: () => ensureRequestLimits(database()) },
 ];
 
 export type Outcome = {
