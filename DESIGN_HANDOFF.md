@@ -210,6 +210,67 @@ editing · saving · error.
 
 ---
 
+## Refusals that can appear on more than one route
+
+Added in the D1728–D1732 security pass. These are member-visible states that
+did not exist when the rest of this document was written, and they can appear
+on several screens, so they are described once here rather than repeated per
+route.
+
+### A file that was not accepted
+
+**Where.** Anywhere a member chooses a file: `/listing-factory` (listing
+images), `/design-scanner` (the design), `/mockups` (a scene mask), and the
+support form.
+**Shape.** `400` with `{ error }`. The message is written for the member and
+is safe to render verbatim — no file names are echoed back, and no internal
+terms appear.
+
+| what happened | what the member is told |
+|---|---|
+| not an image, whatever it was called | "That file is not an image we recognise." |
+| an SVG | "SVG files are not accepted. Save it as a PNG or JPG." |
+| a format we cannot process | "That is a GIF file. Choose PNG, JPG or WEBP." |
+| damaged or cut off | "That image is damaged or incomplete." |
+| too many pixels to decode | "That image is 50000x50000. Each side must be under 20000 pixels." |
+| too large in bytes | "That file is larger than 20 MB." |
+| nothing in it | "That file is empty." |
+
+**Rules.**
+
+- This is a **refusal**, not a failure: nothing was saved, nothing was sent to
+  a provider, and no allowance was spent. It must not be styled as an error
+  the member needs to report, and it must not look like the upload is still in
+  progress.
+- Choosing several files at once is all-or-nothing. If one is refused, none
+  are stored — so the message belongs to the **set**, not to a single row, and
+  the design must not imply the others went through.
+- The member's next action is to choose a different file. That path must stay
+  reachable without reloading the screen.
+
+### Too many requests
+
+**Where.** Any API call, on any screen.
+**Shape.** `429` with `{ error }` and a `Retry-After` header in seconds.
+**Message.** "That is more requests than this account can make right now. Try
+again shortly."
+
+**Rules.**
+
+- This is the only state in the product a member can reach **without doing
+  anything wrong** — a stuck retry loop or a tab left open can produce it. The
+  tone is "come back in a moment", never "you did something bad".
+- `Retry-After` is authoritative. If the design shows a wait, it must come
+  from that header, not from a guess.
+- It is not a sign-out and not a failure of the underlying action. Whatever
+  the member was doing is still there when they return; the screen must not
+  discard their work or send them back to a start state.
+- In normal use it does not appear. Two full page loads making 12 and 7 API
+  calls returned 200 on every call. If a member is seeing this during ordinary
+  work, that is a defect to report, not a screen to design around.
+
+---
+
 ## Reskin constraints
 
 - Keep every state above individually addressable. Collapsing "failed" and
