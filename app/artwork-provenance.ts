@@ -17,6 +17,7 @@
  * The image is copied into R2 and hashed, which is what makes a sale two years
  * from now still point at something real.
  */
+import { fetchTrustedImage, ImageTooLarge } from "@/app/trusted-image-fetch";
 import { env } from "cloudflare:workers";
 
 const db = () => (env as unknown as { DB: D1Database }).DB;
@@ -153,13 +154,34 @@ export async function captureProductArtwork(
     if (!image?.src)
       return { ...base, outcome: "no-print-image", note: "The product carries no print image." };
 
-    const artwork = await fetch(image.src, { signal: AbortSignal.timeout(30_000) });
-    if (!artwork.ok)
-      return { ...base, outcome: "artwork-unreachable", note: `Artwork fetch answered ${artwork.status}` };
-    const bytes = await artwork.arrayBuffer();
-    if (bytes.byteLength > MAX_ARTWORK_BYTES)
-      return { ...base, outcome: "too-large", bytes: bytes.byteLength,
-        note: `Artwork is ${Math.round(bytes.byteLength / 1_048_576)}MB, over the ${MAX_ARTWORK_BYTES / 1_048_576}MB cap.` };
+    /*
+      D1723 · This buffered the whole response and THEN measured it, so a
+      reply larger than the cap was fully held in memory before being
+      rejected — the cap described the outcome rather than preventing
+      anything. It also followed redirects wherever they led, over any
+      protocol.
+
+      The shared reader aborts the stream at the ceiling, refuses http and
+      credentials in the URL, and will not let a redirect leave the host it
+      started on.
+    */
+    let artworkBytes: Uint8Array;
+    let artworkType = "image/png";
+    try {
+      const read = await fetchTrustedImage(image.src,
+        { host: "same-host", maxBytes: MAX_ARTWORK_BYTES, timeoutMs: 30_000 });
+      artworkBytes = read.bytes;
+      artworkType = read.type || "image/png";
+    } catch (error) {
+      /* Too large is a different fact from unreachable, and the member can
+         act on one of them. */
+      if (error instanceof ImageTooLarge)
+        return { ...base, outcome: "too-large", bytes: error.bytes,
+          note: `Artwork is over the ${MAX_ARTWORK_BYTES / 1_048_576}MB cap.` };
+      const why = error instanceof Error ? error.message : "unreadable";
+      return { ...base, outcome: "artwork-unreachable", note: why };
+    }
+    const bytes = artworkBytes.buffer as ArrayBuffer;
 
     const hash = await hashOf(bytes);
     /*
@@ -183,7 +205,7 @@ export async function captureProductArtwork(
     /* Keyed by content, so the same design across ten products is stored once. */
     const already = await bucket().head(key).catch(() => null);
     if (!already)
-      await bucket().put(key, bytes, { httpMetadata: { contentType: artwork.headers.get("content-type") ?? "image/png" } });
+      await bucket().put(key, bytes, { httpMetadata: { contentType: artworkType } });
 
     const placement = JSON.stringify({
       position: placeholder?.position ?? "",
