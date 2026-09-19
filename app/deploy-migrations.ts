@@ -28,6 +28,7 @@
  */
 import { ensureCleanupQueue } from "@/app/connection-cleanup";
 import { ensureRequestLimits } from "@/app/request-limits";
+import { ensureBriefRunTable } from "@/app/niche-brief-refresh";
 import { env } from "cloudflare:workers";
 import { ensureErrorLog } from "@/app/error-log";
 import { ensureBillingTables } from "@/app/billing";
@@ -130,6 +131,9 @@ export const MIGRATIONS: Step[] = [
     behaviour for a deploy.
   */
   { name: "request_limits", run: () => ensureRequestLimits(database()) },
+  /* The brief refresh reads this on every run to decide what is due; it must
+     exist before the first scheduled run, not be created by it. */
+  { name: "niche_brief_runs", run: () => ensureBriefRunTable(database()) },
 ];
 
 export type Outcome = {

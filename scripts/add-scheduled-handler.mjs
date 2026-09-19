@@ -245,6 +245,15 @@ export default {
     /* The corpus sweep, which is what keeps discovery going. */
     run("/api/sold-overnight/cron");
     /*
+      AND THE BRIEFS THE MEMBER ACTUALLY READS.
+
+      Reference images were being kept current; the briefs built from them
+      were not, because nothing but a member opening a niche ever wrote one.
+      Six of seven saved niches were telling her their evidence could not be
+      refreshed when nothing had been attempted. Costs no Etsy call.
+    */
+    run("/api/market/niche-brief-tick");
+    /*
       AND THE TWO CLOCKS RECORD THEMSELVES.
 
       The 72-hour gate and the USPTO backfile both finish on their own

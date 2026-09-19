@@ -29,7 +29,10 @@ test("a saved niche reuses one normalization, shared by both features", () => {
   /* Both go through normalizeNiche, so "Dog Moms!" means the same thing in
      Market Watch and in a scan. */
   const scanner = read("app/api/design-scanner/scan/route.ts");
-  const watch = read("app/api/market-watch/niches/route.ts");
+  /* The brief builder was lifted out of the route so the scheduled refresh
+     and the member's own page build a brief identically. The property this
+     protects is unchanged: one matcher, shared with the scanner. */
+  const watch = read("app/niche-brief.ts");
   for (const [name, source] of [["scan", scanner], ["niche watch", watch]])
     assert.match(source, /from "@\/app\/niche-cohort"/, `${name} does not share the matcher`);
   for (const source of [scanner, watch]) {

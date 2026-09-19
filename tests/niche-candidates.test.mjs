@@ -153,8 +153,10 @@ test("rediscovery revives a demoted candidate rather than resetting it", () => {
 });
 
 test("a niche being watched says gathering, not unsupported", () => {
+  /* Now in the extracted brief builder, which both the member's page and the
+     scheduled refresh call. */
   const route = readFileSync(new URL(
-    "../app/api/market-watch/niches/route.ts", import.meta.url), "utf8");
+    "../app/niche-brief.ts", import.meta.url), "utf8");
   assert.match(route, /GATHERING IS NOT THE SAME AS UNSUPPORTED/);
   /* Only while nothing has moved — never shown beside real evidence. */
   assert.match(route, /summary\.moving === 0 && watching > 0 \? GATHERING : null/);

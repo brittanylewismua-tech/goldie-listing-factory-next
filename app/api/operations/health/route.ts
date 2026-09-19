@@ -1,3 +1,4 @@
+import { classify as classifyBrief, BRIEF_REFRESH_SECONDS } from "@/app/niche-brief-refresh";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
@@ -162,6 +163,61 @@ export const GET = withErrorLog("operations-health", async () => {
     const fresh = Number(row?.fresh ?? 0);
     return { state: !held ? "empty" : fresh === 0 ? "stale" : "ok",
       detail: { held, freshWithinSixHours: fresh, usable: Number(row?.usable ?? 0) } };
+  });
+
+  /*
+    THE BRIEFS A MEMBER ACTUALLY READS, COUNTED SEPARATELY FROM THE IMAGES.
+
+    These were conflated: `referenceImages` was healthy — every image inside
+    the six-hour window — while six of seven saved niches displayed as
+    unrefreshable, because nothing rebuilt the brief. One number said the
+    system was fine and the member's screen said it was not, and there was no
+    probe that could tell them apart. Now each state is its own figure.
+  */
+  await probe("nicheBriefs", async () => {
+    const rows = await db.prepare(
+      `SELECT w.niche_key AS key,
+              MAX(w.last_opened) AS lastOpened,
+              COALESCE((SELECT MAX(h.observed_at) FROM niche_watch_history h
+                         WHERE h.niche_key = w.niche_key), 0) AS lastBriefAt,
+              COALESCE((SELECT r.consecutive_failures FROM niche_brief_runs r
+                         WHERE r.niche_key = w.niche_key), 0) AS consecutiveFailures,
+              COALESCE((SELECT r.last_attempt_at FROM niche_brief_runs r
+                         WHERE r.niche_key = w.niche_key), 0) AS lastAttemptAt,
+              COALESCE((SELECT r.last_state FROM niche_brief_runs r
+                         WHERE r.niche_key = w.niche_key), '') AS lastState
+         FROM niche_watches w GROUP BY w.niche_key`)
+      .all<{ key: string; lastOpened: number; lastBriefAt: number;
+        consecutiveFailures: number; lastAttemptAt: number; lastState: string }>();
+
+    const counts = { fresh: 0, due: 0, processing: 0, unavailable: 0, failing: 0 };
+    let oldest = 0;
+    for (const row of rows.results ?? []) {
+      const state = String(row.lastState) === "unavailable"
+        && now - Number(row.lastBriefAt) < BRIEF_REFRESH_SECONDS
+        ? "unavailable"
+        : classifyBrief({
+            key: String(row.key), terms: [],
+            lastOpened: Number(row.lastOpened) || 0,
+            lastBriefAt: Number(row.lastBriefAt) || 0,
+            consecutiveFailures: Number(row.consecutiveFailures) || 0,
+            lastAttemptAt: Number(row.lastAttemptAt) || 0,
+          }, now);
+      counts[state] += 1;
+      const age = now - (Number(row.lastBriefAt) || 0);
+      if (Number(row.lastBriefAt) && age > oldest) oldest = age;
+    }
+    const total = (rows.results ?? []).length;
+    /* Due is normal between runs. Only a brief past the staleness line the
+       member's own screen uses is a problem, because that is the one that
+       produces the refresh-failure message. */
+    const overTheLine = oldest > 36 * 3_600;
+    return {
+      state: !total ? "empty" : counts.failing || overTheLine ? "stale" : "ok",
+      detail: { savedNiches: total, ...counts,
+        oldestBriefAgeSeconds: oldest,
+        stalenessLineSeconds: 36 * 3_600 },
+    };
   });
 
   await probe("marketEvidence", async () => {

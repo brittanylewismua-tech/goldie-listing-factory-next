@@ -108,6 +108,18 @@ test("every member-owned table read is scoped by user_id", () => {
        fetch serves every watcher. It returns shop ids, never whose watch they
        are, and that is the whole reason twenty watchers cost what one costs. */
     "api/design-scanner/cohort-reviews/route.ts: FROM member_shop_watches",
+    /* The scheduled brief rebuild reads the DISTINCT saved niches across every
+       member, grouped by niche key. Scoping it to one member would defeat its
+       purpose: it exists so two members watching "dog mom" share one rebuild
+       instead of buying two. It returns niche keys and a watcher COUNT, never
+       whose watch they are. */
+    "api/market/niche-brief-tick/route.ts: FROM niche_watches",
+    /* The owner health view buckets saved niches by brief state. It reads a
+       row per DISTINCT niche so one classifier decides the state — writing
+       the buckets in SQL instead would be a second copy of that logic, and
+       the copy would drift. It returns niche keys and timestamps, never whose
+       watch they are, and the response is counts. */
+    "api/operations/health/route.ts: FROM niche_watches",
   ]);
   assert.deepEqual(offences.filter(row => !allowed.has(row)), []);
 });
