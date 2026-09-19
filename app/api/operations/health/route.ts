@@ -310,10 +310,12 @@ export const GET = withErrorLog("operations-health", async () => {
       STARTED something instead. If it has neither started nor finished
       anything, it cannot have stalled — there is nothing to have stopped.
     */
+    /* No catch: a query that fails here must surface as a broken probe, not
+       as "nothing has started", which is what the swallow guard exists to
+       stop and what this very check was reporting falsely. */
     const startedHistorical = await db.prepare(
       `SELECT MAX(started) AS at FROM tm_ingest_files WHERE priority > 2`)
-      .first<{ at: string }>()
-      .catch(() => null);
+      .first<{ at: string }>();
     const backfileAt = seconds(lastHistorical?.at);
     const backfileFrom = backfileAt || seconds(startedHistorical?.at);
     const backfileSince = backfileFrom ? now - backfileFrom : 0;
