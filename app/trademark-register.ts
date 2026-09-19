@@ -18,9 +18,9 @@
  * in, because a dead mark is not a reason to change a design.
  */
 import { blocks, singleEntryDeflateStream } from "@/app/uspto-bulk";
-import { normalize, readRecord, worthKeeping, type RegisterHit } from "@/app/trademark-record";
+import { normalize, squeeze, readRecord, worthKeeping, type RegisterHit } from "@/app/trademark-record";
 
-export { normalize, readRecord, worthKeeping, PRINTED_CLASSES } from "@/app/trademark-record";
+export { normalize, squeeze, readRecord, worthKeeping, PRINTED_CLASSES } from "@/app/trademark-record";
 export type { RegisterHit } from "@/app/trademark-record";
 
 export async function ensureRegisterTables(db: D1Database): Promise<void> {
@@ -36,6 +36,7 @@ export async function ensureRegisterTables(db: D1Database): Promise<void> {
       updated TEXT NOT NULL
     )`),
     db.prepare(`CREATE INDEX IF NOT EXISTS tm_marks_normalized ON tm_marks (normalized)`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS tm_marks_squeezed ON tm_marks (squeezed)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS tm_ingest_files (
       name TEXT PRIMARY KEY,
       product TEXT NOT NULL,
@@ -77,6 +78,27 @@ export async function ensureRegisterTables(db: D1Database): Promise<void> {
       if (!/duplicate column/i.test(message)) throw error;
     }
   }
+
+  /* The same rule for tm_marks: the squeezed form is a column added after the
+     first release, so the CREATE above will never produce it on a live table. */
+  try {
+    await db.prepare(`ALTER TABLE tm_marks ADD COLUMN squeezed TEXT NOT NULL DEFAULT ''`).run();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (!/duplicate column/i.test(message)) throw error;
+  }
+
+  /*
+    Backfill for rows written before the column existed. Derived in SQL from
+    `normalized`, which is exactly what squeeze() does to it, so the two can
+    not disagree. Bounded per call: it is a no-op once drained, and a slow
+    drain is better than one statement that times out and never completes.
+  */
+  await db.prepare(
+    `UPDATE tm_marks SET squeezed = REPLACE(normalized, ' ', '')
+      WHERE squeezed = '' AND serial IN (
+        SELECT serial FROM tm_marks WHERE squeezed = '' LIMIT 50000)`).run()
+    .catch(() => {});
 }
 
 const WRITE_BATCH = 100;
@@ -121,10 +143,11 @@ export async function ingestFile(
   };
 
   const insert = db.prepare(
-    `INSERT INTO tm_marks (serial, normalized, mark, owner, registration, status_code, classes, updated)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO tm_marks (serial, normalized, squeezed, mark, owner, registration, status_code, classes, updated)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(serial) DO UPDATE SET
-       normalized = excluded.normalized, mark = excluded.mark, owner = excluded.owner,
+       normalized = excluded.normalized, squeezed = excluded.squeezed,
+       mark = excluded.mark, owner = excluded.owner,
        registration = excluded.registration, status_code = excluded.status_code,
        classes = excluded.classes, updated = excluded.updated`,
   );
@@ -141,6 +164,7 @@ export async function ingestFile(
         insert.bind(
           record.serial,
           normalize(record.mark),
+          squeeze(record.mark),
           record.mark,
           record.owner,
           record.registration,
@@ -177,6 +201,11 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
   const normalized = normalize(phrase);
   if (normalized.length < 2) return [];
   const words = normalized.split(" ");
+  /*
+    The joined form, so "Hauslabs" reaches "HAUS LABS". Exact equality only —
+    see squeeze(). A LIKE on this column would match "ART" inside "HEART".
+  */
+  const squeezed = squeeze(phrase);
   /* Candidates are every mark short enough to sit inside the phrase and
      sharing its first word — the index makes that cheap, and the containment
      test then runs over a handful of rows rather than the whole table. */
@@ -187,9 +216,10 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
         WHERE normalized = ?1
            OR normalized LIKE ?2
            OR ?1 LIKE normalized || ' %'
+           OR squeezed = ?3
         LIMIT 200`,
     )
-    .bind(normalized, `${words[0]} %`)
+    .bind(normalized, `${words[0]} %`, squeezed)
     .all<{
       mark: string; owner: string; serial: string;
       registration: string; classes: string; status_code: number;
@@ -197,7 +227,10 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
 
   const padded = ` ${normalized} `;
   return (candidates.results ?? [])
-    .filter(row => padded.includes(` ${normalize(row.mark)} `))
+    /* Either the mark sits inside the phrase on word boundaries, or the two
+       are the same mark once their spacing is disregarded. */
+    .filter(row => padded.includes(` ${normalize(row.mark)} `)
+      || squeeze(row.mark) === squeezed)
     .map(row => ({
       mark: row.mark,
       owner: row.owner,

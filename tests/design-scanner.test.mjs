@@ -622,8 +622,11 @@ test("an incomplete register can never read as a clean result", () => {
 test("a complete register describes exactly what was searched", () => {
   const ready = tmWithRegister(tmCheck("Bride Tribe"), [], LOADED);
   assert.equal(ready.registerReady, true);
+  /* D1734 · It describes the records we hold. It no longer claims to be the
+     federal register, which it never was — nine classes of forty-five. */
   assert.match(ready.summary,
-    /No exact or contained match was found in the current federal trademark register or the curated risk list/);
+    /No exact or contained match was found in the trademark records available here, or the curated risk list/);
+  assert.ok(!/current federal/.test(ready.summary));
   assert.match(ready.summary, /screening information, not legal clearance/);
   assert.ok(!ready.summary.toLowerCase().includes("character"));
 });

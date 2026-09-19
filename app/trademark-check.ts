@@ -400,6 +400,17 @@ export function mentionsAMark(title: string) {
  * the whole phrase being somebody's registered mark, or a multi-word mark
  * sitting inside it, is the real thing.
  */
+/*
+  The classes a print-on-demand seller actually prints on.
+
+  Restated here rather than imported: this module deliberately takes no
+  imports so the matching stays testable away from a database. A test asserts
+  this set is identical to PRINTED_CLASSES in trademark-record.ts, so the two
+  copies cannot drift apart.
+*/
+const PRINT_CLASSES = new Set(
+  ["014", "016", "018", "020", "021", "024", "025", "026", "028"]);
+
 export type RegisterMatch = {
   mark: string;
   owner: string;
@@ -522,10 +533,46 @@ export function withRegister(
 ): FullVerdict {
   const registerReady = registerIsReady(size);
   const registerComplete = registerIsComplete(size);
-  const serious = matches.filter(
+  /*
+    CLASS DECIDES RELEVANCE HERE. IT USED TO DECIDE EXISTENCE.
+
+    Ingestion kept only the nine print classes, so HAUS LABS — a famous
+    cosmetics brand, class 003 — was never in the corpus at all and the
+    checker answered "nothing found" for it. That is the one answer this tool
+    must not get wrong.
+
+    The instinct behind that filter was still right: a mark registered only
+    for software is no hazard to a shirt, and flagging every ATLAS and every
+    LOVE would make the tool cry wolf until nobody read it. So the rule moves
+    here, where the phrase is in hand and it can be applied with judgement
+    instead of blindly:
+
+      in a print class  — judged exactly as before
+      outside one       — it counts only when the phrase IS the brand: an
+                          exact match on a mark of more than one word. That
+                          catches HAUSLABS and stays silent about ATLAS.
+  */
+  const relevant = matches.filter(match => {
+    const classes = match.classes ?? [];
+    /*
+      NOT KNOWING THE CLASS IS NOT THE SAME AS KNOWING IT IS IRRELEVANT.
+
+      A row that carries no class at all is kept. Dropping it would mean a
+      missing field could silently downgrade a real warning, and in a tool
+      whose entire job is to warn, the unknown case has to fail towards
+      saying something.
+    */
+    if (!classes.length) return true;
+    if (classes.some(code => PRINT_CLASSES.has(code))) return true;
+    /* Known, and none of them is a print class: it counts only when the
+       phrase IS the brand. */
+    return match.exact && words(match.mark) > 1;
+  });
+
+  const serious = relevant.filter(
     match => match.registered && (match.exact || words(match.mark) > 1),
   );
-  const minor = matches.filter(match => !serious.includes(match));
+  const minor = relevant.filter(match => !serious.includes(match));
 
   /*
     A CLEAN RESULT REQUIRES A COMPLETE REGISTER.
@@ -537,22 +584,38 @@ export function withRegister(
   */
   if (verdict.risk === "high") return { ...verdict, register: matches, registerReady };
 
-  if (!matches.length)
+  /* Nothing RELEVANT, which is not the same as nothing found: an out-of-class
+     mark that the phrase does not reproduce is not a finding to report. */
+  if (!relevant.length)
     return {
       ...verdict,
-      register: matches,
+      register: relevant,
       registerReady,
       summary: verdict.risk === "clear"
         ? (registerReady
           ? (registerComplete
-            ? "No exact or contained match was found in the current federal "
-              + "trademark register or the curated risk list. This is "
-              + "screening information, not legal clearance."
+            /*
+              THIS USED TO SAY "the current federal trademark register".
+
+              It never searched that. Ingestion kept only nine print-on-demand
+              classes, so a cosmetics mark like HAUS LABS was absent and the
+              sentence still told the member the federal register had been
+              searched. The class filter is gone, but the claim stays wrong in
+              principle: what is searched is what has been ingested, and that
+              is a fact about our corpus rather than about the register.
+
+              Every clean result now describes the records we actually hold.
+              None of them promises the whole register.
+            */
+            ? "No exact or contained match was found in the trademark records "
+              + "available here, or the curated risk list. This is screening "
+              + "information, not legal clearance — it does not mean nobody "
+              + "owns the phrase."
             /* Final, but with files the register could never read. The
                sentence says what was searched and does not name the whole
                register. */
             : "No exact or contained match was found in the trademark records "
-              + "that could be read, or the curated risk list. A few records "
+              + "that could be read, or the curated risk list. Some records "
               + "could not be loaded at all, so this is not the whole "
               + "register. This is screening information, not legal "
               + "clearance.")
@@ -566,7 +629,7 @@ export function withRegister(
     return {
       ...verdict,
       risk: "high",
-      register: matches,
+      register: relevant,
       registerReady,
       summary: first.exact
         ? `“${first.mark}” is a live registered trademark${first.owner ? `, owned by ${first.owner}` : ""}. Using it as the phrase on a product is what gets a listing removed.`
@@ -578,8 +641,8 @@ export function withRegister(
   return {
     ...verdict,
     risk: "caution",
-    register: matches,
+    register: relevant,
     registerReady,
-    summary: `No famous brands here, but ${named} ${minor.length > 1 ? "are" : "is"} registered for clothing and print by somebody else. A registration on an ordinary word does not stop you using it, and it does mean the owner can object — worth a look before you scale it.`,
+    summary: `No famous brands here, but ${named} ${minor.length > 1 ? "are" : "is"} registered by somebody else. A registration on an ordinary word does not stop you using it, and it does mean the owner can object — worth a look before you scale it.`,
   };
 }

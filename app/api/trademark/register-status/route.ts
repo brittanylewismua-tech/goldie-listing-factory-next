@@ -74,3 +74,54 @@ export const GET = withErrorLog("trademark-register-status", async (request: Req
       : "Advancing",
   });
 });
+
+/**
+ * REQUEUE THE HISTORICAL FILES SO THEY ARE READ AGAIN.
+ *
+ * Every record in those files was already parsed once — and then thrown away
+ * if its class was not one of the nine print classes. That is why HAUS LABS
+ * (class 003) is absent from a register that has read 115 files. Widening the
+ * filter changes what FUTURE reads keep; it cannot recover what past reads
+ * discarded. Only re-reading can.
+ *
+ * Owner only, and deliberately not wired to any schedule: it is a large piece
+ * of work that should happen when somebody decides it should, not because a
+ * clock came round.
+ *
+ * Costs no money — the bulk files are free and already budgeted for. It costs
+ * time: the files are taken one per tick behind the daily files, so a full
+ * pass is measured in days, and the register stays usable throughout because
+ * every write is an upsert rather than a delete-and-rebuild.
+ */
+export const POST = withErrorLog("trademark-register-requeue", async (request: Request) => {
+  const user = await getChatGPTUser();
+  if (!user || !isOwner(user))
+    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+
+  const url = new URL(request.url);
+  if (url.searchParams.get("requeue") !== "historical")
+    return NextResponse.json({ error: "Nothing was run." }, { status: 400 });
+
+  const db = (env as unknown as { DB: D1Database }).DB;
+  await ensureRegisterTables(db);
+
+  /*
+    Only files that finished cleanly. A skipped file was parked for a reason —
+    USPTO refusing it, or a corrupt archive — and requeueing those would undo
+    the terminal answer the backfile has for them.
+  */
+  const before = await db.prepare(
+    `SELECT COUNT(*) AS n FROM tm_ingest_files WHERE state = 'done'`)
+    .first<{ n: number }>();
+  await db.prepare(
+    `UPDATE tm_ingest_files
+        SET state = 'waiting', done_records = 0, kept = 0, note = '',
+            retry_after = NULL, strikes = 0, repeats = 0
+      WHERE state = 'done'`).run();
+
+  return NextResponse.json({
+    requeued: Number(before?.n ?? 0),
+    note: "Historical files will be read again behind the daily files. "
+      + "Marks already stored stay searchable while it runs.",
+  });
+});
