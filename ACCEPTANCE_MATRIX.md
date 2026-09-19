@@ -1,111 +1,140 @@
-# Acceptance matrix
+# Acceptance ledger
 
-**Build:** D1750 · commit `855e411d` · **3,507 tests — 3,495 passing, 0 failing, 12 skipped.**
+**Build:** D1753 · commit `dd623795` · **3,522 tests — 3,510 passing, 0 failing, 12 skipped.**
 
 Three labels, used strictly:
 
-- **Live verified** — exercised against thegoldiesuite.com in a real browser, signed in as the owner, with the resulting data checked.
-- **Fixture verified** — exercised against the shipping components in the closed-network state preview, which mounts the real production components and answers their calls from the fixture table.
+- **Live verified** — exercised against thegoldiesuite.com in a real browser, signed in, with the resulting data checked.
+- **Fixture verified** — exercised against the shipping components in the closed-network state preview, which mounts the real production components and answers their calls from a fixture table with the network closed.
 - **Blocked** — not verified, with the reason.
 
 ---
 
 ## Viewports
 
-| Viewport | How | Result |
+| Viewport | Method | Result |
 |---|---|---|
-| Desktop (1512×900) | Live | **Live verified** — every surface below |
-| 375 / 390 / 430 px, touch + `pointer: coarse` | Headless Chromium against the state preview, 63 states × 3 viewports = **189 combinations** | **Fixture verified** |
-| 375 / 390 / 430 px against **production** | — | **Blocked.** The sandbox cannot reach thegoldiesuite.com (allowlisted egress; the host does not resolve, `000`, no DNS), so a headless context there can never load the live site. Your own Chrome must not be resized. This is the documented fallback: shipping components at real phone viewports, with the live API responses verified separately through the authenticated desktop session. |
+| Desktop 1512×900 | Real browser, signed in | **Live verified** |
+| 375 / 390 / 430 px, touch + `pointer: coarse` | Headless Chromium, shipping components, 63 states × 3 = **189 combinations** | **Fixture verified** |
+| 375 / 390 / 430 px against **production** | — | **Blocked** |
 
-Cookies were never read, printed, or copied. The isolated-context route failed on **network reachability**, not on credentials.
+**Why blocked, explicitly:** the sandbox cannot resolve thegoldiesuite.com — egress is allowlisted, DNS returns nothing, curl returns `000` — so a headless browser there can never load the live site. Your visible Chrome was not manipulated. Cookies were never read, printed or copied; the isolated-context route failed on **network reachability**, not credentials. Live API responses for the same surfaces were verified separately through the authenticated desktop session.
+
+---
+
+## Every fixture state covered (63)
+
+**connections — 6:** loading · etsy-disconnected · printify-disconnected · both-disconnected · needs-reconnect (Etsy access lapsed) · api-error
+
+**market-watch — 13:** loading · empty · saved · stale (refresh failed) · shop-patterns · shop-empty · niche-evidence · niche-gathering · niche-stale · niche-failed · unsupported (niche refused) · at-limit · api-error
+
+**design-scanner — 9:** quality-faint · quality-soft · quality-both · quality-empty (near-empty artwork) · first-use · history-failed · daily-limit · provider-error · global-ceiling
+
+**account — 10:** delete-refused (wrong phrase) · delete-stale-auth · deleted · delete-partial · delete-resumed · delete-already · payment-overdue · in-trial · access-ended · usage-failed
+
+**batches — 7:** loading · empty · saved · remove-uncertain · signed-out · load-failed · count-unavailable
+
+**listing-factory — 6:** connect-checking · connect-none · check-failed · etsy-lapsed · ready · plan-exhausted
+
+**shop-map — 12:** loading · api-error · loaded · partial (finance unavailable) · cost-missing · estimated · verified-mixed · guidance · correction · correction-failed · empty-shop · timezone
+
+Each checked at all three widths for horizontal overflow, clipped text, touch targets under 44px, raw internals on screen (uuid / unix + ISO timestamps / JSON / snake_case), and contrast measured from rendered pixels. **Final result: 0 findings across 189 combinations, 0 console errors, all HTTP 200.**
 
 ---
 
 ## Surfaces
 
-| # | Surface | Result | Evidence |
-|---|---|---|---|
-| 1 | Sign-in / auth return / access denial / expired access | **Fixture verified** | `account-access-ended`, `account-payment-overdue`, `account-in-trial`, `batches-signed-out`, `factory-etsy-lapsed` |
-| 2 | Home | **Live verified** | Renders; month figures, watch evidence, scan allowance, register warning all honest |
-| 3 | Connections | **Live verified** + **Fixture verified** | Etsy `shesawolfclothing` + Printify Connected; 6 disconnect/error states in fixtures |
-| 4 | Tools and settings | **Live verified** | Reachable, renders |
-| 5 | Account + data-deletion preview | **Fixture verified** | 6 deletion states incl. refused, stale-auth, partial, resumed, already-done |
-| 6 | Usage and limits | **Live verified** | `owner_test`, 200/10,000, "Not open yet", no prices |
-| 7 | **Listing Factory** | **Live verified — full journey** | See below |
-| 8 | Batch History | **Live verified** | 20 batches, search, select-all, remove dialog, cancel, confirm |
-| 9 | Design Scanner | **Live verified** (1 real scan) + **Fixture verified** | See below |
-| 10 | Trademark Checker | **Live verified** | `Hauslabs` / `Haus Labs` both resolve; known-mark and clean paths |
-| 11 | Market Watch | **Live verified** | TODAY panel, 7 niches, list/detail agreement |
-| 12 | Niche Watch + TODAY | **Live verified** | All 7 niches agree list↔detail (was 4 mismatched) |
-| 13 | Shop Watch | **Live verified** | Invalid name, duplicate, tab deep-link |
-| 14 | Shop Map | **Live verified** | Correction + reversal + invariants |
-| 15 | Financial views / production-cost correction | **Live verified** + **Fixture verified** | Profit withheld when costs missing; `shop-map-cost-missing`, `-estimated`, `-verified-mixed`, `-partial` |
-| 16 | Shared dialogs, notices, loading, error, navigation | **Live verified** | Confirm dialog opens, cancels safely, executes once |
+| # | Surface | Result |
+|---|---|---|
+| 1 | Sign-in, auth return, access denial, expired access, onboarding | **Fixture verified** (account × 10, batches-signed-out, factory-etsy-lapsed) |
+| 2 | Home | **Live verified** |
+| 3 | Connections | **Live verified** + **Fixture verified** (6) |
+| 4 | Tools and settings | **Live verified** |
+| 5 | Account + data-deletion preview | **Fixture verified** (10) |
+| 6 | Usage and limits | **Live verified** |
+| 7 | Listing Factory | **Live verified — full journey** + **Fixture verified** (6) |
+| 8 | Batch History | **Live verified** + **Fixture verified** (7) |
+| 9 | Design Scanner | **Live verified** (1 cold + 1 warm scan) + **Fixture verified** (9) |
+| 10 | Trademark Checker | **Live verified** — final register state **blocked** on rebuild |
+| 11 | Market Watch | **Live verified** + **Fixture verified** (13) |
+| 12 | Niche Watch + TODAY | **Live verified** |
+| 13 | Shop Watch | **Live verified** |
+| 14 | Shop Map | **Live verified** + **Fixture verified** (12) |
+| 15 | Financial views + production-cost correction | **Live verified** + **Fixture verified** |
+| 16 | Shared dialogs, notices, loading, error, navigation | **Live verified** |
+
+**Blocked rows:** the three mobile viewports against production (above), the register's final wording (rebuild running), and simultaneous identical scans / concurrent identical requests — forcing those needs a second authenticated session or deliberately burning paid allowance. Concurrent duplicate **webhook** delivery is proven behaviourally (D1730).
 
 ---
 
-## Listing Factory — complete member journey, live
+## Exact totals
 
-| Step | Result |
+| Measure | Count |
 |---|---|
-| Create a batch | Auto-saved with id |
-| Upload **invalid** artwork (120×120) | Refused: "VERY LOW RESOLUTION · 9 DPI · below the recommended size", proceed blocked behind "Review resolution warnings" |
-| Remove design | "internal-test-tiny.png was removed", count → 0 |
-| Upload **valid** artwork (4000×4000) | Accepted, graded softer ("Proceed anyway"), severity tiers work |
-| Select product | Unisex Heavy Cotton Tee, 5 colors × 5 sizes imported |
-| DPI safeguard | **Verified at two severity levels** |
-| Review | "Creates unpublished Printify drafts." |
-| Create **one** Printify draft | Created; progress + "you can leave this page" |
-| Confirm identity | Found **through Printify by title**, not thumbnail: `6aaf0035b544ed8a5c0a1039` |
-| Confirm unpublished | `linkedToSalesChannel: ""`, `published_count: 0`, Etsy "0 of 1 complete" |
-| Refresh and resume | Batch resumes at REVIEW |
-| Batch History | Shows "1 PRINTIFY DRAFT SAVED" |
-| Confirmation dialog | Opens, names the batch, **cancel leaves it intact**, confirm executes once |
-| **Delete the product** | Confirmed gone **four ways**: route re-read 404, inspect `exists:false`, Printify verify `missing:[id]`, sweep `internalTests: []` |
-| Remove the batch row | Removed; `createdToday: []` |
-| **Nothing reached Etsy** | `publishedToday: 0`, `publishing: 0` |
-
-**Cost:** 1 listing credit (199 → 200). Printify: ~8 calls. **Etsy writes: 0.**
-
-## Design Scanner — live
-
-One real scan. Allowance **10 → 9**. Result framed as *construction, not fit*: "A design can match every one of those patterns and still not belong in the niche." Patterns described only in aggregate ("around 2 words") — **no copied wording, no reference-listing leakage.** Ten further states fixture verified.
-
-**Cost:** 1 paid vision call.
-
-## Shop Map — live
-
-| Check | Result |
-|---|---|
-| Listings | parts 293 = shop 293 **MATCH** |
-| Active listings | 83 = 83 **MATCH** |
-| Orders (90d) | 15 = 15 **MATCH** |
-| Revenue (90d) | 33,800 = 33,800 **MATCH** |
-| Correction | Workout & Fitness 6→7, orders 79→80, Unclassified 58→57; invariants held |
-| Reversal | Restored to 6 / 58; override audit back to **active 0, reversed 2, clean true** |
-
-Every listing stayed in exactly one primary state; niche totals never exceeded shop totals.
+| **Paid provider calls** | **1** — one cold Design Scanner scan. Confirmed independently: `paidReservations.last24h.settled = 1`. The warm re-scan used the cached analysis and spent none. |
+| **Measured paid cost** | Shop Map `paidProviderCost: 0`; the scan's cost is recorded in the usage store, not exposed on any member route. Reported as **1 settled reservation** rather than a dollar figure I cannot read. |
+| **Design Scanner allowance** | **1 of 10** (10 → 9). The warm re-scan consumed none (9 → 9). |
+| **Listing Factory credits** | **1** (199 → 200) |
+| **Etsy writes** | **0** — `publishedToday: 0`, `publishing: 0` throughout |
+| **Etsy reads** | Page loads plus 3 shop-watch resolutions. Not individually metered on any member route; the app reports `averageEtsyCallsPerListing: 17.1` as its own aggregate. Reported as **not separately countable**, rather than estimated. |
+| **Printify calls** | **~12**: 1 product create, 1 products.json sweep ×3, 1 product read ×3, 1 rename (PATCH), 1 delete, 1 delete-confirm read, plus `drafts/verify` ×2 |
+| **Test artifacts created** | 1 batch, 1 Printify product, 2 scan-history rows |
+| **Test artifacts removed** | 1 batch + 1 Printify product (mine), **3 legacy test batches** |
 
 ---
 
-## States exercised
+## Test-artifact classification
 
-**Fixture verified** across 63 states × 3 viewports: loading, empty, populated, success, validation refusal, unsupported input, provider failure, API failure, stale, partial, limit reached, access denied, expired entitlement, disconnected provider, timezone.
+**Removed — proven internal tests**
 
-**Live verified:** first visit, returning visit, populated, success, validation refusal, retry, refresh after completion, browser back/forward, page reload, new tab, persisted state, duplicate submission.
+| Artifact | Proof |
+|---|---|
+| Batch "INTERNAL TEST do not publish" (mine) | Created by me this session |
+| Printify product `6aaf0035…` (mine) | Created by me; deleted through the guarded marker path; gone confirmed 4 ways |
+| Batch "Internal Test Do Not Order **[gv9f3a1c]**" | Carries the marker |
+| Batch "INTERNAL TEST DO NOT ORDER **[gv9f3a1c]**" | Carries the marker |
+| Batch "INTERNAL TEST DO NOT ORDER" | Prefix **plus** corroboration: attempted 1 / drafts 0, matching the all-caps Printify rejection reproduced in D1745 |
 
-**Blocked:** simultaneous identical scans and concurrent identical requests were not driven live — forcing them needs either a second authenticated session or deliberately burning paid allowance. Concurrent duplicate **webhook** delivery is proven behaviourally (D1730).
+**Retained — accounting or audit evidence**
+
+- Scan-history rows for my two scans: each consumed allowance, so they are usage records.
+- The two reversed Shop Map overrides: reversal is recorded as a timestamp, not a delete, by design.
+- Usage counters (drafts 200): a credit was genuinely spent.
+
+**Retained — not proven internal, must not be touched**
+
+| Artifact | Why I left it |
+|---|---|
+| Batch "case test salt air" (1 draft) | No marker. "case test" could be a member testing a phone-case design. |
+| Printify product "case test salt air" | Exists in your shop, no marker. Deleting it is irreversible. |
+| Printify product "mug test salt air" | Same. |
+| Batch "canary design" (0 attempted, 0 drafts) | No marker; "canary" is a plausible design name. |
+
+These four are yours to judge. Say the word and I will remove them by the same guarded path.
+
+## Proof after cleanup
+
+| Claim | Evidence |
+|---|---|
+| Zero active internal-test products in Printify | sweep `internalTests: []` across 50 products |
+| Zero test batches or drafts shown to the member | no batch matching marker or INTERNAL TEST remains |
+| Zero test overrides | `active: 0`, `reversed: 2`, `orphaned: 0`, `clean: true` |
+| Zero test uploads or mockups | the only mockup was the deleted product's; gone with it |
+| No customer product changed | only the marker-renamed test product was written to |
+| Shop totals unchanged | listings 293, orders 3,737, revenue 9,232,421 — identical before and after |
+| Accounting unchanged | drafts 200, publishedToday 0 — identical before and after |
 
 ---
 
-## Launch invariants, re-confirmed after all work
+## Trademark rebuild — still running
 
-| Invariant | State |
+| Now | Value |
 |---|---|
-| Checkout disabled | "Not open yet", no prices, no retired plan names |
-| Beta roster | `[]`, 0 granted |
-| Active overrides | **0** (restored after the correction test) |
-| Test residue | None — `createdToday: []`, Printify sweep `internalTests: []` |
-| Etsy listings created or changed | **0** |
-| Health | `healthy: true`, `broken: []` |
+| Marks | 336,859 (from 231,798 at the start) |
+| Files | 6 done · 3 skipped · **111 waiting** · 0 partial |
+| Queue | Advancing |
+| Lookup | `ok`, **347 ms** |
+| `Hauslabs` / `Haus Labs` | both **`risk: high`**, `registerRead: true` |
+| Serials 97980718 / 97979817 | **not yet in the corpus** |
+
+The class-003 HAUS LABS record has now arrived — the cosmetics class — so both spellings resolve to it as an exact match. Her two named serials have not landed; 111 files remain, roughly 37 hours at the current cadence. **Final register state, both serials, the known-mark panel, corpus size and final skipped/waiting counts remain blocked on that.**
