@@ -34,6 +34,7 @@ export const ACCESS: Record<string, Rule> = {
   "/signup": { kind: "public" },
   "/api/etsy/callback": { kind: "public" },
   "/auth/callback": { kind: "public" },
+  "/api/csp-report": { kind: "public" },
   "/api/client-errors": { kind: "public" },
   "/api/version": { kind: "public" },
   /* Measured, not assumed: /api/trademark answers 401 to a signed-out caller,

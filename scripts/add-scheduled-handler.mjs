@@ -24,8 +24,82 @@ import app, { DraftCreationWorkflow, PhotoDeliveryWorkflow } from "./index.js";
 
 export { DraftCreationWorkflow, PhotoDeliveryWorkflow };
 
+/*
+  A CONTENT SECURITY POLICY WITH A REAL NONCE.
+
+  The session cookie is readable by page scripts — @supabase/ssr needs its
+  browser client to read it — so script execution is the highest-impact
+  browser risk here, and a policy with 'unsafe-inline' would be a header that
+  looks like a CSP and defends nothing.
+
+  This is the only place every response passes through, and Workers ship
+  HTMLRewriter, so the nonce is minted per request and stamped onto every
+  script tag as the HTML streams out. That covers Next's own bootstrap
+  scripts, which are inline and numerous, without threading a nonce through
+  the framework by hand.
+
+  'strict-dynamic' is what makes that enough: a script we trusted by nonce may
+  load the chunks it needs, and nothing else may.
+
+  static.cloudflareinsights.com is named explicitly. Cloudflare injects it at
+  the edge, AFTER this worker has run, so it can never carry our nonce — it is
+  allowlisted by host or it is broken. It is one script, from Cloudflare, on
+  Cloudflare, and the alternative is turning Web Analytics off.
+
+  img-src allows https: rather than a list of provider CDNs. Etsy and Printify
+  serve listing artwork from hosts that change, and a brittle list would break
+  real images to defend against a class — images that cannot execute — where
+  the defence buys very little. style-src allows inline: styled-jsx and inline
+  style attributes are throughout the app, and unsafe-inline for STYLE does
+  not let an attacker run code.
+
+  REPORT-ONLY for now. It reports to /api/csp-report and enforces nothing, so
+  the full walkthrough can be run against real pages and real violations
+  collected before anything is blocked.
+*/
+const CSP_REPORT_ONLY = true;
+
+const policy = nonce => [
+  "default-src 'self'",
+  \`script-src 'nonce-\${nonce}' 'strict-dynamic' https://static.cloudflareinsights.com\`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.supabase.co https://static.cloudflareinsights.com",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-src 'none'",
+  "worker-src 'self' blob:",
+  "report-uri /api/csp-report",
+].join("; ");
+
+const mintNonce = () => {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return btoa(String.fromCharCode(...bytes)).replace(/[+/=]/g, "");
+};
+
 export default {
-  fetch: (request, env, ctx) => app.fetch(request, env, ctx),
+  async fetch(request, env, ctx) {
+    const response = await app.fetch(request, env, ctx);
+    const type = response.headers.get("content-type") || "";
+    if (!type.includes("text/html")) return response;
+
+    const nonce = mintNonce();
+    const stamped = new HTMLRewriter()
+      .on("script", { element: el => el.setAttribute("nonce", nonce) })
+      .transform(response);
+
+    const headers = new Headers(stamped.headers);
+    headers.set(
+      CSP_REPORT_ONLY
+        ? "Content-Security-Policy-Report-Only"
+        : "Content-Security-Policy",
+      policy(nonce));
+    return new Response(stamped.body, {
+      status: stamped.status, statusText: stamped.statusText, headers });
+  },
 
   /*
     The sweep is invoked by handing the framework a Request built here in

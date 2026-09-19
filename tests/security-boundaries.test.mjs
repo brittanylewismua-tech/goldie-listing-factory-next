@@ -43,7 +43,8 @@ test("every route has a gate, or a documented reason it cannot", () => {
     const route = pathOf(file);
     const gated = /getChatGPTUser|isOwner|requireFeatureApi|cf-connecting-ip/.test(s)
       || /webhook/.test(file)
-      || ["/api/version", "/api/trademark", "/api/client-errors"].includes(route);
+      || ["/api/version", "/api/trademark", "/api/client-errors",
+        "/api/csp-report"].includes(route);
     if (!gated && !UNAUTHENTICATED[route]) ungated.push(route);
   }
   assert.deepEqual(ungated, [],
