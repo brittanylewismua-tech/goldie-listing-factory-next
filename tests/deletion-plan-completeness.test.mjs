@@ -18,7 +18,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { DELETION_PLAN, NOT_MEMBER_DATA } from "../app/deletion-plan.ts";
+import { DELETION_PLAN, NOT_MEMBER_DATA, OBJECT_PREFIXES } from "../app/deletion-plan.ts";
 
 const sources = [];
 const walk = dir => {
@@ -116,5 +116,55 @@ test("no table appears twice", () => {
   for (const step of DELETION_PLAN) {
     assert.ok(!seen.has(step.table), `${step.table} appears twice in the plan`);
     seen.add(step.table);
+  }
+});
+
+test("D1725: every stored object keyed to a member is deleted with them", async () => {
+  /*
+    The TABLE list has been complete for a long time, because a test insists
+    on it. There was no equivalent for objects, and five prefixes keyed by the
+    member's own id had accumulated without ever reaching the plan — their
+    batch templates, draft jobs, draft media, mockup scenes and mockup masks
+    all survived account deletion.
+
+    This looks for the shape rather than for known names: an R2 key built from
+    an owner or user identifier.
+  */
+  const files = [];
+  const walk = async (dir) => {
+    const { readdirSync } = await import("node:fs");
+    for (const entry of readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+      if (entry.isDirectory()) await walk(`${dir}/${entry.name}`);
+      else if (/\.tsx?$/.test(entry.name)) files.push(`${dir}/${entry.name}`);
+    }
+  };
+  await walk("../app");
+
+  const { readFileSync } = await import("node:fs");
+  const found = new Map();
+  for (const file of files) {
+    const source = readFileSync(new URL(file, import.meta.url), "utf8");
+    /* `prefix/${owner}` or `prefix/${user.userId}` — a key whose first
+       interpolation is who it belongs to. */
+    for (const m of source.matchAll(
+      /`([a-z][a-z0-9-]*)\/\$\{(?:encodeURIComponent\()?(owner|userId|user\.userId)\b/g))
+      if (!found.has(m[1])) found.set(m[1], file);
+  }
+
+  const known = new Set(OBJECT_PREFIXES.map(entry => entry.prefix.replace(/\/$/, "")));
+  const missing = [...found].filter(([prefix]) => !known.has(prefix));
+  assert.deepEqual(missing.map(([prefix, file]) => `${prefix}/ (${file})`), [],
+    "these hold a member's own files and would survive their deletion");
+});
+
+test("D1725: every object prefix says what it is, in the member's terms", () => {
+  for (const entry of OBJECT_PREFIXES) {
+    assert.match(entry.prefix, /\/$/, `${entry.prefix} must end in a slash`);
+    assert.ok(entry.say && entry.say.length > 12,
+      `${entry.prefix} has no sentence a member could read`);
+    /* Their words, not ours. */
+    assert.ok(!/R2|bucket|prefix|object store/i.test(entry.say),
+      `${entry.prefix} describes itself in our vocabulary: ${entry.say}`);
   }
 });

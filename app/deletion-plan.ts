@@ -316,6 +316,21 @@ export const OBJECT_PREFIXES: Array<{ prefix: string; say: string }> = [
   { prefix: "provenance/", say: "The print files you uploaded." },
   { prefix: "etsy-listing-images/", say: "The listing images prepared for your shop." },
   { prefix: "photo-delivery/", say: "The photo deliveries prepared for your listings." },
+  /*
+    D1725 · Five prefixes that were keyed by the member's own id and were not
+    on this list, so account deletion left their files in storage. Each holds
+    something they made: the templates they saved, the working files and
+    images from batches they ran, the mockup scenes they prepared and the
+    masks they edited.
+
+    The table list has been complete for a long time because a test insists on
+    it. There was no equivalent test for objects, so this was invisible.
+  */
+  { prefix: "batch-templates/", say: "The batch templates you saved." },
+  { prefix: "draft-jobs/", say: "The working files from listing batches you ran." },
+  { prefix: "draft-media/", say: "The images held while your drafts were being built." },
+  { prefix: "mockup-library/", say: "The mockup scenes you prepared." },
+  { prefix: "mockup-occlusion/", say: "The mockup masks you edited." },
 ];
 
 /** Not touched, and why — shown to the member rather than left to be noticed. */
