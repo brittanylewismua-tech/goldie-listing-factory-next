@@ -184,11 +184,26 @@ async function batchStorage(database:D1Database,userId:string,id:string){
 
   /* A pointer is exclusive only when no other row of this member's mentions
      it. The comparison is on the stored key, which is what R2 is asked for. */
-  const shares=async(needle:string)=>{
-    if(!needle)return [];
-    const rows=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND id<>? AND state_json LIKE ?")
-      .bind(userId,id,`%${needle}%`).all<{id:string}>().catch(()=>({results:[]}));
-    return (rows.results??[]).map(entry=>entry.id);
+  /*
+    `instr`, NOT `LIKE`.
+
+    The first version of this asked `state_json LIKE '%<sha>%'` and caught any
+    failure into an empty array — so D1 answering "LIKE or GLOB pattern too
+    complex" read as "nothing else references this object", which is the most
+    dangerous possible way to be wrong about whether a file is safe to delete.
+    A saved batch's state runs to hundreds of kilobytes and LIKE refuses over
+    it; `instr` does the same search with no pattern limit, and a failure is
+    returned as a failure.
+  */
+  const shares=async(needle:string):Promise<{ok:boolean;ids:string[];error?:string}>=>{
+    if(!needle)return {ok:true,ids:[]};
+    try{
+      const rows=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND id<>? AND instr(state_json, ?) > 0")
+        .bind(userId,id,needle).all<{id:string}>();
+      return {ok:true,ids:(rows.results??[]).map(entry=>entry.id)};
+    }catch(error){
+      return {ok:false,ids:[],error:error instanceof Error?error.message:String(error)};
+    }
   };
   const children=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND parent_batch_id=?")
     .bind(userId,id).all<{id:string}>().catch(()=>({results:[]}));
@@ -205,8 +220,11 @@ async function batchStorage(database:D1Database,userId:string,id:string){
       versions:(Array.isArray(design.artworkVersions)?design.artworkVersions:[]).length})),
     printifyProducts:drafts.map(draft=>draft.id).filter(Boolean),
     storage:{
-      templateSnapshot:template?.key?{key:template.key,sha256:template.sha256,
-        sharedWith:await shares(String(template.sha256||""))}:null,
+      templateSnapshot:template?.key?await(async()=>{const shared=await shares(String(template.sha256||""));
+        return {key:template.key,sha256:template.sha256,
+          /* null, never [], when the check itself failed. */
+          sharedWith:shared.ok?shared.ids:null,
+          sharedWithChecked:shared.ok,checkError:shared.error??""};})():null,
       /* Draft media is keyed per Printify product, so a batch with no product
          has none. Listed explicitly rather than assumed. */
       draftMedia:drafts.filter(draft=>draft._draftMedia)
@@ -401,8 +419,8 @@ async function removeOrphanTemplate(database:D1Database,userId:string,key:string
      with no reason is the shape that makes a guard impossible to debug. */
   let referencing:{results?:Array<{id:string}>}|null=null;
   let checkError="";
-  try{referencing=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND state_json LIKE ?")
-    .bind(userId,`%${sha}%`).all<{id:string}>();}
+  try{referencing=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND instr(state_json, ?) > 0")
+    .bind(userId,sha).all<{id:string}>();}
   catch(error){checkError=error instanceof Error?error.message:String(error)}
   if(!referencing)return {removed:false,
     reason:"The references could not be checked, so nothing was removed.",detail:checkError};
@@ -431,7 +449,10 @@ export async function DELETE(request:Request){const user=await getChatGPTUser();
      cleaned up by whoever breaks it.
      Scoped to this user's own rows, and only rewrites a batch that genuinely
      mapped a product to the deleted id. */
-  const referencing=await database.prepare("SELECT id,state_json FROM listing_batches WHERE user_id=? AND state_json LIKE ?").bind(user.userId,`%${id}%`).all<{id:string;state_json:string}>();
+  /* instr, not LIKE: D1 answers "LIKE or GLOB pattern too complex" over a
+     saved batch state, and that error here would abort the delete halfway,
+     leaving the row gone and every bundle reference to it dangling. */
+  const referencing=await database.prepare("SELECT id,state_json FROM listing_batches WHERE user_id=? AND instr(state_json, ?) > 0").bind(user.userId,id).all<{id:string;state_json:string}>();
   for(const row of referencing.results||[]){
     let state:Record<string,unknown>;
     try{state=JSON.parse(row.state_json||"{}") as Record<string,unknown>}catch{continue}

@@ -5957,8 +5957,10 @@ test("deleting a batch clears the bundles that pointed at it — D631", async ()
   const route = await readFile(new URL("../app/api/batches/route.ts", import.meta.url), "utf8");
 
   // Only this user's rows, and only rows that actually mention the deleted id.
-  assert.match(route, /SELECT id,state_json FROM listing_batches WHERE user_id=\? AND state_json LIKE \?/);
-  assert.match(route, /\.bind\(user\.userId,`%\$\{id\}%`\)/);
+  /* instr, not LIKE: D1 refuses a LIKE over a saved batch state ('pattern
+     too complex'), and that error here would abort the delete halfway. */
+  assert.match(route, /SELECT id,state_json FROM listing_batches WHERE user_id=\? AND instr\(state_json, \?\) > 0/);
+  assert.match(route, /\.bind\(user\.userId,id\)/);
 
   // A row is only rewritten when a mapping really pointed at the deleted batch.
   assert.match(route, /const kept=Object\.fromEntries\(Object\.entries\(map\)\.filter\(\(\[,value\]\)=>String\(value\)!==id\)\)/);
