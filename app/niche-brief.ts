@@ -151,3 +151,72 @@ export async function readNiche(userId: string, terms: string[], key: string, no
     staleForDisplay: listings.filter(row => !row.displayFresh).length,
   };
 }
+
+/**
+ * EVERY SAVED NICHE, COUNTED THE SAME WAY THE DETAIL PAGE COUNTS.
+ *
+ * The list and the detail page disagreed. Measured live: bachelorette read
+ * 131 moving on the list and 136 on the page behind it; halloween 131 against
+ * 143. The list was serving the cached brief the refresh job last wrote,
+ * while the detail computed from current evidence, so the two drifted apart
+ * between refreshes and the member saw one number and then a different one.
+ *
+ * The fix is not a fresher cache — any cache reproduces this — it is to count
+ * from the same evidence with the same function.
+ *
+ * ONE CORPUS READ FOR ALL OF THEM. readNiche loads the whole corpus and then
+ * filters it in memory, which is why it costs around 800ms whichever niche is
+ * asked for; doing that per row would add seconds to the page. The corpus is
+ * read once here and every saved niche is matched against it. The listing
+ * images, the stored analyses and the review counts are skipped — the list
+ * shows none of them, and the three figures it does show do not depend on
+ * them.
+ */
+export async function summariesForWatches(
+  watches: Array<{ key: string; terms: string[] }>, now: number,
+) {
+  const db = (env as unknown as { DB: D1Database }).DB;
+  const since = new Date((now - EVIDENCE_FRESH_DAYS * 86_400) * 1000).toISOString();
+
+  const corpus = await db.prepare(
+    `SELECT r.listing_id AS listingId, a.shop_id AS shopId, r.title AS title,
+            r.tags AS tags, r.outcome AS outcome,
+            a.intervals AS intervals, a.firstSeen AS firstSeen, a.lastSeen AS lastSeen
+       FROM reference_images r
+       JOIN (SELECT listing_id, shop_id, COUNT(DISTINCT interval_id) AS intervals,
+                    MIN(observed_at) AS firstSeen, MAX(observed_at) AS lastSeen
+               FROM listing_sales_activity
+              WHERE interval_id IS NOT NULL AND observed_at >= ?
+              GROUP BY listing_id, shop_id) a
+         ON a.listing_id = r.listing_id`)
+    .bind(since).all<Omit<Row, "imageId" | "imageUrl" | "retrievedAt" | "reviews">>();
+
+  const rows = corpus.results ?? [];
+  const candidates: Candidate[] = rows.map(row => ({
+    listingId: Number(row.listingId), shopId: Number(row.shopId),
+    title: String(row.title ?? ""), tags: String(row.tags ?? "").split("|").filter(Boolean),
+  }));
+  const everyId = new Set(candidates.map(row => row.listingId));
+
+  const out = new Map<string, ReturnType<typeof summarize>>();
+  for (const watch of watches) {
+    const matched = intersect(candidates, everyId, watch.terms);
+    const inNiche = new Set(matched.members.map(member => member.listingId));
+    const evidence: ListingEvidence[] = rows
+      .filter(row => inNiche.has(Number(row.listingId)))
+      .map(row => ({
+        listingId: Number(row.listingId), shopId: Number(row.shopId),
+        intervals: Number(row.intervals) || 0,
+        lastConfirmedAt: Math.floor(Date.parse(row.lastSeen) / 1000) || 0,
+        firstConfirmedAt: Math.floor(Date.parse(row.firstSeen) / 1000) || 0,
+        present: row.outcome === "recovered",
+        /* Not read for the list, and none of moving, repeated or shops
+           depends on it. */
+        linkedReviews: 0,
+      }));
+    /* `since` is per-member and the list does not show "new since you
+       looked", so it is deliberately not passed here. */
+    out.set(watch.key, summarize(evidence, now));
+  }
+  return out;
+}
