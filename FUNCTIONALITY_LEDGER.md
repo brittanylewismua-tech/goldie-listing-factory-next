@@ -1,6 +1,8 @@
 # Functionality ledger
 
-**Build:** D1733 · commit `1e69f8e3` · live commit matched the local tree at every check.
+**Build:** D1733 · commit `9940d091` — **the final functional build.** The
+repo is frozen here for the approved Sites reskin.
+Live commit matched the local tree at every check.
 **Suite:** 3,466 tests — **3,454 passing, 0 failing, 12 skipped.**
 **Presentation:** frozen. No visual work in this pass.
 
@@ -38,50 +40,96 @@ on it. Measured directly, the endpoints behind those screens answered
 | **No test data in her shop** | Override audit: **0 active** (2 stored, 2 reversed), 0 orphaned, 0 money-in-two-places, 0 unreadable, no duplicated rows. |
 | **No Etsy listing created or changed** | `publishedToday: 0`, `publishing: 0`. The 199 drafts are unpublished Printify drafts, not Etsy listings. |
 
-## Trademark register
+## Trademark register — NOT SETTLED. External limitation.
 
-Still advancing under its own server-side cron. No supervision, no app open.
+Checked 2026-09-19T14:18Z.
 
-**Now:** 228,136 marks · 109 done · 1 partial · 3 skipped · 6 waiting · queue
-advancing. Two files are held by USPTO rate limiting until 07:00Z and 10:00Z —
-waiting on USPTO, not stuck.
+```
+marks   231,798
+done        115
+skipped       3
+waiting       2      <- not zero
+partial       0      <- zero, as required
+```
 
-**Terminal state, determined rather than guessed.** Readiness requires no file
-`waiting` *and* none `partial`; completeness additionally requires no `skipped`
-file holding records. Run against the live counts:
+**`partial = 0`** is satisfied. **`waiting = 2`** is not. Both remaining files
+are blocked by USPTO, not by anything in the product:
 
-| | ready | complete |
+| file | next attempt | reason |
 |---|---|---|
-| now | false | false |
-| when the queue drains, 3 skipped remaining | **true** | **false** |
-| only if those 3 ever load | true | true |
+| `apc18840407-20251231-88.zip` | 2026-09-19T16:20Z | USPTO is rate limiting bulk downloads |
+| `apc18840407-20251231-87.zip` | 2026-09-19T19:40Z | USPTO is rate limiting bulk downloads |
 
-So unless the three skipped files become readable, the register settles as
-**final-with-skipped-files** — not complete. That state has its own member
-wording, already implemented and distinct from the other two:
+Queue status reads: *"Stalled: USPTO is rate limiting bulk downloads."* — the
+string deliberately says more than "waiting", because "waiting" is what hid a
+two-day stall once before.
 
-> "No exact or contained match was found in the trademark records that could
-> be read, or the curated risk list. **A few records could not be loaded at
-> all, so this is not the whole register.** This is screening information, not
-> legal clearance."
+### It is guaranteed to settle, and here is the arithmetic
 
-**Verified live today** (register still loading), in both places a member
-sees it:
+A 429 does not count toward the repeated-failure limit — the other side asking
+for time is not a failure. That left a file USPTO refuses indefinitely with no
+terminal state at all, so the escalation has a ceiling: **24 consecutive
+rate-limit strikes parks the file as `skipped`**, with the refusal count and
+elapsed time written into its note so it stays findable and can be requeued by
+hand.
 
-- in the result — "No match was found in the trademark records **currently
-  loaded**. This is screening information, not legal clearance."
-- in the explainer, bolded — "**The register is still loading, so treat a
-  clean result as incomplete today.**"
+Backoff doubles from 30 minutes and caps at 6 hours. Both files are already at
+the cap, so each remaining strike costs 6 hours:
 
-13 tests cover the three states, including that `partial` blocks readiness and
-that only a register with nothing left out is allowed to name the whole
-register.
+```
+strikes 1..4   30m, 60m, 120m, 240m
+strikes 5..24  360m each  (capped)
+full ceiling   7,650 minutes = 127.5 hours = 5.3 days of continuous refusal
+```
 
-**Outstanding — the one open item in this ledger:** a single live read after
-the queue drains (earliest ~10:00Z), to confirm the wording flips to the
-final-with-skipped-files sentence. The outcome is proven; what remains is
-observing it. This line gets updated in place rather than issued as a second
-ledger.
+**So the queue settles either when USPTO relents, or by roughly 2026-09-24 at
+the outside.** It cannot hang indefinitely.
+
+### What it will settle as
+
+`final-with-skipped-files`, not complete — and with **5** skipped files rather
+than 3, if these two throttle out. Confirmed by running the live counts through
+the real predicate: ready becomes true once `waiting` and `partial` are zero;
+complete additionally requires no skipped file holding records, which will not
+be satisfied. The member wording for that state already exists, is distinct,
+and is covered by 13 tests.
+
+### Verified now, in the current (still-loading) state
+
+- **A clean result never claims the whole register.** "moody mics" → risk
+  `clear`, 0 hits, *"No match was found in the trademark records **currently
+  loaded**."* This is the most conservative of the three wordings, so the
+  product is safe to ship in this state.
+- **A known match is still caught.** "taylor swift eras tour" → risk `high`,
+  2 hits, with the removal warning intact.
+- **Daily ingestion is not gated on the backfile.** Products are rediscovered
+  on every tick over a rolling date window, with the daily product at priority
+  1 and the historical chunks at 5. Live evidence: `apc260918.zip` was
+  ingested today at 05:41Z — 47,222 records read, **11,390 marks kept** — while
+  the historical queue was stalled.
+
+### Still outstanding, and only these
+
+Items that require the settled state: confirming `waiting = 0`, confirming the
+final state is `final-with-skipped-files`, recording exactly which files were
+skipped and why, and seeing the skipped-record warning in the idle explanation
+and in a live search result.
+
+**Nothing in the product is blocking them.** They are observations of a state
+USPTO controls the timing of.
+
+---
+
+## Market Watch refresh — confirmed self-sustaining in production
+
+The scheduled rebuild is not merely wired; it is demonstrably running. At
+14:20Z the oldest brief was **3.0 hours old**, rebuilt at about 11:19Z by the
+cron — six hours after the previous rebuild, which is exactly when the window
+expired. All seven niches: **7 fresh, 0 due, 0 processing, 0 unavailable,
+0 failing.**
+
+That is live evidence of sustained completion, which is stronger than the
+capacity arithmetic it confirms.
 
 ## Market Watch refresh defect — CLOSED (D1733)
 
@@ -224,9 +272,9 @@ Security is closed. The walkthrough found one material defect — Market Watch's
 brief refresh — which is now fixed, deployed and verified live. Every launch
 invariant holds. The register is finishing on its own.
 
-**The one remaining item:** the trademark register drains (earliest ~10:00Z,
-two files held by USPTO until 07:00Z and 10:00Z), then one live read to confirm
-the wording flips to the final-with-skipped-files sentence. That outcome is
-already determined and proven by test; what remains is observing it.
+**The repo is frozen at D1733 for the reskin.** No further functional work.
 
-After that: the Sites reskin.
+**The one remaining item is external:** two historical files that USPTO keeps
+refusing. The queue settles when USPTO relents, or by roughly 2026-09-24 when
+the strike ceiling parks them. Until then the member sees the most conservative
+of the three register wordings, which is correct and safe to ship.

@@ -271,6 +271,19 @@ again shortly."
 
 ---
 
+## Repo state for this reskin
+
+**Frozen at D1733 (`9940d091`).** This is the final functional build. Every
+route, state and control below is what is deployed; nothing functional is
+expected to change while the reskin is applied.
+
+One state in `/trademark` is still moving, and it moves on USPTO's schedule
+rather than ours: the register is at `final-with-skipped-files` pending two
+historical files USPTO is rate limiting. The member currently sees the
+**still-loading** wording. All three wordings are already documented below and
+all three must have a home in the new design — the transition between them is
+data-driven and will happen without a deploy.
+
 ## Reskin constraints
 
 - Keep every state above individually addressable. Collapsing "failed" and
