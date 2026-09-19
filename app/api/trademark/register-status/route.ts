@@ -67,6 +67,16 @@ export const GET = withErrorLog("trademark-register-status", async (request: Req
     /* Owner diagnostic: does a real lookup actually succeed? A clean result
        and an unreadable register produced the same answer for long enough
        that this is worth being able to see directly. */
+    /*
+      The LIKE pattern was built from this column, and SQLite refuses a
+      pattern past its length limit — so the longest stored mark is what
+      decided when every lookup began failing.
+    */
+    longestMark: await db.prepare(
+      `SELECT serial, LENGTH(normalized) AS length, updated
+         FROM tm_marks ORDER BY LENGTH(normalized) DESC LIMIT 1`)
+      .first<{ serial: string; length: number; updated: string }>()
+      .catch(() => null),
     lookupProbe: await lookup(db, "dream spun")
       .then(hits => ({ ok: true, hits: hits.length }))
       .catch(error => ({ ok: false,
