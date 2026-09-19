@@ -176,3 +176,24 @@ test("only data files are queued, and a file that cannot be read is parked", asy
      forever behind it. */
   assert.match(tick, /permanent \|\| exhausted \|\| givenUp \? "skipped" : "waiting"/);
 });
+
+test("the internal validation title is one Printify will accept", async () => {
+  /*
+    Printify refuses "Product is invalid. Title contains excessive caps." The
+    title was ALL CAPS, so the validation product was never created and the
+    run recorded an attempt with nothing to show for it. Two batches in the
+    live history had a draft count of zero for exactly this reason.
+  */
+  const { internalValidationTitle, INTERNAL_VALIDATION_MARKER } =
+    await import("../app/printify-validation-marker.ts");
+  const title = internalValidationTitle();
+
+  const letters = title.replace(/[^A-Za-z]/g, "");
+  const caps = letters.replace(/[^A-Z]/g, "").length;
+  assert.ok(caps / letters.length < 0.6,
+    `${caps}/${letters.length} letters are capitals — Printify refuses excessive caps: "${title}"`);
+
+  /* And it still carries the only thing removal matches on. */
+  assert.ok(title.includes(INTERNAL_VALIDATION_MARKER));
+  assert.ok(title.length <= 255);
+});

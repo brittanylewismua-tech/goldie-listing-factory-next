@@ -22,8 +22,25 @@
 */
 export const INTERNAL_VALIDATION_MARKER = "[gv9f3a1c]";
 
+/*
+  MIXED CASE, BECAUSE PRINTIFY REFUSES SHOUTING.
+
+  This read "INTERNAL TEST - DO NOT ORDER [gv9f3a1c]" and Printify answers
+
+    Product is invalid. Title contains excessive caps.
+
+  so the validation product was never created and the run recorded an attempt
+  with nothing to show for it. Two batches in the live history prove it:
+  "INTERNAL TEST DO NOT ORDER" and "INTERNAL TEST DO NOT ORDER [gv9f3a1c]",
+  both attempted once, both with a draft count of zero — while the one titled
+  "Internal Test Do Not Order [gv9f3a1c]" succeeded.
+
+  Reproduced directly against Printify before changing it.
+
+  The marker still carries the identity; only the shouting is gone.
+*/
 export const internalValidationTitle = () =>
-  `INTERNAL TEST - DO NOT ORDER ${INTERNAL_VALIDATION_MARKER}`;
+  `Internal Test - Do Not Order ${INTERNAL_VALIDATION_MARKER}`;
 
 /** Only a product carrying the marker may be removed by the validation route. */
 export const isInternalValidationProduct = (title: string) =>
