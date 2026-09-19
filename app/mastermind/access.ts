@@ -4,9 +4,9 @@ import type { ChatGPTUser } from "@/app/chatgpt-auth";
 type Runtime = { DB?: D1Database; MASTERMIND_ACCESS_CODE?: string };
 export function runtime() { return env as unknown as Runtime; }
 
-export function isOwner(user: ChatGPTUser) {
-  return ["beawolfbiz@gmail.com", "brittany@beawolfbiz.com", "goldie@beawolfbiz.com", "brittanylewismua@gmail.com", "shesawolfclothing@gmail.com"].includes(user.email.trim().toLowerCase());
-}
+export { isOwner } from "@/app/owner-allowlist";
+import { isOwner } from "@/app/owner-allowlist";
+
 
 export async function mastermindState(user: ChatGPTUser) {
   if (isOwner(user)) return { active: true, redeemed: true, expired:false, owner: true, expiresAt: null };

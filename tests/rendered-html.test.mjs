@@ -965,8 +965,19 @@ test("keeps the owner test page separate from mastermind access", async () => {
   assert.match(admin, /DELETE FROM printify_connections/);
   assert.match(admin, /SELECT user_id FROM mastermind_access/);
   assert.match(access, /toUpperCase/);
-  assert.match(access, /brittanylewismua@gmail\.com/);
-  assert.match(access, /shesawolfclothing@gmail\.com/);
+  /* D1722 · The allowlist moved into app/owner-allowlist.ts so a pure
+     identity decision is not reachable only from inside a worker. The
+     property — that these addresses are the owner — is unchanged. */
+  {
+    const allowlist = await readFile(
+      new URL("../app/owner-allowlist.ts", import.meta.url), "utf8");
+    assert.match(allowlist, /brittanylewismua@gmail\.com/);
+  }
+  {
+    const allowlist = await readFile(
+      new URL("../app/owner-allowlist.ts", import.meta.url), "utf8");
+    assert.match(allowlist, /shesawolfclothing@gmail\.com/);
+  }
 });
 
 test("gives the owner testing account room to run real batches", async () => {
@@ -2024,7 +2035,11 @@ test("keeps every owner login and billing outage from crashing the factory route
     readFile(new URL("../app/mastermind/access.ts",import.meta.url),"utf8"),
     readFile(new URL("../app/listing-factory/page.tsx",import.meta.url),"utf8"),
   ]);
-  assert.match(access,/goldie@beawolfbiz\.com/);
+  {
+    const allowlist = await readFile(
+      new URL("../app/owner-allowlist.ts", import.meta.url), "utf8");
+    assert.match(allowlist, /goldie@beawolfbiz\.com/);
+  }
   assert.match(route,/try \{\s*billing = await billingState\(user\);\s*\} catch \(error\) \{/);
   assert.match(route,/billing access[\s\S]*return <SignupClient signedIn/);
 });
