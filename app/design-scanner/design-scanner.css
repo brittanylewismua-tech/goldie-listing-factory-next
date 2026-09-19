@@ -6,7 +6,9 @@
 */
 .scanner {
   --ink: #1b1b1f;
-  --muted: #6b6b76;
+  /* D1743 · 4.28:1 on the lavender badge ("6 scans left today"), against a
+     4.5 minimum. Same hue, dark enough to read on that background. */
+  --muted: #5c5c68;
   --line: #e6e4e0;
   --paper: #fbfaf8;
   --gold: #c9a227;

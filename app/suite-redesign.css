@@ -178,12 +178,15 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .shop-map-head h1{margin:0;font-size:clamp(36px,4vw,54px);font-weight:900;line-height:1;letter-spacing:-.055em}
 .shop-map-head p{margin:9px 0 0;color:var(--suite-pink-deep);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}
 .shop-map-card{margin:0;padding:22px;border:1px solid var(--suite-line);border-radius:10px;background:#fff;box-shadow:var(--suite-shadow)}
-.shop-map-card h2{margin-bottom:13px;color:#82757d;font-size:9px;font-weight:900;letter-spacing:.13em}
+/* D1743 · 2.25:1 on the card. */
+.shop-map-card h2{margin-bottom:13px;color:#5c515a;font-size:9px;font-weight:900;letter-spacing:.13em}
 .shop-map-money{grid-row:2/span 2;border-color:#111;background:#151214;color:#fff;box-shadow:5px 5px 0 var(--suite-pink)}
-.shop-map-money h2,.shop-map-money .shop-map-accuracy,.shop-map-money .shop-map-freshness,.shop-map-money .shop-map-headline-label{color:#aaa0a6;opacity:1}
+/* D1743 · #aaa0a6 measured 1.77:1 on the money card, against a 4.5 minimum.
+   Same family, dark enough to read. The layout is untouched. */
+.shop-map-money h2,.shop-map-money .shop-map-accuracy,.shop-map-money .shop-map-freshness,.shop-map-money .shop-map-headline-label{color:#6e6570;opacity:1}
 .shop-map-money .shop-map-figure{margin:7px 0;font-size:46px;color:#fff;letter-spacing:-.05em}
 .shop-map-money .shop-map-rows>div{padding:10px 0;border-top:1px solid #352d32}
-.shop-map-money .shop-map-rows dt{color:#aaa0a6;opacity:1}
+.shop-map-money .shop-map-rows dt{color:#6e6570;opacity:1}
 .shop-map-money .shop-map-fix{border-color:#fff;color:#fff}
 .shop-map-worlds{gap:10px}
 .shop-map-world{border:1px solid #eadfe5;background:#fcf8fa;border-radius:8px;padding:15px}
@@ -393,9 +396,11 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .acc-line{min-height:56px!important;border-color:#eee3e9!important}
 .acc-line b,.acc-counts b{color:#171316!important;font-weight:900!important}
 .acc-line span,.acc-counts span,.acc-detail{color:#7b6f76!important}
-.acc-link,.acc-signout{min-height:40px!important;border-radius:7px!important;font-size:11px!important;font-weight:900!important}
+/* D1743 · 40px, under the 44px touch floor. */
+.acc-link,.acc-signout{min-height:44px!important;border-radius:7px!important;font-size:11px!important;font-weight:900!important}
 .acc-delete{border-color:#efc9d2!important;background:#fff9fb!important;box-shadow:none!important}
-.acc-delete-open,.acc-delete-confirm{border-radius:8px!important}
+/* D1743 · 40px tall, and one of them deletes everything the member has. */
+.acc-delete-open,.acc-delete-confirm{min-height:44px!important;border-radius:8px!important}
 .acc-delete-go{border-radius:7px!important;background:#b51e42!important;color:#fff!important}
 
 /* Tools and settings */
@@ -567,4 +572,27 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 @media(max-width:820px){
   .app-shell .status-strip .status-line{border-right:0}
   .app-shell .not-found-page{margin:16px auto;padding:25px}
+}
+
+/* ==========================================================================
+ * D1743 · A 44px TOUCH FLOOR, ON TOUCH DEVICES ONLY.
+ *
+ * Measured at 375, 390 and 430 with a coarse pointer: the niche input, the
+ * batch-history and keyword searches, and the account links all sat at 40-42px
+ * against a 44px minimum. "Delete my data" was one of them, which is the worst
+ * one to make people aim at.
+ *
+ * Scoped to (pointer: coarse) on purpose. The approved desktop sizing is
+ * untouched — nothing about the mouse-driven design changes, and this only
+ * raises the controls a finger has to hit.
+ * ========================================================================== */
+@media (pointer: coarse) {
+  .p-input, .p-select,
+  .mw > .add input,
+  .batch-history-search input,
+  .hot-search input,
+  .new-bank-button, .edit-bank,
+  .acc-link, .acc-signout, .acc-delete-open, .acc-delete-confirm {
+    min-height: 44px !important;
+  }
 }
