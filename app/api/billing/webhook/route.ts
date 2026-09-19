@@ -15,8 +15,26 @@ export async function POST(request:Request){
   if(!secret||!signature||!await validSignature(payload,signature,secret))return NextResponse.json({error:"Invalid Stripe signature."},{status:400});
   const event=JSON.parse(payload) as StripeEvent,object=event.data.object,db=runtime.DB;
   await ensureBillingTables(db);
-  const recorded=await db.prepare("SELECT event_id FROM stripe_events WHERE event_id=?").bind(event.id).first();
-  if(recorded)return NextResponse.json({received:true,duplicate:true});
+  /*
+    CLAIM THE EVENT BEFORE DOING ANY OF ITS WORK.
+
+    This was a SELECT followed, at the very end, by the INSERT that recorded
+    the event as handled. Between those two points sat every effect — and
+    Stripe retries on timeout without knowing the first delivery is still in
+    flight. Two deliveries of one event both found no receipt, both proceeded,
+    and the member was emailed twice. The database still looked correct
+    afterwards, because the writes are ON CONFLICT DO UPDATE and the second
+    receipt was INSERT OR IGNORE: the final shape was right, and the effect
+    had happened twice. Measured, before this changed: two simultaneous
+    deliveries produced two trial-reminder emails and left an orphaned Resend
+    id that nothing could cancel.
+
+    INSERT OR IGNORE on the primary key is a compare-and-swap. Exactly one
+    caller gets changes === 1; everyone else is the duplicate and stops here.
+  */
+  const claim=await db.prepare("INSERT OR IGNORE INTO stripe_events (event_id,event_type) VALUES (?,?)")
+    .bind(event.id,event.type).run() as {meta?:{changes?:number}};
+  if(!claim?.meta?.changes)return NextResponse.json({received:true,duplicate:true});
   const changes:D1PreparedStatement[]=[];
   if(event.type==="checkout.session.completed"){
     const userId=object.client_reference_id||object.metadata?.user_id,customer=object.customer;
@@ -39,10 +57,24 @@ export async function POST(request:Request){
       changes.push(db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,'trial') ON CONFLICT(user_id) DO UPDATE SET plan_key='trial',updated_at=CURRENT_TIMESTAMP").bind(userId));
     }else if(["active","past_due"].includes(object.status||""))changes.push(db.prepare("INSERT INTO account_plans (user_id,plan_key) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET plan_key=excluded.plan_key,updated_at=CURRENT_TIMESTAMP").bind(userId,entitlement));
   }
-  // D1 batch is transactional: an event is acknowledged only when all access
-  // changes commit. A failed write rolls back its receipt, allowing Stripe's retry.
-  changes.push(db.prepare("INSERT OR IGNORE INTO stripe_events (event_id,event_type) VALUES (?,?)").bind(event.id,event.type));
-  await db.batch(changes);
+  /*
+    The receipt was claimed before any of this ran, so it can no longer be
+    rolled back by the batch failing — it is not in the batch any more. If the
+    access changes do not commit, the claim has to be released by hand, or the
+    event is marked handled while nothing happened and Stripe's retry is
+    turned away as a duplicate.
+
+    Releasing is best-effort on purpose: if the release itself fails, the
+    original failure is still what gets raised, because that is the one that
+    explains the outcome.
+  */
+  try {
+    await db.batch(changes);
+  } catch (error) {
+    await db.prepare("DELETE FROM stripe_events WHERE event_id=?").bind(event.id).run()
+      .catch(() => {});
+    throw error;
+  }
   if(subscriptionEvent){
     if(object.status==="trialing"&&object.trial_end&&!cancellationScheduled){
       const existing=await db.prepare("SELECT resend_email_id FROM trial_reminder_emails WHERE user_id=? AND canceled_at IS NULL").bind(userId).first<{resend_email_id:string}>();
