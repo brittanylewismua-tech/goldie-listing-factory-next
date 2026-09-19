@@ -130,6 +130,17 @@ rewrote every D-number in the file's prose), push, then verify
 
 # KNOWN-OPEN, and why
 
+- **Upload type is declared, not sniffed.** The member-facing photo path
+  checks the response's `content-type` rather than reading magic bytes. Size
+  (20MB per photo, 90MB per set) and per-member R2 key prefixes are enforced,
+  and every consumer is a provider API that rejects a non-image anyway, so
+  this is a hardening rather than a hole. Sniffing the first bytes would close
+  it properly.
+- **Sixteen provider-image fetches still bypass `fetchTrustedImage`.** The
+  shared guard exists and is applied to artwork capture and photo delivery.
+  The rest are owner-only diagnostics and internal ticks fetching Etsy or
+  Printify URLs; none is member-controlled. Worth finishing, not urgent.
+
 - **CSP `script-src` is not set.** D1715 shipped the headers that cannot break
   a working page — frame-ancestors, object-src, base-uri, form-action, nosniff,
   Referrer-Policy, Permissions-Policy, HSTS, COOP. A real `script-src` needs a
