@@ -125,6 +125,9 @@ export const DELETION_PLAN: PlanStep[] = [
   { table: "shop_map_auth_targets", disposition: "delete",
     sql: `DELETE FROM shop_map_auth_targets WHERE user_id = ?`,
     say: "Which of your shops Shop Map was reading." },
+  { table: "request_limits", disposition: "delete",
+    sql: `DELETE FROM request_limits WHERE user_id = ?`,
+    say: "The short-lived counters that pace how often the app calls out for you." },
 
   { table: "finance_shop_settings", disposition: "delete",
     sql: `DELETE FROM finance_shop_settings WHERE user_id = ?`,

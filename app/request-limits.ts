@@ -37,6 +37,9 @@ export function ensureRequestLimits(db: LimitDb): Promise<void> {
       `CREATE TABLE IF NOT EXISTS request_limits (
          surface TEXT NOT NULL, identity TEXT NOT NULL, window_key TEXT NOT NULL,
          count INTEGER NOT NULL DEFAULT 0,
+         /* The member, when there is one, so their counters go when they do.
+            NULL for anonymous callers, who have no account to delete. */
+         user_id TEXT,
          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
          PRIMARY KEY (surface, identity, window_key))`).bind().run();
   })().catch(error => { ensured = null; throw error; });
@@ -87,11 +90,12 @@ export async function consume(
   try {
     await ensureRequestLimits(db);
     await db.prepare(
-      `INSERT INTO request_limits (surface, identity, window_key, count, updated_at)
-         VALUES (?, ?, ?, 1, datetime('now'))
+      `INSERT INTO request_limits (surface, identity, window_key, count, user_id, updated_at)
+         VALUES (?, ?, ?, 1, ?, datetime('now'))
        ON CONFLICT(surface, identity, window_key)
          DO UPDATE SET count = count + 1, updated_at = datetime('now')`)
-      .bind(surface, identity, key).run();
+      .bind(surface, identity, key,
+        identity.startsWith("u:") ? identity.slice(2) : null).run();
     const row = await db.prepare(
       `SELECT count AS n FROM request_limits
         WHERE surface = ? AND identity = ? AND window_key = ?`)
