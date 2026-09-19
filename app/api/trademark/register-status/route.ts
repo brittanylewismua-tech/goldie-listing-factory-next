@@ -133,7 +133,10 @@ export const POST = withErrorLog("trademark-register-requeue", async (request: R
   await db.prepare(
     `UPDATE tm_ingest_files
         SET state = 'waiting', done_records = 0, kept = 0, note = '',
-            retry_after = NULL, strikes = 0, repeats = 0
+            retry_after = NULL, strikes = 0, repeats = 0,
+            /* Cleared with the rest: a start time left over from the previous
+               pass makes the stall check measure from a run that is over. */
+            started = NULL, finished = NULL
       WHERE state = 'done'`).run();
 
   return NextResponse.json({
