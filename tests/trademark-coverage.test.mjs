@@ -153,11 +153,11 @@ async function realLookup() {
   return mod.lookup;
 }
 
-const fakeDb = stored => ({ prepare: () => ({ bind: (normalized, prefix, squeezed) => ({
+const fakeDb = stored => ({ prepare: () => ({ bind: (normalized, prefix, squeezed, firstWord) => ({
   all: async () => ({ results: stored.filter(row =>
     row.normalized === normalized
     || row.normalized.startsWith(String(prefix).replace(/%$/, ''))
-    || normalized.startsWith(row.normalized + ' ')
+    || row.normalized === firstWord
     || row.squeezed === squeezed) }),
 }) }) });
 
@@ -184,4 +184,33 @@ test('squeezing does not invent a containment hit', async () => {
   assert.equal((await lookup(db, 'heart')).length, 0,
     'ART was reported as sitting inside HEART');
   assert.equal((await lookup(db, 'art')).length, 1);
+});
+
+test('no lookup pattern is ever built from a column', () => {
+  /*
+    The defect this guards: `?1 LIKE normalized || ' %'` built its LIKE pattern
+    out of stored data, so the pattern's complexity grew with the table. Past a
+    couple of hundred thousand marks D1 answered "LIKE or GLOB pattern too
+    complex" for EVERY lookup, and the caller's bare catch turned that into
+    "no match was found". The register half of the checker was dead while it
+    reported clean results.
+  */
+  const register = readFileSync(new URL('../app/trademark-register.ts', import.meta.url), 'utf8');
+  const sql = register.replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.equal(/LIKE\s+\w+\s*\|\|/.test(sql), false,
+    'a LIKE pattern is being concatenated from a column again');
+  assert.equal(/\?\d\s+LIKE\s+normalized/.test(sql), false,
+    'the phrase is being matched against a column-derived pattern');
+  // The remaining LIKE must take its pattern from a bound parameter.
+  assert.match(sql, /normalized LIKE \?2/);
+});
+
+test('a single-word mark at the head of a phrase is still found', async () => {
+  const lookup = await realLookup();
+  // BLUEY inside "bluey birthday shirt" — the case the removed clause covered.
+  const db = fakeDb([{ mark: 'BLUEY', normalized: 'BLUEY', squeezed: 'BLUEY',
+    owner: 'BBC', serial: '3', registration: 'R4', classes: '025', status_code: 700 }]);
+  const hits = await lookup(db, 'bluey birthday shirt');
+  assert.equal(hits.length, 1, 'a single-word mark heading the phrase was lost');
+  assert.equal(hits[0].mark, 'BLUEY');
 });

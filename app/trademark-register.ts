@@ -221,15 +221,36 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
      test then runs over a handful of rows rather than the whole table. */
   const candidates = await db
     .prepare(
+      /*
+        NO LIKE PATTERN IS EVER BUILT FROM A COLUMN.
+
+        This carried `?1 LIKE normalized || ' %'` to find a mark that is a
+        prefix of the phrase. The pattern there is made from stored data, so
+        its complexity grows with the table — and once the register passed a
+        couple of hundred thousand marks D1 began answering
+
+          LIKE or GLOB pattern too complex: SQLITE_ERROR
+
+        for EVERY lookup. The caller wrapped this in a bare catch, so the
+        failure arrived at the member as "no match was found in the trademark
+        records". The register half of the checker was dead and reporting
+        clean results while it was.
+
+        That clause did one job the others do not: catch a single-word mark
+        equal to the phrase's first word, like BLUEY inside "bluey birthday
+        shirt". An equality test does the same job, uses the index, and has
+        no pattern to overrun. ?2 is still a LIKE, but its pattern comes from
+        a bound parameter of known length, not from the table.
+      */
       `SELECT mark, owner, serial, registration, classes, status_code
          FROM tm_marks
         WHERE normalized = ?1
            OR normalized LIKE ?2
-           OR ?1 LIKE normalized || ' %'
+           OR normalized = ?4
            OR squeezed = ?3
         LIMIT 200`,
     )
-    .bind(normalized, `${words[0]} %`, squeezed)
+    .bind(normalized, `${words[0]} %`, squeezed, words[0])
     .all<{
       mark: string; owner: string; serial: string;
       registration: string; classes: string; status_code: number;
