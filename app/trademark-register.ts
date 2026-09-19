@@ -36,7 +36,6 @@ export async function ensureRegisterTables(db: D1Database): Promise<void> {
       updated TEXT NOT NULL
     )`),
     db.prepare(`CREATE INDEX IF NOT EXISTS tm_marks_normalized ON tm_marks (normalized)`),
-    db.prepare(`CREATE INDEX IF NOT EXISTS tm_marks_squeezed ON tm_marks (squeezed)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS tm_ingest_files (
       name TEXT PRIMARY KEY,
       product TEXT NOT NULL,
@@ -87,6 +86,17 @@ export async function ensureRegisterTables(db: D1Database): Promise<void> {
     const message = error instanceof Error ? error.message : "";
     if (!/duplicate column/i.test(message)) throw error;
   }
+
+  /*
+    INDEXED HERE, NOT IN THE BATCH ABOVE.
+
+    It was in that batch first, and on a live table the column did not exist
+    yet — so the index statement failed, and because the batch is atomic it
+    took every other CREATE with it. The whole route answered 500. An index on
+    a column can only be created after the column is.
+  */
+  await db.prepare(
+    `CREATE INDEX IF NOT EXISTS tm_marks_squeezed ON tm_marks (squeezed)`).run();
 
   /*
     Backfill for rows written before the column existed. Derived in SQL from
