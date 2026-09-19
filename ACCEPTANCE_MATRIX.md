@@ -1,6 +1,6 @@
 # Acceptance ledger
 
-**Build:** D1754 · commit `c87b17d2` · **3,535 tests — 3,523 passing, 0 failing, 12 skipped.**
+**Build:** D1758 · commit `a2bf2993` · **3,558 tests — 3,546 passing, 0 failing, 12 skipped.**
 
 Three labels, used strictly:
 
@@ -93,20 +93,34 @@ wrong: `/api/operations/capacity` reports `settledCost` per workload, and the
 figure is **$0.00068**. Nearly all of the 29,352 `search` calls are the Market
 Watch evidence refresh running on its own schedule, not this sweep.
 
-**The two counters that are genuinely missing, named precisely:**
+**The two counters that were missing — both now closed (D1755).**
 
-1. **Printify has no call ledger at all.** Etsy calls go through
-   `recordEtsyCall`, which writes `etsy_api_usage_buckets (bucket, feature,
-   calls, rate_limited, qpd_limit)` on every response. Printify requests are
-   bare `fetch` calls spread across roughly a dozen modules with no metering
-   table, no feature label and no rate-limit capture. Printify volume therefore
-   cannot be read back from any ledger — the ~12 above is my own enumeration of
-   this session's calls, and nothing in the product could reproduce it.
-2. **`etsyFetch`'s feature label defaults to `"publish"`.** So the 16 calls
-   labelled `publish` in the last 24h are *unlabelled* calls, not publishes —
-   real publishes and ordinary reads made without an explicit feature are
-   indistinguishable in that ledger. `publishedToday: 0` is what proves nothing
-   was published; the `publish` counter does not.
+1. **Printify had no call ledger at all.** Requests went out through bare
+   `fetch` in about thirty modules: no counter, no label, no status. Every
+   Printify request now passes through one wrapper that records feature,
+   method, endpoint category, status, attempt, timestamp and — for
+   member-initiated traffic — whose it was. It records **no** token, request
+   or response body, artwork URL, address or path id: the category is derived
+   from the path and the URL is then discarded. Traffic is separated into
+   `listing-factory`, `connections`, `finance`, `cleanup` and `qa`. Reported at
+   `/api/operations/capacity` under `printify`.
+2. **`etsyFetch` defaulted its feature label to `"publish"`,** so any call made
+   without an explicit label was recorded as publishing — which is how 16
+   ordinary reads sat in the publish bucket on a day when `publishedToday` was
+   0. The label is now a required argument: a call without one does not
+   compile. Every call site is classified, including two new labels
+   (`listings`, `partners`) for reads that previously had nowhere honest to go.
+
+**The measurement boundary is explicit.** The Printify table is created at
+deploy, so metering began at that moment and everything before it is reported
+as `before: "unmeasured"` — never as zero. Nothing was backfilled, and no paid
+or destructive workflow was repeated to populate it.
+
+**Verified live after deploy:** Etsy reads (`shipping`, `partners`) and
+Printify reads (`connections`, `cleanup`) all answered 200 and landed in their
+own buckets; the `publish` count did not move. The Printify ledger read 13
+calls — connections 11, cleanup 2; by category orders 8, shops 3, products 2;
+all 2xx, 0 retries.
 
 ---
 
@@ -151,10 +165,19 @@ minutes after it was made, in an internal window whose other commits
 Factory member route. "canary" is this repo's own word for a synthetic probe —
 `app/api/listing-factory/canary/route.ts`.
 
-**Not removed: the deletion was refused.** Running the guarded member delete
-against this batch was blocked by the sandbox's own approval rule for modifying
-shared resources. The classification is settled; the removal needs one
-approval. Nothing else about it is unresolved.
+**Removed**, on the owner's written authorisation, with the identifiers
+resolved and verified first and the whole operation recorded in
+`docs/DELETION_AUDIT.md`: the batch row through the ordinary guarded member
+delete, and its one exclusively-owned stored object through an owner-only
+removal that refuses any key outside the member's own prefix, refuses anything
+still referenced, and confirms by reading the object back. Afterwards: the
+batch 404s, all 20 remaining batches load, 17 still carry intact product
+templates, and shop totals and accounting are identical before and after.
+
+While doing it, the exclusivity check itself turned out to be unsound — it
+asked `state_json LIKE` and caught the failure into an empty result, so a query
+that never ran was reporting "nothing else references this object". Fixed in
+D1758; the audit record carries the full correction.
 
 ### `case test salt air` / `mug test salt air` — **unresolved; retained as protected member data**
 
@@ -181,7 +204,7 @@ file, handoff, defect log or validation note anywhere in the repository's
 history mentions a mug or phone-case walkthrough, "salt air", or these
 timestamps. There is no deployment or validation record that identifies them.
 
-**Therefore: unresolved, and retained.** They were produced by the ordinary
+**Therefore: unresolved, and retained. Untouched by the deletion above.** They were produced by the ordinary
 member workflow, run to completion, in the live shop, against artwork that is
 not recoverable for inspection. The evidence pointing at "internal" is the file
 naming alone, and naming is not proof — the same reasoning that keeps the
@@ -238,7 +261,7 @@ invented negatives, all 25 served at the current comparison version.
 | Claim | Evidence |
 |---|---|
 | Zero active internal-test products in Printify | sweep `internalTests: []` across 50 products |
-| Zero test batches or drafts shown to the member | no batch matching marker or INTERNAL TEST remains; `canary design` is classified internal and awaiting one approval to delete |
+| Zero test batches or drafts shown to the member | no batch matching marker or INTERNAL TEST remains; `canary design` removed and verified gone (`docs/DELETION_AUDIT.md`) |
 | Zero test overrides | `active: 0`, `reversed: 2`, `orphaned: 0`, `clean: true` |
 | Zero test uploads or mockups | the only mockup was the deleted product's; gone with it |
 | No customer product changed | only the marker-renamed test product was written to |
@@ -251,18 +274,13 @@ invented negatives, all 25 served at the current comparison version.
 
 | Now | Value |
 |---|---|
-| Marks | **341,202** (231,798 at the start, 336,859 at the last report) |
-| Files | 7 done · 3 skipped · **110 waiting** · 0 failed · 0 partial |
-| Recent files | apc260917 → apc260912, one roughly every 20–60 minutes |
-| Lookup | `ok`, 4 hits on the probe; **221–658 ms** measured live |
-| `Hauslabs` (one word) | **risk: high** — "HAUS LABS", Ate My Heart Inc., classes 003 and 021 |
-| `Haus Labs` (spaced) | **identical result** — same owner, same two records |
+| Marks | **360,221** (231,798 at the start) |
+| Files | 9 done · 3 skipped · **108 waiting** · 0 failed |
+| Lookup probe | `ok`, 5 hits |
+| `Hauslabs` / `Haus Labs` | both **risk: high** — HAUS LABS, Ate My Heart Inc., classes 003 and 021 |
 | Serials 97980718 / 97979817 | **still not in the corpus** |
-| `registerReady` | **false**, and both member surfaces say so |
-| Member wording, clean result | "No match was found in the trademark records currently loaded. This is screening information, not legal clearance." — never unqualified |
-| Member wording, register loading | Checker: "The register is still loading, so treat a clean result as incomplete today." · Scanner: "The federal register is still loading, so this is not a complete trademark search yet." |
+| `registerReady` | **false**, and both member surfaces say the register is still loading |
 
-110 files remain, about 37 hours at the current cadence. **The final register
-state, both named serials, the known-mark panel and the final corpus and
-skipped counts remain blocked on that** — the queue is advancing on its own and
-needs no further code.
+The queue is advancing on its own and needs no further code. **The final
+register state, both named serials, the known-mark panel and the final corpus
+and skipped counts remain blocked on it.**

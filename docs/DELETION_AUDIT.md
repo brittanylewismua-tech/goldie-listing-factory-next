@@ -28,11 +28,30 @@ safe to remove, who authorised it, and what was checked afterwards.
 | Child batches | none |
 | Parent batch | none |
 | Template snapshot | `batch-templates/supabase%3A23df14e8-2194-4069-8489-002315a2b0aa/e00e392bd659f670dac9590f0595d6a1f1af50ed323ea4958ad745b663850830.json.gz` |
-| Snapshot shared with | **nothing** (`sharedWith: []`) — exclusive to this batch |
+| Snapshot shared with | **nothing** — exclusive to this batch (see the correction below) |
 
 Resolved before deletion through the owner-only read at
 `GET /api/batches?storage=<id>`, which reports a batch's stored objects and,
 for each, whether any other batch references it.
+
+### A correction, recorded because it nearly mattered
+
+The first exclusivity answer was **not trustworthy, and it looked like it
+was**. That check asked `state_json LIKE '%<sha>%'` and caught any failure
+into an empty array. D1 refuses a LIKE over a saved batch state — they run to
+hundreds of kilobytes, and it answers `LIKE or GLOB pattern too complex` — so
+the query never ran and its failure was reported as `sharedWith: []`: "nothing
+else references this object". A failed query was presenting itself as proof
+that a file was safe to delete.
+
+It surfaced because the removal guard used the same query and refused, and the
+refusal said only that the check had failed. D1758 moved both to `instr()`,
+which has no pattern limit, and made a failed check return its reason instead
+of an empty result. The report now answers `null` — never `[]` — when the
+check could not run.
+
+Exclusivity was then re-established under the working query: the removal below
+proceeded only because the reference check ran and returned no rows.
 
 ### Why it was removed
 
@@ -63,7 +82,12 @@ route. "canary" is this repository's own word for a synthetic probe —
    Answered `{"deleted": true}`.
 2. `DELETE /api/batches?orphanTemplate=<key>` — owner-only, refuses any key
    outside the member's own prefix, refuses any object still referenced by a
-   remaining batch, and confirms removal by reading the object back.
+   remaining batch, and confirms removal by reading the object back. Answered
+   `{"removed": true, "existed": true, "confirmedGone": true}`.
+   - A key under another member's prefix was refused first, as a check on the
+     guard itself: *"That key is not a batch template belonging to you."*
+   - Run a second time: *"No such object; nothing to remove."* — idempotent,
+     not an error.
 
 ### What was verified afterwards
 
@@ -74,6 +98,8 @@ route. "canary" is this repository's own word for a synthetic probe —
 | Nothing created | the row that newly appeared in the 20-row page is `3603c7b0-…`, created 2026-09-09, untouched — it moved into view when the deleted row left |
 | Shop totals | listings 293 · active 83 · orders 3,737 · revenue 9,232,421 · reviews 607 — **identical before and after** |
 | Accounting | drafts 200 · mockup sets 9 · publishedToday 0 · publishing 0 — **identical before and after** |
+| The stored object | `DELETE` again → `existed: false`; the batch's template snapshot is gone |
+| Every other stored template | 17 of the 20 remaining batches still carry an intact product template; the 3 without one never had one |
 | Printify | no product existed, none was touched |
 | Etsy | no listing existed, no Etsy call was made |
 

@@ -1,13 +1,13 @@
 # Functionality ledger
 
-**Build:** D1754 · commit `c87b17d2`.
+**Build:** D1758 · commit `a2bf2993`.
 Live commit matched the local tree at every check.
 
 > D1733 was recorded as the final functional build. It is not: the acceptance
 > sweep that followed found seventeen further defects, several of them
 > member-visible and one of them a security-grade false clean result. See
 > ACCEPTANCE_MATRIX.md for what was walked and how.
-**Suite:** 3,535 tests — **3,523 passing, 0 failing, 12 skipped.**
+**Suite:** 3,558 tests — **3,546 passing, 0 failing, 12 skipped.**
 **Presentation:** frozen. No visual work in this pass.
 
 ---
