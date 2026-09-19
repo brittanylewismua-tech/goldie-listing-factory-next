@@ -1,3 +1,5 @@
+import { reportCeilingReached } from "@/app/log-scrubbing";
+import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { logError } from "@/app/error-log";
 
@@ -15,6 +17,15 @@ import { logError } from "@/app/error-log";
  * error so a noisy policy cannot bury a real failure.
  */
 export async function POST(request: Request) {
+  /*
+    D1724 · Anyone can post here — the browser will not send a session with a
+    violation report. So the volume is bounded before the write, or the log a
+    member's broken publish lives in can be buried by a script.
+  */
+  const db = (env as unknown as { DB?: { prepare: (sql: string) => { bind: (...v: unknown[]) => { first: <T>() => Promise<T | null> } } } }).DB;
+  if (db && await reportCeilingReached(db, "csp-report"))
+    return new NextResponse(null, { status: 204 });
+
   const body = await request.json().catch(() => null) as
     { "csp-report"?: Record<string, unknown> } | Record<string, unknown> | null;
   const report = (body && typeof body === "object"

@@ -82,3 +82,45 @@ test("scrubbing is applied to every free-text column, not just the message", asy
   assert.equal((insert.match(/scrubSecrets/g) || []).length >= 2, true,
     "url and context must be scrubbed as well as the message");
 });
+
+/* ------------------------------------------- what an open endpoint may write */
+
+const { reportCeilingReached, REPORTS_PER_HOUR } =
+  await import(join(dir, "log-scrubbing.js"));
+
+const counter = (n) => ({
+  prepare: () => ({ bind: () => ({ first: async () => (n === null ? null : { n }) }) }),
+});
+
+test("an open report endpoint stops writing once the hour is full", async () => {
+  /*
+    Two endpoints take a report from an unauthenticated browser and write it
+    to the same table a member's broken publish lands in. A script posting in
+    a loop could bury every real failure under noise.
+  */
+  assert.equal(await reportCeilingReached(counter(0), "csp-report"), false);
+  assert.equal(await reportCeilingReached(counter(REPORTS_PER_HOUR - 1), "csp-report"), false);
+  assert.equal(await reportCeilingReached(counter(REPORTS_PER_HOUR), "csp-report"), true);
+  assert.equal(await reportCeilingReached(counter(REPORTS_PER_HOUR * 10), "csp-report"), true);
+});
+
+test("a counter that cannot be read does not silence real reports", async () => {
+  /* Failing closed here would mean one broken query hides every error the
+     product is trying to tell us about. */
+  assert.equal(await reportCeilingReached(counter(null), "csp-report"), false);
+  const throws = { prepare: () => ({ bind: () => ({ first: async () => { throw new Error("no table"); } }) }) };
+  assert.equal(await reportCeilingReached(throws, "csp-report"), false);
+});
+
+test("the ceiling is per area, so one noisy source cannot mute another", async () => {
+  /* The count is taken for the area being written, not for the table. */
+  const seen = [];
+  const db = { prepare: (sql) => { seen.push(sql); return { bind: (...v) => { seen.push(v[0]); return { first: async () => ({ n: 0 }) }; } }; } };
+  await reportCeilingReached(db, "browser/");
+  /*
+    Bound as a prefix: /api/client-errors records `browser/<kind>`, so a
+    ceiling on the literal area would have counted a value never written.
+  */
+  assert.ok(seen.some(x => x === "browser/%"), "the area prefix must reach the count");
+  assert.ok(seen.some(x => typeof x === "string" && /area LIKE \?/.test(x)));
+});

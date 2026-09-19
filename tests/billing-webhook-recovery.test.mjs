@@ -60,3 +60,34 @@ test('real Stripe flexible trial cancellation records end date and cancels the r
     assert.ok(h.sqlite.prepare('SELECT canceled_at FROM trial_reminder_emails').get().canceled_at);
   }finally{h.sqlite.close();}
 });
+
+test('D1724: two deliveries of the same event at once produce one business effect',async()=>{
+  /*
+    Sequential replay is covered above by the receipt check. Concurrent
+    delivery is the case that check cannot catch: both requests read
+    stripe_events before either has written to it, so both find nothing and
+    both proceed. What holds then is not the receipt but the shape of every
+    write — each one is an upsert, so applying the event twice lands on the
+    same state rather than a doubled one.
+
+    This asserts that property rather than assuming it.
+  */
+  const h=await fixture();
+  try{
+    const [a,b]=await Promise.all([
+      h.post(await request(subscription)),
+      h.post(await request(subscription)),
+    ]);
+    assert.ok(a.status===200&&b.status===200,'both deliveries must be acknowledged');
+    /* One row per user, whichever order they landed in. */
+    assert.equal(h.sqlite.prepare('SELECT count(*) n FROM account_plans').get().n,1,
+      'the plan must not be applied twice');
+    assert.equal(h.sqlite.prepare('SELECT count(*) n FROM billing_subscriptions').get().n,1,
+      'the subscription must not be doubled');
+    assert.equal(h.sqlite.prepare('SELECT count(*) n FROM stripe_events').get().n,1,
+      'the receipt is one per event id');
+    /* And a third, later delivery is still refused by the receipt. */
+    const third=await h.post(await request(subscription));
+    assert.equal(third.body.duplicate,true);
+  }finally{h.close?.()}
+});

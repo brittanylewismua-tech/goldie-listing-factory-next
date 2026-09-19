@@ -1,3 +1,5 @@
+import { reportCeilingReached } from "@/app/log-scrubbing";
+import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { logError } from "@/app/error-log";
@@ -24,6 +26,11 @@ export async function POST(request: Request) {
      actually experiences, so it belongs in the same log as everything else, with
      their name against it. Identity is read here rather than trusted from the
      body, which is why the beacon does not send it. */
+  /* D1724 · Unauthenticated by necessity, so bounded before the write. */
+  const db = (env as unknown as { DB?: { prepare: (sql: string) => { bind: (...v: unknown[]) => { first: <T>() => Promise<T | null> } } } }).DB;
+  if (db && await reportCeilingReached(db, "browser/"))
+    return NextResponse.json({ received: true });
+
   const user = await getChatGPTUser().catch(() => null);
   await logError({
     area: `browser/${safe.kind}`,
