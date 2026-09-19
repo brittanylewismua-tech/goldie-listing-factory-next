@@ -1,8 +1,12 @@
 # Functionality ledger
 
-**Build:** D1733 · commit `9940d091` — **the final functional build.** The
-repo is frozen here for the approved Sites reskin.
+**Build:** D1750 · commit `855e411d`.
 Live commit matched the local tree at every check.
+
+> D1733 was recorded as the final functional build. It is not: the acceptance
+> sweep that followed found seventeen further defects, several of them
+> member-visible and one of them a security-grade false clean result. See
+> ACCEPTANCE_MATRIX.md for what was walked and how.
 **Suite:** 3,466 tests — **3,454 passing, 0 failing, 12 skipped.**
 **Presentation:** frozen. No visual work in this pass.
 
