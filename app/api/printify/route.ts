@@ -1,4 +1,4 @@
-import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
+import { clearRejection, noteRejection } from "@/app/connection-cleanup";
 import { storeWarning } from "@/app/printify-store-warning";
 import { env } from "cloudflare:workers";
 import { DELETE_UNUSED_TEMPLATE_SESSIONS } from "./retention";
@@ -132,22 +132,39 @@ function productIdFromUrl(value: string) {
   return /^[a-f0-9]{20,32}$/i.test(bare) ? bare : "";
 }
 
-export async function GET(request: Request) {
-  if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
+/*
+  D1717 · THIS CHECK USED TO DELETE THE TOKEN IT WAS CHECKING.
+
+  It runs on page load. When Printify answered 401 or 403 it deleted the
+  stored connection right there, which made a GET mutate a connection record
+  and — worse — treated one bad answer as proof. A 401 is also what a
+  provider returns during an outage, a partial deploy, or a bad minute, and
+  any of those would have destroyed a working token and sent the member off
+  to reconnect for nothing.
+
+  The check is a read now. A refusal is RECORDED and the worker decides
+  later, once the provider has said the same thing twice with real time in
+  between. A credential that starts working again clears its own report.
+*/
+export async function GET() {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to continue." }, { status: 401 });
   try {
     const token = await storedToken(user.userId);
     if (!token) return NextResponse.json({ connected: false, owner: isOwner(user) });
     await printify<Shop[]>("/shops.json", token);
+    await clearRejection(user.userId, "printify", runtimeEnv().DB!);
     return NextResponse.json({ connected: true, owner: isOwner(user) });
   } catch (error) {
     if (error instanceof PrintifyApiError && (error.status === 401 || error.status === 403)) {
-      const db = runtimeEnv().DB;
-      await db?.prepare("DELETE FROM printify_connections WHERE user_id = ?").bind(user.userId).run().catch(() => undefined);
+      await noteRejection(user.userId, "printify",
+        error.status === 401 ? "unauthorized" : "forbidden", runtimeEnv().DB!);
       return NextResponse.json({ connected: false, owner: isOwner(user), reason: "Your saved Printify token expired or was revoked. Connect a new token." });
     }
     if (error instanceof Error && /decrypt|encrypted|token storage/i.test(error.message)) {
+      /* A token we cannot read is its own kind of dead, but it is still only
+         reported — the worker confirms it like any other. */
+      await noteRejection(user.userId, "printify", "unreadable-token", runtimeEnv().DB!);
       return NextResponse.json({ connected: false, owner: isOwner(user), reason: "Your saved Printify connection could not be read safely. Disconnect it and connect a new token." });
     }
     return NextResponse.json({ connected: true, owner: isOwner(user), warning: error instanceof Error ? error.message : "Printify is temporarily unavailable." });

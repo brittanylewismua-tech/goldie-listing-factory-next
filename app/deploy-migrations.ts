@@ -26,6 +26,7 @@
  * runs it — so each `ensure*` uses IF NOT EXISTS and tolerates a duplicate
  * column error and nothing else.
  */
+import { ensureCleanupQueue } from "@/app/connection-cleanup";
 import { env } from "cloudflare:workers";
 import { ensureErrorLog } from "@/app/error-log";
 import { ensureBillingTables } from "@/app/billing";
@@ -120,6 +121,7 @@ export const MIGRATIONS: Step[] = [
   { name: "finance", run: ensureFinanceTables },
 
   { name: "trademark_register", run: () => ensureRegisterTables(database()) },
+  { name: "connection_cleanup_queue", run: () => ensureCleanupQueue(database()) },
 ];
 
 export type Outcome = {

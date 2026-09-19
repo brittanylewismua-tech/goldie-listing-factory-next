@@ -168,6 +168,14 @@ export default {
     */
     run("/api/operations/evidence-tick");
     /*
+      D1717 · Reports of a refused credential arrive from the read paths,
+      which never act on them. This is the only place a connection is
+      retired, and it asks the provider once more itself before doing it — so
+      an outage that produced the refusals cannot cost a member a working
+      token.
+    */
+    run("/api/operations/connection-cleanup-tick");
+    /*
       Whole-shop enumeration is NOT on the clock. The estimate killed it as a
       production path — a median of 695 listings per shop and one with 11,202
       and for the modified-order experiment; nothing schedules it.
