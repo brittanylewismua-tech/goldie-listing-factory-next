@@ -555,11 +555,27 @@ test("a real design mentioning shipping in passing still qualifies", () => {
 });
 
 test("the opportunity is never blank, and never invents a criticism", () => {
-  const perfect = compare(ingredients(), cohort(20));
+  /*
+    D1751 · "Everything matched" now requires a measurement to say so. Without
+    one, the honest top line is that readability could not be measured — which
+    is a fact about the file, not a criticism of the design. The measured-pass
+    case is what this test was always describing.
+  */
+  const measured = { contrast: "pass", tonalRange: "pass", sharpness: "pass",
+    thumbnailReadable: "pass", emptiness: "pass", notes: [],
+    mayClaimReadable: true, mayClaimHighContrast: true };
+  const perfect = compare(ingredients(), cohort(20), { measured });
   assert.ok(perfect.opportunity.length > 0, "an empty opportunity block");
   assert.match(perfect.opportunity, /No clear visual-construction issue surfaced/);
   for (const banned of ["will sell", "bestseller", "guaranteed"])
     assert.ok(!perfect.opportunity.toLowerCase().includes(banned));
+
+  /* Unmeasured: still not blank, still not a criticism, and truthful. */
+  const unmeasured = compare(ingredients(), cohort(20));
+  assert.ok(unmeasured.opportunity.length > 0);
+  assert.match(unmeasured.opportunity, /could not be measured/);
+  for (const banned of ["will sell", "bestseller", "guaranteed"])
+    assert.ok(!unmeasured.opportunity.toLowerCase().includes(banned));
 });
 
 test("the article agrees with the word after it", () => {

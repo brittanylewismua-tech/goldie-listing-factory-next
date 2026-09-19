@@ -105,18 +105,40 @@ export function compare(
   */
   const readable = cohort.filter(row => row.thumbnailReadability === "readable").length
     / cohort.length;
-  const measuredBlocksReadable = measured ? !measured.mayClaimReadable : false;
-  const measuredUnverified = measured
-    ? measured.thumbnailReadable === "unverified" : false;
-  if (design.thumbnailReadability === "readable" && readable >= SHARED
-      && !measuredBlocksReadable && !measuredUnverified)
+
+  /*
+    NO MEASUREMENT AND A FAILED MEASUREMENT ARE THE SAME ANSWER: SAY NOTHING.
+
+    `measuredUnverified` only looked inside a verdict that existed. When the
+    decode failed there was no verdict at all, so it was false, and the
+    model's opinion walked straight through the gate — the live result told a
+    member "It stays readable at thumbnail size" on the same screen as "this
+    design's readability has not been measured". The comment at the decode
+    said "unverified is the honest answer; it blocks the claim". It did not.
+
+    Three states, and only three:
+      pass       measured, and the measurement permits the claim
+      fail       measured, and the measurement refuses it
+      unknown    no measurement, or one that could not decide
+
+    A positive claim needs `pass`. A warning needs `fail`. `unknown` says
+    only that it is unknown. The model never decides this on its own.
+  */
+  const quality: "pass" | "fail" | "unknown" =
+    !measured || measured.thumbnailReadable === "unverified" ? "unknown"
+    : measured.mayClaimReadable ? "pass"
+    : "fail";
+
+  if (quality === "pass"
+      && design.thumbnailReadability === "readable" && readable >= SHARED)
     working.push("It stays readable at thumbnail size, like the listings that are moving.");
-  else if (measuredUnverified)
-    gaps.push({ weight: 2, say: "Readability at thumbnail size could not be verified, so "
-      + "thumbnail size, so treat the comparison below as being about its construction." });
-  else if (design.thumbnailReadability !== "readable" || measuredBlocksReadable)
+  else if (quality === "fail")
     gaps.push({ weight: 5, say: "It gets hard to read at thumbnail size. That is where "
       + "buyers see it first, and it is the single biggest thing to fix here." });
+  else if (quality === "unknown")
+    gaps.push({ weight: 2, say: "Readability at thumbnail size could not be measured "
+      + "from this file, so nothing below is a claim about how it reads — treat the "
+      + "comparison as being about construction." });
 
   /* Wording length: a strategy, not a phrase. */
   const words = median(cohort.map(row => row.wordCount));
@@ -139,14 +161,26 @@ export function compare(
     working.push("It fills the print area about as much as the listings that are moving.");
 
   const contrast = commonest(cohort.map(row => row.contrast));
-  /* Same rule as readability: a measured contrast failure blocks the claim,
-     whatever the model called it. "Its contrast matches the high look that is
-     doing well here" was said about a design that was very nearly invisible. */
-  if (contrast && contrast.share >= SHARED && design.contrast === contrast.value
-      && (!measured || measured.mayClaimHighContrast))
+  /*
+    THE SAME THREE STATES, AND THE SAME HOLE THAT WAS IN READABILITY.
+
+    This read `!measured || measured.mayClaimHighContrast`, so having no
+    measurement PERMITTED the claim rather than withholding it. Live, that
+    printed "Its contrast matches the high look that is doing well here" on a
+    design whose contrast had never been measured — beside a panel saying so.
+
+    An unmeasured design gets no contrast claim in either direction.
+  */
+  const contrastQuality: "pass" | "fail" | "unknown" =
+    !measured || measured.contrast === "unverified" ? "unknown"
+    : measured.mayClaimHighContrast ? "pass"
+    : "fail";
+
+  if (contrastQuality === "pass"
+      && contrast && contrast.share >= SHARED && design.contrast === contrast.value)
     working.push(`Its contrast matches the ${contrast.value} look that is doing well here.`);
-  else if (measured && measured.contrast === "fail")
-    gaps.push({ weight: 5, say: measured.notes.find(note => note.includes("read easily"))
+  else if (contrastQuality === "fail")
+    gaps.push({ weight: 5, say: measured?.notes.find(note => note.includes("read easily"))
       ?? "The light and dark areas in this design are too close together to read easily." });
 
   gaps.sort((a, b) => b.weight - a.weight);
