@@ -19,6 +19,7 @@
  */
 import { fetchTrustedImage, ImageTooLarge } from "@/app/trusted-image-fetch";
 import { env } from "cloudflare:workers";
+import { printifyCall } from "./printify-call.ts";
 
 const db = () => (env as unknown as { DB: D1Database }).DB;
 const bucket = () => (env as unknown as { ARTWORK: R2Bucket }).ARTWORK;
@@ -135,12 +136,12 @@ export async function captureProductArtwork(
   const base: Capture = { captured: false, outcome: "error", reason: because, productId };
 
   try {
-    const response = await fetch(
+    const response = await printifyCall(
       `https://api.printify.com/v1/shops/${shopId}/products/${productId}.json`,
       {
         headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
         signal: AbortSignal.timeout(20_000),
-      });
+      }, { feature: "qa", userId });
     if (!response.ok)
       return { ...base, outcome: "product-unavailable", note: `Printify answered ${response.status}` };
     const product = await response.json() as PrintifyProduct;

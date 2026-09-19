@@ -6,6 +6,7 @@ import { env } from "cloudflare:workers";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { decodeTinyPng } from "@/app/artwork-fingerprint";
 import { printRegion, compareRegions, type Region } from "@/app/artwork-region";
+import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * A BENCHMARK WITH A KNOWN ANSWER.
@@ -122,10 +123,10 @@ export const GET = withErrorLog("shop-map-benchmark-printify", async (request: R
   const productTypes = new Map<string, number>();
   let productsUnavailable = 0;
   for (const design of designs) {
-    const response = await fetch(
+    const response = await printifyCall(
       `https://api.printify.com/v1/shops/${shopId}/products/${design.productId}.json`,
       { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
-        signal: AbortSignal.timeout(20_000) });
+        signal: AbortSignal.timeout(20_000) }, { feature: "qa", userId: user.userId });
     if (!response.ok) { productsUnavailable += 1; continue; }
     const product = await response.json() as {
       blueprint_id?: number;

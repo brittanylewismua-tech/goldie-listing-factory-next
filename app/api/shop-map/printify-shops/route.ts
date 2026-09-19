@@ -4,6 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
+import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * WHICH PRINTIFY SHOP IS THE ETSY ONE?
@@ -33,9 +34,9 @@ export const GET = withErrorLog("shop-map-printify-shops", async () => {
     (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
   const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
   const call = async (path: string) => {
-    const response = await fetch(`https://api.printify.com/v1${path}`, {
+    const response = await printifyCall(`https://api.printify.com/v1${path}`, {
       headers, signal: AbortSignal.timeout(20_000),
-    });
+    }, { feature: "connections", userId: user.userId });
     if (!response.ok) return { ok: false, status: response.status, body: null as unknown };
     return { ok: true, status: 200, body: await response.json() as unknown };
   };

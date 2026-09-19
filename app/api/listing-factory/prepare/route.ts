@@ -17,6 +17,7 @@ import { check, withRegister, registerIsReady, toMatches } from "@/app/trademark
 import { lookup, normalize, registerSize, squeeze } from "@/app/trademark-register";
 import { env } from "cloudflare:workers";
 import { isOwner } from "@/app/mastermind/access";
+import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * THE LAYERED FLOW, IN PRODUCTION, UP TO THE ETSY WRITE.
@@ -437,8 +438,9 @@ async function printifyPreflight() {
   const token = await decryptPrintifyToken(connection.encrypted_token, runtime.PRINTIFY_TOKEN_KEY);
   const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
 
-  const shopsResponse = await fetch("https://api.printify.com/v1/shops.json",
-    { headers, signal: AbortSignal.timeout(15_000) });
+  const shopsResponse = await printifyCall("https://api.printify.com/v1/shops.json",
+    { headers, signal: AbortSignal.timeout(15_000) },
+    { feature: "cleanup", userId: user.userId });
   const shops = shopsResponse.ok
     ? await shopsResponse.json() as Array<{ id: number; title: string; sales_channel?: string }> : [];
   const shop = shops[0];
@@ -447,9 +449,10 @@ async function printifyPreflight() {
   const absent = "0".repeat(24);
   let deleteStatus = 0;
   if (shop) {
-    const attempt = await fetch(
+    const attempt = await printifyCall(
       `https://api.printify.com/v1/shops/${shop.id}/products/${absent}.json`,
-      { method: "DELETE", headers, signal: AbortSignal.timeout(15_000) });
+      { method: "DELETE", headers, signal: AbortSignal.timeout(15_000) },
+      { feature: "cleanup", userId: user.userId });
     deleteStatus = attempt.status;
   }
 
@@ -502,7 +505,8 @@ async function printifyProduct(shopId: string, productId: string, remove: boolea
   const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
   const url = `https://api.printify.com/v1/shops/${shopId}/products/${productId}.json`;
 
-  const readResponse = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+  const readResponse = await printifyCall(url, { headers, signal: AbortSignal.timeout(15_000) },
+    { feature: "cleanup", userId: user.userId });
   if (readResponse.status === 404)
     return NextResponse.json({ productId, exists: false,
       note: "Printify has no product with this id in this shop." });
@@ -528,10 +532,11 @@ async function printifyProduct(shopId: string, productId: string, remove: boolea
       error: `Refused: this route only removes products carrying ${INTERNAL_VALIDATION_MARKER}.`,
       title: product.title }, { status: 409 });
 
-  const deleteResponse = await fetch(url, { method: "DELETE", headers,
-    signal: AbortSignal.timeout(15_000) });
+  const deleteResponse = await printifyCall(url, { method: "DELETE", headers,
+    signal: AbortSignal.timeout(15_000) }, { feature: "cleanup", userId: user.userId });
   /* Confirm by reading again rather than trusting the delete's own answer. */
-  const confirm = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+  const confirm = await printifyCall(url, { headers, signal: AbortSignal.timeout(15_000) },
+    { feature: "cleanup", userId: user.userId });
   return NextResponse.json({ productId, title: product.title,
     deleteStatus: deleteResponse.status,
     confirmedGone: confirm.status === 404,
@@ -567,9 +572,10 @@ async function findInternalTestProducts(shopId: string) {
   const token = await decryptPrintifyToken(connection.encrypted_token, runtime.PRINTIFY_TOKEN_KEY);
   const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
 
-  const response = await fetch(
+  const response = await printifyCall(
     `https://api.printify.com/v1/shops/${shopId}/products.json?limit=50`,
-    { headers, signal: AbortSignal.timeout(20_000) });
+    { headers, signal: AbortSignal.timeout(20_000) },
+    { feature: "cleanup", userId: user.userId });
   if (!response.ok)
     return NextResponse.json({ error: `Printify answered ${response.status}.` }, { status: 502 });
   const page = await response.json() as

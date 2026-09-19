@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { isOwner } from "@/app/mastermind/access";
 import { bundleHistoryIdentity } from "@/app/batch-history-identity";
 import { APPLY_BUNDLE_KEYWORD_BANK } from "@/app/bundle-keyword-bank";
 import { RENAME_BATCH } from "@/app/batch-display-name";
@@ -161,7 +162,60 @@ function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknow
     resume_batch_id:resumeInto};
 }
 
-export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const url=new URL(request.url),id=url.searchParams.get("id");if(id){const row=await database.prepare("SELECT * FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).first<Record<string,unknown>>();if(!row)return NextResponse.json({error:"That batch was not found."},{status:404});let state=await unpackBatchSnapshot(JSON.parse(String(row.state_json||"{}")),user.userId,(env as unknown as RuntimeEnv).ARTWORK) as BatchListState;
+/**
+ * WHAT ONE BATCH ACTUALLY OWNS, BEFORE ANYBODY DELETES IT.
+ *
+ * Read only, owner only. Deleting a batch row is easy; knowing which stored
+ * objects went with it and which are shared with a batch that is staying is
+ * the part that has to be checked first. A product template snapshot is
+ * content-addressed, so two batches built from the same saved product point at
+ * the same object — removing it with one of them would quietly break the
+ * other. This answers, per pointer, whether anything else references it.
+ */
+async function batchStorage(database:D1Database,userId:string,id:string){
+  const row=await database.prepare("SELECT id,user_id,status,step,created_at,updated_at,revision,parent_batch_id,state_json FROM listing_batches WHERE id=? AND user_id=?")
+    .bind(id,userId).first<Record<string,unknown>>();
+  if(!row)return {found:false,batchId:id};
+  let state:Record<string,unknown>={};
+  try{state=JSON.parse(String(row.state_json||"{}")) as Record<string,unknown>}catch{/* reported as unreadable below */}
+  const template=state._templateDetails as {key?:string;sha256?:string}|undefined;
+  const drafts=(Array.isArray(state.drafts)?state.drafts:[]) as Array<Record<string,unknown>>;
+  const designs=(Array.isArray(state.designs)?state.designs:[]) as Array<Record<string,unknown>>;
+
+  /* A pointer is exclusive only when no other row of this member's mentions
+     it. The comparison is on the stored key, which is what R2 is asked for. */
+  const shares=async(needle:string)=>{
+    if(!needle)return [];
+    const rows=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND id<>? AND state_json LIKE ?")
+      .bind(userId,id,`%${needle}%`).all<{id:string}>().catch(()=>({results:[]}));
+    return (rows.results??[]).map(entry=>entry.id);
+  };
+  const children=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND parent_batch_id=?")
+    .bind(userId,id).all<{id:string}>().catch(()=>({results:[]}));
+
+  return {
+    found:true,batchId:id,
+    row:{status:row.status,step:row.step,createdAt:row.created_at,updatedAt:row.updated_at,
+      revision:row.revision,parentBatchId:row.parent_batch_id},
+    children:(children.results??[]).map(entry=>entry.id),
+    designs:designs.map(design=>({id:design.id,name:design.name,
+      contentHash:design.contentHash,width:design.width,height:design.height,
+      /* True when the uploaded original is no longer retained anywhere. */
+      originalUnavailable:Boolean(design.originalUnavailable),
+      versions:(Array.isArray(design.artworkVersions)?design.artworkVersions:[]).length})),
+    printifyProducts:drafts.map(draft=>draft.id).filter(Boolean),
+    storage:{
+      templateSnapshot:template?.key?{key:template.key,sha256:template.sha256,
+        sharedWith:await shares(String(template.sha256||""))}:null,
+      /* Draft media is keyed per Printify product, so a batch with no product
+         has none. Listed explicitly rather than assumed. */
+      draftMedia:drafts.filter(draft=>draft._draftMedia)
+        .map(draft=>({productId:draft.id,pointer:(draft._draftMedia as {key?:string})?.key})),
+    },
+  };
+}
+
+export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const url=new URL(request.url),id=url.searchParams.get("id");const storageId=url.searchParams.get("storage");if(storageId){if(!isOwner(user))return NextResponse.json({error:"Not authorized."},{status:403});return NextResponse.json(await batchStorage(database,user.userId,String(storageId).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80)));}if(id){const row=await database.prepare("SELECT * FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).first<Record<string,unknown>>();if(!row)return NextResponse.json({error:"That batch was not found."},{status:404});let state=await unpackBatchSnapshot(JSON.parse(String(row.state_json||"{}")),user.userId,(env as unknown as RuntimeEnv).ARTWORK) as BatchListState;
     const designIds=(Array.isArray(state.designs)?state.designs:[]).map(design=>design?.id).filter((value):value is string=>Boolean(value));
     if(designIds.length){
       const records=await database.prepare(`SELECT r.response_json,s.product_id AS source_template_id FROM printify_draft_results r LEFT JOIN printify_batch_sessions s ON s.id=r.batch_id AND s.user_id=r.user_id WHERE r.user_id=? AND r.status='succeeded' AND r.client_id IN (${designIds.map(()=>'?').join(',')})`).bind(user.userId,...designIds).all<{response_json:string;source_template_id:string|null}>();

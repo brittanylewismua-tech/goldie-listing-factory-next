@@ -3,6 +3,7 @@ import {NextResponse} from "next/server";
 import {getChatGPTUser} from "@/app/chatgpt-auth";
 import {runBounded} from "@/app/bounded-work";
 import {decryptPrintifyToken} from "../../token-crypto";
+import {printifyCall} from "../../../../printify-call.ts";
 
 type StoredDraft={id?:string;shopId?:number};
 
@@ -22,7 +23,7 @@ export async function POST(request:Request){
   const missing=productIds.filter(id=>!stored.has(id)),errors:string[]=[];
   await runBounded([...stored.entries()],4,async([id,draft])=>{
     try{
-      const response=await fetch(`https://api.printify.com/v1/shops/${Number(draft.shopId)||0}/products/${encodeURIComponent(id)}.json`,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"},signal:AbortSignal.timeout(12000)});
+      const response=await printifyCall(`https://api.printify.com/v1/shops/${Number(draft.shopId)||0}/products/${encodeURIComponent(id)}.json`,{headers:{Authorization:`Bearer ${token}`,"User-Agent":"Goldie-Listing-Factory"},signal:AbortSignal.timeout(12000)},{feature:"listing-factory",userId:user.userId});
       if(response.status===404){missing.push(id);return}
       if(!response.ok)errors.push(`Printify could not confirm a saved draft (${response.status}). Try again.`);
     }catch{errors.push("Printify took too long to confirm a saved draft. Try again.")}

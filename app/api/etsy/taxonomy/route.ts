@@ -20,11 +20,11 @@ export async function POST(request:Request){
          was flattened again each time before any design could be prepared. It
          is the same tree for every Etsy seller, so the FLATTENED form is what
          gets cached: the download and the walk both stop repeating. */
-      const tree=await etsyFetch<{results?:TaxonomyNode[]}>("/seller-taxonomy/nodes",connection.token);
+      const tree=await etsyFetch<{results?:TaxonomyNode[]}>("/seller-taxonomy/nodes",connection.token,"taxonomy");
       return flatten(tree.results||[]).filter(node=>node.leaf);
     }),selected=body.taxonomyId?categories.find(node=>node.id===body.taxonomyId):categories.map(node=>{const productScore=productCategoryScore(body.product,node.path),aiScore=score(body.category||"",node.name)+score(body.category||"",node.path);return {...node,score:productScore+(productScore===0?aiScore:0)}}).sort((a,b)=>b.score-a.score||a.path.localeCompare(b.path))[0];
     if(!selected)return NextResponse.json({error:"Etsy did not return a matching category."},{status:404});
-    const payload=await cachedJson("etsy-taxonomy",`/nodes/${selected.id}/properties`,TAXONOMY_TTL_SECONDS,()=>etsyFetch<{results?:Property[]}>(`/seller-taxonomy/nodes/${selected.id}/properties`,connection.token)),requested={...(body.attributes||{}),...(body.optional||{})},entries=Object.entries(requested);
+    const payload=await cachedJson("etsy-taxonomy",`/nodes/${selected.id}/properties`,TAXONOMY_TTL_SECONDS,()=>etsyFetch<{results?:Property[]}>(`/seller-taxonomy/nodes/${selected.id}/properties`,connection.token,"taxonomy")),requested={...(body.attributes||{}),...(body.optional||{})},entries=Object.entries(requested);
     const properties=(payload.results||[]).filter(property=>property.is_required||property.possible_values?.length).map(property=>{const label=property.display_name||property.name||`Property ${property.property_id}`,requestedValue=entries.map(([key,value])=>({key,value,score:score(key,label)})).sort((a,b)=>b.score-a.score)[0],suggested=requestedValue?.score>0?requestedValue.value:"",choice=(property.possible_values||[]).map(value=>({...value,score:score(suggested,value.name)})).sort((a,b)=>b.score-a.score)[0];return {propertyId:property.property_id,label,required:Boolean(property.is_required),multiple:Boolean(property.is_multivalued),maxValues:Number(property.max_values_allowed||1),possibleValues:property.possible_values||[],valueId:choice?.score>0?choice.value_id:null,value:choice?.score>0?choice.name:suggested}});
     /* D658 · D656 stopped the taxonomy being FETCHED per design, but the route
        still serialised the whole flattened category list back to the browser

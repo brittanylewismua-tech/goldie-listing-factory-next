@@ -7,6 +7,7 @@ import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity 
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { addMoney, formatMoney, fromEtsy, fromPrintify, minorUnits, subtractMoney, type Money } from "@/app/shop-map-money";
 import { reconcile, type EtsyLine, type PrintifyLine } from "@/app/shop-map-match";
+import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * ONE MONTH OF REAL SALES, MATCHED TO WHAT THEY COST.
@@ -148,12 +149,12 @@ export const GET = withErrorLog("shop-map-reconcile", async (request: Request) =
   /* Deep enough to reach the start of the Etsy window. Printify pages with
      ?page=, reports last_page, and returns newest first. */
   for (let page = 1; page <= 40; page += 1) {
-    const response = await fetch(
+    const response = await printifyCall(
       `https://api.printify.com/v1/shops/${printifyShopId}/orders.json?limit=50&page=${page}`,
       {
         headers: { Authorization: `Bearer ${printifyToken}`, "User-Agent": "Goldie-Listing-Factory" },
         signal: AbortSignal.timeout(25_000),
-      });
+      }, { feature: "finance", userId: user.userId });
     calls.printify += 1;
     if (!response.ok) break;
     const text = await response.text();

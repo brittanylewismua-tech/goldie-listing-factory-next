@@ -27,15 +27,27 @@ export async function waitForEtsyCapacity(){
  * Etsy, who want proof of need before they raise a limit. A number is a
  * complaint; a breakdown is a case.
  *
- * `feature` defaults to "unlabelled" so an unlabelled call still records
- * against the budget. Missing a label must never mean missing a call.
+ * EVERY CALL NAMES ITS FEATURE. THERE IS NO DEFAULT.
+ *
+ * `etsyFetch` used to default `feature` to "publish", so any call made without
+ * an explicit label was counted as publishing. Sixteen ordinary reads in one
+ * day were recorded as publishes while `publishedToday` was 0 — the ledger
+ * could not tell a shipping-profile read from a listing going live, which is
+ * the one distinction it exists to make.
+ *
+ * The label is now the third positional argument and it is required, so a call
+ * without one does not compile. `recordEtsyCall` keeps a default of
+ * "unlabelled" deliberately: a call that reaches the meter must still be
+ * counted, and "unlabelled" is an honest bucket in a way that "publish" is not.
  */
 /* finance is its own feature so financial API spend is budgeted and
    reported apart from Market Watch and Shop Watch freshness. */
 /* `shop-watch` is its own label so its consumption can be capped separately
    from the detector's. Without it every Shop Watch call counted as "search"
    and its own allowance could never deplete. */
-export type EtsyFeature="publish"|"photos"|"search"|"taxonomy"|"shipping"|"connect"|"qa"|"finance"|"shop-watch"|"unlabelled";
+/* `listings` and `partners` exist because those reads previously had nowhere
+   honest to go and fell into the "publish" default. */
+export type EtsyFeature="publish"|"photos"|"search"|"taxonomy"|"shipping"|"connect"|"qa"|"finance"|"shop-watch"|"listings"|"partners"|"unlabelled";
 
 export async function recordEtsyCall(response:Response,feature:EtsyFeature="unlabelled"){
   const bucket=hourBucket(),observedLimit=Math.max(0,Number(response.headers.get("x-limit-per-day"))||0);
@@ -100,7 +112,7 @@ export async function etsyConnection(userId:string){
   return {token,shopId:row.shop_id,shopName:row.shop_name,etsyUserId:row.etsy_user_id};
 }
 
-export async function etsyFetch<T>(path:string,token:string,init?:RequestInit,meter?:{calls:number},feature:EtsyFeature="publish"):Promise<T>{
+export async function etsyFetch<T>(path:string,token:string,feature:EtsyFeature,init?:RequestInit,meter?:{calls:number}):Promise<T>{
   for(let attempt=0;attempt<5;attempt+=1){
     await waitForEtsyCapacity();
     const response=await fetch(`${API}${path}`,{...init,signal:init?.signal??AbortSignal.timeout(30000),headers:{"x-api-key":etsyApiCredential(),Authorization:`Bearer ${token}`,...(init?.body instanceof URLSearchParams?{"Content-Type":"application/x-www-form-urlencoded"}:{}),...(init?.headers||{})}});

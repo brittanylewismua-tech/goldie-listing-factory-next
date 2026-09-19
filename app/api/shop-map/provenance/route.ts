@@ -6,6 +6,7 @@ import { env } from "cloudflare:workers";
 import { captureProductArtwork, provenanceHealth } from "@/app/artwork-provenance";
 import { captureQueueHealth } from "@/app/artwork-capture-queue";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
+import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * WHAT GOLDIE CAN NOW PROVE ABOUT A DESIGN.
@@ -47,12 +48,12 @@ export const GET = withErrorLog("shop-map-provenance", async (request: Request) 
   let lastPage = 0;
   let reportedTotal = 0;
   for (let page = 1; page <= 20; page += 1) {
-    const response = await fetch(
+    const response = await printifyCall(
       `https://api.printify.com/v1/shops/${shopId}/products.json?limit=50&page=${page}`,
       {
         headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
         signal: AbortSignal.timeout(20_000),
-      });
+      }, { feature: "qa", userId: user.userId });
     if (!response.ok) break;
     const body = await response.json() as {
       data?: Array<{ id?: string }>; last_page?: number; total?: number;

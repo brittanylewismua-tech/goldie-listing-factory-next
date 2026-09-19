@@ -21,7 +21,7 @@ let taxonomyCache:{at:number;nodes:TaxonomyNode[]}|null=null;
 const TAXONOMY_TTL_MS=60*60*1000;
 async function taxonomyNodes(token:string,meter:{calls:number}){
   if(taxonomyCache&&Date.now()-taxonomyCache.at<TAXONOMY_TTL_MS)return taxonomyCache.nodes;
-  const payload=await etsyFetch<{results?:TaxonomyNode[]}>("/seller-taxonomy/nodes",token,undefined,meter);
+  const payload=await etsyFetch<{results?:TaxonomyNode[]}>("/seller-taxonomy/nodes",token,"taxonomy",undefined,meter);
   const nodes=payload.results||[];
   if(nodes.length)taxonomyCache={at:Date.now(),nodes};
   return nodes;
@@ -39,23 +39,23 @@ async function applyProperty(token:string,shopId:number,listingId:number,propert
   const label=text.trim()||`property ${propertyId}`;
   if(!valueId){skipped.push(label);return}
   const body=new URLSearchParams();body.append("value_ids",String(valueId));body.append("values",text.trim()||String(valueId));
-  try{await etsyFetch(`/shops/${shopId}/listings/${listingId}/properties/${propertyId}`,token,{method:"PUT",body},meter)}catch{skipped.push(label)}
+  try{await etsyFetch(`/shops/${shopId}/listings/${listingId}/properties/${propertyId}`,token,"publish",{method:"PUT",body},meter)}catch{skipped.push(label)}
 }
 async function applyEtsyDetails(token:string,shopId:number,listingId:number,details:EtsyDetails,shippingProfileId:number,description:string,meter:{calls:number}){
   const tree=await taxonomyNodes(token,meter),match=chooseTaxonomy(tree,details);
   const taxonomyId=Number(details.taxonomyId)||match?.node.id;if(!taxonomyId||!match&& !details.taxonomyId)throw new Error(`The Listing Factory could not safely match the Etsy category “${details.category||"unknown"}”. Review this listing before publishing.`);
   const listingBody=new URLSearchParams({taxonomy_id:String(taxonomyId),shipping_profile_id:String(shippingProfileId),description});
-  await etsyFetch(`/shops/${shopId}/listings/${listingId}`,token,{method:"PATCH",body:listingBody},meter);
+  await etsyFetch(`/shops/${shopId}/listings/${listingId}`,token,"publish",{method:"PATCH",body:listingBody},meter);
   const skipped:string[]=[];
   if(details.properties?.length){for(const property of details.properties){if(!property.value.trim()&&!property.valueId)continue;await applyProperty(token,shopId,listingId,property.propertyId,property.valueId,property.value,meter,skipped)}return skipped}
-  const propertyPayload=await etsyFetch<{results?:EtsyProperty[]}>(`/seller-taxonomy/nodes/${taxonomyId}/properties`,token,undefined,meter),properties=propertyPayload.results||[],requested={...(details.attributes||{}),...(details.optional||{})};
+  const propertyPayload=await etsyFetch<{results?:EtsyProperty[]}>(`/seller-taxonomy/nodes/${taxonomyId}/properties`,token,"taxonomy",undefined,meter),properties=propertyPayload.results||[],requested={...(details.attributes||{}),...(details.optional||{})};
   for(const [label,value] of Object.entries(requested)){if(!value.trim())continue;const labelWords=words(label),property=properties.map(item=>({item,score:[...words(item.display_name||item.name||"")].filter(word=>labelWords.has(word)).length})).sort((a,b)=>b.score-a.score)[0];if(!property||property.score<=0)continue;const valueWords=words(value),choice=(property.item.possible_values||[]).map(item=>({item,score:[...words(item.name)].filter(word=>valueWords.has(word)).length+(item.name.toLowerCase()===value.toLowerCase()?10:0)})).sort((a,b)=>b.score-a.score)[0];
     await applyProperty(token,shopId,listingId,property.item.property_id,choice&&choice.score>0?choice.item.value_id:null,choice&&choice.score>0?choice.item.name:value,meter,skipped)}
   return skipped;
 }
 async function applyPersonalization(token:string,shopId:number,listingId:number,details:EtsyDetails,meter:{calls:number}){
   if(details.personalization===undefined)return;
-  if(!details.personalization.enabled){await etsyFetch(`/shops/${shopId}/listings/${listingId}/personalization`,token,{method:"DELETE"},meter);return}
+  if(!details.personalization.enabled){await etsyFetch(`/shops/${shopId}/listings/${listingId}/personalization`,token,"publish",{method:"DELETE"},meter);return}
   const questions=details.personalization.questions.slice(0,5).map(question=>{
     const base={question_text:String(question.question||"Personalization").trim().slice(0,120),question_type:question.type,required:Boolean(question.required)};
     if(question.type==="dropdown")return{...base,options:(question.options||[]).map(label=>({label:label.trim().slice(0,20)})).filter(option=>option.label).slice(0,30)};
@@ -63,11 +63,11 @@ async function applyPersonalization(token:string,shopId:number,listingId:number,
     return{...base,instructions:String(question.instructions||"").trim().slice(0,120),max_allowed_characters:Math.max(1,Math.min(1024,Number(question.maxCharacters)||256))};
   });
   if(!questions.length)throw new Error("Add at least one personalization question or turn personalization off.");
-  await etsyFetch(`/shops/${shopId}/listings/${listingId}/personalization?supports_multiple_personalization_questions=true`,token,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({personalization_questions:questions})},meter);
+  await etsyFetch(`/shops/${shopId}/listings/${listingId}/personalization?supports_multiple_personalization_questions=true`,token,"publish",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({personalization_questions:questions})},meter);
 }
 async function applyListingImages(userId:string,token:string,shopId:number,listingId:number,productId:string,keptPrintifyIndices:number[],meter:{calls:number}){
-  const current=await etsyFetch<{results?:Array<{listing_image_id:number;rank?:number}>}>(`/listings/${listingId}/images`,token,undefined,meter),images=current.results||[],keep=new Set(keptPrintifyIndices);
-  for(let index=0;index<images.length;index++)if(!keep.has(index))await etsyFetch(`/shops/${shopId}/listings/${listingId}/images/${images[index].listing_image_id}`,token,{method:"DELETE"},meter);
+  const current=await etsyFetch<{results?:Array<{listing_image_id:number;rank?:number}>}>(`/listings/${listingId}/images`,token,"photos",undefined,meter),images=current.results||[],keep=new Set(keptPrintifyIndices);
+  for(let index=0;index<images.length;index++)if(!keep.has(index))await etsyFetch(`/shops/${shopId}/listings/${listingId}/images/${images[index].listing_image_id}`,token,"photos",{method:"DELETE"},meter);
   const prefix=`etsy-listing-images/${userId}/${productId}/`,storedPage=await runtime().ARTWORK.list({prefix}),stored=storedPage.objects.filter(object=>!object.key.endsWith("order.json")),defaultOrder=[...stored.filter(object=>object.key.includes("/mockup/")||object.key.includes("/upload/")).sort((a,b)=>a.uploaded.getTime()-b.uploaded.getTime()).map(object=>`stored:${object.key}`),...keptPrintifyIndices.map(index=>`printify:${index}`),...stored.filter(object=>object.key.includes("/size-guide/")).map(object=>`stored:${object.key}`)];
   const savedObject=await runtime().ARTWORK.get(`${prefix}order.json`);let saved:string[]=[];if(savedObject)try{saved=JSON.parse(await savedObject.text()) as string[]}catch{saved=[]}
   const availableIds=new Set(defaultOrder),ordered=[...saved.filter(id=>availableIds.has(id)),...defaultOrder.filter(id=>!saved.includes(id))].slice(0,10),objects=new Map(stored.map(object=>[`stored:${object.key}`,object])),printifyByIndex=new Map(images.map((image,index)=>[index,image]));
@@ -93,7 +93,7 @@ async function queueArtworkCapture(userId:string,draft:DraftData,listingId:numbe
 
 export async function finishEtsyListing(userId:string,draft:DraftData,listingId:number,printifyImageIndices:number[]){
   const connection=await etsyConnection(userId),meter={calls:0};
-  const listing=await etsyFetch<Listing>(`/listings/${listingId}`,connection.token,undefined,meter);
+  const listing=await etsyFetch<Listing>(`/listings/${listingId}`,connection.token,"listings",undefined,meter);
   if(Number(listing.shop_id)!==Number(connection.shopId))throw new Error("Etsy returned a listing from a different shop. The Listing Factory stopped without editing it.");
   if(!draft.etsyDetails?.category)throw new Error("Etsy category details are missing for this listing.");
   if(!draft.etsyShippingProfileId)throw new Error("Choose an Etsy shipping profile before publishing.");

@@ -17,7 +17,7 @@ export async function GET(request:Request){
     const tokenResponse=await fetch("https://api.etsy.com/v3/public/oauth/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({grant_type:"authorization_code",client_id:apiKey(),redirect_uri:pending.redirect_uri,code,code_verifier:pending.code_verifier}),signal:AbortSignal.timeout(25000)}),tokens=await tokenResponse.json() as {access_token?:string;refresh_token?:string;expires_in?:number;scope?:string;error_description?:string};
     if(!tokenResponse.ok||!tokens.access_token||!tokens.refresh_token)throw new Error(tokens.error_description||"Etsy did not complete the connection.");
     const etsyUserId=Number(tokens.access_token.split(".")[0]);if(!etsyUserId)throw new Error("Etsy did not return a valid account identifier.");
-    const shop=await etsyFetch<{shop_id:number;shop_name:string}>(`/users/${etsyUserId}/shops`,tokens.access_token);
+    const shop=await etsyFetch<{shop_id:number;shop_name:string}>(`/users/${etsyUserId}/shops`,tokens.access_token,"connect");
     if(!shop||!Number.isSafeInteger(Number(shop.shop_id))||Number(shop.shop_id)<=0||!shop.shop_name)throw new Error("No Etsy shop was found on this account. Connect an account with an existing Etsy shop.");
     /*
       SHOP MAP ASKED FOR SALES ACCESS ON ONE SAVED SHOP.
