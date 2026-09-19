@@ -8,6 +8,20 @@ import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity 
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { attemptLink, summarise, type EtsyCandidate, type PrintifyCandidate } from "@/app/artwork-linkage";
 
+/*
+  D1716 · THIS WAS A GET, AND IT DOES WORK.
+
+  A GET is meant to be safe to repeat and safe to follow: a bookmark, a
+  crawler, a browser prefetch, a copied link, a click. This one writes, so
+  it is a POST now. The GET below refuses without doing anything, so an old
+  link fails loudly rather than quietly running the job again.
+*/
+export async function GET() {
+  return NextResponse.json(
+    { error: "This does work, so it is a POST now. Nothing was run." },
+    { status: 405, headers: { Allow: "POST" } });
+}
+
 /**
  * DO THE CAPTURED DESIGNS BELONG TO LISTINGS WE KNOW SOLD?
  *
@@ -20,7 +34,7 @@ import { attemptLink, summarise, type EtsyCandidate, type PrintifyCandidate } fr
  * receipt through identifiers — is stored as safe for sales-backed use. SKU
  * and timing results are reported and never promoted.
  */
-export const GET = withErrorLog("shop-map-linkage", async (request: Request) => {
+export const POST = withErrorLog("shop-map-linkage", async (request: Request) => {
   if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))

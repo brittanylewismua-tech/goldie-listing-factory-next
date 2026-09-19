@@ -38,8 +38,15 @@ export default {
   */
   async scheduled(event, env, ctx) {
     const site = (env.GOLDIE_SITE_URL || "https://thegoldiesuite.com").replace(/\\/$/, "");
+    /*
+      D1716 · Every job is a POST. These used to be GETs, which meant the work
+      sat behind a method that is meant to be safe to repeat and safe to
+      follow. The internal-only header check is still what authenticates them;
+      the method is now honest about what they do.
+    */
     const run = path =>
-      ctx.waitUntil(app.fetch(new Request(site + path), env, ctx).catch(() => {}));
+      ctx.waitUntil(app.fetch(new Request(site + path, { method: "POST" }), env, ctx)
+        .catch(() => {}));
 
     /*
       TWO CLOCKS, AND THEY DO NOT SHARE WORK.
@@ -89,9 +96,9 @@ export default {
         remembering to look is not a gate.
       */
       ctx.waitUntil((async () => {
-        await app.fetch(new Request(site + "/api/market/correlate"), env, ctx)
+        await app.fetch(new Request(site + "/api/market/correlate", { method: "POST" }), env, ctx)
           .catch(() => {});
-        await app.fetch(new Request(site + "/api/market/observe"), env, ctx)
+        await app.fetch(new Request(site + "/api/market/observe", { method: "POST" }), env, ctx)
           .catch(() => {});
       })());
       /*

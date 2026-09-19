@@ -10,6 +10,20 @@ import { monthOf, monthWindow } from "@/app/finance-month";
 import { rollUp } from "@/app/finance-rollup";
 import { ensureFinanceTables, shopTimezone } from "@/app/finance-store";
 
+/*
+  D1716 · THIS WAS A GET, AND IT DOES WORK.
+
+  A GET is meant to be safe to repeat and safe to follow: a bookmark, a
+  crawler, a browser prefetch, a copied link, a click. This one writes, so
+  it is a POST now. The GET below refuses without doing anything, so an old
+  link fails loudly rather than quietly running the job again.
+*/
+export async function GET() {
+  return NextResponse.json(
+    { error: "This does work, so it is a POST now. Nothing was run." },
+    { status: 405, headers: { Allow: "POST" } });
+}
+
 /**
  * RECONCILE, THEN RECOMPUTE EVERY MONTH.
  *
@@ -21,7 +35,7 @@ import { ensureFinanceTables, shopTimezone } from "@/app/finance-store";
  * Nothing is written to the source tables except the match result, and no
  * manual adjustment is created.
  */
-export const GET = withErrorLog("shop-map-financial-reconcile", async (request: Request) => {
+export const POST = withErrorLog("shop-map-financial-reconcile", async (request: Request) => {
   if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))

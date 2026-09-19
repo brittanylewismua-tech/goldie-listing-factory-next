@@ -55,6 +55,28 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to prepare listings." }, { status: 401 });
 
+  /*
+    D1716 · The two destructive diagnostics that used to live on the GET.
+    Owner only, read from the query string so the existing call shape is
+    unchanged apart from the method, and settled before the member workflow
+    below is touched.
+  */
+  {
+    const params = new URL(request.url).searchParams;
+    const wantsReset = params.get("reset");
+    const wantsDelete = params.get("printify") === "delete";
+    if (wantsReset || wantsDelete) {
+      if (!isOwner(user))
+        return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+      if (crossSiteWrite(request))
+        return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
+      return wantsReset
+        ? await reset(wantsReset)
+        : await printifyProduct(params.get("shopId") ?? "",
+            params.get("productId") ?? "", true);
+    }
+  }
+
   const canary = await canaryFor(user.userId);
   if (!canary.useNewFlow)
     return NextResponse.json({ error: "Not available on this account.", because: canary.because },
@@ -231,14 +253,21 @@ export const GET = withErrorLog("listing-factory-prepare-sample", async (request
   try {
     const params = new URL(request.url).searchParams;
     if (params.get("probe") === "1") return await probe();
-    if (params.get("reset")) return await reset(params.get("reset") ?? "");
+    /*
+      D1716 · `reset` and `printify=delete` DELETE things, and they sat on a
+      GET beside four reads. A GET must be safe to repeat and safe to follow;
+      these are neither. They answer on POST now, and refuse here without
+      doing anything.
+    */
+    if (params.get("reset") || params.get("printify") === "delete")
+      return NextResponse.json(
+        { error: "That action does work, so it is a POST now. Nothing was run." },
+        { status: 405, headers: { Allow: "POST" } });
     if (params.get("printify") === "preflight") return await printifyPreflight();
     if (params.get("printify") === "find")
       return await findInternalTestProducts(params.get("shopId") ?? "");
     if (params.get("printify") === "read")
       return await printifyProduct(params.get("shopId") ?? "", params.get("productId") ?? "", false);
-    if (params.get("printify") === "delete")
-      return await printifyProduct(params.get("shopId") ?? "", params.get("productId") ?? "", true);
     return await sample(new URL(request.url).searchParams.get("n") ?? "0");
   } catch (error) {
     /* The real message, to the owner. This endpoint has no member audience and

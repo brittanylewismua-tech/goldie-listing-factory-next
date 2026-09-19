@@ -28,7 +28,21 @@ import { ensureFinanceTables } from "@/app/finance-store";
  */
 const EARLIEST = Math.floor(Date.parse("2023-01-01T00:00:00Z") / 1_000);
 
-export const GET = withErrorLog("shop-map-financial-ingest", async (request: Request) => {
+/*
+  D1716 · THIS WAS A GET, AND IT DOES WORK.
+
+  A GET is meant to be safe to repeat and safe to follow: a bookmark, a
+  crawler, a browser prefetch, a copied link, a click. This one writes, so
+  it is a POST now. The GET below refuses without doing anything, so an old
+  link fails loudly rather than quietly running the job again.
+*/
+export async function GET() {
+  return NextResponse.json(
+    { error: "This does work, so it is a POST now. Nothing was run." },
+    { status: 405, headers: { Allow: "POST" } });
+}
+
+export const POST = withErrorLog("shop-map-financial-ingest", async (request: Request) => {
   if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))

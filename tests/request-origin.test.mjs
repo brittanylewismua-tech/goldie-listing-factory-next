@@ -104,3 +104,82 @@ test("the deployed headers are configured, and script-src is not faked", () => {
   assert.ok(!/script-src[^"]*unsafe-inline/.test(config),
     "unsafe-inline would make the CSP decorative");
 });
+
+test("D1716: no route runs work on a GET", () => {
+  /*
+    The property, stated once: if a handler writes, it must not be the GET.
+    A bookmark, a crawler, a prefetch, a copied link and an address-bar
+    navigation are all GETs, and none of them should be able to start a job.
+  */
+  const routes = [];
+  const walk = (d) => {
+    for (const e of readdirSync(new URL(d, import.meta.url), { withFileTypes: true })) {
+      if (e.isDirectory()) walk(`${d}/${e.name}`);
+      else if (e.name === "route.ts") routes.push(`${d}/${e.name}`);
+    }
+  };
+  walk("../app/api");
+
+  const strip = (x) => x.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+  const offences = [];
+  for (const file of routes) {
+    const s = strip(readFileSync(new URL(file, import.meta.url), "utf8"));
+    const at = s.search(/export (?:const|async function) GET\b/);
+    if (at < 0) continue;
+    /*
+      The handler's OWN body, by brace matching. Slicing to the next export
+      swallowed every helper declared below it and reported a route that had
+      already been fixed — the handler returns 405 for its two destructive
+      branches, and the functions those branches used to call still live in
+      the file because POST calls them now.
+    */
+    const open = s.indexOf("{", at);
+    let depth = 0, end = open;
+    for (let i = open; i < s.length; i += 1) {
+      if (s[i] === "{") depth += 1;
+      else if (s[i] === "}") { depth -= 1; if (depth === 0) { end = i; break; } }
+    }
+    const body = s.slice(open, end + 1);
+    if (!/(INSERT INTO|UPDATE\s+\w+\s+SET|DELETE FROM)\s+\w+/.test(body)) continue;
+    /*
+      Two stay, and both are reads whose writes are consequences rather than
+      purposes:
+        etsy/callback   the OAuth redirect; its state row is the credential
+                        and is consumed by being used
+        printify        "is Printify connected?", called on page load; it
+                        deletes the stored token only when Printify itself
+                        rejects it, tidying a credential already dead
+      connect-sales starts an OAuth flow and records the state it just minted.
+    */
+    if (/etsy\/callback|api\/printify\/route|connect-sales/.test(file)) continue;
+    offences.push(file);
+  }
+  assert.deepEqual(offences, [],
+    `these still do work on a GET:\n${offences.join("\n")}`);
+});
+
+test("D1716: a retired GET refuses without doing the work", () => {
+  const s = readFileSync(new URL(
+    "../app/api/shop-map/override-audit/route.ts", import.meta.url), "utf8");
+  const at = s.search(/export async function GET\b/);
+  assert.ok(at > -1, "the old verb must still answer, so an old link fails loudly");
+  const body = s.slice(at, at + 400);
+  assert.match(body, /status: 405/);
+  assert.match(body, /Allow: "POST"/);
+  assert.match(body, /Nothing was run/);
+  assert.ok(!/INSERT INTO|DELETE FROM|UPDATE\s+\w+\s+SET/.test(body),
+    "the 405 must not reach any write");
+});
+
+test("D1716: the cron posts its jobs", () => {
+  const cron = readFileSync(new URL(
+    "../scripts/add-scheduled-handler.mjs", import.meta.url), "utf8");
+  assert.match(cron, /new Request\(site \+ path, \{ method: "POST" \}\)/,
+    "the shared runner must post");
+  /* And the two sequenced calls, which are written out longhand. */
+  for (const path of ["/api/market/correlate", "/api/market/observe"]) {
+    const at = cron.indexOf(path);
+    assert.ok(at > -1, `${path} missing from the cron`);
+    assert.match(cron.slice(at, at + 90), /method: "POST"/, `${path} still a GET`);
+  }
+});

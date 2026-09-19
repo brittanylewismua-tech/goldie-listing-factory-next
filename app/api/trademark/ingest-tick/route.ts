@@ -308,7 +308,22 @@ async function runTick(db: D1Database, request: Request) {
   }
 }
 
-export const GET = withErrorLog("trademark-ingest-tick", async (request: Request) => {
+/*
+  D1716 · A JOB IS NOT A GET.
+
+  This ran work on a GET. The internal-only header check is what keeps the
+  outside world out, and it held — but a GET is meant to be safe to repeat
+  and safe to follow, and any prefetch, crawl or copied link that ever got
+  past that check would have started the job. It answers on POST now, and
+  the GET refuses without running anything.
+*/
+export async function GET() {
+  return NextResponse.json(
+    { error: "This runs a job, so it is a POST now. Nothing was run." },
+    { status: 405, headers: { Allow: "POST" } });
+}
+
+export const POST = withErrorLog("trademark-ingest-tick", async (request: Request) => {
   /* The clock reaches this with no cf-connecting-ip, which is proof of origin
      nobody outside can forge. An owner may also run a file by hand, which is
      what makes a stuck ingest debuggable instead of a mystery. */

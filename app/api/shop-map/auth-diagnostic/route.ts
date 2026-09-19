@@ -7,6 +7,20 @@ import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyConnection } from "@/app/api/etsy/client";
 import { ensureScopeColumn } from "@/app/shop-map-auth";
 
+/*
+  D1716 · THIS WAS A GET, AND IT DOES WORK.
+
+  A GET is meant to be safe to repeat and safe to follow: a bookmark, a
+  crawler, a browser prefetch, a copied link, a click. This one writes, so
+  it is a POST now. The GET below refuses without doing anything, so an old
+  link fails loudly rather than quietly running the job again.
+*/
+export async function GET() {
+  return NextResponse.json(
+    { error: "This does work, so it is a POST now. Nothing was run." },
+    { status: 405, headers: { Allow: "POST" } });
+}
+
 /**
  * WHY DOES SHOP MAP STILL THINK IT CANNOT READ SALES?
  *
@@ -19,7 +33,7 @@ import { ensureScopeColumn } from "@/app/shop-map-auth";
  * It reads one receipt's worth of metadata at most, and reports no buyer
  * fields — only the status, and the count Etsy reports.
  */
-export const GET = withErrorLog("shop-map-auth-diagnostic", async (request: Request) => {
+export const POST = withErrorLog("shop-map-auth-diagnostic", async (request: Request) => {
   if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
   if (!user || !isOwner(user))

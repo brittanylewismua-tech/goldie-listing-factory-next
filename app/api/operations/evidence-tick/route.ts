@@ -35,7 +35,22 @@ import { registerIsReady, registerIsComplete, registerParkedFiles } from "@/app/
 const internalOnly = (request: Request) =>
   !request.headers.get("cf-connecting-ip");
 
-export const GET = withErrorLog("operations-evidence-tick", async (request: Request) => {
+/*
+  D1716 · A JOB IS NOT A GET.
+
+  This ran work on a GET. The internal-only header check is what keeps the
+  outside world out, and it held — but a GET is meant to be safe to repeat
+  and safe to follow, and any prefetch, crawl or copied link that ever got
+  past that check would have started the job. It answers on POST now, and
+  the GET refuses without running anything.
+*/
+export async function GET() {
+  return NextResponse.json(
+    { error: "This runs a job, so it is a POST now. Nothing was run." },
+    { status: 405, headers: { Allow: "POST" } });
+}
+
+export const POST = withErrorLog("operations-evidence-tick", async (request: Request) => {
   if (!internalOnly(request))
     return NextResponse.json({ error: "Not available." }, { status: 404 });
 

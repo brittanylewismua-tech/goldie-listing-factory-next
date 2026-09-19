@@ -389,7 +389,14 @@ test("the observation sample is taken after the work it measures", () => {
   const sequenced = tick.slice(tick.indexOf("ctx.waitUntil((async"));
   assert.ok(sequenced.indexOf("/api/market/correlate") < sequenced.indexOf("/api/market/observe"),
     "the sample must be taken after the correlator has run");
-  assert.match(sequenced, /await app\.fetch\(new Request\(site \+ "\/api\/market\/correlate"\)/);
+  /*
+    D1716 · This matched the exact call text and broke when the ticks became
+    POSTs, a change that did not touch the ordering it is here to protect.
+    The property is that correlate is AWAITED before observe is reached.
+  */
+  assert.match(sequenced,
+    /await app\.fetch\(new Request\(site \+ "\/api\/market\/correlate"/,
+    "correlate must be awaited, not fired alongside");
 });
 
 test("the sweep says what it proved, and does not call narrow layout mobile", async () => {

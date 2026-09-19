@@ -138,7 +138,11 @@ test("the tick's worker is declared before the handler that calls it", () => {
   const route = readFileSync(new URL(
     "../app/api/trademark/ingest-tick/route.ts", import.meta.url), "utf8");
   const worker = route.indexOf("async function runTick");
-  const handler = route.indexOf("export const GET");
+  /* D1716 · The handler became a POST when jobs stopped being GETs. What
+     this test guards is the declaration order that caused the D1665 TDZ
+     crash, not which verb the route answers on. */
+  const handler = Math.max(route.indexOf("export const POST"),
+    route.indexOf("export const GET"));
   assert.ok(worker > -1, "the worker function is missing");
   assert.ok(handler > -1, "the handler is missing");
   assert.ok(worker < handler,
