@@ -13,13 +13,29 @@ export const metadata = { title: "Market Watch" };
   answers one question — what is actually moving out there — and then gets out
   of the way. It does not tell the seller what to do next.
 */
-export default async function MarketWatchPage() {
+export default async function MarketWatchPage(
+  { searchParams }: { searchParams: Promise<{ tab?: string }> },
+) {
   const user = await requireFeaturePage("marketWatch", "/market-watch");
+  /*
+    THE TAB IS DECIDED ON THE SERVER, BECAUSE THE CLIENT CANNOT.
+
+    The client falls back to reading ?tab= from window.location, and during
+    server rendering there is no window — so it rendered "niches", and
+    hydration keeps whatever the server decided rather than re-running the
+    initialiser. The result: the page WRITES ?tab=shops into the address bar
+    when you switch, and then that same address opens on the niche tab.
+    Reload, back, forward, a new tab and a bookmark all landed in the wrong
+    place, and a shop state could not be linked to at all.
+
+    The prop already existed for this. Nothing passed it.
+  */
+  const startTab = (await searchParams)?.tab === "shops" ? "shops" as const : "niches" as const;
   return (
     /* D1575 · the same rail, topbar, wordmark and footer as the Listing
        Factory. This page rendered as a bare column on white before. */
     <FactoryShell active="market-watch" title="Market Watch" desktopOnly={false}>
-      <MarketWatchClient signedInEmail={user.email} />
+      <MarketWatchClient signedInEmail={user.email} startTab={startTab} />
     </FactoryShell>
   );
 }
