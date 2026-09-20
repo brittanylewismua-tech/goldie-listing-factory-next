@@ -1,6 +1,6 @@
 {
-  "name": "Seller Tools",
-  "short_name": "Seller Tools",
+  "name": "Goldie Suite",
+  "short_name": "Goldie Suite",
   "description": "Tools for Etsy sellers: bulk listing creation, market evidence, your own shop's numbers, and a trademark check before you print. Not endorsed or certified by Etsy, Inc.",
   "start_url": "/home?source=homescreen",
   "scope": "/",

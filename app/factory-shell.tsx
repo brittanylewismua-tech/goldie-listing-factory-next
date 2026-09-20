@@ -28,7 +28,7 @@ import SuiteSidebarNav, { type SuiteNavItem } from "./suite-sidebar-nav";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
-export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "usage"
+export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "mockups" | "usage"
   | "connections" | "market-watch" | "shop-map" | "design-scanner" | "more";
 
 /* D834 · Usage + Plan and Connections moved into the account menu, where the
@@ -61,10 +61,13 @@ export const NAV: SuiteNavItem[] = [
   { key: "factory", label: "Listing Factory", href: "/listing-factory", icon: "listingFactory", group: "factory" },
   { key: "batches", label: "Batch History", href: "/batches", icon: "batches", group: "factory" },
   { key: "keywords", label: "Keyword Banks", href: "/keywords", icon: "keywords", group: "factory" },
+  { key: "mockups", label: "Mockup Sets", href: "/mockups", icon: "mockups", group: "factory" },
+  { key: "usage", label: "Usage", href: "/usage", icon: "usage", group: "factory" },
   { key: "market-watch", label: "Market Watch", href: "/market-watch", icon: "marketWatch", group: "command" },
   { key: "design-scanner", label: "Design Scanner", href: "/design-scanner", icon: "designScanner", group: "command" },
   { key: "shop-map", label: "Shop Map", href: "/shop-map", icon: "shopMap", group: "command" },
   { key: "trademark", label: "Trademark Checker", href: "/trademark", icon: "trademark", group: "command" },
+  { key: "connections", label: "Connections", href: "/connections", icon: "connections", group: "connections" },
 ];
 
 /*
@@ -92,8 +95,6 @@ export const NAV: SuiteNavItem[] = [
   the shell entirely rather than have the shell tell the truth about which
   half was which. So the shell says it now.
 */
-const FACTORY_PAGES = new Set<NavKey>(["home", "factory", "batches", "keywords"]);
-
 export default function FactoryShell({ active, title, desktopOnly = true, children }:
   { active: NavKey; title: string; desktopOnly?: boolean; children: React.ReactNode }) {
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
@@ -183,11 +184,9 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
         {/* Above the primary action, because that is the order of the morning:
             see what moved, then go and list. Styled quieter than Start a new
             batch so the money action keeps its weight. */}
-        {active !== "factory" && <a className="workflow-restart-button" href="/listing-factory">
-          <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" /><path d="M3 21v-5h5" /></svg> Start a new batch</a>}
       </div>
       <div className="approved-sidebar-footer">
-        {FACTORY_PAGES.has(active) && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
+        {active === "factory" && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>}
         {/*
           A GOAL NOBODY EXPLAINS IS A NUMBER NOBODY TRUSTS.
@@ -197,7 +196,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
           word, not a seller's — it means drafts built and ready to publish.
           Both are now on the card, in the member's language.
         */}
-        {FACTORY_PAGES.has(active) && goal && <a className="listing-goal-side" href="/goals">
+        {active === "factory" && goal && <a className="listing-goal-side" href="/goals">
           <span className="listing-goal-caption">Your {goal.period}ly goal</span>
           <b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${goal.target} drafts ready`:"Loading progress…"}</b>
           <span className="listing-goal-note">{goalDaysError?"Try again shortly.":"You set this target in Goals."}</span>
@@ -251,7 +250,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
                 {switchError && <small role="alert" className="factory-account-shop-error">{switchError}</small>}
               </div>}
               <a role="menuitem" href="/usage">Usage and limits</a>
-              <a role="menuitem" href="/listing-factory?step=connect">Connections</a>
+              <a role="menuitem" href="/connections">Connections</a>
               {account && <a role="menuitem" href={account.signedIn
                 ? "/account/sign-out?return_to=%2Flisting-factory"
                 : "/account/sign-in?return_to=%2Flisting-factory"}>{account.signedIn ? "Sign out" : "Sign in"}</a>}

@@ -2732,7 +2732,7 @@ test("D416: Connect does not pretend to be step one", async () => {
     "the step count under the title");
   assert.match(app, /workflowStep==="connect"\?"Connect Printify and Etsy"/,
     "and the batch header beside the rail");
-  assert.match(app, /workflowStep==="connect"\?"ACCOUNT SETUP":"YOUR BATCH"/);
+  assert.match(app, /workflowStep==="connect"\?"ACCOUNT SETUP":listingRunMode==="single"\?"YOUR LISTING":"YOUR BATCH"/);
 
   assert.match(app, /\{workflowStep!=="connect"&&!\(workflowStep==="finish"&&finishPhase==="final"\)&&\(files\.length>0\|\|drafts\.length>0\|\|Boolean\(templateDetails\)\)&&<button className="save-draft-link"/,
     "nothing to save before a batch exists");
@@ -6323,11 +6323,11 @@ test("the connection screen stays reachable after connecting — D639", async ()
   /* D721 · Brittany approved removing the sidebar icons, so NavIcon no longer
      renders in the factory sidebar. The rule this guards is that the Connections
      entry still exists and still points at step=connect. */
-  assert.match(app, /href="\/listing-factory\?step=connect"[\s\S]{0,120}Connections/);
+  assert.match(app, /href="\/connections"[\s\S]{0,120}Connections/);
   /* D834 · Connections moved into the account menu. What D639 guards is that
      the way back to the connection screen exists at all, and that it still
      points at ?step=connect - not which list it sits in. */
-  assert.match(management, /role="menuitem" href="\/listing-factory\?step=connect">Connections<\/a>/,
+  assert.match(management, /role="menuitem" href="\/connections">Connections<\/a>/,
     "D203's rule: both navigations list the same destinations or they drift");
   assert.match(icons, /case "connections":/);
   assert.match(icons, /\| "connections"/);

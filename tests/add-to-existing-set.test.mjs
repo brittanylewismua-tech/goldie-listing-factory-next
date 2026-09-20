@@ -14,7 +14,7 @@ const css = await read("app/mockups/mockups.css");
 
 test("every saved set offers a way to add more mockups", () => {
   assert.match(page, /className="selectSet addToSet"[^>]*onClick=\{\(\)=>chooseMoreForSet\(theme\)\}/);
-  assert.match(page, /＋ Add mockups/);
+  assert.match(page, />\+<\/span> Add mockups/);
 });
 
 test("the photographs are filed under the set that was clicked", () => {

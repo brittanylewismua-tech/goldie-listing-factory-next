@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
+import "@fontsource-variable/manrope";
+import "@fontsource/dm-serif-display";
 /* D528 - ConfirmHost was mounted inside the Listing Factory only, so on Batch
    History, Keyword Banks and the Mockup Library confirmAction returned a promise
    that never settled: no dialog, no action, no error. Delete 20 batches did
@@ -20,7 +22,6 @@ import MobileShell from "./mobile-shell";
 import "./mobile-shell.css";
 import "./suite-redesign.css";
 import "./approved-redesign-components.css";
-import { NEUTRAL_FALLBACK_TITLE } from "./shell-identity";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -38,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
     is what a member actually sees almost all of the time; this is only the
     fallback. Replace it, and NEUTRAL_FALLBACK_TITLE, when the name exists.
   */
-  const title = NEUTRAL_FALLBACK_TITLE;
+  const title = "Goldie Suite";
   const description = "Etsy seller tools: bulk listing creation, market evidence, "
     + "your own shop's numbers, and a trademark check before you print.";
   return {
@@ -55,7 +56,8 @@ export async function generateMetadata(): Promise<Metadata> {
       there is a brand to point at them.
     */
     manifest: "/manifest.webmanifest",
-    appleWebApp: { capable: true, title: NEUTRAL_FALLBACK_TITLE, statusBarStyle: "black-translucent" },
+    icons: { icon: "/goldie-g.png", shortcut: "/goldie-g.png", apple: "/apple-touch-icon.png" },
+    appleWebApp: { capable: true, title, statusBarStyle: "black-translucent" },
     openGraph: { title, description },
     twitter: { card: "summary", title, description },
   };

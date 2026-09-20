@@ -11,7 +11,7 @@ type Niche = {
 };
 type Focus = { nicheId: string; label: string; headline: string; advice: string; reason: string };
 type ShopMap = {
-  shop?: { shopName: string };
+  shop?: { shopName: string; imageUrl?: string };
   month?: string;
   thisMonth?: { revenueMinor: number; etsyFeesMinor: number; productionCostMinor: number;
     headline: string; profitMinor: number | null; accuracy: string; orders: number;
@@ -195,22 +195,24 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const sold = shown.soldListings?.listings ?? [];
   return <main className="shop-map shop-map-redesign">
     <header className="shop-map-head">
-      <p className="mini-label">YOUR SHOP</p>
-      <h1>Shop Map</h1>
-      <p>See what is selling and decide where to focus next.</p>
-      <span className="shop-map-shop-name">{shown.shop?.shopName ?? "Your shop"} · {monthName(shown.month)}</span>
+      <div className="shop-map-identity">
+        {shown.shop?.imageUrl ? <img src={shown.shop.imageUrl} alt="" width={64} height={64}/>
+          : <span className="shop-map-profile-fallback" aria-hidden="true">G</span>}
+        <div><h1>{shown.shop?.shopName ?? "Shop Map"}</h1>
+          <p>Shop Map · {monthName(shown.month)}</p></div>
+      </div>
     </header>
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     <nav className="shop-map-tabs" aria-label="Shop Map sections">
-      {([['overview','Overview'],['themes','Product themes'],['sold','Sold listings'],['money','Money']] as const)
+      {([['overview','Overview'],['themes','Product themes'],['sold','Sold listings'],['money','Your numbers']] as const)
         .map(([key,label]) => <button key={key} type="button" aria-current={tab === key ? 'page' : undefined}
           onClick={() => setTab(key)}>{label}</button>)}
     </nav>
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       <section className="shop-map-leaders">
-        <div className="shop-map-section-head"><div><p className="mini-label">YOUR 24 MOST RECENT SALES</p>
-          <h2>These listings sold most often.</h2><p>Ranked by quantity sold in the last 90 days.</p></div>
+        <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
+          <h2>Top three listings</h2></div>
           <button type="button" onClick={() => setTab("sold")}>See every sold listing ↗</button></div>
         {sold.length ? <div className="shop-map-leader-grid">{sold.slice(0,3).map((listing,index) =>
           <article key={listing.listingId} className={index === 0 ? "lead" : ""}>

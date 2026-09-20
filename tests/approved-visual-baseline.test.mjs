@@ -1210,18 +1210,18 @@ test("D818: both shells render the shared, grouped suite navigation", async () =
   /* D1575 · the workflow renders the shared NAV rather than a hand-written
      copy, so "on both surfaces" is structural instead of a list of labels
      somebody has to remember to extend. */
-  for (const label of ["Home", "Listing Factory", "Batch History", "Keyword Banks",
-    "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker"])
+  for (const label of ["Home", "Listing Factory", "Batch History", "Keyword Banks", "Mockup Sets", "Usage",
+    "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker", "Connections"])
     assert.ok(shell.includes(`label: "${label}"`), `${label} is on the interior rail`);
   assert.match(app, /import \{ NAV \} from "\.\/factory-shell"/,
     "the workflow rail must draw from the same list");
   for (const source of [shell, app]) {
     const menu = source.slice(source.indexOf("factory-account-menu"));
     assert.match(menu, /role="menuitem"[^>]*href="\/usage"/, "Usage + Plan is in the account menu");
-    assert.match(menu, /role="menuitem"[^>]*href="\/listing-factory\?step=connect"/, "Connections is in the account menu");
+    assert.match(menu, /role="menuitem"[^>]*href="\/connections"/, "Connections is in the account menu");
   }
-  assert.doesNotMatch(shell.slice(0, shell.indexOf("NAV.map")), /label: "Usage \+ Plan"|label: "Connections"/,
-    "and neither is still on the rail");
+  assert.match(shell, /label: "Connections"[\s\S]*group: "connections"/,
+    "Connections is the last top-level navigation item");
   assert.match(shell, /<SuiteSidebarNav active=\{active\} items=\{NAV\}/,
     "interior pages mount the shared navigation component");
   assert.match(app, /<SuiteSidebarNav active="factory" items=\{NAV\}/,

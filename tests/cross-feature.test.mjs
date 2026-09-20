@@ -170,16 +170,13 @@ test("the Trademark Checker renders as itself at every width", () => {
   assert.ok(!code.includes("MobileGate"), "the checker still carries a desktop gate");
 });
 
-test("the suite CTA is universal while factory metrics stay on factory pages", () => {
-  /* Starting a batch is the suite's primary call to action. Usage and goal
-     metrics still belong only to the Listing Factory surfaces. */
+test("the batch CTA and factory metrics stay inside Listing Factory", () => {
   const shell = strip(read("app/factory-shell.tsx"));
-  assert.ok(shell.includes("Start a new batch"), "the primary suite CTA is missing");
+  assert.ok(!shell.includes("Start a new batch"), "the batch CTA leaked into the shared shell");
   for (const control of ["approved-usage", "listing-goal-side"]) {
     const at = shell.indexOf(control);
     assert.ok(at > 0, `${control} is missing from the shell`);
-    assert.ok(shell.lastIndexOf("FACTORY_PAGES.has(active)", at) > shell.lastIndexOf("<header", at) - 2000
-      || shell.slice(Math.max(0, at - 600), at).includes("FACTORY_PAGES.has(active)"),
+    assert.ok(shell.slice(Math.max(0, at - 600), at).includes('active === "factory"'),
       `${control} is not scoped to factory pages`);
   }
 });
@@ -220,12 +217,11 @@ test("the same checker module answers on every surface", () => {
   }
 });
 
-test("no screen calls the checker a tracker or promises alerts", () => {
+test("the tracker promises only visible watched-phrase status", () => {
   for (const file of ["app/trademark/page.tsx", "app/more/page.tsx",
     "app/home/page.tsx", "app/design-scanner/design-scanner-client.tsx"]) {
     const text = read(file).toLowerCase();
-    for (const banned of ["tracker", "we'll alert", "we will alert", "notify you when",
-      "watch this phrase", "monitor this phrase"])
+    for (const banned of ["we'll alert", "we will alert", "notify you when", "monitor this phrase"])
       assert.ok(!text.includes(banned), `${file} says "${banned}"`);
   }
 });
@@ -247,8 +243,8 @@ test("the installed app names no product that does not exist", () => {
     new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
   assert.equal(manifest.display, "standalone");
   assert.match(manifest.start_url, /^\/home/);
-  assert.equal(manifest.name, NEUTRAL_NAME);
-  assert.equal(manifest.short_name, NEUTRAL_NAME);
+  assert.equal(manifest.name, "Goldie Suite");
+  assert.equal(manifest.short_name, "Goldie Suite");
   /* The description says what the software does. It may not say Goldie, and
      may not imply that Etsy endorses it. */
   assert.doesNotMatch(manifest.description, /goldie/i);

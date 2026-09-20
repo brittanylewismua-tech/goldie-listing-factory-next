@@ -61,6 +61,17 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
   const [verdict, setVerdict] = useState<FullVerdict | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
+  const [watches, setWatches] = useState<Array<{ phrase: string; risk: string;
+    changed: boolean; pending: boolean; matches: number }>>([]);
+  const [watchBusy, setWatchBusy] = useState("");
+
+  const loadWatches = async () => {
+    const response = await fetch("/api/trademark/watches", { cache: "no-store" });
+    if (!response.ok) return;
+    const body = await response.json() as { watches?: typeof watches };
+    setWatches(body.watches ?? []);
+  };
+  useEffect(() => { void loadWatches(); }, []);
 
   const started = useRef(false);
   useEffect(() => {
@@ -70,7 +81,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
     /* Once, on mount, for the preview only. */
   }, [initialPhrase]);
 
-  async function run(value: string) {
+  async function run(value: string, acknowledgeWatch = false) {
     const term = value.trim();
     if (!term || checking) return;
     setChecking(true); setError(""); setVerdict(null);
@@ -80,9 +91,32 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
       const result = await response.json() as FullVerdict & { error?: string };
       if (!response.ok) throw new Error(result.error || "That could not be checked.");
       setVerdict(result);
+      if (acknowledgeWatch) {
+        await fetch("/api/trademark/watches", { method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phrase: term }) });
+        await loadWatches();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "That could not be checked.");
     } finally { setChecking(false); }
+  }
+
+  async function watchPhrase() {
+    const term = (verdict?.phrase || phrase).trim();
+    if (!term) return;
+    setWatchBusy(term);
+    await fetch("/api/trademark/watches", { method: "POST",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phrase: term }) });
+    await loadWatches();
+    setWatchBusy("");
+  }
+
+  async function removeWatch(term: string) {
+    setWatchBusy(term);
+    await fetch(`/api/trademark/watches?phrase=${encodeURIComponent(term)}`, { method: "DELETE" });
+    await loadWatches();
+    setWatchBusy("");
   }
 
   /* The phrase with each hit marked in place. Built from offsets rather than
@@ -132,6 +166,24 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
           <button key={example} type="button"
             onClick={() => { setPhrase(example); run(example); }}>{example}</button>)}
       </div>
+
+      {watches.length > 0 && <section className="tm-watches" aria-labelledby="tm-watches-title">
+        <div className="tm-watches-head"><div><p className="mini-label">WATCHED PHRASES</p>
+          <h2 id="tm-watches-title">Status changes show up here.</h2></div></div>
+        <div className="tm-watch-list">{watches.map(watch => <article key={watch.phrase}
+          className={watch.changed ? "changed" : ""}>
+          <div><strong>{watch.phrase}</strong><span>{watch.changed
+            ? `${watch.matches || "New"} ${watch.matches === 1 ? "result needs" : "results need"} review${watch.pending ? " · pending application found" : ""}`
+            : watch.pending ? "Pending application found"
+              : watch.matches ? `${watch.matches} matching record${watch.matches === 1 ? "" : "s"}`
+                : "No matching record found"}</span></div>
+          <span className={`tm-watch-risk ${watch.risk}`}>{watch.risk === "high" ? "High risk"
+            : watch.risk === "caution" ? "Review" : "Clear for now"}</span>
+          <button type="button" onClick={() => { setPhrase(watch.phrase); void run(watch.phrase, true); }}>Review</button>
+          <button type="button" className="quiet" disabled={watchBusy === watch.phrase}
+            onClick={() => void removeWatch(watch.phrase)}>Remove</button>
+        </article>)}</div>
+      </section>}
 
       {error && <section className="drop-error p-notice p-notice-bad" role="alert">
         <h2>This could not be checked</h2>
@@ -192,18 +244,16 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
               </span>
             </li>)}
         </ul>}
+        <button className="tm-watch-button" type="button" disabled={watchBusy === verdict.phrase}
+          onClick={() => void watchPhrase()}>{watches.some(watch => watch.phrase.toLowerCase() === verdict.phrase.toLowerCase())
+            ? "Update watched phrase" : "Watch this phrase"}</button>
       </section>}
 
       <p className="tm-note">
-        <strong>What this checks.</strong> Two things. The brands, characters, franchises,
-        teams and artists that listings actually get removed for — and live US trademark
-        records, taken from USPTO's own published data. Marks outside the classes
-        print-on-demand sellers use are counted when the phrase is the brand itself.{" "}
+        A clear result means nothing was found rather than nobody owns it.{" "}
         {verdict && verdict.registerReady === false &&
-          <strong>The register is still loading, so treat a clean result as incomplete today.</strong>}
-        {" "}It is not legal advice, and a clean result means nothing was found rather than
-        nobody owns it. If you are about to build a whole product line on a phrase, have it
-        searched properly first.
+          <strong>Some records are still loading, so a clear result is incomplete.</strong>}
+        {" "}This is screening information, not legal advice.
       </p>
     </div>
 </>);

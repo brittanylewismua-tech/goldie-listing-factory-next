@@ -39,7 +39,6 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell>.topbar .top-nav{display:grid;gap:3px}
 /* #746b70 on the rail measured 3.69:1. These are the only labels that say
    what the two groups of links are. */
-.app-shell>.topbar .suite-nav-label{display:block;margin:7px 10px 8px;color:#a29499;font-size:9px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
 .app-shell>.topbar .top-nav a{position:relative;display:flex;align-items:center;gap:11px;min-height:41px;padding:0 11px;border-radius:7px;color:#bcb2b8;font-size:12px;font-weight:750}
 .app-shell>.topbar .top-nav a svg{width:17px;height:17px;flex:0 0 17px}
 .app-shell>.topbar .top-nav a>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -61,7 +60,6 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell>.topbar .top-nav a.suite-nav-child{min-height:34px;padding:0 10px;color:#958a90;font-size:11px;font-weight:700}
 .app-shell>.topbar .top-nav a.suite-nav-child svg{width:14px;height:14px;flex-basis:14px}
 .app-shell>.topbar .top-nav a.suite-nav-child.active{color:#111}
-.app-shell>.topbar .suite-nav-label{margin-top:17px}
 .app-shell>.topbar .top-nav a.locked{color:#756c71;cursor:pointer}
 .app-shell>.topbar .top-nav a.locked:hover{background:#1d1a1c;color:#bcb2b8}
 .app-shell>.topbar .top-nav a .suite-nav-lock{width:13px;height:13px;flex:0 0 13px;margin-left:auto;fill:none;stroke:currentColor;stroke-width:1.8;opacity:.9}

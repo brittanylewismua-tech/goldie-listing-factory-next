@@ -78,6 +78,12 @@ export async function ensureListingTables() {
       confirmed INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
       PRIMARY KEY (user_id, shop_id, product_family))`),
+    db().prepare(`CREATE TABLE IF NOT EXISTS shop_map_shop_profiles (
+      user_id TEXT NOT NULL,
+      shop_id INTEGER NOT NULL,
+      image_url TEXT NOT NULL DEFAULT '',
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (user_id, shop_id))`),
   ]);
   try {
     await db().prepare(`ALTER TABLE shop_map_listings ADD COLUMN image_url TEXT NOT NULL DEFAULT ''`).run();

@@ -123,15 +123,6 @@ body { min-width: 320px; }
 
 .app-shell > .topbar .top-nav { gap: 3px !important; }
 
-.app-shell > .topbar .suite-nav-label {
-  margin: 4px 10px 8px !important;
-  color: var(--pro-subtle) !important;
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  letter-spacing: .08em !important;
-}
-
-.app-shell > .topbar .suite-nav-label-library { margin-top: 23px !important; }
 
 .app-shell > .topbar .top-nav a {
   min-height: 43px !important;
@@ -1161,7 +1152,6 @@ html, body { background: var(--pro-canvas) !important; }
   box-shadow: none !important;
 }
 
-.app-shell > .topbar .suite-nav-label { color: #8d838b !important; }
 .app-shell > .topbar .top-nav a {
   color: #aaa1a8 !important;
   border-radius: 9px !important;

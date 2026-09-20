@@ -3,15 +3,15 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { NavIcon, type NavKey as NavIconKey } from "./nav-icons";
 
-export type SuiteNavKey = "home" | "factory" | "batches" | "keywords"
-  | "market-watch" | "design-scanner" | "shop-map" | "trademark";
+export type SuiteNavKey = "home" | "factory" | "batches" | "keywords" | "mockups" | "usage"
+  | "market-watch" | "design-scanner" | "shop-map" | "trademark" | "connections";
 
 export type SuiteNavItem = {
   key: SuiteNavKey;
   label: string;
   href: string;
   icon: NavIconKey;
-  group: "home" | "factory" | "command";
+  group: "home" | "factory" | "command" | "connections";
 };
 
 type Props = {
@@ -21,7 +21,8 @@ type Props = {
   keywordBankInNewTab?: boolean;
 };
 
-const FACTORY_KEYS = new Set(["factory", "batches", "keywords"]);
+const FACTORY_KEYS = new Set(["factory", "batches", "keywords", "mockups", "usage"]);
+const COMMAND_KEYS = new Set(["market-watch", "design-scanner", "shop-map", "trademark"]);
 
 function LockIcon() {
   return <svg className="suite-nav-lock" viewBox="0 0 24 24" aria-hidden="true">
@@ -33,6 +34,7 @@ function LockIcon() {
 export default function SuiteSidebarNav({ active, items, onNavigate,
   keywordBankInNewTab = false }: Props) {
   const [factoryOpen, setFactoryOpen] = useState(FACTORY_KEYS.has(active));
+  const [commandOpen, setCommandOpen] = useState(COMMAND_KEYS.has(active));
   const [commandCenterAccess, setCommandCenterAccess] = useState(false);
   const [lockedTool, setLockedTool] = useState("");
 
@@ -58,6 +60,7 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
   const factory = items.find(item => item.key === "factory");
   const factoryChildren = items.filter(item => item.group === "factory" && item.key !== "factory");
   const command = items.filter(item => item.group === "command");
+  const connections = items.find(item => item.group === "connections");
   const navigate = (event: MouseEvent<HTMLAnchorElement>, item: SuiteNavItem) => {
     if (item.group === "command" && commandCenterAccess === false) {
       event.preventDefault();
@@ -96,8 +99,20 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
         </div>
         {factoryOpen && <div className="suite-nav-children">{factoryChildren.map(item => link(item, true))}</div>}
       </div>}
-      <span className="suite-nav-label">Command Center</span>
-      {command.map(item => link(item))}
+      <div className={`suite-nav-section${COMMAND_KEYS.has(active) ? " current" : ""}`}>
+        <div className="suite-nav-parent suite-nav-command-parent">
+          <button type="button" className="suite-nav-toggle" aria-label={`${commandOpen ? "Collapse" : "Expand"} Command Center menu`}
+            aria-expanded={commandOpen} onClick={() => setCommandOpen(open => !open)}>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+          </button>
+          <button type="button" className="suite-nav-heading" aria-expanded={commandOpen}
+            onClick={() => setCommandOpen(open => !open)}>
+            <NavIcon name="marketWatch"/><span>Command Center</span>
+          </button>
+        </div>
+        {commandOpen && <div className="suite-nav-children">{command.map(item => link(item, true))}</div>}
+      </div>
+      {connections && link(connections)}
     </nav>
 
     {lockedTool && <div className="suite-access-backdrop" role="presentation"

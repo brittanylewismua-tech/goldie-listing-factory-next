@@ -7,14 +7,14 @@ const css = readFileSync(new URL("../app/professional-redesign.css", import.meta
 const route = readFileSync(new URL("../app/api/shop-map/map/route.ts", import.meta.url), "utf8");
 
 test("the redesigned map has four clear sections", () => {
-  for (const label of ["Overview", "Product themes", "Sold listings", "Money"])
+  for (const label of ["Overview", "Product themes", "Sold listings", "Your numbers"])
     assert.ok(client.includes(label), `${label} is missing`);
   assert.match(client, /aria-current=\{tab === key \? 'page'/);
 });
 
 test("overview leads with sold listings and plain timing", () => {
-  assert.match(client, /These listings sold most often/);
-  assert.match(client, /Ranked by quantity sold in the last 90 days/);
+  assert.match(client, /Top three listings/);
+  assert.match(client, /LAST 90 DAYS/);
   assert.match(client, /sold\.slice\(0,3\)/);
   assert.match(client, /listing\.sales\} sold/);
 });

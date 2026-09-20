@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import HomeStatus from "./home-status";
+import { useEffect, useState } from "react";
 
 /**
  * THE HOME PAGE'S CONTENT, MOUNTABLE ON ITS OWN.
@@ -19,7 +19,7 @@ const TOOLS = [
   {
     href: "/listing-factory",
     name: "Listing Factory",
-    what: "Turn a design into finished Etsy listings, in bulk.",
+    what: "Create one Etsy listing or build a batch.",
     desktopOnly: true,
     icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
       <path d="M3 20h18" /><path d="M5 20V9l5 3V9l5 3V6l4 3v11" /></svg>,
@@ -27,7 +27,7 @@ const TOOLS = [
   {
     href: "/market-watch",
     name: "Market Watch",
-    what: "What is actually moving in the niches and shops you follow.",
+    what: "Track the niches and shops you care about.",
     desktopOnly: false,
     icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
       <path d="M3 17l6-6 4 4 7-7" /><path d="M14 8h7v7" /></svg>,
@@ -35,7 +35,7 @@ const TOOLS = [
   {
     href: "/design-scanner",
     name: "Design Scanner",
-    what: "See how a design compares with listings that are moving.",
+    what: "Check a design before you build the listing.",
     desktopOnly: false,
     icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
       <circle cx="12" cy="12" r="8" /><path d="M4 12h16" /></svg>,
@@ -43,15 +43,15 @@ const TOOLS = [
   {
     href: "/shop-map",
     name: "Shop Map",
-    what: "Your own listings, your money, and what your shop is made of.",
+    what: "See sold listings, product themes, and your numbers.",
     desktopOnly: false,
     icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
       <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg>,
   },
   {
     href: "/trademark",
-    name: "Trademark Checker",
-    what: "Check a phrase before you print it.",
+    name: "Trademark Tracker",
+    what: "Check a phrase and keep an eye on it.",
     desktopOnly: false,
     icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
       <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>,
@@ -60,26 +60,31 @@ const TOOLS = [
 
 
 export default function HomeView({ firstName = "Britt" }: { firstName?: string }) {
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const [today, setToday] = useState<Date | null>(null);
+  useEffect(() => setToday(new Date()), []);
+  const greeting = !today ? "Welcome back" : today.getHours() < 12
+    ? "Good morning" : today.getHours() < 17 ? "Good afternoon" : "Good evening";
   return <>
   <main className="hub p-grid home-dashboard">
     <header className="hub-head home-command-head home-dashboard-intro">
-      <p className="home-dashboard-date"><span />{new Intl.DateTimeFormat("en-US", {
+      {today && <p className="home-dashboard-date"><span />{new Intl.DateTimeFormat("en-US", {
         weekday: "long", month: "long", day: "numeric",
-      }).format(new Date())}</p>
-      <h1>{greeting}, {firstName}.<br/><em>Your shop is moving.</em></h1>
-      <p className="hub-intro">The clearest signals from your shop are ready.</p>
+      }).format(today)}</p>}
+      <h1>{greeting}, {firstName}.</h1>
+      <p className="hub-intro">What do you want to work on?</p>
     </header>
 
-    <HomeStatus />
+    <section className="home-primary-actions" aria-label="Quick actions">
+      <Link className="home-primary-action" href="/listing-factory"><span>CREATE LISTINGS</span><strong>Start in Listing Factory</strong><i aria-hidden="true">→</i></Link>
+      <Link className="home-secondary-action" href="/batches"><span>KEEP WORKING</span><strong>Open Batch History</strong><i aria-hidden="true">→</i></Link>
+    </section>
 
-    <div className="hub-section-head home-workspaces-head"><div><p className="mini-label">YOUR WORKSPACES</p><h2>Choose what you want to work on.</h2></div></div>
+    <div className="hub-section-head home-workspaces-head"><div><p className="mini-label">TOOLS</p><h2>Everything in Goldie Suite</h2></div></div>
     <section className="hub-grid">
-      {TOOLS.map(tool => (
+      {TOOLS.map((tool, index) => (
         <Link key={tool.name} className="hub-tool" href={tool.href}>
           <span className="hub-icon" aria-hidden="true">{tool.icon}</span>
-          <span className="hub-tool-number">0{TOOLS.indexOf(tool) + 1}</span>
+          <span className="hub-tool-number">0{index + 1}</span>
           <b>{tool.name}</b>
           <span className="hub-what">{tool.what}</span>
           {/* "Desktop" told a member nothing. This is a bulk publishing

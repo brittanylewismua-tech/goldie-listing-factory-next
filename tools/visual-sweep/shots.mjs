@@ -30,14 +30,22 @@ for (const view of WIDTHS) {
     deviceScaleFactor: 1,
   });
   const page = await context.newPage();
-  page.on('pageerror', error => console.log(`  ! page error: ${String(error).slice(0, 120)}`));
+  let pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error)));
   for (const state of states) {
     if (ONLY && !ONLY.includes(state)) continue;
     const url = `${BASE}/dev/state-preview?state=${encodeURIComponent(state)}`
-      + (TICKET ? `&ticket=${TICKET}` : '') + '&bare=1';
+      + (TICKET ? `&ticket=${TICKET}` : '') + '&bare=1'
+      + (state === 'factory-ready' ? '&step=setup' : '');
     try {
+      pageErrors = [];
       await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
       await page.waitForTimeout(900);
+      const fatalText = await page.locator('body').innerText();
+      const hasErrorOverlay = await page.locator('nextjs-portal, .nextjs-toast-errors-parent').count();
+      if (fatalText.includes('Page not found') || hasErrorOverlay || pageErrors.length) {
+        throw new Error(pageErrors[0] || (hasErrorOverlay ? 'React error overlay rendered' : '404 rendered'));
+      }
       await page.screenshot({ path: `${OUT}/${state}__${view.name}.png`, fullPage: true });
       console.log(`ok ${state} ${view.name}`);
     } catch (error) {

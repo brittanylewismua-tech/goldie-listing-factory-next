@@ -24,8 +24,8 @@ import TrademarkPage from "@/app/trademark/page";
 import UsagePage from "@/app/usage/page";
 import KeywordBanks from "@/app/keywords/page";
 import MoreView from "@/app/more/more-view";
+import MockupsPage from "@/app/mockups/page";
 import "@/app/suite-redesign.css";
-import "@/app/professional-redesign.css";
 import "@/app/account/settings/account.css";
 
 /**
@@ -145,8 +145,7 @@ const Shell = ({ active, title, children }:
 /* Every surface is given the same props; most ignore `at`, which is what
    makes adding a sub-view to one of them a one-line change. */
 const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
-  connections: () => <Shell active="connections" title="Connections">
-    <ConnectionsClient signedInEmail="preview@example.invalid" /></Shell>,
+  connections: () => <ConnectionsClient signedInEmail="preview@example.invalid" />,
   "market-watch": ({ at }: { at?: string }) =>
     <Shell active="market-watch" title="Market Watch">
       <MarketWatchClient signedInEmail="preview@example.invalid"
@@ -166,6 +165,7 @@ const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
   trademark: ({ at }: { at?: string }) => <TrademarkPage initialPhrase={at} />,
   usage: () => <UsagePage />,
   keywords: () => <KeywordBanks />,
+  mockups: () => <MockupsPage />,
   more: () => <Shell active="more" title="Tools & settings"><MoreView /></Shell>,
 };
 

@@ -49,8 +49,12 @@ async function buildMap(request: Request) {
   const now = Math.floor(Date.now() / 1_000);
 
   const shopRow = await db.prepare(
-    `SELECT shop_id, shop_name FROM etsy_connections WHERE user_id = ? AND is_active = 1 LIMIT 1`)
-    .bind(user.userId).first<{ shop_id: number; shop_name: string }>();
+    `SELECT c.shop_id, c.shop_name, COALESCE(p.image_url, '') AS image_url
+       FROM etsy_connections c
+       LEFT JOIN shop_map_shop_profiles p
+         ON p.user_id = c.user_id AND p.shop_id = c.shop_id
+      WHERE c.user_id = ? AND c.is_active = 1 LIMIT 1`)
+    .bind(user.userId).first<{ shop_id: number; shop_name: string; image_url: string }>();
   if (!shopRow) return NextResponse.json({ error: "No connected shop." }, { status: 400 });
   const shopId = Number(shopRow.shop_id);
   /*
@@ -408,7 +412,7 @@ async function buildMap(request: Request) {
     || b.revenueMinor - a.revenueMinor || b.favorites - a.favorites);
 
   return NextResponse.json({
-    shop: { shopId, shopName: shopRow.shop_name, timezone },
+    shop: { shopId, shopName: shopRow.shop_name, imageUrl: shopRow.image_url, timezone },
     /* The money section is blocked until this shop's own timezone is set. */
     timezoneNeeded: !timezone,
     month,

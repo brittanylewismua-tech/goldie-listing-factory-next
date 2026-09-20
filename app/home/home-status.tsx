@@ -102,8 +102,8 @@ export default function HomeStatus() {
 
     <section className="home-signal">
       <div className="home-signal-heading">
-        <div><p className="mini-label">YOUR SHOP'S CLEAREST SIGNAL</p>
-          <h2>Your top three listings in the last 30 days.</h2>
+        <div><p className="mini-label">LAST 30 DAYS</p>
+          <h2>Top three listings</h2>
           <p>{hasSales
             ? "Ranked by the number sold."
             : "No recent sales yet, so these are ranked by customer favorites."}</p></div>

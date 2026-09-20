@@ -1264,6 +1264,7 @@ export default function ListingFactoryApp() {
   const [preparingListingId,setPreparingListingId]=useState("");
   const [savingEtsyDetails,setSavingEtsyDetails]=useState(false);
   const [workflowStep,setWorkflowStep]=useState<WorkflowStep>("connect");
+  const [listingRunMode,setListingRunMode]=useState<"single"|"batch"|null>(null);
   const [restoringBatch,setRestoringBatch]=useState(true);
   const [resumeProcessing,setResumeProcessing]=useState(false);
   const [finishPhase,setFinishPhase]=useState<FinishPhase>("details");
@@ -1278,6 +1279,7 @@ export default function ListingFactoryApp() {
   const [batchDisplayName,setBatchDisplayName]=useState("");
   const [restoredBatchName,setRestoredBatchName]=useState("");
   const [savingDraftBatch,setSavingDraftBatch]=useState(false);
+  useEffect(()=>{if(!listingRunMode&&(activeRecipe||files.length||drafts.length))setListingRunMode(files.length===1?"single":"batch")},[listingRunMode,activeRecipe,files.length,drafts.length]);
   useEffect(()=>{
     if(!restartBatchOpen)return;
     const restore=containModalFocus("restart-batch-title");
@@ -1542,7 +1544,7 @@ export default function ListingFactoryApp() {
      could name, so it stayed enabled and a click threw a blocking modal reading
      "Wait until every design finishes loading and checking". The button is the
      thing she is looking at; it should say so itself. */
-  const missingRequirement = !connected ? "Connect Printify first" : !productSelected ? "Choose or add a saved product" : !templateLoaded ? "Connect its Printify template" : files.length === 0 ? "Add at least one design" : !designsFinished ? `Checking ${designsPreparing} ${designsPreparing===1?"design":"designs"}\u2026` : "";
+  const missingRequirement = !connected ? "Connect Printify first" : !listingRunMode ? "Choose one listing or a batch" : !productSelected ? "Choose or add a saved product" : !templateLoaded ? "Connect its Printify template" : files.length === 0 ? "Add at least one design" : !designsFinished ? `Checking ${designsPreparing} ${designsPreparing===1?"design":"designs"}\u2026` : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
   const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?(complete&&reviewEditing?8:2):running?4:3;
   const measuredCreationProgress=measuredDraftCreationPercent(draftCreationPhases,runTotal);
@@ -1923,7 +1925,7 @@ export default function ListingFactoryApp() {
     const review=draft.costReview?{...draft.costReview,variants:draft.costReview.variants.map(variant=>({id:variant.id,title:variant.title,cost:variant.cost,price:variant.price,isEnabled:variant.isEnabled}))}:undefined;
     return {...draft,colorPreviewImageDetails:compactPreviews,costReview:review};
   }
-  function batchStateSnapshot(overrides:Record<string,unknown>={}){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,artworkPreviewUrl:ignoredArtworkPreview,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file:ignoredArtworkFile,previewUrl:ignoredArtworkVersionPreview,...artwork})=>artwork)}));return {queuedDesignSessions:Object.fromEntries(files.filter(file=>queuedDesignSessions.current.has(file.id)).map(file=>[file.id,queuedDesignSessions.current.get(file.id)])),template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,bundleQualityDecisions,designs,drafts:drafts.map(snapshotDraft),complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt,batchDisplayName,...overrides}}
+  function batchStateSnapshot(overrides:Record<string,unknown>={}){const designs=files.map(({file:ignoredFile,previewUrl:ignoredPreview,artworkPreviewUrl:ignoredArtworkPreview,artworkVersions,...design})=>({...design,artworkVersions:artworkVersions?.map(({file:ignoredArtworkFile,previewUrl:ignoredArtworkVersionPreview,...artwork})=>artwork)}));return {queuedDesignSessions:Object.fromEntries(files.filter(file=>queuedDesignSessions.current.has(file.id)).map(file=>[file.id,queuedDesignSessions.current.get(file.id)])),listingRunMode,template,templateDetails,description,pricing,selectedColorIds,selectedSizeIds,variantPrices,etsyShippingProfileId,pricingApproved,mockupTheme,activeRecipe,activeBundle,bundleRecipes,bundleIndex,bundleBatchIds,bundleQualityDecisions,designs,drafts:drafts.map(snapshotDraft),complete,finishPhase,bulkTitles,batchKeywords,titleJoiner,titleBuilderMode,autoTitleBankId,manualKeywordBankId,sharedMockups,preparedMockupCounts,printifyImageIndices,printifyImageSelections,sizeGuideName,keptAsDrafts,batchReceipt,batchDisplayName,...overrides}}
   async function saveDraftBatch(){const name=batchDisplayName.trim();if(!name)return;setSavingDraftBatch(true);try{const id=batchIdRef.current||crypto.randomUUID();batchIdRef.current=id;window.localStorage.setItem("goldie-active-batch",id);await saveBatchFiles(id,files.map(file=>file.file));if(!localPreview){const response=await batchFetch("/api/batches",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,status:"draft",step:workflowStep,setupName:name,productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:{...batchStateSnapshot(),keptAsDrafts:complete}})});if(!response.ok)throw new Error("This batch could not be saved.");await saveBatchName(id,name)}setKeptAsDrafts(true);setDraftSaveOpen(false);setDraftSavedOpen(true)}catch(error){stopWith("This batch was not saved.",[error instanceof Error?error.message:"Try again in a moment."])}finally{setSavingDraftBatch(false)}}
   function jumpToMissingPhotoListing(clientId:string){setMissingPhotoDraftIds([]);window.setTimeout(()=>{
     /* D532 - a listing collapses now, and you cannot scroll to something inside a
@@ -2661,7 +2663,7 @@ export default function ListingFactoryApp() {
   async function chooseFiles(list: FileList | null) {
     if(draftRunInFlight.current)return;
     if (!list) return;
-    const selected = Array.from(list).filter((file) => /\.(png|jpe?g)$/i.test(file.name));
+    const selected = Array.from(list).filter((file) => /\.(png|jpe?g)$/i.test(file.name)).slice(0, listingRunMode === "single" ? 1 : undefined);
     if (selected.length === 0) {
       setFileNotice("");
       setFileError("No supported designs were found. Choose PNG or JPG images.");
@@ -2684,7 +2686,8 @@ export default function ListingFactoryApp() {
       if(existingHashes.has(contentHash)){duplicateCount+=1;continue}
       existingHashes.add(contentHash);const artworkPreviewUrl=URL.createObjectURL(file);unique.push({name:file.name,size:file.size,id:crypto.randomUUID(),file,previewUrl:artworkPreviewUrl,artworkPreviewUrl,title:"",tags:[],contentHash,paddingStatus:"checking"})
     }
-    const available=Math.max(0,Math.min(MAX_BATCH_FILES-files.length,batchDesignLimit-files.length));
+    const availableForBatch=Math.max(0,Math.min(MAX_BATCH_FILES-files.length,batchDesignLimit-files.length));
+    const available=listingRunMode==="single"?Math.min(availableForBatch,Math.max(0,1-files.length)):availableForBatch;
     if(unique.length>available){unique.forEach(image=>URL.revokeObjectURL(image.previewUrl));setFileNotice(duplicateCount?`${duplicateCount} exact ${duplicateCount===1?"duplicate was":"duplicates were"} skipped.`:"");setFileError(available?`This selection contains ${unique.length} new designs, but this batch has room for ${available}. Choose ${available} or fewer so nothing is partially added.`:"This batch has no listing allowance left. No designs were added and no batch was created.");if(folderPicker.current)folderPicker.current.value="";if(imagePicker.current)imagePicker.current.value="";return}
     const images=unique;
     if(!images.length&&!replacements.size){if(duplicateCount){setFileError("");setFileNotice(`${duplicateCount===1?"That design is":"Those designs are"} already in this batch. No duplicate was added.`)}else{setFileNotice("");setFileError(`This batch already has ${MAX_BATCH_FILES} designs.`)}if(folderPicker.current)folderPicker.current.value="";if(imagePicker.current)imagePicker.current.value="";return}
@@ -2775,6 +2778,7 @@ export default function ListingFactoryApp() {
     files.forEach(file=>URL.revokeObjectURL(file.previewUrl));
     setBatchToolsOpen(true);
     setBatchDisplayName("");
+    setListingRunMode(null);
     setRestoredBatchName("");
     setKeptAsDrafts(false);
     setBatchSaveStatus("idle");
@@ -5643,7 +5647,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          "Choose product", so that is the name three places already agree on. The
          title stays put; the copy carries the state. */
       ? { eyebrow: "STEP 1 OF 3", title: files.length?"Review your product and designs":"Add your designs", copy: "" }
-      : { eyebrow: "STEP 1 OF 3", title: "Start your batch", copy: "Choose a saved product or bundle." },
+      : !listingRunMode
+        ? { eyebrow: "STEP 1 OF 3", title: "Start new listings", copy: "Choose one listing or a batch." }
+        : listingRunMode==="single"
+          ? { eyebrow: "STEP 1 OF 3", title: "Choose your product", copy: "Select the saved product for this listing." }
+          : { eyebrow: "STEP 1 OF 3", title: "Choose products", copy: "Select a saved product or product bundle for this batch." },
     designs: complete
       ? reviewEditing
         ? reviewEditorHero
@@ -5754,7 +5762,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 {/* D639 · ?step=connect is honoured as an explicit request and the
                     auto-skip leaves it alone, so this is the way back to the
                     connection screen rather than a new page. */}
-                <a role="menuitem" href="/listing-factory?step=connect" onClick={event=>guardNavigation(event,"/listing-factory?step=connect")}>Connections</a>
+                <a role="menuitem" href="/connections" onClick={event=>guardNavigation(event,"/connections")}>Connections</a>
                 {signedIn!==null&&(localPreview&&!signedIn
                   ? <span role="menuitem" title="Account sign-in is available on the published Listing Factory site.">Preview mode</span>
                   : <a role="menuitem" href={signedIn?"/account/sign-out?return_to=%2Flisting-factory":"/account/sign-in?return_to=%2Flisting-factory"}>{signedIn?"Sign out":"Sign in"}</a>)}
@@ -5799,7 +5807,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
       {!returningHome&&<section className={`workspace ${complete&&workflowStep==="designs"?"mockup-workspace":""}`}>
         <nav className="workflow-progress" aria-label="Listing Factory progress" style={{"--rail-count":RAIL_STAGES.length} as React.CSSProperties}>
-          <div className="workflow-progress-head"><div><p className="mini-label">{workflowStep==="connect"?"ACCOUNT SETUP":"YOUR BATCH"}</p>{/* D416 - On the Connect step this read "Step 1 of 4 · Product" under a heading
+          <div className="workflow-progress-head"><div><p className="mini-label">{workflowStep==="connect"?"ACCOUNT SETUP":listingRunMode==="single"?"YOUR LISTING":"YOUR BATCH"}</p>{/* D416 - On the Connect step this read "Step 1 of 4 · Product" under a heading
                 that says "Connect your accounts", and the rail lit up Product. Connecting
                 is a one-time gate before the four steps, not the first of them. */}<b>{workflowStep==="connect"?"Connect Printify and Etsy":`Step ${railTopNumber} of ${RAIL_STAGES.length} · ${currentStage.label}`}</b></div>{(template||files.length>0||drafts.length>0)&&<button className="start-new-batch" disabled={running} onClick={startOver}>Clear batch + start over</button>}</div>
           {localPreview&&<p className="preview-mode-note">Preview mode · every step is unlocked <a href="/design-lab">Open design lab →</a></p>}
@@ -5961,7 +5969,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             </div>
           </article>
 
-          <div inert={running||Boolean(bundleRun)} className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"}`}>{/* D763 · Panel 01. The facets below number from 02, and until now
+          <div inert={running||Boolean(bundleRun)} className={`product-step workflow-panel ${workflowStep==="setup"?"active-panel":"hidden-panel"} ${workflowStep==="setup"&&!listingRunMode?"listing-mode-needed":""}`}>
+          {workflowStep==="setup"&&!listingRunMode&&<section className="listing-mode-chooser" aria-labelledby="listing-mode-title">
+            <p className="mini-label">START A NEW LISTING</p><h2 id="listing-mode-title">What are you making?</h2>
+            <div><button type="button" onClick={()=>setListingRunMode("single")}><strong>One listing</strong><span>Choose one product and upload one design.</span><i aria-hidden="true">→</i></button>
+            <button type="button" onClick={()=>setListingRunMode("batch")}><strong>A batch of listings</strong><span>Use one or more products and upload several designs.</span><i aria-hidden="true">→</i></button></div>
+          </section>}{/* D763 · Panel 01. The facets below number from 02, and until now
             there was no 01 - the picker sat in the old card while the settings
             under it had already become panels. */}<FactoryPanel index={1} title={bundleCreationMode?"Create a product bundle":productFormMode?"Add a saved product":showProductLibrary||(!productSelected&&!bundleSelected)?"Saved products and bundles":bundleSelected?"Products for this batch":productSelected?"Product for this batch":"Choose a product or bundle"} description={bundleCreationMode?"Name it, then choose 2 to 4 products":productFormMode?"Connect one completed Printify product":showProductLibrary||(!productSelected&&!bundleSelected)?undefined:"Selected for this batch"} state={failedBundleNames().length?"Needs a look":undefined} headerActions={bundleCreationMode||productFormMode?undefined:showProductLibrary||(!productSelected&&!bundleSelected)?<>{showProductLibrary&&(productSelected||bundleSelected)&&<button type="button" className="panel-create-action" onClick={()=>setShowProductLibrary(false)}>Back to this batch</button>}<button type="button" className="panel-create-action" onClick={()=>setAddProductRequest(value=>value+1)}>＋ Add a new product</button>{bundleCreationAvailable&&<button type="button" className="panel-create-action" onClick={()=>setCreateBundleRequest(value=>value+1)}>＋ Create a new bundle</button>}</>:bundleSelected?<button type="button" className="panel-create-action" onClick={()=>setShowProductLibrary(true)}>Choose a different bundle</button>:<button type="button" className="panel-create-action" onClick={()=>setShowProductLibrary(true)}>Choose a different product</button>} tone={failedBundleNames().length?"attention":productSelected||bundleSelected?"done":undefined} open><SavedWorkflow bundleChosen={Boolean(activeBundle&&bundleRecipes.length>1)} savedRevision={savedRevision} connected={connected||localPreview} templateUrl={template} templateVerified={templateLoaded} loadingTemplate={loadingTemplateVersion===templateLoadVersion.current&&loadingTemplateVersion>0} suggestedProductName={templateDetails?[templateDetails.brand,templateDetails.model].filter(Boolean).join(" ").trim()||templateDetails.blueprintTitle||"":""} selectedProductId={activeBundle?`bundle:${activeBundle.id}`:activeRecipe?.id||""} showLibrary={showProductLibrary} onShowLibraryChange={setShowProductLibrary} addProductRequest={addProductRequest} createBundleRequest={createBundleRequest} onBundleAvailabilityChange={setBundleCreationAvailable} onBundleModeChange={setBundleCreationMode} onProductModeChange={setProductFormMode} selectedSummary={templateDetails?<div className="template-proof recipe-proof selected-product-header">{/* D834 · This drew the words "YOUR ART" in a box. The product's own
                    Printify flatlay is available here - pickProductPhoto scores the
@@ -6155,18 +6168,18 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               <input ref={imagePicker} className="hidden-picker" type="file" multiple accept=".png,.jpg,.jpeg" onChange={(event) => void chooseFiles(event.target.files)} />
               {!files.length&&<><p className="upload-primary-note">{activeBundle&&bundleRecipes.length>1?`Upload each ${uploadPrimaryLabel} design once for every product in this bundle.`:`Upload one ${uploadPrimaryLabel} design per listing.`}{uploadSecondaryLabel?` Add optional ${uploadSecondaryLabel} artwork afterward.`:""}</p>
               <div className="upload-actions">
-              <button className="folder-drop" onClick={() => folderPicker.current?.click()}>
+              {listingRunMode==="batch"&&<button className="folder-drop" onClick={() => folderPicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">↑</span>
                 <span><b>{files.length ? designsFinished?"Add another folder":`Preparing ${designsReady} of ${files.length}` : "Add a folder"}</b><small>{files.length ? `${files.length} design${files.length===1?"":"s"} selected` : "Upload several images at once"}</small></span>
                 <span className="browse-chip">Browse</span>
-              </button>
+              </button>}
               <button className="folder-drop" onClick={() => imagePicker.current?.click()}>
                 <span className="upload-icon" aria-hidden="true">＋</span>
-                <span><b>Add individual images</b><small>Choose one or several files</small></span>
+                {listingRunMode==="single"?<span><b>Upload your design</b><small>Choose one PNG or JPG</small></span>:<span><b>Add individual images</b><small>Choose one or several files</small></span>}
                 <span className="browse-chip">Browse</span>
               </button>
               </div>
-              <p className="upload-guidance batch-limits file-reminder"><span className="batch-limits-quota"><b>PNG or JPG · up to {batchDesignLimit} designs · 100 MB each</b></span></p></>}
+              <p className="upload-guidance batch-limits file-reminder"><span className="batch-limits-quota">{listingRunMode==="single"?<b>PNG or JPG · one design · 100 MB</b>:<b>PNG or JPG · up to {batchDesignLimit} designs · 100 MB each</b>}</span></p></>}
               {fileError && <p className="file-limit-error" role="alert"><b>That batch can’t be added.</b><span>{fileError}</span></p>}
               {fileNotice&&(workflowStep==="setup"||workflowStep==="designs")&&<p className="file-add-notice" role="status"><b>Upload updated</b><span>{fileNotice}</span></p>}
               {files.length>0&&!designsFinished&&<section className="design-preparation-status working" role="status" aria-live="polite"><span className="design-status-icon" aria-hidden="true"/><div><b>{`Preparing designs: ${designsReady} of ${files.length} ready`}</b><small>Keep this page open while the files are checked.</small><div className="design-status-track"><i style={{width:`${files.length?designsReady/files.length*100:0}%`}}/></div></div><strong>{designsReady}/{files.length}</strong></section>}
@@ -6176,7 +6189,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 <div className="design-artwork-primary"><UploadedDesignPreview src={file.previewUrl}/><div><em>{itemNoun==="garment"&&primarySide?`Main design · ${printSideLabel(primarySide)}`:primarySide&&/wrap|around/i.test(primarySide)?"Main design · Wrap":"Main design"}</em><small>{file.width&&file.height?`${file.width} × ${file.height}px`:"Checking dimensions…"}</small></div><button type="button" className="artwork-remove-action" onClick={()=>removeDesign(file.id)} aria-label="Remove design">Remove</button></div>
                 {secondarySides.length>0&&<div className="artwork-version-tools"><b>Optional artwork for this listing</b><small>Add artwork only for another print area already prepared in this Printify product.</small><div>{secondarySides.map(side=><label className="secondary-action" role="button" tabIndex={0} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();event.currentTarget.querySelector("input")?.click()}}} key={side}>＋ Add {printSideLabel(side).toLocaleLowerCase()} artwork to this design<input className="hidden-picker" type="file" accept=".png,.jpg,.jpeg" onChange={event=>{void addArtworkVersion(file.id,side,event.target.files);event.target.value=""}}/></label>)}</div></div>}
 {secondaryVersions.map(artwork=>{const compatibleProducts=productsInBatch.filter(recipe=>orderedPrintSides(bundleProductDetails[recipe.id]?.printPositions).some(side=>side.toLocaleLowerCase()===artwork.side.toLocaleLowerCase())),assignedProducts=artwork.productIds?.length?artwork.productIds:(artwork.ownerProductId?[artwork.ownerProductId]:activeRecipe?.id?[activeRecipe.id]:[]);return <section className="artwork-version" key={artwork.id}><img src={artwork.previewUrl} alt=""/><div><b>{printSideLabel(artwork.side)} artwork for this listing design</b>{!artwork.colorIds.length&&<em className="artwork-color-required">Choose at least one {itemNoun} color for this {printSideLabel(artwork.side).toLocaleLowerCase()} print.</em>}{colors.length?<fieldset><legend>Use it on these {activeRecipe?.name||itemNoun} colors</legend>{colors.map(color=><button type="button" key={color.id} className={artwork.colorIds.includes(color.id)?"selected":""} aria-pressed={artwork.colorIds.includes(color.id)} onClick={()=>toggleArtworkColor(file.id,artwork.id,color.id)}><i style={{background:color.swatch||"#ddd"}}/>{color.title}</button>)}</fieldset>:null}{activeBundle&&bundleRecipes.length>1?<fieldset className="bundle-print-products"><legend>Which products get this {printSideLabel(artwork.side).toLocaleLowerCase()} artwork?</legend><small>Only products that support this print area are included. Every other product keeps its primary artwork only.</small>{compatibleProducts.map(recipe=><button type="button" key={recipe.id} className={assignedProducts.includes(recipe.id)?"selected":""} aria-pressed={assignedProducts.includes(recipe.id)} onClick={()=>toggleArtworkProduct(file.id,artwork.id,recipe.id)}><span aria-hidden="true">{assignedProducts.includes(recipe.id)?"✓":""}</span>{recipe.name}</button>)}</fieldset>:null}</div><button type="button" onClick={()=>removeArtworkVersion(file.id,artwork.id)} aria-label={`Remove ${printSideLabel(artwork.side).toLocaleLowerCase()} artwork`}>Remove</button></section>})}
-              </article>})}<button type="button" className="add-another-design" onClick={()=>imagePicker.current?.click()}><span aria-hidden="true">＋</span> Add another design</button></div>}
+              </article>})}{listingRunMode==="batch"&&<button type="button" className="add-another-design" onClick={()=>imagePicker.current?.click()}><span aria-hidden="true">＋</span> Add another design</button>}</div>}
               {files.length>0&&!complete&&(workflowStep==="setup"||workflowStep==="designs")&&<>{designsFinished&&belowRecommendedPixels.length>0&&bundleQualityGroups.length>0&&<div className={`pixel-warning-inline ${criticalDpiFiles.length?"critical-dpi":""}`} role="status"><span>!</span><div><b>{criticalDpiFiles.length?`${criticalDpiFiles.length} ${criticalDpiFiles.length===1?"design is":"designs are"} below 215 DPI — very low resolution.`:belowRecommendedPixels.length===1?"One design is below Printify’s recommended pixel size.":"Some designs are below Printify’s recommended pixel size."}</b><small>{criticalDpiFiles.length?"Each affected design must be replaced or approved.":"You can still continue after confirming."}</small></div></div>}{/* D399 - Step 2 showed "Next step" here AND "Continue to create drafts" in the
                 product card below. Creating the drafts is the step; this button only
                 scrolled down to it. One forward control per step: the action while the

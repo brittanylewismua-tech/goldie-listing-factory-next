@@ -48,7 +48,6 @@ html, body { background: var(--pro-canvas) !important; }
   box-shadow: none !important;
 }
 
-.app-shell > .topbar .suite-nav-label { color: #8d838b !important; }
 .app-shell > .topbar .top-nav a {
   color: #aaa1a8 !important;
   border-radius: 9px !important;
@@ -239,7 +238,6 @@ html, body { background: var(--pro-canvas) !important; }
   font-size: clamp(38px,4.5vw,60px) !important; line-height: 1 !important; letter-spacing: -.05em !important; }
 .app-shell .shop-map-redesign .shop-map-head > p:last-of-type { margin: 0 !important; color:#70646e !important;
   font-size:15px !important; font-weight:500 !important; letter-spacing:0 !important; text-transform:none !important; }
-.shop-map-shop-name { display:block; margin-top:10px; color:#8a7d85; font-size:12px; font-weight:700; }
 .shop-map-tabs { display: flex; gap: 28px; margin: 0 0 24px; border-bottom: 1px solid #cfc3ca; overflow-x: auto; }
 .shop-map-tabs button { position: relative; flex: 0 0 auto; min-height: 48px; padding: 0 2px; border: 0;
   background: transparent; color: #70646e; font: 750 13px/1 inherit; cursor: pointer; }
@@ -315,3 +313,77 @@ html, body { background: var(--pro-canvas) !important; }
   box-shadow:5px 5px 0 #ff2ca6!important; }
 .app-shell .scanner > .go:disabled { background:#171318!important; color:#fff!important; opacity:.55!important; }
 .app-shell .usage-grid .usage-card:only-child { grid-column:1/-1!important; }
+
+/* Final product-wide type and navigation pass. */
+html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",Arial,sans-serif}
+.app-shell :is(h1,h2,.hub-head h1,.shop-map-leader-grid .lead h3){font-family:"DM Serif Display",Georgia,serif;font-weight:400!important;letter-spacing:-.025em!important}
+.app-shell :is(.top-nav,.shop-map-tabs,.hub-tool,.tm-page,.mw,.scanner){font-family:"Manrope Variable","Manrope",Arial,sans-serif}
+
+.app-shell>.topbar .suite-brand{display:flex!important;align-items:center;gap:12px;width:100%;min-height:56px;margin:0 0 24px;padding:4px 8px;text-decoration:none}
+.app-shell>.topbar .suite-brand-mark{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px}
+.app-shell>.topbar .suite-brand-mark svg{width:31px!important;height:31px!important}
+.app-shell>.topbar .suite-brand-mark i{display:none!important}
+.suite-brand-copy{display:grid;gap:2px;min-width:0}
+.suite-brand-copy strong{color:#fff;font-family:"DM Serif Display",Georgia,serif;font-size:22px;font-weight:400;line-height:1;letter-spacing:-.015em;white-space:nowrap}
+.suite-brand-copy small{color:#a79da4;font-size:8px;font-weight:800;letter-spacing:.16em}
+
+.suite-sidebar-nav{gap:5px!important}
+.suite-nav-section{display:grid;gap:4px}
+.suite-nav-parent{display:grid;grid-template-columns:26px minmax(0,1fr);align-items:center}
+.suite-nav-toggle{display:grid;place-items:center;width:26px;height:42px;padding:0;border:0;background:transparent;color:#8f858c;cursor:pointer}
+.suite-nav-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;transition:transform .18s ease}
+.suite-nav-toggle[aria-expanded="false"] svg{transform:rotate(-90deg)}
+.suite-nav-parent>a{min-width:0!important;padding-left:6px!important}
+.suite-nav-heading{display:flex;align-items:center;gap:12px;min-width:0;min-height:46px;padding:0 15px 0 6px;border:0;border-radius:9px;background:transparent;color:#aaa1a8;font-size:13px;font-weight:650;text-align:left;cursor:pointer}
+.suite-nav-heading:hover{background:#19171b;color:#fff}
+.suite-nav-heading svg{width:18px;height:18px;flex:0 0 18px}
+.suite-nav-children{display:grid;gap:3px;margin:0 0 5px 26px;padding-left:11px;border-left:1px solid #342d33}
+.app-shell>.topbar .suite-nav-children a{min-height:39px;padding:0 11px!important;font-size:12px}
+.app-shell>.topbar .suite-nav-child svg{width:16px;height:16px}
+.app-shell>.topbar .workflow-restart-button{width:100%!important;max-width:100%!important;box-sizing:border-box!important;white-space:normal!important}
+
+.home-primary-actions{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;margin:0 0 42px}
+.home-primary-actions a{position:relative;display:grid;gap:10px;min-height:132px;padding:24px 62px 24px 24px;border:1px solid #171318;border-radius:14px;color:#171318;text-decoration:none;background:#fff;box-shadow:5px 5px 0 #171318;transition:transform .16s ease,box-shadow .16s ease}
+.home-primary-actions a:first-child{background:#171318;color:#fff;box-shadow:6px 6px 0 #ff2ca6}
+.home-primary-actions a:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 #ff2ca6}
+.home-primary-actions span{font-size:9px;font-weight:850;letter-spacing:.13em;color:#cf087f}
+.home-primary-actions strong{font-family:"DM Serif Display",Georgia,serif;font-size:27px;font-weight:400;line-height:1.05}
+.home-primary-actions i{position:absolute;right:25px;top:50%;font-style:normal;font-size:25px;transform:translateY(-50%)}
+
+.shop-map-identity{display:flex;align-items:center;gap:17px}
+.shop-map-identity img,.shop-map-profile-fallback{display:grid;place-items:center;width:64px;height:64px;flex:0 0 64px;border:1px solid #171318;border-radius:50%;object-fit:cover;background:#171318;color:#ff2ca6;font-family:"DM Serif Display",Georgia,serif;font-size:30px;box-shadow:4px 4px 0 #ff2ca6}
+.app-shell .shop-map-redesign .shop-map-identity h1{margin:0 0 5px!important}
+.shop-map-identity p{margin:0;color:#776b72;font-size:12px;font-weight:700}
+
+.tm-page .drop-head{max-width:700px;margin-bottom:24px}
+.tm-page .drop-head>p:last-child{max-width:540px;color:#70646e;font-size:14px}
+.tm-watches{margin:30px 0;padding:24px!important;border:1px solid #171318!important;border-radius:14px;background:#fff!important;box-shadow:5px 5px 0 #171318}
+.tm-watches-head h2{margin:5px 0 18px;font-size:30px}
+.tm-watch-list{display:grid;gap:9px}
+.tm-watch-list article{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:12px;padding:13px 14px;border:1px solid #d5c9d0;border-radius:9px}
+.tm-watch-list article.changed{border-color:#171318;background:#fff1f9}
+.tm-watch-list article>div{display:grid;gap:3px}.tm-watch-list strong{font-size:13px}.tm-watch-list article>div span{color:#70646e;font-size:11px}
+.tm-watch-risk{padding:5px 8px;border-radius:8px;background:#f2edf0;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.tm-watch-list button,.tm-watch-button{min-height:34px;padding:0 12px;border:1px solid #171318;border-radius:7px;background:#171318;color:#fff;font-weight:750;cursor:pointer}
+.tm-watch-list button.quiet{background:#fff;color:#171318}
+.tm-watch-button{margin-top:18px;box-shadow:3px 3px 0 #ff2ca6}
+.tm-note{max-width:760px!important;padding:0!important;border:0!important;background:transparent!important;color:#776b72!important;font-size:11px!important;line-height:1.5!important}
+
+.listing-mode-needed>:not(.listing-mode-chooser){display:none!important}
+.listing-mode-chooser{width:min(820px,100%);margin:12px auto 28px;padding:34px;border:1px solid #171318;border-radius:16px;background:#fff;box-shadow:7px 7px 0 #ff2ca6;text-align:center}
+.listing-mode-chooser h2{margin:6px 0 25px;font-size:38px}
+.listing-mode-chooser>div{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.listing-mode-chooser button{position:relative;display:grid;gap:8px;min-height:145px;padding:23px 50px 23px 22px;border:1px solid #171318;border-radius:12px;background:#fff;color:#171318;text-align:left;cursor:pointer}
+.listing-mode-chooser button:hover{background:#fff2f9;box-shadow:4px 4px 0 #171318}
+.listing-mode-chooser strong{font-family:"DM Serif Display",Georgia,serif;font-size:24px;font-weight:400}.listing-mode-chooser span{color:#70646e;font-size:12px;line-height:1.45}.listing-mode-chooser i{position:absolute;right:20px;top:50%;font-style:normal;font-size:22px;transform:translateY(-50%)}
+
+/* An inactive step is a label on the rail, not a disabled grey card. */
+.app-shell .workflow-progress button:not(.active){background:transparent!important;border:0!important;box-shadow:none!important}
+.app-shell .workflow-progress button:not(.active)>span:first-child{background:#fff!important;color:#6e626a!important;border-color:#cfc3ca!important;box-shadow:none!important}
+
+@media(max-width:700px){
+  .home-primary-actions{grid-template-columns:1fr}.home-primary-actions a{min-height:112px}
+  .tm-watch-list article{grid-template-columns:1fr auto}.tm-watch-list article>div{grid-column:1/-1}
+  .listing-mode-chooser{padding:23px 18px}.listing-mode-chooser>div{grid-template-columns:1fr}.listing-mode-chooser h2{font-size:32px}
+  .shop-map-identity img,.shop-map-profile-fallback{width:52px;height:52px;flex-basis:52px}
+}

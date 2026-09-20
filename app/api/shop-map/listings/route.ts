@@ -77,6 +77,19 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
   for (const section of ((sections.body as { results?: Array<{ shop_section_id?: number; title?: string }> })?.results) ?? [])
     if (section.shop_section_id) sectionNames.set(Number(section.shop_section_id), decodeEntities(String(section.title ?? "")));
 
+  /* Keep the shop identity beside its numbers. Etsy returns this on the shop
+     record, not on a listing, so it has its own small cache. */
+  const shopAnswer = await etsy(`/shops/${shopId}`);
+  if (shopAnswer.status === 200) {
+    const shop = shopAnswer.body as { icon_url_fullxfull?: string; image_url_760x100?: string };
+    const imageUrl = String(shop.icon_url_fullxfull ?? shop.image_url_760x100 ?? "");
+    if (imageUrl) await db.prepare(
+      `INSERT INTO shop_map_shop_profiles (user_id, shop_id, image_url, updated_at)
+       VALUES (?,?,?,?) ON CONFLICT(user_id, shop_id) DO UPDATE SET
+       image_url = excluded.image_url, updated_at = excluded.updated_at`)
+      .bind(user.userId, shopId, imageUrl, now).run();
+  }
+
   const byState: Record<string, number> = {};
   const fieldsSeen = { views: 0, favorites: 0, created: 0 };
   let stored = 0;

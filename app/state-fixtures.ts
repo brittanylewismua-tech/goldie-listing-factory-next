@@ -46,7 +46,7 @@ export type StateFixture = {
   label: string;
   /* Which component the preview should mount. */
   surface: "connections" | "market-watch" | "design-scanner" | "shop-map" | "account"
-    | "batches" | "listing-factory" | "home" | "trademark" | "usage" | "keywords" | "more";
+    | "batches" | "listing-factory" | "home" | "trademark" | "usage" | "keywords" | "mockups" | "more";
   /*
     Which sub-view of that surface the state lives in. Two shop fixtures
     rendered Market Watch's niche tab and were called verified: the state they
@@ -76,6 +76,14 @@ const etsyConnected = (): FixtureReply => ({
 const printifyConnected = (): FixtureReply => ({
   path: "/api/connections/printify", status: 200,
   body: { connected: true, shopId: 1, shopName: "", lastSyncAt: secondsAgo(7200) },
+});
+
+const trademarkWatches = (): FixtureReply => ({
+  path: "/api/trademark/watches", status: 200,
+  body: { watches: [
+    { phrase: "girl math", risk: "caution", changed: true, pending: true, matches: 3 },
+    { phrase: "sunday morning coffee", risk: "clear", changed: false, pending: false, matches: 0 },
+  ] },
 });
 
 const listingPreview = (shirt: string, ink: string, words: string) =>
@@ -566,7 +574,8 @@ export const stateFixtures = (): StateFixture[] => [
     replies: [
       { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite",
         drafts: 10_000, dailyListings: 1_000 }, usage: { drafts: 12 } } },
-      { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
+      { path: "/api/seller-preferences", status: 200, body: { pricing: null,
+        listingGoal: { enabled: true, period: "month", target: 40 } } },
       { path: "/api/account", status: 200, body: { signedIn: true, name: "Preview",
         initials: "PV" } },
       { path: "/api/etsy", status: 200, body: { connected: true, shops: [] } },
@@ -730,6 +739,7 @@ export const stateFixtures = (): StateFixture[] => [
   { key: "factory-ready", label: "Connected, no product chosen", surface: "listing-factory",
     what: "Both connected and nothing built yet. The next thing to do must be obvious.",
     replies: [
+      { path: "/api/account", status: 200, body: { signedIn: true, name: "Preview", initials: "PV" } },
       { path: "/api/printify", status: 200, body: { connected: true, owner: true } },
       { path: "/api/etsy", status: 200, body: { connected: true, shopName: "a-connected-shop" } },
       { path: "/api/shop-map/connections", status: 200, body: { connections: [
@@ -738,7 +748,8 @@ export const stateFixtures = (): StateFixture[] => [
           authorizeSalesUrl: "/api/shop-map/connect-sales?for=preview" }] } },
       { path: "/api/etsy/shipping-profiles", status: 200, body: { profiles: [
         { id: 1, title: "Standard" }] } },
-      { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
+      { path: "/api/seller-preferences", status: 200, body: { pricing: null,
+        listingGoal: { enabled: true, period: "month", target: 40 } } },
       { path: "/api/keyword-lists", status: 200, body: { lists: [] } },
       { path: "/api/product-recipes", status: 200, body: { recipes: [] } },
       { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite",
@@ -778,7 +789,8 @@ export const stateFixtures = (): StateFixture[] => [
   { key: "shop-map-loaded", label: "Loaded", surface: "shop-map",
     what: "The ordinary map: a month, niches with evidence behind them, somewhere to focus.",
     replies: [{ path: "/api/shop-map/map", status: 200, body: {
-      shop: { shopName: "a-connected-shop" }, month: "September 2026",
+      shop: { shopName: "She’s a Wolf Clothing",
+        imageUrl: listingPreview("#171318", "#ff2ca6", "G") }, month: "September 2026",
       thisMonth: { revenueMinor: 184_250, etsyFeesMinor: -22_110,
         productionCostMinor: 71_400, profitMinor: 90_740, orders: 47,
         headline: "47 orders so far this month.", accuracy: "Every production cost came from Printify.",
@@ -1065,7 +1077,7 @@ export const stateFixtures = (): StateFixture[] => [
   { key: "trademark-idle", label: "Trademark — nothing checked yet", surface: "trademark",
     what: "The empty state: what this checks, and what it is not.",
     replies: [{ path: "/api/trademark/register-status", status: 200,
-      body: { marks: 366_828, files: [{ state: "done", count: 9 }] } }] },
+      body: { marks: 366_828, files: [{ state: "done", count: 9 }] } }, trademarkWatches()] },
 
   { key: "trademark-match", label: "Trademark — a live mark", surface: "trademark",
     at: "Haus Labs",
@@ -1076,7 +1088,7 @@ export const stateFixtures = (): StateFixture[] => [
       register: [
         { mark: "HAUS LABS", owner: "Ate My Heart Inc.", registration: "", classes: ["021"], registered: false, exact: true },
         { mark: "HAUS LABS", owner: "Ate My Heart Inc.", registration: "", classes: ["003"], registered: false, exact: true },
-      ] } }] },
+      ] } }, trademarkWatches()] },
 
   { key: "trademark-clear", label: "Trademark — no match found", surface: "trademark",
     at: "sunday morning coffee",
@@ -1084,7 +1096,7 @@ export const stateFixtures = (): StateFixture[] => [
     replies: [{ path: "/api/trademark?phrase", status: 200, body: {
       phrase: "sunday morning coffee", risk: "clear", registerRead: true, registerReady: true,
       hits: [], register: [],
-      summary: "No match was found in the trademark records currently loaded. This is screening information, not legal clearance." } }] },
+      summary: "No match was found in the trademark records currently loaded. This is screening information, not legal clearance." } }, trademarkWatches()] },
 
   { key: "trademark-register-loading", label: "Trademark — register still loading", surface: "trademark",
     at: "sunday morning coffee",
@@ -1092,12 +1104,12 @@ export const stateFixtures = (): StateFixture[] => [
     replies: [{ path: "/api/trademark?phrase", status: 200, body: {
       phrase: "sunday morning coffee", risk: "clear", registerRead: true, registerReady: false,
       hits: [], register: [],
-      summary: "No match was found in the trademark records currently loaded. This is screening information, not legal clearance." } }] },
+      summary: "No match was found in the trademark records currently loaded. This is screening information, not legal clearance." } }, trademarkWatches()] },
 
   { key: "trademark-failed", label: "Trademark — the check failed", surface: "trademark",
     at: "bride squad",
     what: "The lookup itself broke. A failure must not be reported as a clean result.",
-    replies: [{ path: "/api/trademark?phrase", status: 503, body: { error: "The trademark check could not be completed. Try again in a moment." } }] },
+    replies: [{ path: "/api/trademark?phrase", status: 503, body: { error: "The trademark check could not be completed. Try again in a moment." } }, trademarkWatches()] },
 
   { key: "usage-normal", label: "Usage — mid-month", surface: "usage",
     what: "What is left, of what, and when it resets.",
@@ -1129,6 +1141,17 @@ export const stateFixtures = (): StateFixture[] => [
       { id: "bank-dog-mom", name: "Dog mom",
         keywords: ["dog mom", "rescue mom", "fur mama"] },
     ] } }] },
+
+  { key: "mockups-empty", label: "Mockup Sets — ready to add", surface: "mockups",
+    what: "The restored mockup workspace with no saved sets yet.",
+    replies: [
+      { path: "/api/mockups/library", status: 200, body: { templates: [], preferences: [] } },
+      { path: "/api/usage", status: 200, body: { usage: { drafts: 12 }, plan: { drafts: 10_000 } } },
+      { path: "/api/seller-preferences", status: 200, body: {} },
+      { path: "/api/account", status: 200, body: { signedIn: true, name: "Preview", initials: "PV" } },
+      { path: "/api/etsy", status: 200, body: { connected: true, shops: [] } },
+      { path: "/api/batches", status: 200, body: { batches: [], prepared: [], preparedAvailable: true } },
+    ] },
 
   { key: "more-tools", label: "Tools & settings", surface: "more",
     what: "The shelf of everything that is not a daily tool.",

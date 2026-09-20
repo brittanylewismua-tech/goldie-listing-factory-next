@@ -63,6 +63,7 @@ export const ACCESS: Record<string, Rule> = {
   "/api/connections/printify": { kind: "open" },
   "/trademark": { kind: "open" },
   "/api/trademark": { kind: "open" },
+  "/api/trademark/watches": { kind: "open" },
   "/api/shop-map/connections": { kind: "open" },
   "/api/shop-map/connect-sales": { kind: "open" },
   "/api/etsy": { kind: "open" },
