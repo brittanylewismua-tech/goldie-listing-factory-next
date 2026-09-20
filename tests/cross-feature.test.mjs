@@ -170,11 +170,12 @@ test("the Trademark Checker renders as itself at every width", () => {
   assert.ok(!code.includes("MobileGate"), "the checker still carries a desktop gate");
 });
 
-test("the suite CTA is universal while factory metrics stay on factory pages", () => {
-  /* Starting a batch is the suite's primary call to action. Usage and goal
-     metrics still belong only to the Listing Factory surfaces. */
+test("the batch CTA stays inside Listing Factory while factory metrics stay on factory pages", () => {
+  /* Starting a batch is a workflow action, not a universal suite action. */
   const shell = strip(read("app/factory-shell.tsx"));
-  assert.ok(shell.includes("Start a new batch"), "the primary suite CTA is missing");
+  assert.ok(!shell.includes("Start a new batch"), "the batch CTA leaked into the shared sidebar");
+  assert.ok(read("app/listing-factory-app.tsx").includes("Start a new batch"),
+    "the Listing Factory lost its batch action");
   for (const control of ["approved-usage", "listing-goal-side"]) {
     const at = shell.indexOf(control);
     assert.ok(at > 0, `${control} is missing from the shell`);

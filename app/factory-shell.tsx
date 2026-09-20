@@ -155,9 +155,6 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
      digits. Same number, the preview's formatting. */
   const usageLine = usage
     ? `${usage.used.toLocaleString()} / ${usage.limit.toLocaleString()} listings`
-    /* "Allowance unavailable" describes the request, not the member's
-       position. What they need to know is that the number is missing and
-       that reopening the page is the fix. */
     : usageFailed ? "Couldn't load — reopen to retry"
     : "Loading usage…";
 
@@ -177,26 +174,10 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
       <div className="brand-lockup"><SuiteBrand /></div>
       <div className="top-actions">
         <SuiteSidebarNav active={active} items={NAV}/>
-        {/* D818 · on the workflow this is a button because it has to clear live
-            batch state first. There is no batch to clear here, so the same
-            control is the link it actually is. */}
-        {/* Above the primary action, because that is the order of the morning:
-            see what moved, then go and list. Styled quieter than Start a new
-            batch so the money action keeps its weight. */}
-        {active !== "factory" && <a className="workflow-restart-button" href="/listing-factory">
-          <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" /><path d="M3 21v-5h5" /></svg> Start a new batch</a>}
       </div>
       <div className="approved-sidebar-footer">
         {FACTORY_PAGES.has(active) && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>}
-        {/*
-          A GOAL NOBODY EXPLAINS IS A NUMBER NOBODY TRUSTS.
-
-          This read "This week's goal · 2 of 20 prepared". It never said who
-          set 20 (the member did, in Goals), and "prepared" is this codebase's
-          word, not a seller's — it means drafts built and ready to publish.
-          Both are now on the card, in the member's language.
-        */}
         {FACTORY_PAGES.has(active) && goal && <a className="listing-goal-side" href="/goals">
           <span className="listing-goal-caption">Your {goal.period}ly goal</span>
           <b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${goal.target} drafts ready`:"Loading progress…"}</b>
@@ -211,15 +192,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
 
     <div className="factory-main">
       <header className="factory-top">
-        {/*
-          THE PAGE NAMES ITSELF. IT DOES NOT NEED A PARENT.
-
-          This read "Suite › Home". "Suite" is not a place a member can go, not
-          a name the product uses, and not a level of anything — a breadcrumb
-          trail of one invented ancestor. What is left is the only part that
-          was ever true: which page you are on.
-        */}
-        <div className="factory-breadcrumb"><b className="factory-top-batch">{title}</b></div>
+        <div className="factory-breadcrumb"><span>Suite</span><i aria-hidden="true">›</i><b className="factory-top-batch">{title}</b></div>
         <div className="factory-top-right">
           <div className="factory-account-wrap">
             <button type="button" className="factory-account" aria-haspopup="menu"

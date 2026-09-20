@@ -232,9 +232,7 @@
    the reasoning. */
 .pattern .pattern-headline{margin:0;font-size:14px;font-weight:700;line-height:1.35;color:var(--ink)}
 .pattern .pattern-because{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
-/* D1743 · 3.87:1 measured. The .85 fade is what took it under; the colour
-   carries the muting on its own. */
-.pattern .support{display:block;margin-top:8px;font-size:11px;color:var(--p-ink-soft)}
+.pattern .support{display:block;margin-top:8px;font-size:11px;color:var(--muted);opacity:.85}
 
 /* ------------------------------------------------- waiting and failure
 

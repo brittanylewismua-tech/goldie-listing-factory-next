@@ -22,6 +22,7 @@ type Props = {
 };
 
 const FACTORY_KEYS = new Set(["factory", "batches", "keywords"]);
+const COMMAND_KEYS = new Set(["market-watch", "design-scanner", "shop-map", "trademark"]);
 
 function LockIcon() {
   return <svg className="suite-nav-lock" viewBox="0 0 24 24" aria-hidden="true">
@@ -33,6 +34,7 @@ function LockIcon() {
 export default function SuiteSidebarNav({ active, items, onNavigate,
   keywordBankInNewTab = false }: Props) {
   const [factoryOpen, setFactoryOpen] = useState(FACTORY_KEYS.has(active));
+  const [commandOpen, setCommandOpen] = useState(COMMAND_KEYS.has(active));
   const [commandCenterAccess, setCommandCenterAccess] = useState(false);
   const [lockedTool, setLockedTool] = useState("");
 
@@ -96,8 +98,18 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
         </div>
         {factoryOpen && <div className="suite-nav-children">{factoryChildren.map(item => link(item, true))}</div>}
       </div>}
-      <span className="suite-nav-label">Command Center</span>
-      {command.map(item => link(item))}
+      <div className={`suite-nav-section suite-command-section${COMMAND_KEYS.has(active) ? " current" : ""}`}>
+        <div className="suite-nav-parent">
+          <button type="button" className="suite-nav-toggle" aria-label={`${commandOpen ? "Collapse" : "Expand"} Command Center menu`}
+            aria-expanded={commandOpen} onClick={() => setCommandOpen(open => !open)}>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+          </button>
+          <button type="button" className="suite-nav-heading" onClick={() => setCommandOpen(open => !open)}>
+            Command Center
+          </button>
+        </div>
+        {commandOpen && <div className="suite-nav-children">{command.map(item => link(item, true))}</div>}
+      </div>
     </nav>
 
     {lockedTool && <div className="suite-access-backdrop" role="presentation"
