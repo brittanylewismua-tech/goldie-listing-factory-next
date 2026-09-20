@@ -47,7 +47,7 @@ export const GET = withErrorLog("home-status", async () => {
       .bind(user.userId).all<{ shopId: number; shopName: string; active: number; live: number }>();
     const shops = rows.results ?? [];
     const broken = shops.filter(row => !row.live);
-    const active = shops.find(row => row.active === 1);
+    const active = shops.find(row => row.active === 1) ?? shops.find(row => row.live);
     if (!shops.length) blocks.connections = { needs: "etsy", say: "Connect your Etsy shop to begin." };
     else if (broken.length)
       blocks.connections = { needs: "reconnect",
@@ -55,7 +55,7 @@ export const GET = withErrorLog("home-status", async () => {
         shops: broken.map(row => row.shopName) };
     else if (active) {
       activeShopId = Number(active.shopId);
-      blocks.connections = { needs: null, activeShop: active.shopName };
+      blocks.connections = { needs: null, activeShop: active.shopName, connected: true };
     }
   } catch { /* the block is dropped, the page is not */ }
 

@@ -13,6 +13,6 @@ export default async function HomePage() {
     return <main className="hub-auth"><Link href={accountSignInPath("/home")}>Sign in</Link></main>;
 
   return <FactoryShell active="home" title="Home" desktopOnly={false}>
-    <HomeView />
+    <HomeView firstName={(user.fullName ?? user.displayName).trim().split(/\s+/)[0] || "there"} />
   </FactoryShell>;
 }

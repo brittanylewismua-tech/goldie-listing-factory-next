@@ -59,38 +59,22 @@ const TOOLS = [
 ];
 
 
-export default function HomeView() {
+export default function HomeView({ firstName = "Britt" }: { firstName?: string }) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   return <>
-  <main className="hub p-grid">
-    {/*
-      THE FIRST SCREEN IS FOR THE MEMBER'S POSITION, NOT FOR A SLOGAN.
-
-      This was a full screen of hero: an eyebrow reading YOUR SELLER COMMAND
-      CENTER (the third time those words appeared within a few inches — the
-      rail's brand lockup and its first group heading had them too), a 64px
-      two-line headline, and a sentence of product copy. The member's actual
-      numbers sat below it, and the tools below those, off the bottom of the
-      screen.
-
-      What is left is one line that says where you are. The status strip and
-      the tools now start at the top of the page, which is what a member opens
-      this page to reach.
-    */}
-    <header className="hub-head home-command-head">
-      <p className="mini-label">SELLER COMMAND CENTER</p>
-      <h1>See what is working.<br/><em>Know what to do next.</em></h1>
-      <p className="hub-intro">Your shop performance and the tools that move it forward, in one place.</p>
+  <main className="hub p-grid home-dashboard">
+    <header className="hub-head home-command-head home-dashboard-intro">
+      <p className="home-dashboard-date"><span />{new Intl.DateTimeFormat("en-US", {
+        weekday: "long", month: "long", day: "numeric",
+      }).format(new Date())}</p>
+      <h1>{greeting}, {firstName}.<br/><em>Your shop is moving.</em></h1>
+      <p className="hub-intro">The clearest signals from your shop are ready.</p>
     </header>
 
     <HomeStatus />
 
-    {/*
-      The "Create listings ↗" button stood here, between the status strip and
-      the tools, pointing at the Listing Factory tile eighteen pixels below it.
-      A call to action beside the thing it duplicates is noise; the tile is the
-      door.
-    */}
-    <div className="hub-section-head"><div><p className="mini-label">YOUR WORKSPACES</p><h2>Choose what you want to work on.</h2></div></div>
+    <div className="hub-section-head home-workspaces-head"><div><p className="mini-label">YOUR WORKSPACES</p><h2>Choose what you want to work on.</h2></div></div>
     <section className="hub-grid">
       {TOOLS.map(tool => (
         <Link key={tool.name} className="hub-tool" href={tool.href}>

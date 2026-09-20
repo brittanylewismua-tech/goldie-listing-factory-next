@@ -38,6 +38,7 @@ const CLASSIFIED = {
   "api/listing-photos/delivery/service.ts": "guarded: trustedImageUrl redirect loop, plus own-url Printify API",
   "api/listing-photos/download/route.ts": "guarded: fetchTrustedImage (D1726)",
   "connections/connections-client.tsx": "client: browser to our own origin",
+  "home/home-status.tsx": "client: browser to our own origin",
   "integrated-mockups.tsx": "client: browser to our own origin",
   "listing-factory-app.tsx": "client: browser to our own origin",
   "market-watch/market-watch-client.tsx": "client: browser to our own origin",
