@@ -134,7 +134,18 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .hub-tool>b{align-self:end;font-size:16px;letter-spacing:-.03em}
 .hub-what{align-self:start;max-width:42ch;color:#796d74;font-size:11px;line-height:1.45}
 .hub-tool-number{position:absolute;right:16px;top:16px;color:#c2b4bc;font-size:9px;font-weight:900;letter-spacing:.08em}
-.hub-desktop{position:absolute;left:18px;bottom:14px;padding:4px 7px;border-radius:16px;background:#f7edf3;color:#79636f;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+/*
+  ONLY WHERE IT IS NEWS.
+
+  "Needs a computer" on a computer is a warning about the situation the member
+  is already in. The Listing Factory's gate is the same 820px this file uses
+  everywhere else, so the chip appears exactly where the tile is about to
+  refuse: on a phone.
+*/
+.hub-desktop{display:none}
+@media(max-width:820px){
+  .hub-desktop{display:inline-block;position:absolute;left:18px;bottom:14px;padding:4px 7px;border-radius:16px;background:#f7edf3;color:#79636f;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+}
 .hub-open{position:absolute;right:17px;bottom:12px;font-size:19px;font-weight:700}
 .hub-foot{margin:32px 0 0!important;padding:20px 0 0!important;min-height:0!important;border-top:1px solid var(--suite-line)!important;background:transparent!important;color:#958991!important}
 .hub-foot p{max-width:680px;margin:0;color:#958991;font-size:9px;line-height:1.5}
