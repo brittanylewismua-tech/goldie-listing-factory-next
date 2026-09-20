@@ -323,6 +323,14 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 }
 .goals-page .goals-current{border-color:#111!important;background:#151214!important;color:#fff!important;box-shadow:5px 5px 0 var(--suite-pink)!important}
 .goals-page .goals-current .mini-label{color:#ff69bd!important}
+/*
+  "2 of 20" — the number this page exists to show — measured 1.35:1 on the
+  deployed page. `.goals-current h2` was outranked by
+  `.app-shell .factory-work .interior-page h2`, which paints every interior
+  heading near-black; this card is dark. Named at a specificity that settles
+  it rather than relying on which stylesheet loads last.
+*/
+.app-shell .factory-work .goals-page .goals-current :is(h2,h3,p,b,span,small){color:#fff}
 .goals-page .goals-track{height:9px!important;border-radius:9px!important;background:#393137!important;overflow:hidden}
 .goals-page .goals-track i,.goals-page .goals-bar i{background:var(--suite-pink)!important}
 .goals-page .goals-history{margin-top:16px!important}
