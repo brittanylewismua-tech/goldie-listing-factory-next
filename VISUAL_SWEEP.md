@@ -1,35 +1,92 @@
-# Member-facing sweep — D1760
+# Member-facing sweep — D1762
 
-**Deployed build:** D1760 · commit `6660ca8c` · verified live at thegoldiesuite.com
+**Deployed build:** D1762 · commit `c6ff4e12` · verified live at thegoldiesuite.com
 **Suite:** 3,559 tests — **3,547 passing, 0 failing, 12 skipped**
-**Mechanical sweep:** 77 states × 4 viewports (1440 / 375 / 390 / 430) — **0 findings**
 
 ---
 
-## How this was looked at, and what that is worth
+## The arithmetic, corrected
 
-Two lenses, and the difference between them matters:
+My last report said "77 states × 4 widths = 248 readings". 77 × 4 is **308**,
+and 248 was the number of readings the log actually held — so the multiplication
+and the count disagreed and I reported both as if they agreed. The log was the
+honest number; the claim of full coverage was not.
 
-- **Seen.** Every state rendered in a headless browser and the screenshots read
-  by eye — composition, hierarchy, empty space, wording. The images are in
-  `sweep/desktop/` and `sweep/phone-375/`, one per state.
-- **Measured.** Contrast computed from each text colour against the real
-  composited background behind it (translucent layers blended, not treated as
-  opaque), plus horizontal overflow, touch targets under 44px on a coarse
-  pointer, clipped text, and internals reaching the member — every state, at
-  every width.
+What had happened: the scan ran in chunks, each chunk cut off by a tool timeout
+partway through its viewport list. Desktop finished every time because it ran
+first. **26 of 77 states were never measured at 390 or 430**, and 8 were never
+measured at 375. I did not check coverage before reporting the total.
 
-**The honest distinction:** the surfaces are the shipping components inside the
-shipping shell, with the shipping stylesheets, answered by fixtures behind a
-closed network. This sandbox cannot resolve thegoldiesuite.com, so the phone
-widths are that, not production. The deployed pages were verified separately
-through the authenticated desktop session: build, status, and the rendered
-copy of every change below. A narrow desktop window was never called mobile.
+| Width | States measured, as reported | States measured, actually | Now |
+|---|---|---|---|
+| 1440 | 77 | 77 | **77** |
+| 375 | 77 | 69 | **77** |
+| 390 | 77 | 51 | **77** |
+| 430 | 77 | 51 | **77** |
+| **Total readings** | 248 (called 308) | **248** | **308** |
 
-**Something the old harness was hiding.** It mounted each component *bare*.
-Every shell rule is scoped to `.app-shell`, so every screenshot ever reviewed
-in it was of a cascade no member sees. The harness now mounts each surface in
-the real shell, and three of the defects below were invisible until it did.
+**Now: 308 of 308 state-width pairs, 0 states short of four widths, 0 findings.**
+
+The screenshots were worse: I named folders for 1440 and 375 only, because
+those were the only widths I had captured. 390 and 430 had been measured for
+some states and photographed for none.
+
+---
+
+## Screenshot folders
+
+All four widths, every state, captured against the final build:
+
+| Width | Folder | Files |
+|---|---|---|
+| 1440 | `visual-acceptance-D1762/1440/` | 77 |
+| 375 | `visual-acceptance-D1762/375/` | 77 |
+| 390 | `visual-acceptance-D1762/390/` | 77 |
+| 430 | `visual-acceptance-D1762/430/` | 77 |
+
+**308 screenshots**, one per state per width, named for the state.
+
+---
+
+## The deployed review found five things the local harness could not
+
+This is the part that mattered most, and it is why "verify the deployed build"
+was the right instruction.
+
+**The harness was loading the same stylesheets in a different order than the
+build does.** The preview imports each feature's CSS at the top of one module;
+the production bundle emits the route's own stylesheet last. Where two rules
+have equal specificity, order decides — so the preview and production
+disagreed, and the preview was the one showing things fixed.
+
+| Found on production at 1440 | Measured | Fixed in |
+|---|---|---|
+| **Shop Map money card white-on-white** — the month's money, "Profit unavailable", "Revenue" and every label invisible. `.shop-map-money{background:#151214}` (shared file) vs `.shop-map-card{background:#fff}` (route file, loads last). | **1.00:1** | D1761, compound selector so order cannot decide |
+| **Goals: "2 of 20"** — the number the page exists to show — on its dark card | **1.35:1** | D1761 → still wrong → D1762 at a specificity that settles it |
+| **Listing Factory: "Shop: She's A Wolf Clothing"** — which Etsy shop a saved product belongs to | **3.69:1** | D1761 |
+| **Keyword Banks: "· 15 short enough for Etsy tags"** | **3.69:1** | D1761 |
+| **Goals had no route layout** — its tab read only the fallback while every other page named itself; and `/usage` still read "Plan and limits" after the rail and page were renamed. The account menu and Tools & settings still linked to it by the old name. | — | D1761 |
+
+Deployed routes re-measured on D1762 at 1440, after the fixes: `/home`,
+`/market-watch`, `/design-scanner`, `/shop-map`, `/trademark`, `/batches`,
+`/keywords`, `/usage`, `/more`, `/connections`, `/account/settings`,
+`/listing-factory`, `/goals` — **0 findings on every one.**
+
+---
+
+## What each method proves, and what it does not
+
+- **Deployed, authenticated, 1440** — the real build, the real bundle order,
+  the real data. Every member route. This is where the five defects above were
+  found.
+- **Deployed at 375 / 390 / 430** — **not done, and here is why.** The site
+  sends `X-Frame-Options: DENY`, so I cannot load it in a sized iframe, and
+  resizing your window is off-limits. An isolated browser has no session. I am
+  not weakening a security header to take a screenshot. The narrow widths are
+  therefore the harness: the shipping components, in the shipping shell, with
+  the same stylesheets, on the same commit — with the order caveat above stated
+  rather than glossed.
+- **Harness, all four widths** — 308 readings, 308 screenshots, 0 findings.
 
 ---
 
