@@ -266,6 +266,22 @@ async function buildMap(request: Request) {
         AND source_created_at BETWEEN ? AND ?`)
     .bind(user.userId, shopId, window.from, window.to).first<{ fees: number }>() : null;
 
+  const incompleteFinance = window ? await db.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM finance_windows
+         WHERE user_id=? AND shop_id=? AND state IN ('pending','failed')
+           AND window_from<=? AND window_to>=?)
+       +
+       (SELECT COUNT(*) FROM finance_ledger
+         WHERE user_id=? AND shop_id=? AND bucket='neither'
+           AND source_created_at BETWEEN ? AND ?)
+       +
+       (SELECT CASE WHEN COUNT(*)=0 OR MIN(refreshed_at)<? THEN 1 ELSE 0 END
+          FROM finance_sources WHERE user_id=? AND shop_id=?) AS n`)
+    .bind(user.userId,shopId,window.to,window.from,
+      user.userId,shopId,window.from,window.to,
+      now-86_400,user.userId,shopId).first<{n:number}>().catch(()=>({n:1})) : {n:1};
+
   const productionRows = window ? await db.prepare(
     `SELECT receipt_id, cost_minor, shipping_minor, canceled, counts_as_etsy_cost
        FROM finance_production WHERE user_id = ? AND shop_id = ?
@@ -311,7 +327,9 @@ async function buildMap(request: Request) {
   const revenue = (receiptTotals?.subtotal ?? 0) + (receiptTotals?.shipping ?? 0)
     - Math.abs(receiptTotals?.discount ?? 0);
   const state = profitState({ grossRevenueMinor: revenue,
-    feesMinor: Number(feeRow?.fees ?? 0), costs });
+    feesMinor: Number(feeRow?.fees ?? 0), costs,
+    otherComplete: Number(incompleteFinance?.n ?? 1) === 0
+      && ((monthReceipts.results?.length ?? 0) === 0 || feeRow !== null) });
 
   /*
     THE UNCLASSIFIED PART OF THE SHOP, COUNTED.

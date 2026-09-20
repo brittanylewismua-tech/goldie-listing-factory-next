@@ -152,30 +152,24 @@ test("rediscovery revives a demoted candidate rather than resetting it", () => {
     "rediscovery rewrites the original discovery date");
 });
 
-test("a niche being watched says gathering, not unsupported", () => {
+test("a tracked keyword shows current listings while sales evidence gathers", () => {
   /* Now in the extracted brief builder, which both the member's page and the
      scheduled refresh call. */
   const route = readFileSync(new URL(
     "../app/niche-brief.ts", import.meta.url), "utf8");
-  assert.match(route, /GATHERING IS NOT THE SAME AS UNSUPPORTED/);
-  /* Only while nothing has moved — never shown beside real evidence. */
-  assert.match(route, /summary\.moving === 0 && watching > 0 \? GATHERING : null/);
+  assert.match(route, /gathering: summary\.moving === 0 && listings\.length > 0/);
 
   const client = readFileSync(new URL(
     "../app/market-watch/market-watch-client.tsx", import.meta.url), "utf8");
-  assert.match(client, /\{view\.gathering && listings\.length === 0 &&/);
-  assert.match(client, /!view\.gathering && !summary\?\.meaningfulMomentum/);
+  assert.match(client, /No sales have been confirmed for these listings yet/);
+  assert.match(client, /current Etsy stats/);
 });
 
-test("candidate counts are shown as watching, never as momentum", () => {
+test("internal candidate counts are never shown to members", () => {
   const client = readFileSync(new URL(
     "../app/market-watch/market-watch-client.tsx", import.meta.url), "utf8");
-  const block = client.slice(client.indexOf("view.gathering && listings.length"),
-    client.indexOf("!view.gathering &&"));
-  assert.match(block, /Market Watch is watching \$\{view\.candidates\.watching\} listings/);
-  for (const banned of ["moving", "momentum", "selling", "sold"])
-    assert.ok(!block.toLowerCase().includes(banned),
-      `candidates were described as "${banned}"`);
+  assert.doesNotMatch(client, /candidates\?\.|candidates\.watching|listings checked/i);
+  assert.doesNotMatch(client, /Market Watch is watching/);
 });
 
 /* ------------------------------------------------- over-cap reconciliation */

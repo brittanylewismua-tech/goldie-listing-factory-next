@@ -258,7 +258,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       {shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
         {detected ? <button className="shop-map-confirm" disabled={busy === "timezone"} onClick={() => void confirmTimezone()}>
           {busy === "timezone" ? "Saving…" : `My shop runs on ${detected}`}</button> : null}</>
-      : <><p className="shop-map-figure" data-basis={monthBasis(month)}>{month?.profitMinor == null ? "Profit needs costs" : money(month.profitMinor)}
+      : <><p className="shop-map-figure" data-basis={monthBasis(month)}>{month?.profitMinor == null ? "Profit unavailable" : money(month.profitMinor)}
           {monthBasis(month) === "estimated" && <span className="shop-map-basis-chip">Estimate</span>}</p>
         <p className="shop-map-accuracy">{month?.accuracy}</p>
         {month?.freshness ? <p className="shop-map-freshness" data-stale={month.salesStale ? "yes" : "no"}>{month.freshness}</p> : null}

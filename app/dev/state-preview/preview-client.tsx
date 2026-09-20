@@ -149,7 +149,8 @@ const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
   "market-watch": ({ at }: { at?: string }) =>
     <Shell active="market-watch" title="Market Watch">
       <MarketWatchClient signedInEmail="preview@example.invalid"
-        startTab={at === "shops" ? "shops" : "niches"} /></Shell>,
+        startTab={at === "shops" ? "shops" : "niches"}
+        startKeyword={at?.startsWith("keyword:") ? at.slice(8) : undefined} /></Shell>,
   "design-scanner": () => <Shell active="design-scanner" title="Design Scanner">
     <DesignScannerClient signedInEmail="preview@example.invalid" /></Shell>,
   "shop-map": () => <Shell active="shop-map" title="Shop Map">

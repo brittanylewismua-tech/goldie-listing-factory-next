@@ -187,11 +187,11 @@ test("market watch tells waiting, broken and genuinely empty apart", () => {
     "a failed response must set the failed state, not fall through to empty");
   /* The empty sentence is reachable only through the state machine. */
   assert.match(source, /function WatchList\(/);
-  assert.match(source, /load\.data\.length === 0 \? <p className="empty">\{empty\}<\/p> : children/);
-  assert.match(source, /load\.status === "loading" && load\.data\.length === 0/);
-  assert.match(source, /load\.status === "failed" && load\.data\.length === 0/);
+  assert.match(source, /load\.data\.length\?children:<p className="empty">\{empty\}<\/p>/);
+  assert.match(source, /load\.status==="loading"&&!load\.data\.length/);
+  assert.match(source, /load\.status==="failed"&&!load\.data\.length/);
   /* A failed refresh over data already on screen keeps the data. */
-  assert.match(source, /Showing what was loaded before/);
+  assert.match(source, /Showing the last loaded results/);
   assert.match(source, /p-skeleton/, "the wait must draw the shape of what is coming");
 });
 
@@ -676,19 +676,18 @@ test("the review caveat is said once per section, not on every card", () => {
   const client = read("market-watch/market-watch-client.tsx");
   assert.match(client, /name === "Getting attention" &&/);
   assert.match(client, /Reviews are not sales, and a buyer can leave one up to a hundred days/);
-  assert.match(client, /section-caveat/);
+  assert.match(client, /section-note/);
 });
 
-test("counts of one are not written as plurals", () => {
+test("keyword cards use labels instead of generated count sentences", () => {
   /* "feminist · 1 moving · 1 repeated · 1 shops" on the live page. */
   const client = read("market-watch/market-watch-client.tsx");
-  assert.match(client, /\$\{watch\.shops === 1 \? "shop" : "shops"\}/);
-  assert.match(client, /\$\{summary\.shops === 1 \? "shop" : "shops"\}/);
-  assert.match(client, /\$\{summary\.moving === 1 \? "listing" : "listings"\}/);
-  assert.ok(!/\$\{watch\.shops\} shops/.test(client));
+  assert.match(client, /Confirmed sold · 30 days/);
+  assert.match(client, /Repeat sellers/);
+  assert.doesNotMatch(client, /across .*shops/);
 });
 
-test("a niche page never denies the evidence it is showing", () => {
+test("a keyword page separates current listings from confirmed sales", () => {
   /*
     "Not enough verified evidence in this niche yet" sat directly above
     listings labelled "Repeated momentum" and "Momentum detected". Seen on
@@ -701,12 +700,8 @@ test("a niche page never denies the evidence it is showing", () => {
     sentence is, so it stops contradicting what sits underneath it.
   */
   const client = read("market-watch/market-watch-client.tsx");
-  assert.match(client, /: listings\.length\s*\n?\s*\?/,
-    "the thin-but-confirmed case needs its own sentence");
-  assert.match(client, /not yet enough across enough shops to read as a/);
-  assert.match(client, /Each one below is a confirmed movement on its own/);
-  /* The flat denial survives only for the case where there is nothing below. */
-  assert.match(client, /: "Not enough verified evidence in this niche yet\."/);
+  assert.match(client, /No sales have been confirmed for these listings yet/);
+  assert.match(client, /Their current Etsy stats are below/);
 
   /* And the bar itself is untouched — this is not a threshold change. */
   const watch = read("niche-watch.ts");

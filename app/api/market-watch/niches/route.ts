@@ -1,22 +1,12 @@
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
-import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { requireFeatureApi } from "@/app/require-feature";
-import { env } from "cloudflare:workers";
-import { normalizeNiche, intersect, type Candidate } from "@/app/niche-cohort";
-import {
-  stateOf, summarize, patterns, LABELS, type ListingEvidence,
-} from "@/app/niche-watch";
+import { normalizeNiche } from "@/app/niche-cohort";
 import {
   saveWatch, removeWatch, watchesFor, markOpened, appendHistory, lastGood, trend,
   MAX_NICHE_WATCHES,
 } from "@/app/niche-watch-store";
-import { ANALYSIS_VERSION } from "@/app/reference-analysis";
-import { candidateSummary } from "@/app/niche-candidate-store";
-import { GATHERING } from "@/app/niche-candidates";
-import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
-import { describeWindow } from "@/app/evidence-window";
-import { DISPLAY_FRESHNESS_SECONDS } from "@/app/reference-images";
+import { refreshKeywordListings } from "@/app/niche-listing-refresh";
 
 /**
  * NICHE WATCH.
@@ -31,7 +21,7 @@ import { DISPLAY_FRESHNESS_SECONDS } from "@/app/reference-images";
  */
 export const maxDuration = 300;
 
-import { readNiche, summariesForWatches } from "@/app/niche-brief";
+import { readNiche, summariesForWatches, previewsForWatches } from "@/app/niche-brief";
 
 export const GET = withErrorLog("market-watch-niches", async (request: Request) => {
   /* The entitlement decides, not the owner flag: a complimentary beta
@@ -61,7 +51,12 @@ export const GET = withErrorLog("market-watch-niches", async (request: Request) 
           that is a few hours old and labelled is better than a page of
           zeroes, and `stale` says which it is.
         */
-        const live = await summariesForWatches(saved, now).catch(() => null);
+        await Promise.all(saved.slice(0,3).map(watch =>
+          refreshKeywordListings(watch.key, watch.phrase, now).catch(() => false)));
+        const [live, previews] = await Promise.all([
+          summariesForWatches(saved, now).catch(() => null),
+          previewsForWatches(saved.map(watch => watch.key), now).catch(() => new Map()),
+        ]);
         return Promise.all(saved.map(async watch => {
           const held = await lastGood(watch.key);
           const fresh = live?.get(watch.key);
@@ -72,6 +67,7 @@ export const GET = withErrorLog("market-watch-niches", async (request: Request) 
             repeated: fresh ? fresh.repeated : payload?.repeated ?? 0,
             shops: fresh ? fresh.shops : payload?.shops ?? 0,
             lastCheckedAt: fresh ? now : held?.observedAt ?? 0,
+            listings: previews.get(watch.key) ?? [],
             /* Live figures are current by definition. A fallback to the
                stored brief is only fresh if the brief itself is. */
             stale: fresh ? false : held ? now - held.observedAt > 36 * 3_600 : true };
@@ -83,6 +79,7 @@ export const GET = withErrorLog("market-watch-niches", async (request: Request) 
   if (!watch) return NextResponse.json({ error: "That watch is not saved." }, { status: 404 });
 
   try {
+    await refreshKeywordListings(key, watch.phrase, now).catch(() => false);
     const view = await readNiche(user.userId, watch.terms, key, now);
     await appendHistory(key, view.summary, now);
     await markOpened(user.userId, key, now);
@@ -121,7 +118,7 @@ export const POST = withErrorLog("market-watch-save-niche", async (request: Requ
   }
 
   const phrase = String(body?.phrase ?? "").trim().slice(0, 80);
-  if (!phrase) return NextResponse.json({ error: "Name a niche to watch." }, { status: 400 });
+  if (!phrase) return NextResponse.json({ error: "Enter a keyword to track." }, { status: 400 });
   const { terms } = normalizeNiche(phrase);
   const saved = await saveWatch(user.userId, phrase, terms, now);
   if (!saved.ok) return NextResponse.json({ error: saved.because }, { status: 400 });
@@ -129,6 +126,7 @@ export const POST = withErrorLog("market-watch-save-niche", async (request: Requ
   /* The first reading happens immediately, so a new watch is never an empty
      page waiting for a cron. */
   try {
+    await refreshKeywordListings(saved.key, phrase, now, true).catch(() => false);
     const view = await readNiche(user.userId, terms, saved.key, now);
     await appendHistory(saved.key, view.summary, now);
     return NextResponse.json({ saved: true, key: saved.key, phrase, ...view });

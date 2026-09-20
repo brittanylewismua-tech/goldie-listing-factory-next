@@ -31,7 +31,31 @@ export async function ensureCandidateTables() {
     last_qualifying_at INTEGER,
     last_availability_check INTEGER,
     removed_reason TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    image_url TEXT NOT NULL DEFAULT '',
+    price_cents INTEGER,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    favorites INTEGER,
+    views INTEGER,
+    original_created INTEGER,
+    display_refreshed_at INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (niche_key, listing_id))`).run();
+  /* Existing production tables need the display fields too. Discovery used
+     to throw away the listing title, photo and current Etsy stats, which is
+     why a tracked keyword could open into an empty text-only page. */
+  for (const column of [
+    "title TEXT NOT NULL DEFAULT ''",
+    "image_url TEXT NOT NULL DEFAULT ''",
+    "price_cents INTEGER",
+    "currency TEXT NOT NULL DEFAULT 'USD'",
+    "favorites INTEGER",
+    "views INTEGER",
+    "original_created INTEGER",
+    "display_refreshed_at INTEGER NOT NULL DEFAULT 0",
+  ]) await db().prepare(`ALTER TABLE niche_candidates ADD COLUMN ${column}`).run()
+    .catch((error: unknown) => {
+      if (!/duplicate column/i.test(error instanceof Error ? error.message : "")) throw error;
+    });
   await db().prepare(
     `CREATE INDEX IF NOT EXISTS niche_candidates_state
        ON niche_candidates (state, priority DESC)`).run();
@@ -59,7 +83,10 @@ export const dueForDiscovery = async (nicheKey: string, now: number) => {
 
 export async function addCandidates(
   nicheKey: string, phrase: string, query: string,
-  found: Array<{ listingId: number; shopId: number; page: number; state: string }>,
+  found: Array<{ listingId: number; shopId: number; page: number; state: string;
+    title?: string; imageUrl?: string; priceCents?: number | null; currency?: string;
+    favorites?: number | null; views?: number | null; originalCreated?: number | null;
+    displayRefreshedAt?: number }>,
   now: number, watchers: number,
 ) {
   await ensureCandidateTables();
@@ -109,12 +136,22 @@ export async function addCandidates(
     `INSERT INTO niche_candidates
        (niche_key, listing_id, shop_id, original_phrase, discovery_query,
         discovered_at, search_page, listing_state, state, priority,
-        last_availability_check)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        last_availability_check, title, image_url, price_cents, currency,
+        favorites, views, original_created, display_refreshed_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(niche_key, listing_id) DO UPDATE SET
        listing_state = excluded.listing_state,
        last_availability_check = excluded.last_availability_check,
        priority = excluded.priority,
+       title = CASE WHEN excluded.title <> '' THEN excluded.title ELSE niche_candidates.title END,
+       image_url = CASE WHEN excluded.image_url <> '' THEN excluded.image_url ELSE niche_candidates.image_url END,
+       price_cents = COALESCE(excluded.price_cents, niche_candidates.price_cents),
+       currency = CASE WHEN excluded.currency <> '' THEN excluded.currency ELSE niche_candidates.currency END,
+       favorites = COALESCE(excluded.favorites, niche_candidates.favorites),
+       views = COALESCE(excluded.views, niche_candidates.views),
+       original_created = COALESCE(excluded.original_created, niche_candidates.original_created),
+       display_refreshed_at = MAX(niche_candidates.display_refreshed_at,
+                                  excluded.display_refreshed_at),
        /* REDISCOVERY REVIVES, IT DOES NOT RESET. A candidate that was demoted
           for lack of movement and has been found again is worth watching
           once more, and its discovery date stays the first one. */
@@ -142,7 +179,9 @@ export async function addCandidates(
       /* Something already polled needs no baseline pass of its own. */
       known.has(row.listingId) ? "monitoring" : "awaiting-baseline",
       priorityFor({ watchers, hasPriorEvidence: known.has(row.listingId), repeated: false }),
-      now));
+      now, row.title ?? "", row.imageUrl ?? "", row.priceCents ?? null,
+      row.currency ?? "USD", row.favorites ?? null, row.views ?? null,
+      row.originalCreated ?? null, row.displayRefreshedAt ?? now));
 
   let added = 0;
   for (let index = 0; index < statements.length; index += 25) {
@@ -163,6 +202,20 @@ export async function addCandidates(
     insertedShops: new Set(selected.map(row => row.shopId)).size,
     atCap: room === 0,
   };
+}
+
+/** Whether opening a tracked keyword needs one current Etsy refresh before it
+ * can show real listing cards. This is an internal gate, never a user-facing
+ * count. */
+export async function needsCandidateDisplay(nicheKey: string, now: number) {
+  await ensureCandidateTables();
+  const row = await db().prepare(
+    `SELECT COUNT(*) AS n FROM niche_candidates
+      WHERE niche_key = ? AND title <> '' AND image_url <> ''
+        AND display_refreshed_at >= ?`)
+    .bind(nicheKey, now - 5 * 3_600)
+    .first<{ n: number }>().catch(() => null);
+  return Number(row?.n ?? 0) < 6;
 }
 
 export async function recordDiscoveryRun(

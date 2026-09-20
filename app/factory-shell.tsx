@@ -58,7 +58,7 @@ export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | 
 */
 export const NAV: SuiteNavItem[] = [
   { key: "home", label: "Home", href: "/home", icon: "home", group: "home" },
-  { key: "factory", label: "Listing Factory", href: "/listing-factory", icon: "listingFactory", group: "factory" },
+  { key: "factory", label: "Listing Factory", href: "/listing-factory?step=setup", icon: "listingFactory", group: "factory" },
   { key: "batches", label: "Batch History", href: "/batches", icon: "batches", group: "factory" },
   { key: "keywords", label: "Keyword Banks", href: "/keywords", icon: "keywords", group: "factory" },
   { key: "mockups", label: "Mockup Sets", href: "/mockups", icon: "mockups", group: "factory" },

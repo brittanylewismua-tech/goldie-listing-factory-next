@@ -35,13 +35,12 @@ test("a saved niche reuses one normalization, shared by both features", () => {
   /* The brief builder was lifted out of the route so the scheduled refresh
      and the member's own page build a brief identically. The property this
      protects is unchanged: one matcher, shared with the scanner. */
-  const watch = read("app/niche-brief.ts");
+  const watch = read("app/niche-listing-refresh.ts");
   for (const [name, source] of [["scan", scanner], ["niche watch", watch]])
     assert.match(source, /from "@\/app\/niche-cohort"/, `${name} does not share the matcher`);
-  for (const source of [scanner, watch]) {
-    assert.match(source, /normalizeNiche/);
-    assert.match(source, /intersect\(/);
-  }
+  for (const source of [scanner, watch]) assert.match(source, /normalizeNiche/);
+  assert.match(scanner, /intersect\(/);
+  assert.match(watch, /relates\(/);
 });
 
 /* ------------------------------ 4. Trademark consistency */

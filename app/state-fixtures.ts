@@ -138,28 +138,28 @@ export const stateFixtures = (): StateFixture[] => [
     what: "Nothing may claim the member has no watches while the answer is still in flight.",
     replies: [
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] }, delayMs: 60_000 },
-      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] }, delayMs: 60_000 },
-      { path: "/api/market-watch/update", status: 200, body: { lines: [] }, delayMs: 60_000 }] },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] }, delayMs: 60_000 }] },
 
   { key: "market-watch-empty", label: "Nothing watched", surface: "market-watch",
     what: "A member who has not started. The page has to invite, not apologise.",
     replies: [{ path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
-      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
-      { path: "/api/market-watch/update", status: 200,
-        body: { lines: [], message: null } }] },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } }] },
 
   { key: "market-watch-saved", label: "Saved niches", surface: "market-watch",
-    what: "The ordinary loaded state: watches with evidence, and today's lines.",
+    what: "The ordinary loaded state: tracked keywords with listing photos and useful stats.",
     replies: [
       { path: "/api/market-watch/niches", status: 200, body: { watches: [
-        { key: "bachelorette", phrase: "bachelorette", moving: 14, repeated: 5, shops: 9,
-          lastCheckedAt: secondsAgo(5_400), stale: false },
-        { key: "dog-mom", phrase: "dog mom", moving: 6, repeated: 2, shops: 4,
-          lastCheckedAt: secondsAgo(9_000), stale: false }] } },
-      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
-      { path: "/api/market-watch/update", status: 200, body: { lines: [
-        "3 listings in bachelorette moved again today.",
-        "dog mom has 1 new shop showing repeated movement."], message: null } }] },
+        { key: "bookish-sweatshirt", phrase: "bookish sweatshirt", moving: 8, repeated: 3, shops: 6,
+          lastCheckedAt: secondsAgo(5_400), stale: false, listings: [
+            {listingId:1,title:"Just One More Chapter Sweatshirt",imageUrl:listingPreview("#d8c7b8","#382d2a","ONE MORE CHAPTER"),displayFresh:true,sold30:7,sold7:2},
+            {listingId:2,title:"Book Club Crewneck",imageUrl:listingPreview("#c6d4c4","#26332a","BOOK CLUB"),displayFresh:true,sold30:4,sold7:1},
+            {listingId:3,title:"Romantasy Reader Sweatshirt",imageUrl:listingPreview("#cdbccf","#39243c","ROMANTASY"),displayFresh:true,sold30:3,sold7:1},
+            {listingId:4,title:"Library Card Pullover",imageUrl:listingPreview("#d8b9b0","#42251f","LIBRARY"),displayFresh:true,sold30:2,sold7:0}] },
+        { key: "dog-mom", phrase: "dog mom shirt", moving: 6, repeated: 2, shops: 4,
+          lastCheckedAt: secondsAgo(9_000), stale: false, listings: [
+            {listingId:5,title:"Dog Mom Comfort Colors Tee",imageUrl:listingPreview("#ddd1bb","#463824","DOG MOM"),displayFresh:true,sold30:5,sold7:1},
+            {listingId:6,title:"Retro Dog Mama Shirt",imageUrl:listingPreview("#bbc7cf","#26323b","DOG MAMA"),displayFresh:true,sold30:2,sold7:0}] }] } },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } }] },
 
   { key: "market-watch-stale", label: "Refresh failed (stale reading)", surface: "market-watch",
     what: "Today's update could not be built. The last confirmed reading is labelled, not hidden.",
@@ -167,14 +167,12 @@ export const stateFixtures = (): StateFixture[] => [
       { path: "/api/market-watch/niches", status: 200, body: { watches: [
         { key: "bachelorette", phrase: "bachelorette", moving: 14, repeated: 5, shops: 9,
           lastCheckedAt: secondsAgo(190_000), stale: true }] } },
-      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
-      { path: "/api/market-watch/update", status: 500, body: { error: "upstream" } }] },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } }] },
 
   { key: "market-watch-shop-patterns", label: "Shop Watch patterns", surface: "market-watch", at: "shops",
     what: "A shop brief with a finding, its reasoning and its evidence — not a bare count.",
     replies: [
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
-      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } },
       { path: "/api/shop-watch/brief", status: 200, body: { shops: [{
         shopId: 4471, shopName: "a-watched-shop", etsy: "https://www.etsy.com/shop/a-watched-shop",
         gettingAttention: [{ pattern: "One listing is drawing most of this shop's recent reviews.",
@@ -190,12 +188,11 @@ export const stateFixtures = (): StateFixture[] => [
     what: "A shop is followed but has no confirmed pattern. Silence has to be explained.",
     replies: [
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
-      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } },
       { path: "/api/shop-watch/brief", status: 200, body: { shops: [{
         shopId: 4471, shopName: "a-quiet-shop", etsy: "", gettingAttention: [],
         whatBuyersLove: [], whatBuyersDislike: [], whatChanged: [] }] } }] },
 
-  { key: "market-watch-niche-evidence", label: "Niche detail — evidence", surface: "market-watch",
+  { key: "market-watch-niche-evidence", label: "Niche detail — evidence", surface: "market-watch", at: "keyword:bachelorette",
     what: "Open 'bachelorette'. Listings are the subject, each with what confirmed it and when.",
     replies: [
       { path: "/api/market-watch/niches?key=", status: 200, body: {
@@ -207,33 +204,34 @@ export const stateFixtures = (): StateFixture[] => [
           "The date set below the name, much smaller."],
         listings: [
           { listingId: 1234567890, title: "Bachelorette Party Shirt · Custom Name",
-            imageUrl: "", etsyUrl: "https://www.etsy.com/listing/1234567890",
-            state: "moving", label: "Moving", confirmedAt: secondsAgo(4_200),
-            reviewsOnThisListing: 3, displayFresh: false },
+            imageUrl: listingPreview("#ead6df","#54263d","BRIDE CREW"), etsyUrl: "https://www.etsy.com/listing/1234567890",
+            state: "moving", label: "Moving", confirmedAt: secondsAgo(4_200), intervals:3,
+            sold7:4,sold30:11,priceCents:3495,currency:"USD",favorites:812,views:14240,ageDays:188,
+            reviewsOnThisListing: 3, displayFresh: true },
           { listingId: 1234567891, title: "Last Disco Bachelorette Tee",
-            imageUrl: "", etsyUrl: "https://www.etsy.com/listing/1234567891",
-            state: "repeated", label: "Moving again", confirmedAt: secondsAgo(90_000),
-            reviewsOnThisListing: 0, displayFresh: false }] } },
+            imageUrl: listingPreview("#d9c8b5","#46301f","LAST DISCO"), etsyUrl: "https://www.etsy.com/listing/1234567891",
+            state: "repeated", label: "Moving again", confirmedAt: secondsAgo(90_000), intervals:2,
+            sold7:2,sold30:6,priceCents:2899,currency:"USD",favorites:417,views:8932,ageDays:240,
+            reviewsOnThisListing: 0, displayFresh: true }] } },
       { path: "/api/market-watch/niches", status: 200, body: { watches: [
         { key: "bachelorette", phrase: "bachelorette", moving: 14, repeated: 5, shops: 9,
           lastCheckedAt: secondsAgo(4_200), stale: false }] } },
-      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
-      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } }] },
 
-  { key: "market-watch-niche-gathering", label: "Niche detail — still gathering", surface: "market-watch",
-    what: "Watched, nothing confirmed yet. Silence is explained and counted, not left blank.",
+  { key: "market-watch-niche-gathering", label: "Niche detail — still gathering", surface: "market-watch", at: "keyword:dog-mom",
+    what: "Tracked with no confirmed sales yet. Current listing cards still appear without internal counts.",
     replies: [
       { path: "/api/market-watch/niches?key=", status: 200, body: {
-        key: "dog-mom", phrase: "dog mom", listings: [],
-        gathering: "Market Watch has not confirmed movement in this niche yet.",
-        candidates: { watching: 412, shops: 37 } } },
+        key: "dog-mom", phrase: "dog mom", gathering: true,
+        summary:{moving:0,repeated:0,newSinceLastBrief:0,shops:0}, listings: [
+          {listingId:5,title:"Dog Mom Comfort Colors Tee",imageUrl:listingPreview("#ddd1bb","#463824","DOG MOM"),etsyUrl:"https://www.etsy.com/listing/5",state:"watching",label:"Watching",confirmedAt:0,intervals:0,sold7:0,sold30:0,priceCents:2795,currency:"USD",favorites:94,views:1308,ageDays:42,reviewsOnThisListing:0,displayFresh:true}
+        ] } },
       { path: "/api/market-watch/niches", status: 200, body: { watches: [
         { key: "dog-mom", phrase: "dog mom", moving: 0, repeated: 0, shops: 0,
           lastCheckedAt: secondsAgo(3_000), stale: false }] } },
-      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
-      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } }] },
 
-  { key: "market-watch-niche-stale", label: "Niche detail — refresh failed", surface: "market-watch",
+  { key: "market-watch-niche-stale", label: "Niche detail — refresh failed", surface: "market-watch", at: "keyword:bachelorette",
     what: "Today's refresh failed. The last confirmed reading is shown and labelled as old.",
     replies: [
       { path: "/api/market-watch/niches?key=", status: 200, body: {
@@ -244,8 +242,7 @@ export const stateFixtures = (): StateFixture[] => [
       { path: "/api/market-watch/niches", status: 200, body: { watches: [
         { key: "bachelorette", phrase: "bachelorette", moving: 11, repeated: 4, shops: 7,
           lastCheckedAt: secondsAgo(190_000), stale: true }] } },
-      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
-      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } }] },
 
   { key: "market-watch-niche-failed", label: "Niche detail — could not open", surface: "market-watch",
     what: "The evidence read failed outright. The saved list must stay intact behind it.",
@@ -254,8 +251,7 @@ export const stateFixtures = (): StateFixture[] => [
       { path: "/api/market-watch/niches", status: 200, body: { watches: [
         { key: "bachelorette", phrase: "bachelorette", moving: 14, repeated: 5, shops: 9,
           lastCheckedAt: secondsAgo(4_200), stale: false }] } },
-      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
-      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } }] },
 
   { key: "market-watch-unsupported", label: "Niche refused", surface: "market-watch",
     what: "A phrase with nothing to search on. The refusal says what is wrong with it.",
@@ -263,8 +259,7 @@ export const stateFixtures = (): StateFixture[] => [
       { path: "/api/market-watch/niches", status: 200, body: { watches: [] } },
       { path: "/api/market-watch/niches", method: "POST", status: 400,
         body: { error: "That niche needs at least one meaningful word." } },
-      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
-      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } }] },
 
   { key: "market-watch-at-limit", label: "Watch limit reached", surface: "market-watch",
     what: "The cap is a standing limit with a way out, not a dead end.",
@@ -274,14 +269,12 @@ export const stateFixtures = (): StateFixture[] => [
           lastCheckedAt: secondsAgo(5_400), stale: false }] } },
       { path: "/api/market-watch/niches", method: "POST", status: 400,
         body: { error: "You can watch 10 niches at once. Remove one to add another." } },
-      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } },
-      { path: "/api/market-watch/update", status: 200, body: { lines: [], message: null } }] },
+      { path: "/api/shop-watch/brief", status: 200, body: { shops: [] } }] },
 
   { key: "market-watch-api-error", label: "API failure", surface: "market-watch",
     what: "Evidence unavailable. Must not read as 'nothing is moving' or 'you watch nothing'.",
     replies: [{ path: "/api/market-watch/niches", status: 500, body: { error: "upstream" } },
-      { path: "/api/shop-watch/brief", status: 500, body: { error: "upstream" } },
-      { path: "/api/market-watch/update", status: 500, body: { error: "upstream" } }] },
+      { path: "/api/shop-watch/brief", status: 500, body: { error: "upstream" } }] },
 
   /* ------------------------------------------------------- design scanner */
   { key: "scanner-quality-faint", label: "Readability — faint only", surface: "design-scanner",

@@ -1033,13 +1033,13 @@ html body .app-shell .listing-streak {
   box-shadow: var(--pro-shadow-float) !important;
 }
 
-.app-shell :is(.p-empty, .empty, .shop-map-state, .update-failed, .refusal) {
+.app-shell :is(.p-empty, .empty, .shop-map-state, .refusal) {
   border: 1px solid var(--pro-line) !important;
   border-radius: 14px !important;
   background: var(--pro-paper-soft) !important;
 }
 
-.app-shell :is(.p-notice-bad, .usage-load-error, .update-failed, .refusal, [role="alert"]) { color: #843344 !important; }
+.app-shell :is(.p-notice-bad, .usage-load-error, .refusal, [role="alert"]) { color: #843344 !important; }
 .app-shell .save-toast.error { border-color: #d7a9b4 !important; background: #fff !important; color: #843344 !important; }
 .app-shell .save-toast.error :is(b, small, span, button) { color: inherit !important; }
 .app-shell .drop-error { border-color: var(--pro-line) !important; border-radius: 16px !important; background: #fff !important; box-shadow: var(--pro-shadow) !important; }

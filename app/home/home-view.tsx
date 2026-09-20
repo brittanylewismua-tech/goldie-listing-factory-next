@@ -75,7 +75,7 @@ export default function HomeView({ firstName = "Britt" }: { firstName?: string }
     </header>
 
     <section className="home-primary-actions" aria-label="Quick actions">
-      <Link className="home-primary-action" href="/listing-factory"><span>CREATE LISTINGS</span><strong>Start in Listing Factory</strong><i aria-hidden="true">→</i></Link>
+      <Link className="home-primary-action" href="/listing-factory?step=setup"><span>CREATE LISTINGS</span><strong>Start in Listing Factory</strong><i aria-hidden="true">→</i></Link>
       <Link className="home-secondary-action" href="/batches"><span>KEEP WORKING</span><strong>Open Batch History</strong><i aria-hidden="true">→</i></Link>
     </section>
 

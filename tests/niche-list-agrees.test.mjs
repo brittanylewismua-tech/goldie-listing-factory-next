@@ -49,7 +49,7 @@ test('both paths count through the same function, not two copies of it', () => {
   /* One summarize import, used by readNiche and by the list builder. */
   assert.match(brief, /summariesForWatches/);
   assert.match(brief, /summarize\(evidence, now\)/);
-  assert.match(brief, /const summary = summarize\(evidence, now, \{ since: since_ \}\)/);
+  assert.match(brief, /const summary = summarize\(evidence, now, \{ since: watch\?\.lastOpened \?\? 0 \}\)/);
   /* The route must not compute counts of its own. */
   const stripped = route.replace(/\/\*[\s\S]*?\*\//g, '');
   assert.equal(/moving:\s*\w+\.filter/.test(stripped), false,

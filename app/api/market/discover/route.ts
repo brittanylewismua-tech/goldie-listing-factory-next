@@ -26,7 +26,9 @@ export const maxDuration = 300;
 const PAGE = 100;
 
 type EtsyRow = { listing_id?: number; shop_id?: number; title?: string;
-  tags?: string[]; state?: string };
+  tags?: string[]; state?: string; price?: { amount?: number; divisor?: number; currency_code?: string };
+  num_favorers?: number; views?: number; original_creation_timestamp?: number;
+  images?: Array<{ url_570xN?: string; url_fullxfull?: string; url_300x300?: string }> };
 
 export const POST = withErrorLog("market-discover", async (request: Request) => {
   const internal = !request.headers.get("cf-connecting-ip");
@@ -86,7 +88,10 @@ export const POST = withErrorLog("market-discover", async (request: Request) => 
       continue;
     }
 
-    const found: Array<{ listingId: number; shopId: number; page: number; state: string }> = [];
+    const found: Array<{ listingId: number; shopId: number; page: number; state: string;
+      title: string; imageUrl: string; priceCents: number | null; currency: string;
+      favorites: number | null; views: number | null; originalCreated: number | null;
+      displayRefreshedAt: number }> = [];
     const rejected: Record<string, number> = {};
     let examined = 0;
     let calls = 0;
@@ -97,7 +102,7 @@ export const POST = withErrorLog("market-discover", async (request: Request) => 
       try {
         const search = new URLSearchParams({
           keywords: query, limit: String(PAGE), offset: String(page * PAGE),
-          sort_on: "score", sort_order: "desc",
+          sort_on: "score", sort_order: "desc", includes: "Images",
         });
         response = await fetch(
           `https://openapi.etsy.com/v3/application/listings/active?${search}`,
@@ -127,8 +132,16 @@ export const POST = withErrorLog("market-discover", async (request: Request) => 
           rejected[verdict.because] = (rejected[verdict.because] ?? 0) + 1;
           continue;
         }
+        const photo=row.images?.[0],divisor=Math.max(1,Number(row.price?.divisor)||100);
         found.push({ listingId: shape.listingId, shopId: shape.shopId, page,
-          state: String(row.state ?? "active") });
+          state: String(row.state ?? "active"), title: shape.title,
+          imageUrl: String(photo?.url_570xN??photo?.url_fullxfull??photo?.url_300x300??""),
+          priceCents: Number.isFinite(Number(row.price?.amount))?Math.round(Number(row.price?.amount)*100/divisor):null,
+          currency: String(row.price?.currency_code??"USD"),
+          favorites: Number.isFinite(Number(row.num_favorers))?Number(row.num_favorers):null,
+          views: Number.isFinite(Number(row.views))?Number(row.views):null,
+          originalCreated: Number(row.original_creation_timestamp)||null,
+          displayRefreshedAt: now });
       }
       if (rows.length < PAGE) break;
     }

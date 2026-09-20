@@ -237,10 +237,10 @@ test("a stale watch is labelled, not emptied", () => {
   assert.match(MW, /data-stale=/);
 });
 
-test("empty and thin states say what is happening", () => {
-  assert.match(MW, /Not enough verified evidence in this niche yet/);
-  assert.match(MW, /has not confirmed enough movement in this niche yet/);
-  assert.match(MW, /Nothing confirmed for this shop yet/);
+test("empty and gathering states say what is happening", () => {
+  assert.match(MW, /No sales have been confirmed for these listings yet/);
+  assert.match(MW, /Listings could not be refreshed right now/);
+  assert.match(MW, /No listing activity has been confirmed for this shop yet/);
 });
 
 test("patterns are never presented as instructions", () => {

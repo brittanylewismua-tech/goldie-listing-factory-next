@@ -118,6 +118,15 @@ export function profitState(
   const spent = costs.reduce((sum, cost) => sum + cost.costMinor, 0);
   const profit = grossRevenueMinor + feesMinor - spent;
 
+  /* A number is not profit if Etsy's revenue/fee import is incomplete. Hiding
+     that uncertainty behind "estimated" produced a confident, inflated total
+     from a partial ledger. */
+  if (!otherComplete)
+    return { headline: "Profit unavailable", profitMinor: null,
+      accuracy: "Etsy sales or fee data is still syncing",
+      verifiedShare: share(verified), estimatedShare: share(estimated),
+      unavailableShare: share(missing) };
+
   /* An order with no cost at all cannot be estimated away. */
   if (!total || missing > 0)
     return { headline: "Profit unavailable", profitMinor: null,
@@ -127,7 +136,7 @@ export function profitState(
       verifiedShare: share(verified), estimatedShare: share(estimated),
       unavailableShare: share(missing) };
 
-  const allVerified = verified === total && otherComplete;
+  const allVerified = verified === total;
   return {
     headline: allVerified ? "Verified profit" : "Estimated profit",
     profitMinor: profit,

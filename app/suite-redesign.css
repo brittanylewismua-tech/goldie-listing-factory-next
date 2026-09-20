@@ -517,7 +517,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 
 /* Consistent dialogs, failures, and empty states everywhere */
 .app-shell [role="dialog"],.app-shell dialog{border-radius:10px!important}
-.app-shell :is(.p-empty,.empty,.shop-map-state,.update-failed,.refusal){border-radius:9px!important}
+.app-shell :is(.p-empty,.empty,.shop-map-state,.refusal){border-radius:9px!important}
 .app-shell [role="alert"],.app-shell .p-notice{border-radius:8px!important}
 .app-shell :is(button,a,input,select,textarea):focus-visible{outline:3px solid rgba(255,44,166,.28)!important;outline-offset:2px!important}
 
@@ -625,7 +625,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
   color:inherit
 }
 
-.app-shell :is(.p-notice-bad,.usage-load-error,.update-failed,.refusal,[role="alert"]){
+.app-shell :is(.p-notice-bad,.usage-load-error,.refusal,[role="alert"]){
   color:#7f263d
 }
 .app-shell .save-toast.error{
