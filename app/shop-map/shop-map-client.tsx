@@ -192,7 +192,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   return (
     <main className="shop-map">
       <header className="shop-map-head">
-        <h1>{shown.shop?.shopName ?? "Your shop"}</h1>
+        <h1>Shop Map</h1>
         <p>{monthName(shown.month)}</p>
       </header>
 

@@ -1101,6 +1101,11 @@ export function replyFor(
     full = parsed.pathname + parsed.search;
   } catch { /* already a path */ }
   const verb = method.toUpperCase();
+  /* The shared shell checks this on every mounted page. It is infrastructure,
+     not a feature-state dependency, so every fixture answers it identically. */
+  if (path === "/api/version" && (verb === "GET" || verb === "HEAD")) {
+    return { path: "/api/version", status: 200, body: { build: "state-preview", commit: "state-preview" } };
+  }
   /*
     A PATH MAY CARRY A QUERY, AND THEN THE QUERY IS PART OF THE MATCH.
 

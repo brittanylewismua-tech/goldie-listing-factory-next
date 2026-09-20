@@ -404,7 +404,7 @@ test("the observation sample is taken after the work it measures", () => {
 
 test("the sweep says what it proved, and does not call narrow layout mobile", async () => {
   /*
-    An iframe 375 CSS pixels wide makes the width media queries fire. It does
+    A 375 CSS pixel viewport makes the width media queries fire. It does
     not make the browser report a touch device, and this product's mobile
     rules need both halves — (max-width:820px) and (pointer:coarse) is what
     hides the Listing Factory shell behind the desktop gate. A sweep that
@@ -450,11 +450,13 @@ test("the phone-width sweep is a control, not something done by hand once", () =
   assert.match(source, /scrolls sideways by/);
   assert.match(source, /wider than the screen/);
   assert.match(source, /tap target/);
-  /* Each state gets a real CSS viewport, not a scaled screenshot: an iframe
-     of that exact width is what makes the media queries fire. */
-  assert.match(source, /width:\$\{width\}px/);
+  /* Each state gets a real CSS viewport, not a scaled screenshot. The probe
+     window is resized to the requested width because production security
+     headers intentionally prevent the application from being iframed. */
+  assert.match(source, /probe\.resizeTo\(width, 900\)/);
+  assert.match(source, /window\.open\("about:blank", "goldie-state-sweep"/);
   /*
-    The sweep opens this same component inside each iframe, so the control
+    The sweep opens this same component inside the probe window, so the control
     must not recurse — and `window` cannot be read during render, because
     this page is server-rendered first.
   */

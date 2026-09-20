@@ -19,6 +19,7 @@ import ReliableNavigation from "./reliable-navigation";
 import MobileShell from "./mobile-shell";
 import "./mobile-shell.css";
 import "./suite-redesign.css";
+import "./professional-redesign.css";
 import { NEUTRAL_FALLBACK_TITLE } from "./shell-identity";
 
 export async function generateMetadata(): Promise<Metadata> {
