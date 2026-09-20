@@ -26,7 +26,6 @@ import KeywordBanks from "@/app/keywords/page";
 import MoreView from "@/app/more/more-view";
 import "@/app/suite-redesign.css";
 import "@/app/account/settings/account.css";
-import "@/app/professional-redesign.css";
 
 /**
  * THE REAL COMPONENT, IN A STATE THAT WOULD OTHERWISE HAVE TO BE WAITED FOR.
@@ -139,7 +138,8 @@ const Shell = ({ active, title, children }:
 /* Every surface is given the same props; most ignore `at`, which is what
    makes adding a sub-view to one of them a one-line change. */
 const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
-  connections: () => <ConnectionsClient signedInEmail="preview@example.invalid" />,
+  connections: () => <Shell active="connections" title="Connections">
+    <ConnectionsClient signedInEmail="preview@example.invalid" /></Shell>,
   "market-watch": ({ at }: { at?: string }) =>
     <Shell active="market-watch" title="Market Watch">
       <MarketWatchClient signedInEmail="preview@example.invalid"
@@ -165,7 +165,7 @@ const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
 /*
   EVERY STATE, EVERY PHONE WIDTH — AND AN HONEST LABEL ON WHAT THAT PROVES.
 
-  A probe window 375 CSS pixels wide gives the page a real narrow viewport and
+  An iframe 375 CSS pixels wide gives the page a real narrow viewport and
   makes its width media queries fire. It does NOT make the browser report a
   touch device, and this product's mobile rules require BOTH halves:
 
@@ -187,60 +187,50 @@ const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
   through it have never measured anything.
 */
 
-function readSweepState(state: string, width: number): SweepReading {
-  const reading: SweepReading = { state, askedWidth: width, innerWidth: window.innerWidth,
-    clientWidth: document.documentElement.clientWidth,
-    coarsePointer: window.matchMedia("(pointer: coarse)").matches,
-    mobileGateMatches: window.matchMedia(MOBILE_GATE).matches,
+async function sweepOne(state: string, width: number): Promise<SweepReading> {
+  const frame = document.createElement("iframe");
+  frame.style.cssText =
+    `position:fixed;left:-9999px;top:0;width:${width}px;height:900px;border:0`;
+  frame.src = `/dev/state-preview?state=${encodeURIComponent(state)}`;
+  document.body.appendChild(frame);
+  await new Promise(resolve => { frame.onload = resolve; setTimeout(resolve, 6_000); });
+  await new Promise(resolve => setTimeout(resolve, 350));
+
+  const reading: SweepReading = { state, askedWidth: width, innerWidth: null,
+    clientWidth: null, coarsePointer: null, mobileGateMatches: null,
     horizontalOverflow: null, undersizedTargets: [], problems: [] };
-  const main = document.querySelector(".sp-stage main");
-  if (!main) reading.problems.push("nothing rendered");
-  else {
-    reading.horizontalOverflow = main.scrollWidth - window.innerWidth;
-    if (reading.horizontalOverflow > 0)
-      reading.problems.push(`scrolls sideways by ${reading.horizontalOverflow}px`);
-    for (const node of main.querySelectorAll("*"))
-      if (node.getBoundingClientRect().width > window.innerWidth + 1)
-        reading.problems.push(`wider than the screen: ${node.tagName.toLowerCase()}`);
-    for (const node of main.querySelectorAll("button, a, select")) {
-      const box = node.getBoundingClientRect();
-      if (box.width > 0 && box.height > 0 && box.height < 40) {
-        const said = `${Math.round(box.height)}px tap target: `
-          + `${(node.textContent ?? "").trim().slice(0, 24)}`;
-        reading.undersizedTargets.push(said);
-        reading.problems.push(said);
+  try {
+    const doc = frame.contentDocument!;
+    const view = frame.contentWindow!;
+    reading.innerWidth = view.innerWidth;
+    reading.clientWidth = doc.documentElement.clientWidth;
+    reading.coarsePointer = view.matchMedia("(pointer: coarse)").matches;
+    reading.mobileGateMatches = view.matchMedia(MOBILE_GATE).matches;
+
+    const main = doc.querySelector("main");
+    if (!main) reading.problems.push("nothing rendered");
+    else {
+      reading.horizontalOverflow = main.scrollWidth - view.innerWidth;
+      if (reading.horizontalOverflow > 0)
+        reading.problems.push(`scrolls sideways by ${reading.horizontalOverflow}px`);
+      for (const node of main.querySelectorAll("*"))
+        if (node.getBoundingClientRect().width > view.innerWidth + 1)
+          reading.problems.push(`wider than the screen: ${node.tagName.toLowerCase()}`);
+      for (const node of main.querySelectorAll("button, a, select")) {
+        const box = node.getBoundingClientRect();
+        if (box.width > 0 && box.height > 0 && box.height < 40) {
+          const said = `${Math.round(box.height)}px tap target: `
+            + `${(node.textContent ?? "").trim().slice(0, 24)}`;
+          reading.undersizedTargets.push(said);
+          reading.problems.push(said);
+        }
       }
     }
-  }
-  const refused = document.querySelector(".sp-refused")?.textContent?.trim();
-  if (refused) reading.problems.push(refused.slice(0, 80));
+    const refused = doc.querySelector(".sp-refused")?.textContent?.trim();
+    if (refused) reading.problems.push(refused.slice(0, 80));
+  } catch { reading.problems.push("could not be measured"); }
+  frame.remove();
   reading.problems = [...new Set(reading.problems)];
-  return reading;
-}
-
-async function sweepOne(state: string, width: number, probe: Window): Promise<SweepReading> {
-  const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const answer = new Promise<SweepReading | null>(resolve => {
-    const timer = window.setTimeout(() => { cleanup(); resolve(null); }, 6_000);
-    const onMessage = (event: MessageEvent) => {
-      if (event.source !== probe || event.data?.type !== "goldie-sweep"
-        || event.data?.token !== token) return;
-      cleanup();
-      resolve(event.data.reading as SweepReading);
-    };
-    const cleanup = () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("message", onMessage);
-    };
-    window.addEventListener("message", onMessage);
-  });
-  probe.resizeTo(width, 900);
-  probe.location.href = `/dev/state-preview?state=${encodeURIComponent(state)}`
-    + `&sweep=${encodeURIComponent(token)}&sweepWidth=${width}`;
-  const reading = await answer ?? { state, askedWidth: width, innerWidth: null,
-    clientWidth: null, coarsePointer: null, mobileGateMatches: null,
-    horizontalOverflow: null, undersizedTargets: [],
-    problems: ["could not be measured: sweep window did not answer"] };
   return reading;
 }
 
@@ -288,38 +278,16 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
   const [sweep, setSweep] = useState<{ running: boolean; done: number; total: number;
     problems: string[]; conditions: SweepConditions | null } | null>(null);
   /*
-    The sweep opens each state in a probe window, which renders this
+    The sweep opens each state in an iframe, and those iframes render this
     same component. Set after mount rather than read during render, because
     this page is server-rendered first and `window` does not exist there.
   */
   const [topLevel, setTopLevel] = useState(false);
   useEffect(() => { setTopLevel(window.self === window.top); }, []);
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("sweep");
-    const width = Number(params.get("sweepWidth"));
-    if (!token || !Number.isFinite(width)) return;
-    const timer = window.setTimeout(() => {
-      const receiver = window.opener ?? window.parent;
-      receiver.postMessage({ type: "goldie-sweep", token,
-        reading: readSweepState(key, width) }, "*");
-    }, 350);
-    return () => window.clearTimeout(timer);
-  }, [key]);
 
   const runSweep = async () => {
     const total = all.length * PHONE_WIDTHS.length;
     setSweep({ running: true, done: 0, total, problems: [], conditions: null });
-    /* The production security headers intentionally prevent the app from being
-       embedded in an iframe. A single user-opened probe window keeps those
-       headers intact and reports its own measurements back to this page. */
-    const probe = window.open("about:blank", "goldie-state-sweep",
-      "popup,width=430,height=900");
-    if (!probe) {
-      setSweep({ running: false, done: 0, total,
-        problems: ["The sweep window was blocked by the browser."], conditions: null });
-      return;
-    }
     /*
       GROUPED BY THE PROBLEM, NOT BY THE MEASUREMENT.
 
@@ -332,7 +300,7 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
     let done = 0;
     for (const width of PHONE_WIDTHS)
       for (const entry of all) {
-        const reading = await sweepOne(entry.key, width, probe);
+        const reading = await sweepOne(entry.key, width);
         readings.push(reading);
         for (const line of reading.problems) {
           const where = seen.get(line) ?? new Set<string>();
@@ -343,7 +311,6 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
         setSweep({ running: true, done, total, problems: summarise(seen),
           conditions: conditionsOf(readings) });
       }
-    probe.close();
     setSweep({ running: false, done: total, total, problems: summarise(seen),
       conditions: conditionsOf(readings) });
   };
@@ -381,8 +348,8 @@ export default function StatePreviewClient({ initial }: { initial: string }) {
                 ? `${sweep.total} checks clean.`
                 : `${sweep.problems.length} problem`
                   + `${sweep.problems.length === 1 ? "" : "s"}: `
-                  + sweep.problems.slice(0, 20).join(" · ")
-                  + (sweep.problems.length > 20 ? " …" : "")}
+                  + sweep.problems.slice(0, 6).join(" · ")
+                  + (sweep.problems.length > 6 ? " …" : "")}
             </span>
             {/* The conditions, every run, so nothing here reads as more than
                 it is. `label` is the honest name for what was proved. */}
