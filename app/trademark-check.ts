@@ -311,8 +311,13 @@ function findHits(phrase: string): Hit[] {
   return hits.sort((a, b) => a.at - b.at);
 }
 
-/* A name that already ends in a full stop does not get another. */
-const endSentence = (text: string) => text.replace(/\.\.$/, ".");
+/*
+  "filed by Ate My Heart Inc.. It is not registered yet" — an owner name that
+  ends in its own full stop met the sentence's. USPTO names routinely end in
+  "Inc.", "Ltd." or "Co.", so the sentence supplies the stop only when the
+  name has not already, wherever in the sentence that lands.
+*/
+export const endSentence = (text: string) => text.replace(/([^.])\.\.(?=\s|$)/g, "$1.");
 
 export function check(raw: string): Verdict {
   const phrase = String(raw ?? "").trim();

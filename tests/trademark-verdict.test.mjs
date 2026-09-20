@@ -84,3 +84,14 @@ test("the answer says whether the register was fully loaded", () => {
   assert.equal(withRegister(check("anything"), [], LOADING).registerReady, false);
   assert.equal(withRegister(check("anything"), [], LOADED).registerReady, true);
 });
+
+test('an owner name that ends in a full stop does not produce two', async () => {
+  const { endSentence } = await import('../app/trademark-check.ts');
+  assert.equal(
+    endSentence('“HAUS LABS” is a live trademark application, filed by Ate My Heart Inc.. It is not registered yet.'),
+    '“HAUS LABS” is a live trademark application, filed by Ate My Heart Inc. It is not registered yet.');
+  assert.equal(endSentence('owned by Acme Corp. Using it is a risk.'),
+    'owned by Acme Corp. Using it is a risk.');
+  /* An ellipsis is not two full stops. */
+  assert.equal(endSentence('wait for it...'), 'wait for it...');
+});
