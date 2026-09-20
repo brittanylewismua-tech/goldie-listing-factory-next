@@ -112,10 +112,21 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
       setSalesImportError("Etsy returned without the sales permission. Try the sales connection again.");
       return;
     }
-    if (result !== "connected") return;
+    /*
+      Closing the browser after Etsy approval used to strand the connection in
+      an awkward half-state: permission was saved, but the import only started
+      when the callback query string was still present. A connected shop with
+      sales permission and no successful sync is the same unfinished job, so
+      resume it automatically. This does not ask Etsy for permission again and
+      does not change the active Listing Factory shop.
+    */
+    const unfinished = loaded && shops.some(shop =>
+      shop.activeForListingFactory && shop.canReadSales
+      && !shop.needsReconnect && !shop.lastSyncAt);
+    if (result !== "connected" && !unfinished) return;
     salesImportStarted.current = true;
     setSalesImport("running");
-    window.history.replaceState({}, "", "/connections");
+    if (result === "connected") window.history.replaceState({}, "", "/connections");
 
     let alive = true;
     const post = async (url: string) => {
@@ -154,7 +165,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
       }
     })();
     return () => { alive = false; };
-  }, [load]);
+  }, [load, loaded, shops]);
 
   return (
     <FactoryShell active="connections" title="Connections" desktopOnly={false}>

@@ -195,9 +195,10 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const sold = shown.soldListings?.listings ?? [];
   return <main className="shop-map shop-map-redesign">
     <header className="shop-map-head">
-      <p className="mini-label">YOUR SHOP, MAPPED</p>
-      <h1>See what your shop is actually selling.</h1>
-      <p>{shown.shop?.shopName ?? "Your shop"} · {monthName(shown.month)}</p>
+      <p className="mini-label">YOUR SHOP</p>
+      <h1>Shop Map</h1>
+      <p>See what is selling and decide where to focus next.</p>
+      <span className="shop-map-shop-name">{shown.shop?.shopName ?? "Your shop"} · {monthName(shown.month)}</span>
     </header>
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     <nav className="shop-map-tabs" aria-label="Shop Map sections">
@@ -216,7 +217,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
             <div className="shop-map-listing-image">{listing.imageUrl
               ? <img src={listing.imageUrl} alt="" loading="lazy" width={570} height={570} />
               : <span aria-hidden="true">G</span>}<b>0{index + 1}</b></div>
-            <div><h3>{listing.title}</h3><p><strong>{listing.sales} sold</strong><span>{money(listing.revenueMinor)}</span></p></div>
+            <div>{index === 0 ? <p className="mini-label">TOP SELLER</p> : null}<h3>{listing.title}</h3>
+              <p><strong>{listing.sales} sold</strong><span>{money(listing.revenueMinor)}</span></p></div>
           </article>)}</div> : <div className="shop-map-empty"><b>No sales in the last 90 days.</b>
             <p>Your sold listings will appear here after the next Etsy sales import.</p></div>}
       </section>

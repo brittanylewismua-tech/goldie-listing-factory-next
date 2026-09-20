@@ -28,6 +28,7 @@ export const GET = withErrorLog("home-status", async () => {
   const owner = isOwner(user);
   const now = Math.floor(Date.now() / 1000);
   const blocks: Record<string, unknown> = {};
+  let activeShopId: number | null = null;
 
   /* The shop's own timezone, so a date on Home reads the same as the same
      date on Shop Map rather than shifting by a day. */
@@ -40,10 +41,10 @@ export const GET = withErrorLog("home-status", async () => {
   /* Connections: only mentioned when something needs the member's attention. */
   try {
     const rows = await db.prepare(
-      `SELECT shop_name AS shopName, is_active AS active,
+      `SELECT shop_id AS shopId, shop_name AS shopName, is_active AS active,
               encrypted_access_token <> '' AS live
          FROM etsy_connections WHERE user_id = ?`)
-      .bind(user.userId).all<{ shopName: string; active: number; live: number }>();
+      .bind(user.userId).all<{ shopId: number; shopName: string; active: number; live: number }>();
     const shops = rows.results ?? [];
     const broken = shops.filter(row => !row.live);
     const active = shops.find(row => row.active === 1);
@@ -52,8 +53,10 @@ export const GET = withErrorLog("home-status", async () => {
       blocks.connections = { needs: "reconnect",
         say: `${broken.length} shop${broken.length === 1 ? "" : "s"} need reconnecting.`,
         shops: broken.map(row => row.shopName) };
-    else if (active)
+    else if (active) {
+      activeShopId = Number(active.shopId);
       blocks.connections = { needs: null, activeShop: active.shopName };
+    }
   } catch { /* the block is dropped, the page is not */ }
 
   /* This month, from Shop Map's own rollups. Profit unavailable stays
@@ -129,11 +132,11 @@ export const GET = withErrorLog("home-status", async () => {
          LEFT JOIN shop_map_listing_sales s
            ON s.user_id = l.user_id AND s.shop_id = l.shop_id
           AND s.listing_id = l.listing_id
-        WHERE l.user_id = ?
+        WHERE l.user_id = ? AND (? IS NULL OR l.shop_id = ?)
         GROUP BY l.user_id, l.shop_id, l.listing_id
         ORDER BY sales DESC, favorites DESC, l.title ASC
         LIMIT 3`)
-      .bind(soldSince, soldSince, soldSince, user.userId)
+      .bind(soldSince, soldSince, soldSince, user.userId, activeShopId, activeShopId)
       .all<{ listingId: number; title: string; imageUrl: string; favorites: number;
         sales: number; revenueMinor: number; currency: string | null }>();
     const listings = (result.results ?? []).map(row => ({
