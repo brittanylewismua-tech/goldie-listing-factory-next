@@ -45,9 +45,9 @@ export default function UsagePage(){
   async function choosePlan(plan:"goldie"|"pro"|"scale"){if(data?.billing?.active){await manageBilling();return}setCheckoutPlan(plan);setBillingMessage("");try{const response=await fetch("/api/billing/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan,interval})}),result=await response.json() as {url?:string;error?:string};if(response.ok&&result.url){window.location.href=result.url;return}setBillingMessage(result.error||"Secure checkout could not be opened.")}catch{setBillingMessage("Checkout could not be opened. Please try again.")}finally{setCheckoutPlan(null)}}
   const billingTerms = data?.billing?.terms;
   const currentPrice = billingTerms ? `${new Intl.NumberFormat("en-US",{style:"currency",currency:billingTerms.currency}).format(billingTerms.amount/100)} / ${billingTerms.intervalCount > 1 ? `${billingTerms.intervalCount} ` : ""}${billingTerms.interval}` : "Renewal details in Manage billing";
-  return <FactoryShell active="usage" title="Usage and limits"><div className="usage-page interior-page">
+  return <FactoryShell active="usage" title="Usage + Plan"><div className="usage-page interior-page">
     
-    <header><p className="mini-label">USAGE AND LIMITS</p><h1>Your Listing Factory plan</h1><p>Successful listing creations use your allowance. Failed attempts do not.</p></header>
+    <header><p className="mini-label">USAGE + PLAN</p><h1>Your Listing Factory plan</h1><p>Successful listing creations use your allowance. Failed attempts do not.</p></header>
     {loadError?<section className="usage-load-error" role="alert"><h2>Your plan and usage could not be loaded</h2><p>{loadError}</p><button type="button" onClick={()=>window.location.reload()}>Reload this page</button></section>:!data?(
       /* D1609 · the fourth page to use a bare sentence as its whole loading
          state. This one waits on billing and the allowance ledger. */
@@ -81,7 +81,7 @@ export default function UsagePage(){
       <section id="listing-goal" className="listing-goal-settings">
       <p className="mini-label">YOUR TARGET</p>
       <h2>Listing goal</h2>
-      <p className="listing-goal-intro">Your default target for drafts ready to publish is 20 per week. Change it here, or hide your goal any time.</p>
+      <p className="listing-goal-intro">Your default target for listings prepared as Printify drafts is 20 per week. Change it here, or hide your goal any time.</p>
       <label className="listing-goal-switch">
         <input type="checkbox" checked={goal.enabled} onChange={event=>void saveGoal({...goal,enabled:event.target.checked})}/>
         <span>Show my listing goal</span>

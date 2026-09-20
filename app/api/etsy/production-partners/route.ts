@@ -12,7 +12,7 @@ const readPreferences=(value?:string|null):SavedPreferences=>{try{return JSON.pa
 export async function GET(){
  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:'Sign in to load Etsy production partners.'},{status:401});
  try{
-  const connection=await etsyConnection(user.userId),payload=await etsyFetch<{results?:EtsyProductionPartner[]}>(`/shops/${connection.shopId}/production-partners`,connection.token,"partners"),partners=validProductionPartners(payload);
+  const connection=await etsyConnection(user.userId),payload=await etsyFetch<{results?:EtsyProductionPartner[]}>(`/shops/${connection.shopId}/production-partners`,connection.token),partners=validProductionPartners(payload);
   const [row]=await getDb().select().from(sellerPreferences).where(eq(sellerPreferences.userId,user.userId)).limit(1);
   const saved=Number(readPreferences(row?.pricingJson).etsyProductionPartners?.[String(connection.shopId)])||0,exact=partners.filter(partner=>partner.partner_name?.trim().toLowerCase()==='printify');
   const selectedId=partners.some(partner=>Number(partner.production_partner_id)===saved)?saved:exact.length===1?Number(exact[0].production_partner_id):partners.length===1?Number(partners[0].production_partner_id):0;
@@ -23,7 +23,7 @@ export async function GET(){
 export async function POST(request:Request){
  const user=await getChatGPTUser();if(!user)return NextResponse.json({error:'Sign in to save the Etsy production partner.'},{status:401});
  try{
-  const id=Number((await request.json() as {id?:number}).id),connection=await etsyConnection(user.userId),payload=await etsyFetch<{results?:EtsyProductionPartner[]}>(`/shops/${connection.shopId}/production-partners`,connection.token,"partners"),partners=validProductionPartners(payload);
+  const id=Number((await request.json() as {id?:number}).id),connection=await etsyConnection(user.userId),payload=await etsyFetch<{results?:EtsyProductionPartner[]}>(`/shops/${connection.shopId}/production-partners`,connection.token),partners=validProductionPartners(payload);
   if(!partners.some(partner=>Number(partner.production_partner_id)===id))throw Error('That production partner is no longer available in this Etsy shop.');
   const [row]=await getDb().select().from(sellerPreferences).where(eq(sellerPreferences.userId,user.userId)).limit(1),existing=readPreferences(row?.pricingJson),next={...existing,etsyProductionPartners:{...(existing.etsyProductionPartners||{}),[String(connection.shopId)]:id}};
   await getDb().insert(sellerPreferences).values({userId:user.userId,pricingJson:JSON.stringify(next)}).onConflictDoUpdate({target:sellerPreferences.userId,set:{pricingJson:JSON.stringify(next)}});

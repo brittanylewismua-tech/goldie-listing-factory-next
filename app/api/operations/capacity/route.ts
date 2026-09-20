@@ -7,7 +7,6 @@ import { PAID_WORKLOADS, workload } from "@/app/paid-workloads";
 import { spendReport } from "@/app/spend-guard";
 import { etsyBudget, etsyQpdLimit } from "@/app/api/etsy/client";
 import { CAPABILITIES } from "@/app/capability-registry";
-import { printifyUsage } from "@/app/printify-usage";
 
 /**
  * EVERY WORKLOAD THAT COSTS MONEY OR QUOTA, IN ONE VIEW.
@@ -193,13 +192,8 @@ export const GET = withErrorLog("operations-capacity", async () => {
     };
   };
 
-  /* Printify had no counter at all until this shipped; `printifyUsage` says
-     since when it has, and never guesses at what came before. */
-  const printify = await printifyUsage(db, now - 24 * 3_600).catch(() => null);
-
   return NextResponse.json({
     at: now,
-    printify,
     etsy: { ...etsy, quota, quotaSource: (etsy as { limit?: number } | null)?.limit
       ? "reported by Etsy" : "local fallback" },
     spend: report,

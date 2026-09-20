@@ -1,5 +1,4 @@
 import { retryAfterMilliseconds } from "./retry-after.ts";
-import { meteredPrintifyFetch } from "../../printify-call.ts";
 const PRINTIFY_API = "https://api.printify.com/v1";
 
 /** A POST may have committed even when its response was lost. Never replay it. */
@@ -49,9 +48,7 @@ export async function createProductWithImageRetries<T>(options: {
   const waits = [3000, 7000, 15000, 20000, 30000, 45000];
   const IMAGE_ERROR_LIMIT = 2;
   let imageErrors = 0;
-  /* A creation POST is the most expensive call this product makes. It is
-     metered by default, not only when a caller remembers to pass a fetcher. */
-  const fetcher = options.fetcher ?? meteredPrintifyFetch({ feature: "listing-factory" });
+  const fetcher = options.fetcher ?? fetch;
   const sleeper = options.sleeper ?? ((milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
   for (let attempt = 0; attempt <= waits.length; attempt += 1) {
     let response: Response;

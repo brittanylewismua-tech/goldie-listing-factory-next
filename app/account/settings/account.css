@@ -35,13 +35,8 @@
 
 /* Deletion. Quiet until asked for, then unmistakable. */
 .acc-delete{border-top:1px solid var(--p-line);padding-top:var(--p-3)}
-/* D1743 · --p-muted measured 3.86:1 here against a 4.5 minimum: the button is
-   transparent over a tinted card, so the token that passes on white does not
-   pass here. --p-ink-soft is the design system's own darker text token, so the
-   palette is unchanged. This control deletes everything the member has; it is
-   the last one that should be hard to read. */
 .acc-delete-open{min-height:40px;padding:0 var(--p-4);border:1px solid var(--p-line-strong);
-  border-radius:var(--p-radius);background:transparent;color:var(--p-ink-soft);
+  border-radius:var(--p-radius);background:transparent;color:var(--p-muted);
   font:inherit;font-size:13px;font-weight:750;cursor:pointer}
 .acc-delete-open:hover{border-color:var(--p-bad);color:var(--p-bad);background:var(--p-bad-soft)}
 .acc-delete-confirm{display:grid;gap:var(--p-3);padding:var(--p-4);border:1px solid #e4cedb;

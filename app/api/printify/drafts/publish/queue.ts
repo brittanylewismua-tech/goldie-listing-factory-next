@@ -11,7 +11,6 @@ import { finishEtsyListing } from "../../../etsy/finish";
 import { logError } from "@/app/error-log";
 import { readPrintifyPublishState } from "../../publish-state";
 import { unpackDraftMedia, type MediaBucket } from "@/app/draft-media-storage";
-import {meteredPrintifyFetch,printifyCall} from "../../../../printify-call.ts";
 
 /* D559 - a job carried ONE settings blob: one shipping profile, one set of image
    selections. A bundle's products each have their own - her hoodie ships on the
@@ -50,7 +49,7 @@ async function queueCapacity(now:number){
   return {budget,estimatedCalls,active,paused,canStart:!paused&&active<MAX_CONCURRENT_LISTINGS&&budget.remaining-active*estimatedCalls>=estimatedCalls};
 }
 
-async function printifyListingId(token:string,shopId:number,productId:string){const result=await readPrintifyPublishState(meteredPrintifyFetch({feature:"listing-factory"}),token,shopId,productId);return result.state==="published"?result.listingId:0}
+async function printifyListingId(token:string,shopId:number,productId:string){const result=await readPrintifyPublishState(fetch,token,shopId,productId);return result.state==="published"?result.listingId:0}
 /* D637 - this polled 18 times at 2.5s, so a single item could hold an execution
    for 45 seconds plus the publish call. Cloudflare ends the request long before
    that, and because the item was already marked running with no sweep on the
@@ -129,7 +128,7 @@ export async function processNextPublishItem(userId:string,jobId:string){
     const linked=await runtime().DB.prepare("SELECT etsy_listing_id FROM etsy_listing_links WHERE printify_product_id=? AND user_id=? AND etsy_listing_id>0").bind(draft.id,userId).first<{etsy_listing_id:number}>();
     let listingId=Number(linked?.etsy_listing_id)||0;
     if(!listingId){
-      const publishState=await readPrintifyPublishState(meteredPrintifyFetch({feature:"listing-factory"}),token,draft.shopId,draft.id);
+      const publishState=await readPrintifyPublishState(fetch,token,draft.shopId,draft.id);
       if(publishState.state==="unknown")throw new Error(`${publishState.reason} The Listing Factory stopped before publishing so it cannot create a duplicate Etsy listing.`);
       if(publishState.state==="published")listingId=publishState.listingId;
     }
@@ -161,7 +160,7 @@ export async function processNextPublishItem(userId:string,jobId:string){
       alreadyPublished=false;
     }
     if(!listingId&&!alreadyPublished){
-      const response=await printifyCall(`https://api.printify.com/v1/shops/${draft.shopId}/products/${draft.id}/publish.json`,{method:"POST",headers:{...printifyHeaders(token),"Content-Type":"application/json"},body:JSON.stringify({title:true,description:true,images:true,variants:true,tags:true,keyFeatures:true,shipping_template:true})},{feature:"listing-factory",userId})
+      const response=await fetch(`https://api.printify.com/v1/shops/${draft.shopId}/products/${draft.id}/publish.json`,{method:"POST",headers:{...printifyHeaders(token),"Content-Type":"application/json"},body:JSON.stringify({title:true,description:true,images:true,variants:true,tags:true,keyFeatures:true,shipping_template:true})});
       if(!response.ok)throw new Error(`Printify could not publish this listing (${response.status}).`);
       await runtime().DB.prepare("INSERT INTO etsy_listing_links (printify_product_id,user_id,batch_id,etsy_listing_id,status,last_error,updated_at) VALUES (?,?,?,0,'publishing',NULL,CURRENT_TIMESTAMP) ON CONFLICT(printify_product_id) DO UPDATE SET status='publishing',last_error=NULL,updated_at=CURRENT_TIMESTAMP").bind(draft.id,userId,draft.batchId||"").run();
     }

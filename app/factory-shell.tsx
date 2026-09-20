@@ -155,7 +155,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
      digits. Same number, the preview's formatting. */
   const usageLine = usage
     ? `${usage.used.toLocaleString()} / ${usage.limit.toLocaleString()} listings`
-    : usageFailed ? "Couldn't load — reopen to retry"
+    : usageFailed ? "Allowance unavailable"
     : "Loading usage…";
 
   return <main className={`app-shell interior-shell${desktopOnly ? "" : " responsive-shell"}`}>
@@ -174,14 +174,21 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
       <div className="brand-lockup"><SuiteBrand /></div>
       <div className="top-actions">
         <SuiteSidebarNav active={active} items={NAV}/>
+        {/* D818 · on the workflow this is a button because it has to clear live
+            batch state first. There is no batch to clear here, so the same
+            control is the link it actually is. */}
+        {/* Above the primary action, because that is the order of the morning:
+            see what moved, then go and list. Styled quieter than Start a new
+            batch so the money action keeps its weight. */}
+        {active !== "factory" && <a className="workflow-restart-button" href="/listing-factory">
+          <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" /><path d="M3 21v-5h5" /></svg> Start a new batch</a>}
       </div>
       <div className="approved-sidebar-footer">
-        {FACTORY_PAGES.has(active) && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
+        {FACTORY_PAGES.has(active) && <a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{usageLine}</span>
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>}
         {FACTORY_PAGES.has(active) && goal && <a className="listing-goal-side" href="/goals">
-          <span className="listing-goal-caption">Your {goal.period}ly goal</span>
-          <b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${goal.target} drafts ready`:"Loading progress…"}</b>
-          <span className="listing-goal-note">{goalDaysError?"Try again shortly.":"You set this target in Goals."}</span>
+          <span className="listing-goal-caption">This {goal.period}&rsquo;s goal</span>
+          <b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${goal.target} prepared`:"Loading progress…"}</b>
           {goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span>}</a>}
         <small>&copy; 2026 Be A Wolf Biz</small>
         <p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>
@@ -223,7 +230,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
                   {shop.shopName}{shop.active ? " ✓" : switching === shop.shopId ? " …" : ""}</button>)}
                 {switchError && <small role="alert" className="factory-account-shop-error">{switchError}</small>}
               </div>}
-              <a role="menuitem" href="/usage">Usage and limits</a>
+              <a role="menuitem" href="/usage">Usage + Plan</a>
               <a role="menuitem" href="/listing-factory?step=connect">Connections</a>
               {account && <a role="menuitem" href={account.signedIn
                 ? "/account/sign-out?return_to=%2Flisting-factory"

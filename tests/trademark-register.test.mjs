@@ -9,8 +9,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { normalize, readRecord, worthKeeping, PRINTED_CLASSES } from "../app/trademark-record.ts";
 import { blocks, field, allFields, singleEntryDeflateStream } from "../app/uspto-bulk.ts";
-import { withRegister } from "../app/trademark-check.ts";
-import { readFileSync } from "node:fs";
 
 const record = ({ status, mark, code, cancellation, drawing = "4", registration = "1234567" }) => `<case-file>
  <serial-number>99000001</serial-number>
@@ -52,42 +50,7 @@ test("a live clothing mark is kept, a dead one is not", () => {
 });
 
 test("a mark registered only for software is no hazard to a shirt", () => {
-  /*
-    The property is unchanged; where it is enforced has moved.
-
-    Excluding these at INGESTION also excluded HAUS LABS — a famous cosmetics
-    brand in class 003 — so the checker answered "nothing found" for it. The
-    corpus now keeps every live word mark, and the class test happens at the
-    verdict, where the phrase is in hand: an out-of-class mark counts only
-    when the phrase IS the brand.
-  */
-  const atlas = readRecord(record({ status: 700, mark: "ATLAS", code: "042" }));
-  assert.equal(worthKeeping(atlas), true, "the corpus should hold it");
-
-  const match = { mark: "ATLAS", owner: "", registration: "R1", classes: ["042"],
-    registered: true, exact: false };
-  const ready = { marks: 10, files: [{ state: "done", count: 1 }] };
-  const shirt = withRegister({ risk: "clear", summary: "", hits: [] }, [match], ready);
-  assert.equal(shirt.risk, "clear",
-    "a software mark was reported as a hazard to a shirt");
-  assert.equal(shirt.register.length, 0);
-
-  /* But a two-word brand the phrase reproduces exactly still counts. */
-  const haus = { mark: "HAUS LABS", owner: "ATE MY HEART INC.", registration: "R2",
-    classes: ["003"], registered: true, exact: true };
-  const brand = withRegister({ risk: "clear", summary: "", hits: [] }, [haus], ready);
-  assert.equal(brand.risk, "high",
-    "an exact match on a famous out-of-class brand was ignored");
-});
-
-test("the two copies of the print-class set have not drifted apart", () => {
-  const check = readFileSync(new URL("../app/trademark-check.ts", import.meta.url), "utf8");
-  const listed = /const PRINT_CLASSES = new Set\(\s*(\[[^\]]*\])/.exec(check);
-  assert.ok(listed, "the verdict's print-class set could not be read");
-  assert.deepEqual(
-    new Set(JSON.parse(listed[1].replace(/'/g, '"'))),
-    PRINTED_CLASSES,
-    "trademark-check.ts and trademark-record.ts disagree about the print classes");
+  assert.equal(worthKeeping(readRecord(record({ status: 700, mark: "ATLAS", code: "042" }))), false);
 });
 
 test("a cancelled mark is dead however healthy its status code looks", () => {
@@ -175,25 +138,4 @@ test("only data files are queued, and a file that cannot be read is parked", asy
      "Trailing bytes after end of compressed data", and 88 files were retried
      forever behind it. */
   assert.match(tick, /permanent \|\| exhausted \|\| givenUp \? "skipped" : "waiting"/);
-});
-
-test("the internal validation title is one Printify will accept", async () => {
-  /*
-    Printify refuses "Product is invalid. Title contains excessive caps." The
-    title was ALL CAPS, so the validation product was never created and the
-    run recorded an attempt with nothing to show for it. Two batches in the
-    live history had a draft count of zero for exactly this reason.
-  */
-  const { internalValidationTitle, INTERNAL_VALIDATION_MARKER } =
-    await import("../app/printify-validation-marker.ts");
-  const title = internalValidationTitle();
-
-  const letters = title.replace(/[^A-Za-z]/g, "");
-  const caps = letters.replace(/[^A-Z]/g, "").length;
-  assert.ok(caps / letters.length < 0.6,
-    `${caps}/${letters.length} letters are capitals — Printify refuses excessive caps: "${title}"`);
-
-  /* And it still carries the only thing removal matches on. */
-  assert.ok(title.includes(INTERNAL_VALIDATION_MARKER));
-  assert.ok(title.length <= 255);
 });

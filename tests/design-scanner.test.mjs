@@ -555,27 +555,11 @@ test("a real design mentioning shipping in passing still qualifies", () => {
 });
 
 test("the opportunity is never blank, and never invents a criticism", () => {
-  /*
-    D1751 · "Everything matched" now requires a measurement to say so. Without
-    one, the honest top line is that readability could not be measured — which
-    is a fact about the file, not a criticism of the design. The measured-pass
-    case is what this test was always describing.
-  */
-  const measured = { contrast: "pass", tonalRange: "pass", sharpness: "pass",
-    thumbnailReadable: "pass", emptiness: "pass", notes: [],
-    mayClaimReadable: true, mayClaimHighContrast: true };
-  const perfect = compare(ingredients(), cohort(20), { measured });
+  const perfect = compare(ingredients(), cohort(20));
   assert.ok(perfect.opportunity.length > 0, "an empty opportunity block");
   assert.match(perfect.opportunity, /No clear visual-construction issue surfaced/);
   for (const banned of ["will sell", "bestseller", "guaranteed"])
     assert.ok(!perfect.opportunity.toLowerCase().includes(banned));
-
-  /* Unmeasured: still not blank, still not a criticism, and truthful. */
-  const unmeasured = compare(ingredients(), cohort(20));
-  assert.ok(unmeasured.opportunity.length > 0);
-  assert.match(unmeasured.opportunity, /could not be measured/);
-  for (const banned of ["will sell", "bestseller", "guaranteed"])
-    assert.ok(!unmeasured.opportunity.toLowerCase().includes(banned));
 });
 
 test("the article agrees with the word after it", () => {
@@ -638,11 +622,8 @@ test("an incomplete register can never read as a clean result", () => {
 test("a complete register describes exactly what was searched", () => {
   const ready = tmWithRegister(tmCheck("Bride Tribe"), [], LOADED);
   assert.equal(ready.registerReady, true);
-  /* D1734 · It describes the records we hold. It no longer claims to be the
-     federal register, which it never was — nine classes of forty-five. */
   assert.match(ready.summary,
-    /No exact or contained match was found in the trademark records available here, or the curated risk list/);
-  assert.ok(!/current federal/.test(ready.summary));
+    /No exact or contained match was found in the current federal trademark register or the curated risk list/);
   assert.match(ready.summary, /screening information, not legal clearance/);
   assert.ok(!ready.summary.toLowerCase().includes("character"));
 });

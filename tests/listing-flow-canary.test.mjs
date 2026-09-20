@@ -46,7 +46,7 @@ test("the live publish path gates before Etsy and records identity", () => {
   const gateAt = queue.indexOf("await productGate(");
   const selectionAt = queue.indexOf("await recordSelection(");
   /* The call inside the item loop, not the helper defined above it. */
-  const publishAt = queue.indexOf("readPrintifyPublishState(meteredPrintifyFetch({feature:\"listing-factory\"}),token,draft.shopId");
+  const publishAt = queue.indexOf("readPrintifyPublishState(fetch,token,draft.shopId");
   assert.ok(gateAt > 0 && selectionAt > 0, "the publish path does not gate or record");
   assert.ok(gateAt < publishAt, "the gate runs after Etsy is contacted");
   assert.ok(selectionAt < publishAt, "identity is recorded after publishing");

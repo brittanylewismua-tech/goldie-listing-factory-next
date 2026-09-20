@@ -311,14 +311,6 @@ function findHits(phrase: string): Hit[] {
   return hits.sort((a, b) => a.at - b.at);
 }
 
-/*
-  "filed by Ate My Heart Inc.. It is not registered yet" — an owner name that
-  ends in its own full stop met the sentence's. USPTO names routinely end in
-  "Inc.", "Ltd." or "Co.", so the sentence supplies the stop only when the
-  name has not already, wherever in the sentence that lands.
-*/
-export const endSentence = (text: string) => text.replace(/([^.])\.\.(?=\s|$)/g, "$1.");
-
 export function check(raw: string): Verdict {
   const phrase = String(raw ?? "").trim();
   if (!phrase)
@@ -408,17 +400,6 @@ export function mentionsAMark(title: string) {
  * the whole phrase being somebody's registered mark, or a multi-word mark
  * sitting inside it, is the real thing.
  */
-/*
-  The classes a print-on-demand seller actually prints on.
-
-  Restated here rather than imported: this module deliberately takes no
-  imports so the matching stays testable away from a database. A test asserts
-  this set is identical to PRINTED_CLASSES in trademark-record.ts, so the two
-  copies cannot drift apart.
-*/
-const PRINT_CLASSES = new Set(
-  ["014", "016", "018", "020", "021", "024", "025", "026", "028"]);
-
 export type RegisterMatch = {
   mark: string;
   owner: string;
@@ -504,37 +485,20 @@ export function registerParkedFiles(size: RegisterSize | null | undefined) {
   downgraded from high risk to a minor mention — on the publish path.
 */
 export function toMatches(
-  /* classes is the array the register returns. It was typed as a string here
-     and the mismatch was papered over with a cast, which is why the two
-     callers could disagree about the shape without anything complaining. */
   hits: Array<{ mark: string; owner?: string; registration?: string;
-    classes?: string[]; registered?: boolean }>,
+    classes?: string; registered?: boolean }>,
   phrase: string,
   /* Injected rather than imported: the normaliser lives beside the register
      reader, and this module stays free of anything that touches a database.
      Named distinctly so the import-integrity guard can tell a parameter from
      a symbol borrowed off another module. */
   normalizeMark: (value: string) => string,
-  /* The joined form, injected for the same reason as the normaliser. Optional
-     so an older caller still compiles; without it "Hauslabs" and "HAUS LABS"
-     are not recognised as one mark. */
-  squeezeMark?: (value: string) => string,
 ): RegisterMatch[] {
   const wanted = normalizeMark(phrase);
-  const squeezed = squeezeMark ? squeezeMark(phrase) : null;
   return hits.map(hit => ({
     mark: hit.mark, owner: hit.owner, registration: hit.registration,
-    classes: hit.classes ?? [], registered: hit.registered,
-    /*
-      "EXACT" MEANS THE PHRASE IS THE MARK, NOT THAT IT IS SPELLED THE SAME.
-
-      This compared normalised forms only, so "Hauslabs" against HAUS LABS came
-      back exact: false — and `serious` leans on exact, so the joined spelling
-      was quietly graded softer than the spaced one. The whole point of the
-      squeezed form is that those are one mark.
-    */
-    exact: normalizeMark(hit.mark) === wanted
-      || (squeezed !== null && squeezeMark!(hit.mark) === squeezed),
+    classes: hit.classes, registered: hit.registered,
+    exact: normalizeMark(hit.mark) === wanted,
   })) as RegisterMatch[];
 }
 
@@ -558,61 +522,10 @@ export function withRegister(
 ): FullVerdict {
   const registerReady = registerIsReady(size);
   const registerComplete = registerIsComplete(size);
-  /*
-    CLASS DECIDES RELEVANCE HERE. IT USED TO DECIDE EXISTENCE.
-
-    Ingestion kept only the nine print classes, so HAUS LABS — a famous
-    cosmetics brand, class 003 — was never in the corpus at all and the
-    checker answered "nothing found" for it. That is the one answer this tool
-    must not get wrong.
-
-    The instinct behind that filter was still right: a mark registered only
-    for software is no hazard to a shirt, and flagging every ATLAS and every
-    LOVE would make the tool cry wolf until nobody read it. So the rule moves
-    here, where the phrase is in hand and it can be applied with judgement
-    instead of blindly:
-
-      in a print class  — judged exactly as before
-      outside one       — it counts only when the phrase IS the brand: an
-                          exact match on a mark of more than one word. That
-                          catches HAUSLABS and stays silent about ATLAS.
-  */
-  const relevant = matches.filter(match => {
-    const classes = match.classes ?? [];
-    /*
-      NOT KNOWING THE CLASS IS NOT THE SAME AS KNOWING IT IS IRRELEVANT.
-
-      A row that carries no class at all is kept. Dropping it would mean a
-      missing field could silently downgrade a real warning, and in a tool
-      whose entire job is to warn, the unknown case has to fail towards
-      saying something.
-    */
-    if (!classes.length) return true;
-    if (classes.some(code => PRINT_CLASSES.has(code))) return true;
-    /* Known, and none of them is a print class: it counts only when the
-       phrase IS the brand. */
-    return match.exact && words(match.mark) > 1;
-  });
-
-  /*
-    PENDING IS NOT HARMLESS.
-
-    `serious` required match.registered, so an exact match on a live
-    APPLICATION was demoted to a passing mention — and the caution headline
-    that carried it said "Somebody owns part of this", which is wrong twice
-    over: not partly, and not owned.
-
-    Everything in the corpus is live; worthKeeping drops dead marks and the
-    ingest deletes marks that have since died. So `registered` does not
-    separate real from irrelevant here — it separates GRANTED from FILED, and
-    that belongs in the wording, not in the severity. A company that has filed
-    for a mark and is trading under it will police it whether or not the
-    certificate has issued, and the listing comes down either way.
-  */
-  const serious = relevant.filter(
-    match => match.exact || words(match.mark) > 1,
+  const serious = matches.filter(
+    match => match.registered && (match.exact || words(match.mark) > 1),
   );
-  const minor = relevant.filter(match => !serious.includes(match));
+  const minor = matches.filter(match => !serious.includes(match));
 
   /*
     A CLEAN RESULT REQUIRES A COMPLETE REGISTER.
@@ -624,38 +537,22 @@ export function withRegister(
   */
   if (verdict.risk === "high") return { ...verdict, register: matches, registerReady };
 
-  /* Nothing RELEVANT, which is not the same as nothing found: an out-of-class
-     mark that the phrase does not reproduce is not a finding to report. */
-  if (!relevant.length)
+  if (!matches.length)
     return {
       ...verdict,
-      register: relevant,
+      register: matches,
       registerReady,
       summary: verdict.risk === "clear"
         ? (registerReady
           ? (registerComplete
-            /*
-              THIS USED TO SAY "the current federal trademark register".
-
-              It never searched that. Ingestion kept only nine print-on-demand
-              classes, so a cosmetics mark like HAUS LABS was absent and the
-              sentence still told the member the federal register had been
-              searched. The class filter is gone, but the claim stays wrong in
-              principle: what is searched is what has been ingested, and that
-              is a fact about our corpus rather than about the register.
-
-              Every clean result now describes the records we actually hold.
-              None of them promises the whole register.
-            */
-            ? "No exact or contained match was found in the trademark records "
-              + "available here, or the curated risk list. This is screening "
-              + "information, not legal clearance — it does not mean nobody "
-              + "owns the phrase."
+            ? "No exact or contained match was found in the current federal "
+              + "trademark register or the curated risk list. This is "
+              + "screening information, not legal clearance."
             /* Final, but with files the register could never read. The
                sentence says what was searched and does not name the whole
                register. */
             : "No exact or contained match was found in the trademark records "
-              + "that could be read, or the curated risk list. Some records "
+              + "that could be read, or the curated risk list. A few records "
               + "could not be loaded at all, so this is not the whole "
               + "register. This is screening information, not legal "
               + "clearance.")
@@ -669,26 +566,11 @@ export function withRegister(
     return {
       ...verdict,
       risk: "high",
-      register: relevant,
+      register: matches,
       registerReady,
-      /*
-        The headline may not imply ownership for a record that is only filed.
-        "registered trademark ... owned by" becomes "pending trademark
-        application ... filed by", and the consequence is stated either way
-        because it is the same consequence.
-      */
-      /*
-        "Ate My Heart Inc.." — an owner name that ends in its own full stop
-        met the sentence's full stop. USPTO owner names routinely end in
-        "Inc.", "Ltd." or "LLC.", so the sentence supplies the stop only when
-        the name has not already. */
-      summary: first.registered
-        ? (first.exact
-          ? endSentence(`“${first.mark}” is a live registered trademark${first.owner ? `, owned by ${first.owner}` : ""}. Using it as the phrase on a product is what gets a listing removed.`)
-          : endSentence(`This phrase contains “${first.mark}”, a live registered trademark${first.owner ? ` owned by ${first.owner}` : ""}. Printing it risks the listing being removed.`))
-        : (first.exact
-          ? endSentence(`“${first.mark}” is a live trademark application${first.owner ? `, filed by ${first.owner}` : ""}. It is not registered yet, and an applicant trading under a name still gets listings removed for it.`)
-          : endSentence(`This phrase contains “${first.mark}”, a live trademark application${first.owner ? ` filed by ${first.owner}` : ""}. It is not registered yet, and the applicant can still object.`))
+      summary: first.exact
+        ? `“${first.mark}” is a live registered trademark${first.owner ? `, owned by ${first.owner}` : ""}. Using it as the phrase on a product is what gets a listing removed.`
+        : `This phrase contains “${first.mark}”, a live registered trademark${first.owner ? ` owned by ${first.owner}` : ""}. Printing it risks the listing being removed.`,
     };
   }
 
@@ -696,20 +578,8 @@ export function withRegister(
   return {
     ...verdict,
     risk: "caution",
-    register: relevant,
+    register: matches,
     registerReady,
-    /*
-      SAY WHICH IT IS. IT USED TO SAY "registered" FOR BOTH.
-
-      `minor` holds pending applications as well as registrations, and this
-      sentence called all of them registered — so a live application read as a
-      granted right, and the advice that followed ("a registration on an
-      ordinary word...") described something that had not happened.
-    */
-    summary: `No famous brands here, but ${named} ${minor.every(match => match.registered)
-      ? `${minor.length > 1 ? "are" : "is"} registered by somebody else`
-      : `${minor.length > 1 ? "have been filed" : "has been filed"} by somebody else`}. `
-      + `That does not stop you using it, and it does mean the owner can object — `
-      + `worth a look before you scale it.`,
+    summary: `No famous brands here, but ${named} ${minor.length > 1 ? "are" : "is"} registered for clothing and print by somebody else. A registration on an ordinary word does not stop you using it, and it does mean the owner can object — worth a look before you scale it.`,
   };
 }

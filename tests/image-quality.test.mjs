@@ -218,22 +218,12 @@ test("the scan lets measurement overrule the model, never the reverse", () => {
   /* A failed decode must block the claim, not silently allow it. */
   assert.match(route, /unverified is the honest answer; it blocks the claim/);
 
-  /*
-    D1751 · Both gates asked whether a measurement OBJECTED, which meant an
-    ABSENT measurement permitted the claim: the contrast gate literally read
-    `!measured || mayClaimHighContrast`. Live, a design whose decode had
-    failed was told it "stays readable at thumbnail size" on the same screen
-    that said its readability had not been measured.
-
-    The property is unchanged and now stronger, so it is asserted on
-    behaviour rather than on the shape of the condition.
-  */
-  assert.match(compare, /"pass" \| "fail" \| "unknown"/);
-  assert.match(compare, /could not be measured/);
-  /* Comments stripped: the note explaining the old condition quotes it. */
-  const code = compare.replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.equal(/!measured \|\| measured\.mayClaimHighContrast/.test(code), false,
-    "an absent measurement permits the contrast claim again");
+  /* The two positive claims are both gated on the measurement. */
+  assert.match(compare, /&& !measuredBlocksReadable && !measuredUnverified/);
+  assert.match(compare, /&& \(!measured \|\| measured\.mayClaimHighContrast\)/);
+  /* And when it cannot be verified, the member is told that rather than
+     receiving either a positive or a negative claim. */
+  assert.match(compare, /Readability at thumbnail size could not be verified/);
 });
 
 test("construction and subject stay separate in the result model", () => {

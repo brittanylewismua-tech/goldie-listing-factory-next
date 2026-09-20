@@ -7,7 +7,6 @@ import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { attemptLink, summarise, type EtsyCandidate, type PrintifyCandidate } from "@/app/artwork-linkage";
-import { printifyCall } from "../../../printify-call.ts";
 
 /*
   D1716 · THIS WAS A GET, AND IT DOES WORK.
@@ -56,10 +55,10 @@ export const POST = withErrorLog("shop-map-linkage", async (request: Request) =>
     stored.encrypted_token, (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
 
   const printify = async (path: string) => {
-    const response = await printifyCall(`https://api.printify.com/v1${path}`, {
+    const response = await fetch(`https://api.printify.com/v1${path}`, {
       headers: { Authorization: `Bearer ${printifyToken}`, "User-Agent": "Goldie-Listing-Factory" },
       signal: AbortSignal.timeout(20_000),
-    }, { feature: "qa", userId: user.userId });
+    });
     return response.ok ? await response.json() as unknown : null;
   };
   const etsy = async (path: string) => {

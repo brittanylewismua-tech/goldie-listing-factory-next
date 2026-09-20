@@ -6,7 +6,6 @@ import { getDb } from "@/db";
 import { productRecipes } from "@/db/schema";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { productIdFromUrl, flatlayOf, type ProductImage } from "../flatlay";
-import { printifyCall } from "../../../printify-call.ts";
 
 /* D848 · The saved-product tiles drew a grey placeholder garment.
  *
@@ -66,7 +65,7 @@ export async function POST() {
   const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
   let shops: Shop[] = [];
   try {
-    const response = await printifyCall(`${PRINTIFY_API}/shops.json`, { headers, cache: "no-store" }, { feature: "listing-factory", userId: user.userId });
+    const response = await fetch(`${PRINTIFY_API}/shops.json`, { headers, cache: "no-store" });
     if (!response.ok) return NextResponse.json({ photos: {} });
     shops = (await response.json()) as Shop[];
   } catch { return NextResponse.json({ photos: {} }) }
@@ -79,7 +78,7 @@ export async function POST() {
     const order = hinted ? [...shops.filter((shop) => shop.id === hinted), ...shops.filter((shop) => shop.id !== hinted)] : shops;
     for (const shop of order) {
       try {
-        const response = await printifyCall(`${PRINTIFY_API}/shops/${shop.id}/products/${entry.productId}.json`, { headers, cache: "no-store" }, { feature: "listing-factory", userId: user.userId });
+        const response = await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${entry.productId}.json`, { headers, cache: "no-store" });
         if (!response.ok) continue;
         const photo = flatlayOf(((await response.json()) as Product).images);
         if (photo) return { id: entry.recipe.id, photo, pricing: entry.pricing, shop };

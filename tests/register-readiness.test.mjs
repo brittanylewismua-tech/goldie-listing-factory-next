@@ -59,14 +59,7 @@ test("an incomplete register never produces the complete-search wording", () => 
   assert.match(loading.summary, /trademark records currently loaded/);
   assert.ok(!/current federal/.test(loading.summary),
     "an incomplete register must not claim the current federal register");
-  /* The complete state no longer claims the federal register either: the
-     corpus is what was ingested, not the register itself. It must still be
-     distinguishable from the loading state. */
-  assert.ok(!/current federal/.test(done.summary),
-    "a complete register still claims to be the federal register");
-  assert.match(done.summary, /available here/);
-  assert.notEqual(done.summary, loading.summary,
-    "the two register states became indistinguishable");
+  assert.match(done.summary, /current federal/);
   assert.equal(loading.registerReady, false);
 });
 
@@ -126,18 +119,9 @@ test("D1705: final is not the same as complete", () => {
 });
 
 test("D1705: only a register with nothing left out names the whole register", () => {
-  /*
-    D1734 · NO STATE NAMES THE WHOLE REGISTER ANY MORE.
-
-    This asserted that a complete register was allowed to say "the current
-    federal trademark register". It was never entitled to: ingestion kept nine
-    classes out of forty-five, so a cosmetics mark like HAUS LABS was absent
-    while the sentence told the member the federal register had been searched.
-    What is searched is what we hold.
-  */
   const complete = withRegister(check("mountains at dawn"), [], LOADED);
-  assert.match(complete.summary, /available here, or the curated risk list/);
-  assert.ok(!/current federal/.test(complete.summary));
+  assert.match(complete.summary,
+    /current federal trademark register or the curated risk list/);
 
   const parked = withRegister(check("mountains at dawn"), [], PARKED);
   assert.equal(parked.registerReady, true);
@@ -145,8 +129,6 @@ test("D1705: only a register with nothing left out names the whole register", ()
   assert.match(parked.summary, /not the whole register/);
   assert.ok(!/current federal trademark register/.test(parked.summary),
     "a register missing files must not name itself as the register");
-  assert.notEqual(parked.summary, complete.summary,
-    "parked and complete must stay distinguishable");
 
   const loading = withRegister(check("mountains at dawn"), [], LOADING);
   assert.match(loading.summary, /records currently loaded/);

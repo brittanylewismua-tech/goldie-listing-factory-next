@@ -2,7 +2,6 @@ import {env} from 'cloudflare:workers';
 import {unpackDraftMedia} from '@/app/draft-media-storage';
 import {decryptPrintifyToken} from '../printify/token-crypto';
 import {etsyConnection,etsyApiCredential,etsyBudget,recordEtsyCall} from '../etsy/client';
-import { printifyCall } from '../../printify-call.ts';
 /** Read-only owner diagnostics. Candidate matches are never linked or modified automatically. */
 export async function inspectLaunchListing(owner:string,productId:string){
  const runtime=env as unknown as {DB:D1Database;ARTWORK:R2Bucket;PRINTIFY_TOKEN_KEY:string};
@@ -12,7 +11,7 @@ export async function inspectLaunchListing(owner:string,productId:string){
  const connection=await runtime.DB.prepare('SELECT encrypted_token FROM printify_connections WHERE user_id=?').bind(owner).first<{encrypted_token:string}>();
  if(!connection)throw Error('Printify is not connected.');
  const token=await decryptPrintifyToken(connection.encrypted_token,runtime.PRINTIFY_TOKEN_KEY);
- const response=await printifyCall(`https://api.printify.com/v1/shops/${draft.shopId}/products/${productId}.json`,{headers:{Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory'},signal:AbortSignal.timeout(15000)},{feature:'qa',userId:owner});
+ const response=await fetch(`https://api.printify.com/v1/shops/${draft.shopId}/products/${productId}.json`,{headers:{Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory'},signal:AbortSignal.timeout(15000)});
  if(!response.ok)throw Error('Printify could not read the QA product.');
  const product=await response.json() as {title:string;external?:{id?:string|number};is_locked?:boolean;variants:Array<{id:number;sku?:string;price:number;is_enabled:boolean}>;print_areas?:unknown};
  const hash=async(value:unknown)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(value))))).map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -46,7 +45,7 @@ export async function cleanupLaunchListings(owner:string,batchIds:string[]){
  const etsy=await etsyConnection(owner),etsyHeaders={'x-api-key':etsyApiCredential(),Authorization:`Bearer ${etsy.token}`};
  const products:Array<{id:string;shopId:number;title:string;etsyId:number|null;missing:boolean}>=[];
  for(const draft of unique){
-  const response=await printifyCall(`https://api.printify.com/v1/shops/${draft.shopId}/products/${draft.id}.json`,{headers,signal:AbortSignal.timeout(15000)},{feature:'qa',userId:owner});
+  const response=await fetch(`https://api.printify.com/v1/shops/${draft.shopId}/products/${draft.id}.json`,{headers,signal:AbortSignal.timeout(15000)});
   if(response.status===404){products.push({...draft,etsyId:null,missing:true});continue}
   if(!response.ok)throw Error('Printify could not preflight every exact QA product. Nothing was deleted.');
   const product=await response.json() as {title:string;external?:{id?:string|number}};
@@ -63,6 +62,6 @@ export async function cleanupLaunchListings(owner:string,batchIds:string[]){
  const deletedEtsy:number[]=[],pendingEtsy:number[]=[];let etsyDeleteError='';
  for(const product of products){if(!product.etsyId)continue;try{const response=await fetch(`https://api.etsy.com/v3/application/listings/${product.etsyId}`,{method:'DELETE',headers:etsyHeaders,signal:AbortSignal.timeout(15000)});await recordEtsyCall(response,"qa");if(!response.ok)throw Error(`Etsy returned ${response.status}.`);deletedEtsy.push(product.etsyId)}catch(error){pendingEtsy.push(product.etsyId);etsyDeleteError=error instanceof Error?error.message:'Etsy could not delete the QA draft.'}}
  const deletedPrintify:string[]=[],alreadyMissingPrintify=products.filter(product=>product.missing).map(product=>product.id);
- for(const product of products){if(product.missing)continue;const response=await printifyCall(`https://api.printify.com/v1/shops/${product.shopId}/products/${product.id}.json`,{method:'DELETE',headers,signal:AbortSignal.timeout(15000)},{feature:'cleanup',userId:owner});if(!response.ok&&response.status!==404)throw Error(`Printify could not delete QA product ${product.id}.`);(response.status===404?alreadyMissingPrintify:deletedPrintify).push(product.id)}
+ for(const product of products){if(product.missing)continue;const response=await fetch(`https://api.printify.com/v1/shops/${product.shopId}/products/${product.id}.json`,{method:'DELETE',headers,signal:AbortSignal.timeout(15000)});if(!response.ok&&response.status!==404)throw Error(`Printify could not delete QA product ${product.id}.`);(response.status===404?alreadyMissingPrintify:deletedPrintify).push(product.id)}
  return {deletedPrintify,alreadyMissingPrintify,deletedEtsy,pendingEtsy,etsyDeleteError,productIds:products.map(product=>product.id),etsyListingIds:products.flatMap(product=>product.etsyId?[product.etsyId]:[])};
 }

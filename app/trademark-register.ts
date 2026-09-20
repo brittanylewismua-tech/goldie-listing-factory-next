@@ -18,9 +18,9 @@
  * in, because a dead mark is not a reason to change a design.
  */
 import { blocks, singleEntryDeflateStream } from "@/app/uspto-bulk";
-import { normalize, squeeze, readRecord, worthKeeping, type RegisterHit } from "@/app/trademark-record";
+import { normalize, readRecord, worthKeeping, type RegisterHit } from "@/app/trademark-record";
 
-export { normalize, squeeze, readRecord, worthKeeping, PRINTED_CLASSES } from "@/app/trademark-record";
+export { normalize, readRecord, worthKeeping, PRINTED_CLASSES } from "@/app/trademark-record";
 export type { RegisterHit } from "@/app/trademark-record";
 
 export async function ensureRegisterTables(db: D1Database): Promise<void> {
@@ -77,38 +77,6 @@ export async function ensureRegisterTables(db: D1Database): Promise<void> {
       if (!/duplicate column/i.test(message)) throw error;
     }
   }
-
-  /* The same rule for tm_marks: the squeezed form is a column added after the
-     first release, so the CREATE above will never produce it on a live table. */
-  try {
-    await db.prepare(`ALTER TABLE tm_marks ADD COLUMN squeezed TEXT NOT NULL DEFAULT ''`).run();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (!/duplicate column/i.test(message)) throw error;
-  }
-
-  /*
-    INDEXED HERE, NOT IN THE BATCH ABOVE.
-
-    It was in that batch first, and on a live table the column did not exist
-    yet — so the index statement failed, and because the batch is atomic it
-    took every other CREATE with it. The whole route answered 500. An index on
-    a column can only be created after the column is.
-  */
-  await db.prepare(
-    `CREATE INDEX IF NOT EXISTS tm_marks_squeezed ON tm_marks (squeezed)`).run();
-
-  /*
-    Backfill for rows written before the column existed. Derived in SQL from
-    `normalized`, which is exactly what squeeze() does to it, so the two can
-    not disagree. Bounded per call: it is a no-op once drained, and a slow
-    drain is better than one statement that times out and never completes.
-  */
-  await db.prepare(
-    `UPDATE tm_marks SET squeezed = REPLACE(normalized, ' ', '')
-      WHERE squeezed = '' AND serial IN (
-        SELECT serial FROM tm_marks WHERE squeezed = '' LIMIT 50000)`).run()
-    .catch(() => {});
 }
 
 const WRITE_BATCH = 100;
@@ -153,11 +121,10 @@ export async function ingestFile(
   };
 
   const insert = db.prepare(
-    `INSERT INTO tm_marks (serial, normalized, squeezed, mark, owner, registration, status_code, classes, updated)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO tm_marks (serial, normalized, mark, owner, registration, status_code, classes, updated)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(serial) DO UPDATE SET
-       normalized = excluded.normalized, squeezed = excluded.squeezed,
-       mark = excluded.mark, owner = excluded.owner,
+       normalized = excluded.normalized, mark = excluded.mark, owner = excluded.owner,
        registration = excluded.registration, status_code = excluded.status_code,
        classes = excluded.classes, updated = excluded.updated`,
   );
@@ -174,7 +141,6 @@ export async function ingestFile(
         insert.bind(
           record.serial,
           normalize(record.mark),
-          squeeze(record.mark),
           record.mark,
           record.owner,
           record.registration,
@@ -211,46 +177,19 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
   const normalized = normalize(phrase);
   if (normalized.length < 2) return [];
   const words = normalized.split(" ");
-  /*
-    The joined form, so "Hauslabs" reaches "HAUS LABS". Exact equality only —
-    see squeeze(). A LIKE on this column would match "ART" inside "HEART".
-  */
-  const squeezed = squeeze(phrase);
   /* Candidates are every mark short enough to sit inside the phrase and
      sharing its first word — the index makes that cheap, and the containment
      test then runs over a handful of rows rather than the whole table. */
   const candidates = await db
     .prepare(
-      /*
-        NO LIKE PATTERN IS EVER BUILT FROM A COLUMN.
-
-        This carried `?1 LIKE normalized || ' %'` to find a mark that is a
-        prefix of the phrase. The pattern there is made from stored data, so
-        its complexity grows with the table — and once the register passed a
-        couple of hundred thousand marks D1 began answering
-
-          LIKE or GLOB pattern too complex: SQLITE_ERROR
-
-        for EVERY lookup. The caller wrapped this in a bare catch, so the
-        failure arrived at the member as "no match was found in the trademark
-        records". The register half of the checker was dead and reporting
-        clean results while it was.
-
-        That clause did one job the others do not: catch a single-word mark
-        equal to the phrase's first word, like BLUEY inside "bluey birthday
-        shirt". An equality test does the same job, uses the index, and has
-        no pattern to overrun. ?2 is still a LIKE, but its pattern comes from
-        a bound parameter of known length, not from the table.
-      */
       `SELECT mark, owner, serial, registration, classes, status_code
          FROM tm_marks
         WHERE normalized = ?1
            OR normalized LIKE ?2
-           OR normalized = ?4
-           OR squeezed = ?3
+           OR ?1 LIKE normalized || ' %'
         LIMIT 200`,
     )
-    .bind(normalized, `${words[0]} %`, squeezed, words[0])
+    .bind(normalized, `${words[0]} %`)
     .all<{
       mark: string; owner: string; serial: string;
       registration: string; classes: string; status_code: number;
@@ -258,10 +197,7 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
 
   const padded = ` ${normalized} `;
   return (candidates.results ?? [])
-    /* Either the mark sits inside the phrase on word boundaries, or the two
-       are the same mark once their spacing is disregarded. */
-    .filter(row => padded.includes(` ${normalize(row.mark)} `)
-      || squeeze(row.mark) === squeezed)
+    .filter(row => padded.includes(` ${normalize(row.mark)} `))
     .map(row => ({
       mark: row.mark,
       owner: row.owner,

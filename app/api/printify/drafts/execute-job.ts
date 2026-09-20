@@ -49,11 +49,11 @@ async function api<T>(path: string, token: string, init?: RequestInit, onRetry?:
   for (let attempt = 0; attempt <= waits.length; attempt += 1) {
     let response: Response;
     try {
-      response = await printifyCall(`${PRINTIFY_API}${path}`, {
+      response = await fetch(`${PRINTIFY_API}${path}`, {
         ...init,
         signal: AbortSignal.timeout(30000),
         headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory", "Content-Type": "application/json", ...(init?.headers ?? {}) },
-      }, { feature: "listing-factory", attempt: attempt + 1 });
+      });
     } catch {
       if (attempt < waits.length) { await onRetry?.(attempt + 1); await new Promise((resolve) => setTimeout(resolve, waits[attempt])); continue; }
       throw new Error("The connection to Printify was interrupted after three automatic retries.");
@@ -81,7 +81,6 @@ import {draftVariantSku} from "../draft-identity";
 import {reconcileDraftJob} from "../reconcile-draft-job";
 import {readJobObject,writeJobObject,type PendingDraftJob,type JobBucket} from "../draft-job-store";
 import {decryptPrintifyToken} from "../token-crypto";
-import { printifyCall } from "../../../printify-call.ts";
 export type DraftRequestBody={ batchId?: string; title?: string; tags?: string[]; description?: string; visibleBounds?:{left:number;top:number;right:number;bottom:number}; maxPlacementScale?:number; fileName?: string; stagedId?: string; artworks?:Array<{key:string;fileName:string;stagedId:string;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number}>; artworkAssignments?:ArtworkAssignment[]; supportReference?: string; clientId?: string; variantPrices?:Record<string,number>; variantCosts?:Record<string,number>; selectedVariantIds?:number[]; mockupVariantIds?:number[]; mockupVariantSources?:Record<string,number>; etsyBuyerShipping?:number; shippingTemplateId?:number; pricing?: { targetProfit?: number; etsyFeePercent?: number; fixedFee?: number; listingFee?: number; shippingCost?: number; shippingCharged?: number } };
 export type DraftJobInput={userId:string;requestUrl:string;body:DraftRequestBody;session:{shop_id:number;product_id:string;template_json:string}};
 export type DraftJobBindings={DB:D1Database;ARTWORK:JobBucket&MediaBucket&{get(key:string):Promise<{arrayBuffer():Promise<ArrayBuffer>;body?:ReadableStream;customMetadata?:Record<string,string>}|null>};PRINTIFY_TOKEN_KEY:string};

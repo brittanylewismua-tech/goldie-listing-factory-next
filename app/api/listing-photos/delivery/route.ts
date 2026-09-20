@@ -82,11 +82,11 @@ export async function POST(request:Request){
   if(body.mode==='draft'){
     const connection=await etsyConnection(user.userId);
     if(Number(connection.shopId)!==Number(shop.shop_id))throw Error('Your Etsy shop changed. Refresh before preparing this draft.');
-    const productionPartnerId=await requiredPrintifyPartner(connection.shopId,()=>etsyFetch(`/shops/${connection.shopId}/production-partners`,connection.token,"partners"),Date.now(),body.productionPartnerId);
+    const productionPartnerId=await requiredPrintifyPartner(connection.shopId,()=>etsyFetch(`/shops/${connection.shopId}/production-partners`,connection.token),Date.now(),body.productionPartnerId);
     const preparedSnapshot=freezeDraft({...draft as SourceDraft,etsyShippingProfileId:body.shippingProfileId,productionPartnerId});draftSnapshot=preparedSnapshot;
-    const profile=await etsyFetch<{shipping_profile_id:number;is_deleted?:boolean}>(`/shops/${connection.shopId}/shipping-profiles/${preparedSnapshot.shipping_profile_id}`,connection.token,"shipping");
+    const profile=await etsyFetch<{shipping_profile_id:number;is_deleted?:boolean}>(`/shops/${connection.shopId}/shipping-profiles/${preparedSnapshot.shipping_profile_id}`,connection.token);
     if(Number(profile.shipping_profile_id)!==preparedSnapshot.shipping_profile_id||profile.is_deleted)throw Error('The selected shipping profile is unavailable in this Etsy shop. Choose another profile.');
-    const category=await cachedJson('etsy-taxonomy',`/nodes/${preparedSnapshot.taxonomy_id}/properties`,TAXONOMY_TTL_SECONDS,()=>etsyFetch<{results?:CategoryProperty[]}>(`/seller-taxonomy/nodes/${preparedSnapshot.taxonomy_id}/properties`,connection.token,"taxonomy"));
+    const category=await cachedJson('etsy-taxonomy',`/nodes/${preparedSnapshot.taxonomy_id}/properties`,TAXONOMY_TTL_SECONDS,()=>etsyFetch<{results?:CategoryProperty[]}>(`/seller-taxonomy/nodes/${preparedSnapshot.taxonomy_id}/properties`,connection.token));
     if(!Array.isArray(category.results))throw Error('Etsy category requirements could not be checked. Try again before sending this draft.');
     checkCategoryRequirements(preparedSnapshot,category.results);
   }

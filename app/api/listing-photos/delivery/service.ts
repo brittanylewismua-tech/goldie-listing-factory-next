@@ -12,7 +12,6 @@ import {decryptPrintifyToken} from '../../printify/token-crypto';
 import {readPrintifyPublishState} from '../../printify/publish-state';
 import {deliveryStep,DeliveryReviewRequired,type DeliveryImage,type DeliveryPhoto,type DeliveryState} from './engine';
 import {requiredPrintifyPartner} from '../../etsy/production-partner';
-import {printifyCall} from '../../../printify-call.ts';
 export type DeliveryEnv={DB:D1Database;ARTWORK:R2Bucket;PRINTIFY_TOKEN_KEY:string;IMAGES?:{input(stream:ReadableStream):{output(options:{format:'image/jpeg';background:string;quality:number}):Promise<{response():Response}>}};PHOTO_DELIVERY:Workflow<{id:string;owner:string}>};
 export type DeliveryRow={transfer_json?:string|null;draft_json?:string|null;draft_state_json?:string|null;id:string;user_id:string;product_id:string;printify_shop_id:number;etsy_shop_id:number;fingerprint:string;status:string;photos_json:string;state_json:string|null;candidate_listing_id:number|null;candidate_seen_at:number|null;error:string|null;created_at:number;updated_at:number;expires_at:number};
 export const printifyWaitMessage=(automatic:boolean,locked:boolean,reason:string)=>automatic&&locked?null:reason+' Automatic checking will retry.';
@@ -83,25 +82,25 @@ export async function runDeliveryTick(id:string,owner:string){
     if(!tokenRow)throw new DeliveryReviewRequired('Reconnect Printify to deliver the photos.');
     const token=await decryptPrintifyToken(tokenRow.encrypted_token,runtime.PRINTIFY_TOKEN_KEY);
     let printifyProduct:PrintifyDraftProduct|undefined;
-    const published=await readPrintifyPublishState(async(url,init)=>{const response=await printifyCall(url,{...init,signal:AbortSignal.timeout(15000)},{feature:'listing-factory',userId:owner});if(response.ok){const product=await response.clone().json() as PrintifyDraftProduct;printifyProduct=product;if(product.is_locked)return new Response(null,{status:423})}return response},token,row.printify_shop_id,row.product_id);
+    const published=await readPrintifyPublishState(async(url,init)=>{const response=await fetch(url,{...init,signal:AbortSignal.timeout(15000)});if(response.ok){const product=await response.clone().json() as PrintifyDraftProduct;printifyProduct=product;if(product.is_locked)return new Response(null,{status:423})}return response},token,row.printify_shop_id,row.product_id);
     if(published.state!=='published'){
       if(row.state_json)throw new DeliveryReviewRequired('Printify could no longer confirm the linked Etsy listing. Delivery paused.');
       if(row.draft_json&&row.transfer_json&&published.state==='unpublished'){
-        const shopsResponse=await printifyCall('https://api.printify.com/v1/shops.json',{headers:{Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory'},signal:AbortSignal.timeout(15000)},{feature:'connections',userId:owner});
+        const shopsResponse=await fetch('https://api.printify.com/v1/shops.json',{headers:{Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory'},signal:AbortSignal.timeout(15000)});
         if(!shopsResponse.ok)throw Error('Printify could not verify the connected store.');
         const shops=await shopsResponse.json() as {id:number;sales_channel:string}[];
         if(!shops.some(shop=>Number(shop.id)===row.printify_shop_id&&shop.sales_channel==='etsy'))throw new DraftTransferReviewRequired('The selected Printify store is not connected to Etsy.');
         const transfer=JSON.parse(row.transfer_json) as TransferState;
         if(transfer.phase==='ready'){
-          const pairing=await verifyShopPairing({printifyToken:token,printifyShopId:row.printify_shop_id,etsyShopId:row.etsy_shop_id,etsyToken:connection.token,etsyFetch:<T,>(path:string,token:string)=>etsyFetch<T>(path,token,"connect")});
+          const pairing=await verifyShopPairing({printifyToken:token,printifyShopId:row.printify_shop_id,etsyShopId:row.etsy_shop_id,etsyToken:connection.token,etsyFetch});
           if(pairing.result==='mismatched')throw new DraftTransferReviewRequired('This Printify store is connected to a different Etsy shop. No draft was sent.');
         }
         const url=`https://api.printify.com/v1/shops/${row.printify_shop_id}/products/${row.product_id}`,headers={Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory','Content-Type':'application/json'};
         await transferDraft({
           inspect:async product=>{await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/printify-after-hidden.json`,JSON.stringify(product))},
           wait:ms=>new Promise(resolve=>setTimeout(resolve,ms)),
-          read:async()=>{const response=await printifyCall(`${url}.json`,{headers,signal:AbortSignal.timeout(15000)},{feature:'listing-factory',userId:owner});if(!response.ok)throw Error('Printify could not verify the draft before transfer.');return response.json() as Promise<TransferProduct>},
-          hide:async()=>{const response=await printifyCall(`${url}.json`,{method:'PUT',headers,body:JSON.stringify({visible:false}),signal:AbortSignal.timeout(15000)},{feature:'listing-factory',userId:owner});if(!response.ok)throw Error('Printify could not save the hidden draft setting. No transfer was sent.')},
+          read:async()=>{const response=await fetch(`${url}.json`,{headers,signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('Printify could not verify the draft before transfer.');return response.json() as Promise<TransferProduct>},
+          hide:async()=>{const response=await fetch(`${url}.json`,{method:'PUT',headers,body:JSON.stringify({visible:false}),signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error('Printify could not save the hidden draft setting. No transfer was sent.')},
           backup:async product=>{await runtime.ARTWORK.put(`photo-delivery/${owner}/${id}/printify-before-transfer.json`,JSON.stringify(product))},
           claim:async state=>{const claim=await runtime.DB.prepare("UPDATE photo_deliveries SET transfer_json=?,status='delivering',updated_at=? WHERE id=? AND user_id=? AND transfer_json=? AND status IN ('waiting','delivering')").bind(JSON.stringify(state),Date.now(),id,owner,row.transfer_json).run();return Boolean(claim.meta.changes)},
           save:async state=>{await runtime.DB.prepare('UPDATE photo_deliveries SET transfer_json=?,updated_at=? WHERE id=? AND user_id=?').bind(JSON.stringify(state),Date.now(),id,owner).run()},

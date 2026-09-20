@@ -6,8 +6,7 @@
 */
 .scanner {
   --ink: #1b1b1f;
-  /* Dark enough to remain readable on the scanner's tinted surfaces. */
-  --muted: #5c5c68;
+  --muted: #6b6b76;
   --line: #e6e4e0;
   --paper: #fbfaf8;
   --gold: #c9a227;

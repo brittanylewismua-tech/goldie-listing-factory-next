@@ -13,16 +13,13 @@ export const metadata = { title: "Market Watch" };
   answers one question — what is actually moving out there — and then gets out
   of the way. It does not tell the seller what to do next.
 */
-export default async function MarketWatchPage(
-  { searchParams }: { searchParams: Promise<{ tab?: string }> },
-) {
+export default async function MarketWatchPage() {
   const user = await requireFeaturePage("marketWatch", "/market-watch");
-  const startTab = (await searchParams)?.tab === "shops" ? "shops" as const : "niches" as const;
   return (
     /* D1575 · the same rail, topbar, wordmark and footer as the Listing
        Factory. This page rendered as a bare column on white before. */
     <FactoryShell active="market-watch" title="Market Watch" desktopOnly={false}>
-      <MarketWatchClient signedInEmail={user.email} startTab={startTab} />
+      <MarketWatchClient signedInEmail={user.email} />
     </FactoryShell>
   );
 }

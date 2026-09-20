@@ -1,4 +1,3 @@
-import {printifyCall} from "../../printify-call.ts";
 /* D641 · D639 compared the Printify store's title with the connected Etsy shop
    name. Brittany's own account broke it within the hour: her Printify store is
    still called HOWDYANGEL, the Etsy shop it publishes to was renamed to
@@ -77,7 +76,7 @@ export async function verifyShopPairing(options:{
   const outOfTime=()=>Date.now()-started>PAIRING_BUDGET_MS;
   let candidates:number[]=[];
   try{
-    const response=await withTimeout(printifyCall(`https://api.printify.com/v1/shops/${printifyShopId}/products.json?limit=20`,{headers:{Authorization:`Bearer ${printifyToken}`,"User-Agent":"Goldie-Listing-Factory"},cache:"no-store",signal:timeoutSignal(PAIRING_STEP_MS)},{feature:"connections"}));
+    const response=await withTimeout(fetch(`https://api.printify.com/v1/shops/${printifyShopId}/products.json?limit=20`,{headers:{Authorization:`Bearer ${printifyToken}`,"User-Agent":"Goldie-Listing-Factory"},cache:"no-store",signal:timeoutSignal(PAIRING_STEP_MS)}));
     if(!response.ok)return {result:"unknown"};
     const payload=await response.json() as {data?:PrintifyProduct[]};
     candidates=(payload.data||[]).map(product=>Number(product.external?.id)).filter(id=>Number.isInteger(id)&&id>0);

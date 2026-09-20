@@ -4,7 +4,6 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
-import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * CAN WE TELL WHICH ARTWORK THE BUYER ACTUALLY BOUGHT?
@@ -42,10 +41,10 @@ export const GET = withErrorLog("shop-map-artwork-audit", async (request: Reques
     stored.encrypted_token, (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
 
   const call = async (path: string) => {
-    const response = await printifyCall(`https://api.printify.com/v1${path}`, {
+    const response = await fetch(`https://api.printify.com/v1${path}`, {
       headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
       signal: AbortSignal.timeout(20_000),
-    }, { feature: "qa", userId: user.userId });
+    });
     const text = await response.text();
     let parsed: unknown = null;
     try { parsed = JSON.parse(text); } catch { /* reported by status */ }

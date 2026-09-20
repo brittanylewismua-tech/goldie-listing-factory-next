@@ -191,13 +191,6 @@ export const DELETION_PLAN: PlanStep[] = [
     sql: `UPDATE spend_reservations SET user_id = '' WHERE user_id = ?`,
     say: "The record of what your work cost is unlinked from you. The cost "
       + "figures remain, attached to nobody." },
-  /* Printify call telemetry carries a member id so traffic can be attributed
-     while they are here. It is not accounting — no money hangs off it — so the
-     identity goes and the shape of the traffic stays. */
-  { table: "printify_api_calls", disposition: "retire",
-    sql: `UPDATE printify_api_calls SET user_id = '' WHERE user_id = ?`,
-    say: "Records of calls made to your print provider on your behalf are "
-      + "unlinked from you." },
   { table: "vision_calls", disposition: "retire",
     sql: `UPDATE vision_calls SET user_id = '' WHERE user_id = ?`,
     say: "Analysis usage records are unlinked from you." },

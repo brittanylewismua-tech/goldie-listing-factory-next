@@ -34,11 +34,7 @@
   /* ---- ink ------------------------------------------------------------ */
   --p-ink:#19191c;
   --p-ink-soft:#4b4550;
-  /* D1743 · #6f6980 passes on white (5.1:1) and fails on the tinted cards it
-     is actually used on — measured 3.87 to 4.28 across Market Watch, the
-     scanner and the account. Darkened just enough to clear 4.5 on those
-     surfaces; it is the same hue, only less washed out. */
-  --p-muted:#5f5a6e;
+  --p-muted:#6f6980;
   --p-on-dark:#fff;
   --p-on-dark-dim:rgba(255,255,255,.62);
   /* ---- surfaces ------------------------------------------------------- */
@@ -113,8 +109,7 @@
 .p-button-quiet{background:transparent;color:var(--p-ink);border:1px solid var(--p-line-strong)}
 .p-button-quiet:hover{background:var(--p-lavender)}
 
-/* D1743 · 42px, just under the 44px touch floor. */
-.p-input,.p-select{width:100%;min-height:44px;padding:10px var(--p-3);
+.p-input,.p-select{width:100%;min-height:42px;padding:10px var(--p-3);
   border:1px solid var(--p-line-strong);border-radius:var(--p-radius);
   background:#fff;color:var(--p-ink);font:inherit;font-size:14px;outline:none;
   transition:border-color .16s,box-shadow .16s}

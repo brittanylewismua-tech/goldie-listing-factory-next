@@ -9,7 +9,6 @@ import { mergePreviewDetails,type PreviewDetail } from "@/app/printify-preview-d
 import { unpackDraftMedia,saveDraftChanges,type MediaBucket } from "@/app/draft-media-storage";
 import {printifyVariantLimitMessage} from "@/app/printify-variant-limit";
 import {printifyDraftChangeError} from "@/app/printify-draft-error";
-import {printifyCall} from "../../../../printify-call.ts";
 
 type ArtworkUpdate={stagedId?:string;fileName?:string;position:string;variantIds:number[];colorId:number;colorTitle:string;reset?:boolean;bounds?:{left:number;top:number;right:number;bottom:number};maxPlacementScale?:number};
 
@@ -72,7 +71,7 @@ export async function PATCH(request:Request){
       const runtime=env as unknown as {ARTWORK?:{get(key:string):Promise<{body?:ReadableStream;customMetadata?:Record<string,string>}|null>}};
       const staged=change.stagedId?await runtime.ARTWORK?.get(change.stagedId):null;
       if(!staged||staged.customMetadata?.owner!==user.userId||Number(staged.customMetadata?.expires||0)<=Date.now())return NextResponse.json({error:"That artwork upload expired. Choose the file again."},{status:400});
-      const upload=await printifyCall("https://api.printify.com/v1/uploads/images.json",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","User-Agent":"Goldie-Listing-Factory"},body:JSON.stringify({file_name:String(change.fileName||"alternate-artwork.png"),url:await signedArtworkUrl(new URL(request.url).origin,change.stagedId!,secret)})},{feature:"listing-factory",userId:user.userId});
+      const upload=await fetch("https://api.printify.com/v1/uploads/images.json",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json","User-Agent":"Goldie-Listing-Factory"},body:JSON.stringify({file_name:String(change.fileName||"alternate-artwork.png"),url:await signedArtworkUrl(new URL(request.url).origin,change.stagedId!,secret)})});
       if(!upload.ok)return NextResponse.json({error:`Printify could not upload that artwork (${upload.status}).`},{status:upload.status});
       const uploaded=await upload.json() as {id?:string;preview_url?:string};
       imageId=String(uploaded.id||"");overridePreviewUrl=uploaded.preview_url;

@@ -6,7 +6,6 @@ import { env } from "cloudflare:workers";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { productFamily } from "@/app/product-type-utils";
 import { productFactsFor } from "@/app/product-facts";
-import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * WHAT THE RECORD ACTUALLY SHOWS.
@@ -121,11 +120,10 @@ export const GET = withErrorLog("listing-factory-blueprint-evidence", async () =
         evidence: "historicalEvidence: unavailable - no stored Printify product id" });
       continue;
     }
-    const response = await printifyCall(
+    const response = await fetch(
       `https://api.printify.com/v1/shops/${shopId}/products/${sighting.printifyProductId}.json`,
       { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
-        signal: AbortSignal.timeout(20_000) },
-      { feature: "qa", userId: user.userId }).catch(() => null);
+        signal: AbortSignal.timeout(20_000) }).catch(() => null);
     if (!response?.ok) {
       resolved.push({ titleClass: sighting.titleClass,
         printifyProductId: sighting.printifyProductId, blueprintId: null,

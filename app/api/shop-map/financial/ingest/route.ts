@@ -10,7 +10,6 @@ import { classifyLedgerType } from "@/app/finance-classify";
 import { windowsFor, incrementalFrom, outstanding, WINDOW_SECONDS } from "@/app/finance-windows";
 import { classifyOrphan } from "@/app/finance-reconcile";
 import { ensureFinanceTables } from "@/app/finance-store";
-import { printifyCall } from "../../../../printify-call.ts";
 
 /**
  * INCREMENTAL FINANCIAL INGESTION.
@@ -322,11 +321,10 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
       stored.encrypted_token, (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
     const printifyShop = 1374648;
     for (let page = 1; page <= maxOrderPages; page += 1) {
-      const response = await printifyCall(
+      const response = await fetch(
         `https://api.printify.com/v1/shops/${printifyShop}/orders.json?limit=50&page=${page}`,
         { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
-          signal: AbortSignal.timeout(25_000) },
-        { feature: "finance", userId: user.userId }).catch(() => null);
+          signal: AbortSignal.timeout(25_000) }).catch(() => null);
       if (!response?.ok) break;
       const body = await response.json() as { data?: Array<Record<string, unknown>> };
       const orders = body.data ?? [];

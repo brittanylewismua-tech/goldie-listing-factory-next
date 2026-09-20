@@ -60,7 +60,4 @@ export const TAB_TITLES: Record<ShellSection, string> = {
  * the moment the umbrella name exists — it is referenced from the layout
  * metadata and the web manifest, and nowhere else.
  */
-/* Was "Goldie Suite", against this file's own instruction. Goldie is not this
-   product's name. Until an umbrella name exists this says what the software
-   is, and it avoids implying that Etsy endorses it. */
-export const NEUTRAL_FALLBACK_TITLE = "Seller Tools";
+export const NEUTRAL_FALLBACK_TITLE = "Goldie Suite";

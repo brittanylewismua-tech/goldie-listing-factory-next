@@ -608,7 +608,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .mobile-brand{text-align:center}.mobile-brand .approved-wm{font-size:34px}
   .mobile-card{margin:auto 0;padding:38px 26px 34px;border:1px solid rgba(255,255,255,.84);border-radius:16px;background:linear-gradient(158deg,rgba(255,255,255,.66),rgba(255,252,255,.52)),url('/goldie-background-reference.jpg') center/cover fixed no-repeat;box-shadow:0 1px 0 rgba(255,255,255,.95) inset,0 34px 70px -36px rgba(74,42,62,.35);text-align:center}
   .mobile-command{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 24px;border:1px solid rgba(255,255,255,.8);border-radius:50%;background:rgba(252,244,254,.7);font-size:24px}
-  .mobile-card h1{font:400 38px/1.04 'DM Serif Display',Georgia,serif;letter-spacing:-.025em}.mobile-card p{max-width:300px;margin:18px auto 0;color:rgba(74,42,62,1);font-size:14px;font-weight:300;line-height:1.65}
+  .mobile-card h1{font:400 38px/1.04 'DM Serif Display',Georgia,serif;letter-spacing:-.025em}.mobile-card p{max-width:300px;margin:18px auto 0;color:rgba(74,42,62,.75);font-size:14px;font-weight:300;line-height:1.65}
 .mobile-saved{margin-top:22px;padding-top:20px;border-top:1px solid #ded6dc;color:rgba(74,42,62,.58);font-size:12px}.mobile-footer{text-align:center;color:rgba(74,42,62,.58);font-size:10px;letter-spacing:.08em}
 }
 
@@ -1396,10 +1396,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .recipe-copy .recipe-shop{
   display:block!important;width:auto!important;max-width:100%!important;
   margin-top:3px!important;padding:0!important;border:0!important;border-radius:0!important;
-  /* #8a7d86 measured 3.69:1 on the tile, on the deployed page. It names which
-     Etsy shop a saved product belongs to, which is the one thing on the tile a
-     member must not misread. */
-  background:transparent!important;color:#635a61!important;
+  background:transparent!important;color:#8a7d86!important;
   font-size:10px!important;font-weight:500!important;letter-spacing:0!important;
   overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
 }

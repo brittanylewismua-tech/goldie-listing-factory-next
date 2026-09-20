@@ -2,9 +2,6 @@
   The four features are one product. These are the seams between them, and the
   boundaries that must hold across those seams.
 */
-/* The product has no chosen name; the manifest must not invent one, and
-   must not say Goldie. */
-const NEUTRAL_NAME = 'Seller Tools';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -170,12 +167,11 @@ test("the Trademark Checker renders as itself at every width", () => {
   assert.ok(!code.includes("MobileGate"), "the checker still carries a desktop gate");
 });
 
-test("the batch CTA stays inside Listing Factory while factory metrics stay on factory pages", () => {
-  /* Starting a batch is a workflow action, not a universal suite action. */
+test("the suite CTA is universal while factory metrics stay on factory pages", () => {
+  /* Starting a batch is the suite's primary call to action. Usage and goal
+     metrics still belong only to the Listing Factory surfaces. */
   const shell = strip(read("app/factory-shell.tsx"));
-  assert.ok(!shell.includes("Start a new batch"), "the batch CTA leaked into the shared sidebar");
-  assert.ok(read("app/listing-factory-app.tsx").includes("Start a new batch"),
-    "the Listing Factory lost its batch action");
+  assert.ok(shell.includes("Start a new batch"), "the primary suite CTA is missing");
   for (const control of ["approved-usage", "listing-goal-side"]) {
     const at = shell.indexOf(control);
     assert.ok(at > 0, `${control} is missing from the shell`);
@@ -243,17 +239,14 @@ test("the service worker never caches an API response or a page", () => {
   assert.match(bail, /cacheable = \/\\\.\(\?:png/);
 });
 
-test("the installed app names no product that does not exist", () => {
+test("the installed app carries the chosen Goldie Suite identity", () => {
   const manifest = JSON.parse(readFileSync(
     new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
   assert.equal(manifest.display, "standalone");
   assert.match(manifest.start_url, /^\/home/);
-  assert.equal(manifest.name, NEUTRAL_NAME);
-  assert.equal(manifest.short_name, NEUTRAL_NAME);
-  /* The description says what the software does. It may not say Goldie, and
-     may not imply that Etsy endorses it. */
-  assert.doesNotMatch(manifest.description, /goldie/i);
-  assert.match(manifest.description, /Not endorsed or certified by Etsy/);
+  assert.equal(manifest.name, "Goldie Suite");
+  assert.equal(manifest.short_name, "Goldie");
+  assert.match(manifest.description, /Goldie Suite/);
 });
 
 test("the connections screen reports a real last sync", () => {

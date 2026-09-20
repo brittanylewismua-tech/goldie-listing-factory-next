@@ -250,20 +250,6 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
       <button className="go p-button p-button-primary" onClick={() => void scan()} disabled={!ready}>
         {scanning ? "Scanning…" : "Scan"}
       </button>
-      {/*
-        A DISABLED BUTTON THAT SAYS WHY.
-
-        "Scan" greyed out with nothing beside it leaves the member guessing
-        which of the two things above it is missing — and the design is chosen
-        through a file picker, so it is genuinely easy to think you have.
-      */}
-      {!ready && !scanning && (
-        <p className="go-needs" role="status">
-          {!artworkHash && !niche.trim() ? "Choose a design and say who it is for."
-            : !artworkHash ? "Choose a design to scan."
-            : "Say who this design is for."}
-        </p>
-      )}
 
       {scanning && (
         <ul className="stages">
