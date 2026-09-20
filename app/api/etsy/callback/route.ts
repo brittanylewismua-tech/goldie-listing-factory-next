@@ -61,7 +61,17 @@ export async function GET(request:Request){
       if(!intended)return fail("That shop is not connected to this account yet. Connect it first, then add sales access.");
       await env.DB.prepare("UPDATE etsy_connections SET encrypted_access_token=?, encrypted_refresh_token=?, expires_at=?, etsy_user_id=?, shop_name=?, scopes=?, scopes_checked_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND shop_id=?")
         .bind(await encryptEtsy(tokens.access_token),await encryptEtsy(tokens.refresh_token),Math.floor(Date.now()/1000)+Number(tokens.expires_in||3600),etsyUserId,shop.shop_name,String(tokens.scope||""),pending.user_id,targetShopId).run();
-      return NextResponse.redirect(`${returnOrigin}/api/shop-map/capability?shop=${targetShopId}`);
+      /*
+        RETURN TO A PAGE, NOT A JSON ENDPOINT.
+
+        The capability endpoint is useful to code, but sending a member there
+        after Etsy approval leaves them staring at raw JSON and does not start
+        the import they just authorised. Connections owns this flow. It can
+        confirm the grant, start the read-only import, and show progress in the
+        same place where the member began.
+      */
+      const salesGranted=String(tokens.scope||"").split(/\s+/).includes("transactions_r");
+      return NextResponse.redirect(`${returnOrigin}/connections?etsy_sales=${salesGranted?"connected":"missing"}&shop=${targetShopId}`);
     }
 
     const existing=adding?await env.DB.prepare("SELECT shop_name,is_active FROM etsy_connections WHERE user_id=? AND shop_id=?").bind(pending.user_id,shop.shop_id).first<{shop_name:string;is_active:number}>():null;
