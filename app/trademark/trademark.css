@@ -58,7 +58,7 @@
   background: #fff; border: 1px solid var(--line, #5b354f29);
 }
 .tm-hit b { font-size: 15px; color: var(--ink, #4b283e); }
-.tm-hit .tm-owner { font-size: 14px; color: #6f6675; }  /* was #8b8390 — 3.65:1 */
+.tm-hit .tm-owner { font-size: 14px; color: #8b8390; }
 .tm-hit .tm-cat {
   margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: .06em;
   text-transform: uppercase; color: #92222b;

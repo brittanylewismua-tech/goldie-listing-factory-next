@@ -33,8 +33,9 @@ test("one nav exposes every member feature", () => {
     "Shop Map", "Trademark Checker", "Batch History", "Keyword Banks"])
     assert.ok(shell.includes(`label: "${destination}"`), `${destination} is missing from the suite navigation`);
   const nav = read("suite-sidebar-nav.tsx");
-  assert.match(nav, />Command Center</);
+  assert.match(nav, /Command Center/);
   assert.match(nav, /aria-expanded=\{factoryOpen\}/);
+  assert.match(nav, /aria-expanded=\{commandOpen\}/);
   assert.match(nav, /Join the membership to access \{lockedTool\}/);
   assert.match(nav, /\$47\/month membership/);
   assert.match(nav, /commandCenterAccess === false/);
