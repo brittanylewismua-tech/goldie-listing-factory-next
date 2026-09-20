@@ -1213,10 +1213,8 @@ test("D818: both shells render the shared, grouped suite navigation", async () =
   for (const label of ["Home", "Listing Factory", "Batch History", "Keyword Banks",
     "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker", "Tools & settings"])
     assert.ok(shell.includes(`label: "${label}"`), `${label} is on the interior rail`);
-  assert.match(app, /import \{ SuiteSidebarNav \} from "\.\/factory-shell"/,
-    "the workflow rail must draw the shared navigation component");
-  assert.match(app, /<SuiteSidebarNav active="factory"/,
-    "the workflow must render the shared navigation component");
+  assert.match(app, /import \{ NAV \} from "\.\/factory-shell"/,
+    "the workflow rail must draw from the same list");
   for (const source of [shell, app]) {
     const menu = source.slice(source.indexOf("factory-account-menu"));
     assert.match(menu, /role="menuitem"[^>]*href="\/usage"/, "Usage + Plan is in the account menu");
@@ -1224,9 +1222,9 @@ test("D818: both shells render the shared, grouped suite navigation", async () =
   }
   assert.doesNotMatch(shell.slice(0, shell.indexOf("NAV.map")), /label: "Usage \+ Plan"|label: "Connections"/,
     "and neither is still on the rail");
-  assert.match(shell, /<nav className="top-nav suite-sidebar-nav"/, "the shared navigation draws the suite rail");
+  assert.match(shell, /<nav className="top-nav"/, "the same nav element as the workflow");
   assert.match(shell, /NavIcon/, "the suite rail carries the approved icon system");
-  assert.match(app, /SuiteSidebarNav/);
+  assert.match(app, /NavIcon/);
 });
 
 test("D203: cross-screen alignment and destructive-action faults are fixed", async () => {

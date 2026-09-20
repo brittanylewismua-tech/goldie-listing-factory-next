@@ -12,8 +12,7 @@ export default async function HomePage() {
   if (!user)
     return <main className="hub-auth"><Link href={accountSignInPath("/home")}>Sign in</Link></main>;
 
-  const dateLabel = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(new Date());
   return <FactoryShell active="home" title="Home" desktopOnly={false}>
-    <HomeView firstName={(user.fullName || user.displayName || "").trim().split(/\s+/)[0]} dateLabel={dateLabel} />
+    <HomeView />
   </FactoryShell>;
 }

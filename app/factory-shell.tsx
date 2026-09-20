@@ -21,7 +21,7 @@
  * bar). The class names are identical, so both surfaces are drawn by the same
  * rules and neither needs an override of the other.
  * ==========================================================================*/
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useState } from "react";
 import {readBatchHistory,preparedDaysFromHistory} from "./batch-history-read";
 import SuiteBrand from "./suite-brand";
 import { NavIcon, type NavKey as NavIconKey } from "./nav-icons";
@@ -56,68 +56,17 @@ export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | 
   to anything. A member who opened Market Watch could reach the rest of the
   product only with the browser's back button.
 */
-export const NAV: { key: NavKey; label: string; href: string; icon: NavIconKey; group: "home" | "factory" | "factory-child" | "command" | "settings"; requiresFullSuite?: boolean }[] = [
-  { key: "home", label: "Home", href: "/home", icon: "home", group: "home" },
-  { key: "factory", label: "Listing Factory", href: "/listing-factory", icon: "listingFactory", group: "factory" },
-  { key: "batches", label: "Batch History", href: "/batches", icon: "batches", group: "factory-child" },
-  { key: "keywords", label: "Keyword Banks", href: "/keywords", icon: "keywords", group: "factory-child" },
-  { key: "market-watch", label: "Market Watch", href: "/market-watch", icon: "marketWatch", group: "command", requiresFullSuite: true },
-  { key: "design-scanner", label: "Design Scanner", href: "/design-scanner", icon: "designScanner", group: "command", requiresFullSuite: true },
-  { key: "shop-map", label: "Shop Map", href: "/shop-map", icon: "shopMap", group: "command", requiresFullSuite: true },
-  { key: "trademark", label: "Trademark Checker", href: "/trademark", icon: "trademark", group: "command", requiresFullSuite: true },
-  { key: "more", label: "Tools & settings", href: "/more", icon: "more", group: "settings" },
+export const NAV: { key: NavKey; label: string; href: string; icon: NavIconKey; group: "work" | "library" }[] = [
+  { key: "home", label: "Home", href: "/home", icon: "home", group: "work" },
+  { key: "factory", label: "Listing Factory", href: "/listing-factory", icon: "listingFactory", group: "work" },
+  { key: "market-watch", label: "Market Watch", href: "/market-watch", icon: "marketWatch", group: "work" },
+  { key: "design-scanner", label: "Design Scanner", href: "/design-scanner", icon: "designScanner", group: "work" },
+  { key: "shop-map", label: "Shop Map", href: "/shop-map", icon: "shopMap", group: "work" },
+  { key: "trademark", label: "Trademark Checker", href: "/trademark", icon: "trademark", group: "work" },
+  { key: "batches", label: "Batch History", href: "/batches", icon: "batches", group: "library" },
+  { key: "keywords", label: "Keyword Banks", href: "/keywords", icon: "keywords", group: "library" },
+  { key: "more", label: "Tools & settings", href: "/more", icon: "more", group: "library" },
 ];
-
-const LockIcon = () => <svg className="suite-nav-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>;
-
-export function SuiteSidebarNav({ active, canFullSuite, workflow = false, onNavigate }:
-  { active: NavKey; canFullSuite: boolean | null; workflow?: boolean; onNavigate?: (event: MouseEvent<HTMLAnchorElement>, href: string) => void }) {
-  const factoryCurrent = active === "factory" || active === "batches" || active === "keywords";
-  const [factoryOpen, setFactoryOpen] = useState(factoryCurrent);
-  const [accessPrompt, setAccessPrompt] = useState(false);
-  const link = (item: typeof NAV[number], child = false) => {
-    const locked = Boolean(item.requiresFullSuite && canFullSuite === false);
-    const keywordWindow = workflow && item.key === "keywords";
-    return <a key={item.key} href={locked ? "/usage" : item.href}
-      className={`${item.key === active ? "active" : ""}${child ? " suite-nav-child" : ""}${locked ? " locked" : ""}`.trim() || undefined}
-      aria-current={item.key === active ? "page" : undefined}
-      aria-haspopup={locked ? "dialog" : undefined}
-      target={keywordWindow ? "_blank" : undefined} rel={keywordWindow ? "noopener noreferrer" : undefined}
-      onClick={event => {
-        if (locked) { event.preventDefault(); setAccessPrompt(true); return; }
-        onNavigate?.(event, item.href);
-      }}>
-      <NavIcon name={item.icon}/><span>{item.label}</span>{item.key === "market-watch" && <small>LIVE</small>}{locked && <LockIcon/>}
-    </a>;
-  };
-
-  return <>
-    <nav className="top-nav suite-sidebar-nav" aria-label={workflow ? "Listing Factory navigation" : "Main navigation"}>
-      {link(NAV.find(item => item.group === "home")!)}
-      <section className={`suite-nav-section${factoryCurrent ? " current" : ""}`}>
-        <div className="suite-nav-parent">
-          <button type="button" className="suite-nav-toggle" aria-label={`${factoryOpen ? "Collapse" : "Expand"} Listing Factory links`} aria-expanded={factoryOpen} onClick={() => setFactoryOpen(open => !open)}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
-          </button>
-          {link(NAV.find(item => item.group === "factory")!)}
-        </div>
-        {factoryOpen && <div className="suite-nav-children">{NAV.filter(item => item.group === "factory-child").map(item => link(item, true))}</div>}
-      </section>
-      <span className="suite-nav-label">Command Center</span>
-      {NAV.filter(item => item.group === "command").map(item => link(item))}
-      {NAV.filter(item => item.group === "settings").map(item => link(item))}
-    </nav>
-    {accessPrompt && <div className="suite-access-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setAccessPrompt(false); }}>
-      <section className="suite-access-dialog" role="dialog" aria-modal="true" aria-labelledby="suite-access-title">
-        <button type="button" className="suite-access-close" aria-label="Close" onClick={() => setAccessPrompt(false)}>×</button>
-        <span className="suite-access-lock"><LockIcon/></span>
-        <h2 id="suite-access-title">Unlock Command Center</h2>
-        <p>Market Watch, Design Scanner, Shop Map, and Trademark Checker are included with the $47 Full Suite membership.</p>
-        <div className="suite-access-actions"><button type="button" onClick={() => setAccessPrompt(false)}>Maybe later</button><a href="/usage">View Full Suite</a></div>
-      </section>
-    </div>}
-  </>;
-}
 
 /*
   THE DESKTOP GATE BELONGS TO THE LISTING FACTORY, NOT TO THE SHELL.
@@ -153,7 +102,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
   const [goalDays, setGoalDays] = useState<PublishedDay[]>([]);
   const [goalDaysLoaded, setGoalDaysLoaded] = useState(false);
   const [goalDaysError,setGoalDaysError]=useState(false);
-  const [account, setAccount] = useState<{ name: string; initials: string; signedIn: boolean; canFullSuite: boolean | null } | null>(null);
+  const [account, setAccount] = useState<{ name: string; initials: string; signedIn: boolean } | null>(null);
   /* D835 · Every Etsy shop this seller has connected. The active one is the shop
      the product bank is scoped to; switching is a menu choice, not an OAuth
      round trip, because the token for each shop is already stored. */
@@ -193,8 +142,8 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
     void (fetch("/api/etsy").then(response => response.json()) as Promise<{ shops?: { shopId: number; shopName: string; active: boolean }[] }>).then((result: { shops?: { shopId: number; shopName: string; active: boolean }[] }) => {
       setShops(result.shops || []);
     }).catch(() => undefined);
-    void (fetch("/api/account").then(response => response.json()) as Promise<{ signedIn?: boolean; name?: string; initials?: string; canFullSuite?: boolean }>).then((result: { signedIn?: boolean; name?: string; initials?: string; canFullSuite?: boolean }) => {
-      setAccount({ signedIn: Boolean(result.signedIn), name: result.name || "", initials: result.initials || "", canFullSuite: typeof result.canFullSuite === "boolean" ? result.canFullSuite : null });
+    void (fetch("/api/account").then(response => response.json()) as Promise<{ signedIn?: boolean; name?: string; initials?: string }>).then((result: { signedIn?: boolean; name?: string; initials?: string }) => {
+      setAccount({ signedIn: Boolean(result.signedIn), name: result.name || "", initials: result.initials || "" });
     }).catch(() => undefined);
   }, []);
 
@@ -228,7 +177,14 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
       */}
       <div className="brand-lockup"><SuiteBrand /></div>
       <div className="top-actions">
-        <SuiteSidebarNav active={active} canFullSuite={account?.canFullSuite ?? null}/>
+        <nav className="top-nav" aria-label="Main navigation">
+          <span className="suite-nav-label">Your tools</span>
+          {NAV.filter(item => item.group === "work").map(item => <a key={item.key} className={item.key === active ? "active" : undefined}
+            href={item.href} aria-current={item.key === active ? "page" : undefined}><NavIcon name={item.icon}/><span>{item.label}</span>{item.key === "market-watch" && <small>LIVE</small>}</a>)}
+          <span className="suite-nav-label suite-nav-label-library">Library &amp; settings</span>
+          {NAV.filter(item => item.group === "library").map(item => <a key={item.key} className={item.key === active ? "active" : undefined}
+            href={item.href} aria-current={item.key === active ? "page" : undefined}><NavIcon name={item.icon}/><span>{item.label}</span></a>)}
+        </nav>
         {/* D818 · on the workflow this is a button because it has to clear live
             batch state first. There is no batch to clear here, so the same
             control is the link it actually is. */}

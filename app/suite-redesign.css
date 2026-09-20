@@ -33,10 +33,6 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .suite-brand-mark{position:relative;display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;color:var(--suite-pink)}
 .suite-brand-mark svg{width:36px;height:36px;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .suite-brand-mark i{position:absolute;right:0;top:0;width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px #111011}
-.suite-brand-copy strong,.suite-brand-copy small{display:block}
-.suite-brand-copy strong{font-size:20px;line-height:1;letter-spacing:-.045em;text-transform:lowercase}
-.suite-brand-copy strong em{color:var(--suite-pink);font-style:normal;font-weight:400}
-.suite-brand-copy small{margin-top:6px;color:#8f848b;font-size:8px;font-weight:900;letter-spacing:.16em}
 .app-shell>.topbar>.brand-lockup{margin:0 7px 24px;padding:0}
 
 .app-shell>.topbar>.top-actions{display:block;padding:0!important;overflow-x:hidden;overflow-y:auto}
@@ -44,6 +40,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 /* #746b70 on the rail measured 3.69:1. These are the only labels that say
    what the two groups of links are. */
 .app-shell>.topbar .suite-nav-label{display:block;margin:7px 10px 8px;color:#a29499;font-size:9px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
+.app-shell>.topbar .suite-nav-label-library{margin-top:20px}
 .app-shell>.topbar .top-nav a{position:relative;display:flex;align-items:center;gap:11px;min-height:41px;padding:0 11px;border-radius:7px;color:#bcb2b8;font-size:12px;font-weight:750}
 .app-shell>.topbar .top-nav a svg{width:17px;height:17px;flex:0 0 17px}
 .app-shell>.topbar .top-nav a>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -51,38 +48,6 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell>.topbar .top-nav a.active{background:#fff;color:#111;box-shadow:0 8px 26px rgba(0,0,0,.24)}
 .app-shell>.topbar .top-nav a.active::before{content:"";position:absolute;left:-5px;top:10px;bottom:10px;width:3px;border-radius:6px;background:var(--suite-pink)}
 .app-shell>.topbar .top-nav a.active>small{color:var(--suite-pink-deep)}
-.app-shell>.topbar .suite-sidebar-nav{gap:3px}
-.app-shell>.topbar .suite-nav-section{display:grid;gap:3px}
-.app-shell>.topbar .suite-nav-parent{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center}
-.app-shell>.topbar .suite-nav-parent>a{min-width:0;padding-left:4px}
-.app-shell>.topbar .suite-nav-toggle{display:grid;place-items:center;width:28px;height:36px;padding:0;border:0;border-radius:7px;background:transparent;color:#81767c;cursor:pointer}
-.app-shell>.topbar .suite-nav-toggle:hover,.app-shell>.topbar .suite-nav-toggle:focus-visible{background:#242024;color:#fff}
-.app-shell>.topbar .suite-nav-toggle:focus-visible{outline:2px solid var(--suite-pink);outline-offset:1px}
-.app-shell>.topbar .suite-nav-toggle svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .16s}
-.app-shell>.topbar .suite-nav-toggle[aria-expanded="false"] svg{transform:rotate(-90deg)}
-.app-shell>.topbar .suite-nav-section.current>.suite-nav-parent>a:not(.active){color:#fff}
-.app-shell>.topbar .suite-nav-children{display:grid;gap:2px;margin:0 0 5px;padding-left:28px}
-.app-shell>.topbar .top-nav a.suite-nav-child{min-height:34px;padding:0 10px;color:#958a90;font-size:11px;font-weight:700}
-.app-shell>.topbar .top-nav a.suite-nav-child svg{width:14px;height:14px;flex-basis:14px}
-.app-shell>.topbar .top-nav a.suite-nav-child.active{color:#111}
-.app-shell>.topbar .suite-nav-label{margin-top:17px}
-.app-shell>.topbar .top-nav a.locked{color:#756c71;cursor:pointer}
-.app-shell>.topbar .top-nav a.locked:hover{background:#1d1a1c;color:#bcb2b8}
-.app-shell>.topbar .top-nav a .suite-nav-lock{width:13px;height:13px;flex:0 0 13px;margin-left:auto;fill:none;stroke:currentColor;stroke-width:1.8;opacity:.9}
-.app-shell>.topbar .top-nav a>small+.suite-nav-lock{margin-left:0}
-.suite-access-backdrop{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(10,7,9,.72);backdrop-filter:blur(5px)}
-.suite-access-dialog{position:relative;width:min(440px,100%);padding:34px;border:1px solid #111;border-radius:10px;background:#fff;color:#151214;box-shadow:8px 8px 0 var(--suite-pink)}
-.suite-access-dialog h2{max-width:360px;margin:18px 0 10px;font:900 28px/1.05 Arial,Helvetica,sans-serif;letter-spacing:-.045em}
-.suite-access-dialog p{margin:0;color:#756a72;font-size:14px;line-height:1.55}
-.suite-access-close{position:absolute;right:14px;top:12px;display:grid;place-items:center;width:34px;height:34px;padding:0;border:0;border-radius:7px;background:transparent;color:#71666d;cursor:pointer;font:400 27px/1 Arial,sans-serif}
-.suite-access-close:hover,.suite-access-close:focus-visible{background:#f6edf2;color:#111}
-.suite-access-lock{display:grid;place-items:center;width:42px;height:42px;border-radius:8px;background:#111;color:var(--suite-pink);box-shadow:3px 3px 0 var(--suite-pink)}
-.suite-access-lock .suite-nav-lock{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}
-.suite-access-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:25px}
-.suite-access-actions button,.suite-access-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid #111;border-radius:7px;cursor:pointer;font:900 11px/1 Arial,Helvetica,sans-serif;text-decoration:none}
-.suite-access-actions button{background:#fff;color:#111}
-.suite-access-actions a{background:#111;color:#fff;box-shadow:3px 3px 0 var(--suite-pink)}
-.suite-access-actions :is(button,a):focus-visible,.suite-access-close:focus-visible{outline:2px solid var(--suite-pink);outline-offset:2px}
 .app-shell>.topbar .workflow-restart-button{min-height:39px;margin:16px 6px 4px;border:1px solid #fff;border-radius:7px;background:#fff;color:#111;font-size:11px;font-weight:900;box-shadow:3px 3px 0 var(--suite-pink)}
 .app-shell>.topbar .workflow-restart-button .new-batch-icon{color:var(--suite-pink-deep)}
 .app-shell>.topbar .approved-sidebar-footer{gap:7px;padding:12px 6px 0}
@@ -126,13 +91,20 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell .p-notice{border-radius:8px}
 
 /* Home */
-.hub{width:100%;max-width:none;margin:0;padding:8px 0 50px;background:transparent}
-.hub-head{position:relative;margin:0 0 28px;padding:0 2px 30px;border-bottom:1px solid rgba(218,203,212,.8)}
-.hub-eyebrow{display:flex;align-items:center;gap:9px;margin:0 0 13px;color:#766a71;font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
-.hub-eyebrow>span{width:7px;height:7px;border-radius:50%;background:var(--suite-pink);box-shadow:0 0 0 4px rgba(255,44,166,.13)}
-.hub-head h1{max-width:790px;margin:0;color:#111;font-size:clamp(40px,5vw,64px);font-weight:900;line-height:.98;letter-spacing:-.06em}
+.app-shell .factory-work>.hub{
+  width:100%;max-width:none;min-height:0;margin:0;padding:8px 0 50px;
+  background-color:#fff9fc!important;
+  background-image:linear-gradient(var(--suite-grid) 1px,transparent 1px),linear-gradient(90deg,var(--suite-grid) 1px,transparent 1px)!important;
+  background-size:42px 42px!important;
+  color:var(--suite-ink)!important;
+  overflow:visible!important
+}
+.hub-head{position:relative;margin:0 0 20px;padding:0 2px 16px;border-bottom:1px solid rgba(218,203,212,.8)}
+/* Was clamp(40px,5vw,64px) over two lines: a headline that filled the first
+   screen on its own while the member's numbers waited below it. */
+.hub-head h1{max-width:790px;margin:0;color:#111;font-size:clamp(26px,2.8vw,34px);font-weight:900;line-height:1.1;letter-spacing:-.04em}
 .hub-head h1 em{color:var(--suite-pink-deep);font-style:normal}
-.hub-intro{max-width:680px;margin:18px 0 0;color:#6f636a;font-size:14px;line-height:1.6}
+.hub-intro{max-width:680px;margin:7px 0 0;color:#6f636a;font-size:13px;line-height:1.5}
 .app-shell .hub .status-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin:0 0 30px;border:1px solid #111;border-radius:10px;background:#fff!important;box-shadow:5px 5px 0 #111;overflow:hidden}
 .app-shell .hub .status-line{position:relative;display:flex;align-items:flex-start;min-height:0;padding:16px 18px;border-right:1px solid var(--suite-line);background:#fff!important;color:#171316!important;text-decoration:none;font-size:12px;font-weight:800;line-height:1.45}
 .app-shell .hub .status-body{display:grid;gap:3px;min-width:0}
@@ -146,21 +118,35 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .status-line::before{content:"";width:8px;height:8px;flex:0 0 8px;margin-right:10px;border-radius:50%;background:var(--suite-pink)}
 .status-line.act::before{box-shadow:0 0 0 5px rgba(255,44,166,.13)}
 .app-shell .hub .status-line.quiet{color:#776b72!important;font-weight:600}
-.hub-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin:0 0 17px}
+.hub-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:30px;margin:0 0 12px}
 .hub-section-head .mini-label{margin:0 0 7px}
 .hub-section-head h2{max-width:620px;margin:0;font-size:24px;letter-spacing:-.04em}
 .hub-section-head>a{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border:1px solid #111;border-radius:7px;background:#111;color:#fff;box-shadow:3px 3px 0 var(--suite-pink);text-decoration:none;font-size:11px;font-weight:900;white-space:nowrap}
 .hub-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-.hub-tool{position:relative;display:grid;grid-template-columns:48px 1fr;grid-template-rows:auto auto;gap:5px 14px;min-height:188px;padding:24px;border:1px solid #d9ccd4;border-radius:10px;background:#fff;color:#111;text-decoration:none;box-shadow:var(--suite-shadow);transition:transform .16s,box-shadow .16s,border-color .16s}
-.hub-tool:first-child,.hub-tool:nth-child(2){grid-column:span 6}
-.hub-tool:nth-child(n+3){grid-column:span 4}
+/* Was min-height:188px with the first two spanning half the row each: two
+   enormous cards holding one line of text, and the other three below the
+   fold. Every tool is the same size now, because every tool is a door. */
+.hub-tool{position:relative;display:grid;grid-template-columns:44px 1fr;grid-template-rows:auto auto;gap:4px 13px;min-height:126px;padding:18px 18px 34px;border:1px solid #d9ccd4;border-radius:10px;background:#fff;color:#111;text-decoration:none;box-shadow:var(--suite-shadow);transition:transform .16s,box-shadow .16s,border-color .16s}
+.hub-tool{grid-column:span 4}
+@media (max-width:1180px){.hub-tool{grid-column:span 6}}
 .hub-tool:hover{transform:translateY(-2px);border-color:#111;box-shadow:5px 5px 0 var(--suite-pink)}
-.hub-icon{grid-row:1/3;display:grid;place-items:center;width:46px;height:46px;border-radius:8px;background:#111;color:var(--suite-pink);box-shadow:3px 3px 0 var(--suite-pink)}
-.hub-tool>b{align-self:end;font-size:18px;letter-spacing:-.03em}
-.hub-what{align-self:start;max-width:42ch;color:#796d74;font-size:11px;line-height:1.5}
-.hub-tool-number{position:absolute;right:20px;top:20px;color:#c2b4bc;font-size:9px;font-weight:900;letter-spacing:.08em}
-.hub-desktop{position:absolute;left:24px;bottom:20px;padding:4px 7px;border-radius:16px;background:#f7edf3;color:#79636f;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
-.hub-open{position:absolute;right:21px;bottom:18px;font-size:19px;font-weight:700}
+.hub-icon{grid-row:1/3;align-self:start;display:grid;place-items:center;width:42px;height:42px;border-radius:8px;background:#111;color:var(--suite-pink);box-shadow:3px 3px 0 var(--suite-pink)}
+.hub-tool>b{align-self:end;font-size:16px;letter-spacing:-.03em}
+.hub-what{align-self:start;max-width:42ch;color:#796d74;font-size:11px;line-height:1.45}
+.hub-tool-number{position:absolute;right:16px;top:16px;color:#c2b4bc;font-size:9px;font-weight:900;letter-spacing:.08em}
+/*
+  ONLY WHERE IT IS NEWS.
+
+  "Needs a computer" on a computer is a warning about the situation the member
+  is already in. The Listing Factory's gate is the same 820px this file uses
+  everywhere else, so the chip appears exactly where the tile is about to
+  refuse: on a phone.
+*/
+.hub-desktop{display:none}
+@media(max-width:820px){
+  .hub-desktop{display:inline-block;position:absolute;left:18px;bottom:14px;padding:4px 7px;border-radius:16px;background:#f7edf3;color:#79636f;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+}
+.hub-open{position:absolute;right:17px;bottom:12px;font-size:19px;font-weight:700}
 .hub-foot{margin:32px 0 0!important;padding:20px 0 0!important;min-height:0!important;border-top:1px solid var(--suite-line)!important;background:transparent!important;color:#958991!important}
 .hub-foot p{max-width:680px;margin:0;color:#958991;font-size:9px;line-height:1.5}
 
@@ -544,10 +530,6 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 }
 
 @media(max-width:560px){
-  .suite-access-dialog{padding:28px 22px}
-  .suite-access-dialog h2{font-size:24px}
-  .suite-access-actions{display:grid}
-  .suite-access-actions button,.suite-access-actions a{width:100%}
   .hub-head h1,.mw>h1,.scanner>h1,.costs>h1,.shop-map-head h1,.tm-page .drop-head h1{font-size:35px}
   .hub-tool{grid-template-columns:42px 1fr;padding:20px}
   .hub-icon{width:40px;height:40px}
@@ -566,7 +548,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 
 .app-shell .status-strip{overflow:hidden;background:#fff}
 .app-shell .status-strip .status-line{
-  min-height:88px;border:0;border-right:1px solid var(--suite-line);border-radius:0;
+  min-height:64px;border:0;border-right:1px solid var(--suite-line);border-radius:0;
   background:#fff;color:#171316
 }
 .app-shell .status-strip .status-line:hover{background:#fff8fc}
