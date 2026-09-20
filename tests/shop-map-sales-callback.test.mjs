@@ -101,9 +101,9 @@ test("the duplicate guard does not fire when the shop is the intended one", asyn
   assert.doesNotMatch(decodeURIComponent(result.url), /Sign out of Etsy/);
 });
 
-test("it returns to Connections so the import can start", async () => {
+test("it returns to that shop's capability state", async () => {
   const { result } = await runSales();
-  assert.equal(result.url, "https://goldie.test/connections?etsy_sales=connected&shop=16538900");
+  assert.equal(result.url, "https://goldie.test/api/shop-map/capability?shop=16538900");
 });
 
 test("the scope Etsy granted is stored against that connection", async () => {
@@ -117,13 +117,8 @@ test("the scope Etsy granted is stored against that connection", async () => {
 
 test("an already-active connection is handled the same way, without reactivating anything", async () => {
   const { result, statements } = await runSales({ existing: { shop_name: "shesawolfclothing", is_active: 1 } });
-  assert.equal(result.url, "https://goldie.test/connections?etsy_sales=connected&shop=16538900");
+  assert.equal(result.url, "https://goldie.test/api/shop-map/capability?shop=16538900");
   assert.doesNotMatch(statements.map(row => row.sql).join(" | "), /SET is_active/);
-});
-
-test("a grant without transactions permission returns to a visible refusal", async () => {
-  const { result } = await runSales({ grantedScope: "listings_r listings_w shops_r shops_w" });
-  assert.equal(result.url, "https://goldie.test/connections?etsy_sales=missing&shop=16538900");
 });
 
 test("a genuinely different Etsy account is refused before anything is written", async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * WHAT IS CONNECTED, AND WHAT HAPPENS IF YOU DISCONNECT IT.
@@ -68,9 +68,6 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
     it. The same false claim as before, reached through the other door.
   */
   const [failed, setFailed] = useState(false);
-  const [salesImport, setSalesImport] = useState<"" | "running" | "done" | "failed">("");
-  const [salesImportError, setSalesImportError] = useState("");
-  const salesImportStarted = useRef(false);
 
   const load = useCallback(async () => {
     try {
@@ -94,68 +91,6 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
 
   useEffect(() => { void load(); }, [load]);
 
-  /*
-    ETSY APPROVAL IS THE START OF THE JOB, NOT THE FINISH LINE.
-
-    Sales permission used to return to a raw capability response and leave the
-    member with no import at all. The callback now returns here with a narrow
-    success marker. This page reads the shop's real receipts, listing sales,
-    fees, reviews and Printify costs in bounded passes, then reloads the
-    connection facts. Every endpoint is read-only against Etsy and Printify.
-  */
-  useEffect(() => {
-    if (typeof window === "undefined" || salesImportStarted.current) return;
-    const parameters = new URLSearchParams(window.location.search);
-    const result = parameters.get("etsy_sales");
-    if (result === "missing") {
-      setSalesImport("failed");
-      setSalesImportError("Etsy returned without the sales permission. Try the sales connection again.");
-      return;
-    }
-    if (result !== "connected") return;
-    salesImportStarted.current = true;
-    setSalesImport("running");
-    window.history.replaceState({}, "", "/connections");
-
-    let alive = true;
-    const post = async (url: string) => {
-      const response = await fetch(url, { method: "POST" });
-      const body = await response.json().catch(() => ({})) as {
-        error?: string; ledger?: { windowsOutstanding?: number }; salesStored?: number;
-      };
-      if (!response.ok) throw new Error(body.error || "The import did not finish.");
-      return body;
-    };
-
-    void (async () => {
-      try {
-        /* Finance needs a full receipt pass once; ledger windows then finish
-           in bounded follow-up passes without repeating that backfill. */
-        let finance = await post(
-          "/api/shop-map/financial/ingest?backfill=1&windows=25&receipts=40&orders=10");
-        for (let pass = 0; pass < 3 && Number(finance.ledger?.windowsOutstanding ?? 0) > 0; pass += 1)
-          finance = await post(
-            "/api/shop-map/financial/ingest?windows=25&receipts=6&orders=10");
-
-        /* A receipt can contain several sold listings. Walk enough bounded
-           pages for the owner's known shop history, while the route safely
-           stops on the first short or empty Etsy page. */
-        for (let salesFrom = 0; salesFrom < 40; salesFrom += 8)
-          await post(`/api/shop-map/listings?sales=1&salesFrom=${salesFrom}&receipts=8`
-            + (salesFrom === 0 ? "&pages=20&listings=1&reviews=1" : ""));
-
-        if (!alive) return;
-        setSalesImport("done");
-        await load();
-      } catch (reason) {
-        if (!alive) return;
-        setSalesImport("failed");
-        setSalesImportError(reason instanceof Error ? reason.message : "The import did not finish.");
-      }
-    })();
-    return () => { alive = false; };
-  }, [load]);
-
   return (
     <FactoryShell active="connections" title="Connections" desktopOnly={false}>
     <main className="conn p-grid">
@@ -168,19 +103,6 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
       {error && <p className="p-notice p-notice-bad" role="alert">{error}</p>}
 
       <h2>Etsy</h2>
-      {salesImport === "running" && (
-        <p className="p-notice" role="status">
-          Sales access is approved. Importing sold listings, revenue, Etsy fees, and Printify costs now…
-        </p>
-      )}
-      {salesImport === "done" && (
-        <p className="p-notice" role="status">
-          Your sales data is loaded. <a href="/shop-map">Open Shop Map</a>
-        </p>
-      )}
-      {salesImport === "failed" && (
-        <p className="p-notice p-notice-bad" role="alert">{salesImportError}</p>
-      )}
       {!loaded && (
         <div className="p-stack" role="status" aria-label="Checking your connections">
           <div className="p-skeleton p-skeleton-card" />
