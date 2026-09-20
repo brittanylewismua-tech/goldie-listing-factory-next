@@ -320,10 +320,10 @@ test("the two rails cannot disagree about what is on them", () => {
   const shell = read("factory-shell.tsx");
   const app = read("listing-factory-app.tsx");
   assert.match(shell, /export const NAV/, "the rail's links must be exported to be shared");
-  assert.match(app, /import \{ NAV \} from "\.\/factory-shell"/,
-    "the workflow rail must render the shared list, not a copy of it");
-  assert.equal((app.match(/NAV\.filter\(item => item\.group === "(?:work|library)"\)\.map\(item =>/g) ?? []).length, 2,
-    "the workflow rail must render both groups from the shared list");
+  assert.match(app, /import \{ SuiteSidebarNav \} from "\.\/factory-shell"/,
+    "the workflow rail must render the shared component, not a copy of it");
+  assert.equal((app.match(/<SuiteSidebarNav /g) ?? []).length, 1,
+    "the workflow must render exactly one shared rail");
   /* Every top-level feature, in the one list both rails draw from. */
   for (const label of ["Home", "Listing Factory", "Batch History", "Keyword Banks",
     "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker", "Tools & settings"])
