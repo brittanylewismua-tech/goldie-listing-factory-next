@@ -5,7 +5,7 @@
   through to the neutral fallback and read "Etsy seller tools". A route layout
   is a server component, which is where metadata belongs.
 */
-export const metadata = { title: "Plan and limits" };
+export const metadata = { title: "Usage and limits" };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return children;

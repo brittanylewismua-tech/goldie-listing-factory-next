@@ -1379,7 +1379,10 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .recipe-card .recipe-copy .recipe-shop{
   display:block!important;width:auto!important;max-width:100%!important;
   margin-top:3px!important;padding:0!important;border:0!important;border-radius:0!important;
-  background:transparent!important;color:#8a7d86!important;
+  /* #8a7d86 measured 3.69:1 on the tile, on the deployed page. It names which
+     Etsy shop a saved product belongs to, which is the one thing on the tile a
+     member must not misread. */
+  background:transparent!important;color:#635a61!important;
   font-size:10px!important;font-weight:500!important;letter-spacing:0!important;
   overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
 }

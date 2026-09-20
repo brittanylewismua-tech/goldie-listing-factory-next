@@ -87,11 +87,14 @@ test("client-component pages carry a route layout so the tab has a name", () => 
   /* `export const metadata` is silently ignored in a "use client" page, so
      these fell through to the neutral fallback and every tab read the same. */
   for (const [route, title] of [
-    ["usage", "Plan and limits"],
+    ["usage", "Usage and limits"],
     ["connections", "Connections"],
     ["trademark", "Trademark Checker"],
     ["batches", "Batch History"],
     ["keywords", "Keyword Banks"],
+    /* Goals was the last one without a layout: its tab read only the
+       fallback while every other page named itself. */
+    ["goals", "Listing goal"],
   ]) {
     const layout = read(`${route}/layout.tsx`);
     assert.match(layout, new RegExp(`title: "${title}"`),

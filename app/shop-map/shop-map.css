@@ -18,6 +18,18 @@
 .shop-map-head h1{font-size:20px;margin:0 0 2px;line-height:1.25}
 .shop-map-head p{margin:0 0 16px;font-size:13px}
 .shop-map-card{border:1px solid #e6dfe4;border-radius:14px;padding:16px;margin-bottom:14px;background:#fff}
+/*
+  THE DARK CARD HAS TO WIN ON SPECIFICITY, NOT ON FILE ORDER.
+
+  `.shop-map-money{background:#151214}` lives in the shared stylesheet and
+  `.shop-map-card{background:#fff}` lives here, in the route's own — equal
+  specificity, and in the built bundle this file loads last. Production
+  therefore painted the money card white while its text stayed white: 1.00:1,
+  the month's money and every label on it invisible, on the deployed build
+  only. The local preview imports these files in the other order, which is
+  exactly why it looked fixed. Compound selector, so order stops mattering.
+*/
+.shop-map-card.shop-map-money{background:#151214;border-color:#111;color:#fff}
 .shop-map-card h2{font-size:13px;margin:0 0 10px;letter-spacing:.02em;text-transform:uppercase}
 .shop-map-headline-label{margin:0;font-size:13px}
 .shop-map-figure{margin:2px 0 4px;font-size:34px;line-height:1.1;font-weight:750}
