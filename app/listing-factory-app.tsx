@@ -56,7 +56,8 @@ import { GoldieCommandBar } from "./returning-command-center";
 import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
 import SuiteBrand from "./suite-brand";
-import { SuiteSidebarNav } from "./factory-shell";
+import { NavIcon } from "./nav-icons";
+import { NAV } from "./factory-shell";
 import MobileGate from "./mobile-gate";
 import { productFamily, productOptionAxis } from "./product-type-utils";
 import { printifyMockupDetails, printifyMockupForColor, printifyVariantIdsForColor } from "./printify-color-mockup";
@@ -1185,7 +1186,6 @@ export default function ListingFactoryApp() {
   /* D786 · Whose account this is. The rail used to say "Brittany" to everyone. */
   const [accountName, setAccountName] = useState<string | null>(null);
   const [accountInitials, setAccountInitials] = useState<string | null>(null);
-  const [canFullSuite, setCanFullSuite] = useState<boolean | null>(null);
   const [localPreview,setLocalPreview]=useState(false);
   const [preparationMessage, setPreparationMessage] = useState("");
   const [runTotal, setRunTotal] = useState(0);
@@ -2427,7 +2427,7 @@ export default function ListingFactoryApp() {
     window.dispatchEvent(new CustomEvent("goldie-recipe-shop",{detail:{recipeId,title,shopId}}));
   }
   useEffect(()=>{void (fetch("/api/etsy").then(response=>response.json()) as Promise<{shops?:{shopId:number;shopName:string;active:boolean}[]}>).then((result:{shops?:{shopId:number;shopName:string;active:boolean}[]})=>setEtsyShops(result.shops||[])).catch(()=>undefined)},[]);
-  useEffect(()=>{setLocalPreview(["localhost","127.0.0.1"].includes(window.location.hostname));(fetch("/api/account").then(response=>response.json()) as Promise<{signedIn?:boolean;name?:string|null;initials?:string|null;canFullSuite?:boolean}>).then((result:{signedIn?:boolean;name?:string|null;initials?:string|null;canFullSuite?:boolean})=>{setSignedIn(Boolean(result.signedIn));setAccountName(result.name||null);setAccountInitials(result.initials||null);setCanFullSuite(typeof result.canFullSuite==="boolean"?result.canFullSuite:null)}).catch(()=>{setSignedIn(null);setCanFullSuite(null)})},[]);
+  useEffect(()=>{setLocalPreview(["localhost","127.0.0.1"].includes(window.location.hostname));(fetch("/api/account").then(response=>response.json()) as Promise<{signedIn?:boolean;name?:string|null;initials?:string|null}>).then((result:{signedIn?:boolean;name?:string|null;initials?:string|null})=>{setSignedIn(Boolean(result.signedIn));setAccountName(result.name||null);setAccountInitials(result.initials||null)}).catch(()=>setSignedIn(null))},[]);
   useEffect(()=>{if(signedIn!==true||publishing)return;const jobId=window.localStorage.getItem("goldie-active-publish-job");if(jobId)void monitorPublishJob(jobId,true);
   },[signedIn]);
 
@@ -5651,7 +5651,34 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       <header className="topbar">
         <div className="brand-lockup"><SuiteBrand /></div>
         <div className="top-actions">
-          <SuiteSidebarNav active="factory" canFullSuite={canFullSuite} workflow onNavigate={guardNavigation}/>
+          <nav className="top-nav" aria-label="Listing Factory navigation">
+            {/*
+              D1575 · THIS LIST WAS WRITTEN OUT BY HAND AND THE TWO RAILS DREW APART.
+
+              The workflow keeps its own copy of the rail markup because its
+              sidebar is wired to workflow state — the unsaved-work navigation
+              guard in particular. The LINKS are not workflow state, and
+              copying them meant that when Market Watch, Shop Map, Design
+              Scanner and the Trademark Checker were added to the shell's rail,
+              the workflow's rail still showed four items: a member standing in
+              the Listing Factory, where she spends most of her time, could not
+              see most of the product.
+
+              One list, rendered twice. The guard stays here, where it belongs.
+            */}
+            <span className="suite-nav-label">Your tools</span>
+            {NAV.filter(item => item.group === "work").map(item => item.href === "/keywords"
+              /* Unsaved batch work: this one opens beside the workflow rather
+                 than navigating away from it. */
+              ? <a key={item.key} href={item.href} target="_blank" rel="noopener noreferrer"><NavIcon name={item.icon}/><span>{item.label}</span></a>
+              : <a key={item.key} href={item.href}
+                  className={item.href === "/listing-factory" ? "active" : undefined}
+                  onClick={event=>guardNavigation(event,item.href)}><NavIcon name={item.icon}/><span>{item.label}</span>{item.key === "market-watch" && <small>LIVE</small>}</a>)}
+            <span className="suite-nav-label suite-nav-label-library">Library &amp; settings</span>
+            {NAV.filter(item => item.group === "library").map(item => item.href === "/keywords"
+              ? <a key={item.key} href={item.href} target="_blank" rel="noopener noreferrer"><NavIcon name={item.icon}/><span>{item.label}</span></a>
+              : <a key={item.key} href={item.href} onClick={event=>guardNavigation(event,item.href)}><NavIcon name={item.icon}/><span>{item.label}</span></a>)}
+          </nav>
           {/* THE HOT LIST BUTTON IS GONE FROM HERE ON PURPOSE.
 
               This page carries its own copy of the rail rather than using

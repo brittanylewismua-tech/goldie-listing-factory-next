@@ -11,15 +11,18 @@ const read = name => readFileSync(join(APP, name), "utf8");
 /* Comments record what a string used to be; only what renders is the test. */
 const strip = text => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
-test("every desktop shell renders the approved Goldie Suite home lockup once", () => {
+test("every desktop shell renders the one home link, and it names no product", () => {
   const shell = read("factory-shell.tsx");
   const workflow = read("listing-factory-app.tsx");
   const brand = read("suite-brand.tsx");
   assert.match(shell, /<SuiteBrand\s*\/>/);
   assert.match(workflow, /<SuiteBrand\s*\/>/);
+  /* Goldie is not this product's name. The lockup is the way back to Home and
+     carries no wordmark at all — a placeholder is how a stand-in becomes
+     permanent, and "seller command center" was printed here, in the rail's
+     first group heading, and on the home page's eyebrow all at once. */
   assert.match(brand, /aria-label="Home"/);
-  assert.match(strip(brand), /goldie <em>suite<\/em>/i);
-  assert.match(strip(brand), /SELLER COMMAND CENTER/);
+  assert.doesNotMatch(strip(brand), /goldie|suite<|command center/i);
   assert.equal((shell.match(/<SuiteBrand\s*\/>/g) ?? []).length, 1);
   assert.equal((workflow.match(/<SuiteBrand\s*\/>/g) ?? []).length, 1);
 });
@@ -29,10 +32,8 @@ test("one nav exposes every member feature", () => {
   for (const destination of ["Home", "Listing Factory", "Market Watch", "Design Scanner",
     "Shop Map", "Trademark Checker", "Batch History", "Keyword Banks", "Tools & settings"])
     assert.ok(shell.includes(`label: "${destination}"`), `${destination} is missing from the suite navigation`);
-  assert.match(shell, /suite-nav-label">Command Center</);
-  assert.match(shell, /group: "factory-child"/);
-  assert.match(shell, /requiresFullSuite: true/);
-  assert.match(shell, /Unlock Command Center/);
+  assert.match(shell, /suite-nav-label">Your tools</);
+  assert.match(shell, /Library &amp; settings/);
   /* And the breadcrumb no longer invents a parent: it read "Suite › Home". */
   assert.doesNotMatch(shell, /<span>Suite<\/span>/);
 });
@@ -56,14 +57,4 @@ test("Listing Factory remains a feature, not the suite identity", () => {
   const shell = read("factory-shell.tsx");
   assert.doesNotMatch(brand, /Listing Factory/i);
   assert.match(shell, /label: "Listing Factory"/);
-});
-
-test("Command Center locks use the real suite entitlement", () => {
-  const shell = read("factory-shell.tsx");
-  const account = read("api/account/route.ts");
-  assert.match(account, /entitlementFor\(user\)/);
-  assert.match(account, /allows\(entitlement, "marketWatch"/);
-  assert.doesNotMatch(account, /billing|subscription/i);
-  assert.match(shell, /canFullSuite === false/);
-  assert.match(shell, /included with the \$47 Full Suite membership/);
 });

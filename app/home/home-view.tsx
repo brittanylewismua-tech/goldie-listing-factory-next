@@ -59,8 +59,7 @@ const TOOLS = [
 ];
 
 
-export default function HomeView({ firstName, dateLabel = "Today" }: { firstName?: string; dateLabel?: string }) {
-  const greeting = firstName?.trim() || "there";
+export default function HomeView() {
   return <>
   <main className="hub p-grid">
     {/*
@@ -78,9 +77,8 @@ export default function HomeView({ firstName, dateLabel = "Today" }: { firstName
       this page to reach.
     */}
     <header className="hub-head">
-      <p className="hub-eyebrow"><span aria-hidden="true" />{dateLabel}</p>
-      <h1>Good morning, {greeting}.<br/><em>Your shop is moving.</em></h1>
-      <p className="hub-intro">The strongest signals across your shop, tracked markets, and watched competitors are ready.</p>
+      <h1>Home</h1>
+      <p className="hub-intro">Where your shop, your watched markets and your listing work stand today.</p>
     </header>
 
     <HomeStatus />

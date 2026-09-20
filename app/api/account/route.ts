@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
-import { entitlementFor } from "@/app/entitlements";
-import { allows } from "@/app/suite-plans";
 
 export async function GET() {
   const user = await getChatGPTUser();
@@ -20,16 +18,10 @@ export async function GET() {
   const initials = displayName
     ? displayName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase()
     : null;
-  const entitlement = user ? await entitlementFor(user) : null;
-  const canFullSuite = entitlement
-    ? allows(entitlement, "marketWatch", Math.floor(Date.now() / 1000)).ok
-    : false;
   return NextResponse.json({
     signedIn: Boolean(user),
     owner: Boolean(user && isOwner(user)),
     name: displayName,
     initials,
-    canFullSuite,
-    suitePlan: entitlement?.plan ?? null,
   });
 }
