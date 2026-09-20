@@ -56,8 +56,8 @@ import { GoldieCommandBar } from "./returning-command-center";
 import FinalListingReview from "./final-listing-review";
 import ContextHelp from "./context-help";
 import SuiteBrand from "./suite-brand";
-import { NavIcon } from "./nav-icons";
 import { NAV } from "./factory-shell";
+import SuiteSidebarNav from "./suite-sidebar-nav";
 import MobileGate from "./mobile-gate";
 import { productFamily, productOptionAxis } from "./product-type-utils";
 import { printifyMockupDetails, printifyMockupForColor, printifyVariantIdsForColor } from "./printify-color-mockup";
@@ -1450,6 +1450,7 @@ export default function ListingFactoryApp() {
   const [pixelWarningOpen,setPixelWarningOpen]=useState(false);
   const [etsyConnected,setEtsyConnected]=useState(false);
   const [etsyShop,setEtsyShop]=useState("");
+  const [etsySalesVisible,setEtsySalesVisible]=useState<boolean|null>(null);
   const [etsyConnecting,setEtsyConnecting]=useState(false);
   const [etsyError,setEtsyError]=useState("");
   const [etsyCategories,setEtsyCategories]=useState<EtsyCategoryOption[]>([]);
@@ -2584,6 +2585,15 @@ export default function ListingFactoryApp() {
     const response=await fetchWithDeadline("/api/etsy",{},25000),result=await responseJson<{connected?:boolean;shopName?:string;error?:string}>(response);
     if(!response.ok)throw Error(connectionCheckMessage(result.error,"Etsy connection could not be checked. Try checking again."));
     setEtsyConnected(Boolean(result.connected));setEtsyShop(result.shopName||"");setEtsyError(result.error||"");
+    if(result.connected){
+      const sales=await fetchWithDeadline("/api/shop-map/connections",{},25000);
+      const payload=await responseJson<{connections?:Array<{shopName:string;activeForListingFactory:boolean;canReadSales:boolean}>;error?:string}>(sales);
+      if(sales.ok){
+        const active=(payload.connections||[]).find(shop=>shop.activeForListingFactory)
+          ||(payload.connections||[]).find(shop=>shop.shopName===result.shopName);
+        setEtsySalesVisible(active?Boolean(active.canReadSales):null);
+      }else setEtsySalesVisible(null);
+    }else setEtsySalesVisible(null);
     setEtsyCheckFailed(false);
   }catch(error){
     /* Same rule as Printify above: an unanswered question is not a no. */
@@ -4715,6 +4725,24 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
 
   async function connectEtsy(adding=false){setEtsyConnecting(true);setEtsyError("");try{const response=await fetchWithDeadline("/api/etsy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({intent:adding?"add":"connect"})},25000),result=await response.json() as {authorizeUrl?:string;error?:string};if(!response.ok||!result.authorizeUrl)throw new Error(result.error||"Etsy connection could not start.");window.location.href=result.authorizeUrl}catch(error){setEtsyError(error instanceof Error?error.message:"Etsy connection could not start.");setEtsyConnecting(false)}}
 
+  async function connectEtsySales(){
+    setEtsyConnecting(true);setEtsyError("");
+    try{
+      const response=await fetchWithDeadline("/api/shop-map/connections",{},25000);
+      const payload=await responseJson<{connections?:Array<{shopName:string;activeForListingFactory:boolean;canReadSales:boolean;authorizeSalesUrl:string|null}>;error?:string}>(response);
+      if(!response.ok)throw new Error(payload.error||"Your Etsy sales connection could not be checked.");
+      const shop=(payload.connections||[]).find(item=>item.activeForListingFactory)
+        ||(payload.connections||[]).find(item=>item.shopName===etsyShop);
+      if(!shop)throw new Error("Goldie could not find the Etsy shop connected here.");
+      if(shop.canReadSales){setEtsySalesVisible(true);setEtsyConnecting(false);return}
+      if(!shop.authorizeSalesUrl)throw new Error("Goldie could not start Etsy sales access. Try again.");
+      window.location.href=shop.authorizeSalesUrl;
+    }catch(error){
+      setEtsyError(error instanceof Error?error.message:"Etsy sales access could not start.");
+      setEtsyConnecting(false);
+    }
+  }
+
   async function loadTemplateUrl(productUrl = template, pricingOverride?:Pricing, savedShippingProfileId=0,rememberedColorIds:number[]=[],rememberedSizeIds:number[]=[]):Promise<TemplateDetails|null> {
     const requestVersion=++templateLoadVersion.current;
     setLoadingTemplateVersion(requestVersion); setTemplateError(""); setTemplateDetails(null);
@@ -5651,34 +5679,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       <header className="topbar">
         <div className="brand-lockup"><SuiteBrand /></div>
         <div className="top-actions">
-          <nav className="top-nav" aria-label="Listing Factory navigation">
-            {/*
-              D1575 · THIS LIST WAS WRITTEN OUT BY HAND AND THE TWO RAILS DREW APART.
-
-              The workflow keeps its own copy of the rail markup because its
-              sidebar is wired to workflow state — the unsaved-work navigation
-              guard in particular. The LINKS are not workflow state, and
-              copying them meant that when Market Watch, Shop Map, Design
-              Scanner and the Trademark Checker were added to the shell's rail,
-              the workflow's rail still showed four items: a member standing in
-              the Listing Factory, where she spends most of her time, could not
-              see most of the product.
-
-              One list, rendered twice. The guard stays here, where it belongs.
-            */}
-            <span className="suite-nav-label">Your tools</span>
-            {NAV.filter(item => item.group === "work").map(item => item.href === "/keywords"
-              /* Unsaved batch work: this one opens beside the workflow rather
-                 than navigating away from it. */
-              ? <a key={item.key} href={item.href} target="_blank" rel="noopener noreferrer"><NavIcon name={item.icon}/><span>{item.label}</span></a>
-              : <a key={item.key} href={item.href}
-                  className={item.href === "/listing-factory" ? "active" : undefined}
-                  onClick={event=>guardNavigation(event,item.href)}><NavIcon name={item.icon}/><span>{item.label}</span>{item.key === "market-watch" && <small>LIVE</small>}</a>)}
-            <span className="suite-nav-label suite-nav-label-library">Library &amp; settings</span>
-            {NAV.filter(item => item.group === "library").map(item => item.href === "/keywords"
-              ? <a key={item.key} href={item.href} target="_blank" rel="noopener noreferrer"><NavIcon name={item.icon}/><span>{item.label}</span></a>
-              : <a key={item.key} href={item.href} onClick={event=>guardNavigation(event,item.href)}><NavIcon name={item.icon}/><span>{item.label}</span></a>)}
-          </nav>
+          <SuiteSidebarNav active="factory" items={NAV} keywordBankInNewTab
+            onNavigate={(event,href)=>guardNavigation(event,href)}/>
           {/* THE HOT LIST BUTTON IS GONE FROM HERE ON PURPOSE.
 
               This page carries its own copy of the rail rather than using
@@ -5935,6 +5937,15 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   {etsyConnectionRow(false)}
                 </div>
               )}
+              {/* Sales permission belongs to Etsy, not Printify. Keeping this
+                  outside the Printify connection branches makes it visible when
+                  Etsy is connected but Printify is not, which is a valid and
+                  common account state. */}
+              {etsyConnected&&etsySalesVisible!==true&&<div className="sales-data-connect">
+                <div><b>Connect sales data</b><span>Required to show sold listings, revenue, Etsy fees, and profit in Shop Map.</span></div>
+                <button type="button" aria-busy={etsyConnecting} disabled={etsyConnecting} onClick={()=>void connectEtsySales()}>{etsyConnecting?"Opening Etsy…":"Connect sales data"}</button>
+              </div>}
+              {etsyConnected&&etsySalesVisible===true&&<div className="sales-data-connected"><span aria-hidden="true">✓</span><b>Sales data connected</b><small>Shop Map can read sales and calculate your numbers.</small></div>}
               {connected&&connectionError&&<p className="field-warning" role="status">{connectionError}</p>}
               {etsyError&&<p className="field-error" role="alert">{etsyError}</p>}
               {(connectionError||etsyError)&&<button type="button" className="secondary-action" disabled={checkingConnection||checkingEtsyConnection} onClick={()=>{void checkPrintifyConnection();void checkEtsyConnection()}}>{checkingConnection||checkingEtsyConnection?"Checking connections…":"Check connections again"}</button>}

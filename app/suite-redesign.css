@@ -40,7 +40,6 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 /* #746b70 on the rail measured 3.69:1. These are the only labels that say
    what the two groups of links are. */
 .app-shell>.topbar .suite-nav-label{display:block;margin:7px 10px 8px;color:#a29499;font-size:9px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
-.app-shell>.topbar .suite-nav-label-library{margin-top:20px}
 .app-shell>.topbar .top-nav a{position:relative;display:flex;align-items:center;gap:11px;min-height:41px;padding:0 11px;border-radius:7px;color:#bcb2b8;font-size:12px;font-weight:750}
 .app-shell>.topbar .top-nav a svg{width:17px;height:17px;flex:0 0 17px}
 .app-shell>.topbar .top-nav a>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -48,6 +47,39 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell>.topbar .top-nav a.active{background:#fff;color:#111;box-shadow:0 8px 26px rgba(0,0,0,.24)}
 .app-shell>.topbar .top-nav a.active::before{content:"";position:absolute;left:-5px;top:10px;bottom:10px;width:3px;border-radius:6px;background:var(--suite-pink)}
 .app-shell>.topbar .top-nav a.active>small{color:var(--suite-pink-deep)}
+.app-shell>.topbar .suite-sidebar-nav{gap:3px}
+.app-shell>.topbar .suite-nav-section{display:grid;gap:3px}
+.app-shell>.topbar .suite-nav-parent{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center}
+.app-shell>.topbar .suite-nav-parent>a{min-width:0;padding-left:4px}
+.app-shell>.topbar .suite-nav-toggle{display:grid;place-items:center;width:28px;height:36px;padding:0;border:0;border-radius:7px;background:transparent;color:#81767c;cursor:pointer}
+.app-shell>.topbar .suite-nav-toggle:hover,.app-shell>.topbar .suite-nav-toggle:focus-visible{background:#242024;color:#fff}
+.app-shell>.topbar .suite-nav-toggle:focus-visible{outline:2px solid var(--suite-pink);outline-offset:1px}
+.app-shell>.topbar .suite-nav-toggle svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .16s ease}
+.app-shell>.topbar .suite-nav-toggle[aria-expanded="false"] svg{transform:rotate(-90deg)}
+.app-shell>.topbar .suite-nav-section.current>.suite-nav-parent>a:not(.active){color:#fff}
+.app-shell>.topbar .suite-nav-children{display:grid;gap:2px;margin:0 0 5px;padding-left:28px}
+.app-shell>.topbar .top-nav a.suite-nav-child{min-height:34px;padding:0 10px;color:#958a90;font-size:11px;font-weight:700}
+.app-shell>.topbar .top-nav a.suite-nav-child svg{width:14px;height:14px;flex-basis:14px}
+.app-shell>.topbar .top-nav a.suite-nav-child.active{color:#111}
+.app-shell>.topbar .suite-nav-label{margin-top:17px}
+.app-shell>.topbar .top-nav a.locked{color:#756c71;cursor:pointer}
+.app-shell>.topbar .top-nav a.locked:hover{background:#1d1a1c;color:#bcb2b8}
+.app-shell>.topbar .top-nav a .suite-nav-lock{width:13px;height:13px;flex:0 0 13px;margin-left:auto;fill:none;stroke:currentColor;stroke-width:1.8;opacity:.9}
+.app-shell>.topbar .top-nav a>small+.suite-nav-lock{margin-left:0}
+.suite-access-backdrop{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(10,7,9,.72);backdrop-filter:blur(5px)}
+.suite-access-dialog{position:relative;width:min(440px,100%);padding:34px;border:1px solid #111;border-radius:10px;background:#fff;color:#151214;box-shadow:8px 8px 0 var(--suite-pink)}
+.suite-access-dialog h2{max-width:360px;margin:18px 0 10px;font:900 28px/1.05 Arial,Helvetica,sans-serif;letter-spacing:-.045em}
+.suite-access-dialog p{margin:0;color:#756a72;font-size:14px;line-height:1.55}
+.suite-access-close{position:absolute;right:14px;top:12px;display:grid;place-items:center;width:34px;height:34px;padding:0;border:0;border-radius:7px;background:transparent;color:#71666d;font:400 27px/1 Arial,sans-serif;cursor:pointer}
+.suite-access-close:hover,.suite-access-close:focus-visible{background:#f6edf2;color:#111}
+.suite-access-lock{display:grid;place-items:center;width:42px;height:42px;border-radius:8px;background:#111;color:var(--suite-pink);box-shadow:3px 3px 0 var(--suite-pink)}
+.suite-access-lock .suite-nav-lock{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}
+.suite-access-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:25px}
+.suite-access-actions button,.suite-access-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid #111;border-radius:7px;font:900 11px/1 Arial,Helvetica,sans-serif;text-decoration:none;cursor:pointer}
+.suite-access-actions button{background:#fff;color:#111}
+.suite-access-actions a{background:#111;color:#fff;box-shadow:3px 3px 0 var(--suite-pink)}
+.suite-access-actions :is(button,a):focus-visible,.suite-access-close:focus-visible{outline:2px solid var(--suite-pink);outline-offset:2px}
+@media(max-width:560px){.suite-access-dialog{padding:28px 22px}.suite-access-dialog h2{font-size:24px}.suite-access-actions{display:grid}.suite-access-actions button,.suite-access-actions a{width:100%}}
 .app-shell>.topbar .workflow-restart-button{min-height:39px;margin:16px 6px 4px;border:1px solid #fff;border-radius:7px;background:#fff;color:#111;font-size:11px;font-weight:900;box-shadow:3px 3px 0 var(--suite-pink)}
 .app-shell>.topbar .workflow-restart-button .new-batch-icon{color:var(--suite-pink-deep)}
 .app-shell>.topbar .approved-sidebar-footer{gap:7px;padding:12px 6px 0}
@@ -553,7 +585,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 }
 .app-shell .status-strip .status-line:hover{background:#fff8fc}
 .app-shell .status-strip .status-line.quiet{color:#71666d;border-style:solid}
-.app-shell .status-strip .app-shell .hub-tool-number{color:#7d496f!important}
+.app-shell .hub-tool-number{color:#7d496f!important}
 
 .app-shell .tools-settings .ts-group .ts-rows{
   border:0!important;border-radius:0!important;background:transparent!important;
@@ -580,7 +612,6 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 */
 .app-shell .shop-map-card.shop-map-money{color:#fff}
 /* The chip keeps its own ink — see shop-map.css, where that colour lives. */
-
 .app-shell :is(input,textarea,select){color:#171316;background-color:#fff}
 .app-shell :is(input,textarea)::placeholder{color:#8a7f86;opacity:1}
 

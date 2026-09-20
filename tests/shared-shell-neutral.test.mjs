@@ -30,12 +30,17 @@ test("every desktop shell renders the one home link, and it names no product", (
 test("one nav exposes every member feature", () => {
   const shell = read("factory-shell.tsx");
   for (const destination of ["Home", "Listing Factory", "Market Watch", "Design Scanner",
-    "Shop Map", "Trademark Checker", "Batch History", "Keyword Banks", "Tools & settings"])
+    "Shop Map", "Trademark Checker", "Batch History", "Keyword Banks"])
     assert.ok(shell.includes(`label: "${destination}"`), `${destination} is missing from the suite navigation`);
-  assert.match(shell, /suite-nav-label">Your tools</);
-  assert.match(shell, /Library &amp; settings/);
-  /* And the breadcrumb no longer invents a parent: it read "Suite › Home". */
-  assert.doesNotMatch(shell, /<span>Suite<\/span>/);
+  const nav = read("suite-sidebar-nav.tsx");
+  assert.match(nav, />Command Center</);
+  assert.match(nav, /aria-expanded=\{factoryOpen\}/);
+  assert.match(nav, /Join the membership to access \{lockedTool\}/);
+  assert.match(nav, /\$47\/month membership/);
+  assert.match(nav, /commandCenterAccess === false/);
+  const access = read("api/access/status/route.ts");
+  assert.match(access, /gate\(user, "marketWatch"\)/,
+    "the sidebar lock must come from the Full Suite entitlement gate");
 });
 
 test("browser and installed-app identity name no product that does not exist", () => {

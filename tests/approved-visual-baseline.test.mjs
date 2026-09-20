@@ -1211,7 +1211,7 @@ test("D818: both shells render the shared, grouped suite navigation", async () =
      copy, so "on both surfaces" is structural instead of a list of labels
      somebody has to remember to extend. */
   for (const label of ["Home", "Listing Factory", "Batch History", "Keyword Banks",
-    "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker", "Tools & settings"])
+    "Market Watch", "Shop Map", "Design Scanner", "Trademark Checker"])
     assert.ok(shell.includes(`label: "${label}"`), `${label} is on the interior rail`);
   assert.match(app, /import \{ NAV \} from "\.\/factory-shell"/,
     "the workflow rail must draw from the same list");
@@ -1222,9 +1222,10 @@ test("D818: both shells render the shared, grouped suite navigation", async () =
   }
   assert.doesNotMatch(shell.slice(0, shell.indexOf("NAV.map")), /label: "Usage \+ Plan"|label: "Connections"/,
     "and neither is still on the rail");
-  assert.match(shell, /<nav className="top-nav"/, "the same nav element as the workflow");
-  assert.match(shell, /NavIcon/, "the suite rail carries the approved icon system");
-  assert.match(app, /NavIcon/);
+  assert.match(shell, /<SuiteSidebarNav active=\{active\} items=\{NAV\}/,
+    "interior pages mount the shared navigation component");
+  assert.match(app, /<SuiteSidebarNav active="factory" items=\{NAV\}/,
+    "the workflow mounts the same shared navigation component");
 });
 
 test("D203: cross-screen alignment and destructive-action faults are fixed", async () => {
