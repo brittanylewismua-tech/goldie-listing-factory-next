@@ -687,6 +687,23 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
   .app-shell .connect-step .etsy-shop-name{display:block;max-width:100%;overflow:hidden;color:rgba(56,50,55,.76);font-size:12px;font-weight:500;font-style:italic;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
   .app-shell .connect-step .connected-connection-stack{width:100%}
 .app-shell .connect-step .connected-connection-stack>.connection-row{width:100%;height:84px;min-height:84px;margin-left:0;margin-right:0;padding:14px 15px;box-sizing:border-box}
+  .app-shell .connect-step .sales-data-connect,
+  .app-shell .connect-step .sales-data-connected{display:flex;align-items:center;gap:16px;width:100%;padding:15px;border:1px solid #ded6dc;border-radius:12px;background:#fff;box-sizing:border-box}
+  .app-shell .connect-step .sales-data-connect>div{display:grid;gap:4px;min-width:0}
+  .app-shell .connect-step .sales-data-connect b,
+  .app-shell .connect-step .sales-data-connected b{font-size:13px}
+  .app-shell .connect-step .sales-data-connect span,
+  .app-shell .connect-step .sales-data-connected small{color:rgba(74,42,62,.72);font-size:12px;line-height:1.4}
+  .app-shell .connect-step .sales-data-connect>button{min-height:42px;margin-left:auto;padding:10px 15px;border:1px solid #68445f;border-radius:8px;background:var(--lf-pink);color:#3d0b2b;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+  .app-shell .connect-step .sales-data-connect>button:disabled{cursor:wait;opacity:.65}
+  .app-shell .connect-step .sales-data-connected>span{display:grid;width:25px;height:25px;flex:0 0 25px;place-items:center;border-radius:50%;background:#e9d9e4;color:#67465e;font-weight:800}
+  .app-shell .connect-step .sales-data-connected small{margin-left:auto;text-align:right}
+  @media(max-width:700px){
+    .app-shell .connect-step .sales-data-connect{align-items:stretch;flex-direction:column}
+    .app-shell .connect-step .sales-data-connect>button{width:100%;margin-left:0}
+    .app-shell .connect-step .sales-data-connected{align-items:flex-start;flex-wrap:wrap}
+    .app-shell .connect-step .sales-data-connected small{width:100%;margin-left:41px;text-align:left}
+  }
   .app-shell .connect-step .service-row>button,
   .app-shell .connect-step .connection-row>button,
   .app-shell .connect-step .connection-row button.secondary-action{width:124px;min-width:124px;max-width:124px;white-space:nowrap}

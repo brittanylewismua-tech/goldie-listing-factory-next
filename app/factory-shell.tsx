@@ -24,7 +24,7 @@
 import { useEffect, useState } from "react";
 import {readBatchHistory,preparedDaysFromHistory} from "./batch-history-read";
 import SuiteBrand from "./suite-brand";
-import { NavIcon, type NavKey as NavIconKey } from "./nav-icons";
+import SuiteSidebarNav, { type SuiteNavItem } from "./suite-sidebar-nav";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
@@ -56,16 +56,15 @@ export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | 
   to anything. A member who opened Market Watch could reach the rest of the
   product only with the browser's back button.
 */
-export const NAV: { key: NavKey; label: string; href: string; icon: NavIconKey; group: "work" | "library" }[] = [
-  { key: "home", label: "Home", href: "/home", icon: "home", group: "work" },
-  { key: "factory", label: "Listing Factory", href: "/listing-factory", icon: "listingFactory", group: "work" },
-  { key: "market-watch", label: "Market Watch", href: "/market-watch", icon: "marketWatch", group: "work" },
-  { key: "design-scanner", label: "Design Scanner", href: "/design-scanner", icon: "designScanner", group: "work" },
-  { key: "shop-map", label: "Shop Map", href: "/shop-map", icon: "shopMap", group: "work" },
-  { key: "trademark", label: "Trademark Checker", href: "/trademark", icon: "trademark", group: "work" },
-  { key: "batches", label: "Batch History", href: "/batches", icon: "batches", group: "library" },
-  { key: "keywords", label: "Keyword Banks", href: "/keywords", icon: "keywords", group: "library" },
-  { key: "more", label: "Tools & settings", href: "/more", icon: "more", group: "library" },
+export const NAV: SuiteNavItem[] = [
+  { key: "home", label: "Home", href: "/home", icon: "home", group: "home" },
+  { key: "factory", label: "Listing Factory", href: "/listing-factory", icon: "listingFactory", group: "factory" },
+  { key: "batches", label: "Batch History", href: "/batches", icon: "batches", group: "factory" },
+  { key: "keywords", label: "Keyword Banks", href: "/keywords", icon: "keywords", group: "factory" },
+  { key: "market-watch", label: "Market Watch", href: "/market-watch", icon: "marketWatch", group: "command" },
+  { key: "design-scanner", label: "Design Scanner", href: "/design-scanner", icon: "designScanner", group: "command" },
+  { key: "shop-map", label: "Shop Map", href: "/shop-map", icon: "shopMap", group: "command" },
+  { key: "trademark", label: "Trademark Checker", href: "/trademark", icon: "trademark", group: "command" },
 ];
 
 /*
@@ -177,14 +176,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
       */}
       <div className="brand-lockup"><SuiteBrand /></div>
       <div className="top-actions">
-        <nav className="top-nav" aria-label="Main navigation">
-          <span className="suite-nav-label">Your tools</span>
-          {NAV.filter(item => item.group === "work").map(item => <a key={item.key} className={item.key === active ? "active" : undefined}
-            href={item.href} aria-current={item.key === active ? "page" : undefined}><NavIcon name={item.icon}/><span>{item.label}</span>{item.key === "market-watch" && <small>LIVE</small>}</a>)}
-          <span className="suite-nav-label suite-nav-label-library">Library &amp; settings</span>
-          {NAV.filter(item => item.group === "library").map(item => <a key={item.key} className={item.key === active ? "active" : undefined}
-            href={item.href} aria-current={item.key === active ? "page" : undefined}><NavIcon name={item.icon}/><span>{item.label}</span></a>)}
-        </nav>
+        <SuiteSidebarNav active={active} items={NAV}/>
         {/* D818 · on the workflow this is a button because it has to clear live
             batch state first. There is no batch to clear here, so the same
             control is the link it actually is. */}

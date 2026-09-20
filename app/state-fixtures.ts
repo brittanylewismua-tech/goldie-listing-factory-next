@@ -675,6 +675,25 @@ export const stateFixtures = (): StateFixture[] => [
         preparedAvailable: true } },
     ] },
 
+  { key: "factory-etsy-only", label: "Etsy connected, Printify not connected", surface: "listing-factory",
+    what: "Sales access is an Etsy permission and must remain visible even when Printify is not connected.",
+    replies: [
+      { path: "/api/printify", status: 200, body: { connected: false } },
+      { path: "/api/etsy", status: 200, body: { connected: true, shopName: "She's a Wolf",
+        shops: [{ shopId: 1, shopName: "She's a Wolf", active: true }] } },
+      { path: "/api/shop-map/connections", status: 200, body: { connections: [
+        { shopId: 1, shopName: "She's a Wolf", activeForListingFactory: true,
+          canReadSales: false, needsReconnect: false,
+          authorizeSalesUrl: "/api/shop-map/connect-sales?for=preview" }] } },
+      { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
+      { path: "/api/keyword-lists", status: 200, body: { lists: [] } },
+      { path: "/api/product-recipes", status: 200, body: { recipes: [] } },
+      { path: "/api/usage", status: 200, body: { plan: { name: "Full Suite",
+        drafts: 10_000, dailyListings: 1_000 }, usage: { drafts: 12 } } },
+      { path: "/api/batches", status: 200, body: { batches: [], prepared: [],
+        preparedAvailable: true } },
+    ] },
+
   { key: "factory-check-failed", label: "Connection check failed", surface: "listing-factory",
     what: "Both checks fail on an account that IS connected. It must not say "
       + "'Not connected yet', and it must not move the member.",
@@ -710,6 +729,10 @@ export const stateFixtures = (): StateFixture[] => [
     replies: [
       { path: "/api/printify", status: 200, body: { connected: true, owner: true } },
       { path: "/api/etsy", status: 200, body: { connected: true, shopName: "a-connected-shop" } },
+      { path: "/api/shop-map/connections", status: 200, body: { connections: [
+        { shopId: 1, shopName: "a-connected-shop", activeForListingFactory: true,
+          canReadSales: false, needsReconnect: false,
+          authorizeSalesUrl: "/api/shop-map/connect-sales?for=preview" }] } },
       { path: "/api/etsy/shipping-profiles", status: 200, body: { profiles: [
         { id: 1, title: "Standard" }] } },
       { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
@@ -726,6 +749,9 @@ export const stateFixtures = (): StateFixture[] => [
     replies: [
       { path: "/api/printify", status: 200, body: { connected: true, owner: true } },
       { path: "/api/etsy", status: 200, body: { connected: true, shopName: "a-connected-shop" } },
+      { path: "/api/shop-map/connections", status: 200, body: { connections: [
+        { shopId: 1, shopName: "a-connected-shop", activeForListingFactory: true,
+          canReadSales: true, needsReconnect: false, authorizeSalesUrl: null }] } },
       { path: "/api/etsy/shipping-profiles", status: 200, body: { profiles: [
         { id: 1, title: "Standard" }] } },
       { path: "/api/seller-preferences", status: 200, body: { pricing: null } },
