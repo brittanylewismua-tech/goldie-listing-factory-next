@@ -36,7 +36,7 @@ export default function GoalsPage() {
       <header>
         <p className="mini-label">LISTING GOAL</p>
         <h1>Your listing history</h1>
-        <p>Every listing you have prepared as a Printify draft, by {period}.</p>
+        <p>Every draft you have made ready to publish, by {period}.</p>
       </header>
 
       {error&&<div className="batch-restore-notice" role="alert"><p>{error}</p><button type="button" className="secondary-action" onClick={()=>void loadHistory()}>Reload listing history</button></div>}
@@ -45,7 +45,7 @@ export default function GoalsPage() {
       {loaded && !goal?.enabled && (
         <section className="goals-off">
           <h2>Your listing goal is hidden</h2>
-          <p>Turn one on in Usage + Plan and The Listing Factory will show your progress here and in the sidebar.</p>
+          <p>Turn one on in Usage and limits and The Listing Factory will show your progress here and in the sidebar.</p>
           <a className="goals-cta" href="/usage#listing-goal">Show my listing goal</a>
         </section>
       )}

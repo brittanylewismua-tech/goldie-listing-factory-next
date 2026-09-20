@@ -296,11 +296,32 @@ export const GET = withErrorLog("operations-health", async () => {
       `SELECT COUNT(*) AS n FROM tm_ingest_files
         WHERE state IN ('waiting','partial') AND priority > 2`)
       .first<{ n: number }>();
+    /*
+      NEVER FINISHED ONE IS NOT THE SAME AS STOPPED FINISHING THEM.
+
+      This read `!backfileAt` — no historical file has ever completed — as a
+      stall. That is also true of a queue that has just been requeued, and of
+      a fresh install: the backfile was reported broken while it was visibly
+      working, marks climbing and a file completing an hour earlier. A false
+      broken is worse than no check, because the next real stall looks
+      identical to it.
+
+      With nothing finished yet, the clock runs from when the queue last
+      STARTED something instead. If it has neither started nor finished
+      anything, it cannot have stalled — there is nothing to have stopped.
+    */
+    /* No catch: a query that fails here must surface as a broken probe, not
+       as "nothing has started", which is what the swallow guard exists to
+       stop and what this very check was reporting falsely. */
+    const startedHistorical = await db.prepare(
+      `SELECT MAX(started) AS at FROM tm_ingest_files WHERE priority > 2`)
+      .first<{ at: string }>();
     const backfileAt = seconds(lastHistorical?.at);
-    const backfileSince = backfileAt ? now - backfileAt : 0;
+    const backfileFrom = backfileAt || seconds(startedHistorical?.at);
+    const backfileSince = backfileFrom ? now - backfileFrom : 0;
     const backfileWaiting = Number(historicalWaiting?.n ?? 0);
     const backfileStalled = backfileWaiting > 0
-      && (!backfileAt || backfileSince > 6 * 3_600);
+      && Boolean(backfileFrom) && backfileSince > 6 * 3_600;
 
     return {
       state: (byState.failed ?? 0) > 0 ? "broken"

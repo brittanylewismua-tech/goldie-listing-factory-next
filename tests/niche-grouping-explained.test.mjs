@@ -101,15 +101,12 @@ test("nothing to explain produces nothing", () => {
   assert.deepEqual(explainGrouping([]), []);
 });
 
-test("the page shows it collapsed, and points at the way to disagree", () => {
+test("grouping mechanics stay out of the primary seller interface", () => {
   const client = readFileSync(new URL(
     "../app/shop-map/shop-map-client.tsx", import.meta.url), "utf8");
-  assert.match(client, /<details className="shop-map-grouping">/);
-  assert.match(client, /How these niches were organized/);
-  assert.ok(!/<details className="shop-map-grouping" open/.test(client),
-    "it must be closed by default");
-  assert.match(client, /move a listing below and its orders and\s*\n?\s*revenue move with it/);
-  /* And the page still handles none of the internal vocabulary. */
+  assert.match(client, /Product themes/);
+  assert.doesNotMatch(client, /How these niches were organized/);
+  assert.doesNotMatch(client, /Fix a listing/);
   for (const leak of ["classifier", "collapse", "confidence", "canonical", "buyer"])
     assert.ok(!new RegExp(leak, "i").test(client), `the page handles ${leak}`);
 });

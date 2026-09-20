@@ -4,6 +4,7 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
+import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * WHICH PRINTIFY STORE DID THIS MEMBER'S DRAFTS GO INTO?
@@ -87,9 +88,9 @@ export const GET = withErrorLog("support-printify-store", async (request: Reques
     try {
       const token = await decryptPrintifyToken(
         stored.encrypted_token, (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
-      const response = await fetch("https://api.printify.com/v1/shops.json",
+      const response = await printifyCall("https://api.printify.com/v1/shops.json",
         { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
-          signal: AbortSignal.timeout(20_000) });
+          signal: AbortSignal.timeout(20_000) }, { feature: "qa", userId });
       if (response.ok) {
         const rows = await response.json() as Array<Record<string, unknown>>;
         stores = rows.map(row => ({ id: Number(row.id ?? 0), title: String(row.title ?? ""),
@@ -150,10 +151,10 @@ export const GET = withErrorLog("support-printify-store", async (request: Reques
       const probe = { productId, foundIn: [] as number[], missingFrom: [] as number[],
         statuses: {} as Record<string, number> };
       for (const store of stores) {
-        const response = await fetch(
+        const response = await printifyCall(
           `https://api.printify.com/v1/shops/${store.id}/products/${productId}.json`,
           { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
-            signal: AbortSignal.timeout(20_000) }).catch(() => null);
+            signal: AbortSignal.timeout(20_000) }, { feature: "qa", userId }).catch(() => null);
         const status = response?.status ?? 0;
         probe.statuses[String(store.id)] = status;
         if (status === 200) probe.foundIn.push(store.id);

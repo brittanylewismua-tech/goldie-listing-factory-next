@@ -6,6 +6,7 @@ import { env } from "cloudflare:workers";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { productFamily } from "@/app/product-type-utils";
 import { classifyBlueprint, MAPPING_VERSION } from "@/app/blueprint-registry";
+import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * THE REAL SUPPORTED SET.
@@ -34,10 +35,11 @@ export const GET = withErrorLog("listing-factory-blueprint-registry", async (req
   const shopId = 1374648;
   const seen = new Map<number, { title: string; products: number }>();
   for (let page = 1; page <= pages; page += 1) {
-    const response = await fetch(
+    const response = await printifyCall(
       `https://api.printify.com/v1/shops/${shopId}/products.json?limit=50&page=${page}`,
       { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
-        signal: AbortSignal.timeout(25_000) }).catch(() => null);
+        signal: AbortSignal.timeout(25_000) },
+      { feature: "qa", userId: user.userId }).catch(() => null);
     if (!response?.ok) break;
     const body = await response.json() as
       { data?: Array<{ blueprint_id?: number; title?: string }> };
@@ -60,10 +62,11 @@ export const GET = withErrorLog("listing-factory-blueprint-registry", async (req
   */
   const registry = [];
   for (const [blueprintId, held] of seen) {
-    const catalog = await fetch(
+    const catalog = await printifyCall(
       `https://api.printify.com/v1/catalog/blueprints/${blueprintId}.json`,
       { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
-        signal: AbortSignal.timeout(20_000) }).catch(() => null);
+        signal: AbortSignal.timeout(20_000) },
+      { feature: "qa", userId: user.userId }).catch(() => null);
     const blueprint = catalog?.ok
       ? await catalog.json() as { title?: string; brand?: string; model?: string }
       : null;

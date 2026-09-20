@@ -3,6 +3,7 @@ import { withErrorLog } from "@/app/error-log";
 import { env } from "cloudflare:workers";
 import { confirmedRejections, markRetired, clearRejection } from "@/app/connection-cleanup";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
+import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * THE ONLY PLACE A CONNECTION IS RETIRED.
@@ -55,10 +56,10 @@ export const POST = withErrorLog("connection-cleanup-tick", async (request: Requ
       const secret = (env as unknown as { PRINTIFY_TOKEN_KEY?: string }).PRINTIFY_TOKEN_KEY;
       if (!secret) { outcome.push({ user: report.userId, action: "no-key" }); continue; }
       const token = await decryptPrintifyToken(row.token, secret);
-      const answer = await fetch("https://api.printify.com/v1/shops.json", {
+      const answer = await printifyCall("https://api.printify.com/v1/shops.json", {
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(20_000),
-      });
+      }, { feature: "connections", userId: report.userId });
       if (answer.ok) recovered = true;
       else if (answer.status === 401 || answer.status === 403) stillRefused = true;
     } catch {

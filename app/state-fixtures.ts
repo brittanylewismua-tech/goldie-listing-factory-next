@@ -46,7 +46,7 @@ export type StateFixture = {
   label: string;
   /* Which component the preview should mount. */
   surface: "connections" | "market-watch" | "design-scanner" | "shop-map" | "account"
-    | "batches" | "listing-factory";
+    | "batches" | "listing-factory" | "home" | "trademark" | "usage" | "keywords" | "more";
   /*
     Which sub-view of that surface the state lives in. Two shop fixtures
     rendered Market Watch's niche tab and were called verified: the state they
@@ -77,6 +77,9 @@ const printifyConnected = (): FixtureReply => ({
   path: "/api/connections/printify", status: 200,
   body: { connected: true, shopId: 1, shopName: "", lastSyncAt: secondsAgo(7200) },
 });
+
+const listingPreview = (shirt: string, ink: string, words: string) =>
+  `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600"><rect width="600" height="600" fill="#f7f0f4"/><path d="M190 124l65-34h90l65 34 92 84-62 74-48-38v270H208V244l-48 38-62-74z" fill="${shirt}" stroke="#171318" stroke-width="8"/><text x="300" y="285" text-anchor="middle" fill="${ink}" font-family="Arial" font-size="30" font-weight="800">${words}</text></svg>`)}`;
 
 export const stateFixtures = (): StateFixture[] => [
   /* ---------------------------------------------------------- connections */
@@ -781,8 +784,8 @@ export const stateFixtures = (): StateFixture[] => [
         headline: "47 orders so far this month.", accuracy: "Every production cost came from Printify.",
         coverage: { verified: 44, estimated: 3, unavailable: 0 } },
       standout: { hasStandout: true,
-        headline: "Bachelorette shirts are carrying the month.",
-        nextStep: "They are 61% of orders and 12% of your active listings." },
+        headline: "Bachelorette shirts made up 61% of recent orders.",
+        nextStep: "That came from 9 active listings." },
       whereToFocus: [{ nicheId: "bachelorette", label: "Bachelorette",
         headline: "Most orders, fewest listings.",
         advice: "Your other niches have four times the listings for a third of the orders.",
@@ -804,7 +807,16 @@ export const stateFixtures = (): StateFixture[] => [
           productFamilies: [{ family: "Comfort Colors tee", listings: 22 },
             { family: "Mug", listings: 9 }],
           reviews: { recent: 3, lifetimeHeld: 51 } }],
-      coverage: { activeListings: 40, recentRevenue: 306_200, recentOrders: 80 },
+      coverage: { activeListings: 0.4, recentRevenue: 306_200, recentOrders: 80 },
+      soldListings: { period: "Last 90 days", listings: [
+        { listingId: 1, title: "Mama, I Am a Rich Man Comfort Colors Shirt",
+          imageUrl: listingPreview("#f2dfd6", "#191419", "RICH MAN"), favorites: 42, sales: 12, revenueMinor: 35988 },
+        { listingId: 2, title: "She’s a Wolf Feminist Back Print Tee",
+          imageUrl: listingPreview("#171318", "#ff2ca6", "SHE’S A WOLF"), favorites: 31, sales: 8, revenueMinor: 23992 },
+        { listingId: 3, title: "Not Fragile Like a Flower Shirt",
+          imageUrl: listingPreview("#d9c9b6", "#171318", "NOT FRAGILE"), favorites: 27, sales: 5, revenueMinor: 14995 },
+        { listingId: 4, title: "Sometimes the King Is a Woman Tee", imageUrl: "", favorites: 18, sales: 3, revenueMinor: 8997 },
+      ] },
       shopTotals: { listings: 52, orders: 80 } } }] },
 
   { key: "shop-map-partial", label: "Partial — finance unavailable", surface: "shop-map",
@@ -1000,6 +1012,127 @@ export const stateFixtures = (): StateFixture[] => [
       shop: { shopName: "a-connected-shop" }, month: "September 2026",
       timezoneNeeded: true, worlds: [], worldsPeriod: "last 90 days",
       shopTotals: { listings: 52, orders: 80 } } }] },
+
+  /*
+    THE PAGES THAT HAD NO FIXTURES AT ALL.
+
+    Home, the Trademark Checker, Usage and Keyword Banks could only be seen by
+    signing in as a member with the right data — which is why their states went
+    unexamined for so long. Each state below is one a member actually reaches.
+  */
+  { key: "home-working-shop", label: "Home — a working shop", surface: "home",
+    what: "Money, watched niches, open drafts and scans left, all at once.",
+    replies: [
+      { path: "/api/home", status: 200, body: { blocks: {
+        thisMonth: { revenueMinor: 7100, currency: "USD", orders: 3,
+          profitMinor: null, profitAvailable: false, stale: true, asOfDay: "15 September" },
+        niches: [{ phrase: "bachelorette", newly: 3 }, { phrase: "dog mom", newly: 1 }],
+        factory: { openDrafts: 2 },
+        scansLeft: { remaining: 9, limit: 10 },
+        topListings: { period: "Last 30 days", rankedBy: "sales", listings: [
+          { listingId: 1, title: "Mama, I Am a Rich Man Comfort Colors Shirt",
+            imageUrl: listingPreview("#f2dfd6", "#191419", "RICH MAN"), favorites: 42,
+            sales: 8, revenueMinor: 23992, currency: "USD" },
+          { listingId: 2, title: "She’s a Wolf Feminist Back Print Tee",
+            imageUrl: listingPreview("#171318", "#ff2ca6", "SHE’S A WOLF"), favorites: 31,
+            sales: 5, revenueMinor: 14995, currency: "USD" },
+          { listingId: 3, title: "Not Fragile Like a Flower Shirt",
+            imageUrl: listingPreview("#d9c9b6", "#171318", "NOT FRAGILE"), favorites: 27,
+            sales: 3, revenueMinor: 8997, currency: "USD" },
+        ] },
+      } } },
+      { path: "/api/usage", status: 200, body: { usage: { drafts: 200 },
+        plan: { drafts: 10_000 } } },
+    ] },
+
+  { key: "home-quiet", label: "Home — nothing pending", surface: "home",
+    what: "A member with no numbers to report. The strip must be absent, not empty.",
+    replies: [{ path: "/api/home", status: 200, body: { blocks: {} } },
+      { path: "/api/usage", status: 200, body: { usage: { drafts: 0 }, plan: { drafts: 10_000 } } }] },
+
+  { key: "home-needs-connection", label: "Home — connection needs attention", surface: "home",
+    what: "Etsy access has lapsed; the first box is the one that must be acted on.",
+    replies: [{ path: "/api/home", status: 200, body: { blocks: {
+      connections: { needs: "etsy", say: "Etsy needs reconnecting" },
+      scansLeft: { remaining: 10, limit: 10 },
+      trademark: { marks: 360_221, loading: true },
+    } } }] },
+
+  { key: "home-status-failed", label: "Home — status unavailable", surface: "home",
+    what: "The status request failed. The doors must still work and nothing may be invented.",
+    replies: [{ path: "/api/home", status: 500, body: { error: "unavailable" } }] },
+
+  { key: "trademark-idle", label: "Trademark — nothing checked yet", surface: "trademark",
+    what: "The empty state: what this checks, and what it is not.",
+    replies: [{ path: "/api/trademark/register-status", status: 200,
+      body: { marks: 366_828, files: [{ state: "done", count: 9 }] } }] },
+
+  { key: "trademark-match", label: "Trademark — a live mark", surface: "trademark",
+    at: "Haus Labs",
+    what: "A real registered brand. The member must understand the risk without legal training.",
+    replies: [{ path: "/api/trademark?phrase", status: 200, body: {
+      phrase: "Haus Labs", risk: "high", registerRead: true, registerReady: true, hits: [],
+      summary: "\u201cHAUS LABS\u201d is a live trademark application, filed by Ate My Heart Inc.. It is not registered yet, and an applicant trading under a name still gets listings removed for it.",
+      register: [
+        { mark: "HAUS LABS", owner: "Ate My Heart Inc.", registration: "", classes: ["021"], registered: false, exact: true },
+        { mark: "HAUS LABS", owner: "Ate My Heart Inc.", registration: "", classes: ["003"], registered: false, exact: true },
+      ] } }] },
+
+  { key: "trademark-clear", label: "Trademark — no match found", surface: "trademark",
+    at: "sunday morning coffee",
+    what: "A clean phrase. It must never read as legal clearance.",
+    replies: [{ path: "/api/trademark?phrase", status: 200, body: {
+      phrase: "sunday morning coffee", risk: "clear", registerRead: true, registerReady: true,
+      hits: [], register: [],
+      summary: "No match was found in the trademark records currently loaded. This is screening information, not legal clearance." } }] },
+
+  { key: "trademark-register-loading", label: "Trademark — register still loading", surface: "trademark",
+    at: "sunday morning coffee",
+    what: "A clean result while the corpus is incomplete. The caveat is the point.",
+    replies: [{ path: "/api/trademark?phrase", status: 200, body: {
+      phrase: "sunday morning coffee", risk: "clear", registerRead: true, registerReady: false,
+      hits: [], register: [],
+      summary: "No match was found in the trademark records currently loaded. This is screening information, not legal clearance." } }] },
+
+  { key: "trademark-failed", label: "Trademark — the check failed", surface: "trademark",
+    at: "bride squad",
+    what: "The lookup itself broke. A failure must not be reported as a clean result.",
+    replies: [{ path: "/api/trademark?phrase", status: 503, body: { error: "The trademark check could not be completed. Try again in a moment." } }] },
+
+  { key: "usage-normal", label: "Usage — mid-month", surface: "usage",
+    what: "What is left, of what, and when it resets.",
+    replies: [{ path: "/api/usage", status: 200, body: {
+      plan: { key: "owner_test", name: "Owner testing", price: 0, drafts: 10_000,
+        dailyListings: 1_000, mockupSets: 1_000, mockupsPerSet: 50 },
+      resetAt: "2026-10-01T00:00:00.000Z",
+      usage: { drafts: 200, mockupSets: 9, publishedToday: 0, publishing: 0 },
+      operations: { averageEtsyCallsPerListing: 17.1 },
+      streak: { days: ["2026-09-19"], count: 1, target: 5, window: 7, listedToday: true, hit: false,
+        message: "1 of 5 listing days this week." },
+      billing: { active: false } } }] },
+
+  { key: "usage-failed", label: "Usage — unavailable", surface: "usage",
+    what: "The allowance could not be read. It must not show a zero.",
+    replies: [{ path: "/api/usage", status: 500, body: { error: "unavailable" } }] },
+
+  { key: "keywords-empty", label: "Keyword Banks — none saved", surface: "keywords",
+    what: "The empty state has to say what a bank is for before asking for one.",
+    replies: [{ path: "/api/product-recipes", status: 200, body: { recipes: [] } },
+      { path: "/api/keyword-lists", status: 200, body: { lists: [] } }] },
+
+  { key: "keywords-saved", label: "Keyword Banks — saved banks", surface: "keywords",
+    what: "Two saved banks, one of them used by a product.",
+    replies: [{ path: "/api/product-recipes", status: 200, body: { recipes: [] } },
+      { path: "/api/keyword-lists", status: 200, body: { lists: [
+      { id: "bank-bachelorette", name: "Bachelorette",
+        keywords: ["bride squad", "bachelorette party", "bridal party", "bach weekend"] },
+      { id: "bank-dog-mom", name: "Dog mom",
+        keywords: ["dog mom", "rescue mom", "fur mama"] },
+    ] } }] },
+
+  { key: "more-tools", label: "Tools & settings", surface: "more",
+    what: "The shelf of everything that is not a daily tool.",
+    replies: [{ path: "/api/usage", status: 200, body: { usage: { drafts: 200 }, plan: { drafts: 10_000 } } }] },
 ];
 
 export const fixtureFor = (key: string) =>

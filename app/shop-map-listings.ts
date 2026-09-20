@@ -32,6 +32,7 @@ export async function ensureListingTables() {
       updated_at INTEGER,
       views INTEGER,
       favorites INTEGER,
+      image_url TEXT NOT NULL DEFAULT '',
       printify_product_id TEXT NOT NULL DEFAULT '',
       printify_blueprint_id INTEGER,
       product_family TEXT NOT NULL DEFAULT '',
@@ -78,8 +79,12 @@ export async function ensureListingTables() {
       created_at INTEGER NOT NULL,
       PRIMARY KEY (user_id, shop_id, product_family))`),
   ]);
+  try {
+    await db().prepare(`ALTER TABLE shop_map_listings ADD COLUMN image_url TEXT NOT NULL DEFAULT ''`).run();
+  } catch (error) {
+    if (!/duplicate column/i.test(error instanceof Error ? error.message : "")) throw error;
+  }
   await db().prepare(
     `CREATE INDEX IF NOT EXISTS shop_map_sales_listing
        ON shop_map_listing_sales (user_id, shop_id, listing_id, sold_at)`).run();
 }
-

@@ -68,6 +68,7 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
     shop_section_id?: number; created_timestamp?: number; original_creation_timestamp?: number;
     updated_timestamp?: number; last_modified_timestamp?: number;
     views?: number; num_favorers?: number;
+    images?: Array<{ url_570xN?: string; url_fullxfull?: string }>;
   };
 
   /* Section names, so a world can be labelled with what the seller called it. */
@@ -84,7 +85,7 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
   for (const state of (listingsOnly ? STATES : [])) {
     for (let page = 0; page < maxPages; page += 1) {
       const answer = await etsy(
-        `/shops/${shopId}/listings?state=${state}&limit=100&offset=${page * 100}`);
+        `/shops/${shopId}/listings?state=${state}&limit=100&offset=${page * 100}&includes=Images`);
       /*
         A state the granted scope does not permit answers with an error rather
         than an empty list. That is recorded, not retried and not guessed at.
@@ -100,6 +101,8 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
         const views = typeof listing.views === "number" ? listing.views : null;
         const favorites = typeof listing.num_favorers === "number" ? listing.num_favorers : null;
         const created = Number(listing.original_creation_timestamp ?? listing.created_timestamp ?? 0) || null;
+        const imageUrl = String(listing.images?.[0]?.url_570xN
+          ?? listing.images?.[0]?.url_fullxfull ?? "");
         if (views !== null) fieldsSeen.views += 1;
         if (favorites !== null) fieldsSeen.favorites += 1;
         if (created) fieldsSeen.created += 1;
@@ -107,8 +110,8 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
         await db.prepare(
           `INSERT INTO shop_map_listings
              (user_id, shop_id, listing_id, title, tags, shop_section, state,
-              created_at, updated_at, views, favorites, product_family, ingested_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+              created_at, updated_at, views, favorites, image_url, product_family, ingested_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(user_id, shop_id, listing_id) DO UPDATE SET
              title = excluded.title, tags = excluded.tags,
              shop_section = excluded.shop_section, state = excluded.state,
@@ -116,12 +119,15 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
              /* Absent stays absent: a null must not overwrite a real reading. */
              views = COALESCE(excluded.views, shop_map_listings.views),
              favorites = COALESCE(excluded.favorites, shop_map_listings.favorites),
+             image_url = CASE WHEN excluded.image_url <> '' THEN excluded.image_url
+               ELSE shop_map_listings.image_url END,
              ingested_at = excluded.ingested_at`)
           .bind(user.userId, shopId, listingId, decodeEntities(String(listing.title ?? "")),
             JSON.stringify(listing.tags ?? []), sectionNames.get(sectionId) ?? "",
             String(listing.state ?? state), created,
             Number(listing.last_modified_timestamp ?? listing.updated_timestamp ?? 0) || null,
-            views, favorites, productFamily(decodeEntities(String(listing.title ?? ""))), now)
+            views, favorites, imageUrl,
+            productFamily(decodeEntities(String(listing.title ?? ""))), now)
           .run();
         stored += 1;
         byState[state] = (byState[state] ?? 0) + 1;

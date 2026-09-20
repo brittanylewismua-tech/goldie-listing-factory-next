@@ -7,6 +7,7 @@ import { memberUsage } from "@/app/spend-guard";
 import { registerSize } from "@/app/trademark-register";
 import { watchesFor } from "@/app/niche-watch-store";
 import { dayInShopTimezone, isStale } from "@/app/finance-freshness";
+import { ensureListingTables } from "@/app/shop-map-listings";
 
 /**
  * STATUS WORTH A MEMBER'S ATTENTION, AND NOTHING ELSE.
@@ -109,6 +110,44 @@ export const GET = withErrorLog("home-status", async () => {
       };
     }
   } catch { /* Shop Map may not be set up for this member */ }
+
+  /* The first thing a seller wants to know is which listings customers chose.
+     Sales lead when they exist; favourites are the honest fallback for a shop
+     without a sale in the last 30 days. */
+  try {
+    await ensureListingTables();
+    const soldSince = now - 30 * 86_400;
+    const result = await db.prepare(
+      `SELECT l.listing_id AS listingId, l.title, l.image_url AS imageUrl,
+              COALESCE(l.favorites, 0) AS favorites,
+              COALESCE(SUM(CASE WHEN s.refunded = 0 AND s.sold_at >= ?
+                THEN s.quantity ELSE 0 END), 0) AS sales,
+              COALESCE(SUM(CASE WHEN s.refunded = 0 AND s.sold_at >= ?
+                THEN s.quantity * s.price_minor ELSE 0 END), 0) AS revenueMinor,
+              MAX(CASE WHEN s.refunded = 0 AND s.sold_at >= ? THEN s.currency END) AS currency
+         FROM shop_map_listings l
+         LEFT JOIN shop_map_listing_sales s
+           ON s.user_id = l.user_id AND s.shop_id = l.shop_id
+          AND s.listing_id = l.listing_id
+        WHERE l.user_id = ?
+        GROUP BY l.user_id, l.shop_id, l.listing_id
+        ORDER BY sales DESC, favorites DESC, l.title ASC
+        LIMIT 3`)
+      .bind(soldSince, soldSince, soldSince, user.userId)
+      .all<{ listingId: number; title: string; imageUrl: string; favorites: number;
+        sales: number; revenueMinor: number; currency: string | null }>();
+    const listings = (result.results ?? []).map(row => ({
+      listingId: Number(row.listingId), title: String(row.title ?? "Untitled listing"),
+      imageUrl: String(row.imageUrl ?? ""), favorites: Number(row.favorites ?? 0),
+      sales: Number(row.sales ?? 0), revenueMinor: Number(row.revenueMinor ?? 0),
+      currency: String(row.currency ?? "USD"),
+    }));
+    if (listings.length) blocks.topListings = {
+      period: "Last 30 days",
+      rankedBy: listings.some(listing => listing.sales > 0) ? "sales" : "favorites",
+      listings,
+    };
+  } catch { /* A new shop can still use every tool below. */ }
 
   /* Watched niches carrying something new since the last brief. */
   try {

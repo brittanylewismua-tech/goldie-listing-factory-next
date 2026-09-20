@@ -290,7 +290,7 @@ export default function AccountClient({ email }: { email: string }) {
               </b>
             </div>
           )}
-          <Link className="acc-link" href="/usage">Plan and limits</Link>
+          <Link className="acc-link" href="/usage">Usage and limits</Link>
         </div>
       </section>
 

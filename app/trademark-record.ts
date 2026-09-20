@@ -37,6 +37,20 @@ export type RegisterHit = {
  * and "cozy  season" are one mark for this purpose. Punctuation goes,
  * whitespace collapses, case goes.
  */
+/**
+ * The same phrase with its word boundaries removed.
+ *
+ * "HAUSLABS" and "HAUS LABS" are one mark to a buyer, to a brand owner, and
+ * to whoever files the takedown — but not to a string comparison, so they were
+ * never matched. Squeezing gives both forms one key.
+ *
+ * Used for EXACT equivalence only, never for containment. "ART" sits inside
+ * "HEART" once the spaces are gone, and a containment test on squeezed text
+ * would start reporting that as a hit. Containment stays on the word-boundary
+ * form, where it means what it says.
+ */
+export const squeeze = (text: string): string => normalize(text).replace(/ /g, "");
+
 export const normalize = (text: string): string =>
   text
     .toUpperCase()
@@ -80,6 +94,20 @@ export function worthKeeping(record: ReturnType<typeof readRecord>): boolean {
   if (!record.live) return false;
   if (!record.mark || record.drawingCode === DESIGN_ONLY_DRAWING_CODE) return false;
   if (normalize(record.mark).length < 2) return false;
-  return record.classes.some(code => PRINTED_CLASSES.has(code));
+  /*
+    CLASS IS NOT A FILTER. IT WAS, AND IT PRODUCED THE WORST KIND OF MISS.
+
+    Only the nine print-on-demand classes were kept, which reads as sensible
+    for a print-on-demand tool and is wrong for what this tool is FOR. A
+    takedown follows the brand, not the Nice classification: printing HAUSLABS
+    on a shirt gets the listing removed whether or not Haus Labs registered in
+    the apparel class. It registered in class 3 — cosmetics — so the search
+    returned "nothing found" for a famous beauty brand, which is the one answer
+    this tool must never give wrongly.
+
+    Classes are still read and stored. They rank and explain a hit; they no
+    longer decide whether the mark is allowed to exist in the corpus.
+  */
+  return true;
 }
 

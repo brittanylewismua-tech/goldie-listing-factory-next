@@ -31,7 +31,7 @@ import { DISPLAY_FRESHNESS_SECONDS } from "@/app/reference-images";
  */
 export const maxDuration = 300;
 
-import { readNiche } from "@/app/niche-brief";
+import { readNiche, summariesForWatches } from "@/app/niche-brief";
 
 export const GET = withErrorLog("market-watch-niches", async (request: Request) => {
   /* The entitlement decides, not the owner flag: a complimentary beta
@@ -47,17 +47,36 @@ export const GET = withErrorLog("market-watch-niches", async (request: Request) 
   if (!key)
     return NextResponse.json({
       limit: MAX_NICHE_WATCHES,
-      watches: await Promise.all(saved.map(async watch => {
-        const held = await lastGood(watch.key);
-        const payload = held?.payload as { moving?: number; repeated?: number;
-          shops?: number } | undefined;
-        return { key: watch.key, phrase: watch.phrase,
-          moving: payload?.moving ?? 0, repeated: payload?.repeated ?? 0,
-          shops: payload?.shops ?? 0,
-          lastCheckedAt: held?.observedAt ?? 0,
-          /* A brief we could not rebuild today is shown, and labelled. */
-          stale: held ? now - held.observedAt > 36 * 3_600 : true };
-      })),
+      watches: await (async () => {
+        /*
+          COUNTED LIVE, THE SAME WAY THE DETAIL PAGE COUNTS.
+
+          These figures came from the stored brief, while the page behind them
+          computed from current evidence — so the list said bachelorette had
+          131 listings moving and the page said 136. One read of the corpus
+          serves every saved niche, so this costs one query rather than one
+          per row.
+
+          The stored brief is still what answers if the read fails: a number
+          that is a few hours old and labelled is better than a page of
+          zeroes, and `stale` says which it is.
+        */
+        const live = await summariesForWatches(saved, now).catch(() => null);
+        return Promise.all(saved.map(async watch => {
+          const held = await lastGood(watch.key);
+          const fresh = live?.get(watch.key);
+          const payload = held?.payload as { moving?: number; repeated?: number;
+            shops?: number } | undefined;
+          return { key: watch.key, phrase: watch.phrase,
+            moving: fresh ? fresh.moving : payload?.moving ?? 0,
+            repeated: fresh ? fresh.repeated : payload?.repeated ?? 0,
+            shops: fresh ? fresh.shops : payload?.shops ?? 0,
+            lastCheckedAt: fresh ? now : held?.observedAt ?? 0,
+            /* Live figures are current by definition. A fallback to the
+               stored brief is only fresh if the brief itself is. */
+            stale: fresh ? false : held ? now - held.observedAt > 36 * 3_600 : true };
+        }));
+      })(),
     });
 
   const watch = saved.find(row => row.key === key);

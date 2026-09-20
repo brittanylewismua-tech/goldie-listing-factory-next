@@ -41,6 +41,9 @@ const env=globalThis.__deliveryTiming.runtime;
 class DeliveryReviewRequired extends Error{};class DraftReviewRequired extends Error{};class DraftWriteRejected extends Error{};class DraftTransferReviewRequired extends Error{};
 const etsyConnection=async()=>({shopId:200,token:'test'}),decryptPrintifyToken=async()=>'test';
 const readPrintifyPublishState=async reader=>{await reader('https://printify.test');return globalThis.__deliveryTiming.published};
+/* The service now routes its Printify requests through the meter; under test
+   it delegates to the stubbed global fetch so the assertions are unchanged. */
+const printifyCall=(target,init)=>fetch(target,init);
 `+service;
 const {runDeliveryTick}=await import(url(service));
 function reset(){row={id:'job',user_id:'owner',status:'delivering',draft_json:'{}',transfer_json:JSON.stringify({phase:'accepted',submittedAt:Date.now()}),state_json:null,candidate_listing_id:123,candidate_seen_at:Date.now(),etsy_shop_id:200,expires_at:Date.now()+86400000};published={state:'unknown',reason:'Busy'};locked=true;paused=0;updates=[]}

@@ -42,6 +42,8 @@ type ShopMap = {
     revenueMinor: number; reviews: number; ordersLast90: number; revenueLast90Minor: number };
   needsAttention?: { overbuiltWorlds: Array<{ label: string; reason: string }> };
   shopTotals?: { listings: number; orders: number };
+  soldListings?: { period: string; listings: Array<{ listingId: number; title: string;
+    imageUrl: string; favorites: number; sales: number; revenueMinor: number }> };
   timezoneNeeded?: boolean;
   error?: string;
 };
@@ -75,6 +77,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   /* The last map that loaded. A failed refresh shows this rather than nothing. */
   const [lastGood, setLastGood] = useState<ShopMap | null>(null);
   const [failed, setFailed] = useState(false);
+  const [tab, setTab] = useState<"overview" | "themes" | "sold" | "money">("overview");
 
   const load = async () => {
     const next = await fetch("/api/shop-map/map")
@@ -189,291 +192,80 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const recentTotal = niches.reduce((sum, niche) => sum + niche.revenueMinor, 0);
   const noSalesYet = (shown.shopTotals?.orders ?? 0) === 0;
 
-  return (
-    <main className="shop-map">
-      <header className="shop-map-head">
-        <h1>{shown.shop?.shopName ?? "Your shop"}</h1>
-        <p>{monthName(shown.month)}</p>
-      </header>
+  const sold = shown.soldListings?.listings ?? [];
+  return <main className="shop-map shop-map-redesign">
+    <header className="shop-map-head">
+      <p className="mini-label">YOUR SHOP, MAPPED</p>
+      <h1>See what your shop is actually selling.</h1>
+      <p>{shown.shop?.shopName ?? "Your shop"} · {monthName(shown.month)}</p>
+    </header>
+    {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
+    <nav className="shop-map-tabs" aria-label="Shop Map sections">
+      {([['overview','Overview'],['themes','Product themes'],['sold','Sold listings'],['money','Money']] as const)
+        .map(([key,label]) => <button key={key} type="button" aria-current={tab === key ? 'page' : undefined}
+          onClick={() => setTab(key)}>{label}</button>)}
+    </nav>
 
-      {failed
-        ? <p className="shop-map-stale">Showing your last map — the newest refresh didn’t finish.</p>
-        : null}
-
-      {/* 1 · This month. One dominant figure, never two. */}
-      {shown.timezoneNeeded
-        ? <section className="shop-map-card">
-            <h2>This month</h2>
-            <p className="shop-map-reason">
-              Monthly figures need to know where your shop trades, because a month
-              starts and ends at a different moment in each place.
-            </p>
-            {detected
-              ? <button type="button" className="shop-map-confirm"
-                  disabled={busy === "timezone"} onClick={() => void confirmTimezone()}>
-                  {busy === "timezone" ? "Saving…" : `My shop runs on ${detected}`}
-                </button>
-              : null}
-          </section>
-        : <section className="shop-map-card shop-map-money">
-            <h2>This month</h2>
-            <p className="shop-map-headline-label">{month?.headline}</p>
-            {/* The figure line is omitted entirely when there is no profit to
-                show. It used to render a bare em dash under "Profit
-                unavailable", which reads as a broken value rather than an
-                absent one. */}
-            {month?.profitMinor !== null && month?.profitMinor !== undefined && (
-              <p className="shop-map-figure" data-basis={monthBasis(month)}>
-                {money(month.profitMinor)}
-                {/*
-                  D1677 · ON THE FIGURE, NOT ONLY IN THE SENTENCE ABOVE IT.
-
-                  An estimate was distinguishable only by the word
-                  "Estimated" in the headline. A member reading the number
-                  first — which is what a number that size invites — saw
-                  nothing marking it as provisional. The mark sits on the
-                  figure, and it is driven by the verdict's own label with
-                  the cost coverage as a fallback, so it cannot be lost to a
-                  copy change.
-                */}
-                {monthBasis(month) === "estimated" && (
-                  <span className="shop-map-basis-chip">Estimate</span>
-                )}
-              </p>
-            )}
-            <p className="shop-map-accuracy">{month?.accuracy}</p>
-            {/*
-              D1684 · How current the figure is, beside the figure. The
-              financial view already refused profit with staleness as its
-              first reason while this card mentioned only production costs.
-              The sentence is built on the server, so the page never handles
-              a source name.
-            */}
-            {month?.freshness && (
-              <p className="shop-map-freshness"
-                data-stale={month.salesStale ? "yes" : "no"}>
-                {month.freshness}
-              </p>
-            )}
-            <dl className="shop-map-rows">
-              <div><dt>Revenue</dt><dd>{money(month?.revenueMinor)}</dd></div>
-              <div><dt>Etsy fees</dt><dd>{money(month?.etsyFeesMinor)}</dd></div>
-              <div>
-                <dt>Production</dt>
-                {/*
-                  A COST THAT IS UNKNOWN IS NOT ZERO.
-
-                  This rendered "$0.00" directly beneath "Production costs
-                  missing for 1 of 1 orders" — two lines of the same card
-                  contradicting each other, and the zero is the one a member
-                  would believe. It now says what is true.
-                */}
-                {/*
-                  D1672 · AND NO MONTH AT ALL IS NOT ZERO EITHER.
-
-                  The fix above caught the case where coverage says the cost
-                  is unavailable. With no `thisMonth` in the payload — a shop
-                  read before its first month closed — the fallback was a
-                  literal 0, so Production read "$0.00" in a list where
-                  Revenue and Etsy fees both read "—". The same wrong claim,
-                  reached through the other door: money(undefined) already
-                  renders the dash every other row uses.
-                */}
-                <dd>{month?.coverage?.unavailable
-                  ? "Not available"
-                  : money(month ? -month.productionCostMinor : undefined)}</dd>
-              </div>
-              <div><dt>Orders</dt><dd>{month?.orders ?? 0}</dd></div>
-            </dl>
-            {month?.coverage?.unavailable ? (
-              /* Told there is a problem, and given the way to fix it. */
-              <a className="shop-map-fix" href="/shop-map/costs">
-                Add the missing production cost
-              </a>
-            ) : null}
-          </section>}
-
-      {/* 2 · One sentence, or the reason there isn't one. */}
-      <section className="shop-map-card">
-        <h2>Your shop is pointing here</h2>
-        {noSalesYet
-          ? <p className="shop-map-reason">No sales yet, so there is nothing to point at.</p>
-          : shown.standout?.hasStandout
-            ? <>
-                <p className="shop-map-world-name">{shown.standout.headline}</p>
-                <p className="shop-map-reason">{shown.standout.nextStep}</p>
-              </>
-            : <>
-                <p className="shop-map-world-name">{shown.standout?.headline ?? "No clear direction yet."}</p>
-                <p className="shop-map-reason">{shown.standout?.nextStep}</p>
-              </>}
-        {shown.directionBasis || shown.directionCaveat
-          ? <p className="shop-map-caveat">
-              {shown.directionBasis} {shown.directionCaveat}
-            </p>
-          : null}
+    {tab === "overview" && <div className="shop-map-tab-panel">
+      <section className="shop-map-leaders">
+        <div className="shop-map-section-head"><div><p className="mini-label">YOUR 24 MOST RECENT SALES</p>
+          <h2>These listings sold most often.</h2><p>Ranked by quantity sold in the last 90 days.</p></div>
+          <button type="button" onClick={() => setTab("sold")}>See every sold listing ↗</button></div>
+        {sold.length ? <div className="shop-map-leader-grid">{sold.slice(0,3).map((listing,index) =>
+          <article key={listing.listingId} className={index === 0 ? "lead" : ""}>
+            <div className="shop-map-listing-image">{listing.imageUrl
+              ? <img src={listing.imageUrl} alt="" loading="lazy" width={570} height={570} />
+              : <span aria-hidden="true">G</span>}<b>0{index + 1}</b></div>
+            <div><h3>{listing.title}</h3><p><strong>{listing.sales} sold</strong><span>{money(listing.revenueMinor)}</span></p></div>
+          </article>)}</div> : <div className="shop-map-empty"><b>No sales in the last 90 days.</b>
+            <p>Your sold listings will appear here after the next Etsy sales import.</p></div>}
       </section>
-
-      {/*
-        2b · WHERE TO FOCUS.
-
-        Arrives on every response, was declared in this file's own type, and
-        was rendered nowhere. The thin entries are grouped rather than given
-        a card each: four identical cards saying nothing happened is how a
-        real finding gets lost among them.
-      */}
-      {(shown.whereToFocus ?? []).length > 0 && (
-        <section className="shop-map-card">
-          <h2>Where to focus</h2>
-          {(shown.whereToFocus ?? [])
-            .filter(focus => !/needs more data/i.test(focus.headline))
-            .map(focus => (
-              <div className="shop-map-focus" key={focus.nicheId || focus.label}>
-                <p className="shop-map-world-name">{focus.label} · {focus.headline}</p>
-                <p className="shop-map-reason">{focus.reason}</p>
-                {focus.advice ? <p className="shop-map-advice">{focus.advice}</p> : null}
-              </div>
-            ))}
-          {(() => {
-            const thin = (shown.whereToFocus ?? [])
-              .filter(focus => /needs more data/i.test(focus.headline));
-            if (!thin.length) return null;
-            return (
-              <p className="shop-map-reason shop-map-thin">
-                Not enough recent orders to read a pattern in{" "}
-                {thin.map(focus => focus.label).join(", ")}. They stay on the map
-                with their lifetime figures.
-              </p>
-            );
-          })()}
-        </section>
-      )}
-
-      {/*
-        2c · HOW THESE NICHES WERE ORGANIZED.
-
-        Closed by default: it answers a question a member only sometimes has,
-        and an open block of reasoning above their actual niches would bury
-        them. Open, it is the difference between a grouping they can check
-        and one they can only accept — and the control to disagree with it
-        sits directly below.
-      */}
-      {(shown.grouping?.notes ?? []).length > 0 && (
-        <section className="shop-map-card">
-          <details className="shop-map-grouping">
-            <summary>
-              <span>How these niches were organized</span>
-              <span className="shop-map-grouping-chevron" aria-hidden="true">⌄</span>
-            </summary>
-            <p className="shop-map-reason">
-              Your listings suggested {shown.grouping?.found} groupings. Shop Map
-              shows {shown.grouping?.shown}, because some of them describe the same
-              thing.
-            </p>
-            <ul className="shop-map-grouping-notes">
-              {(shown.grouping?.notes ?? []).map(note => (
-                <li key={note.sentence} data-kind={note.kind}>{note.sentence}</li>
-              ))}
-            </ul>
-            <p className="shop-map-reason">
-              If any of this is wrong, move a listing below and its orders and
-              revenue move with it.
-            </p>
-          </details>
-        </section>
-      )}
-
-      {/* 3 · The niches. Recent first, lifetime as history. */}
-      <section className="shop-map-card">
-        <h2>Your niches</h2>
-        <p className="shop-map-period">
-          {shown.worldsPeriod}
-          {shown.coverage
-            ? ` · ${Math.round(shown.coverage.activeListings * 100)}% of active listings organized`
-            : ""}
-        </p>
-        <ul className="shop-map-worlds">
-          {niches.map(niche => {
-            const share = recentTotal ? niche.revenueMinor / recentTotal : 0;
-            /* Written out rather than built from a variable: a class the
-               stylesheet defines should be findable by searching for it. */
-            const strength = share >= 0.25 ? "shop-map-world-strong"
-              : share >= 0.1 ? "shop-map-world-mid" : "shop-map-world-quiet";
-            return (
-              <li key={niche.worldId}>
-                <button type="button"
-                  className={`shop-map-world ${strength}`}
-                  aria-expanded={open === niche.worldId}
-                  onClick={() => setOpen(open === niche.worldId ? "" : niche.worldId)}>
-                  <span className="shop-map-world-label">{niche.label}</span>
-                  <span className="shop-map-world-figure">{money(niche.revenueMinor)}</span>
-                  <span className="shop-map-world-meta">
-                    {niche.activeListings} active · {niche.orders}
-                    {niche.orders === 1 ? " order" : " orders"} · {niche.reviews.lifetimeHeld} reviews
-                  </span>
-                  <span className="shop-map-bar" aria-hidden="true">
-                    <span style={{ width: `${Math.max(2, Math.round(share * 100))}%` }} />
-                  </span>
-                  {niche.productFamilies.length
-                    ? <span className="shop-map-families">
-                        {niche.productFamilies.map(row => row.family).join(" · ")}
-                      </span>
-                    : null}
-                  <span className="shop-map-lifetime">
-                    Lifetime {money(niche.lifetimeRevenueMinor)} · {niche.lifetimeOrders} orders
-                  </span>
-                </button>
-                {open === niche.worldId
-                  ? <div className="shop-map-evidence">
-                      <p>{niche.evidence}</p>
-                      {niche.productFamilies.length
-                        ? <p>Products: {niche.productFamilies
-                            .map(row => `${row.family} (${row.listings})`).join(", ")}</p>
-                        : null}
-                      <p>{niche.listings} listings in total, {niche.activeListings} active.</p>
-                    </div>
-                  : null}
-              </li>
-            );
-          })}
-        </ul>
+      <section className="shop-map-summary-grid">
+        <article><span>Orders this month</span><strong>{month?.orders ?? 0}</strong><small>{money(month?.revenueMinor)} revenue</small></article>
+        <article><span>Active listings</span><strong>{shown.shopTotals?.listings ?? 0}</strong><small>in your current catalog</small></article>
+        <article><span>Top product theme</span><strong>{niches[0]?.label ?? "Not enough data"}</strong><small>{niches[0] ? `${niches[0].orders} orders in 90 days` : "Sales will reveal this"}</small></article>
       </section>
+    </div>}
 
-      {/* 4 · Only what can be acted on. */}
-      <section className="shop-map-card shop-map-attention">
-        <h2>Needs attention</h2>
-        <ul>
-          {shown.unclassifiedPerformance?.activeListings
-            ? <li>{shown.unclassifiedPerformance.activeListings} active
-              {shown.unclassifiedPerformance.activeListings === 1 ? " listing isn’t" : " listings aren’t"}
-              {" "}in a niche yet</li>
-            : null}
-          {(shown.needsAttention?.overbuiltWorlds ?? []).map(niche =>
-            <li key={niche.label}>{niche.reason}</li>)}
-          {!shown.unclassifiedPerformance?.activeListings
-            && !(shown.needsAttention?.overbuiltWorlds ?? []).length
-            ? <li className="shop-map-clear">Nothing needs your attention.</li> : null}
-        </ul>
-      </section>
+    {tab === "themes" && <section className="shop-map-card shop-map-themes">
+      <div className="shop-map-section-head"><div><p className="mini-label">PRODUCT THEMES</p><h2>Where your sales are coming from.</h2>
+        <p>{shown.worldsPeriod}. Open a theme to see what is included.</p></div></div>
+      <ul className="shop-map-worlds">{niches.map(niche => { const share = recentTotal ? niche.revenueMinor / recentTotal : 0;
+        return <li key={niche.worldId}><button type="button" className="shop-map-world"
+          aria-expanded={open === niche.worldId} onClick={() => setOpen(open === niche.worldId ? "" : niche.worldId)}>
+          <span className="shop-map-world-label">{niche.label}</span><span className="shop-map-world-figure">{money(niche.revenueMinor)}</span>
+          <span className="shop-map-world-meta">{niche.activeListings} active listings · {niche.orders} orders</span>
+          <span className="shop-map-bar"><span style={{width:`${Math.max(2,Math.round(share*100))}%`}}/></span>
+          <span className="shop-map-lifetime">Lifetime: {money(niche.lifetimeRevenueMinor)} from {niche.lifetimeOrders} orders</span>
+        </button>{open === niche.worldId ? <div className="shop-map-evidence"><p>{niche.evidence}</p>
+          <p>{niche.listings} listings total. {niche.productFamilies.map(row => row.family).join(", ")}</p></div> : null}</li>})}</ul>
+    </section>}
 
-      {/* Correction: move one listing, recomputed with no duplication. */}
-      <section className="shop-map-card">
-        <h2>Fix a listing</h2>
-        <p className="shop-map-reason">
-          Look up a listing to see which niche it is in and why, then move it if
-          that is wrong. Its orders and revenue move with it.
-        </p>
-        {correctionFailed && (
-          <p className="p-notice p-notice-bad shop-map-correction-failed" role="alert">
-            {correctionFailed}
-          </p>
-        )}
-        <MoveControl niches={niches} busy={busy} onMove={moveListing}
-          onClear={clearCorrection} />
-      </section>
-      {signedInEmail ? null : null}
-    </main>
-  );
+    {tab === "sold" && <section className="shop-map-card shop-map-sold">
+      <div className="shop-map-section-head"><div><p className="mini-label">SOLD LISTINGS</p><h2>Every listing with a sale in the last 90 days.</h2>
+        <p>Sales and revenue come from Etsy transactions. Favorites come from the current listing record.</p></div></div>
+      <div className="shop-map-sold-table"><div className="head"><span>Listing</span><span>Sold</span><span>Favorites</span><span>Revenue</span></div>
+        {sold.map(listing => <article key={listing.listingId}><div>{listing.imageUrl ? <img src={listing.imageUrl} alt=""/> : <i>G</i>}
+          <strong>{listing.title}</strong></div><b>{listing.sales}</b><span>{listing.favorites}</span><span>{money(listing.revenueMinor)}</span></article>)}</div>
+    </section>}
+
+    {tab === "money" && <section className="shop-map-card shop-map-money shop-map-money-redesign">
+      <p className="mini-label">THIS MONTH</p><h2>{month?.headline ?? "Your monthly totals"}</h2>
+      {shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
+        {detected ? <button className="shop-map-confirm" disabled={busy === "timezone"} onClick={() => void confirmTimezone()}>
+          {busy === "timezone" ? "Saving…" : `My shop runs on ${detected}`}</button> : null}</>
+      : <><p className="shop-map-figure" data-basis={monthBasis(month)}>{month?.profitMinor == null ? "Profit needs costs" : money(month.profitMinor)}
+          {monthBasis(month) === "estimated" && <span className="shop-map-basis-chip">Estimate</span>}</p>
+        <p className="shop-map-accuracy">{month?.accuracy}</p>
+        {month?.freshness ? <p className="shop-map-freshness" data-stale={month.salesStale ? "yes" : "no"}>{month.freshness}</p> : null}
+        <dl className="shop-map-rows">
+          <div><dt>Revenue</dt><dd>{money(month?.revenueMinor)}</dd></div><div><dt>Etsy fees</dt><dd>{money(month?.etsyFeesMinor)}</dd></div>
+          <div><dt>Production</dt><dd>{month?.coverage?.unavailable ? "Not available" : money(month ? -month.productionCostMinor : undefined)}</dd></div>
+          <div><dt>Orders</dt><dd>{month?.orders ?? 0}</dd></div></dl>
+        {month?.coverage?.unavailable ? <a className="shop-map-fix" href="/shop-map/costs">Add production costs</a> : null}</>}
+    </section>}
+    {signedInEmail ? null : null}
+  </main>;
 }
 
 type Placement = { listingId: number; title: string; nicheId: string;

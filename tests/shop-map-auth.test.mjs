@@ -158,11 +158,11 @@ test("the granted scopes are stored against the intended connection", () => {
   assert.match(branch, /String\(tokens\.scope\|\|""\)/);
 });
 
-test("the member lands back on that shop's capability state", () => {
+test("the member lands back on Connections with the granted shop", () => {
   const branch = callback.slice(
     callback.indexOf('if(intent==="sales"'),
     callback.indexOf("const existing=adding?"));
-  assert.match(branch, /\/api\/shop-map\/capability\?shop=\$\{targetShopId\}/);
+  assert.match(branch, /\/connections\?etsy_sales=\$\{salesGranted\?"connected":"missing"\}&shop=\$\{targetShopId\}/);
 });
 
 test("capability can be asked about one shop without activating it", () => {

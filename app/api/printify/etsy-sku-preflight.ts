@@ -1,8 +1,9 @@
 import {draftVariantSku} from './draft-identity.ts';
+import {meteredPrintifyFetch} from "../../printify-call.ts";
 type Variant={id:number;sku?:string;price:number;is_enabled:boolean};
 type Product={external?:{id?:string|number};is_locked?:boolean;variants?:Variant[]};
 /** Owner and exact creation key are established by the caller. Never publishes or creates. */
-export async function prepareEtsySkus(shopId:number,productId:string,key:string,token:string,fetcher:typeof fetch=fetch){
+export async function prepareEtsySkus(shopId:number,productId:string,key:string,token:string,fetcher:typeof fetch=meteredPrintifyFetch({feature:"listing-factory"})){
  const exactKey=/^[a-f0-9]{64}$/.test(key);
  const url=`https://api.printify.com/v1/shops/${shopId}/products/${productId}.json`;
  const headers={Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory'};

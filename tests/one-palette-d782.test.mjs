@@ -88,7 +88,7 @@ for (const name of readdirSync(new URL("../app", import.meta.url)).filter(file =
     for (const [raw, [hue, saturation, lightness]] of literals) {
       /* Near-neutrals carry almost no hue and read as grey whatever their
          nominal angle; the near-black and near-white ends likewise. */
-      if (saturation < 12 || lightness < 8 || lightness > 97) continue;
+      if (saturation < 12 || lightness <= 8 || lightness > 97) continue;
       if (measured && raw.startsWith(measured)) continue;
       const warmGold = hue >= 20 && hue < 70;
       const blueViolet = hue >= 180 && hue < 300;

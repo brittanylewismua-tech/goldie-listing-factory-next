@@ -1,7 +1,8 @@
 import {belongsToCreation} from './draft-identity.ts';
+import {meteredPrintifyFetch} from "../../printify-call.ts";
 type Product={id:string;shop_id?:number;blueprint_id?:number;print_provider_id?:number;variants?:Array<{id:number;sku?:string}>};
 /** Read only. An absent/incomplete match is never permission to replay a POST. */
-export async function reconcileDraftJob<T extends Product>(expected:Parameters<typeof belongsToCreation>[1],token:string,fetcher:typeof fetch=fetch):Promise<T|null>{
+export async function reconcileDraftJob<T extends Product>(expected:Parameters<typeof belongsToCreation>[1],token:string,fetcher:typeof fetch=meteredPrintifyFetch({feature:"listing-factory"})):Promise<T|null>{
   let match:T|null=null;
   for(let page=1;page<=10;page++){
     const response=await fetcher(`https://api.printify.com/v1/shops/${expected.shopId}/products.json?limit=50&page=${page}`,{signal:AbortSignal.timeout(15000),headers:{Authorization:`Bearer ${token}`,'User-Agent':'Goldie-Listing-Factory'}});

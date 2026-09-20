@@ -112,7 +112,7 @@ export const GET = withErrorLog("etsy-capability", async (request: Request) => {
     const connection = await etsyConnection(user.userId);
     const own = await etsyFetch<unknown>(
       `/listings/batch/inventory?listing_ids=${ids.join(",")}`,
-      connection.token, undefined, undefined, "qa",
+      connection.token, "qa",
     ).then(body => ({ status: 200, body })).catch(error => ({
       status: 0, body: error instanceof Error ? error.message : "failed",
     }));

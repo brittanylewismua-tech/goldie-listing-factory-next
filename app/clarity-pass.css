@@ -1812,7 +1812,9 @@ body{min-width:0}
   display:grid;gap:10px;margin-bottom:16px;padding:22px;
   border:1px solid #ded5db;border-radius:16px;background:rgba(255,255,255,.55);
 }
-.goals-current h2{margin:0;font:400 34px/1.05 "DM Serif Display",Georgia,serif;color:#4c293f}
+/* The card is dark (#151214) and this is the number on it — "2 of 20" —
+   measured 1.35:1 on the deployed page. */
+.goals-current h2{margin:0;font:400 34px/1.05 "DM Serif Display",Georgia,serif;color:#fff}
 .goals-track,.goals-bar{display:block;height:8px;border-radius:16px;background:rgba(91,48,79,.14);overflow:hidden}
 .goals-track>i,.goals-bar>i{display:block;height:100%;border-radius:16px;background:linear-gradient(90deg,#c58fbe,#8e4c78)}
 .goals-history ol{display:grid;gap:10px;margin:0;padding:0;list-style:none}
@@ -2417,7 +2419,10 @@ body{min-width:0}
 
 /* D551 - a phrase Etsy will not accept as a tag. It still works in a title, so it
    is marked, not struck out. */
-.app-shell .bank-tag-usable{color:rgba(74,42,62,.62);font-weight:600}
+/* rgba(74,42,62,.62) composites to #8b7a85 on the card — 3.85:1 at 11px,
+   measured on the deployed page. The caption tells a member which phrases
+   are short enough to use as tags, so it has to be readable. */
+.app-shell .bank-tag-usable{color:#63555e;font-weight:600}
 .app-shell .bank-grid span.over-tag-limit{border:1px dashed rgba(139,89,137,.45);background:rgba(255,255,255,.5);color:#75576b}
 
 /* D553 - one collapse, at the task. Every listing's work is open underneath it,
@@ -3220,3 +3225,11 @@ body{min-width:0}
 .app-shell .selected-product-loading[role="alert"] .secondary-action{
   min-height:44px;padding:0 14px;
 }
+
+/* The goal card says who set the target and what it counts. Quiet, because it
+   is an explanation and not the number. */
+.app-shell .listing-goal-note{
+  color:#8e8e8e!important;
+  font:600 10px/1.35 Inter,system-ui,sans-serif!important;
+}
+.app-shell > .topbar .listing-goal-side .listing-goal-note{color:#9a8f95!important}

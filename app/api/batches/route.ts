@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { isOwner } from "@/app/mastermind/access";
 import { bundleHistoryIdentity } from "@/app/batch-history-identity";
 import { APPLY_BUNDLE_KEYWORD_BANK } from "@/app/bundle-keyword-bank";
 import { RENAME_BATCH } from "@/app/batch-display-name";
@@ -161,7 +162,78 @@ function withRunProgress(item:Record<string,unknown>,parent:Record<string,unknow
     resume_batch_id:resumeInto};
 }
 
-export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const url=new URL(request.url),id=url.searchParams.get("id");if(id){const row=await database.prepare("SELECT * FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).first<Record<string,unknown>>();if(!row)return NextResponse.json({error:"That batch was not found."},{status:404});let state=await unpackBatchSnapshot(JSON.parse(String(row.state_json||"{}")),user.userId,(env as unknown as RuntimeEnv).ARTWORK) as BatchListState;
+/**
+ * WHAT ONE BATCH ACTUALLY OWNS, BEFORE ANYBODY DELETES IT.
+ *
+ * Read only, owner only. Deleting a batch row is easy; knowing which stored
+ * objects went with it and which are shared with a batch that is staying is
+ * the part that has to be checked first. A product template snapshot is
+ * content-addressed, so two batches built from the same saved product point at
+ * the same object — removing it with one of them would quietly break the
+ * other. This answers, per pointer, whether anything else references it.
+ */
+async function batchStorage(database:D1Database,userId:string,id:string){
+  const row=await database.prepare("SELECT id,user_id,status,step,created_at,updated_at,revision,parent_batch_id,state_json FROM listing_batches WHERE id=? AND user_id=?")
+    .bind(id,userId).first<Record<string,unknown>>();
+  if(!row)return {found:false,batchId:id};
+  let state:Record<string,unknown>={};
+  try{state=JSON.parse(String(row.state_json||"{}")) as Record<string,unknown>}catch{/* reported as unreadable below */}
+  const template=state._templateDetails as {key?:string;sha256?:string}|undefined;
+  const drafts=(Array.isArray(state.drafts)?state.drafts:[]) as Array<Record<string,unknown>>;
+  const designs=(Array.isArray(state.designs)?state.designs:[]) as Array<Record<string,unknown>>;
+
+  /* A pointer is exclusive only when no other row of this member's mentions
+     it. The comparison is on the stored key, which is what R2 is asked for. */
+  /*
+    `instr`, NOT `LIKE`.
+
+    The first version of this asked `state_json LIKE '%<sha>%'` and caught any
+    failure into an empty array — so D1 answering "LIKE or GLOB pattern too
+    complex" read as "nothing else references this object", which is the most
+    dangerous possible way to be wrong about whether a file is safe to delete.
+    A saved batch's state runs to hundreds of kilobytes and LIKE refuses over
+    it; `instr` does the same search with no pattern limit, and a failure is
+    returned as a failure.
+  */
+  const shares=async(needle:string):Promise<{ok:boolean;ids:string[];error?:string}>=>{
+    if(!needle)return {ok:true,ids:[]};
+    try{
+      const rows=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND id<>? AND instr(state_json, ?) > 0")
+        .bind(userId,id,needle).all<{id:string}>();
+      return {ok:true,ids:(rows.results??[]).map(entry=>entry.id)};
+    }catch(error){
+      return {ok:false,ids:[],error:error instanceof Error?error.message:String(error)};
+    }
+  };
+  const children=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND parent_batch_id=?")
+    .bind(userId,id).all<{id:string}>().catch(()=>({results:[]}));
+
+  return {
+    found:true,batchId:id,
+    row:{status:row.status,step:row.step,createdAt:row.created_at,updatedAt:row.updated_at,
+      revision:row.revision,parentBatchId:row.parent_batch_id},
+    children:(children.results??[]).map(entry=>entry.id),
+    designs:designs.map(design=>({id:design.id,name:design.name,
+      contentHash:design.contentHash,width:design.width,height:design.height,
+      /* True when the uploaded original is no longer retained anywhere. */
+      originalUnavailable:Boolean(design.originalUnavailable),
+      versions:(Array.isArray(design.artworkVersions)?design.artworkVersions:[]).length})),
+    printifyProducts:drafts.map(draft=>draft.id).filter(Boolean),
+    storage:{
+      templateSnapshot:template?.key?await(async()=>{const shared=await shares(String(template.sha256||""));
+        return {key:template.key,sha256:template.sha256,
+          /* null, never [], when the check itself failed. */
+          sharedWith:shared.ok?shared.ids:null,
+          sharedWithChecked:shared.ok,checkError:shared.error??""};})():null,
+      /* Draft media is keyed per Printify product, so a batch with no product
+         has none. Listed explicitly rather than assumed. */
+      draftMedia:drafts.filter(draft=>draft._draftMedia)
+        .map(draft=>({productId:draft.id,pointer:(draft._draftMedia as {key?:string})?.key})),
+    },
+  };
+}
+
+export async function GET(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const url=new URL(request.url),id=url.searchParams.get("id");const storageId=url.searchParams.get("storage");if(storageId){if(!isOwner(user))return NextResponse.json({error:"Not authorized."},{status:403});return NextResponse.json(await batchStorage(database,user.userId,String(storageId).replace(/[^a-zA-Z0-9-]/g,"").slice(0,80)));}if(id){const row=await database.prepare("SELECT * FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).first<Record<string,unknown>>();if(!row)return NextResponse.json({error:"That batch was not found."},{status:404});let state=await unpackBatchSnapshot(JSON.parse(String(row.state_json||"{}")),user.userId,(env as unknown as RuntimeEnv).ARTWORK) as BatchListState;
     const designIds=(Array.isArray(state.designs)?state.designs:[]).map(design=>design?.id).filter((value):value is string=>Boolean(value));
     if(designIds.length){
       const records=await database.prepare(`SELECT r.response_json,s.product_id AS source_template_id FROM printify_draft_results r LEFT JOIN printify_batch_sessions s ON s.id=r.batch_id AND s.user_id=r.user_id WHERE r.user_id=? AND r.status='succeeded' AND r.client_id IN (${designIds.map(()=>'?').join(',')})`).bind(user.userId,...designIds).all<{response_json:string;source_template_id:string|null}>();
@@ -321,7 +393,50 @@ export async function POST(request:Request){const user=await getChatGPTUser();if
   const parentBatchId=String(body.parentBatchId||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80)||null;
   const saved=await database.prepare("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,parent_batch_id,revision,updated_at) VALUES (?,?,?,?,?,?,?,?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET revision=listing_batches.revision+1,parent_batch_id=COALESCE(excluded.parent_batch_id,listing_batches.parent_batch_id),status=excluded.status,step=excluded.step,setup_name=excluded.setup_name,product_title=excluded.product_title,design_count=excluded.design_count,state_json=CASE WHEN length(trim(COALESCE(json_extract(listing_batches.state_json,'$.batchDisplayName'),'')))>0 THEN json_set(excluded.state_json,'$.batchDisplayName',json_extract(listing_batches.state_json,'$.batchDisplayName')) ELSE excluded.state_json END,updated_at=CURRENT_TIMESTAMP WHERE user_id=excluded.user_id AND listing_batches.revision=? AND (json_extract(listing_batches.state_json,'$.activeRecipe.id') IS NULL OR json_extract(listing_batches.state_json,'$.activeRecipe.id')=json_extract(excluded.state_json,'$.activeRecipe.id')) RETURNING revision").bind(id,user.userId,status,step,String(body.setupName||"").slice(0,160),String(body.productTitle||"").slice(0,200),Math.max(0,Math.min(20,Number(body.designCount||0))),stateJson,parentBatchId,expectedRevision).all<{revision:number}>();if(!saved.results.length)return NextResponse.json({code:"BATCH_SAVE_CONFLICT",error:"This batch changed since you opened it. Reload the saved batch before continuing."},{status:409});return NextResponse.json({id,saved:true,revision:saved.results[0].revision})}
 
-export async function DELETE(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const id=String(new URL(request.url).searchParams.get("id")||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);if(!id)return NextResponse.json({error:"Choose a batch to clear."},{status:400});/* D871 · Deleting a run deletes the run. A child is the run's own record for
+/**
+ * REMOVE A STORED OBJECT THAT NO BATCH REFERENCES ANY MORE.
+ *
+ * Deleting a batch row leaves its product-template snapshot behind: R2 objects
+ * are content-addressed and can be shared by two batches built from the same
+ * saved product, so the row delete cannot safely remove them on its own.
+ *
+ * This removes exactly one named object, and only when all four hold:
+ *   - it sits under THIS member's own prefix,
+ *   - it is a batch-template snapshot and nothing else,
+ *   - no remaining row of theirs references its content hash,
+ *   - the caller is the owner and named the key explicitly.
+ *
+ * It never scans, never removes more than the one key it was given, and
+ * refuses rather than guessing.
+ */
+async function removeOrphanTemplate(database:D1Database,userId:string,key:string){
+  const prefix=`batch-templates/${encodeURIComponent(userId)}/`;
+  const shape=new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}([a-f0-9]{64})\\.json\\.gz$`);
+  const match=shape.exec(key);
+  if(!match)return {removed:false,reason:"That key is not a batch template belonging to you."};
+  const sha=match[1];
+  /* A failure here is reported rather than swallowed: "could not be checked"
+     with no reason is the shape that makes a guard impossible to debug. */
+  let referencing:{results?:Array<{id:string}>}|null=null;
+  let checkError="";
+  try{referencing=await database.prepare("SELECT id FROM listing_batches WHERE user_id=? AND instr(state_json, ?) > 0")
+    .bind(userId,sha).all<{id:string}>();}
+  catch(error){checkError=error instanceof Error?error.message:String(error)}
+  if(!referencing)return {removed:false,
+    reason:"The references could not be checked, so nothing was removed.",detail:checkError};
+  if((referencing.results??[]).length)
+    return {removed:false,reason:"Still referenced by a saved batch.",
+      referencedBy:(referencing.results??[]).map(row=>row.id)};
+  const bucket=(env as unknown as {ARTWORK:{delete(key:string):Promise<unknown>;get(key:string):Promise<unknown>}}).ARTWORK;
+  const before=Boolean(await bucket.get(key));
+  if(!before)return {removed:false,reason:"No such object; nothing to remove.",existed:false};
+  await bucket.delete(key);
+  /* Confirmed by reading it back, not by trusting the delete. */
+  const after=Boolean(await bucket.get(key));
+  return {removed:!after,existed:true,confirmedGone:!after,key,sha256:sha};
+}
+
+export async function DELETE(request:Request){const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});const database=db();if(!database)return NextResponse.json({error:"Batch history is unavailable."},{status:503});await ensure(database);const id=String(new URL(request.url).searchParams.get("id")||"").replace(/[^a-zA-Z0-9-]/g,"").slice(0,80);const orphanTemplate=new URL(request.url).searchParams.get("orphanTemplate");if(orphanTemplate){if(!isOwner(user))return NextResponse.json({error:"Not authorized."},{status:403});return NextResponse.json(await removeOrphanTemplate(database,user.userId,String(orphanTemplate).slice(0,300)));}if(!id)return NextResponse.json({error:"Choose a batch to clear."},{status:400});/* D871 · Deleting a run deletes the run. A child is the run's own record for
      one of its products, not a separate job the seller can keep. */
   await database.prepare("DELETE FROM listing_batches WHERE user_id=? AND parent_batch_id=?").bind(user.userId,id).run().catch(()=>undefined);
   await database.prepare("DELETE FROM listing_batches WHERE id=? AND user_id=?").bind(id,user.userId).run();
@@ -334,7 +449,10 @@ export async function DELETE(request:Request){const user=await getChatGPTUser();
      cleaned up by whoever breaks it.
      Scoped to this user's own rows, and only rewrites a batch that genuinely
      mapped a product to the deleted id. */
-  const referencing=await database.prepare("SELECT id,state_json FROM listing_batches WHERE user_id=? AND state_json LIKE ?").bind(user.userId,`%${id}%`).all<{id:string;state_json:string}>();
+  /* instr, not LIKE: D1 answers "LIKE or GLOB pattern too complex" over a
+     saved batch state, and that error here would abort the delete halfway,
+     leaving the row gone and every bundle reference to it dangling. */
+  const referencing=await database.prepare("SELECT id,state_json FROM listing_batches WHERE user_id=? AND instr(state_json, ?) > 0").bind(user.userId,id).all<{id:string;state_json:string}>();
   for(const row of referencing.results||[]){
     let state:Record<string,unknown>;
     try{state=JSON.parse(row.state_json||"{}") as Record<string,unknown>}catch{continue}

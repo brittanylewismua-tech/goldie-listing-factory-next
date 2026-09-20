@@ -35,6 +35,6 @@ test("anything unparseable is shown as it came, not guessed", () => {
 test("the page renders it through the function", () => {
   const source = readFileSync(new URL(
     "../app/shop-map/shop-map-client.tsx", import.meta.url), "utf8");
-  assert.match(source, /<p>\{monthName\(shown\.month\)\}<\/p>/);
+  assert.match(source, /monthName\(shown\.month\)/);
   assert.ok(!/<p>\{shown\.month\}<\/p>/.test(source));
 });

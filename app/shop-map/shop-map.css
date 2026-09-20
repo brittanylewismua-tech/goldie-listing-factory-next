@@ -1,46 +1,75 @@
+/*
+ * D1743 · OPACITY WAS DOING THE MUTING, AND IT WAS MUTING LEGIBILITY.
+ *
+ * Ten text rules here faded themselves to between .6 and .85. On the money
+ * card that put "This month" at 1.77:1 and the section headings at 2.25:1,
+ * against a 4.5 minimum — measured on rendered pixels at 375, 390 and 430.
+ *
+ * Opacity cannot be reasoned about locally: it multiplies against whatever is
+ * behind it, so the same declaration reads differently on every card. The
+ * muted tone now lives in the colour, which is checkable, and the fade is
+ * gone. Nothing here changes a size, a weight, a spacing or a layout — only
+ * how dark the muted text is.
+ *
+ * Kept: opacity on :disabled, where fading IS the meaning.
+ */
 /* Phone first. No table, no horizontal scroll, large touch targets. */
 .shop-map{max-width:640px;margin:0 auto;padding:16px 16px 48px}
 .shop-map-head h1{font-size:20px;margin:0 0 2px;line-height:1.25}
-.shop-map-head p{margin:0 0 16px;font-size:13px;opacity:.7}
+.shop-map-head p{margin:0 0 16px;font-size:13px}
 .shop-map-card{border:1px solid #e6dfe4;border-radius:14px;padding:16px;margin-bottom:14px;background:#fff}
-.shop-map-card h2{font-size:13px;margin:0 0 10px;letter-spacing:.02em;text-transform:uppercase;opacity:.65}
-.shop-map-headline-label{margin:0;font-size:13px;opacity:.75}
+/*
+  THE DARK CARD HAS TO WIN ON SPECIFICITY, NOT ON FILE ORDER.
+
+  `.shop-map-money{background:#151214}` lives in the shared stylesheet and
+  `.shop-map-card{background:#fff}` lives here, in the route's own — equal
+  specificity, and in the built bundle this file loads last. Production
+  therefore painted the money card white while its text stayed white: 1.00:1,
+  the month's money and every label on it invisible, on the deployed build
+  only. The local preview imports these files in the other order, which is
+  exactly why it looked fixed. Compound selector, so order stops mattering.
+*/
+.shop-map-card.shop-map-money{background:#151214;border-color:#111;color:#fff}
+.shop-map-card h2{font-size:13px;margin:0 0 10px;letter-spacing:.02em;text-transform:uppercase}
+.shop-map-headline-label{margin:0;font-size:13px}
 .shop-map-figure{margin:2px 0 4px;font-size:34px;line-height:1.1;font-weight:750}
-.shop-map-accuracy{margin:0 0 12px;font-size:12px;opacity:.7;line-height:1.45}
+.shop-map-accuracy{margin:0 0 12px;font-size:12px;line-height:1.45}
 .shop-map-rows{margin:0;display:grid;gap:8px}
 .shop-map-rows>div{display:flex;justify-content:space-between;gap:12px;font-size:14px}
-.shop-map-rows dt{opacity:.7;margin:0}
+.shop-map-rows dt{margin:0}
 .shop-map-rows dd{margin:0;font-variant-numeric:tabular-nums}
-.shop-map-reason{margin:0;font-size:14px;line-height:1.5;opacity:.85}
+.shop-map-reason{margin:0;font-size:14px;line-height:1.5}
 .shop-map-worlds{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .shop-map-world{display:grid;gap:4px;width:100%;text-align:left;background:none;border:0;
   padding:12px;border-radius:12px;min-height:64px;cursor:pointer}
 .shop-map-world:hover{background:#faf7f9}
 .shop-map-world-label{font-size:16px;font-weight:700}
 .shop-map-world-figure{font-size:15px;font-variant-numeric:tabular-nums}
-.shop-map-world-meta{font-size:12px;opacity:.7;line-height:1.45}
+.shop-map-world-meta{font-size:12px;line-height:1.45}
 .shop-map-bar{display:block;height:6px;border-radius:3px;background:#efe7ec;overflow:hidden}
 .shop-map-bar>span{display:block;height:100%;background:#a33a48}
-.shop-map-evidence{margin:0 12px 8px;font-size:12px;line-height:1.5;opacity:.75}
+.shop-map-evidence{margin:0 12px 8px;font-size:12px;line-height:1.5}
 .shop-map-attention ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px;line-height:1.5}
-.shop-map-clear{opacity:.65}
+.shop-map-clear{}
 @media (min-width:700px){.shop-map{padding:28px 20px 64px}}
-.shop-map-period{margin:-6px 0 10px;font-size:12px;opacity:.7}
+/* D1743 · The pink itself reads at 4.81:1; the .7 opacity took it to 3.41.
+   Removing the fade keeps the exact brand colour and makes it legible. */
+.shop-map-period{margin:-6px 0 10px;font-size:12px}
 .shop-map-evidence p{margin:0 0 6px}
 /* The map is the centre of the feature: strength has to read in a glance. */
 .shop-map-world-strong{background:#fdf3f6;box-shadow:inset 0 0 0 1px rgba(163,58,72,.22)}
 .shop-map-world-strong .shop-map-world-label{font-size:19px}
 .shop-map-world-strong .shop-map-bar{height:10px}
 .shop-map-world-mid .shop-map-bar{height:8px}
-.shop-map-families{font-size:11px;opacity:.6;letter-spacing:.01em}
+.shop-map-families{font-size:11px;letter-spacing:.01em}
 .shop-map-confirm{margin-top:10px;min-height:44px;padding:10px 16px;border-radius:10px;
   border:1px solid #a33a48;background:#a33a48;color:#fff;font-size:15px;font-weight:700;cursor:pointer}
 .shop-map-confirm:disabled{opacity:.6}
-.shop-map-state{padding:32px 0;font-size:14px;opacity:.75;line-height:1.5}
+.shop-map-state{padding:32px 0;font-size:14px;line-height:1.5}
 .shop-map-stale{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:#fff8ec;
   font-size:13px;line-height:1.45}
-.shop-map-caveat{margin:8px 0 0;font-size:12px;opacity:.65;line-height:1.5}
-.shop-map-lifetime{font-size:11px;opacity:.55}
+.shop-map-caveat{margin:8px 0 0;font-size:12px;line-height:1.5}
+.shop-map-lifetime{font-size:11px}
 /* Built as shop-map-world-${strength}: strong, mid, quiet. */
 .shop-map-world-quiet .shop-map-bar{height:5px}
 .shop-map-move{display:grid;gap:10px}
@@ -98,6 +127,10 @@
   first saw nothing telling them it was provisional.
 */
 .shop-map-figure[data-basis="estimated"]{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* The money card is dark and its children inherit white. The chip paints its
+   own cream field, so it keeps its own dark ink — inheriting white measured
+   1.08:1 on the one word that qualifies the number beside it. */
+.app-shell .shop-map-money .shop-map-figure .shop-map-basis-chip{color:#6b4a06}
 .shop-map-basis-chip{display:inline-flex;align-items:center;border-radius:999px;
   border:1px solid #e0b64f;background:#fff6e0;padding:3px 10px;
   color:#6b4a06;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}

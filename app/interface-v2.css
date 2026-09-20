@@ -2316,7 +2316,7 @@ html, body { background: var(--lf-paper); }
   padding:5px 9px;border-radius:6px;background:#f7edf3;color:#6b4560;
   font:11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-work .bank-grid article .bank-tag-usable{
-  padding:0;background:none;border-radius:0;color:#8b7a85;
+  padding:0;background:none;border-radius:0;color:#63555e;   /* was #8b7a85 — 3.85:1 */
   font:11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif}
 
 /* D818e · The 404. It rendered outside the shell too, in Manrope with a 10px
@@ -4599,7 +4599,6 @@ html, body { background: var(--lf-paper); }
 .status-line.quiet{color:#9a9a9a;border-style:dashed}
 /* D1688 · How old the figure beside it is. Quieter than the figure, on the
    same line, so it qualifies the number rather than competing with it. */
-.status-asof{opacity:.72}
 
 /* A bare `footer` rule in approved-functional.css paints every footer in the
    app a translucent plum, which put a band across the bottom of this page.

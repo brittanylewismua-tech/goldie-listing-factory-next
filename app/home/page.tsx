@@ -1,71 +1,11 @@
 import Link from "next/link";
 import { accountSignInPath, getChatGPTUser } from "@/app/chatgpt-auth";
-import HomeStatus from "./home-status";
 import FactoryShell from "@/app/factory-shell";
+import HomeView from "./home-view";
 
 /* The tab says what this page is. There is no product name to append, and
    a placeholder in a tab title is how a stand-in becomes permanent. */
 export const metadata = { title: "Home" };
-
-
-/**
- * THE FRONT DOOR, FOR THE PRODUCT AS IT NOW IS.
- *
- * Four features, not a growing shelf of tools. The previous version listed Hot
- * List and a "Customer Service" tile marked coming soon — neither is part of
- * the product, and a permanent coming-soon tile is a promise nobody made.
- *
- * Status lives above the doors and only appears when it says something. A
- * member with nothing pending sees four doors and no numbers, which is the
- * correct amount of information for that morning.
- */
-const stroke = {
-  fill: "none", stroke: "currentColor", strokeWidth: 1.6,
-  strokeLinecap: "round" as const, strokeLinejoin: "round" as const,
-};
-
-const TOOLS = [
-  {
-    href: "/listing-factory",
-    name: "Listing Factory",
-    what: "Turn a design into finished Etsy listings, in bulk.",
-    desktopOnly: true,
-    icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
-      <path d="M3 20h18" /><path d="M5 20V9l5 3V9l5 3V6l4 3v11" /></svg>,
-  },
-  {
-    href: "/market-watch",
-    name: "Market Watch",
-    what: "What is actually moving in the niches and shops you follow.",
-    desktopOnly: false,
-    icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
-      <path d="M3 17l6-6 4 4 7-7" /><path d="M14 8h7v7" /></svg>,
-  },
-  {
-    href: "/design-scanner",
-    name: "Design Scanner",
-    what: "See how a design compares with listings that are moving.",
-    desktopOnly: false,
-    icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
-      <circle cx="12" cy="12" r="8" /><path d="M4 12h16" /></svg>,
-  },
-  {
-    href: "/shop-map",
-    name: "Shop Map",
-    what: "Your own listings, your money, and what your shop is made of.",
-    desktopOnly: false,
-    icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
-      <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></svg>,
-  },
-  {
-    href: "/trademark",
-    name: "Trademark Checker",
-    what: "Check a phrase before you print it.",
-    desktopOnly: false,
-    icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
-      <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>,
-  },
-];
 
 export default async function HomePage() {
   const user = await getChatGPTUser();
@@ -73,47 +13,6 @@ export default async function HomePage() {
     return <main className="hub-auth"><Link href={accountSignInPath("/home")}>Sign in</Link></main>;
 
   return <FactoryShell active="home" title="Home" desktopOnly={false}>
-  <main className="hub p-grid">
-    <header className="hub-head">
-      {/*
-        NO MARK HERE.
-
-        This carried the suite name. The umbrella product has not been named
-        yet, and Home — the page that offers every feature — is the last place
-        a stand-in should sit, because whatever goes here reads as the name of
-        the whole thing. The greeting is the heading; the features name
-        themselves on their own tiles.
-      */}
-      {/* No name. The only one available is the part of an email address
-          before the @, and "Good to see you, shesawolfclothing" is worse than
-          not trying. */}
-      <p className="hub-eyebrow"><span /> YOUR SELLER COMMAND CENTER</p>
-      <h1>Good to see you.<br/><em>Your next move is here.</em></h1>
-      <p className="hub-intro">The clearest signals across your shop, watched markets, and listing workflow, all in one place.</p>
-    </header>
-
-    <HomeStatus />
-
-    <div className="hub-section-head"><div><p className="mini-label">YOUR TOOLS</p><h2>Everything you need to move the shop forward.</h2></div><a href="/listing-factory">Create listings <span aria-hidden="true">↗</span></a></div>
-    <section className="hub-grid">
-      {TOOLS.map(tool => (
-        <Link key={tool.name} className="hub-tool" href={tool.href}>
-          <span className="hub-icon" aria-hidden="true">{tool.icon}</span>
-          <span className="hub-tool-number">0{TOOLS.indexOf(tool) + 1}</span>
-          <b>{tool.name}</b>
-          <span className="hub-what">{tool.what}</span>
-          {tool.desktopOnly && <span className="hub-desktop">Desktop</span>}
-          <span className="hub-open" aria-hidden="true">↗</span>
-        </Link>
-      ))}
-    </section>
-
-    <footer className="hub-foot">
-      <p className="etsy-api-disclosure">
-        The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the
-        Etsy API but is not endorsed or certified by Etsy, Inc.
-      </p>
-    </footer>
-  </main>
+    <HomeView />
   </FactoryShell>;
 }

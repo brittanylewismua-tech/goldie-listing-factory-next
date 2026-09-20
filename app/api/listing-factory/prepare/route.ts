@@ -1,6 +1,6 @@
 import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
-import { withErrorLog } from "@/app/error-log";
+import { withErrorLog, logError } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { canaryFor } from "@/app/listing-flow-canary";
 import { classifyBlueprint, validateMapping } from "@/app/blueprint-registry";
@@ -14,9 +14,10 @@ import { artworkHashOfBytes, artworkHashOfDataUrl } from "@/app/artwork-identity
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { INTERNAL_VALIDATION_MARKER, isInternalValidationProduct } from "@/app/printify-validation-marker";
 import { check, withRegister, registerIsReady, toMatches } from "@/app/trademark-check";
-import { lookup, normalize, registerSize } from "@/app/trademark-register";
+import { lookup, normalize, registerSize, squeeze } from "@/app/trademark-register";
 import { env } from "cloudflare:workers";
 import { isOwner } from "@/app/mastermind/access";
+import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * THE LAYERED FLOW, IN PRODUCTION, UP TO THE ETSY WRITE.
@@ -179,9 +180,26 @@ export const POST = withErrorLog("listing-factory-prepare", async (request: Requ
        backfill. And the raw hits went in unmapped, leaving `exact` undefined
        on every one, which downgraded an exact single-word registered mark
        from high risk to a minor mention. */
-    trademark = withRegister(check(phrase), toMatches(hits, phrase, normalize),
-      size);
-  } catch { /* the verdict without the register is still a verdict */ }
+    trademark = { ...withRegister(check(phrase), toMatches(hits, phrase, normalize, squeeze),
+      size), registerRead: true };
+  } catch (error) {
+    /*
+      A FAILED REGISTER READ TRAVELS. IT DOES NOT VANISH.
+
+      This was a bare catch, and the comment said the verdict without the
+      register is still a verdict — which is true, and it is a DIFFERENT
+      verdict. The register lookup was failing globally for months on the
+      other route for exactly this reason: the failure was indistinguishable
+      from a clean search. A batch that could not read the register must say
+      so rather than quietly screen on the curated list alone.
+    */
+    trademark = { ...withRegister(check(phrase), [], null), registerRead: false };
+    await logError({
+      area: "trademark/register-read",
+      message: error instanceof Error ? error.message : String(error),
+      userId: user.userId,
+    }).catch(() => {});
+  }
 
   /* Steps 10-12: composed, not generated. */
   const listings = supported.map(entry => {
@@ -420,8 +438,9 @@ async function printifyPreflight() {
   const token = await decryptPrintifyToken(connection.encrypted_token, runtime.PRINTIFY_TOKEN_KEY);
   const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
 
-  const shopsResponse = await fetch("https://api.printify.com/v1/shops.json",
-    { headers, signal: AbortSignal.timeout(15_000) });
+  const shopsResponse = await printifyCall("https://api.printify.com/v1/shops.json",
+    { headers, signal: AbortSignal.timeout(15_000) },
+    { feature: "cleanup", userId: user.userId });
   const shops = shopsResponse.ok
     ? await shopsResponse.json() as Array<{ id: number; title: string; sales_channel?: string }> : [];
   const shop = shops[0];
@@ -430,9 +449,10 @@ async function printifyPreflight() {
   const absent = "0".repeat(24);
   let deleteStatus = 0;
   if (shop) {
-    const attempt = await fetch(
+    const attempt = await printifyCall(
       `https://api.printify.com/v1/shops/${shop.id}/products/${absent}.json`,
-      { method: "DELETE", headers, signal: AbortSignal.timeout(15_000) });
+      { method: "DELETE", headers, signal: AbortSignal.timeout(15_000) },
+      { feature: "cleanup", userId: user.userId });
     deleteStatus = attempt.status;
   }
 
@@ -485,7 +505,8 @@ async function printifyProduct(shopId: string, productId: string, remove: boolea
   const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
   const url = `https://api.printify.com/v1/shops/${shopId}/products/${productId}.json`;
 
-  const readResponse = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+  const readResponse = await printifyCall(url, { headers, signal: AbortSignal.timeout(15_000) },
+    { feature: "cleanup", userId: user.userId });
   if (readResponse.status === 404)
     return NextResponse.json({ productId, exists: false,
       note: "Printify has no product with this id in this shop." });
@@ -511,10 +532,11 @@ async function printifyProduct(shopId: string, productId: string, remove: boolea
       error: `Refused: this route only removes products carrying ${INTERNAL_VALIDATION_MARKER}.`,
       title: product.title }, { status: 409 });
 
-  const deleteResponse = await fetch(url, { method: "DELETE", headers,
-    signal: AbortSignal.timeout(15_000) });
+  const deleteResponse = await printifyCall(url, { method: "DELETE", headers,
+    signal: AbortSignal.timeout(15_000) }, { feature: "cleanup", userId: user.userId });
   /* Confirm by reading again rather than trusting the delete's own answer. */
-  const confirm = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
+  const confirm = await printifyCall(url, { headers, signal: AbortSignal.timeout(15_000) },
+    { feature: "cleanup", userId: user.userId });
   return NextResponse.json({ productId, title: product.title,
     deleteStatus: deleteResponse.status,
     confirmedGone: confirm.status === 404,
@@ -550,9 +572,10 @@ async function findInternalTestProducts(shopId: string) {
   const token = await decryptPrintifyToken(connection.encrypted_token, runtime.PRINTIFY_TOKEN_KEY);
   const headers = { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" };
 
-  const response = await fetch(
+  const response = await printifyCall(
     `https://api.printify.com/v1/shops/${shopId}/products.json?limit=50`,
-    { headers, signal: AbortSignal.timeout(20_000) });
+    { headers, signal: AbortSignal.timeout(20_000) },
+    { feature: "cleanup", userId: user.userId });
   if (!response.ok)
     return NextResponse.json({ error: `Printify answered ${response.status}.` }, { status: 502 });
   const page = await response.json() as

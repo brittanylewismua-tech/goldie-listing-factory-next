@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FullVerdict } from "../trademark-check";
 import "./trademark.css";
 import FactoryShell from "@/app/factory-shell";
@@ -31,11 +31,44 @@ const EXAMPLES = [
   "bluey birthday shirt",
 ];
 
-export default function TrademarkPage() {
-  const [phrase, setPhrase] = useState("");
+/* `initialPhrase` exists for the state preview: it runs the same check the
+   member's keystroke would, so a match state can be seen without one. */
+/*
+  A CLASS NUMBER IS NOT AN ANSWER.
+
+  The record said "class 021" — a Nice classification code that means nothing
+  to a seller deciding whether to print a phrase. It now says what the class
+  covers, with the number kept for anyone who wants to look it up.
+*/
+const CLASS_NAMES: Record<string, string> = {
+  "003": "cosmetics", "009": "electronics", "014": "jewellery",
+  "016": "paper and stationery", "018": "bags and leather",
+  "020": "furniture", "021": "housewares and mugs", "024": "textiles",
+  "025": "clothing", "026": "trims and patches", "028": "toys and games",
+  "030": "food", "032": "drinks", "035": "retail and advertising",
+  "041": "entertainment and classes", "043": "food and drink services",
+};
+const classPhrase = (classes: string[]) => {
+  const named = classes.map(code => {
+    const key = code.padStart(3, "0");
+    return CLASS_NAMES[key] ? `${CLASS_NAMES[key]} (class ${key})` : `class ${key}`;
+  });
+  return named.join(", ");
+};
+
+export default function TrademarkPage({ initialPhrase }: { initialPhrase?: string } = {}) {
+  const [phrase, setPhrase] = useState(initialPhrase ?? "");
   const [verdict, setVerdict] = useState<FullVerdict | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
+
+  const started = useRef(false);
+  useEffect(() => {
+    if (!initialPhrase || started.current) return;
+    started.current = true;
+    void run(initialPhrase);
+    /* Once, on mount, for the preview only. */
+  }, [initialPhrase]);
 
   async function run(value: string) {
     const term = value.trim();
@@ -145,13 +178,17 @@ export default function TrademarkPage() {
             curated list: they are a different kind of fact and a seller
             should be able to tell which one is talking. */}
         {(verdict.register ?? []).length > 0 && <ul className="tm-hits tm-register p-card-quiet">
-          {(verdict.register ?? []).map(match =>
-            <li key={match.registration || match.mark} className="tm-hit">
+          {(verdict.register ?? []).map((match, index) =>
+            /* Two records for one brand share a mark and carry no
+               registration number until they register, so the previous key
+               collided and React kept only one of them. */
+            <li key={`${match.mark}-${match.classes.join("-")}-${index}`} className="tm-hit">
               <b>{match.mark}</b>
-              {match.owner && <span className="tm-owner">registered to {match.owner}</span>}
+              {match.owner && <span className="tm-owner">
+                {match.registered ? "registered to" : "filed by"} {match.owner}</span>}
               <span className="tm-cat">
                 {match.registered ? "live registration" : "pending application"}
-                {match.classes.length ? ` · class ${match.classes.join(", ")}` : ""}
+                {match.classes.length ? ` · ${classPhrase(match.classes)}` : ""}
               </span>
             </li>)}
         </ul>}
@@ -160,8 +197,8 @@ export default function TrademarkPage() {
       <p className="tm-note">
         <strong>What this checks.</strong> Two things. The brands, characters, franchises,
         teams and artists that listings actually get removed for — and live US trademark
-        registrations in the classes print-on-demand sellers sell into, taken from USPTO's
-        own published data.{" "}
+        records, taken from USPTO's own published data. Marks outside the classes
+        print-on-demand sellers use are counted when the phrase is the brand itself.{" "}
         {verdict && verdict.registerReady === false &&
           <strong>The register is still loading, so treat a clean result as incomplete today.</strong>}
         {" "}It is not legal advice, and a clean result means nothing was found rather than

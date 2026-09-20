@@ -108,6 +108,9 @@ export default function MarketWatchClient(
   const [busy, setBusy] = useState(false);
   const [opening, setOpening] = useState("");
   const [error, setError] = useState("");
+  /* Not every outcome is a failure. Saving something already saved is a
+     perfectly good answer, and the member still needs to be told. */
+  const [notice, setNotice] = useState("");
 
   const loadNiches = useCallback(async (quiet = false) => {
     if (!quiet) setWatches(was => ({ ...was, status: "loading" }));
@@ -150,15 +153,31 @@ export default function MarketWatchClient(
     if (!value || busy) return;
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       const path = tab === "niches" ? "/api/market-watch/niches" : "/api/market-watch/shops";
       const payload = tab === "niches" ? { phrase: value } : { input: value };
       const response = await fetch(path, { method: "POST",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      const body = await response.json() as { error?: string } & NicheView;
+      const body = await response.json() as
+        /* The shops route answers shopName at the top level; the niches
+           route has no shop at all. Read both rather than only the shape one
+           of them happens to use. */
+        { error?: string; alreadyWatched?: boolean; shopName?: string;
+          shop?: { shopName?: string } } & NicheView;
       if (!response.ok) setError(body.error ?? "That could not be saved.");
       else {
         setInput("");
+        /*
+          THE SERVER SAID "already watched" AND THE PAGE SAID NOTHING.
+
+          Adding a shop that was already on the list cleared the box and gave
+          no answer at all, so the only way to tell whether it had worked was
+          to count the rows. The reply carries alreadyWatched; this says it.
+        */
+        setNotice(body.alreadyWatched
+          ? `${body.shopName ?? body.shop?.shopName ?? "That shop"} is already on your watch list.`
+          : "");
         if (tab === "niches") { setOpen(body); void loadNiches(true); }
         else void loadShops(true);
       }
@@ -176,6 +195,7 @@ export default function MarketWatchClient(
   const chooseTab = (next: "niches" | "shops") => {
     setTab(next);
     setError("");
+    setNotice("");
     if (typeof window === "undefined" || startTab) return;
     const url = new URL(window.location.href);
     if (next === "shops") url.searchParams.set("tab", "shops");
@@ -259,6 +279,7 @@ export default function MarketWatchClient(
         would ever hear.
       */}
       {error && <p className="error" role="alert">{error}</p>}
+      {!error && notice && <p className="p-notice" role="status">{notice}</p>}
 
       {/*
         The tabs carried role="tab" and aria-selected but controlled nothing —
@@ -288,7 +309,14 @@ export default function MarketWatchClient(
                     ? "Last update could not be refreshed — showing the last confirmed reading"
                     /* D1674 · "feminist · 1 moving · 1 repeated · 1 shops" on
                        the live page. The counts are genuinely often one. */
-                    : `${watch.moving} moving · ${watch.repeated} repeated · `
+                    /*
+                      "14 moving · 5 repeated · 9 shops" is this codebase's
+                      shorthand, not a sentence. A seller cannot tell what is
+                      moving, what repeated, or why the shop count matters.
+                      Each number now says what it counts.
+                    */
+                    : `${watch.moving} listing${watch.moving === 1 ? "" : "s"} selling · `
+                      + `${watch.repeated} with repeat sales · across `
                       + `${watch.shops} ${watch.shops === 1 ? "shop" : "shops"}`}
               </span>
             </button>
@@ -363,8 +391,8 @@ function NicheDetail({ view, onBack }: { view: NicheView; onBack: () => void }) 
         <p className="summary">
           {summary.meaningfulMomentum
             /* Same rule as the list row: these counts are often one. */
-            ? `${summary.moving} ${summary.moving === 1 ? "listing" : "listings"} moving · `
-              + `${summary.repeated} with repeated momentum · `
+            ? `${summary.moving} ${summary.moving === 1 ? "listing" : "listings"} selling · `
+              + `${summary.repeated} with repeat sales · across `
               + `${summary.shops} ${summary.shops === 1 ? "shop" : "shops"}`
             /*
               D1675 · THE PAGE DENIED THE EVIDENCE IT WAS SHOWING.

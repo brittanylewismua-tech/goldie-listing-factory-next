@@ -58,6 +58,7 @@ import { ensureListingTables } from "@/app/shop-map-listings";
 import { ensureScopeColumn } from "@/app/shop-map-auth";
 import { ensureTargetTable } from "@/app/shop-map-targets";
 import { ensureRegisterTables } from "@/app/trademark-register";
+import { ensurePrintifyMeter } from "@/app/printify-call";
 import { ensureEntitlementTables } from "@/app/entitlements";
 import { ensureScannerTables } from "@/app/scanner-store";
 
@@ -134,6 +135,11 @@ export const MIGRATIONS: Step[] = [
   /* The brief refresh reads this on every run to decide what is due; it must
      exist before the first scheduled run, not be created by it. */
   { name: "niche_brief_runs", run: () => ensureBriefRunTable(database()) },
+  /* The Printify meter records the moment it began measuring, and everything
+     before that moment is reported as unmeasured. Creating it at deploy means
+     that moment is the deploy, rather than whenever the first call happened to
+     be made — which is the difference between a known boundary and a guess. */
+  { name: "printify_api_calls", run: ensurePrintifyMeter },
 ];
 
 export type Outcome = {

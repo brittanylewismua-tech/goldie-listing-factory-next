@@ -12,6 +12,7 @@ import { isOwner } from "@/app/mastermind/access";
 import { decryptPrintifyToken, encryptPrintifyToken } from "./token-crypto";
 import { etsyConnection, etsyFetch } from "../etsy/client";
 import { canonicalProductColorIds, groupProductColors, productColorAxisIndex, productColorVariantIds } from "@/app/product-color-options";
+import { printifyCall } from "../../printify-call.ts";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Shop = { id: number; title: string };
@@ -71,10 +72,10 @@ async function saveToken(userId: string, token: string) {
   await db.prepare("INSERT INTO printify_connections (user_id, encrypted_token, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET encrypted_token = excluded.encrypted_token, updated_at = CURRENT_TIMESTAMP").bind(userId, encrypted).run();
 }
 
-async function printify<T>(path: string, token: string): Promise<T> {
+async function printify<T>(path: string, token: string, userId?: string): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${PRINTIFY_API}${path}`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" });
+    response = await printifyCall(`${PRINTIFY_API}${path}`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" }, { feature: "connections", userId });
   } catch { throw new PrintifyApiError(0, "Printify could not be reached. Your saved connection has not been changed."); }
   if (!response.ok) throw new PrintifyApiError(response.status, response.status === 401 || response.status === 403 ? "Printify did not accept that token." : `Printify returned ${response.status}. Your saved connection has not been changed.`);
   return response.json() as Promise<T>;
@@ -210,7 +211,7 @@ export async function POST(request: Request) {
        waits on. They do not depend on each other, so ask them together. */
     const attempts = await phase("findProduct",()=>Promise.all(shops.map(async shop => {
       try{
-        const response = await fetch(`${PRINTIFY_API}/shops/${shop.id}/products/${productId}.json`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" });
+        const response = await printifyCall(`${PRINTIFY_API}/shops/${shop.id}/products/${productId}.json`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" }, { feature: "connections", userId: user.userId });
         if (response.ok) return { shop, product: (await response.json()) as Product };
         /* A 404 is "not this shop". Anything else is Printify having a bad
            moment, and must not be reported to the seller as a wrong shop. */
@@ -236,7 +237,7 @@ export async function POST(request: Request) {
       const memo=await provenPairing(user.userId,found.shop.id,etsyLink.shopId);
       cacheReport.shopPairing=memo?"hit":"miss";
       if(!memo){
-      const pairing=await phase("shopPairing",()=>verifyShopPairing({printifyToken:token,printifyShopId:found.shop.id,etsyShopId:etsyLink.shopId,etsyToken:etsyLink.token,etsyFetch}));
+      const pairing=await phase("shopPairing",()=>verifyShopPairing({printifyToken:token,printifyShopId:found.shop.id,etsyShopId:etsyLink.shopId,etsyToken:etsyLink.token,etsyFetch:<T,>(path:string,token:string)=>etsyFetch<T>(path,token,"connect")}));
       if(pairing.result==="matched")await rememberPairing(user.userId,found.shop.id,etsyLink.shopId,pairing.listingId||0);
       if(pairing.result==="mismatched")return NextResponse.json({...shopMismatch(found.shop.title,etsyLink.shopName||"your connected Etsy shop"),shop:{id:found.shop.id,title:found.shop.title,count:shops.length}},{status:409});
       }
@@ -254,7 +255,7 @@ export async function POST(request: Request) {
     if(externalListingId>0){
       try{
         const connection=await etsyConnection(user.userId);
-        const listing=await boundedEtsy(etsyFetch<{shipping_profile_id?:number}>(`/listings/${externalListingId}`,connection.token));
+        const listing=await boundedEtsy(etsyFetch<{shipping_profile_id?:number}>(`/listings/${externalListingId}`,connection.token,"listings"));
         if(Number(listing.shipping_profile_id)>0)shippingTemplateId=String(listing.shipping_profile_id);
       }catch{/* The normal validation message below remains accurate if Etsy is disconnected. */}
     }
@@ -266,7 +267,7 @@ export async function POST(request: Request) {
     if(!shippingTemplateId&&Number.isInteger(rememberedProfileId)&&rememberedProfileId>0){
       try{
         const connection=await etsyConnection(user.userId);
-        const profile=await boundedEtsy(etsyFetch<EtsyShippingProfile>(`/shops/${connection.shopId}/shipping-profiles/${rememberedProfileId}`,connection.token));
+        const profile=await boundedEtsy(etsyFetch<EtsyShippingProfile>(`/shops/${connection.shopId}/shipping-profiles/${rememberedProfileId}`,connection.token,"shipping"));
         if(Number(profile.shipping_profile_id)===rememberedProfileId&&!profile.is_deleted)shippingTemplateId=String(rememberedProfileId);
       }catch{/* A missing, deleted, or foreign profile must not bypass template validation. */}
     }

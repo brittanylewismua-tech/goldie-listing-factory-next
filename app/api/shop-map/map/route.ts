@@ -67,13 +67,13 @@ async function buildMap(request: Request) {
 
   /* ------------------------------------------------------------- listings */
   const listingRows = await db.prepare(
-    `SELECT listing_id, title, tags, shop_section, state, created_at, views, favorites,
+    `SELECT listing_id, title, tags, shop_section, state, created_at, views, favorites, image_url,
             product_family
        FROM shop_map_listings WHERE user_id = ? AND shop_id = ?`)
     .bind(user.userId, shopId)
     .all<{ listing_id: number; title: string; tags: string; shop_section: string;
       state: string; created_at: number | null; views: number | null;
-      favorites: number | null; product_family: string }>();
+      favorites: number | null; image_url: string; product_family: string }>();
   const rows = listingRows.results ?? [];
 
   const listings: Listing[] = rows.map(row => ({
@@ -390,6 +390,22 @@ async function buildMap(request: Request) {
   const recentOrders = worldPerformance.reduce((sum, world) => sum + world.ordersLast90, 0);
   const recentEnough = recentOrders >= 10;
   const found = direction(worldPerformance);
+  const sales90 = new Map<number, { sales: number; revenueMinor: number }>();
+  for (const sale of (saleRows.results ?? [])) {
+    if (Number(sale.refunded) || Number(sale.sold_at) < now - 90 * 86_400) continue;
+    const id = Number(sale.listing_id);
+    const previous = sales90.get(id) ?? { sales: 0, revenueMinor: 0 };
+    previous.sales += Number(sale.quantity ?? 0);
+    previous.revenueMinor += Number(sale.quantity ?? 0) * Number(sale.price_minor ?? 0);
+    sales90.set(id, previous);
+  }
+  const soldListings = rows.map(row => ({
+    listingId: Number(row.listing_id), title: String(row.title ?? "Untitled listing"),
+    imageUrl: String(row.image_url ?? ""), favorites: Number(row.favorites ?? 0),
+    sales: sales90.get(Number(row.listing_id))?.sales ?? 0,
+    revenueMinor: sales90.get(Number(row.listing_id))?.revenueMinor ?? 0,
+  })).filter(row => row.sales > 0).sort((a, b) => b.sales - a.sales
+    || b.revenueMinor - a.revenueMinor || b.favorites - a.favorites);
 
   return NextResponse.json({
     shop: { shopId, shopName: shopRow.shop_name, timezone },
@@ -438,6 +454,7 @@ async function buildMap(request: Request) {
     coverage,
     unclassifiedPerformance: unclassified,
     shopTotals,
+    soldListings: { period: "Last 90 days", listings: soldListings },
     /* Unclassified is a card, not a footnote: it is part of the shop. */
     unclassifiedCard: {
       worldId: "unclassified", label: "Unclassified",

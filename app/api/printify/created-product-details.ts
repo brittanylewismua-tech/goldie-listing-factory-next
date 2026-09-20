@@ -1,3 +1,4 @@
+import { meteredPrintifyFetch } from "../../printify-call.ts";
 type ProductDetails = {
   id: string;
   images?: Array<{src?: string}>;
@@ -12,7 +13,7 @@ export async function completeCreatedProduct<T extends ProductDetails>(
   created: T,
   shopId: number,
   token: string,
-  fetcher: typeof fetch = fetch,
+  fetcher: typeof fetch = meteredPrintifyFetch({ feature: "listing-factory" }),
   timeoutMs = CREATED_DETAILS_TIMEOUT_MS,
 ): Promise<T> {
   const hasImages = created.images?.some(image => Boolean(image.src));

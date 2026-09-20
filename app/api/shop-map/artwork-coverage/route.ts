@@ -5,6 +5,7 @@ import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
+import { printifyCall } from "../../../printify-call.ts";
 
 /**
  * HOW MUCH OF THE PAST CAN STILL BE SEEN?
@@ -47,10 +48,10 @@ export const GET = withErrorLog("shop-map-artwork-coverage", async (request: Req
     stored.encrypted_token, (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
 
   const printify = async (path: string) => {
-    const response = await fetch(`https://api.printify.com/v1${path}`, {
+    const response = await printifyCall(`https://api.printify.com/v1${path}`, {
       headers: { Authorization: `Bearer ${printifyToken}`, "User-Agent": "Goldie-Listing-Factory" },
       signal: AbortSignal.timeout(20_000),
-    });
+    }, { feature: "qa", userId: user.userId });
     const text = await response.text();
     let parsed: unknown = null;
     try { parsed = JSON.parse(text); } catch { /* status carries it */ }

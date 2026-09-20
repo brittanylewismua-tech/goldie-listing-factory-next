@@ -6,6 +6,7 @@ import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
 import { batchHasEveryCreatedDraft } from "@/app/batch-draft-integrity";
 import { decryptEtsy, etsyFetch } from "@/app/api/etsy/client";
 import { verifyInventory } from "@/app/api/listing-photos/delivery/draft-service";
+import { printifyCall } from "../../../printify-call.ts";
 
 const PRINTIFY_API = "https://api.printify.com/v1";
 type Runtime = { DB?: D1Database; PRINTIFY_TOKEN_KEY?: string; PHOTO_DELIVERY?: Workflow<{id:string;owner:string}> };
@@ -20,8 +21,8 @@ async function decryptToken(value: string) {
   return decryptPrintifyToken(value, secret);
 }
 
-async function status(path: string, token: string) {
-  const response = await fetch(`${PRINTIFY_API}${path}`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" });
+async function status(path: string, token: string, userId?: string) {
+  const response = await printifyCall(`${PRINTIFY_API}${path}`, { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" }, cache: "no-store" }, { feature: "qa", userId });
   return { response, status: response.status };
 }
 
@@ -78,7 +79,7 @@ async function auditDeliveryVariants(rows:DeliveryDiagnostic[],printifyToken:str
   try{
    const [productCheck,inventory]=await Promise.all([
     status(`/shops/${row.printifyShopId}/products/${encodeURIComponent(row.productId)}.json`,printifyToken),
-    etsyFetch<{products?:{sku:string;offerings:{price:{amount:number;divisor:number};is_enabled:boolean;quantity?:number;readiness_state_id?:number|null}[];property_values?:{property_id:number;property_name:string;scale_id?:number|null;value_ids?:number[];values?:string[]}[]}[];price_on_property?:number[];quantity_on_property?:number[];sku_on_property?:number[]}>(`/listings/${summary.listingId}/inventory`,etsyToken),
+    etsyFetch<{products?:{sku:string;offerings:{price:{amount:number;divisor:number};is_enabled:boolean;quantity?:number;readiness_state_id?:number|null}[];property_values?:{property_id:number;property_name:string;scale_id?:number|null;value_ids?:number[];values?:string[]}[]}[];price_on_property?:number[];quantity_on_property?:number[];sku_on_property?:number[]}>(`/listings/${summary.listingId}/inventory`,etsyToken,"qa"),
    ]);
    if(!productCheck.response.ok)return {...summary,printifyHttpStatus:productCheck.status,diagnosis:'The Printify product could not be read.'};
    const product=await productCheck.response.json() as {variants?:{id:number;sku:string;price:number;is_enabled:boolean;options?:number[]}[];options?:{name:string;values:{id:number;title:string}[]}[]};
@@ -218,7 +219,7 @@ export async function POST(request: Request) {
     for(const row of rows.results){
       const listingId=Number(safeJson(row.stateJson).listingId||row.candidateListingId)||0;
       if(row.status!=="needs_attention"||!row.draftJson||!listingId||row.etsyShopId!==etsyConnection.shopId||safeJson(row.stateJson).pending||safeJson(row.draftStateJson).pending)return NextResponse.json({error:"A saved draft changed after the audit. Refresh the member audit before resuming it."},{status:409});
-      const [productCheck,inventory]=await Promise.all([status(`/shops/${row.printifyShopId}/products/${encodeURIComponent(row.productId)}.json`,printifyToken),etsyFetch<Parameters<typeof verifyInventory>[1]>(`/listings/${listingId}/inventory`,etsyToken)]);
+      const [productCheck,inventory]=await Promise.all([status(`/shops/${row.printifyShopId}/products/${encodeURIComponent(row.productId)}.json`,printifyToken),etsyFetch<Parameters<typeof verifyInventory>[1]>(`/listings/${listingId}/inventory`,etsyToken,"qa")]);
       if(!productCheck.response.ok)return NextResponse.json({error:"Printify could not verify one of the saved drafts. Nothing was restarted."},{status:409});
       try{verifyInventory(await productCheck.response.json(),inventory)}catch{return NextResponse.json({error:"A saved draft still differs from Printify. Nothing was restarted."},{status:409})}
     }
