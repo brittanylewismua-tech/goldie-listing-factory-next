@@ -14,11 +14,17 @@ import { chromium } from 'playwright';
 import { measureContrast, required } from './pixel-contrast.mjs';
 
 const BASE = process.env.BASE ?? 'http://127.0.0.1:5199';
-const VIEWPORTS = [
-  { name: '375', width: 375, height: 812 },
-  { name: '390', width: 390, height: 844 },
-  { name: '430', width: 430, height: 932 },
-];
+/* The phone widths by default; VIEWPORTS=desktop adds the width the member
+   actually sits at most of the time, which is where composition defects live. */
+const ALL_VIEWPORTS = {
+  '375': { name: '375', width: 375, height: 812, phone: true },
+  '390': { name: '390', width: 390, height: 844, phone: true },
+  '430': { name: '430', width: 430, height: 932, phone: true },
+  desktop: { name: 'desktop', width: 1440, height: 900, phone: false },
+};
+const VIEWPORTS = (process.env.VIEWPORTS ?? '375,390,430')
+  .split(',').map(name => ALL_VIEWPORTS[name]).filter(Boolean);
+const SAMPLE = Number(process.env.SAMPLE ?? 18);
 
 /* Contrast, so "unreadable colour combinations" is measured not eyeballed. */
 const luminance = ([r, g, b]) => {
@@ -142,11 +148,11 @@ const targets = states.length
 for (const vp of VIEWPORTS) {
   const context = await browser.newContext({
     viewport: { width: vp.width, height: vp.height },
-    deviceScaleFactor: 3,
-    isMobile: true,
-    hasTouch: true,
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
-      + 'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    deviceScaleFactor: vp.phone ? 3 : 1,
+    isMobile: vp.phone,
+    hasTouch: vp.phone,
+    ...(vp.phone ? { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
+      + 'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' } : {}),
   });
   await context.addInitScript(() => {
     /*
@@ -193,7 +199,7 @@ for (const vp of VIEWPORTS) {
     /* Pixels, not computed styles — see pixel-contrast.mjs. */
     const bad = [];
     const handles = await page.$$(`${scope}p, ${scope}h1, ${scope}h2, ${scope}h3, ${scope}span, ${scope}button, ${scope}a, ${scope}li`);
-    for (const h of handles.slice(0, 18)) {
+    for (const h of handles.slice(0, SAMPLE)) {
       const info = await h.evaluate(el => {
         const st = getComputedStyle(el); const r = el.getBoundingClientRect();
         /* WCAG exempts disabled controls from contrast, and a greyed-out
@@ -209,7 +215,7 @@ for (const vp of VIEWPORTS) {
       if (r === null) continue;
       const need = required(info.size, info.weight);
       if (r < need) bad.push(`"${info.text}" ${r.toFixed(2)}:1 (needs ${need}) @${info.size}px`);
-      if (bad.length >= 4) break;
+      if (bad.length >= 8) break;
     }
     if (bad.length) found.findings.push({ kind: 'low-contrast', detail: bad.join(' | ') });
     delete found.contrastSamples; delete found.textBoxes;

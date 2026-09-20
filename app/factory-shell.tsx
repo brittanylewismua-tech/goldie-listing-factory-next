@@ -156,7 +156,10 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
      digits. Same number, the preview's formatting. */
   const usageLine = usage
     ? `${usage.used.toLocaleString()} / ${usage.limit.toLocaleString()} listings`
-    : usageFailed ? "Allowance unavailable"
+    /* "Allowance unavailable" describes the request, not the member's
+       position. What they need to know is that the number is missing and
+       that reopening the page is the fix. */
+    : usageFailed ? "Couldn't load — reopen to retry"
     : "Loading usage…";
 
   return <main className={`app-shell interior-shell${desktopOnly ? "" : " responsive-shell"}`}>
@@ -174,8 +177,8 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
       */}
       <div className="brand-lockup"><SuiteBrand /></div>
       <div className="top-actions">
-        <nav className="top-nav" aria-label="Goldie Suite navigation">
-          <span className="suite-nav-label">Command center</span>
+        <nav className="top-nav" aria-label="Main navigation">
+          <span className="suite-nav-label">Your tools</span>
           {NAV.filter(item => item.group === "work").map(item => <a key={item.key} className={item.key === active ? "active" : undefined}
             href={item.href} aria-current={item.key === active ? "page" : undefined}><NavIcon name={item.icon}/><span>{item.label}</span>{item.key === "market-watch" && <small>LIVE</small>}</a>)}
           <span className="suite-nav-label suite-nav-label-library">Library &amp; settings</span>
@@ -192,11 +195,20 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
           <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" /><path d="M3 21v-5h5" /></svg> Start a new batch</a>}
       </div>
       <div className="approved-sidebar-footer">
-        {FACTORY_PAGES.has(active) && <a className="approved-usage" href="/usage"><b>Usage + Plan</b><span>{usageLine}</span>
+        {FACTORY_PAGES.has(active) && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>}
+        {/*
+          A GOAL NOBODY EXPLAINS IS A NUMBER NOBODY TRUSTS.
+
+          This read "This week's goal · 2 of 20 prepared". It never said who
+          set 20 (the member did, in Goals), and "prepared" is this codebase's
+          word, not a seller's — it means drafts built and ready to publish.
+          Both are now on the card, in the member's language.
+        */}
         {FACTORY_PAGES.has(active) && goal && <a className="listing-goal-side" href="/goals">
-          <span className="listing-goal-caption">This {goal.period}&rsquo;s goal</span>
-          <b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${goal.target} prepared`:"Loading progress…"}</b>
+          <span className="listing-goal-caption">Your {goal.period}ly goal</span>
+          <b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${goal.target} drafts ready`:"Loading progress…"}</b>
+          <span className="listing-goal-note">{goalDaysError?"Try again shortly.":"You set this target in Goals."}</span>
           {goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span>}</a>}
         <small>&copy; 2026 Be A Wolf Biz</small>
         <p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>
@@ -207,7 +219,15 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
 
     <div className="factory-main">
       <header className="factory-top">
-        <div className="factory-breadcrumb"><span>Suite</span><i aria-hidden="true">›</i><b className="factory-top-batch">{title}</b></div>
+        {/*
+          THE PAGE NAMES ITSELF. IT DOES NOT NEED A PARENT.
+
+          This read "Suite › Home". "Suite" is not a place a member can go, not
+          a name the product uses, and not a level of anything — a breadcrumb
+          trail of one invented ancestor. What is left is the only part that
+          was ever true: which page you are on.
+        */}
+        <div className="factory-breadcrumb"><b className="factory-top-batch">{title}</b></div>
         <div className="factory-top-right">
           <div className="factory-account-wrap">
             <button type="button" className="factory-account" aria-haspopup="menu"
@@ -238,7 +258,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
                   {shop.shopName}{shop.active ? " ✓" : switching === shop.shopId ? " …" : ""}</button>)}
                 {switchError && <small role="alert" className="factory-account-shop-error">{switchError}</small>}
               </div>}
-              <a role="menuitem" href="/usage">Usage + Plan</a>
+              <a role="menuitem" href="/usage">Usage and limits</a>
               <a role="menuitem" href="/listing-factory?step=connect">Connections</a>
               {account && <a role="menuitem" href={account.signedIn
                 ? "/account/sign-out?return_to=%2Flisting-factory"

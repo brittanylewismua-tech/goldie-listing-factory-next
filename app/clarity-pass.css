@@ -3220,3 +3220,11 @@ body{min-width:0}
 .app-shell .selected-product-loading[role="alert"] .secondary-action{
   min-height:44px;padding:0 14px;
 }
+
+/* The goal card says who set the target and what it counts. Quiet, because it
+   is an explanation and not the number. */
+.app-shell .listing-goal-note{
+  color:#8e8e8e!important;
+  font:600 10px/1.35 Inter,system-ui,sans-serif!important;
+}
+.app-shell > .topbar .listing-goal-side .listing-goal-note{color:#9a8f95!important}

@@ -8,34 +8,48 @@ import { join } from "node:path";
 const APP = new URL("../app/", import.meta.url).pathname;
 const read = name => readFileSync(join(APP, name), "utf8");
 
-test("every desktop shell renders the one Goldie Suite brand", () => {
+/* Comments record what a string used to be; only what renders is the test. */
+const strip = text => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+test("every desktop shell renders the one home link, and it names no product", () => {
   const shell = read("factory-shell.tsx");
   const workflow = read("listing-factory-app.tsx");
   const brand = read("suite-brand.tsx");
   assert.match(shell, /<SuiteBrand\s*\/>/);
   assert.match(workflow, /<SuiteBrand\s*\/>/);
-  assert.match(brand, /aria-label="Goldie Suite home"/);
-  assert.match(brand, />goldie <em>suite<\/em></);
+  /* Goldie is not this product's name. The lockup is the way back to Home and
+     carries no wordmark at all — a placeholder is how a stand-in becomes
+     permanent, and "seller command center" was printed here, in the rail's
+     first group heading, and on the home page's eyebrow all at once. */
+  assert.match(brand, /aria-label="Home"/);
+  assert.doesNotMatch(strip(brand), /goldie|suite<|command center/i);
   assert.equal((shell.match(/<SuiteBrand\s*\/>/g) ?? []).length, 1);
   assert.equal((workflow.match(/<SuiteBrand\s*\/>/g) ?? []).length, 1);
 });
 
-test("the command center exposes every member feature from one nav", () => {
+test("one nav exposes every member feature", () => {
   const shell = read("factory-shell.tsx");
   for (const destination of ["Home", "Listing Factory", "Market Watch", "Design Scanner",
     "Shop Map", "Trademark Checker", "Batch History", "Keyword Banks", "Tools & settings"])
     assert.ok(shell.includes(`label: "${destination}"`), `${destination} is missing from the suite navigation`);
-  assert.match(shell, /Command center/);
+  assert.match(shell, /suite-nav-label">Your tools</);
   assert.match(shell, /Library &amp; settings/);
+  /* And the breadcrumb no longer invents a parent: it read "Suite › Home". */
+  assert.doesNotMatch(shell, /<span>Suite<\/span>/);
 });
 
-test("browser and installed-app identity use the chosen suite name", () => {
+test("browser and installed-app identity name no product that does not exist", () => {
   const identity = read("shell-identity.ts");
-  assert.match(identity, /NEUTRAL_FALLBACK_TITLE = "Goldie Suite"/);
+  /* The file's own instruction was a plain description rather than a name;
+     the value was "Goldie Suite" anyway. */
+  assert.doesNotMatch(strip(identity), /Goldie/i);
+  assert.match(identity, /NEUTRAL_FALLBACK_TITLE = "[^"]+"/);
   const manifest = JSON.parse(readFileSync(
     new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
-  assert.equal(manifest.name, "Goldie Suite");
-  assert.equal(manifest.short_name, "Goldie");
+  for (const value of [manifest.name, manifest.short_name, manifest.description])
+    assert.doesNotMatch(String(value), /goldie/i);
+  /* Etsy's API terms: the app may not present itself as Etsy's. */
+  assert.match(String(manifest.description), /Not endorsed or certified by Etsy/);
 });
 
 test("Listing Factory remains a feature, not the suite identity", () => {

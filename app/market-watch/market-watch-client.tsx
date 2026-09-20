@@ -309,7 +309,14 @@ export default function MarketWatchClient(
                     ? "Last update could not be refreshed — showing the last confirmed reading"
                     /* D1674 · "feminist · 1 moving · 1 repeated · 1 shops" on
                        the live page. The counts are genuinely often one. */
-                    : `${watch.moving} moving · ${watch.repeated} repeated · `
+                    /*
+                      "14 moving · 5 repeated · 9 shops" is this codebase's
+                      shorthand, not a sentence. A seller cannot tell what is
+                      moving, what repeated, or why the shop count matters.
+                      Each number now says what it counts.
+                    */
+                    : `${watch.moving} listing${watch.moving === 1 ? "" : "s"} selling · `
+                      + `${watch.repeated} with repeat sales · across `
                       + `${watch.shops} ${watch.shops === 1 ? "shop" : "shops"}`}
               </span>
             </button>
@@ -384,8 +391,8 @@ function NicheDetail({ view, onBack }: { view: NicheView; onBack: () => void }) 
         <p className="summary">
           {summary.meaningfulMomentum
             /* Same rule as the list row: these counts are often one. */
-            ? `${summary.moving} ${summary.moving === 1 ? "listing" : "listings"} moving · `
-              + `${summary.repeated} with repeated momentum · `
+            ? `${summary.moving} ${summary.moving === 1 ? "listing" : "listings"} selling · `
+              + `${summary.repeated} with repeat sales · across `
               + `${summary.shops} ${summary.shops === 1 ? "shop" : "shops"}`
             /*
               D1675 · THE PAGE DENIED THE EVIDENCE IT WAS SHOWING.

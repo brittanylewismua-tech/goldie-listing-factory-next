@@ -1147,16 +1147,16 @@ test("the rail digits use the app's own type — D352", async () => {
    meter, and says what the number means before saying the number. */
 test("the sidebar goal names the period — D351", async () => {
   const app = await read("app/listing-factory-app.tsx");
-  assert.match(app, /className="listing-goal-caption">This \{listingGoal\.period\}&rsquo;s goal<\/span>/);
+  assert.match(app, /className="listing-goal-caption">Your \{listingGoal\.period\}ly goal<\/span>/);
   /* D938 · the Printify-only handoff means prepared drafts are now the progress
      Goldie can truthfully count. D351's rule is unchanged: progress only, no
      deficit, no cap, and identical wording on both sidebars. */
-  assert.match(app, /goalDaysLoaded\?`\$\{goalDone\} of \$\{listingGoal\.target\} prepared`/,
+  assert.match(app, /goalDaysLoaded\?`\$\{goalDone\} of \$\{listingGoal\.target\} drafts ready`/,
     "progress only — still no deficit, and the count is not capped");
   assert.doesNotMatch(app, /\{listingGoal\.target - goalDone\}|Math\.min\(goalDone/,
     "no deficit and no cap");
   const shell = await read("app/factory-shell.tsx");
-  assert.match(shell, /\$\{goalDone\} of \$\{goal\.target\} prepared/,
+  assert.match(shell, /\$\{goalDone\} of \$\{goal\.target\} drafts ready/,
     "and the interior rail says it the same way");
 });
 

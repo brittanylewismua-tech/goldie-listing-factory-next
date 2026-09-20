@@ -1,8 +1,6 @@
+"use client";
 import Link from "next/link";
-import { requireChatGPTUser } from "@/app/chatgpt-auth";
 import { NavIcon } from "@/app/nav-icons";
-import FactoryShell from "@/app/factory-shell";
-import MoreView from "./more-view";
 import "@/app/tools-settings.css";
 
 /*
@@ -23,7 +21,6 @@ import "@/app/tools-settings.css";
   checklists rather than cards, grouped so the eye can skip to the group it
   wants. Sign out is not a feature and does not wear a feature's card.
 */
-export const metadata = { title: "Tools & settings" };
 
 type Row = { href: string; name: string; what: string; icon: Parameters<typeof NavIcon>[0]["name"] };
 type Group = { heading: string; rows: Row[] };
@@ -62,10 +59,10 @@ const GROUPS: Group[] = [
     rows: [
       { href: "/account/settings", name: "Account", icon: "account",
         what: "Who you are signed in as, your access, and the data held about you." },
-      { href: "/usage", name: "Plan and limits", icon: "usage",
+      { href: "/usage", name: "Usage and limits", icon: "usage",
         what: "What you have used today, and what is left." },
       { href: "/goals", name: "Listing goal", icon: "goals",
-        what: "How many listings you have prepared this period." },
+        what: "How many drafts you have ready to publish this period." },
     ],
   },
 ];
@@ -88,13 +85,55 @@ const FEATURE_NAMES: Record<string, string> = {
   trademarkAtPublish: "the trademark check at publish",
 };
 
-export default async function MorePage(
-  { searchParams }: { searchParams: Promise<{ needs?: string }> },
-) {
-  await requireChatGPTUser("/more");
-  const needs = (await searchParams).needs ?? "";
-  const needsName = FEATURE_NAMES[needs] ?? "";
-  return <FactoryShell active="more" title="Tools & settings" desktopOnly={false}>
-    <MoreView needsName={needsName} />
-  </FactoryShell>;
+
+/**
+ * The shelf itself, mountable without a session so its layout and copy can be
+ * checked at a phone width like every other surface.
+ */
+export default function MoreView({ needsName = "" }: { needsName?: string }) {
+  return <>
+    <main className="tools-settings p-grid">
+    <div className="p-page">
+      <header className="p-head">
+        <h1>Tools &amp; settings</h1>
+        <p>Manage your tools, shop connections, and account.</p>
+      </header>
+
+      {needsName && (
+        <p className="p-notice p-notice-bad ts-needs" role="status">
+          <b>{needsName.charAt(0).toUpperCase() + needsName.slice(1)} is not part of your plan.</b>
+          You were brought here because that is where plan and access live. Nothing
+          about your shops or saved work has changed.
+        </p>
+      )}
+
+      {GROUPS.map(group => (
+        <section className="ts-group" key={group.heading}>
+          <h2 className="ts-heading">{group.heading}</h2>
+          <div className="ts-rows">
+            {group.rows.map(row => (
+              <Link className="ts-row" key={row.href} href={row.href}>
+                <span className="ts-icon"><NavIcon name={row.icon} /></span>
+                <span className="ts-text">
+                  <b>{row.name}</b>
+                  <small>{row.what}</small>
+                </span>
+                <span className="ts-go" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+                    strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Ends the session. Not a feature, so not a feature's card. */}
+      <div className="ts-signout">
+        <Link href="/account/sign-out">Sign out</Link>
+      </div>
+    </div>
+    </main>
+  </>;
 }

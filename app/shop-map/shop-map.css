@@ -115,6 +115,10 @@
   first saw nothing telling them it was provisional.
 */
 .shop-map-figure[data-basis="estimated"]{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* The money card is dark and its children inherit white. The chip paints its
+   own cream field, so it keeps its own dark ink — inheriting white measured
+   1.08:1 on the one word that qualifies the number beside it. */
+.app-shell .shop-map-money .shop-map-figure .shop-map-basis-chip{color:#6b4a06}
 .shop-map-basis-chip{display:inline-flex;align-items:center;border-radius:999px;
   border:1px solid #e0b64f;background:#fff6e0;padding:3px 10px;
   color:#6b4a06;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}

@@ -601,9 +601,9 @@ test("a plan allowance that could not be read blocks creation rather than being 
   assert.match(begin, /could not be read, so this batch was not started/);
 
   /* And the sidebar says so rather than claiming to still be loading. */
-  assert.match(source, /sidebarUsageFailed\?"Allowance unavailable"/);
+  assert.match(source, /sidebarUsageFailed\?"Couldn't load — reopen to retry"/);
   const shell = read("factory-shell.tsx");
-  assert.match(shell, /usageFailed \? "Allowance unavailable"/);
+  assert.match(shell, /usageFailed \? "Couldn't load — reopen to retry"/);
   assert.match(shell, /if \(!response\.ok\) throw new Error\("usage"\)/);
 });
 

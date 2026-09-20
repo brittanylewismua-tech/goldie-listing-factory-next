@@ -2363,8 +2363,16 @@ test("uses one management navigation vocabulary everywhere (fixes D84)",async()=
   /* D834 · Usage + Plan is reached from the account menu now, not the rail.
      The vocabulary rule is unchanged: one name for the destination, wherever
      it is offered. */
-  assert.match(nav,/>Usage \+ Plan</);
-  assert.doesNotMatch(nav,/Usage and Plan|Plan \+ Usage|Billing/);
+  /* The destination is called "Usage and limits" now — "Plan" named a thing
+     the member does not manage here, and the page's own title said one word
+     while the menu said another. One name, wherever it is offered. */
+  assert.match(nav,/>Usage and limits</);
+  /* Comments may still describe the old name's history; what a member reads
+     may not. */
+  const rendered=nav.replace(/\/\*[\s\S]*?\*\//g,"").replace(/^\s*\*.*$/gm,"");
+  assert.doesNotMatch(rendered,/Usage \+ Plan|Plan \+ Usage|Billing/);
+  const usagePage=await readFile(new URL("../app/usage/page.tsx",import.meta.url),"utf8");
+  assert.match(usagePage,/title="Usage and limits"/);
   /* D818 - the interior pages mount the shell rather than a nav of their own,
      which is what makes one vocabulary structural instead of a convention. */
   for(const page of ["batches","keywords","usage","goals","mockups","operations"]){

@@ -311,6 +311,9 @@ function findHits(phrase: string): Hit[] {
   return hits.sort((a, b) => a.at - b.at);
 }
 
+/* A name that already ends in a full stop does not get another. */
+const endSentence = (text: string) => text.replace(/\.\.$/, ".");
+
 export function check(raw: string): Verdict {
   const phrase = String(raw ?? "").trim();
   if (!phrase)
@@ -669,13 +672,18 @@ export function withRegister(
         application ... filed by", and the consequence is stated either way
         because it is the same consequence.
       */
+      /*
+        "Ate My Heart Inc.." — an owner name that ends in its own full stop
+        met the sentence's full stop. USPTO owner names routinely end in
+        "Inc.", "Ltd." or "LLC.", so the sentence supplies the stop only when
+        the name has not already. */
       summary: first.registered
         ? (first.exact
-          ? `“${first.mark}” is a live registered trademark${first.owner ? `, owned by ${first.owner}` : ""}. Using it as the phrase on a product is what gets a listing removed.`
-          : `This phrase contains “${first.mark}”, a live registered trademark${first.owner ? ` owned by ${first.owner}` : ""}. Printing it risks the listing being removed.`)
+          ? endSentence(`“${first.mark}” is a live registered trademark${first.owner ? `, owned by ${first.owner}` : ""}. Using it as the phrase on a product is what gets a listing removed.`)
+          : endSentence(`This phrase contains “${first.mark}”, a live registered trademark${first.owner ? ` owned by ${first.owner}` : ""}. Printing it risks the listing being removed.`))
         : (first.exact
-          ? `“${first.mark}” is a live trademark application${first.owner ? `, filed by ${first.owner}` : ""}. It is not registered yet, and an applicant trading under a name still gets listings removed for it.`
-          : `This phrase contains “${first.mark}”, a live trademark application${first.owner ? ` filed by ${first.owner}` : ""}. It is not registered yet, and the applicant can still object.`),
+          ? endSentence(`“${first.mark}” is a live trademark application${first.owner ? `, filed by ${first.owner}` : ""}. It is not registered yet, and an applicant trading under a name still gets listings removed for it.`)
+          : endSentence(`This phrase contains “${first.mark}”, a live trademark application${first.owner ? ` filed by ${first.owner}` : ""}. It is not registered yet, and the applicant can still object.`))
     };
   }
 

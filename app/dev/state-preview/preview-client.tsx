@@ -18,6 +18,13 @@ import ListingFactoryApp from "@/app/listing-factory-app";
 import DesignScannerClient from "@/app/design-scanner/design-scanner-client";
 import ShopMapClient from "@/app/shop-map/shop-map-client";
 import AccountClient from "@/app/account/settings/account-client";
+import HomeView from "@/app/home/home-view";
+import FactoryShell from "@/app/factory-shell";
+import TrademarkPage from "@/app/trademark/page";
+import UsagePage from "@/app/usage/page";
+import KeywordBanks from "@/app/keywords/page";
+import MoreView from "@/app/more/more-view";
+import "@/app/suite-redesign.css";
 import "@/app/account/settings/account.css";
 
 /**
@@ -113,20 +120,46 @@ function useClosedNetwork(fixture: StateFixture | null) {
   }, []);
 }
 
+/*
+  THE SHELL IS PART OF THE PAGE.
+
+  Components were mounted bare, so every screenshot showed a feature floating
+  on white with no rail, no page title and none of the shell's own rules
+  applying — and the shell's rules are scoped to `.app-shell`, so the fixtures
+  were being reviewed in a cascade the member never sees. Surfaces whose real
+  route wraps them in the shell are wrapped here too; the ones that mount it
+  themselves are left alone.
+*/
+const Shell = ({ active, title, children }:
+  { active: "home" | "market-watch" | "shop-map" | "design-scanner" | "connections" | "more";
+    title: string; children: React.ReactNode }) =>
+  <FactoryShell active={active} title={title} desktopOnly={false}>{children}</FactoryShell>;
+
 /* Every surface is given the same props; most ignore `at`, which is what
    makes adding a sub-view to one of them a one-line change. */
 const SURFACES: Record<string, (props: { at?: string }) => ReactElement> = {
-  connections: () => <ConnectionsClient signedInEmail="preview@example.invalid" />,
+  connections: () => <Shell active="connections" title="Connections">
+    <ConnectionsClient signedInEmail="preview@example.invalid" /></Shell>,
   "market-watch": ({ at }: { at?: string }) =>
-    <MarketWatchClient signedInEmail="preview@example.invalid"
-      startTab={at === "shops" ? "shops" : "niches"} />,
-  "design-scanner": () => <DesignScannerClient signedInEmail="preview@example.invalid" />,
-  "shop-map": () => <ShopMapClient signedInEmail="preview@example.invalid" />,
-  account: () => <AccountClient email="preview@example.invalid" />,
+    <Shell active="market-watch" title="Market Watch">
+      <MarketWatchClient signedInEmail="preview@example.invalid"
+        startTab={at === "shops" ? "shops" : "niches"} /></Shell>,
+  "design-scanner": () => <Shell active="design-scanner" title="Design Scanner">
+    <DesignScannerClient signedInEmail="preview@example.invalid" /></Shell>,
+  "shop-map": () => <Shell active="shop-map" title="Shop Map">
+    <ShopMapClient signedInEmail="preview@example.invalid" /></Shell>,
+  account: () => <Shell active="more" title="Account">
+    <AccountClient email="preview@example.invalid" /></Shell>,
   batches: () => <BatchesPage />,
   /* The whole workflow, mounted against a closed network. Its own
      stylesheets come in through the shell imports above. */
   "listing-factory": () => <ListingFactoryApp />,
+  /* The pages that previously could only be seen with a member's session. */
+  home: () => <Shell active="home" title="Home"><HomeView /></Shell>,
+  trademark: ({ at }: { at?: string }) => <TrademarkPage initialPhrase={at} />,
+  usage: () => <UsagePage />,
+  keywords: () => <KeywordBanks />,
+  more: () => <Shell active="more" title="Tools & settings"><MoreView /></Shell>,
 };
 
 /*

@@ -18,6 +18,19 @@ type Blocks = {
   trademark?: { marks: number; loading: boolean };
 };
 
+/* The API sends "15 September" (en-GB, day then month). A status strip is
+   read at a glance, so it is shortened rather than reformatted from a
+   timestamp the client does not have. */
+const MONTHS: Record<string, string> = { January: "Jan", February: "Feb", March: "Mar",
+  April: "Apr", May: "May", June: "Jun", July: "Jul", August: "Aug",
+  September: "Sep", October: "Oct", November: "Nov", December: "Dec" };
+const shortDay = (day: string) => {
+  const parts = day.trim().split(/\s+/);
+  if (parts.length !== 2) return day;
+  const [number, month] = parts;
+  return MONTHS[month] ? `${MONTHS[month]} ${number}` : day;
+};
+
 const money = (minor: number, currency: string) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: currency || "USD" })
     .format(minor / 100);
@@ -37,47 +50,64 @@ export default function HomeStatus() {
   if (!blocks) return null;
   const lines: React.ReactNode[] = [];
 
+  /*
+    ONE FACT PER BOX, WITH ITS LABEL ABOVE IT.
+
+    These were single running sentences — "This month: $71.00 from 3 orders ·
+    profit unavailable · worked out 15 September" — set in one weight, wrapped
+    mid-clause at every width, with "worked out 15 September" reading as a
+    phrase the member had to decode and "profit unavailable" reading as a
+    failure rather than a missing input. Each box now has a quiet label, the
+    number it is about, and, when there is one, a plain note underneath.
+  */
+  const box = (key: string, href: string, label: string, value: React.ReactNode,
+    note?: React.ReactNode, act = false) =>
+    <a key={key} className={`status-line${act ? " act" : ""}`} href={href}>
+      <span className="status-body">
+        <span className="status-label">{label}</span>
+        <b className="status-value">{value}</b>
+        {note ? <span className="status-note">{note}</span> : null}
+      </span>
+    </a>;
+
   if (blocks.connections?.needs)
-    lines.push(<a key="conn" className="status-line act" href="/connections">
-      {blocks.connections.say}</a>);
+    lines.push(box("conn", "/connections", "Connection",
+      blocks.connections.say ?? "Needs attention", "Open Connections to fix it.", true));
 
   if (blocks.thisMonth)
-    lines.push(<a key="month" className="status-line" href="/shop-map">
-      This month: {money(blocks.thisMonth.revenueMinor, blocks.thisMonth.currency)} from{" "}
-      {blocks.thisMonth.orders} order{blocks.thisMonth.orders === 1 ? "" : "s"}
-      {/* Profit that cannot be evidenced says so rather than showing a number
-          that looks complete. */}
-      {blocks.thisMonth.profitAvailable
-        ? ` · profit ${money(blocks.thisMonth.profitMinor ?? 0, blocks.thisMonth.currency)}`
-        : " · profit unavailable"}
-      {/*
-        D1688 · The same figure sat on two pages at two different ages and
-        only one of them said so. Home reads the rollup, which is built when
-        the shop is reconciled rather than on a clock.
-      */}
-      {blocks.thisMonth.stale && blocks.thisMonth.asOfDay
-        ? <span className="status-asof"> · worked out {blocks.thisMonth.asOfDay}</span>
-        : null}
-    </a>);
+    lines.push(box("month", "/shop-map", "This month",
+      <>{money(blocks.thisMonth.revenueMinor, blocks.thisMonth.currency)}
+        <small> from {blocks.thisMonth.orders} order{blocks.thisMonth.orders === 1 ? "" : "s"}</small></>,
+      <>
+        {blocks.thisMonth.profitAvailable
+          ? `Profit ${money(blocks.thisMonth.profitMinor ?? 0, blocks.thisMonth.currency)}.`
+          /* Not "profit unavailable": that names the gap without naming what
+             closes it. Production costs are what is missing. */
+          : "Profit needs your production costs."}
+        {blocks.thisMonth.stale && blocks.thisMonth.asOfDay
+          ? ` Data through ${shortDay(blocks.thisMonth.asOfDay)}.`
+          : ""}
+      </>));
 
   if (blocks.niches?.length)
-    lines.push(<a key="niches" className="status-line" href="/market-watch">
-      New evidence in {blocks.niches.map(niche => niche.phrase).join(", ")}
-    </a>);
+    lines.push(box("niches", "/market-watch", "Market Watch",
+      `New evidence in ${blocks.niches.map(niche => niche.phrase).join(", ")}`));
 
   if (blocks.factory)
-    lines.push(<a key="factory" className="status-line" href="/batches">
-      {blocks.factory.openDrafts} draft{blocks.factory.openDrafts === 1 ? "" : "s"} in progress
-    </a>);
+    lines.push(box("factory", "/batches", "Listing Factory",
+      `${blocks.factory.openDrafts} draft${blocks.factory.openDrafts === 1 ? "" : "s"} in progress`));
 
   if (blocks.scansLeft)
-    lines.push(<a key="scans" className="status-line" href="/design-scanner">
-      {blocks.scansLeft.remaining} of {blocks.scansLeft.limit} scans left today
-    </a>);
+    lines.push(box("scans", "/design-scanner", "Design Scanner",
+      `${blocks.scansLeft.remaining} of ${blocks.scansLeft.limit} scans left`, "Resets daily."));
 
   if (blocks.trademark?.loading)
     lines.push(<span key="tm" className="status-line quiet">
-      The trademark register is still loading, so checks are not complete searches yet.
+      <span className="status-body">
+        <span className="status-label">Trademark Checker</span>
+        <b className="status-value">Register still loading</b>
+        <span className="status-note">Checks are not complete searches yet.</span>
+      </span>
     </span>);
 
   if (!lines.length) return null;

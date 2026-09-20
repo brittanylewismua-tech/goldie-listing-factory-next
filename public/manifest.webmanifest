@@ -1,7 +1,7 @@
 {
-  "name": "Goldie Suite",
-  "short_name": "Goldie",
-  "description": "Goldie Suite is your Etsy seller command center for listings, market evidence, shop performance, and trademark checks.",
+  "name": "Seller Tools",
+  "short_name": "Seller Tools",
+  "description": "Tools for Etsy sellers: bulk listing creation, market evidence, your own shop's numbers, and a trademark check before you print. Not endorsed or certified by Etsy, Inc.",
   "start_url": "/home?source=homescreen",
   "scope": "/",
   "display": "standalone",

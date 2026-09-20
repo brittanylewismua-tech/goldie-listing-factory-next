@@ -2,6 +2,9 @@
   The four features are one product. These are the seams between them, and the
   boundaries that must hold across those seams.
 */
+/* The product has no chosen name; the manifest must not invent one, and
+   must not say Goldie. */
+const NEUTRAL_NAME = 'Seller Tools';
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -239,14 +242,17 @@ test("the service worker never caches an API response or a page", () => {
   assert.match(bail, /cacheable = \/\\\.\(\?:png/);
 });
 
-test("the installed app carries the chosen Goldie Suite identity", () => {
+test("the installed app names no product that does not exist", () => {
   const manifest = JSON.parse(readFileSync(
     new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
   assert.equal(manifest.display, "standalone");
   assert.match(manifest.start_url, /^\/home/);
-  assert.equal(manifest.name, "Goldie Suite");
-  assert.equal(manifest.short_name, "Goldie");
-  assert.match(manifest.description, /Goldie Suite/);
+  assert.equal(manifest.name, NEUTRAL_NAME);
+  assert.equal(manifest.short_name, NEUTRAL_NAME);
+  /* The description says what the software does. It may not say Goldie, and
+     may not imply that Etsy endorses it. */
+  assert.doesNotMatch(manifest.description, /goldie/i);
+  assert.match(manifest.description, /Not endorsed or certified by Etsy/);
 });
 
 test("the connections screen reports a real last sync", () => {

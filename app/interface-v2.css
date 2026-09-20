@@ -4599,7 +4599,6 @@ html, body { background: var(--lf-paper); }
 .status-line.quiet{color:#9a9a9a;border-style:dashed}
 /* D1688 · How old the figure beside it is. Quieter than the figure, on the
    same line, so it qualifies the number rather than competing with it. */
-.status-asof{opacity:.72}
 
 /* A bare `footer` rule in approved-functional.css paints every footer in the
    app a translucent plum, which put a band across the bottom of this page.
