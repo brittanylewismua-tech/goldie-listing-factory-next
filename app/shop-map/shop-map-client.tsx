@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { monthName } from "@/app/shop-map-month";
 
 type Niche = {
@@ -71,10 +71,16 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
   const [soldDays,setSoldDays]=useState(90);
   const [selectedMonth,setSelectedMonth]=useState("");
+  const [refreshing,setRefreshing]=useState(false);
+  const requestSequence=useRef(0);
   const load = useCallback(async () => {
+    const sequence=++requestSequence.current;
+    setRefreshing(true);
     const next = await fetch(`/api/shop-map/map?days=${soldDays}${selectedMonth?`&month=${encodeURIComponent(selectedMonth)}`:""}`)
       .then(response => response.json() as Promise<ShopMap>)
       .catch(() => null);
+    if(sequence!==requestSequence.current)return;
+    setRefreshing(false);
     if (!next || next.error) { setFailed(true); return; }
     setFailed(false);
     setMap(next);
@@ -243,14 +249,14 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       <div className="shop-map-section-head"><div><p className="mini-label">SOLD LISTINGS</p><h2>Sold listings · last {soldDays} days</h2>
         <p>Sales and revenue come from Etsy transactions. Favorites come from the current listing record.</p></div></div>
       <label className="shop-map-period">Sales period <select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label>
-      <div className="shop-map-sold-table"><div className="head"><span>Listing</span><span>Sold</span><span>Favorites</span><span>Revenue</span></div>
+      {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-table"><div className="head"><span>Listing</span><span>Sold</span><span>Favorites</span><span>Revenue</span></div>
         {sold.map(listing => <article key={listing.listingId}><div>{listing.imageUrl ? <img src={listing.imageUrl} alt=""/> : <i>G</i>}
-          <strong><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.title}</a></strong></div><b data-label="Sold">{listing.sales}</b><span data-label="Favorites">{listing.favorites??"Unavailable"}</span><span data-label="Revenue">{money(listing.revenueMinor)}</span></article>)}</div>
+          <strong><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.title}</a></strong></div><b data-label="Sold">{listing.sales}</b><span data-label="Favorites">{listing.favorites??"Unavailable"}</span><span data-label="Revenue">{money(listing.revenueMinor)}</span></article>)}</div>}
     </section>}
 
     {tab === "money" && <section className="shop-map-card shop-map-money shop-map-money-redesign">
-      <label className="shop-map-period">Month <input type="month" value={selectedMonth||shown.month||""} onChange={event=>setSelectedMonth(event.target.value)}/></label><h2>{month?.headline ?? "Your monthly totals"}</h2>
-      {shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
+      <label className="shop-map-period">Month <input type="month" value={selectedMonth||shown.month||""} onChange={event=>setSelectedMonth(event.target.value)}/></label><h2>Monthly profit</h2>
+      {refreshing?<p role="status">Loading this month’s totals…</p>:shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
         {detected ? <button className="shop-map-confirm" disabled={busy === "timezone"} onClick={() => void confirmTimezone()}>
           {busy === "timezone" ? "Saving…" : `My shop runs on ${detected}`}</button> : null}</>
       : <><p className="shop-map-figure" data-basis={monthBasis(month)}>{monthBasis(month)==="unavailable"||month?.profitMinor == null ? "Profit unavailable" : money(month.profitMinor,month.currency)}</p>

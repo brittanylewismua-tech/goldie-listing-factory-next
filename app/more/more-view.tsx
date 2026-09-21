@@ -34,15 +34,20 @@ type Group = { heading: string; rows: Row[] };
   the page look more complete and be worse. The group appears when the routes do.
 */
 const GROUPS: Group[] = [
+  { heading: "Listing Factory", rows: [
+    {href:"/listing-factory?step=setup",name:"Listing Factory",icon:"listingFactory",what:"Create an individual listing or a batch on your computer."},
+    {href:"/batches",name:"Batch History",icon:"batches",what:"Open saved batches and check their progress."},
+    {href:"/mockups",name:"Mockup Sets",icon:"mockups",what:"Manage the photos used for your listings."},
+  ]},
   {
     heading: "Tools",
     rows: [
-      { href: "/trademark", name: "Trademark Checker", icon: "trademark",
+      { href: "/trademark", name: "Trademark Tracker", icon: "trademark",
         /* D1693 · "the federal register" claims a complete search. The tool
            itself says "the trademark records currently loaded", and the
            register is still ingesting. The menu should not promise more
            than the page it opens. */
-        what: "Check a phrase against US trademark records and known risks." },
+        what: "Check a phrase and watch for trademark changes." },
       { href: "/keywords", name: "Keyword Banks", icon: "keywords",
         what: "The phrases your titles and tags are built from." },
     ],
@@ -81,7 +86,7 @@ const FEATURE_NAMES: Record<string, string> = {
   designScanner: "Design Scanner",
   marketWatch: "Market Watch",
   shopMap: "Shop Map",
-  trademarkStandalone: "the Trademark Checker",
+  trademarkStandalone: "the Trademark Tracker",
   trademarkAtPublish: "the trademark check at publish",
 };
 

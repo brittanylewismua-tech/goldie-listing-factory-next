@@ -78,9 +78,7 @@ export function meetsThreshold(
     ? cohort.withUsableImage / cohort.listings : 0;
   if (cohort.listings < threshold.listings)
     return { ok: false, refusal: { kind: "cohort-too-small",
-      because: `Only ${cohort.listings} listing${cohort.listings === 1 ? "" : "s"} in this `
-        + `niche show verified movement so far. Design Scanner needs at least `
-        + `${threshold.listings} before it will compare anything.` } };
+      because: "Not enough buyer activity has been recorded for this keyword to compare designs. Try another keyword or check back later." } };
   if (cohort.shops < threshold.shops)
     return { ok: false, refusal: { kind: "no-shop-diversity",
       because: `The movement in this niche comes from only ${cohort.shops} shop`

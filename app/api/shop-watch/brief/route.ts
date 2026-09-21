@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { decodeEntities } from "@/app/shop-map-worlds";
 import { withErrorLog } from "@/app/error-log";
 import { cachedListingDisplay } from "@/app/etsy-display-cache";
 import { listingPhoto, listingPrice } from "@/app/etsy-listing-display";
@@ -91,7 +92,7 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
         ORDER BY created_at DESC LIMIT 3`).bind(shop.shopId,card.listing.id)
         .all<{rating:number;review:string;createdAt:number}>() : {results:[]};
       return {...card, listing: {...card.listing, title: row?.title ?? "", imageUrl: row ? listingPhoto(row) : "",
-        priceCents: row ? listingPrice(row) : null, currency: row?.price?.currency_code ?? "USD"}, reviews: reviews.results ?? []};
+        priceCents: row ? listingPrice(row) : null, currency: row?.price?.currency_code ?? "USD"}, reviews: (reviews.results ?? []).map(review=>({...review,review:decodeEntities(review.review)}))};
     };
     return {...shop, gettingAttention:await Promise.all(shop.gettingAttention.map(enrich)),
       whatBuyersLove:await Promise.all(shop.whatBuyersLove.map(enrich)),

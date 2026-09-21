@@ -6090,7 +6090,7 @@ test("one list decides whether the press can happen, scoped to the selection —
   const handoff=app.match(/function handoffBlockers\(\)\{[\s\S]*?\n  \}/)?.[0]||"";
   assert.doesNotMatch(handoff,/publishBlockers\(\)/,
     "Etsy-draft readiness cannot be bypassed by an empty live-publish selection");
-  assert.match(app, /copy: etsyDraftTransferState==="complete"\?"Your Etsy drafts were created and verified\."[\s\S]*handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/,
+  assert.match(app, /copy: bundleProductsStillReading\(\)\.length\|\|!draftAvailabilitySettled\?"Checking your saved drafts\.":etsyDraftTransferState==="complete"\?"Your Etsy drafts were created and verified\."[\s\S]*handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/,
     "the handoff heading reads the same list as the handoff action");
   assert.match(app, /publishBlockersRef\.current=publishBlockers;/,
     "and by the guard through a ref refreshed every render - D644");
@@ -7133,7 +7133,7 @@ test("the final review reads honestly — D660", async () => {
   assert.match(css, /\.app-shell \.row-value\{min-width:0;overflow-wrap:anywhere\}/);
 
   // The heading must agree with the button underneath it.
-  assert.match(app, /title: "Review your listings", copy: etsyDraftTransferState==="complete"\?"Your Etsy drafts were created and verified\."[\s\S]*handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/);
+  assert.match(app, /title: "Review your listings", copy: bundleProductsStillReading\(\)\.length\|\|!draftAvailabilitySettled\?"Checking your saved drafts\.":etsyDraftTransferState==="complete"\?"Your Etsy drafts were created and verified\."[\s\S]*handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/);
 
   /* The heading and the draft chip overlapped once the chip carried a product
      name: "✓ 2 drafts on Gildan Hoodie" printed through the heading. */

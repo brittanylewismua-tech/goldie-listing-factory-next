@@ -38,7 +38,8 @@ test("a multi-word mark sitting inside the phrase is serious too", () => {
 test("one ordinary registered word is a caution, not an alarm", () => {
   const out = withRegister(check("love always wins"), [hit({ mark: "LOVE" })], LOADED);
   assert.equal(out.risk, "caution");
-  assert.match(out.summary, /does not stop you using it/);
+  assert.match(out.summary, /Review the matching goods and services/);
+  assert.doesNotMatch(out.summary, /does not stop you using it/);
 });
 
 test("a pending application is never dressed up as a registration", () => {

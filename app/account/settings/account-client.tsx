@@ -34,7 +34,7 @@ type Usage = {
 const COUNT_LABELS: Record<string, { one: string; many: string }> = {
   scans: { one: "design scan", many: "design scans" },
   designAnalyses: { one: "stored design analysis", many: "stored design analyses" },
-  nicheWatches: { one: "niche watched", many: "niches watched" },
+  nicheWatches: { one: "keyword tracked", many: "keywords tracked" },
   shopWatches: { one: "shop watched", many: "shops watched" },
   capturedArtwork: { one: "print file kept", many: "print files kept" },
   etsyShops: { one: "Etsy shop connected", many: "Etsy shops connected" },
@@ -246,7 +246,7 @@ export default function AccountClient({ email }: { email: string }) {
     <div className="p-page">
       <header className="p-head">
         <h1>Account</h1>
-        <p>Who you are signed in as, what your access covers, and what is held about you.</p>
+        <p>Your sign-in, subscription, and saved data.</p>
       </header>
 
       {error && <p className="p-notice p-notice-bad" role="alert">{error}</p>}
@@ -315,7 +315,7 @@ export default function AccountClient({ email }: { email: string }) {
             <details className="acc-detail">
               <summary>What would be kept, and why</summary>
               <ul>{data.kept.map(entry => (
-                <li key={entry.say}>{entry.say} <em>({entry.why})</em></li>
+                <li key={entry.say}>{entry.say}</li>
               ))}</ul>
             </details>
           )}

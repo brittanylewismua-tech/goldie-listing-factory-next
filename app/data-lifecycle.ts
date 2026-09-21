@@ -37,7 +37,7 @@ export const EFFECTS: Record<Action, Effect[]> = {
     { what: "artwork_provenance, ARTWORK objects", disposition: "removed",
       say: "Every print file captured for you." },
     { what: "niche_watches", disposition: "removed",
-      say: "Your saved niches. The evidence behind them is market data and stays." },
+      say: "Your tracked keywords. Public marketplace information is retained." },
     { what: "member_shop_watches", disposition: "removed",
       say: "The shops you follow." },
     { what: "shop_map_listings, finance_*", disposition: "removed",

@@ -38,5 +38,5 @@ test("D1693: no menu promises a complete register search", () => {
   for (const line of shown)
     assert.doesNotMatch(line, /federal register/i,
       `a menu entry claims a complete search: ${line}`);
-  assert.match(more, /Check a phrase against US trademark records and known risks\./);
+  assert.match(more, /Check a phrase and watch for trademark changes\./);
 });

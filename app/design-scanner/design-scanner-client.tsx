@@ -217,14 +217,13 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
     <main className="scanner p-grid">
       <h1>Design Scanner</h1>
       <p className="lede">
-        See how your design compares with listings that have actually been
-        moving in your niche.
+        Compare your design with Etsy listings that have recorded buyer activity.
       </p>
 
       <div className="stage">
         {preview
           ? <img src={preview} alt="Your design" />
-          : <div className="empty p-empty"><b>No design yet</b><p>Choose a design and Design Scanner will compare how it is built with listings that are actually moving in your niche.</p></div>}
+          : <div className="empty p-empty"><b>No design yet</b><p>Upload your artwork to compare its style, layout, and colors with relevant Etsy listings.</p></div>}
         {scanning && <div className="beam" aria-hidden="true" />}
       </div>
 
@@ -239,10 +238,10 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
         <input id="niche" type="text" value={niche} placeholder="bachelorette, dog mom, teacher…"
           onChange={event => setNiche(event.target.value)} />
         {savedNiches.length > 0 && (
-          <select aria-label="Use a niche you are watching" value=""
+          <select aria-label="Use a tracked keyword" value=""
             onChange={event => event.target.value && setNiche(event.target.value)}
             style={{ marginTop: 10 }}>
-            <option value="">Or use a niche you are watching…</option>
+            <option value="">Choose a tracked keyword…</option>
             {savedNiches.map(name => <option key={name} value={name}>{name}</option>)}
           </select>
         )}

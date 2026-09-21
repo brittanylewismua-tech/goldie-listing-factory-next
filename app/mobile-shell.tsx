@@ -44,7 +44,7 @@ const BARE = [/^\/$/, /^\/account\/sign-in/, /^\/signup/, /^\/auth/];
   listings. Saying so plainly is kinder than a cramped workspace, and the
   member's saved work is untouched either way.
 */
-const WORKSPACE = [/^\/listing-factory/, /^\/listingfactory/, /^\/batches/];
+const WORKSPACE = [/^\/listing-factory/, /^\/listingfactory/];
 
 /*
   ONE EXCEPTION, AND IT IS DELIBERATE.
@@ -106,12 +106,12 @@ export default function MobileShell() {
 
   if (WORKSPACE.some(pattern => pattern.test(pathname)) && !SCANNER.test(pathname))
     return <aside className="desktop-only-notice" role="note">
-      <b>Listing Factory is built for desktop.</b>
+      <a className="mobile-notice-brand" href="/home">Goldie Suite</a>
+      <b>Create listings on a computer.</b>
       <p>
-        Your saved designs, batches and keyword banks are exactly where you left
-        them, and they will be ready when you are back at your computer.
+        Listing Factory’s artwork and bulk editors need a larger screen. Your saved work is ready when you return.
       </p>
-      <a href="/home">Back to Home</a>
+      <nav className="mobile-work-links"><a href="/batches">Batch History</a><a href="/home">All tools</a></nav>
     </aside>;
 
   return <>

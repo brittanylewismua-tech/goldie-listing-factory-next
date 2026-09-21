@@ -442,7 +442,7 @@ test("a cohort that clears every gate is allowed", () => {
 test("each gate refuses with its own reason, in the member's language", () => {
   const small = meetsThreshold(shape({ listings: 6, shops: 6, repeatedMovement: 1, withUsableImage: 6 }));
   assert.equal(small.refusal.kind, "cohort-too-small");
-  assert.match(small.refusal.because, /at least 12/);
+  assert.match(small.refusal.because, /Not enough buyer activity/);
 
   const narrow = meetsThreshold(shape({ listings: 20, shops: 3, withUsableImage: 20 }));
   assert.equal(narrow.refusal.kind, "no-shop-diversity");

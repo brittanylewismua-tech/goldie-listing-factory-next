@@ -9,7 +9,7 @@ const deliveryRead=fs.readFileSync(new URL('../app/delivery-status-read.ts',impo
 const css=fs.readFileSync(new URL('../app/lilac-theme.css',import.meta.url),'utf8');
 
 test('D1240: Review has one instruction and one primary outcome',()=>{
-  assert.match(app,/title: "Review your listings", copy: etsyDraftTransferState==="complete"\?"Your Etsy drafts were created and verified\."/);
+  assert.match(app,/title: "Review your listings", copy: bundleProductsStillReading\(\)\.length\|\|!draftAvailabilitySettled\?"Checking your saved drafts\.":etsyDraftTransferState==="complete"\?"Your Etsy drafts were created and verified\."/);
   assert.match(app,/etsyDraftTransferState==="working"\?"Your Etsy drafts are being created and checked\.":handoffBlockers\(\)\.length\?"Fix the missing items shown on the listing cards\.":"Everything is ready\. Save the batch to Etsy Drafts\."/);
   assert.doesNotMatch(app,/Choose where to keep these listings/);
   assert.doesNotMatch(app,/<dl className="publish-box-reports">/);

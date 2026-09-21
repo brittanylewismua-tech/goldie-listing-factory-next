@@ -685,11 +685,11 @@ export function withRegister(
         the name has not already. */
       summary: first.registered
         ? (first.exact
-          ? endSentence(`“${first.mark}” is a live registered trademark${first.owner ? `, owned by ${first.owner}` : ""}. Using it as the phrase on a product is what gets a listing removed.`)
-          : endSentence(`This phrase contains “${first.mark}”, a live registered trademark${first.owner ? ` owned by ${first.owner}` : ""}. Printing it risks the listing being removed.`))
+          ? endSentence(`“${first.mark}” is a live registered trademark${first.owner ? `, owned by ${first.owner}` : ""}. Review the registration’s goods and services before using this phrase.`)
+          : endSentence(`This phrase contains “${first.mark}”, a live registered trademark${first.owner ? ` owned by ${first.owner}` : ""}. Compare the registration’s goods and services with your intended product.`))
         : (first.exact
-          ? endSentence(`“${first.mark}” is a live trademark application${first.owner ? `, filed by ${first.owner}` : ""}. It is not registered yet, and an applicant trading under a name still gets listings removed for it.`)
-          : endSentence(`This phrase contains “${first.mark}”, a live trademark application${first.owner ? ` filed by ${first.owner}` : ""}. It is not registered yet, and the applicant can still object.`))
+          ? endSentence(`“${first.mark}” is a live trademark application${first.owner ? `, filed by ${first.owner}` : ""}. It is not registered yet. Compare its goods and services with your intended product.`)
+          : endSentence(`This phrase contains “${first.mark}”, a live trademark application${first.owner ? ` filed by ${first.owner}` : ""}. It is not registered yet. Compare its goods and services with your intended product.`))
     };
   }
 
@@ -707,10 +707,10 @@ export function withRegister(
       granted right, and the advice that followed ("a registration on an
       ordinary word...") described something that had not happened.
     */
-    summary: `No famous brands here, but ${named} ${minor.every(match => match.registered)
+    summary: `${named} ${minor.every(match => match.registered)
       ? `${minor.length > 1 ? "are" : "is"} registered by somebody else`
       : `${minor.length > 1 ? "have been filed" : "has been filed"} by somebody else`}. `
-      + `That does not stop you using it, and it does mean the owner can object — `
-      + `worth a look before you scale it.`,
+      + `Review the matching goods and services before using this phrase. `
+      + `A match alone does not determine whether your use is permitted.`,
   };
 }
