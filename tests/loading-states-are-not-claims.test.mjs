@@ -674,16 +674,16 @@ test("the review caveat is said once per section, not on every card", () => {
   assert.match(attention, /against an average of \$\{evenShare\.toFixed\(1\)\} for a/);
 
   const client = read("market-watch/market-watch-client.tsx");
-  assert.match(client, /name === "Getting attention" &&/);
-  assert.match(client, /Reviews are not sales, and a buyer can leave one up to a hundred days/);
+  assert.match(client, /name==="Listings buyers reviewed"&&/);
+  assert.match(client, /Review dates show when feedback was posted, not when an item sold/);
   assert.match(client, /section-note/);
 });
 
 test("keyword cards use labels instead of generated count sentences", () => {
   /* "feminist · 1 moving · 1 repeated · 1 shops" on the live page. */
   const client = read("market-watch/market-watch-client.tsx");
-  assert.match(client, /Confirmed sold · 30 days/);
-  assert.match(client, /Repeat sellers/);
+  assert.match(client, /Favorites/);
+  assert.match(client, /Recorded reviews/);
   assert.doesNotMatch(client, /across .*shops/);
 });
 
@@ -700,8 +700,8 @@ test("a keyword page separates current listings from confirmed sales", () => {
     sentence is, so it stops contradicting what sits underneath it.
   */
   const client = read("market-watch/market-watch-client.tsx");
-  assert.match(client, /No sales have been confirmed for these listings yet/);
-  assert.match(client, /Their current Etsy stats are below/);
+  assert.match(client, /it does not establish how many units an individual listing sold/);
+  assert.match(client, /Favorites and views are current listing totals/);
 
   /* And the bar itself is untouched — this is not a threshold change. */
   const watch = read("niche-watch.ts");

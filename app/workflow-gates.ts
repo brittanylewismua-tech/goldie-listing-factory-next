@@ -111,10 +111,10 @@ export function navigationIssues(index:number,state:NavigationGateState){
      click. Measured on her batch: Next step disabled, every visible section
      green, and the stated reason belonging to a page she had already left.
      A blocker that does not say where it lives sends the seller looking. */
-  if(index>=5&&!state.etsyShippingProfileReady)issues.push("Choose the Etsy shipping profile after approving the finished prices on the Images step.");
+  if(index>=8&&!state.etsyShippingProfileReady)issues.push("Choose the Etsy shipping profile on the pricing and shipping editor.");
   if(index>=5&&!state.draftsComplete)issues.push("Finish creating the Printify drafts.");
   if(index>=5&&!state.createdDraftCount)issues.push("Create at least one Printify draft.");
-  if(index>=5&&!state.pricingApproved)issues.push("Review the item prices.");
+  if(index>=8&&!state.pricingApproved)issues.push("Review the item prices.");
   if(index>=6&&!state.titlesReady)issues.push("Finish every listing title.");
   if(index>=6&&!state.tagsReady)issues.push("Finish every listing’s tags.");
   if(index>=6&&!state.descriptionReady)issues.push("Add the reusable product description.");

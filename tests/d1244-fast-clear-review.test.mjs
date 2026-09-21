@@ -27,15 +27,12 @@ test('D1244: creation sends both sides of the price comparison and never waits o
   assert.match(app,/pricingApproved:finished\?finalPricingApproved:false/);
 });
 
-test('D1244: every price blocker has a working correction path',()=>{
+test('Every final price blocker has a correction link on Photos',()=>{
   const app=read('app/listing-factory-app.tsx');
-  const css=read('app/interface-v2.css');
   assert.match(app,/target\.phase==="pricing"\)\{setActiveTask\("draft-pricing"\);goToStep\("designs",false,true\)\}/);
-  assert.doesNotMatch(app,/target\.phase==="pricing"\)\{setActiveTask\("prices"\)/);
-  assert.match(app,/priceTarget=costReviewDrafts\(\)\.find/);
-  assert.match(app,/canOpenPricing\?"Review item prices":"Review batch"/);
-  assert.match(app,/disabled=\{savingEtsyDetails\|\|Boolean\(issues\.length&&!canOpenPricing\)\}/);
-  assert.doesNotMatch(css,/\.review-gate-action/);
+  assert.match(app,/const next=unfinishedDraftGuidance\(\)/);
+  assert.match(app,/onClick=\{\(\)=>openGuidedDraftTask\(next.task,next.index\)\}/);
+  assert.match(app,/disabled=\{imagesStepIssues\(\).length>0\}/);
 });
 
 test('D1244: returning from sign-in retries the preserved save',()=>{

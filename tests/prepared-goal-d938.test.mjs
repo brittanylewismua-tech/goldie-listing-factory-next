@@ -19,8 +19,8 @@ test("D938: the goal is counted from successful Printify drafts, not disabled Et
 test("D938: every visible goal describes prepared listings",()=>{
   assert.match(shell,/of \$\{goal\.target\} drafts ready/);
   assert.match(app,/of \$\{listingGoal\.target\} drafts ready/);
-  assert.match(goals,/made ready to publish/);
-  assert.match(usage,/target for drafts ready to publish/);
+  assert.match(goals,/Printify drafts you have created/);
+  assert.match(usage,/target for Printify drafts created/);
   for(const source of [shell,app,goals,usage]) assert.doesNotMatch(source,/goal[^\n]{0,180}publish receipt/i);
 });
 

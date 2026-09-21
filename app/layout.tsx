@@ -22,6 +22,7 @@ import MobileShell from "./mobile-shell";
 import "./mobile-shell.css";
 import "./suite-redesign.css";
 import "./approved-redesign-components.css";
+import "./production-repair.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();

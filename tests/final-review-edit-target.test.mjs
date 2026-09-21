@@ -35,5 +35,5 @@ test('reload preserves an explicit empty color or size selection',()=>{
 });
 test('old mockups-phase bookmarks recover into the real photos step',()=>{
   assert.match(app,/workflowStep==="finish"&&finishPhase==="mockups"/);
-  assert.match(app,/setFinishPhase\("details"\);setActiveTask\("photos"\);goToStep\("designs",true,true\)/);
+  assert.match(app,/setActiveTask\("photos"\);goToStep\("designs",true,true\)/);
 });

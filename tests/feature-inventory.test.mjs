@@ -171,7 +171,7 @@ test("step-level controls sit below the cards, product-level inside them", async
   for (const gone of ["listing-editor", "design-table-section", "batch-title-builder"]) {
     assert.ok(!listing.body.includes(gone), `${gone} must not be a body block any more`);
   }
-  assert.ok(listing.footer.includes("Preparing Etsy details automatically"), "automatic Etsy preparation is reported for the whole batch");
+  assert.ok(listing.footer.includes("Preparing Etsy details"), "automatic Etsy preparation is reported for the whole batch");
   assert.ok(!listing.footer.includes("prepare-etsy"), "automatic Etsy preparation is not presented as a button");
 
   // Step 4 has no per-product body at all: reviewing and publishing cover the batch.

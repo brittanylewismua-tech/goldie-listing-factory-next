@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { monthName } from "@/app/shop-map-month";
 
 type Niche = {
@@ -7,14 +7,17 @@ type Niche = {
   period: string; orders: number; revenueMinor: number;
   lifetimeOrders: number; lifetimeRevenueMinor: number; evidence: string;
   productFamilies: Array<{ family: string; listings: number }>;
+  memberListings?:Array<{listingId:number;title:string;imageUrl:string;favorites:number|null;sales:number;state:string}>;
   reviews: { recent: number; lifetimeHeld: number };
 };
 type Focus = { nicheId: string; label: string; headline: string; advice: string; reason: string };
 type ShopMap = {
+  displayUnavailable?:boolean;
+  topListings?: Array<{listingId:number;title:string;imageUrl:string;favorites:number|null;sales:number;revenueMinor:number}>;
   shop?: { shopName: string; imageUrl?: string };
   month?: string;
-  thisMonth?: { revenueMinor: number; etsyFeesMinor: number; productionCostMinor: number;
-    headline: string; profitMinor: number | null; accuracy: string; orders: number;
+  thisMonth?: { revenueMinor: number|null; etsyFeesMinor: number|null; productionCostMinor: number|null; refundsMinor?:number|null;adjustmentsMinor?:number|null;
+    currency?:string; headline: string; profitMinor: number | null; accuracy: string; orders: number;
     salesAsOf?: number; salesStale?: boolean; freshness?: string;
     /* What this month's figures may be called. An estimate must never be
        able to read as a verified figure, so the distinction is structural
@@ -41,34 +44,21 @@ type ShopMap = {
   unclassifiedPerformance?: { listings: number; activeListings: number; orders: number;
     revenueMinor: number; reviews: number; ordersLast90: number; revenueLast90Minor: number };
   needsAttention?: { overbuiltWorlds: Array<{ label: string; reason: string }> };
-  shopTotals?: { listings: number; orders: number };
+  shopTotals?: { listings: number; activeListings?:number; orders: number };
   soldListings?: { period: string; listings: Array<{ listingId: number; title: string;
     imageUrl: string; favorites: number; sales: number; revenueMinor: number }> };
   timezoneNeeded?: boolean;
   error?: string;
 };
 
-/*
-  Whether this month's profit is an exact figure or an estimate. The label
-  the server computes is authoritative; the cost coverage is the fallback for
-  a response saved before the label was sent, so an older cached month still
-  cannot present an estimate as verified.
-*/
+// Cached estimates must never be presented as a complete profit figure.
 function monthBasis(month: { label?: string;
   coverage?: { estimated: number; unavailable: number } } | undefined) {
-  if (!month) return "unknown";
-  if (month.label === "estimated") return "estimated";
-  if (month.label === "verified") return "verified";
-  if (month.label === "unavailable") return "unavailable";
-  if ((month.coverage?.unavailable ?? 0) > 0) return "unavailable";
-  if ((month.coverage?.estimated ?? 0) > 0) return "estimated";
-  return "verified";
+  return month?.label === "verified" ? "verified" : "unavailable";
 }
 
-const money = (minor: number | null | undefined) =>
-  minor === null || minor === undefined ? "—"
-    : `${minor < 0 ? "-" : ""}$${Math.abs(minor / 100).toLocaleString(undefined,
-      { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (minor: number | null | undefined,currency="USD") =>
+  minor === null || minor === undefined ? "—" : new Intl.NumberFormat(undefined,{style:"currency",currency}).format(minor/100);
 
 export default function ShopMapClient({ signedInEmail }: { signedInEmail?: string }) {
   const [map, setMap] = useState<ShopMap | null>(null);
@@ -79,16 +69,18 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState<"overview" | "themes" | "sold" | "money">("overview");
 
-  const load = async () => {
-    const next = await fetch("/api/shop-map/map")
+  const [soldDays,setSoldDays]=useState(90);
+  const [selectedMonth,setSelectedMonth]=useState("");
+  const load = useCallback(async () => {
+    const next = await fetch(`/api/shop-map/map?days=${soldDays}${selectedMonth?`&month=${encodeURIComponent(selectedMonth)}`:""}`)
       .then(response => response.json() as Promise<ShopMap>)
       .catch(() => null);
     if (!next || next.error) { setFailed(true); return; }
     setFailed(false);
     setMap(next);
     setLastGood(next);
-  };
-  useEffect(() => { void load(); }, []);
+  },[soldDays,selectedMonth]);
+  useEffect(() => { void load(); }, [load]);
 
   /*
     The browser knows where the member is; Shop Map asks rather than assumes.
@@ -193,6 +185,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const noSalesYet = (shown.shopTotals?.orders ?? 0) === 0;
 
   const sold = shown.soldListings?.listings ?? [];
+  const leaders=shown.topListings??sold.slice(0,3);
   return <main className="shop-map shop-map-redesign">
     <header className="shop-map-head">
       <div className="shop-map-identity">
@@ -202,6 +195,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           <p>Shop Map · {monthName(shown.month)}</p></div>
       </div>
     </header>
+    {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     <nav className="shop-map-tabs" aria-label="Shop Map sections">
       {([['overview','Overview'],['themes','Product themes'],['sold','Sold listings'],['money','Your numbers']] as const)
@@ -212,21 +206,21 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     {tab === "overview" && <div className="shop-map-tab-panel">
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
-          <h2>Top three listings</h2></div>
+          <h2>Top 3 listings in the last 90 days</h2></div>
           <button type="button" onClick={() => setTab("sold")}>See every sold listing ↗</button></div>
-        {sold.length ? <div className="shop-map-leader-grid">{sold.slice(0,3).map((listing,index) =>
+        {leaders.length ? <div className="shop-map-leader-grid">{leaders.map((listing,index) =>
           <article key={listing.listingId} className={index === 0 ? "lead" : ""}>
             <div className="shop-map-listing-image">{listing.imageUrl
               ? <img src={listing.imageUrl} alt="" loading="lazy" width={570} height={570} />
               : <span aria-hidden="true">G</span>}<b>0{index + 1}</b></div>
-            <div>{index === 0 ? <p className="mini-label">TOP SELLER</p> : null}<h3>{listing.title}</h3>
+            <div>{index === 0 ? <p className="mini-label">TOP SELLER</p> : null}<h3><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.title}</a></h3>
               <p><strong>{listing.sales} sold</strong><span>{money(listing.revenueMinor)}</span></p></div>
           </article>)}</div> : <div className="shop-map-empty"><b>No sales in the last 90 days.</b>
             <p>Your sold listings will appear here after the next Etsy sales import.</p></div>}
       </section>
       <section className="shop-map-summary-grid">
-        <article><span>Orders this month</span><strong>{month?.orders ?? 0}</strong><small>{money(month?.revenueMinor)} revenue</small></article>
-        <article><span>Active listings</span><strong>{shown.shopTotals?.listings ?? 0}</strong><small>in your current catalog</small></article>
+        <article><span>Orders this month</span><strong>{month?.orders ?? 0}</strong><small>{money(month?.revenueMinor,month?.currency)} revenue</small></article>
+        <article><span>Active listings</span><strong>{shown.shopTotals?.activeListings ?? 0}</strong><small>in your current catalog</small></article>
         <article><span>Top product theme</span><strong>{niches[0]?.label ?? "Not enough data"}</strong><small>{niches[0] ? `${niches[0].orders} orders in 90 days` : "Sales will reveal this"}</small></article>
       </section>
     </div>}
@@ -242,30 +236,30 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           <span className="shop-map-bar"><span style={{width:`${Math.max(2,Math.round(share*100))}%`}}/></span>
           <span className="shop-map-lifetime">Lifetime: {money(niche.lifetimeRevenueMinor)} from {niche.lifetimeOrders} orders</span>
         </button>{open === niche.worldId ? <div className="shop-map-evidence"><p>{niche.evidence}</p>
-          <p>{niche.listings} listings total. {niche.productFamilies.map(row => row.family).join(", ")}</p></div> : null}</li>})}</ul>
+          <p>{niche.listings} listings. Sales below cover the last 90 days.</p><div className="shop-map-theme-listings">{niche.memberListings?.map(listing=><a key={listing.listingId} href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.imageUrl?<img src={listing.imageUrl} alt="" loading="lazy" width={68} height={68}/>:null}<span><strong>{listing.title}</strong><small>{listing.sales} sold · {listing.favorites==null?"Favorites unavailable":`${listing.favorites} favorites`} · {listing.state}</small></span></a>)}</div></div> : null}</li>})}</ul>
     </section>}
 
     {tab === "sold" && <section className="shop-map-card shop-map-sold">
-      <div className="shop-map-section-head"><div><p className="mini-label">SOLD LISTINGS</p><h2>Every listing with a sale in the last 90 days.</h2>
+      <div className="shop-map-section-head"><div><p className="mini-label">SOLD LISTINGS</p><h2>Sold listings · last {soldDays} days</h2>
         <p>Sales and revenue come from Etsy transactions. Favorites come from the current listing record.</p></div></div>
+      <label className="shop-map-period">Sales period <select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label>
       <div className="shop-map-sold-table"><div className="head"><span>Listing</span><span>Sold</span><span>Favorites</span><span>Revenue</span></div>
         {sold.map(listing => <article key={listing.listingId}><div>{listing.imageUrl ? <img src={listing.imageUrl} alt=""/> : <i>G</i>}
-          <strong>{listing.title}</strong></div><b>{listing.sales}</b><span>{listing.favorites}</span><span>{money(listing.revenueMinor)}</span></article>)}</div>
+          <strong><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.title}</a></strong></div><b data-label="Sold">{listing.sales}</b><span data-label="Favorites">{listing.favorites??"Unavailable"}</span><span data-label="Revenue">{money(listing.revenueMinor)}</span></article>)}</div>
     </section>}
 
     {tab === "money" && <section className="shop-map-card shop-map-money shop-map-money-redesign">
-      <p className="mini-label">THIS MONTH</p><h2>{month?.headline ?? "Your monthly totals"}</h2>
+      <label className="shop-map-period">Month <input type="month" value={selectedMonth||shown.month||""} onChange={event=>setSelectedMonth(event.target.value)}/></label><h2>{month?.headline ?? "Your monthly totals"}</h2>
       {shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
         {detected ? <button className="shop-map-confirm" disabled={busy === "timezone"} onClick={() => void confirmTimezone()}>
           {busy === "timezone" ? "Saving…" : `My shop runs on ${detected}`}</button> : null}</>
-      : <><p className="shop-map-figure" data-basis={monthBasis(month)}>{month?.profitMinor == null ? "Profit unavailable" : money(month.profitMinor)}
-          {monthBasis(month) === "estimated" && <span className="shop-map-basis-chip">Estimate</span>}</p>
+      : <><p className="shop-map-figure" data-basis={monthBasis(month)}>{monthBasis(month)==="unavailable"||month?.profitMinor == null ? "Profit unavailable" : money(month.profitMinor,month.currency)}</p>
         <p className="shop-map-accuracy">{month?.accuracy}</p>
         {month?.freshness ? <p className="shop-map-freshness" data-stale={month.salesStale ? "yes" : "no"}>{month.freshness}</p> : null}
         <dl className="shop-map-rows">
-          <div><dt>Revenue</dt><dd>{money(month?.revenueMinor)}</dd></div><div><dt>Etsy fees</dt><dd>{money(month?.etsyFeesMinor)}</dd></div>
-          <div><dt>Production</dt><dd>{month?.coverage?.unavailable ? "Not available" : money(month ? -month.productionCostMinor : undefined)}</dd></div>
-          <div><dt>Orders</dt><dd>{month?.orders ?? 0}</dd></div></dl>
+          <div><dt>Revenue</dt><dd>{money(month?.revenueMinor,month?.currency)}</dd></div><div><dt>Etsy fees</dt><dd>{money(month?.etsyFeesMinor,month?.currency)}</dd></div>
+          <div><dt>Production</dt><dd>{month?.productionCostMinor == null || month?.coverage?.unavailable ? "Not available" : money(-month.productionCostMinor,month.currency)}</dd></div>
+          <div><dt>Refunds recorded</dt><dd>{money(month?.refundsMinor,month?.currency)}</dd></div><div><dt>Adjustments</dt><dd>{money(month?.adjustmentsMinor,month?.currency)}</dd></div><div><dt>Orders</dt><dd>{month?.orders ?? 0}</dd></div></dl>
         {month?.coverage?.unavailable ? <a className="shop-map-fix" href="/shop-map/costs">Add production costs</a> : null}</>}
     </section>}
     {signedInEmail ? null : null}

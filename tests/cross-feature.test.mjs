@@ -175,7 +175,7 @@ test("the batch CTA and factory metrics stay inside Listing Factory", () => {
   for (const control of ["approved-usage", "listing-goal-side"]) {
     const at = shell.indexOf(control);
     assert.ok(at > 0, `${control} is missing from the shell`);
-    assert.ok(shell.slice(Math.max(0, at - 600), at).includes('active === "factory"'),
+    assert.ok(shell.slice(Math.max(0, at - 1000), at).includes('isFactoryPage'),
       `${control} is not scoped to factory pages`);
   }
 });

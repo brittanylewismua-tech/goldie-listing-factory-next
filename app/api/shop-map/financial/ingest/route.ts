@@ -202,11 +202,11 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
       WHERE user_id = ? AND shop_id = ? AND state = 'complete'`)
     .bind(user.userId, shopId).first<{ n: number }>();
   await db.prepare(
-    `INSERT INTO finance_sources (user_id, shop_id, source, refreshed_at, high_water)
-     VALUES (?,?,'ledger',?,?)
+    `INSERT INTO finance_sources (user_id, shop_id, source, refreshed_at, high_water,last_error)
+     VALUES (?,?,'ledger',?,?,?)
      ON CONFLICT(user_id, shop_id, source) DO UPDATE SET
-       refreshed_at = excluded.refreshed_at, high_water = excluded.high_water`)
-    .bind(user.userId, shopId, now, Number(completeTo?.n ?? 0)).run();
+       refreshed_at = excluded.refreshed_at, high_water = excluded.high_water,last_error=excluded.last_error`)
+    .bind(user.userId, shopId, windowErrors.length?0:now, Number(completeTo?.n ?? 0),windowErrors.join('; ')).run();
 
   /* ------------------------------------------------------------ receipts */
   /*
@@ -228,6 +228,10 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
   let refundsSeen = 0;
   let newestReceipt = Number(receiptState?.high_water ?? 0);
   let oldestSeen = Number.MAX_SAFE_INTEGER;
+  let receiptsReadComplete=false;
+  let receiptError="";
+  const previousComplete=await db.prepare(`SELECT refreshed_at FROM finance_sources WHERE user_id=? AND shop_id=? AND source='receipts-complete'`)
+    .bind(user.userId,shopId).first<{refreshed_at:number}>();
   const maxReceiptPages = Math.min(40, Math.max(1, Number(parameters.get("receipts")) || 6));
   const backfill = parameters.get("backfill") === "1";
 
@@ -240,16 +244,16 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
       high-water mark - which is what the mark is actually for.
     */
     const answer = await etsy(`/shops/${shopId}/receipts?limit=100&offset=${page * 100}`);
-    if (answer.status !== 200) break;
+    if (answer.status !== 200) {receiptError=`Etsy receipts returned ${answer.status}`;break;}
     const results = ((answer.body as { results?: Array<Record<string, unknown>> })?.results) ?? [];
-    if (!results.length) break;
+    if (!results.length) {receiptsReadComplete=true;break;}
 
     for (const receipt of results) {
       const receiptId = Number(receipt.receipt_id ?? 0);
       if (!receiptId) continue;
       const money = (value: unknown) => {
         const row = (value ?? {}) as Record<string, unknown>;
-        return { minor: Math.round(Number(row.amount ?? 0)), divisor: Number(row.divisor ?? 100) || 100,
+        return { minor: Math.round(Number(row.amount ?? 0)*100/(Number(row.divisor ?? 100)||100)), divisor: 100,
           currency: String(row.currency_code ?? "USD") };
       };
       const subtotal = money(receipt.subtotal);
@@ -289,27 +293,22 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
       receiptsStored += 1;
       transactionsStored += ((receipt.transactions ?? []) as unknown[]).length;
     }
-    if (results.length < 100) break;
+    if (results.length < 100) {receiptsReadComplete=true;break;}
     /*
       Everything from here back is already held, plus the overlap - unless a
       backfill was asked for, which walks the whole history once. The
       incremental stop is right for every later run and wrong for the first.
     */
-    if (!backfill && receiptsFrom > 0 && oldestSeen < receiptsFrom) break;
+    if (!backfill && receiptsFrom > 0 && oldestSeen < receiptsFrom) {receiptsReadComplete=Boolean(previousComplete);break;}
   }
 
-  await db.prepare(
-    `INSERT INTO finance_sources (user_id, shop_id, source, refreshed_at, high_water)
-     VALUES (?,?,'receipts',?,?)
-     ON CONFLICT(user_id, shop_id, source) DO UPDATE SET
-       refreshed_at = excluded.refreshed_at, high_water = excluded.high_water`)
-    .bind(user.userId, shopId, now, newestReceipt).run();
-  for (const source of ["transactions", "payments", "refunds"])
-    await db.prepare(
-      `INSERT INTO finance_sources (user_id, shop_id, source, refreshed_at, high_water)
-       VALUES (?,?,?,?,?)
-       ON CONFLICT(user_id, shop_id, source) DO UPDATE SET refreshed_at = excluded.refreshed_at`)
-      .bind(user.userId, shopId, source, now, newestReceipt).run();
+  const receiptFailure=receiptError||(!receiptsReadComplete?"The receipt import has not completed.":"");
+  for(const source of ["receipts","transactions","refunds","receipts-complete"]){
+    await db.prepare(`INSERT INTO finance_sources (user_id,shop_id,source,refreshed_at,high_water,last_error)
+      VALUES(?,?,?,?,?,?) ON CONFLICT(user_id,shop_id,source) DO UPDATE SET
+      refreshed_at=excluded.refreshed_at,high_water=excluded.high_water,last_error=excluded.last_error`)
+      .bind(user.userId,shopId,source,receiptFailure?0:now,newestReceipt,receiptFailure).run();
+  }
 
   /* ----------------------------------------------------------- printify */
   const stored = await db
@@ -320,17 +319,21 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
   if (stored) {
     const token = await decryptPrintifyToken(
       stored.encrypted_token, (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
-    const printifyShop = 1374648;
+    const pairing=await db.prepare("SELECT DISTINCT printify_shop_id FROM shop_pairing_proofs WHERE user_id=? AND etsy_shop_id=?").bind(user.userId,shopId).all<{printify_shop_id:number}>();
+    if(pairing.results.length!==1) return NextResponse.json({error:"Connect the matching Printify store before refreshing production costs."},{status:409});
+    const printifyShop=Number(pairing.results[0].printify_shop_id);
+    let productionComplete=false;
+    let productionError="";
     for (let page = 1; page <= maxOrderPages; page += 1) {
       const response = await printifyCall(
         `https://api.printify.com/v1/shops/${printifyShop}/orders.json?limit=50&page=${page}`,
         { headers: { Authorization: `Bearer ${token}`, "User-Agent": "Goldie-Listing-Factory" },
           signal: AbortSignal.timeout(25_000) },
         { feature: "finance", userId: user.userId }).catch(() => null);
-      if (!response?.ok) break;
+      if (!response?.ok) {productionError="Printify orders could not be refreshed.";break;}
       const body = await response.json() as { data?: Array<Record<string, unknown>> };
       const orders = body.data ?? [];
-      if (!orders.length) break;
+      if (!orders.length) {productionComplete=true;break;}
       for (const order of orders) {
         const metadata = (order.metadata ?? {}) as Record<string, unknown>;
         const shopOrderId = String(metadata.shop_order_id ?? "");
@@ -369,13 +372,13 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
           .run();
         productionRows += 1;
       }
-      if (orders.length < 50) break;
+      if (orders.length < 50) {productionComplete=true;break;}
     }
     await db.prepare(
-      `INSERT INTO finance_sources (user_id, shop_id, source, refreshed_at, high_water)
-       VALUES (?,?,'printify',?,?)
-       ON CONFLICT(user_id, shop_id, source) DO UPDATE SET refreshed_at = excluded.refreshed_at`)
-      .bind(user.userId, shopId, now, now).run();
+      `INSERT INTO finance_sources (user_id, shop_id, source, refreshed_at, high_water,last_error)
+       VALUES (?,?,'printify',?,?,?)
+       ON CONFLICT(user_id, shop_id, source) DO UPDATE SET refreshed_at = excluded.refreshed_at,last_error=excluded.last_error`)
+      .bind(user.userId, shopId, productionComplete?now:0, now,productionError||(!productionComplete?'The production cost import has not completed.':'')).run();
   }
 
   const remaining = await db.prepare(

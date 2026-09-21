@@ -293,3 +293,10 @@ export async function spendReport() {
   }
   return report;
 }
+
+/** Retain actual provider spending while returning the member's scan allowance
+ * when the completed analysis cannot produce a usable comparison. */
+export async function refundMemberAllowance(id:string){
+  const db=(env as unknown as {DB:D1Database}).DB;
+  await db.prepare(`UPDATE spend_reservations SET consumes_allowance=0 WHERE id=? AND state='settled'`).bind(id).run();
+}

@@ -31,7 +31,7 @@ export const GET = withErrorLog("operations-evidence", async (request: Request) 
       .catch((error: unknown) => {
         throw new EvidenceUnavailable(`${sql.trim().slice(0, 60)}… — ${String(error)}`);
       });
-    if (!out || out.success === false)
+    if (!out || !out.success)
       throw new EvidenceUnavailable(`${sql.trim().slice(0, 60)}… returned no result set`);
     return (out.results ?? []) as T[];
   };

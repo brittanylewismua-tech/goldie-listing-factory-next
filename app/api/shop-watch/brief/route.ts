@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
-import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { cachedListingDisplay } from "@/app/etsy-display-cache";
+import { listingPhoto, listingPrice } from "@/app/etsy-listing-display";
 import { requireFeatureApi } from "@/app/require-feature";
 import { env } from "cloudflare:workers";
 import { briefForShop, shopWatchBetaHealth, SHOP_WATCH_FLAG } from "@/app/shop-watch-brief";
@@ -61,16 +62,16 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
       etsy: `https://www.etsy.com/shop/${encodeURIComponent(row.shop_name)}`,
       /* Four sections. Each card says what the pattern is, which listing it
          is about, how much evidence stands behind it, and how fresh it is. */
-      gettingAttention: (brief.attention ?? []).map(card => present(card, row.shop_name)),
-      whatBuyersLove: (brief.love ?? []).map(card => present(card, row.shop_name)),
-      whatBuyersDislike: (brief.dislike ?? []).map(card => present(card, row.shop_name)),
+      gettingAttention: (brief.attention ?? []).map((card: Parameters<typeof present>[0] & {evidenceClass?:string}) => present(card, row.shop_name)),
+      whatBuyersLove: (brief.love ?? []).map((card: Parameters<typeof present>[0] & {evidenceClass?:string}) => present(card, row.shop_name)),
+      whatBuyersDislike: (brief.dislike ?? []).map((card: Parameters<typeof present>[0] & {evidenceClass?:string}) => present(card, row.shop_name)),
       /*
         The two cards in this section are not built from reviews, so the
         weight of their evidence is not a review count. The translation
         happens here, where the internal class still exists; `present` is
         handed a member's sentence and never sees the class at all.
       */
-      whatChanged: (brief.changed ?? []).map(card => present(card, row.shop_name,
+      whatChanged: (brief.changed ?? []).map((card: Parameters<typeof present>[0] & {evidenceClass?:string}) => present(card, row.shop_name,
         card.evidenceClass === "confirmed-shop-total"
           ? "Etsy's own shop counter" : "")),
       lastRefreshed: brief.freshness,
@@ -79,12 +80,31 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
     });
   }
 
+  if (queryFailed) return NextResponse.json({error: "Your watched shops could not be loaded. Please try again."}, {status:503});
+  const cards = shops.flatMap(shop => [...shop.gettingAttention, ...shop.whatBuyersLove, ...shop.whatBuyersDislike]);
+  const {listings, refreshFailed} = await cachedListingDisplay(cards.flatMap(card => card.listing.id ? [card.listing.id] : []), "shop-watch");
+  const enriched = await Promise.all(shops.map(async shop => {
+    const enrich = async (card: typeof cards[number]) => {
+      const row = card.listing.id ? listings.get(card.listing.id) : undefined;
+      const reviews = card.listing.id ? await db.prepare(`SELECT rating, review, created_at AS createdAt
+        FROM shop_reviews WHERE shop_id = ? AND listing_id = ? AND review <> ''
+        ORDER BY created_at DESC LIMIT 3`).bind(shop.shopId,card.listing.id)
+        .all<{rating:number;review:string;createdAt:number}>() : {results:[]};
+      return {...card, listing: {...card.listing, title: row?.title ?? "", imageUrl: row ? listingPhoto(row) : "",
+        priceCents: row ? listingPrice(row) : null, currency: row?.price?.currency_code ?? "USD"}, reviews: reviews.results ?? []};
+    };
+    return {...shop, gettingAttention:await Promise.all(shop.gettingAttention.map(enrich)),
+      whatBuyersLove:await Promise.all(shop.whatBuyersLove.map(enrich)),
+      whatBuyersDislike:await Promise.all(shop.whatBuyersDislike.map(enrich)), displayUnavailable: refreshFailed};
+  }));
+
   return NextResponse.json({
     flag: SHOP_WATCH_FLAG,
     /* An empty list because nothing is watched and an empty list because the
        query broke are different, and the member is told which. */
     ...(queryFailed ? { error: queryFailed } : {}),
-    shops,
+    shops: enriched,
+    limit: 25,
     health: await shopWatchBetaHealth(),
     reminder: "Reviews are evidence that somebody reviewed. They are not sales, and no listing sale count is derived from them.",
   });

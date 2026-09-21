@@ -69,7 +69,7 @@ test("an unknown production cost is never rendered as zero", () => {
     through the other door.
   */
   assert.match(client,
-    /money\(month \? -month\.productionCostMinor : undefined\)/,
+    /month\?\.productionCostMinor == null/,
     "with no month data the cost is unknown, not zero");
   assert.ok(!/money\(month \? -month\.productionCostMinor : 0\)/.test(client));
 });

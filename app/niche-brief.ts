@@ -4,6 +4,7 @@ import { watchesFor } from "@/app/niche-watch-store";
 import { ensureCandidateTables } from "@/app/niche-candidate-store";
 import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 import { describeWindow } from "@/app/evidence-window";
+import { decodeEntities } from "@/app/shop-map-worlds";
 import { DISPLAY_FRESHNESS_SECONDS } from "@/app/reference-images";
 
 type Row = {
@@ -35,11 +36,11 @@ async function rowsFor(keys: string[], now: number) {
     `SELECT c.niche_key AS nicheKey, c.listing_id AS listingId, c.shop_id AS shopId,
             COALESCE(NULLIF(c.title,''), r.title, '') AS title,
             COALESCE(NULLIF(c.image_url,''), r.image_url, '') AS imageUrl,
-            COALESCE(s.price_cents, c.price_cents) AS priceCents,
-            c.currency AS currency, COALESCE(s.favorites,c.favorites) AS favorites,
-            COALESCE(s.views,c.views) AS views,
-            COALESCE(s.original_created,c.original_created) AS originalCreated,
-            MAX(c.display_refreshed_at,COALESCE(r.retrieved_at,0)) AS displayRefreshedAt,
+            CASE WHEN c.display_refreshed_at >= COALESCE(unixepoch(s.observed_at),0) THEN COALESCE(c.price_cents,s.price_cents) ELSE COALESCE(s.price_cents,c.price_cents) END AS priceCents,
+            c.currency AS currency, CASE WHEN c.display_refreshed_at >= COALESCE(unixepoch(s.observed_at),0) THEN COALESCE(c.favorites,s.favorites) ELSE COALESCE(s.favorites,c.favorites) END AS favorites,
+            CASE WHEN c.display_refreshed_at >= COALESCE(unixepoch(s.observed_at),0) THEN COALESCE(c.views,s.views) ELSE COALESCE(s.views,c.views) END AS views,
+            CASE WHEN c.display_refreshed_at >= COALESCE(unixepoch(s.observed_at),0) THEN COALESCE(c.original_created,s.original_created) ELSE COALESCE(s.original_created,c.original_created) END AS originalCreated,
+            CASE WHEN c.image_url <> '' THEN c.display_refreshed_at ELSE COALESCE(r.retrieved_at,0) END AS displayRefreshedAt,
             COALESCE(a.intervals,0) AS intervals, COALESCE(a.sold7,0) AS sold7,
             COALESCE(a.sold30,0) AS sold30, a.firstSeen AS firstSeen,
             a.lastSeen AS lastSeen, COALESCE(v.reviews,0) AS reviews,
@@ -59,7 +60,7 @@ async function rowsFor(keys: string[], now: number) {
          ON v.listing_id=c.listing_id
       WHERE c.niche_key IN (${marks})
         AND c.state NOT IN ('expired','inactive')
-      ORDER BY sold30 DESC, intervals DESC, favorites DESC, views DESC
+      ORDER BY (COALESCE(NULLIF(c.title,''),r.title,'') <> '' AND COALESCE(NULLIF(c.image_url,''),r.image_url,'') <> '') DESC, displayRefreshedAt DESC, sold30 DESC, intervals DESC, favorites DESC, views DESC
       LIMIT ?`)
     /* Each keyword may own up to 200 candidates. A smaller global LIMIT lets
        the first busy keyword crowd every later keyword out of the response. */
@@ -81,7 +82,7 @@ function listingFrom(row: Row, now: number): MarketListing {
   const state = evidence ? stateOf(evidence, now) : "watching";
   const ageDays = row.originalCreated
     ? Math.max(0, Math.floor((now - Number(row.originalCreated)) / 86_400)) : null;
-  return { listingId: Number(row.listingId), title: String(row.title || "Untitled listing"),
+  return { listingId: Number(row.listingId), title: decodeEntities(String(row.title || "Listing details unavailable")),
     imageUrl: String(row.imageUrl || ""), etsyUrl: `https://www.etsy.com/listing/${row.listingId}`,
     state, label: evidence ? LABELS[state as keyof typeof LABELS] : "Watching",
     confirmedAt: evidence?.lastConfirmedAt ?? 0, intervals: Number(row.intervals) || 0,
@@ -99,7 +100,7 @@ export async function readNiche(userId: string, _terms: string[], key: string, n
   const watch = (await watchesFor(userId)).find(row => row.key === key);
   const evidence = evidenceFor(rows);
   const summary = summarize(evidence, now, { since: watch?.lastOpened ?? 0 });
-  const listings = rows.map(row => listingFrom(row, now)).slice(0, 36);
+  const listings = rows.filter(row => row.title).map(row => listingFrom(row, now)).slice(0, 36);
   return { key, summary, window: summary.windowSeconds ? describeWindow(summary.windowSeconds) : null,
     listings, gathering: summary.moving === 0 && listings.length > 0,
     staleForDisplay: listings.filter(row => !row.displayFresh).length };
@@ -121,7 +122,7 @@ export async function previewsForWatches(keys: string[], now: number) {
   const rows = await rowsFor(keys, now);
   const out = new Map<string, MarketListing[]>();
   for (const key of keys)
-    out.set(key, rows.filter(row => row.nicheKey === key).slice(0, 4)
+    out.set(key, rows.filter(row => row.nicheKey === key && row.title).slice(0, 4)
       .map(row => listingFrom(row, now)));
   return out;
 }

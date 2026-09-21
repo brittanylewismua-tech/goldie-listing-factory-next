@@ -4,9 +4,12 @@ import { readFile } from "node:fs/promises";
 
 const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
-test("D1303 keeps one focused-editor blocker and action in the footer", () => {
+test("Focused editors keep one return; sequential listing stages have one next action", () => {
   assert.doesNotMatch(app, /Finish this before Review/);
   assert.doesNotMatch(app, /className="review-gate-action"/);
-  assert.match(app, /issues\[0\]\|\|"Every listing is ready for review"/);
-  assert.match(app, /canOpenPricing\?"Review item prices":"Review batch"/);
+  assert.match(app, /!reviewEditing&&<FactoryFooter status=\{savingEtsyDetails/);
+  assert.match(app, /finishPhase==="details"\?<button[^]*?Continue to Etsy details/);
+  assert.match(app, /Continue to photos/);
+
+
 });

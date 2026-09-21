@@ -28,7 +28,7 @@ test('the client still accepts the decision', () => {
   assert.match(client, /startTab\?\?\s*tabFromUrl|startTab \?\? tabFromUrl/,
     'the client no longer honours startTab');
   /* And must not overwrite the address it was given on first render. */
-  assert.match(client, /if \(typeof window === "undefined" \|\| startTab\) return;/);
+  assert.match(client, /if \(typeof window === "undefined"\s*\) return;/);
 });
 
 test('switching tabs still writes an address that now works', () => {

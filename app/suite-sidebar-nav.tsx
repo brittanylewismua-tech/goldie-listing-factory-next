@@ -35,15 +35,15 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
   keywordBankInNewTab = false }: Props) {
   const [factoryOpen, setFactoryOpen] = useState(FACTORY_KEYS.has(active));
   const [commandOpen, setCommandOpen] = useState(COMMAND_KEYS.has(active));
-  const [commandCenterAccess, setCommandCenterAccess] = useState(false);
+  const [commandCenterAccess, setCommandCenterAccess] = useState<boolean|null>(null);
   const [lockedTool, setLockedTool] = useState("");
 
   useEffect(() => {
     let alive = true;
-    void fetch("/api/access/status").then(response => response.ok ? response.json() : null)
+    void fetch("/api/access/status").then(response => response.ok ? response.json() as Promise<{commandCenter?:boolean}> : null)
       .then((result: { commandCenter?: boolean } | null) => {
-        if (alive) setCommandCenterAccess(Boolean(result?.commandCenter));
-      }).catch(() => { if (alive) setCommandCenterAccess(false); });
+        if (alive) setCommandCenterAccess(result?Boolean(result.commandCenter):null);
+      }).catch(() => { if (alive) setCommandCenterAccess(null); });
     return () => { alive = false; };
   }, []);
 

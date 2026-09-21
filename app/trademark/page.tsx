@@ -45,7 +45,7 @@ const CLASS_NAMES: Record<string, string> = {
   "016": "paper and stationery", "018": "bags and leather",
   "020": "furniture", "021": "housewares and mugs", "024": "textiles",
   "025": "clothing", "026": "trims and patches", "028": "toys and games",
-  "030": "food", "032": "drinks", "035": "retail and advertising",
+  "030": "food", "032": "non-alcoholic drinks", "033": "alcoholic drinks", "035": "retail and advertising",
   "041": "entertainment and classes", "043": "food and drink services",
 };
 const classPhrase = (classes: string[]) => {
@@ -66,10 +66,13 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
   const [watchBusy, setWatchBusy] = useState("");
 
   const loadWatches = async () => {
-    const response = await fetch("/api/trademark/watches", { cache: "no-store" });
-    if (!response.ok) return;
-    const body = await response.json() as { watches?: typeof watches };
-    setWatches(body.watches ?? []);
+    try {
+      const response = await fetch("/api/trademark/watches", { cache: "no-store" });
+      if (!response.ok) throw new Error("Your watched phrases could not be loaded.");
+      const body = await response.json() as { watches?: typeof watches };
+      setWatches(body.watches ?? []);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Your watched phrases could not be loaded."); }
+
   };
   useEffect(() => { void loadWatches(); }, []);
 
@@ -92,9 +95,10 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
       if (!response.ok) throw new Error(result.error || "That could not be checked.");
       setVerdict(result);
       if (acknowledgeWatch) {
-        await fetch("/api/trademark/watches", { method: "POST",
+        const acknowledged=await fetch("/api/trademark/watches", { method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ phrase: term }) });
+        if(!acknowledged.ok)throw new Error("The result loaded, but your watch could not be marked reviewed. Please try again.");
         await loadWatches();
       }
     } catch (e) {
@@ -105,18 +109,26 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
   async function watchPhrase() {
     const term = (verdict?.phrase || phrase).trim();
     if (!term) return;
-    setWatchBusy(term);
-    await fetch("/api/trademark/watches", { method: "POST",
-      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phrase: term }) });
-    await loadWatches();
-    setWatchBusy("");
+    await updateWatch(term, false);
   }
 
   async function removeWatch(term: string) {
-    setWatchBusy(term);
-    await fetch(`/api/trademark/watches?phrase=${encodeURIComponent(term)}`, { method: "DELETE" });
-    await loadWatches();
-    setWatchBusy("");
+    await updateWatch(term, true);
+  }
+
+  async function updateWatch(term: string, remove: boolean) {
+    if (watchBusy) return;
+    setWatchBusy(term); setError("");
+    try {
+      const response = await fetch(remove ? `/api/trademark/watches?phrase=${encodeURIComponent(term)}` : "/api/trademark/watches", {
+        method: remove ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        ...(remove ? {} : { body: JSON.stringify({ phrase: term }) }),
+      });
+      if (!response.ok) throw new Error(remove ? "That phrase could not be removed. Please try again." : "That phrase could not be watched. Please try again.");
+      await loadWatches();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Please try again."); }
+    finally { setWatchBusy(""); }
   }
 
   /* The phrase with each hit marked in place. Built from offsets rather than
@@ -139,9 +151,9 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
   const body = (<>
     <div className="tm-page interior-page p-grid">
       <header className="drop-head">
-        <p className="mini-label p-eyebrow">TRADEMARK CHECK</p>
+        <p className="mini-label p-eyebrow">TRADEMARK TRACKER</p>
         <h1>Check it before you print it</h1>
-        <p>Names, characters and brands that get listings removed.</p>
+        <p>Find matching marks and review their status and product categories.</p>
       </header>
 
       <form className="tm-form" onSubmit={event => { event.preventDefault(); run(phrase); }}>
@@ -177,8 +189,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
             : watch.pending ? "Pending application found"
               : watch.matches ? `${watch.matches} matching record${watch.matches === 1 ? "" : "s"}`
                 : "No matching record found"}</span></div>
-          <span className={`tm-watch-risk ${watch.risk}`}>{watch.risk === "high" ? "High risk"
-            : watch.risk === "caution" ? "Review" : "Clear for now"}</span>
+          <span className={`tm-watch-risk ${watch.risk}`}>{watch.matches ? "Review matches" : "No match found"}</span>
           <button type="button" onClick={() => { setPhrase(watch.phrase); void run(watch.phrase, true); }}>Review</button>
           <button type="button" className="quiet" disabled={watchBusy === watch.phrase}
             onClick={() => void removeWatch(watch.phrase)}>Remove</button>
@@ -195,8 +206,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
             same here as everywhere else in the suite. */}
         <span className={verdict.risk === "high" ? "p-badge p-badge-bad"
           : verdict.risk === "caution" ? "p-badge p-badge-warn" : "p-badge p-badge-good"}>
-          {verdict.risk === "high" ? "High risk"
-            : verdict.risk === "caution" ? "Partly owned" : "Nothing found"}
+          {verdict.risk === "clear" ? "No match found" : "Matches to review"}
         </span>
         {/*
           D1691 · The clear result said "Nothing found" twice — once as the
@@ -209,13 +219,14 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         */}
         {verdict.risk !== "clear" && (
           <p className="tm-headline">
-            {verdict.risk === "high"
-              ? "Do not print this"
-              : "Somebody owns part of this"}
+            {"Review the matching names and categories"}
           </p>
         )}
         <p className="tm-phrase">{marked()}</p>
-        <p>{verdict.summary}</p>
+        <p>{(verdict.register ?? []).length > 0
+          ? `${verdict.register!.length} matching record${verdict.register!.length === 1 ? "" : "s"}. A pending application is not a registration. Compare the goods and services with your intended product.`
+          : verdict.risk === "clear" ? "No matching mark was found for this phrase. This does not establish that the phrase is available to use."
+            : "This phrase contains a brand or name that needs review before use."}</p>
 
         {verdict.hits.length > 0 && <ul className="tm-hits">
           {verdict.hits.map((hit, index) =>
@@ -242,6 +253,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
                 {match.registered ? "live registration" : "pending application"}
                 {match.classes.length ? ` · ${classPhrase(match.classes)}` : ""}
               </span>
+              {/^\d+$/.test(match.serial ?? "") && <a href={`https://tsdr.uspto.gov/#caseNumber=${encodeURIComponent(match.serial ?? "")}&caseSearchType=US_APPLICATION&caseType=DEFAULT&searchType=statusSearch`} target="_blank" rel="noopener noreferrer">View trademark record ↗</a>}
             </li>)}
         </ul>}
         <button className="tm-watch-button" type="button" disabled={watchBusy === verdict.phrase}
@@ -252,7 +264,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
       <p className="tm-note">
         A clear result means nothing was found rather than nobody owns it.{" "}
         {verdict && verdict.registerReady === false &&
-          <strong>Some records are still loading, so a clear result is incomplete.</strong>}
+          <strong>Search results are currently incomplete. Try again later.</strong>}
         {" "}This is screening information, not legal advice.
       </p>
     </div>
@@ -283,7 +295,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
      wrapper adds none: stacking a second heading above it read as three
      titles in a row. */
   return (
-    <FactoryShell active="trademark" title="Trademark Checker" desktopOnly={false}>
+    <FactoryShell active="trademark" title="Trademark Tracker" desktopOnly={false}>
       <main className="tm-standalone">{body}</main>
     </FactoryShell>
   );

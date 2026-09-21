@@ -54,7 +54,7 @@ export const POST = withErrorLog("shop-map-override-audit", async (request: Requ
       .catch((error: unknown) => {
         throw new AuditIncomplete(`${sql.trim().slice(0, 70)}… — ${String(error)}`);
       });
-    if (!out || out.success === false)
+    if (!out || !out.success)
       throw new AuditIncomplete(`${sql.trim().slice(0, 70)}… returned no result set`);
     return (out.results ?? []) as T[];
   };
@@ -131,7 +131,7 @@ export const POST = withErrorLog("shop-map-override-audit", async (request: Requ
           .catch((error: unknown) => {
             throw new AuditIncomplete(`retiring ${row.listing_id} failed — ${String(error)}`);
           });
-        if (done.success === false)
+        if (!done.success)
           throw new AuditIncomplete(`retiring ${row.listing_id} reported no success`);
         repaired += 1;
       }

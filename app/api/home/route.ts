@@ -7,6 +7,8 @@ import { memberUsage } from "@/app/spend-guard";
 import { registerSize } from "@/app/trademark-register";
 import { watchesFor } from "@/app/niche-watch-store";
 import { dayInShopTimezone, isStale } from "@/app/finance-freshness";
+import { RULE_VERSION } from "@/app/finance-rollup";
+import { monthOf } from "@/app/finance-month";
 import { ensureListingTables } from "@/app/shop-map-listings";
 
 /**
@@ -73,8 +75,8 @@ export const GET = withErrorLog("home-status", async () => {
     const row = await db.prepare(
       `SELECT payload_json AS payload, month, computed_at AS computedAt
          FROM finance_rollups
-        WHERE user_id = ? ORDER BY month DESC LIMIT 1`)
-      .bind(user.userId)
+        WHERE user_id = ? AND shop_id = ? AND month = ? LIMIT 1`)
+      .bind(user.userId, activeShopId, monthOf(now, timezoneForMember))
       .first<{ payload: string; month: string; computedAt: number }>();
     if (row) {
       /*
@@ -87,10 +89,10 @@ export const GET = withErrorLog("home-status", async () => {
         unexplained zero is worse than a missing block: it looks like an answer.
       */
       const parsed = JSON.parse(row.payload) as {
-        grossSellerRevenueMinor?: number; currency?: string;
+        grossSellerRevenueMinor?: number; currency?: string; ruleVersion?:number; completeness?:{complete:boolean};
         coverage?: { receipts?: number };
         knownOperatingProfitMinor?: number | null };
-      const profit = parsed.knownOperatingProfitMinor;
+      const profit = parsed.ruleVersion===RULE_VERSION&&parsed.completeness?.complete&&!isStale(Number(row.computedAt??0),now)?parsed.knownOperatingProfitMinor:null;
       blocks.thisMonth = {
         month: row.month,
         revenueMinor: Number(parsed.grossSellerRevenueMinor) || 0,

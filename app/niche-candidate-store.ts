@@ -127,7 +127,24 @@ export async function addCandidates(
             ('discovered','awaiting-baseline','monitoring','momentum','repeated-momentum')`)
     .bind(nicheKey).first<{ n: number }>().catch(() => null);
   const room = Math.max(0, GROWTH.maxCandidatesPerNiche - Number(held?.n ?? 0));
-  const selected = found.slice(0, room);
+  // Refresh existing active candidates even when the pool is full. Only a new
+  // candidate or a reactivation consumes capacity.
+  const existingRows = await db().prepare(
+    `SELECT listing_id AS listingId, state FROM niche_candidates WHERE niche_key = ?`)
+    .bind(nicheKey).all<{ listingId: number; state: string }>();
+  const active = new Set((existingRows.results ?? []).filter(row =>
+    ["discovered", "awaiting-baseline", "monitoring", "momentum", "repeated-momentum"].includes(row.state))
+    .map(row => Number(row.listingId)));
+  let available = room;
+  const seen = new Set<number>();
+  const selected = found.filter(row => {
+    if (seen.has(row.listingId)) return false;
+    seen.add(row.listingId);
+    if (active.has(row.listingId)) return true;
+    if (available <= 0) return false;
+    available -= 1;
+    return true;
+  });
   if (!selected.length)
     return { added: 0, alreadyKnown: known.size, selected: 0, selectedShops: 0,
       insertedShops: 0, atCap: true };

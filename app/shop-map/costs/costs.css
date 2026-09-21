@@ -2,7 +2,7 @@
   --ink: #1b1b1f; --muted: #6b6b76; --line: #e6e4e0; --paper: #fbfaf8;
   --good: #2f7d59; --warn: #9a6a12;
   max-width: 620px; margin: 0 auto; padding: 24px 20px 72px; color: var(--ink);
-  font: 16px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 16px/1.55 "Manrope Variable", Manrope, sans-serif;
 }
 .costs h1 { font-size: 1.4rem; margin: 0 0 4px; }
 .costs .lede { color: var(--muted); margin: 0 0 22px; font-size: 0.95rem; }
@@ -52,3 +52,7 @@
   border-radius: 14px; background: #fff; padding: 16px; margin-bottom: 20px; }
 .verdict h2 { margin: 0 0 6px; font-size: 1.05rem; }
 .verdict p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+.costs .basis{background:#fff;color:#55434e;border-color:#bda9b5;font-weight:650}.costs .basis[data-basis="estimated"]{color:#734809;background:#fff6df;border-color:#b98735}.costs .basis[data-basis="printify-verified"]{color:#205c3e;background:#eaf6ee;border-color:#81aa8f}
+
+.costs .verdict{background:#fff!important;color:#211820!important}.costs .verdict h2{color:#211820!important}.costs .verdict p{color:#62505d!important}

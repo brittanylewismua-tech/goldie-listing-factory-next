@@ -115,7 +115,7 @@ export const GET = withErrorLog("shop-map-financial-audit", async (request: Requ
       entry_type: row.entry_type,
       created: row.create_date ?? row.created_timestamp,
     })),
-    typeCounts: Object.entries(all.reduce((into, row) => {
+    typeCounts: Object.entries(all.reduce<Record<string,number>>((into, row) => {
       const key = String(row.ledger_type ?? "");
       into[key] = (into[key] ?? 0) + 1;
       return into;

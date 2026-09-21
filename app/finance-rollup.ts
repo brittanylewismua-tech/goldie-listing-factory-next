@@ -17,7 +17,7 @@ import { classifyLedgerType, isUnmapped, type Bucket } from "./finance-classify.
  * shown. A profit calculated once and frozen is a profit that quietly stops
  * being true.
  */
-export const RULE_VERSION = 1;
+export const RULE_VERSION = 2;
 
 export type Row = {
   sourceId: string;
@@ -102,6 +102,7 @@ export function rollUp(arguments_:
       the sale. Reading it as revenue produced a negative total with tax
       larger than revenue. The receipt is where the sale actually lives.
     */
+    additionalFailures?: string[];
     receiptTotals?: { subtotalMinor: number; shippingMinor: number;
       taxMinor: number; discountMinor: number; refundedReceipts: number } },
 ): Rollup {
@@ -126,8 +127,9 @@ export function rollUp(arguments_:
   /* Tax is reported so it can be seen to be excluded, never added. */
   const tax = receiptTotals.taxMinor;
   /* Tax never enters seller revenue. It was Etsy's to collect and remit. */
-  const grossSellerRevenue = productRevenue + shipping
-    - Math.abs(receiptTotals.discountMinor) + refunds;
+  // Etsy subtotal already includes coupon discounts. Subtracting them again
+  // understates sales; confirmed against every discounted stored receipt.
+  const grossSellerRevenue = productRevenue + shipping + refunds;
 
   const live = production.filter(entry => !entry.canceled && entry.countsAsEtsyCost);
   const productionCost = sum(live.map(entry => entry.costMinor));
@@ -148,7 +150,9 @@ export function rollUp(arguments_:
     Each condition names itself when it fails, so "incomplete" is actionable
     instead of mysterious.
   */
-  const failures: string[] = [];
+  const failures: string[] = [...(arguments_.additionalFailures??[])];
+  if(unmappedTypes.length) failures.push("Some Etsy charges or credits still need reconciliation.");
+  if(!arguments_.receiptTotals) failures.push("Sales totals are unavailable.");
   if (currencyConflict) failures.push("This month holds more than one currency.");
   if (incompleteWindows > 0)
     failures.push(`${incompleteWindows} ledger window${incompleteWindows === 1 ? "" : "s"} did not complete.`);
@@ -171,16 +175,8 @@ export function rollUp(arguments_:
   const operatingProfit = grossSellerRevenue + costs - productionCost - productionShipping
     + adjustmentsTotal;
 
-  /*
-    The known-order margin exists so a shop with gaps is not useless — but it
-    is returned as its own field, carrying its coverage in its own label, so
-    it cannot be mistaken for the month.
-  */
-  const coveragePercent = Math.round(revenueCoverage * 100);
-  const knownOrderMargin = matchedReceipts > 0 && !complete
-    ? { minor: operatingProfit, coveragePercent,
-        label: `Known-order margin across ${coveragePercent}% of revenue` }
-    : null;
+  // Without matched-subset revenue and fees, a partial margin is not valid.
+  const knownOrderMargin = null;
 
   return {
     month, currency, ruleVersion: RULE_VERSION, computedAt: Math.floor(Date.now() / 1_000),

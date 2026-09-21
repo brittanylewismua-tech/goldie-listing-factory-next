@@ -34,6 +34,7 @@ walk("../app");
 
 /* file:line -> why it is safe. Every entry was read before being listed. */
 const CLASSIFIED = {
+  "trademark/page.tsx": "own-url: ternary selects only the local watch endpoint",
   "api/listing-factory/prepare/route.ts": "own-url: api.printify.com built here",
   "api/listing-photos/delivery/service.ts": "guarded: trustedImageUrl redirect loop, plus own-url Printify API",
   "api/listing-photos/download/route.ts": "guarded: fetchTrustedImage (D1726)",

@@ -48,18 +48,19 @@ test('saved product defaults and draft existence cannot silently approve edited 
   assert.match(source,/if\(restoringBatch\|\|!activeRecipe\|\|drafts\.some\(draft=>draft\.status==="Created"\)\)return;\s*const carries=recipeCarriesApprovedPricing/);
   assert.match(source,/setPricingApproved\(Boolean\(state\.pricingApproved\)\)/);
   assert.doesNotMatch(source,/setPricingApproved\(Boolean\(state\.pricingApproved\)\|\|Boolean\(state\.complete/);
-  assert.match(source,/if\(index>=5&&complete\)issues\.push\(\.\.\.imagesStepIssues\(\)\)/);
+  assert.match(source,/if\(index>=8&&complete\)issues\.push\(\.\.\.imagesStepIssues\(\)\)/);
 });
-test('rail and footer both require saving edited final prices before Listing',()=>{
+test('final review requires saved prices while listing text remains editable',()=>{
   const state={connected:true,etsyConnected:true,productSelected:true,templateReady:true,shippingReady:true,variantsReady:true,bundleProductsReady:true,colorsReady:true,pricesReady:true,designCount:1,designsReady:true,etsyShippingProfileReady:true,draftsComplete:true,createdDraftCount:1,pricingApproved:false,imagesReady:true};
-  assert.deepEqual(navigationIssues(5,state),['Review the item prices.']);
-  assert.deepEqual(leavingImagesIssues(state),['Review the item prices.']);
-  assert.deepEqual(navigationIssues(5,{...state,pricingApproved:true}),[]);
+  assert.deepEqual(navigationIssues(5,state),[]);
+  const complete={...state,titlesReady:true,tagsReady:true,descriptionReady:true,etsyDetailsReady:true,personalizationReady:true};
+  assert.deepEqual(navigationIssues(8,complete),['Review the item prices.']);
+  assert.deepEqual(navigationIssues(8,{...complete,pricingApproved:true}),[]);
 });
 test('pricing badges and sibling approvals use the saved batch decision, not merely an older approved product response',()=>{
   const source=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
   assert.match(source,/const priceApproved=\(isActive\?pricingApproved:Boolean\(bundleApproved\[recipe.id\]\)\)&&productDrafts.length>0/);
-  assert.match(source,/productName:recipe.name,pricingApproved:Boolean\(state.pricingApproved\)/);
+  assert.match(source,/productName:recipe.name,description:String\(state.description\|\|""\),pricingApproved:Boolean\(state.pricingApproved\)/);
   assert.match(source,/Boolean\(member.pricingApproved\)&&created.length>0/);
   assert.match(source,/if\(!reviewedPricingAndShippingReady\(draft\)\)issues.push\(`\$\{name\} needs pricing and shipping approval\.`\)/);
   assert.doesNotMatch(source,/titles · all 13 tags/);

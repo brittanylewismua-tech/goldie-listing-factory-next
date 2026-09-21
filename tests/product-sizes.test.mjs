@@ -695,7 +695,7 @@ test("D222: the Images page continues to Listing, not past it to Publish", async
    * check, so it was removed rather than kept in sync. */
   const button = app.slice(app.indexOf("disabled={imagesStepIssues().length>0}"));
   const handler = button.slice(0, button.indexOf("</button>"));
-  assert.match(handler, /setFinishPhase\("details"\)/, "Images advances to the Listing page");
+  assert.match(handler, /openFinishedReview\(false\)/, "Photos advances to final review after listing details");
   assert.doesNotMatch(handler, /setFinishPhase\("final"\)/, "not straight to Publish");
   assert.match(handler, /createdListingsMissingImages/, "and still gates on every listing having a photo");
 });
@@ -1266,7 +1266,7 @@ test("D378: steps 2-4 wrap their work in the same product card as step 1", async
      lost to .app-shell .step-product-cards{display:grid} in the built
      stylesheet. Result: step 2's "Create your Printify drafts" panel rendered
      on step 1. Two independent guards now, because one was clearly not enough. */
-  assert.match(app, /launch-panel workflow-panel \$\{workflowStep==="designs"&&!complete\?"active-panel":"hidden-panel"\}/,
+  assert.match(app, /launch-panel workflow-panel \$\{workflowStep==="review"&&!complete\?"active-panel":"hidden-panel"\}/,
     "the panel must keep hiding itself, whatever the rail does");
   assert.match(app, /style=\{hidden\?\{display:"none"\}:undefined\}/,
     "and the rail must hide with an inline style, which cannot lose to a cascade");
@@ -1276,7 +1276,7 @@ test("D378: steps 2-4 wrap their work in the same product card as step 1", async
      cards, so the condition now sits in the third argument rather than at the
      end of the call. The guarantee is unchanged: the rail is handed exactly the
      condition the panel applies to itself. */
-  assert.match(app, /,null,!\(workflowStep==="designs"\)\|\|complete,<aside/,
+  assert.match(app, /,null,!\(workflowStep==="review"\)\|\|complete,<aside/,
     "and the rail is handed the same condition the panel applies to itself");
 });
 

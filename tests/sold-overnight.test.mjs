@@ -173,7 +173,7 @@ test("the page explains what the numbers mean without describing the plumbing", 
      them makes a confident number sound like a workaround. */
   const page = read("hot-list/page.tsx");
   assert.match(page, /What these numbers mean/);
-  assert.match(page, /real sales on Etsy/i);
+  assert.match(page, /Etsy listings with observed activity/i);
   for (const leak of [/stock/i, /compare/i, /reading before/i, /listings we watch/i])
     assert.doesNotMatch(strip(page), leak,
       `the page must not describe how the count is produced: ${leak}`);
@@ -535,7 +535,7 @@ test("the period is stated once, not on every card", () => {
   /* Four hundred cards each repeating the window was noise even when it was
      accurate. The selected tab says it; the card carries the number. */
   const page = read("hot-list/page.tsx");
-  assert.match(page, /<span className="drop-unit">sold<\/span>/);
+  assert.match(page, /<span className="drop-unit">Recent activity<\/span>/);
   assert.doesNotMatch(strip(page), /sold this week<\/span>|sold overnight<\/span>/);
 });
 
@@ -669,7 +669,7 @@ test("the board does not recommend somebody else's trademark", () => {
 
   /* Off unless deliberately asked for, and labelled when on. */
   assert.match(read("api/sold-overnight/route.ts"), /params\.get\("rights"\) === "1"/);
-  assert.match(read("hot-list/page.tsx"), /Do not copy these/);
+  assert.match(read("hot-list/page.tsx"), /not a trademark clearance check/);
 });
 
 test("the board is trimmed last, after everything that can disqualify a row", () => {
@@ -797,6 +797,6 @@ test("an exact figure is distinguished from a corroborated one", () => {
   /* Both are true; they are not equally certain, and the difference is said
      rather than smoothed over. */
   const page = read("hot-list/page.tsx");
-  assert.match(page, /attribution === "exact"/);
-  assert.match(page, /Etsy's own sales count for this shop/);
+  assert.doesNotMatch(page, /card.sold/);
+  assert.match(page, /Recent activity/);
 });

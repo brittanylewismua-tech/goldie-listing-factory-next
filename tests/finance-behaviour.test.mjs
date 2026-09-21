@@ -163,10 +163,11 @@ test("19. shipping collected is included in revenue", () => {
   assert.equal(summary.shippingCollectedMinor, 500);
 });
 
-test("20. a seller-funded discount reduces revenue; a marketplace one does not", () => {
+test("20. Etsy subtotal already deducts the seller discount; do not deduct it twice", () => {
   const parts = { subtotalMinor: 3_000, shippingMinor: 500, taxMinor: 210,
-    sellerDiscountMinor: -300, marketplaceDiscountMinor: -100, grandTotalMinor: 3_310 };
-  assert.equal(sellerRevenueMinor(parts), 3_200);
+    sellerDiscountMinor: -300, marketplaceDiscountMinor: -100, grandTotalMinor: 3_610 };
+  assert.equal(sellerRevenueMinor(parts), 3_500);
+  assert.equal(receiptArithmetic(parts).agrees, true);
   /* grandtotal is not revenue: it carries tax and Etsy's own discount. */
   assert.notEqual(sellerRevenueMinor(parts), parts.grandTotalMinor);
 });
@@ -296,12 +297,11 @@ test("an estimated adjustment can never complete a month", () => {
   assert.ok(summary.completeness.failures.some(f => /estimate cannot complete/.test(f)));
 });
 
-test("the known-order margin is separate and carries its coverage", () => {
+test("unmatched all-shop sales never become a known-order margin", () => {
   const summary = rollUp(base({ receiptTotals: totals({ subtotalMinor: 10_000 }),
     production: [prod()], receipts: 10, matchedReceipts: 3 }));
   assert.equal(summary.knownOperatingProfitMinor, null);
-  assert.ok(summary.knownOrderMargin);
-  assert.match(summary.knownOrderMargin.label, /Known-order margin across \d+% of revenue/);
+  assert.equal(summary.knownOrderMargin,null);
 });
 
 test("an unmapped ledger type is surfaced, never silently zeroed", () => {
@@ -356,7 +356,7 @@ test("the financial view separates complete profit from an incomplete margin", (
   /* Different keys, so a caller cannot render one where the other belongs. */
   assert.match(route, /completeProfit:/);
   assert.match(route, /knownOrderMargin:/);
-  assert.match(route, /state = currencies\.size > 1 \? "Mixed currency"/);
+  assert.match(route, /summary.completeness.complete\?"Complete":"Incomplete"/);
 });
 
 test("source rows are never rewritten except by the source", () => {
@@ -535,3 +535,8 @@ test("the additional-unit listing fee is classified from its own amounts", () =>
   assert.equal(isUnmapped(fee), false);
   assert.equal(isUnmapped(credit), false);
 });
+
+ test("Etsy subtotal already includes the coupon discount",()=>{
+ const summary=rollUp(base({receiptTotals:totals({subtotalMinor:2040,shippingMinor:579,taxMinor:128,discountMinor:3059})}));
+ assert.equal(summary.grossSellerRevenueMinor,2619);
+ });

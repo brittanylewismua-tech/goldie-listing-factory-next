@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
-import { readBoard, runSweep } from "@/app/sold-overnight";
+import { readBoard } from "@/app/sold-overnight";
 import { unlockState } from "@/app/unlocks";
 import { listingStreak, STREAK_TARGET } from "@/app/pod-drop";
 
@@ -22,13 +22,7 @@ const NUDGE = 4;
 
 export const GET = withErrorLog("sold-overnight", async (request: Request) => {
   const user = await getChatGPTUser();
-  if (!user) return NextResponse.json({ error: "Sign in to see what sold." }, { status: 401 });
-
-  try {
-    await runSweep({ maxCalls: NUDGE, discovery: false });
-  } catch {
-    /* The board that exists is still the board. */
-  }
+  if (!user) return NextResponse.json({ error: "Sign in to see listing activity." }, { status: 401 });
 
   const params = new URL(request.url).searchParams;
   const hours = Number(params.get("hours"));

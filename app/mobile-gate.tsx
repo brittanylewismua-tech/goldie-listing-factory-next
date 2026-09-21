@@ -27,13 +27,13 @@ export default function MobileGate() {
       <div className="mobile-brand">
         {/* This gate belongs to the Listing Factory, so it says so — and says
             nothing about an umbrella product that has no name yet. */}
-        <div className="approved-wm">Listing Factory</div>
+        <a className="approved-wm" href="/home">Goldie Suite</a>
       </div>
       <div className="mobile-card">
         <div className="mobile-command">&#8984;</div>
-        <h1>Oops, this one needs a bigger screen.</h1>
-        <p>The Listing Factory is built for desktop. Hop onto your computer and sign in. Your saved work will be waiting for you.</p>
-        <div className="mobile-saved">&#10003; Your progress is saved automatically.</div>
+        <h1>Create listings on a computer.</h1>
+        <p>Listing Factory’s artwork and bulk editors need a larger screen. You can still browse your saved batches and manage your account here.</p>
+        <nav className="mobile-work-links"><a href="/batches">Batch History</a><a href="/home">All tools</a></nav><div className="mobile-saved">&#10003; Your progress is saved automatically.</div>
       </div>
       <div className="mobile-footer">&copy; 2026 Be A Wolf Biz</div>
     </section>

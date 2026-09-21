@@ -17,5 +17,7 @@ export const GET = withErrorLog("sold-overnight-search", async (request: Request
   const keyword = (new URL(request.url).searchParams.get("keyword") ?? "").trim().slice(0, 80);
   if (!keyword) return NextResponse.json({ error: "Type a keyword to look up." }, { status: 400 });
 
-  return NextResponse.json({ keyword, listings: await searchSold(keyword) });
+  const requestedHours=Number(new URL(request.url).searchParams.get("hours")||168);
+  const hours=[24,168].includes(requestedHours)?requestedHours:168;
+  return NextResponse.json({ keyword, hours, listings: await searchSold(keyword,hours) });
 });

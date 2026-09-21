@@ -101,8 +101,8 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
 
   if (error && !data)
     return <main className="costs"><h1>Production costs</h1>
-      <p className="error" role="alert">{error}</p></main>;
-  if (!data) return <main className="costs"><h1>Production costs</h1></main>;
+      <p className="error" role="alert">{error}</p><button type="button" className="back" onClick={()=>void load()}>Try again</button></main>;
+  if (!data) return <main className="costs"><h1>Production costs</h1><p role="status">Loading your order costs…</p></main>;
 
   const unresolved = data.orders.filter(order => order.costBasis === "unavailable");
 
@@ -113,12 +113,12 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
       </button>
       <h1>Production costs</h1>
       <p className="lede">
-        Shop Map works out your profit from what Printify charged you to make each
-        order. Where it could not find that, it says so rather than guessing.
+        Review what each order cost to produce. Missing costs must be resolved before
+        Shop Map can report a complete profit figure.
       </p>
 
       <section className="verdict">
-        <h2>{data.verdict.headline}</h2>
+        <h2>{unresolved.length?`${unresolved.length} ${unresolved.length===1?"order needs":"orders need"} a production cost`:"Production costs recorded"}</h2>
         <p>{data.verdict.accuracy}</p>
       </section>
 

@@ -32,14 +32,12 @@ test("D1224: one-listing photo choices stay on that listing until Apply All is u
   assert.match(app.slice(end,end+1500),/setPrintifyImageIndices\(values\)/);
 });
 
-test("D1224: restored Etsy details use one provider sync path",()=>{
-  assert.match(app,/if\(file\.etsy\)return false/);
-  assert.match(app,/syncPreparedListing\(file,file\.etsy!\);syncedListingSignatures\.current\.set/);
+test("Restored listing edits share one serialized save path and final transfer flushes it",()=>{
+  assert.match(app,/const listingFieldsKey = JSON.stringify/);
+  assert.match(app,/await syncListingFields\(file,file.etsy\)/);
   assert.match(app,/function recordListingSyncError[^]*?status:"Failed",error:message/);
-  assert.equal((app.match(/recordListingSyncError\(file\.id/g)||[]).length,2);
-  assert.match(app,/draft\.status==="Created"&&file\.title\.trim/);
-  assert.match(app,/file\.etsy&&drafts\.some\(draft=>draft\.clientId===file\.id&&draft\.status==="Created"\)/);
-  assert.match(app,/const stageStillExists=stage\.label!=="Drafts"\|\|!complete\|\|createdDraftCount>0/);
+  assert.match(app,/beforePrepare=\{async\(\)=>\{await flushLatestListingFields\(\);await persistBatchNow\(\);await persistRunNow\(\)\}\}/);
+  assert.match(app,/finalDescription\(file,file.etsy\)/);
 });
 
 test("D1224: final bundle review waits for every product and explains the real Etsy Drafts action",()=>{

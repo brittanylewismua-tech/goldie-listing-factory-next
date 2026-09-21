@@ -36,7 +36,7 @@ export default function GoalsPage() {
       <header>
         <p className="mini-label">LISTING GOAL</p>
         <h1>Your listing history</h1>
-        <p>Every draft you have made ready to publish, by {period}.</p>
+        <p>Printify drafts you have created, by {period}.</p>
       </header>
 
       {error&&<div className="batch-restore-notice" role="alert"><p>{error}</p><button type="button" className="secondary-action" onClick={()=>void loadHistory()}>Reload listing history</button></div>}

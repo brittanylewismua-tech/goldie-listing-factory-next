@@ -224,7 +224,7 @@ export const isUnmapped = (entry: Classified) => entry.normalized.startsWith("un
  * Seller revenue from a receipt's own components.
  *
  * NOT grandtotal. Revenue is what the seller sold plus the shipping they were
- * paid, less seller-funded discounts. Tax is excluded because it was never
+ * paid. Etsy’s subtotal already includes seller-funded discounts. Tax is excluded because it was never
  * the seller's, and a marketplace-funded discount is excluded because Etsy,
  * not the seller, paid for it.
  */
@@ -239,9 +239,7 @@ export type ReceiptComponents = {
 };
 
 export function sellerRevenueMinor(parts: ReceiptComponents): number {
-  return parts.subtotalMinor
-    + parts.shippingMinor
-    - Math.abs(parts.sellerDiscountMinor);
+  return parts.subtotalMinor + parts.shippingMinor;
 }
 
 /**
@@ -253,7 +251,7 @@ export function sellerRevenueMinor(parts: ReceiptComponents): number {
  */
 export function receiptArithmetic(parts: ReceiptComponents) {
   const rebuilt = parts.subtotalMinor + parts.shippingMinor + parts.taxMinor
-    - Math.abs(parts.sellerDiscountMinor) - Math.abs(parts.marketplaceDiscountMinor);
+    - Math.abs(parts.marketplaceDiscountMinor);
   const differenceMinor = parts.grandTotalMinor - rebuilt;
   return {
     rebuiltMinor: rebuilt,

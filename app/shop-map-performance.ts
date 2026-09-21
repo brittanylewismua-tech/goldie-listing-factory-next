@@ -45,13 +45,14 @@ export function performanceFrom(
   });
 
   for (const sale of sales) {
+    if(!Number.isFinite(sale.soldAt)||sale.soldAt<=0||sale.soldAt>now||!Number.isFinite(sale.priceMinor)||sale.priceMinor<0||!Number.isInteger(sale.quantity)||sale.quantity<=0)continue;
     const row = out.get(sale.listingId) ?? blank(sale.listingId);
     const amount = sale.priceMinor * Math.max(1, sale.quantity);
+    if(sale.refunded){row.refundedOrders+=1;row.refundedMinor+=amount;out.set(sale.listingId,row);continue;}
     row.lifetimeOrders += 1;
     row.lifetimeUnits += Math.max(1, sale.quantity);
     row.lifetimeRevenueMinor += amount;
     if (amount > row.largestOrderMinor) row.largestOrderMinor = amount;
-    if (sale.refunded) { row.refundedOrders += 1; row.refundedMinor += amount; }
     if (sale.soldAt >= yearFrom) { row.yearOrders += 1; row.yearRevenueMinor += amount; }
     if (sale.soldAt >= monthFrom && sale.soldAt <= monthTo) {
       row.monthOrders += 1; row.monthRevenueMinor += amount;

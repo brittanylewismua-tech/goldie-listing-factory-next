@@ -79,11 +79,11 @@ export const GET = withErrorLog("market-watch-niches", async (request: Request) 
   if (!watch) return NextResponse.json({ error: "That watch is not saved." }, { status: 404 });
 
   try {
-    await refreshKeywordListings(key, watch.phrase, now).catch(() => false);
+    const refreshed = await refreshKeywordListings(key, watch.phrase, now).then(() => true).catch(() => false);
     const view = await readNiche(user.userId, watch.terms, key, now);
     await appendHistory(key, view.summary, now);
     await markOpened(user.userId, key, now);
-    return NextResponse.json({ ...view, phrase: watch.phrase, stale: false,
+    return NextResponse.json({ ...view, phrase: watch.phrase, stale: !refreshed || view.staleForDisplay > 0,
       history: await trend(key) });
   } catch (error) {
     /*
@@ -126,12 +126,12 @@ export const POST = withErrorLog("market-watch-save-niche", async (request: Requ
   /* The first reading happens immediately, so a new watch is never an empty
      page waiting for a cron. */
   try {
-    await refreshKeywordListings(saved.key, phrase, now, true).catch(() => false);
+    await refreshKeywordListings(saved.key, phrase, now, true);
     const view = await readNiche(user.userId, terms, saved.key, now);
     await appendHistory(saved.key, view.summary, now);
-    return NextResponse.json({ saved: true, key: saved.key, phrase, ...view });
+    return NextResponse.json({ saved: true, phrase, ...view });
   } catch {
     return NextResponse.json({ saved: true, key: saved.key, phrase,
-      listings: [], stale: true });
+      listings: [], stale: true, error: "Keyword saved. Etsy could not load its listings. Try refreshing this keyword." });
   }
 });

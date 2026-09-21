@@ -8,7 +8,7 @@ test("D1691: a clear result does not say the same words twice", () => {
   const verdict = page.slice(page.indexOf('className={`tm-verdict'));
   /*
     The badge carries the verdict and the headline carries what to do about it
-    — "High risk" → "Do not print this". A clear result has no instruction to
+    — "High risk" → "Matches need review". A clear result has no instruction to
     give, and the only thing that would fill the slot is encouragement to go
     ahead, which a screening tool cannot give.
   */
@@ -17,8 +17,8 @@ test("D1691: a clear result does not say the same words twice", () => {
   const headline = verdict.slice(verdict.indexOf('className="tm-headline"'),
     verdict.indexOf('className="tm-phrase"'));
   assert.doesNotMatch(headline, /Nothing found/);
-  assert.match(headline, /Do not print this/);
-  assert.match(headline, /Somebody owns part of this/);
+  assert.match(headline, /Review the matching names and categories/);
+  assert.doesNotMatch(headline, /Somebody owns part of this|Do not print this/);
 });
 
 test("D1691: a clear result never encourages printing", () => {

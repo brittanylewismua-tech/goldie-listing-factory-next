@@ -10,15 +10,15 @@ test('an absent artwork image cannot be dereferenced while a rendering loads',()
   assert.doesNotMatch(rendering,/image\?\.url===artworkUrl\?artworkInRendering/);
 });
 
-test("D1075 color browsing never mounts a Printify mockup automatically",()=>{
+test("Color browsing uses available real mockups with an explicit edit view",()=>{
   assert.match(app,/showRealPreview&&realPreview\?<img/);
   assert.match(app,/Back to edit view":previewLoading\?"Loading preview…":"Preview"/);
   assert.doesNotMatch(app,/Printify preview loading/);
 });
 
-test("Color browsing changes only the local illustration, never saves",()=>{
+test("Color browsing selects an existing preview without a provider write",()=>{
   const focus=app.match(/function focusColor\(id:number\)\{([^\n]*)\}/)[1];
-  assert.match(focus,/setActiveColor\(id\);setShowRealPreview\(false\)/);
+  assert.match(focus,/setActiveColor\(id\);setShowRealPreview\(true\)/);
   assert.doesNotMatch(focus,/onChange|fetch\(/);
   assert.match(app,/explicitlyChosenColor\.current=color/);
   assert.doesNotMatch(app,/onMouseEnter=\{[^}]*onChange/);

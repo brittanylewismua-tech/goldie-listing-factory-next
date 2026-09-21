@@ -6,7 +6,7 @@ const appUrl = new URL("../app/listing-factory-app.tsx", import.meta.url);
 
 test("D1228: entering Listing from the progress rail opens the first bundle product", async () => {
   const app = await readFile(appUrl, "utf8");
-  assert.match(app, /if\(index===5\|\|index===6\)return enterListingDetails\(\)/);
+  assert.match(app, /if\(index===5\)return enterListingDetails\(\)/);
   assert.match(app, /async function enterListingDetails\(\)\{\s*if\(activeBundle&&bundleRecipes\.length>1&&bundleIndex!==0\)await openBundleProduct\(0\)/);
   assert.match(app, /async function goBackOneStep\(\)[\s\S]*?await enterListingDetails\(\);/);
 });

@@ -89,7 +89,7 @@ export default function HotListPage() {
   const [note, setNote] = useState("");
 
   const load = (next = view, custom = madeToOrder, licensed = rights) => {
-    setBoard(null); setError(""); setView(next);
+    setBoard(null); setError(""); setView(next); setHits(null); setNote("");
     setMadeToOrder(custom); setRights(licensed);
     /* no-store: an open tab must not reuse a board from before a repair. */
     fetch(`/api/sold-overnight?hours=${next.hours}`
@@ -105,7 +105,7 @@ export default function HotListPage() {
         /* The longest honourable period leads. Once a week of history exists
            this becomes the week, on its own, with nothing to announce. */
         const lead = list[list.length - 1];
-        if (lead.hours > next.hours) load(lead, custom, licensed);
+        if (lead && lead.hours > next.hours) load(lead, custom, licensed);
       })
       .catch(e => setError(e instanceof Error ? e.message : "This could not be loaded."));
   };
@@ -124,12 +124,12 @@ export default function HotListPage() {
     setLooking(true); setNote(""); setHits(null);
     try {
       const response = await fetch(
-        `/api/sold-overnight/search?keyword=${encodeURIComponent(term.trim())}`, { cache: "no-store" });
+        `/api/sold-overnight/search?keyword=${encodeURIComponent(term.trim())}&hours=${view.hours}`, { cache: "no-store" });
       const result = await response.json() as { listings?: Hit[]; error?: string };
       if (!response.ok) throw new Error(result.error || "That could not be looked up.");
       setHits(result.listings ?? []);
       if (!result.listings?.length)
-        setNote(`Nothing matching \u201c${term.trim()}\u201d has sold in the last week.`);
+        setNote(`Nothing matching \u201c${term.trim()}\u201d has recorded activity in this period.`);
     } catch (error) {
       setNote(error instanceof Error ? error.message : "That could not be looked up.");
     } finally { setLooking(false); }
@@ -145,8 +145,8 @@ export default function HotListPage() {
   return <FactoryShell active="hotlist" title="Hot List"><div className="drop-page sold-page interior-page">
     <header className="drop-head">
       <p className="mini-label">HOT LIST</p>
-      <h1>What&apos;s actually selling</h1>
-      <p>Real sales on Etsy {view.hours >= 168 ? "this week" : "overnight"}. Not rankings, not saves.</p>
+      <h1>Explore recent listing activity</h1>
+      <p>Etsy listings with observed activity {view.hours >= 168 ? "this week" : "overnight"}. Activity does not establish an individual listing’s sales total.</p>
     </header>
 
     {error && <section className="drop-error" role="alert">
@@ -156,7 +156,7 @@ export default function HotListPage() {
     </section>}
 
     {!board && !error && <section className="drop-loading">
-      <p className="drop-loading-title">Finding what sold</p>
+      <p className="drop-loading-title">Loading listing activity</p>
       <span className="drop-loading-track" aria-hidden><i /></span>
       <p className="drop-loading-sub">One moment</p>
     </section>}
@@ -177,7 +177,7 @@ export default function HotListPage() {
         {note && <p className="hot-note" role="status">{note}</p>}
 
         {hits && hits.length > 0 && <section className="hot-hits">
-          <p className="mini-label">SOLD IN THE LAST WEEK FOR &ldquo;{term.trim()}&rdquo;</p>
+          <p className="mini-label">ACTIVITY IN THIS PERIOD FOR &ldquo;{term.trim()}&rdquo;</p>
           <div className="drop-grid">
             {hits.map(hit => <figure key={hit.listingId} className="drop-card">
               <a href={hit.url} target="_blank" rel="noopener noreferrer" className="drop-shot">
@@ -188,8 +188,8 @@ export default function HotListPage() {
               </a>
               <figcaption>
                 <p className="drop-figures">
-                  <span className="drop-numeral">{hit.sold.toLocaleString()}</span>
-                  <span className="drop-unit">sold</span>
+
+                  <span className="drop-unit">Recent activity</span>
                 </p>
                 {hit.price !== null && <p className="drop-sub">{money(hit.price, hit.currency)}</p>}
                 <a className="drop-title" href={hit.url} target="_blank" rel="noopener noreferrer">
@@ -230,7 +230,7 @@ export default function HotListPage() {
           ? <section className="drop-loading">
               <p className="drop-loading-title">Getting started</p>
               <span className="drop-loading-track" aria-hidden><i /></span>
-              <p className="drop-loading-sub">The first sales will appear here shortly.</p>
+              <p className="drop-loading-sub">No activity is available yet. Try again later.</p>
             </section>
           : board.listings.length === 0
             ? <section className="drop-loading">
@@ -247,13 +247,13 @@ export default function HotListPage() {
                 <button type="button" aria-pressed={rights}
                   className={rights ? "active" : undefined}
                   onClick={() => load(view, madeToOrder, !rights)}>
-                  {rights ? "Showing licensed & tour" : "Show licensed & tour"}
+                  {rights ? "Including flagged brand names" : "Include flagged brand names"}
                 </button>
                 <small>{rights
-                  ? "Trademarked and tour designs are included. Do not copy these."
+                  ? "Listings flagged with brand or tour names are included."
                   : madeToOrder
-                    ? "Personalised listings included. Trademarked and tour designs hidden."
-                    : "Personalised, trademarked and tour designs are hidden."}</small>
+                    ? "Personalized listings included. Brand-name filtering is not a trademark clearance check."
+                    : "Personalized listings and known brand-name matches are filtered. Other protected designs may still appear."}</small>
               </div>
 
               <nav className="drop-tabs" aria-label="Product types">
@@ -264,7 +264,7 @@ export default function HotListPage() {
                   <button key={p.key} type="button" className={product === p.key ? "active" : undefined}
                     aria-current={product === p.key ? "true" : undefined}
                     onClick={() => setProduct(p.key)}>
-                    {p.label}<small>{p.sold.toLocaleString()}</small>
+                    {p.label}
                   </button>)}
               </nav>
 
@@ -281,20 +281,7 @@ export default function HotListPage() {
                   </a>
                   <figcaption>
                     <p className="drop-figures">
-                      <span className="drop-numeral">{listing.sold.toLocaleString()}</span>
-                      {/* An exact figure is Etsy's own count, for a shop with
-                          a single listing. Everything else is this listing's
-                          own movement, confirmed against a real sale at that
-                          shop — true either way, but not equally certain, and
-                          the difference is said rather than smoothed over.
-                          The wording stays on the seller's side: what it
-                          means, never how it was worked out. */}
-                      <span className="drop-unit"
-                        title={listing.attribution === "exact"
-                          ? "Etsy's own sales count for this shop"
-                          : "Confirmed against a real sale at this shop"}>
-                        sold{listing.attribution === "exact" ? " ✓" : ""}
-                      </span>
+                      <span className="drop-unit">Recent activity</span>
                     </p>
                     {listing.price !== null &&
                       <p className="drop-sub">{money(listing.price, listing.currency)}</p>}
@@ -304,7 +291,7 @@ export default function HotListPage() {
                 </figure>)}
 
                 {shown.length === 0 && <p className="drop-none">
-                  Nothing in {product} sold in this period.</p>}
+                  No activity was recorded for {product} in this period.</p>}
               </section>
             </>}
       </div>
@@ -312,11 +299,10 @@ export default function HotListPage() {
       <details className="drop-note">
         <summary>What these numbers mean</summary>
         <p>
-          These are real sales on Etsy over the period shown. Not a ranking,
-          not an estimate, and not a guess from search position. Digital downloads are
-          left out, since they have nothing to do with printing, and so is a shop
-          rearranging its own listings rather than selling any. What is left is sales,
-          and only sales.
+          These listings changed while their shops reported additional sales.
+          Etsy does not provide competitors’ order records, so this does not
+          confirm a sale or a unit count for any individual listing. Use the
+          photos and listing links to research products, not as a sales report.
         </p>
       </details>
     </>}

@@ -75,13 +75,13 @@ export default function UsagePage(){
             says what is unlocked by carrying on; at target it says well done
             and points at the reward rather than at the next obligation. */}
         <p className="streak-reward">{data.streak.hit
-          ?<>All 30 per category are open, with what moved overnight. <a href="/drop">See today&apos;s drop</a></>
-          :<>Five listing days in any seven opens all 30 per category and what moved overnight. <a href="/drop">See today&apos;s preview</a></>}</p>
+          ?<>Your full Hot List is open. <a href="/hot-list">Open Hot List</a></>
+          :<>Create listings on five days in a seven-day period to open the full Hot List. <a href="/hot-list">See the preview</a></>}</p>
       </section>}
       <section id="listing-goal" className="listing-goal-settings">
       <p className="mini-label">YOUR TARGET</p>
       <h2>Listing goal</h2>
-      <p className="listing-goal-intro">Your default target for drafts ready to publish is 20 per week. Change it here, or hide your goal any time.</p>
+      <p className="listing-goal-intro">Your default target for Printify drafts created is 20 per week. Change it here, or hide your goal any time.</p>
       <label className="listing-goal-switch">
         <input type="checkbox" checked={goal.enabled} onChange={event=>void saveGoal({...goal,enabled:event.target.checked})}/>
         <span>Show my listing goal</span>

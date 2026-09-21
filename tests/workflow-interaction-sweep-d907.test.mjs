@@ -8,7 +8,7 @@ const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8"
 test("D907: product plus artwork has an obvious way into the draft step",()=>{
   assert.match(app,/workflowStep==="setup"&&<FactoryFooter status=\{setupForwardReady\?`\$\{files\.length\} \${files\.length===1\?"listing":"listings"} in this batch`/);
   assert.match(app,/onClick=\{\(\)=>goToStep\("designs"\)\}/);
-  assert.match(app,/setupForwardReady\?"Review draft plan"/);
+  assert.match(app,/setupForwardReady\?"Continue to designs"/);
   assert.doesNotMatch(app,/workflowStep!=="setup"&&complete&&<FactoryFooter/);
 });
 

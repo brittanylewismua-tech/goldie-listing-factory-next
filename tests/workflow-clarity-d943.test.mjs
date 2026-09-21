@@ -4,22 +4,22 @@ import fs from "node:fs";
 
 const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
-test("D1238: the three-step rail names the job each stage performs",()=>{
-  assert.match(app,/\{label:"Setup",index:1,title:"Choose a product and add designs"/);
-  assert.match(app,/\{label:"Designs",index:2,title:"Add designs and create drafts"/);
-  assert.match(app,/\{label:"Review",index:8,title:"Review and finish listings"/);
+test("D1238: the seven-step rail names the job each stage performs",()=>{
+  assert.match(app,/\{label:"Product",index:1,title:"Choose your product"/);
+  assert.match(app,/\{label:"Designs",index:2,title:"Add your artwork"/);
+  assert.match(app,/\{label:"Final review",index:8,title:"Review and save to Etsy Drafts"/);
 });
 
 test("D943: moving from Product cannot claim it creates drafts",()=>{
-  assert.match(app,/setupForwardReady\?"Review draft plan"/);
+  assert.match(app,/setupForwardReady\?"Continue to designs"/);
   assert.match(app,/activeBundle&&bundleRecipes\.length>1&&!bundleRecoveryOnly\?`Create drafts for all/);
   assert.match(app,/:`Create \$\{files\.length\} \$\{files\.length===1\?"Printify draft":"Printify drafts"\}`/);
   assert.doesNotMatch(app,/setupForwardReady\?"Continue to create drafts"/);
 });
 
 test("D949: Step 2 names the immediate task without another review layer",()=>{
-  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*Check artwork, colors, sizes, pricing, shipping, and listing photos/);
-  assert.match(app,/title: "Create Printify drafts", copy: "Check the products and designs below, then create the drafts\."/);
+  assert.match(app,/designs: complete[\s\S]*title: "Review photos and final product choices"[\s\S]*Choose listing photos and confirm the finished prices and shipping/);
+  assert.match(app,/title: "Create Printify drafts", copy: "Review the plan, then create the private drafts\."/);
 });
 
 test("D943: bundle summaries count the whole run",()=>{

@@ -66,7 +66,7 @@ export const NAV: SuiteNavItem[] = [
   { key: "market-watch", label: "Market Watch", href: "/market-watch", icon: "marketWatch", group: "command" },
   { key: "design-scanner", label: "Design Scanner", href: "/design-scanner", icon: "designScanner", group: "command" },
   { key: "shop-map", label: "Shop Map", href: "/shop-map", icon: "shopMap", group: "command" },
-  { key: "trademark", label: "Trademark Checker", href: "/trademark", icon: "trademark", group: "command" },
+  { key: "trademark", label: "Trademark Tracker", href: "/trademark", icon: "trademark", group: "command" },
   { key: "connections", label: "Connections", href: "/connections", icon: "connections", group: "connections" },
 ];
 
@@ -95,7 +95,7 @@ export const NAV: SuiteNavItem[] = [
   the shell entirely rather than have the shell tell the truth about which
   half was which. So the shell says it now.
 */
-export default function FactoryShell({ active, title, desktopOnly = true, children }:
+export default function FactoryShell({ active, title, desktopOnly = false, children }:
   { active: NavKey; title: string; desktopOnly?: boolean; children: React.ReactNode }) {
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
   const [goal, setGoal] = useState<ListingGoal | null>(null);
@@ -149,6 +149,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
 
   useEffect(()=>{const loaded=(event:Event)=>{const days=(event as CustomEvent<PublishedDay[]>).detail;if(Array.isArray(days)){setGoalDays(days);setGoalDaysLoaded(true);setGoalDaysError(false)}};window.addEventListener("goldie-history-loaded",loaded);return()=>window.removeEventListener("goldie-history-loaded",loaded)},[]);
 
+  const isFactoryPage = ["factory", "batches", "keywords", "mockups", "usage"].includes(active);
   const goalDone = goal ? publishedDaysThisPeriod(goalDays, goal) : 0;
 
   /* D818 · the preview writes the allowance as "62 / 10,000 listings". Production
@@ -186,7 +187,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
             batch so the money action keeps its weight. */}
       </div>
       <div className="approved-sidebar-footer">
-        {active === "factory" && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
+        {isFactoryPage && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>}
         {/*
           A GOAL NOBODY EXPLAINS IS A NUMBER NOBODY TRUSTS.
@@ -196,7 +197,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
           word, not a seller's — it means drafts built and ready to publish.
           Both are now on the card, in the member's language.
         */}
-        {active === "factory" && goal && <a className="listing-goal-side" href="/goals">
+        {isFactoryPage && goal && <a className="listing-goal-side" href="/goals">
           <span className="listing-goal-caption">Your {goal.period}ly goal</span>
           <b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${goal.target} drafts ready`:"Loading progress…"}</b>
           <span className="listing-goal-note">{goalDaysError?"Try again shortly.":"You set this target in Goals."}</span>
@@ -218,6 +219,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
           trail of one invented ancestor. What is left is the only part that
           was ever true: which page you are on.
         */}
+        <a className="suite-mobile-brand" href="/home"><SuiteBrand /></a>
         <div className="factory-breadcrumb"><b className="factory-top-batch">{title}</b></div>
         <div className="factory-top-right">
           <div className="factory-account-wrap">
@@ -249,6 +251,7 @@ export default function FactoryShell({ active, title, desktopOnly = true, childr
                   {shop.shopName}{shop.active ? " ✓" : switching === shop.shopId ? " …" : ""}</button>)}
                 {switchError && <small role="alert" className="factory-account-shop-error">{switchError}</small>}
               </div>}
+              <a role="menuitem" href="/account/settings">Account settings</a>
               <a role="menuitem" href="/usage">Usage and limits</a>
               <a role="menuitem" href="/connections">Connections</a>
               {account && <a role="menuitem" href={account.signedIn

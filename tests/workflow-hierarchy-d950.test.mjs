@@ -38,7 +38,7 @@ test("D954: optional artwork actions are centered and intentionally spaced",()=>
 
 test("D950: every workflow hero states only the immediate task",()=>{
   for(const copy of [
-    "Check artwork, colors, sizes, pricing, shipping, and listing photos.",
+    "Choose listing photos and confirm the finished prices and shipping.",
     "Review the plan, then create the private drafts.",
     "Update any section below, then return to Review.",
     "Update every listing below, then return to Review.",

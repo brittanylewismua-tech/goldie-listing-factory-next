@@ -420,6 +420,7 @@ const PRINT_CLASSES = new Set(
   ["014", "016", "018", "020", "021", "024", "025", "026", "028"]);
 
 export type RegisterMatch = {
+  serial?: string;
   mark: string;
   owner: string;
   registration: string;
@@ -507,7 +508,7 @@ export function toMatches(
   /* classes is the array the register returns. It was typed as a string here
      and the mismatch was papered over with a cast, which is why the two
      callers could disagree about the shape without anything complaining. */
-  hits: Array<{ mark: string; owner?: string; registration?: string;
+  hits: Array<{ mark: string; owner?: string; serial?: string; registration?: string;
     classes?: string[]; registered?: boolean }>,
   phrase: string,
   /* Injected rather than imported: the normaliser lives beside the register
@@ -523,8 +524,8 @@ export function toMatches(
   const wanted = normalizeMark(phrase);
   const squeezed = squeezeMark ? squeezeMark(phrase) : null;
   return hits.map(hit => ({
-    mark: hit.mark, owner: hit.owner, registration: hit.registration,
-    classes: hit.classes ?? [], registered: hit.registered,
+    mark: hit.mark, owner: hit.owner ?? "", serial: hit.serial, registration: hit.registration ?? "",
+    classes: hit.classes ?? [], registered: Boolean(hit.registered),
     /*
       "EXACT" MEANS THE PHRASE IS THE MARK, NOT THAT IT IS SPELLED THE SAME.
 

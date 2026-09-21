@@ -21,7 +21,7 @@ import { measureQuality, QUALITY_RULE_VERSION, type ImageQuality }
 import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 import { evidenceLine } from "@/app/evidence-window";
 import { isFresh } from "@/app/reference-images";
-import { reserveSpend, settleSpend, failSpend, releaseSpend, memberUsage } from "@/app/spend-guard";
+import { reserveSpend, settleSpend, refundMemberAllowance, failSpend, releaseSpend, memberUsage } from "@/app/spend-guard";
 import { check, withRegister, registerIsReady, type RegisterMatch } from "@/app/trademark-check";
 import { lookup, normalize, registerSize } from "@/app/trademark-register";
 import { etsyApiCredential, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
@@ -80,6 +80,7 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
   const started = Date.now();
   let paidCalls = 0;
   let cost = 0;
+  let chargedReservation = "";
 
   /* ---------------------------------------------- the member's own design */
   const held = await db.prepare(
@@ -178,7 +179,7 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
             + `\n\nvisibleWording: the exact text that appears in THIS design, as one string. `
             + `This field exists only so the uploader can run their own trademark check.`,
           prompt: "Describe how this design is constructed.",
-          image_urls: [body.imageDataUrl],
+          image_urls: [body!.imageDataUrl],
         }),
         signal: AbortSignal.timeout(90_000),
       });
@@ -237,6 +238,7 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
       .bind(user.userId, artworkHash, UPLOAD_ANALYSIS_VERSION,
         JSON.stringify(upload), cost, now).run();
     await settleSpend(reservation.id, cost);
+    chargedReservation = reservation.id;
     /* Stored and paid for. The waiters can stop watching. */
     await done();
   }
@@ -378,7 +380,7 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
     const ready = registerIsReady(size);
     const normalized = normalize(phrase);
     const matches: RegisterMatch[] = hits.map(hit => ({
-      mark: hit.mark, owner: hit.owner, registration: hit.registration,
+      mark: hit.mark, owner: hit.owner, serial: hit.serial, registration: hit.registration,
       classes: hit.classes, registered: hit.registered,
       exact: normalize(hit.mark) === normalized,
     }));
@@ -388,6 +390,7 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
     trademark = withRegister(verdict, [], null);
   }
 
+  if(!gate.ok && chargedReservation) await refundMemberAllowance(chargedReservation);
   const usage = await memberUsage(user.userId, WORKLOAD);
   const base = {
     niche, warm, paidCalls, cost: Number(cost.toFixed(5)),
@@ -401,7 +404,7 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
   if (!gate.ok)
     return NextResponse.json({ ...base, ok: false,
       overall: "Not enough verified evidence",
-      refusal: gate.refusal, cohort: shape });
+      refusal: gate.refusal, allowanceCharged: false, cohort: shape });
 
   /* ------------------------------------------------------ the comparison */
   /* Construction fields only, both sides. No model call. */

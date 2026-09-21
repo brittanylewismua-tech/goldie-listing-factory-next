@@ -161,8 +161,8 @@ test("a tracked keyword shows current listings while sales evidence gathers", ()
 
   const client = readFileSync(new URL(
     "../app/market-watch/market-watch-client.tsx", import.meta.url), "utf8");
-  assert.match(client, /No sales have been confirmed for these listings yet/);
-  assert.match(client, /current Etsy stats/);
+  assert.match(client, /it does not establish how many units an individual listing sold/);
+  assert.match(client, /current listing totals/);
 });
 
 test("internal candidate counts are never shown to members", () => {

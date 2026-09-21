@@ -104,7 +104,7 @@ export const POST = withErrorLog("shop-map-correct", async (request: Request) =>
           WHERE user_id = ? AND shop_id = ? AND listing_id = ? AND reversed_at IS NULL`)
         .bind(now, user.userId, shopId, body.listingId).run()
         .catch(() => null);
-      if (!done || done.success === false)
+      if (!done || !done.success)
         return NextResponse.json({
           error: "That correction could not be cleared, so it is still in place.",
         }, { status: 500 });

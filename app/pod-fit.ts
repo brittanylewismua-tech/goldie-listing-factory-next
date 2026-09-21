@@ -75,7 +75,7 @@ export function madeOfSomethingElse(title: string) {
 
 export function abovePrintableCeiling(product: string | null | undefined, price: number | null | undefined) {
   if (price == null || !Number.isFinite(Number(price))) return false;
-  const ceiling = (product && CEILING[product]) ?? DEFAULT_CEILING;
+  const ceiling = (product ? CEILING[product] : undefined) ?? DEFAULT_CEILING;
   return Number(price) > ceiling;
 }
 

@@ -1,3 +1,4 @@
+import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
@@ -9,7 +10,9 @@ import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-dire
 import { guidance, standout, DIRECTION_BASIS, SHOP_MAP_MIN_RECENT_ORDERS } from "@/app/shop-map-guidance";
 import { collapseFacets } from "@/app/niche-classifier";
 import { rejectAsNiche } from "@/app/shop-map-identity";
-import { resolveCost, profitState, type CostRule } from "@/app/shop-map-cost-rules";
+import { listingDisplay, listingPhoto } from "@/app/etsy-listing-display";
+import { etsyConnection, etsyFetch } from "@/app/api/etsy/client";
+import { readFinancialMonth } from "@/app/financial-month-read";
 import { monthWindow, monthOf } from "@/app/finance-month";
 import { shopTimezone } from "@/app/finance-store";
 import { explainGrouping } from "@/app/niche-grouping-explained";
@@ -26,14 +29,14 @@ import { freshnessNote, isStale, salesAsOf } from "@/app/finance-freshness";
  * NO PAID CALL. Every grouping and every finding is deterministic.
  */
 export const GET = withErrorLog("shop-map-map", async (request: Request) => {
+  if(crossSiteWrite(request))return NextResponse.json(CROSS_SITE_REFUSAL,{status:403});
   try {
     return await buildMap(request);
   } catch (error) {
     /* Owner-only surface: a generic 500 tells nobody what broke, and this
        route reads a dozen tables that may not all exist yet on a shop. */
     return NextResponse.json({
-      error: error instanceof Error ? error.message : "unknown",
-      where: error instanceof Error ? String(error.stack ?? "").split("\n")[1] ?? "" : "",
+      error: "Your shop data could not be loaded. Please try again.",
     }, { status: 500 });
   }
 });
@@ -47,14 +50,15 @@ async function buildMap(request: Request) {
   const db = (env as unknown as { DB: D1Database }).DB;
   const parameters = new URL(request.url).searchParams;
   const now = Math.floor(Date.now() / 1_000);
+  const soldDays=[30,90,365].includes(Number(parameters.get("days")))?Number(parameters.get("days")):90;
 
   const shopRow = await db.prepare(
-    `SELECT c.shop_id, c.shop_name, COALESCE(p.image_url, '') AS image_url
+    `SELECT c.shop_id, c.shop_name, COALESCE(p.image_url, '') AS image_url, COALESCE(p.updated_at,0) AS profile_updated_at
        FROM etsy_connections c
        LEFT JOIN shop_map_shop_profiles p
          ON p.user_id = c.user_id AND p.shop_id = c.shop_id
       WHERE c.user_id = ? AND c.is_active = 1 LIMIT 1`)
-    .bind(user.userId).first<{ shop_id: number; shop_name: string; image_url: string }>();
+    .bind(user.userId).first<{ shop_id: number; shop_name: string; image_url: string; profile_updated_at:number }>();
   if (!shopRow) return NextResponse.json({ error: "No connected shop." }, { status: 400 });
   const shopId = Number(shopRow.shop_id);
   /*
@@ -250,86 +254,9 @@ async function buildMap(request: Request) {
   });
 
   /* --------------------------------------------------------- this month's money */
-  const receiptTotals = window ? await db.prepare(
-    `SELECT COUNT(*) AS receipts, COALESCE(SUM(subtotal_minor),0) AS subtotal,
-            COALESCE(SUM(shipping_minor),0) AS shipping,
-            COALESCE(SUM(seller_discount_minor),0) AS discount
-       FROM finance_receipts WHERE user_id = ? AND shop_id = ?
-         AND source_created_at BETWEEN ? AND ?`)
-    .bind(user.userId, shopId, window.from, window.to)
-    .first<{ receipts: number; subtotal: number; shipping: number; discount: number }>()
-    : null;
-
-  const feeRow = window ? await db.prepare(
-    `SELECT COALESCE(SUM(amount_minor),0) AS fees FROM finance_ledger
-      WHERE user_id = ? AND shop_id = ? AND bucket = 'cost'
-        AND source_created_at BETWEEN ? AND ?`)
-    .bind(user.userId, shopId, window.from, window.to).first<{ fees: number }>() : null;
-
-  const incompleteFinance = window ? await db.prepare(
-    `SELECT
-       (SELECT COUNT(*) FROM finance_windows
-         WHERE user_id=? AND shop_id=? AND state IN ('pending','failed')
-           AND window_from<=? AND window_to>=?)
-       +
-       (SELECT COUNT(*) FROM finance_ledger
-         WHERE user_id=? AND shop_id=? AND bucket='neither'
-           AND source_created_at BETWEEN ? AND ?)
-       +
-       (SELECT CASE WHEN COUNT(*)=0 OR MIN(refreshed_at)<? THEN 1 ELSE 0 END
-          FROM finance_sources WHERE user_id=? AND shop_id=?) AS n`)
-    .bind(user.userId,shopId,window.to,window.from,
-      user.userId,shopId,window.from,window.to,
-      now-86_400,user.userId,shopId).first<{n:number}>().catch(()=>({n:1})) : {n:1};
-
-  const productionRows = window ? await db.prepare(
-    `SELECT receipt_id, cost_minor, shipping_minor, canceled, counts_as_etsy_cost
-       FROM finance_production WHERE user_id = ? AND shop_id = ?
-         AND fulfilled_at BETWEEN ? AND ?`)
-    .bind(user.userId, shopId, window.from, window.to)
-    .all<{ receipt_id: number | null; cost_minor: number; shipping_minor: number;
-      canceled: number; counts_as_etsy_cost: number }>() : { results: [] };
-
-  const ruleRows = await db.prepare(
-    `SELECT product_family, cost_minor, shipping_minor, currency, confirmed
-       FROM shop_map_cost_rules WHERE user_id = ? AND shop_id = ?`)
-    .bind(user.userId, shopId).all<{ product_family: string; cost_minor: number;
-      shipping_minor: number; currency: string; confirmed: number }>()
-    .catch(() => ({ results: [] }));
-  const familyRules = new Map<string, CostRule>();
-  for (const row of ((ruleRows.results ?? []) as Array<Record<string, unknown>>))
-    familyRules.set(String(row.product_family), {
-      productFamily: String(row.product_family), costMinor: Number(row.cost_minor),
-      shippingMinor: Number(row.shipping_minor), currency: String(row.currency ?? "USD"),
-      confirmedByMember: Boolean(row.confirmed) });
-
-  /* Every receipt in the month needs a cost, matched or not. */
-  const monthReceipts = window ? await db.prepare(
-    `SELECT receipt_id FROM finance_receipts WHERE user_id = ? AND shop_id = ?
-       AND source_created_at BETWEEN ? AND ?`)
-    .bind(user.userId, shopId, window.from, window.to)
-    .all<{ receipt_id: number }>() : { results: [] };
-  const producedBy = new Map<number, { cost: number; shipping: number }>();
-  for (const row of ((productionRows.results ?? []) as Array<Record<string, unknown>>))
-    if (row.receipt_id && !Number(row.canceled) && Number(row.counts_as_etsy_cost))
-      producedBy.set(Number(row.receipt_id),
-        { cost: Number(row.cost_minor), shipping: Number(row.shipping_minor) });
-
-  const costs = ((monthReceipts.results ?? []) as Array<{ receipt_id: number }>).map(row => {
-    const made = producedBy.get(Number(row.receipt_id));
-    return resolveCost({
-      receiptId: Number(row.receipt_id), productFamily: "",
-      verifiedCostMinor: made ? made.cost : null,
-      verifiedShippingMinor: made ? made.shipping : null,
-    }, { familyRules });
-  });
-
-  const revenue = (receiptTotals?.subtotal ?? 0) + (receiptTotals?.shipping ?? 0)
-    - Math.abs(receiptTotals?.discount ?? 0);
-  const state = profitState({ grossRevenueMinor: revenue,
-    feesMinor: Number(feeRow?.fees ?? 0), costs,
-    otherComplete: Number(incompleteFinance?.n ?? 1) === 0
-      && ((monthReceipts.results?.length ?? 0) === 0 || feeRow !== null) });
+  const financial = timezone ? await readFinancialMonth(user.userId,shopId,month,timezone) : null;
+  const profit = financial?.knownOperatingProfitMinor ?? null;
+  const productionCoverage = financial?.coverage.productionCoverage ?? 0;
 
   /*
     THE UNCLASSIFIED PART OF THE SHOP, COUNTED.
@@ -412,22 +339,59 @@ async function buildMap(request: Request) {
   const recentOrders = worldPerformance.reduce((sum, world) => sum + world.ordersLast90, 0);
   const recentEnough = recentOrders >= 10;
   const found = direction(worldPerformance);
-  const sales90 = new Map<number, { sales: number; revenueMinor: number }>();
-  for (const sale of (saleRows.results ?? [])) {
-    if (Number(sale.refunded) || Number(sale.sold_at) < now - 90 * 86_400) continue;
-    const id = Number(sale.listing_id);
-    const previous = sales90.get(id) ?? { sales: 0, revenueMinor: 0 };
-    previous.sales += Number(sale.quantity ?? 0);
-    previous.revenueMinor += Number(sale.quantity ?? 0) * Number(sale.price_minor ?? 0);
-    sales90.set(id, previous);
+  const totalsFor=(days:number)=>{
+    const totals=new Map<number,{sales:number;revenueMinor:number}>();
+    for(const sale of saleRows.results??[]){
+      if(Number(sale.refunded)||Number(sale.sold_at)<now-days*86400||Number(sale.sold_at)>now)continue;
+      const id=Number(sale.listing_id),previous=totals.get(id)??{sales:0,revenueMinor:0};
+      previous.sales+=Number(sale.quantity??0);
+      previous.revenueMinor+=Number(sale.quantity??0)*Number(sale.price_minor??0);
+      totals.set(id,previous);
+    }
+    return totals;
+  };
+  const sales90=totalsFor(90), selectedSales=totalsFor(soldDays);
+  const selectedIds=[...new Set([...sales90.keys(),...selectedSales.keys(),...rows.filter(row=>row.state==="active").map(row=>Number(row.listing_id))])].slice(0,100);
+  let displayUnavailable=false;
+  if(selectedIds.some(id=>!rows.find(row=>Number(row.listing_id)===id)?.image_url)||!shopRow.image_url||Number(shopRow.profile_updated_at)<now-6*3600){
+    try{
+      const connection=await etsyConnection(user.userId);
+      if(!shopRow.image_url||Number(shopRow.profile_updated_at)<now-6*3600){
+        const profile=await etsyFetch<{icon_url_fullxfull?:string}>(`/shops/${shopId}`,connection.token,"finance");
+        shopRow.image_url=profile.icon_url_fullxfull||shopRow.image_url;
+        await db.prepare(`INSERT INTO shop_map_shop_profiles(user_id,shop_id,image_url,updated_at) VALUES(?,?,?,?)
+          ON CONFLICT(user_id,shop_id) DO UPDATE SET image_url=excluded.image_url,updated_at=excluded.updated_at`)
+          .bind(user.userId,shopId,shopRow.image_url,now).run();
+      }
+      const display=await listingDisplay(selectedIds,"finance",connection.token);
+      for(const [id,listing] of display){
+        const row=rows.find(row=>Number(row.listing_id)===id);
+        const photo=listingPhoto(listing);
+        if(row){row.image_url=photo||row.image_url;row.title=listing.title||row.title;
+          if(typeof listing.num_favorers==="number")row.favorites=listing.num_favorers;
+          if(typeof listing.views==="number")row.views=listing.views;
+          await db.prepare(`UPDATE shop_map_listings SET image_url=?,title=?,favorites=?,views=? WHERE user_id=? AND shop_id=? AND listing_id=?`)
+            .bind(row.image_url,row.title,row.favorites,row.views,user.userId,shopId,id).run();
+        }
+        if(!shopRow.image_url&&listing.shop?.icon_url_fullxfull){
+          shopRow.image_url=listing.shop.icon_url_fullxfull;
+          await db.prepare(`INSERT INTO shop_map_shop_profiles(user_id,shop_id,image_url,updated_at) VALUES(?,?,?,?)
+            ON CONFLICT(user_id,shop_id) DO UPDATE SET image_url=excluded.image_url,updated_at=excluded.updated_at`)
+            .bind(user.userId,shopId,shopRow.image_url,now).run();
+        }
+      }
+    }catch{displayUnavailable=true;}
   }
-  const soldListings = rows.map(row => ({
-    listingId: Number(row.listing_id), title: String(row.title ?? "Untitled listing"),
-    imageUrl: String(row.image_url ?? ""), favorites: Number(row.favorites ?? 0),
-    sales: sales90.get(Number(row.listing_id))?.sales ?? 0,
-    revenueMinor: sales90.get(Number(row.listing_id))?.revenueMinor ?? 0,
-  })).filter(row => row.sales > 0).sort((a, b) => b.sales - a.sales
-    || b.revenueMinor - a.revenueMinor || b.favorites - a.favorites);
+  const soldRows=(totals:Map<number,{sales:number;revenueMinor:number}>)=>rows.map(row=>({
+    listingId:Number(row.listing_id),title:String(row.title||"Listing details unavailable"),
+    imageUrl:String(row.image_url||""),favorites:row.favorites===null?null:Number(row.favorites),
+    sales:totals.get(Number(row.listing_id))?.sales??0,revenueMinor:totals.get(Number(row.listing_id))?.revenueMinor??0,
+  })).filter(row=>row.sales>0).sort((a,b)=>b.sales-a.sales||b.revenueMinor-a.revenueMinor);
+  const soldListings=soldRows(selectedSales);
+  const themeListings=(ids:number[])=>rows.filter(row=>ids.includes(Number(row.listing_id)))
+    .map(row=>({listingId:Number(row.listing_id),title:String(row.title),imageUrl:row.image_url,
+      favorites:row.favorites,sales:sales90.get(Number(row.listing_id))?.sales??0,state:row.state}))
+    .sort((a,b)=>b.sales-a.sales||Number(b.state==="active")-Number(a.state==="active"));
 
   return NextResponse.json({
     shop: { shopId, shopName: shopRow.shop_name, imageUrl: shopRow.image_url, timezone },
@@ -435,29 +399,22 @@ async function buildMap(request: Request) {
     timezoneNeeded: !timezone,
     month,
     thisMonth: {
-      revenueMinor: revenue,
-      etsyFeesMinor: Number(feeRow?.fees ?? 0),
-      productionCostMinor: costs.reduce((sum, cost) => sum + cost.costMinor, 0),
-      headline: state.headline,
-      /*
-        D1677 · THE LABEL TRAVELS, NOT JUST THE SENTENCE.
-
-        The page could only tell an estimate from a verified figure by the
-        word "Estimated" inside `headline`. That makes the difference between
-        a number a member can bank on and one they cannot a matter of copy —
-        one reworded string away from an estimate reading as fact. The
-        verdict already computes the label; it was simply not sent.
-      */
-      label: state.label,
-      salesAsOf: asOf,
-      salesStale: isStale(asOf, nowSeconds),
-      freshness: freshnessNote({ asOf, nowSeconds, timezone: timezone || "UTC" }),
-      profitMinor: state.profitMinor,
-      accuracy: state.accuracy,
-      coverage: { verified: state.verifiedShare, estimated: state.estimatedShare,
-        unavailable: state.unavailableShare },
-      orders: receiptTotals?.receipts ?? 0,
+      revenueMinor: financial?.grossSellerRevenueMinor ?? null,
+      etsyFeesMinor: financial ? financial.etsyTransactionFeesMinor+financial.etsyProcessingFeesMinor+financial.etsyListingFeesMinor+financial.etsyAdvertisingFeesMinor+financial.etsyOtherFeesMinor : null,
+      productionCostMinor: financial && productionCoverage===1 ? financial.productionCostMinor+financial.productionShippingMinor : null,
+      refundsMinor: financial?.refundsMinor ?? null,
+      adjustmentsMinor: financial?.adjustmentsMinor ?? null,
+      currency: financial?.currency ?? "USD",
+      headline: profit === null ? "Profit unavailable" : "Verified profit",
+      label: profit === null ? "unavailable" : "verified",
+      salesAsOf: asOf, salesStale: isStale(asOf, nowSeconds),
+      freshness: freshnessNote({asOf,nowSeconds,timezone:timezone||"UTC"}),
+      profitMinor: profit,
+      accuracy: profit===null ? "Profit is unavailable until all orders, Etsy charges, refunds, adjustments, and production costs for this period are accounted for." : "Includes sales, Etsy fees, refunds, adjustments, and matched production costs.",
+      coverage: {verified:productionCoverage,estimated:0,unavailable:1-productionCoverage},
+      orders: financial?.coverage.receipts ?? 0,
     },
+
     /* Where to Focus: the instruction, and the arithmetic behind it. */
     standout: standout(worldPerformance,
       guidance(worldPerformance, { period: recentEnough ? "the last 90 days" : "all time",
@@ -476,10 +433,11 @@ async function buildMap(request: Request) {
     coverage,
     unclassifiedPerformance: unclassified,
     shopTotals,
-    soldListings: { period: "Last 90 days", listings: soldListings },
+    soldListings: { period: `Last ${soldDays} days`, days:soldDays, listings: soldListings },
+    topListings: soldRows(sales90).slice(0,3), displayUnavailable,
     /* Unclassified is a card, not a footnote: it is part of the shop. */
     unclassifiedCard: {
-      worldId: "unclassified", label: "Unclassified",
+      worldId: "unclassified", label: "Unclassified", memberListings:themeListings(unclassifiedIds),
       listings: unclassified.listings, activeListings: unclassified.activeListings,
       period: "Last 90 days",
       orders: unclassified.ordersLast90, revenueMinor: unclassified.revenueLast90Minor,
@@ -514,7 +472,7 @@ async function buildMap(request: Request) {
         const reviews = members.flatMap(id => reviewsByListing.get(id) ?? []);
         const recent = reviews.filter(row => row.createdAt >= now - 90 * 86_400);
         return {
-          worldId: world.worldId, label: world.label,
+          worldId: world.worldId, label: world.label, memberListings:themeListings(members),
           listings: members.length,
           activeListings: world.activeListings,
           period: "Last 90 days",
@@ -534,7 +492,7 @@ async function buildMap(request: Request) {
         orders: unclassified.orders, revenueMinor: unclassified.revenueMinor,
         reviews: unclassified.reviews, activeListings: unclassified.activeListings,
       },
-      missingProductionCosts: costs.filter(cost => cost.confidence === "none").length,
+      missingProductionCosts: Math.max(0,(financial?.coverage.receipts??0)-(financial?.coverage.matchedReceipts??0)),
       overbuiltWorlds: overbuilt(worldPerformance),
     },
     classifier: {

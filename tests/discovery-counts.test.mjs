@@ -71,7 +71,9 @@ test("the cap is applied where the counts are taken", () => {
   const store = readFileSync(
     new URL("../app/niche-candidate-store.ts", import.meta.url), "utf8");
   assert.match(store, /THE CAP BOUNDS THE POOL, NOT THE BATCH/);
-  assert.match(store, /const selected = found\.slice\(0, room\);/);
+  assert.match(store, /const selected = found\.filter/);
+  assert.match(store, /if \(active.has\(row.listingId\)\) return true/);
+  assert.match(store, /if \(available <= 0\) return false/);
   assert.match(store, /selectedShops: new Set\(selected\.map\(row => row\.shopId\)\)\.size/);
   /* And nothing takes a shop count from the uncapped pool any more. */
   const route = readFileSync(new URL(
@@ -103,7 +105,9 @@ test("the per-niche cap bounds the pool, not one batch", () => {
   assert.match(store, /THE CAP BOUNDS THE POOL, NOT THE BATCH/);
   assert.match(store, /SELECT COUNT\(\*\) AS n FROM niche_candidates/);
   assert.match(store, /const room = Math\.max\(0, GROWTH\.maxCandidatesPerNiche - Number/);
-  assert.match(store, /const selected = found\.slice\(0, room\);/);
+  assert.match(store, /const selected = found\.filter/);
+  assert.match(store, /if \(active.has\(row.listingId\)\) return true/);
+  assert.match(store, /if \(available <= 0\) return false/);
   /* And a full niche says so instead of reporting a mysterious zero. */
   assert.match(store, /atCap: true/);
 });

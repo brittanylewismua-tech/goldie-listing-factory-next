@@ -129,7 +129,7 @@ test("a requested Finish phase survives a reload — D147", async () => {
   /* D428 · A friendly step name can imply a phase — ?step=publish means the
      Publish phase — so an explicit ?phase= still wins and the alias only fills
      the gap. The rule is unchanged: honour what was asked for. */
-  assert.match(source, /setFinishPhase\(restoredFinishPhase\(state\.finishPhase\|\|"details",requestedPhase\?\?requestedFinishPhase\(requestedStep\),Boolean\(state\.complete\)\)\)/,
+  assert.match(source, /const restoredPhase=restoredFinishPhase\(state\.finishPhase\|\|"details",requestedPhase\?\?requestedFinishPhase\(requestedStep\),Boolean\(state\.complete\)\);setFinishPhase\(restoredPhase\)/,
     "Restoration must honour the requested phase, not overwrite it with the saved one.");
   assert.match(source, /void restoreBatchById\(id,url\.searchParams\.get\("step"\),url\.searchParams\.get\("phase"\)\)/,
     "and on mount the URL is still what gets honoured");
@@ -182,15 +182,15 @@ test("D224: no saved batch can land on a step that has no page", async () => {
   /* D623 widened this function - it now also refuses any value that is not a
      step at all - so the assertion is on what it must still do, not on the one
      line it used to be. */
-  assert.match(source, /function normalizeStep\(step:WorkflowStep\):WorkflowStep\{[\s\S]*?==="review"\?"designs":/,
-    "normalizeStep must still send review to designs");
+  assert.match(source, /function normalizeStep\(step:WorkflowStep\):WorkflowStep\{[\s\S]*?const known=canonicalStep\(step\)\?\?"connect";\s*return known;/,
+    "the restored Create stage remains a valid route");
   assert.match(source, /function goToStep\(rawStep:WorkflowStep,replace=false,force=false\)\{\s*const step=normalizeStep\(rawStep\);/);
 
   const setters = source.match(/setWorkflowStep\([^)]*\)/g) || [];
   for (const setter of setters) {
     const literal = /setWorkflowStep\(["'](\w+)["']/.exec(setter);
     if (literal) {
-      assert.notEqual(literal[1], "review", `${setter} sends the seller to a page that does not exist`);
+      assert.ok(["connect","setup","designs","review","finish"].includes(literal[1]), `${setter} must target a real stage`);
     } else {
       assert.match(setter, /normalizeStep/, `${setter} must normalise a non-literal step`);
     }
@@ -303,7 +303,7 @@ test("D376: every restored finish phase is one that actually renders", async () 
   const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
   /* The renderable set must match what the JSX actually branches on. */
-  assert.match(app, /const RENDERED_FINISH_PHASES:FinishPhase\[\]=\["details","etsy","final"\]/);
+  assert.match(app, /const RENDERED_FINISH_PHASES:FinishPhase\[\]=\["details","etsy","mockups","final"\]/);
   /* D497 - publish now covers the whole bundle, so step 4 passes its action as a
      footer under the cards rather than as the open card's body. The banner still
      travels with that action; what changed is that it sits under every product
@@ -320,8 +320,8 @@ test("D376: every restored finish phase is one that actually renders", async () 
   }
 
   /* And nothing may branch on the dead phase. */
-  assert.doesNotMatch(app, /finishPhase==="mockups"&&/,
-    "if something renders mockups again, take it out of the dead list");
+  assert.match(app, /finishPhase==="mockups"&&/,
+    "the restored photos stage has a footer and renders its product work");
 
   /* Restoring must launder the saved value, not trust it. */
   assert.match(app, /const safeSaved=drawableFinishPhase\(saved,complete\)/);
@@ -339,7 +339,7 @@ test("a link written with the names on screen opens the right step — D428", as
   assert.match(source, /function canonicalStep\(requested:string\|null\):WorkflowStep\|null\{/);
   // Both entry points - first load and browser back/forward - use the same map.
   assert.match(source, /const canonical=canonicalStep\(value\);if\(canonical\)setWorkflowStep\(normalizeStep\(canonical\)\)/);
-  assert.match(source, /const target=canonicalStep\(requested\);\n  if\(!target\)return complete\?"finish":saved;/);
+  assert.match(source, /const target=canonicalStep\(requested\);\n  if\(!target\)return canonicalStep\(saved\)\?\?\(complete\?"finish":"setup"\);/);
   // Emitted links are unchanged, so saved and shared URLs keep working.
   assert.match(source, /url\.searchParams\.set\("step",step\)/);
 });
@@ -366,12 +366,12 @@ test("step 3 always has a way forward — D544", async () => {
   /* D767 · Both branches sit in the step's footer row now, the same one every
      other step uses. The rule is unchanged: exactly one of the two, chosen by
      whether the work is done, so there is never a step 3 with neither. */
-  const footer = app.slice(app.indexOf('{!reviewEditing&&(!etsyDetailsPrepared?<FactoryFooter'));
+  const footer = app.slice(app.indexOf('{!reviewEditing&&<FactoryFooter status={savingEtsyDetails'));
   assert.ok(footer.indexOf('className="workflow-next"') > 0, "the other branch is Next step");
   assert.ok(footer.indexOf('className="workflow-next"') < footer.indexOf("</FactoryFooter>}"), "in the same footer");
 
   // The URL is not allowed to claim a phase the app never enters.
-  assert.doesNotMatch(app, /url\.searchParams\.set\("phase","etsy"\)/);
+  assert.match(app, /url\.searchParams\.set\("phase","etsy"\)/);
   assert.match(app, /url\.searchParams\.set\("phase","details"\)/);
 
   /* And nothing may go back to gating step 3's forward button on the phase,

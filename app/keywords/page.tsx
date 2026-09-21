@@ -22,7 +22,9 @@ const SHIRT_EXCLUDED_NOUNS=excludedProductNouns("tee");
 
 export default function KeywordBanks() {
   const [lists,setLists]=useState<List[]>([]),[products,setProducts]=useState<ProductUse[]>([]),[name,setName]=useState(""),[raw,setRaw]=useState(""),[notice,setNotice]=useState<Notice>(null),[saving,setSaving]=useState(false),[savedId,setSavedId]=useState(""),[expandedBanks,setExpandedBanks]=useState<Set<string>>(new Set());
-  const [returnHref,setReturnHref]=useState("/");
+  const [returnHref,setReturnHref]=useState("/listing-factory?step=setup");
+  const [loading,setLoading]=useState(true);
+  const [loadError,setLoadError]=useState(false);
   const [scrollToEditor,setScrollToEditor]=useState(false);
   /* Scrolling inside the click handler does not survive: the handler sets three
    * pieces of state, React re-renders, and the scroll is lost — measured live,
@@ -35,8 +37,8 @@ export default function KeywordBanks() {
     const form=document.querySelector(".management-create");
     if(form)window.scrollTo(0,form.getBoundingClientRect().top+window.scrollY-20);
   },[scrollToEditor,savedId]);
-  const reload=()=>fetch("/api/keyword-lists").then(r=>responseJson<{lists?:List[]}>(r)).then(r=>setLists(r.lists||[])).catch(()=>{setLists([]);setNotice({kind:"error",title:"Keyword banks could not be loaded",detail:"Reload the page to try again. Nothing was changed."})});
-  useEffect(()=>{void reload();fetch("/api/product-recipes").then(r=>responseJson<{recipes?:ProductUse[]}>(r)).then(r=>setProducts(r.recipes||[])).catch(()=>setProducts([]));const batch=window.localStorage.getItem("goldie-active-batch");setReturnHref(batch?`/?batch=${encodeURIComponent(batch)}`:"/")},[]);
+  const reload=async()=>{setLoading(true);setLoadError(false);try{const response=await fetch("/api/keyword-lists");if(!response.ok)throw new Error("load");const result=await responseJson<{lists?:List[]}>(response);setLists(result.lists||[])}catch{setLoadError(true)}finally{setLoading(false)}};
+  useEffect(()=>{void reload();fetch("/api/product-recipes").then(r=>responseJson<{recipes?:ProductUse[]}>(r)).then(r=>setProducts(r.recipes||[])).catch(()=>setProducts([]));const batch=window.localStorage.getItem("goldie-active-batch");setReturnHref(batch?`/listing-factory?batch=${encodeURIComponent(batch)}`:"/listing-factory?step=setup")},[]);
   useEffect(()=>{if(!notice)return;const timer=window.setTimeout(()=>setNotice(null),5000);return()=>window.clearTimeout(timer)},[notice]);
   const words=useMemo(()=>phrasesFromErank(raw.replace(/;/g,"\n")),[raw]);
   const associatedProducts=products.filter(product=>product.keywordListId===savedId);
@@ -48,20 +50,22 @@ export default function KeywordBanks() {
     const savedName=name.trim();
     const savedWords=[...words];
     if(mismatchedWords.length){setNotice({kind:"error",title:"Fix wrong-product phrases before saving",detail:`This shirt bank contains ${mismatchedWords.length} phrase${mismatchedWords.length===1?"":"s"} for another product: ${mismatchedWords.slice(0,4).join(", ")}${mismatchedWords.length>4?"…":""}`});return}
+    if(saving)return;
     setSaving(true);
+    try{
     const response=await fetch("/api/keyword-lists",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:editingId||undefined,name:savedName,keywords:savedWords})});
     const payload=await responseJson<{id?:string;error?:string}>(response).catch(()=>({error:"The server returned an unreadable response. Please try again."}));
-    setSaving(false);
-    if(!response.ok){setNotice({kind:"error",title:"Keyword bank not saved",detail:payload.error||"Please try again."});return}
+    if(!response.ok||payload.error){setNotice({kind:"error",title:"Keyword bank not saved",detail:payload.error||"Please try again."});return}
     setNotice({kind:"success",title:editingId?`“${savedName}” was updated`:`“${savedName}” was created`,detail:`${savedWords.length} keyword ${savedWords.length===1?"phrase":"phrases"} are ready to use in Listing Factory.`});
     await reload();
     if(editingId){
-      setSavedId(payload.id||editingId);
+      setSavedId(("id" in payload ? payload.id : undefined)||editingId);
     }else{
       setName("");
       setRaw("");
       setSavedId("");
     }
+    }catch{setNotice({kind:"error",title:"Keyword bank not saved",detail:"Check your connection and try again. Your text is still here."})}finally{setSaving(false)}
   }
   function startAnother(){setName("");setRaw("");setSavedId("");setNotice(null)}
   async function remove(list:List){if(!await confirmAction({title:`Delete “${list.name}”?`,body:"This keyword bank and its phrases are removed. Listings already built from it are not changed.",confirmLabel:"Delete bank",destructive:true}))return;await fetch("/api/keyword-lists",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:list.id})});if(savedId===list.id)startAnother();void reload()}
@@ -74,7 +78,7 @@ export default function KeywordBanks() {
       <section className="bank-library"><div><div><p className="mini-label">YOUR LIBRARY</p><h2>Saved banks</h2>{/* D849 · The dashed outline was explained only in a title attribute,
               so the rule was invisible to anyone not hovering the exact chip -
               and on her banks a third of the phrases carry it. Say it once. */}
-        {lists.length?<p className="bank-legend">A dashed outline means the phrase is over Etsy&rsquo;s 20-character tag limit. The Listing Factory can still use it in a title.</p>:null}</div><span>{lists.length} total</span></div>{!lists.length?<div className="empty-bank"><b>No keyword banks yet</b><p>Your first saved bank will appear here immediately.</p></div>:<div className="bank-grid">{lists.map(list=>{const usedBy=products.filter(product=>product.keywordListId===list.id),expanded=expandedBanks.has(list.id),shown=expanded?list.keywords:list.keywords.slice(0,12);return <article className={list.id===savedId?"current":""} key={list.id}><div><h3>{list.name}</h3><button className="bank-delete" aria-label={`Delete ${list.name}`} onClick={()=>void remove(list)}>Delete</button></div>{/* D551 - "50 phrases" is what the page promised; only 20 of them could ever
+        {lists.length?<p className="bank-legend">A dashed outline means the phrase is over Etsy&rsquo;s 20-character tag limit. The Listing Factory can still use it in a title.</p>:null}</div><span>{loading?"":`${lists.length} total`}</span></div>{loading?<p role="status">Loading keyword banks…</p>:loadError?<div role="alert"><p>Keyword banks could not be loaded.</p><button onClick={()=>void reload()}>Try again</button></div>:!lists.length?<div className="empty-bank"><b>No keyword banks yet</b><p>Your first saved bank will appear here immediately.</p></div>:<div className="bank-grid">{lists.map(list=>{const usedBy=products.filter(product=>product.keywordListId===list.id),expanded=expandedBanks.has(list.id),shown=expanded?list.keywords:list.keywords.slice(0,12);return <article className={list.id===savedId?"current":""} key={list.id}><div><h3>{list.name}</h3><button className="bank-delete" aria-label={`Delete ${list.name}`} onClick={()=>void remove(list)}>Delete</button></div>{/* D551 - "50 phrases" is what the page promised; only 20 of them could ever
         become an Etsy tag, because Etsy caps a tag at 20 characters and 30 of hers
         are longer. That is the whole explanation for listings coming back with
         three tags out of thirteen, and nothing anywhere said it. Measured on her

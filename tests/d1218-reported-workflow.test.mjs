@@ -51,7 +51,7 @@ test('D1218 one product-wide title action creates validated fallback tags',()=>{
 test('D1218 listing hierarchy and preparation stay clear and inline',()=>{
   assert.match(app,/className="description-product-heading"/);
   assert.match(app,/className="description-chevron"/);
-  assert.match(app,/Preparing Etsy details automatically…/);
+  assert.match(app,/Preparing Etsy details…/);
   assert.match(app,/className="review-etsy-draft-button" data-inline-progress="true"/);
   assert.doesNotMatch(app,/preparingEtsy\?\{title:"Preparing listing details"/);
   assert.match(css,/\.description-product-heading\{[^}]*font-size:18px/);

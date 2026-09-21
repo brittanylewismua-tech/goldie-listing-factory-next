@@ -40,32 +40,15 @@ test("costs entered by hand are verified, not estimates", () => {
   assert.match(verdict.accuracy, /entered by you; the rest came from Printify/);
 });
 
-test("the route sends the label, not only the sentence", () => {
-  const route = readFileSync(new URL(
-    "../app/api/shop-map/map/route.ts", import.meta.url), "utf8");
-  assert.match(route, /label: state\.label/);
+test("The route labels profit verified only when the complete financial reader returned it",()=>{
+  const route=readFileSync(new URL("../app/api/shop-map/map/route.ts",import.meta.url),"utf8");
+  assert.match(route,/profit = financial\?\.knownOperatingProfitMinor \?\? null/);
+  assert.match(route,/label: profit === null \? "unavailable" : "verified"/);
 });
-
-test("the estimate is marked on the figure itself", () => {
-  const client = readFileSync(new URL(
-    "../app/shop-map/shop-map-client.tsx", import.meta.url), "utf8");
-  assert.match(client, /data-basis=\{monthBasis\(month\)\}/);
-  assert.match(client, /monthBasis\(month\) === "estimated" &&/);
-  assert.match(client, /shop-map-basis-chip">Estimate</);
-  /* The label decides; coverage is the fallback for a response cached before
-     the label existed, so an old month still cannot pass as verified. */
-  assert.match(client, /if \(month\.label === "estimated"\) return "estimated"/);
-  assert.match(client, /if \(\(month\.coverage\?\.estimated \?\? 0\) > 0\) return "estimated"/);
-});
-
-test("a month with no label and an estimated cost is still an estimate", () => {
-  /* The fallback, as arithmetic rather than as a promise. */
-  const client = readFileSync(new URL(
-    "../app/shop-map/shop-map-client.tsx", import.meta.url), "utf8");
-  const fn = client.slice(client.indexOf("function monthBasis"),
-    client.indexOf("const money ="));
-  assert.ok(fn.indexOf('coverage?.unavailable') < fn.indexOf('coverage?.estimated'),
-    "unavailable must be checked before estimated, as verdictFor does");
+test("Cached estimates and missing labels cannot display profit",()=>{
+  const client=readFileSync(new URL("../app/shop-map/shop-map-client.tsx",import.meta.url),"utf8");
+  assert.match(client,/return month\?\.label === "verified" \? "verified" : "unavailable"/);
+  assert.match(client,/monthBasis\(month\)==="unavailable"\|\|month\?\.profitMinor == null \? "Profit unavailable"/);
 });
 
 test("the fixture matches what the server actually emits, and its arithmetic holds", () => {

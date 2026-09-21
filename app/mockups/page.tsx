@@ -199,10 +199,11 @@ export default function Home() {
      first ten and offers the rest. */
   const SET_PREVIEW=10;
   const [expandedSets,setExpandedSets]=useState<Set<string>>(new Set());
+  const [libraryLoading,setLibraryLoading]=useState(true);
   const [libraryBusy,setLibraryBusy]=useState(false); const [libraryProgress,setLibraryProgress]=useState(0); const [libraryTotal,setLibraryTotal]=useState(0);
   const fileInput=useRef<HTMLInputElement>(null); const referenceInput=useRef<HTMLInputElement>(null);
   const mockupInput=useRef<HTMLInputElement>(null); const addSetRef=useRef<HTMLDivElement>(null); const chosen=library.filter(t=>selected.has(t.id)); const total=design?chosen.length:0;
-  useEffect(()=>{let alive=true;(fetch("/api/mockups/library").then(async response=>response.ok?response.json():{templates:[],preferences:[]}) as Promise<{templates?:Template[];preferences?:{sourceTheme:string;displayName:string;hidden:boolean}[]}>).then((payload:{templates?:Template[];preferences?:{sourceTheme:string;displayName:string;hidden:boolean}[]})=>{if(!alive)return;const preferences=new Map((payload.preferences||[]).map(item=>[item.sourceTheme,item]));const builtIns=templates.filter(item=>!preferences.get(item.sourceTheme||item.theme)?.hidden).map(item=>({...item,theme:preferences.get(item.sourceTheme||item.theme)?.displayName||item.theme}));const saved=payload.templates||[];setLibrary([...builtIns,...saved]);
+  useEffect(()=>{let alive=true;(fetch("/api/mockups/library").then(async response=>response.ok?response.json():Promise.reject(new Error("Your mockup sets could not be loaded. Refresh to try again."))) as Promise<{templates?:Template[];preferences?:{sourceTheme:string;displayName:string;hidden:boolean}[]}>).then((payload:{templates?:Template[];preferences?:{sourceTheme:string;displayName:string;hidden:boolean}[]})=>{if(!alive)return;const preferences=new Map((payload.preferences||[]).map(item=>[item.sourceTheme,item]));const builtIns=templates.filter(item=>!preferences.get(item.sourceTheme||item.theme)?.hidden).map(item=>({...item,theme:preferences.get(item.sourceTheme||item.theme)?.displayName||item.theme}));const saved=payload.templates||[];setLibrary([...builtIns,...saved]);
     /* D483 - print-area detection runs on upload, so sets added before it existed
        are still carrying the placeholder rectangle: her ten tee scenes were, and
        were quietly rendering against a generic box instead of a measured one.
@@ -211,7 +212,7 @@ export default function Home() {
        scenes only - the built-ins ship with their own measurements. */
     const stale=saved.filter(item=>!isCalibratedQuad(item.corners,item.normalized));
     if(stale.length)void findPrintAreas(stale,stale[0].theme||"my mockups");
-  }).catch(()=>undefined);return()=>{alive=false};},[]);
+  }).catch(()=>{if(alive)setGenerationError("Your mockup sets could not be loaded. Refresh to try again.")}).finally(()=>{if(alive)setLibraryLoading(false)});return()=>{alive=false};},[]);
   const validImage=(file:File|undefined)=>file&&/^image\/(png|jpeg|webp)$/.test(file.type)?file:null;
   const changed=(e:ChangeEvent<HTMLInputElement>)=>{setDesign(validImage(e.target.files?.[0]));setResults([]);e.target.value="";};
   const referenceChanged=(e:ChangeEvent<HTMLInputElement>)=>{setPlacementReference(validImage(e.target.files?.[0]));e.target.value="";};
@@ -333,7 +334,7 @@ export default function Home() {
   return <FactoryShell active="mockups" title="Your saved mockups"><div className="management-page mockupFactory managementOnly interior-page">
     
     <header className="mockupHero"><p className="mockupEyebrow">MOCKUP LIBRARY</p><h1>Your mockup sets</h1><p className="lede">Add and organize blank mockups here. You can choose from these sets when you create listing images in the Listing Factory.</p></header>
-    <section className="mockupWorkspace"><div className="mockupStep managementLibrary"><div className="managementLibraryHead"><div><p className="mockupEyebrow">SAVED SETS</p><h2>{library.length?"Saved mockup sets":"Create your first mockup set"}</h2><p>Each set can hold up to 50 blank mockups.</p></div><button className="newSetButton" onClick={()=>setShowAddSet(true)}><span aria-hidden="true">+</span> Add mockup set</button></div>
+    <section className="mockupWorkspace"><div className="mockupStep managementLibrary"><div className="managementLibraryHead"><div><p className="mockupEyebrow">SAVED SETS</p><h2>{libraryLoading?"Loading mockup sets…":library.length?"Saved mockup sets":"Create your first mockup set"}</h2><p>Each set can hold up to 50 blank mockups.</p></div><button className="newSetButton" onClick={()=>setShowAddSet(true)}><span aria-hidden="true">+</span> Add mockup set</button></div>
       {generationError&&<p className="smartError" role="alert"><b>The Listing Factory couldn’t complete that change.</b><span>{generationError}</span></p>}
       {libraryBusy&&<div className="librarySaving" role="status"><span className="librarySpinner"/><div><b>Saving {libraryProgress} of {libraryTotal} mockups…</b><small>Please keep this page open until every file is saved.</small></div></div>}
       {preparing>0&&<p className="preparingScenes" role="status">The Listing Factory is working out where the design goes on {preparing} {preparing===1?"photo":"photos"}. You can leave this page; it finishes on its own.</p>}

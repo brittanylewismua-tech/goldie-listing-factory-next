@@ -151,6 +151,13 @@ test("D1716: no route runs work on a GET", () => {
       connect-sales starts an OAuth flow and records the state it just minted.
     */
     if (/etsy\/callback|api\/printify\/route|connect-sales/.test(file)) continue;
+    if (file === "../app/api/shop-watch/listings/route.ts") {
+      const writes=[...body.matchAll(/INSERT INTO\s+(\w+)/g)].map(match=>match[1]);
+      assert.deepEqual(writes,["shop_watch_listing_display"],"GET may fill only its public listing cache");
+      assert.doesNotMatch(body,/DELETE FROM|UPDATE\s+member_/);
+      assert.match(body,/crossSiteWrite/);
+      continue;
+    }
     offences.push(file);
   }
   assert.deepEqual(offences, [],

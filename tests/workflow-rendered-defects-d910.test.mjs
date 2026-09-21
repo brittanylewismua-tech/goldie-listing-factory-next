@@ -8,7 +8,7 @@ const app=readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url)
 const css=readFileSync(new URL("../app/interface-v2.css",import.meta.url),"utf8");
 
 test("D910: a returned Step 1 and a finished Step 2 each render one footer source",()=>{
-  assert.match(app,/workflowStep==="designs"&&<FactoryFooter status=\{running/);
+  assert.match(app,/workflowStep==="review"&&<FactoryFooter status=\{running/);
   assert.match(app,/\{!\(complete&&workflowStep==="designs"\)&&<div className="workflow-footer-actions">/);
   assert.match(app,/\{complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer">/);
 });
@@ -34,7 +34,7 @@ test("D910: footer controls remain visible and aligned",()=>{
 });
 
 test("D910: bundle language and one-column listing states tell the truth",()=>{
-  assert.match(app,/Check artwork, colors, sizes, pricing, shipping, and listing photos\./);
+  assert.match(app,/Choose listing photos and confirm the finished prices and shipping\./);
   assert.match(css,/factory-listing-grid:has\(>\.factory-form-card:only-child\)/);
 });
 

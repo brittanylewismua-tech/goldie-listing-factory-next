@@ -36,8 +36,8 @@ test("a source with no refresh time cannot make the figure look fresh", () => {
 
 test("stale is the same day used to call a source stale elsewhere", () => {
   assert.equal(STALE_AFTER_SECONDS, DAY);
-  const financial = src("../app/api/shop-map/financial/route.ts");
-  assert.match(financial, /> 86_400/,
+  const financial = src("../app/financial-month-read.ts");
+  assert.match(financial, /<=STALE_AFTER_SECONDS/,
     "two definitions of stale would let the card and the reason disagree");
   assert.equal(isStale(now - DAY - 1, now), true);
   assert.equal(isStale(now - DAY + 1, now), false);

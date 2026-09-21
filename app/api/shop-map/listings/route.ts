@@ -6,6 +6,8 @@ import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import { ensureListingTables, decodeEntities } from "@/app/shop-map-listings";
+import { listingDisplay, listingPhoto } from "@/app/etsy-listing-display";
+import { etsySaleValues } from "@/app/etsy-sale-values";
 import { productFamily } from "@/app/product-type-utils";
 
 /**
@@ -98,7 +100,7 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
   for (const state of (listingsOnly ? STATES : [])) {
     for (let page = 0; page < maxPages; page += 1) {
       const answer = await etsy(
-        `/shops/${shopId}/listings?state=${state}&limit=100&offset=${page * 100}&includes=Images`);
+        `/shops/${shopId}/listings?state=${state}&limit=100&offset=${page * 100}`);
       /*
         A state the granted scope does not permit answers with an error rather
         than an empty list. That is recorded, not retried and not guessed at.
@@ -107,6 +109,7 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
       const results = ((answer.body as { results?: Listing[] })?.results) ?? [];
       if (!results.length) break;
 
+      const display = await listingDisplay(results.map(row => Number(row.listing_id)), "finance", connection.token);
       for (const listing of results) {
         const listingId = Number(listing.listing_id ?? 0);
         if (!listingId) continue;
@@ -114,8 +117,7 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
         const views = typeof listing.views === "number" ? listing.views : null;
         const favorites = typeof listing.num_favorers === "number" ? listing.num_favorers : null;
         const created = Number(listing.original_creation_timestamp ?? listing.created_timestamp ?? 0) || null;
-        const imageUrl = String(listing.images?.[0]?.url_570xN
-          ?? listing.images?.[0]?.url_fullxfull ?? "");
+        const imageUrl = listingPhoto(display.get(listingId) ?? listing);
         if (views !== null) fieldsSeen.views += 1;
         if (favorites !== null) fieldsSeen.favorites += 1;
         if (created) fieldsSeen.created += 1;
@@ -175,7 +177,8 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
           const transactionId = Number(line.transaction_id ?? 0);
           const listingId = Number(line.listing_id ?? 0);
           if (!transactionId || !listingId) continue;
-          const price = (line.price ?? {}) as Record<string, unknown>;
+          const values=etsySaleValues(receipt,line,now);
+          if(!values)continue;
           await db.prepare(
             `INSERT INTO shop_map_listing_sales
                (user_id, shop_id, listing_id, transaction_id, receipt_id, quantity,
@@ -183,11 +186,10 @@ export const POST = withErrorLog("shop-map-listings", async (request: Request) =
              VALUES (?,?,?,?,?,?,?,?,?,?)
              ON CONFLICT(user_id, shop_id, transaction_id) DO UPDATE SET
                refunded = excluded.refunded, quantity = excluded.quantity,
-               price_minor = excluded.price_minor`)
+               price_minor = excluded.price_minor, currency = excluded.currency,
+               sold_at = excluded.sold_at, receipt_id = excluded.receipt_id`)
             .bind(user.userId, shopId, listingId, transactionId, receiptId,
-              Number(line.quantity ?? 1) || 1, Math.round(Number(price.amount ?? 0)),
-              String(price.currency_code ?? "USD"),
-              Number(line.paid_timestamp ?? line.created_timestamp ?? 0) || now, refunded)
+              values.quantity, values.priceMinor, values.currency, values.soldAt, refunded)
             .run();
           salesStored += 1;
         }

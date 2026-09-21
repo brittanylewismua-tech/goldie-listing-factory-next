@@ -4,16 +4,11 @@ import { readFile } from "node:fs/promises";
 
 const app = await readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8");
 
-test("D961: Back from Final review returns to the rendered Listing screen", () => {
-  const start = app.indexOf("async function goBackOneStep()");
-  const end = app.indexOf("function canOpenStep", start);
-  const back = app.slice(start, end);
-  assert.match(back, /await enterListingDetails\(\)/);
-  assert.doesNotMatch(back, /setFinishPhase\([^\n]*"mockups"/);
-  assert.doesNotMatch(back, /setFinishPhase\([^\n]*"etsy"/);
-});
-
-test("D961: no visible workflow entry point sends a seller to the retired mockups phase", () => {
-  const withoutRestore = app.replace(/setFinishPhase\(restoredFinishPhase[\s\S]*?\);setBulkTitles/, "setBulkTitles");
-  assert.doesNotMatch(withoutRestore, /setFinishPhase\("mockups"\)/);
+test("Back follows the restored listing-details, Etsy-details, photos, final-review sequence",()=>{
+  const back=app.slice(app.indexOf("async function goBackOneStep()"),app.indexOf("function canOpenStep"));
+  assert.match(back,/progressIndex===6\)return void await enterListingDetails\(\)/);
+  assert.match(back,/progressIndex===7\)return openEtsyStage\(\)/);
+  assert.match(back,/openPhotoStage\(\)/);
+  assert.match(app,/function openPhotoStage\(\)[^]*?goToStep\("designs",false,true\)/);
+  assert.match(app,/function openEtsyStage\(\)[^]*?goToStep\("finish",false,true\)/);
 });

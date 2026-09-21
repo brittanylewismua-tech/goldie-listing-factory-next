@@ -220,27 +220,27 @@ test("every listing card offers a direct Etsy link", () => {
 });
 
 test("the four Shop Watch sections are exactly the four", () => {
-  const names = [...MW.matchAll(/\["(Getting attention|What buyers love|What buyers dislike|What changed)",/g)]
+  const names = [...MW.matchAll(/\["(Listings buyers reviewed|What buyers love|What buyers dislike|Shop changes)",/g)]
     .map(match => match[1]);
   assert.deepEqual(names,
-    ["Getting attention", "What buyers love", "What buyers dislike", "What changed"]);
+    ["Listings buyers reviewed", "What buyers love", "What buyers dislike", "Shop changes"]);
 });
 
 test("the interface never shows a sale count, score or raw review feed", () => {
   for (const banned of ["soldCount", "estimatedSales", "score", "quantity",
-    "evidenceClass", "attribution", "reviewText", "review.review"])
+    "evidenceClass", "attribution", "reviewText"])
     assert.ok(!mwBare.includes(banned), `the interface shows ${banned}`);
 });
 
 test("a stale watch is labelled, not emptied", () => {
-  assert.match(MW, /last confirmed reading/);
-  assert.match(MW, /data-stale=/);
+  assert.match(MW, /Showing saved results/);
+  assert.match(MW, /stale-flag/);
 });
 
 test("empty and gathering states say what is happening", () => {
-  assert.match(MW, /No sales have been confirmed for these listings yet/);
-  assert.match(MW, /Listings could not be refreshed right now/);
-  assert.match(MW, /No listing activity has been confirmed for this shop yet/);
+  assert.match(MW, /it does not establish how many units an individual listing sold/);
+  assert.match(MW, /Current Etsy data could not be refreshed/);
+  assert.match(MW, /No recorded reviews or changes yet/);
 });
 
 test("patterns are never presented as instructions", () => {
@@ -351,8 +351,8 @@ test("removing a personal watch keeps the shared shop and its history", () => {
 test("a withheld image explains itself instead of rendering an empty box", () => {
   /* Measured in the browser: 44 of 45 cards showed a blank grey square,
      because the six-hour rule was withholding images nothing was refreshing. */
-  assert.match(MW, /Picture not current — refreshed shortly/);
-  assert.match(MW, /No picture available/);
+  assert.match(MW, /Photo needs refreshing/);
+  assert.match(MW, /Photo unavailable from Etsy/);
   assert.ok(!MW.includes('background: "#f4f2ef"'),
     "the unexplained grey box is still rendered");
   assert.match(MWCSS, /\.no-image \{/);

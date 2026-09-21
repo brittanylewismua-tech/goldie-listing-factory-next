@@ -17,7 +17,7 @@ const stroke = {
 
 const TOOLS = [
   {
-    href: "/listing-factory",
+    href: "/listing-factory?step=setup",
     name: "Listing Factory",
     what: "Create one Etsy listing or build a batch.",
     desktopOnly: true,
@@ -27,7 +27,7 @@ const TOOLS = [
   {
     href: "/market-watch",
     name: "Market Watch",
-    what: "Track the niches and shops you care about.",
+    what: "Compare Etsy listings for your keywords and watched shops.",
     desktopOnly: false,
     icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
       <path d="M3 17l6-6 4 4 7-7" /><path d="M14 8h7v7" /></svg>,
@@ -59,7 +59,7 @@ const TOOLS = [
 ];
 
 
-export default function HomeView({ firstName = "Britt" }: { firstName?: string }) {
+export default function HomeView() {
   const [today, setToday] = useState<Date | null>(null);
   useEffect(() => setToday(new Date()), []);
   const greeting = !today ? "Welcome back" : today.getHours() < 12
@@ -70,7 +70,7 @@ export default function HomeView({ firstName = "Britt" }: { firstName?: string }
       {today && <p className="home-dashboard-date"><span />{new Intl.DateTimeFormat("en-US", {
         weekday: "long", month: "long", day: "numeric",
       }).format(today)}</p>}
-      <h1>{greeting}, {firstName}.</h1>
+      <h1>{greeting}.</h1>
       <p className="hub-intro">What do you want to work on?</p>
     </header>
 

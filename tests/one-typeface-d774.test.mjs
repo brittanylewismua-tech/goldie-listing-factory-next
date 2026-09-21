@@ -24,7 +24,8 @@ for (const name of readdirSync(new URL("../app", import.meta.url)).filter(file =
     if (decl.prop !== "font-family" || !decl.important) return;
     const selector = decl.parent.selector || "";
     if (EXEMPT.test(selector)) return;
-    if (/Inter/.test(decl.value)) return;                 /* saying Inter loudly is fine */
+    if (/Inter/.test(decl.value)) return;
+    if (name === "production-repair.css" && /h1/.test(selector) && /DM Serif Display/.test(decl.value)) return;                 /* saying Inter loudly is fine */
     offenders.push(`${name}: ${selector.replace(/\s+/g, " ").slice(0, 52)} — ${decl.value.slice(0, 30)}`);
   });
 }

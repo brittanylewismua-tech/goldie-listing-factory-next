@@ -29,6 +29,7 @@ type Result = {
   opportunity?: string;
   evidence?: string;
   refusal?: { kind: string; because: string };
+  allowanceCharged?:boolean;
   scope?: string;
   /* Whether the design is about the niche at all, as distinct from whether it
      is built like the listings that are moving in it. */
@@ -303,7 +304,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
         <section className="history p-card-quiet">
           <h2>Your scans</h2>
           {history.map(row => (
-            <button key={row.id} onClick={() => { setResult(row.result); setNiche(row.niche); }}>
+            <button key={row.id} onClick={() => { setResult(row.result); setNiche(row.niche); if(row.artworkHash!==artworkHash){setPreview("");setDataUrl("");setArtworkHash("");} }}>
               {row.niche}
               <span className="when"> · {new Date(row.createdAt * 1000).toLocaleDateString()}</span>
               {/* What it said, so a list of seven scans is not seven identical
@@ -388,7 +389,7 @@ function ScanResult({ result }: { result: Result }) {
           {/* A refused comparison still measured the artwork, and that
               measurement is often the more useful half. */}
           <ImageQuality quality={result.imageQuality} />
-          <div className="refusal"><p>{result.refusal?.because}</p></div>
+          <div className="refusal"><p>{result.refusal?.because}</p>{result.allowanceCharged===false&&<p>No scan was used from your allowance.</p>}</div>
         </div>
       )}
 

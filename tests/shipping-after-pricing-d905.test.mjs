@@ -26,5 +26,5 @@ test("D905: direct draft creation does not claim pricing and shipping happen fir
   assert.doesNotMatch(create,/Review previews, prices, and shipping|enabled variants reviewed and approved/);
   assert.match(create,/confirmDrafts\(\)/);
   assert.doesNotMatch(app,/enabled variants reviewed and approved/);
-  assert.match(gates,/Choose the Etsy shipping profile after approving the finished prices on the Images step/);
+  assert.match(gates,/Choose the Etsy shipping profile on the pricing and shipping editor/);
 });

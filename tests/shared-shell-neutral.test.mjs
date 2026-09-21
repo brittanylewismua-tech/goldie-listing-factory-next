@@ -23,14 +23,14 @@ test("every desktop shell renders the Goldie Suite home link", () => {
      first group heading, and on the home page's eyebrow all at once. */
   assert.match(brand, /aria-label="Goldie Suite home"/);
   assert.match(strip(brand), />Goldie Suite</);
-  assert.equal((shell.match(/<SuiteBrand\s*\/>/g) ?? []).length, 1);
+  assert.equal((shell.match(/<SuiteBrand\s*\/>/g) ?? []).length, 2);
   assert.equal((workflow.match(/<SuiteBrand\s*\/>/g) ?? []).length, 1);
 });
 
 test("one nav exposes every member feature", () => {
   const shell = read("factory-shell.tsx");
   for (const destination of ["Home", "Listing Factory", "Market Watch", "Design Scanner",
-    "Shop Map", "Trademark Checker", "Batch History", "Keyword Banks"])
+    "Shop Map", "Trademark Tracker", "Batch History", "Keyword Banks"])
     assert.ok(shell.includes(`label: "${destination}"`), `${destination} is missing from the suite navigation`);
   const nav = read("suite-sidebar-nav.tsx");
   assert.match(nav, />Command Center</);
