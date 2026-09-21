@@ -19,7 +19,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - uses: cloudflare/wrangler-action@v3
+      - id: deploy
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: deploy --config wrangler.visual-audit.jsonc
+      - run: printf '%s' "${{ steps.deploy.outputs.deployment-url }}" > visual-audit-url.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: visual-audit-url
+          path: visual-audit-url.txt
