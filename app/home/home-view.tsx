@@ -59,7 +59,7 @@ const TOOLS = [
 ];
 
 
-export default function HomeView({ firstName = "Britt" }: { firstName?: string }) {
+export default function HomeView() {
   const [today, setToday] = useState<Date | null>(null);
   useEffect(() => setToday(new Date()), []);
   const greeting = !today ? "Welcome back" : today.getHours() < 12
@@ -70,7 +70,7 @@ export default function HomeView({ firstName = "Britt" }: { firstName?: string }
       {today && <p className="home-dashboard-date"><span />{new Intl.DateTimeFormat("en-US", {
         weekday: "long", month: "long", day: "numeric",
       }).format(today)}</p>}
-      <h1>{greeting}, {firstName}.</h1>
+      <h1>{greeting}.</h1>
       <p className="hub-intro">What do you want to work on?</p>
     </header>
 

@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "goldie-visual-audit-20260921",
+  "account_id": "81acaa875c17f523e6b248516ffac0e5",
+  "main": "./dist/server/scheduled-entry.mjs",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "no_bundle": true,
+  "workers_dev": true,
+  "preview_urls": true,
+  "rules": [
+    { "type": "ESModule", "globs": ["**/*.js", "**/*.mjs"] }
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist/client"
+  },
+  "vars": {
+    "GOLDIE_SITE_URL": "https://goldie-visual-audit-20260921.workers.dev",
+    "VISUAL_AUDIT_MODE": "fixtures-only"
+  },
+  "observability": { "enabled": false }
+}

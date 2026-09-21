@@ -47,7 +47,12 @@ export default async function StatePreviewPage(
     request from fixtures behind a closed network, so it reads no member data
     and can reach no provider. See app/api/dev/preview-ticket/route.ts.
   */
-  if (!user || !isOwner(user)) {
+  /* The isolated visual-audit worker has no database, storage, secrets,
+     provider bindings, custom domain or schedules. It can expose this fixture
+     surface without weakening the member app's owner-only route. */
+  const visualAudit = (env as unknown as { VISUAL_AUDIT_MODE?: string })
+    .VISUAL_AUDIT_MODE === "fixtures-only";
+  if ((!user || !isOwner(user)) && !visualAudit) {
     const db = (env as unknown as { DB: D1Database }).DB;
     const admitted = db
       ? await previewTicketValid(db, asked.ticket).catch(() => false)
