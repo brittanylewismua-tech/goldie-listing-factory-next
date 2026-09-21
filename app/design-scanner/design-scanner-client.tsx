@@ -370,7 +370,10 @@ function ScanResult({ result }: { result: Result }) {
             </p>
           )}
           <ImageQuality quality={result.imageQuality} />
-          {result.scope && <p className="scope">{result.scope}</p>}
+          {result.scope && <p className="scope">
+            This compares layout, contrast, and readability with Etsy listings that have
+            recorded buyer activity. Similar visual features do not establish demand for your design.
+          </p>}
           {result.working && result.working.length > 0 && (
             <div className="block">
               <h2>What is working</h2>
@@ -400,15 +403,14 @@ function ScanResult({ result }: { result: Result }) {
             <p>{result.trademark.summary}</p>
             {!result.trademark.registerReady && (
               <p className="loading">
-                The federal register is still loading, so this is not a
-                complete trademark search yet.
+                The trademark search is incomplete. Review the matching records before deciding whether to use the phrase.
               </p>
             )}
           </div>
         </div>
       )}
 
-      {result.evidence && <p className="evidence">{result.evidence}</p>}
+      {result.evidence && <p className="evidence">Recorded listing activity does not tell us how many units an individual listing sold.</p>}
     </section>
   );
 }
