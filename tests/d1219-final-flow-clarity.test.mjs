@@ -19,8 +19,8 @@ test("generated tags contain only relevant phrases selected from the current ban
 });
 
 test("D1219 makes Review batch delays and blockers explicit", () => {
-  assert.match(app, /Saving listing details…/);
-  assert.match(app, /await flushLatestListingFields\(\)/);
+  assert.match(app, /Opening final review…/);
+  assert.match(app, /Saving your latest listing changes before review…/);
   assert.match(app, /This is optional and does not block Review batch\./);
   assert.match(app, /failures\.push\(`Listing \$\{item\.index\+1\}: \$\{message\}`\)/);
   assert.match(app, /stopWith\("Some Etsy details were not saved\.",failures\)/);

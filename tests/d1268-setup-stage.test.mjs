@@ -5,7 +5,7 @@ import fs from "node:fs";
 const app=fs.readFileSync(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
 test("the first stage names both jobs that actually appear on its page",()=>{
-  assert.match(app,/\{label:"Product",index:1,title:"Choose your product",covers:\[1\]\}/);
+  assert.match(app,/\{label:"Product",index:1,title:"Choose product",covers:\[1\]\}/);
   assert.match(app,/setup: templateDetails&&productSelected&&!showProductLibrary[\s\S]*title: files\.length\?"Review your product and designs":"Add your designs"[\s\S]*title: "Start new listings", copy: "Choose one listing or a batch."/);
-  assert.doesNotMatch(app,/\{label:"Product",index:1,title:"Choose product"/);
+  assert.match(app,/STEP 1 OF 4/);
 });

@@ -7,23 +7,16 @@ const review=fs.readFileSync(new URL('../app/final-listing-review.tsx',import.me
 const tools=fs.readFileSync(new URL('../app/factory-tools.tsx',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../app/lilac-theme.css',import.meta.url),'utf8');
 
-test('D1268: the customer workflow preserves all seven stages',()=>{
+test('the Factory retains exactly Product, Drafts, Listing, Finish',()=>{
   const rail=app.slice(app.indexOf('const RAIL_STAGES'),app.indexOf('const WORKFLOW_HELP'));
-  assert.match(rail,/label:"Product"/);
-  assert.match(rail,/label:"Designs"/);
-  assert.match(rail,/label:"Final review"/);
-  for(const label of ['Create drafts','Listing details','Etsy details','Photos'])assert.ok(rail.includes(`label:"${label}"`));
-  assert.doesNotMatch(rail,/label:"Listing"|label:"Finish"|label:"Drafts"/);
-  assert.match(app,/STEP 1 OF 7/);
-  assert.match(app,/STEP 2 OF 7/);
-  assert.match(app,/STEP 3 OF 7/);
+  assert.deepEqual([...rail.matchAll(/label:"([^"]+)"/g)].map(match=>match[1]),['Product','Drafts','Listing','Finish']);
+  for(const step of [1,2,3,4])assert.ok(app.includes(`STEP ${step} OF 4`));
 });
 
-test('D1238: completed creation and completed restore open the review surface',()=>{
-  assert.match(app,/if\(!target\)return canonicalStep\(saved\)\?\?\(complete\?"finish":"setup"\)/);
-  assert.match(app,/if\(!requested\|\|!order\.includes\(requested as FinishPhase\)\)return safeSaved/);
-  assert.ok((app.match(/enterListingDetails\(\)/g)||[]).length>=2);
-  assert.match(app,/function openFinishedReview/);
+test('created drafts stay in Drafts and restored work preserves its saved place',()=>{
+  assert.match(app,/if\(!target\)return canonicalStep\(saved\)/);
+  assert.match(app,/if\(!requested\|\|!order.includes\(requested as FinishPhase\)\)return safeSaved/);
+  assert.ok((app.match(/setFinishPhase\("details"\);void goToStep\("designs",false,true\)/g)||[]).length===2);
 });
 
 test('D1238: listing cards expose exact readiness, price, and direct corrections',()=>{

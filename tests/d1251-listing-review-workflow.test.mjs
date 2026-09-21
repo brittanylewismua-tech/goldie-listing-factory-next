@@ -86,7 +86,7 @@ test("Review editing identifies the current listing instead of repeating the ove
   assert.match(app,/reviewEditing\?\.section==="description"[\s\S]*?title:"Edit descriptions"/);
   assert.match(app,/title:"Edit this listing",copy:"Update any section below, then return to Review\."/);
   assert.match(app,/finish: finishPhase==="details" \? \(reviewEditing\?reviewEditorHero/);
-  assert.match(app,/>Continue to listing details →/);
+  assert.match(app,/>Continue to listing details <span/);
   assert.match(app,/reviewEditing\?<button className="workflow-back review-return"[\s\S]{0,180}<span aria-hidden="true">←<\/span> Back to Review/);
   assert.match(app,/complete && workflowStep==="designs" && <div className="workflow-footer-actions post-draft-footer">\{reviewEditing\?null:<button className="workflow-back"/);
   assert.match(app,/if\(reviewEditing\)\{setReviewEditing\(null\);openFinishedReview\(false\);return\}/);
@@ -102,7 +102,7 @@ test("Review editors expose one unambiguous return and truthful save state",()=>
   assert.match(app,/reviewTasks\?reviewTasks\.has\(row\.task\):grouped\?row\.task===effectiveTask/);
   assert.match(app,/footerActions=\{rowOpen&&workflowStep==="designs"&&!reviewEditing/);
   assert.match(app,/onToggle=\{row\.report\|\|reviewEditing\?undefined:/);
-  assert.match(app,/\{!reviewEditing&&finishPhase==="mockups"&&<FactoryFooter status=\{imagesStepIssues\(\)\.length/);
+  assert.match(app,/\{!reviewEditing&&<FactoryFooter status=\{imagesStepIssues\(\)\.length/);
   assert.match(app,/batchAuthenticationRequired\?"Sign in to save":batchSaveConflict\?"Saving paused":batchHeldByAnotherTab\?"Saving paused in this tab":"Saved automatically"/);
 });
 

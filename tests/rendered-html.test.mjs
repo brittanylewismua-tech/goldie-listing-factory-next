@@ -1472,9 +1472,9 @@ test("labels every progress bubble with a short workflow name", async () => {
   ]);
   /* D222 · RAIL_STAGES carries the labels now, one per page, so the parallel
      nine-entry short-label array is gone. */
-  assert.match(page, /\{label:"Product",index:1,title:"Choose your product"/);
-  assert.match(page, /\{label:"Designs",index:2,title:"Add your artwork"/);
-  assert.match(page, /\{label:"Final review",index:8,title:"Review and save to Etsy Drafts"/);
+  assert.match(page, /\{label:"Product",index:1,title:"Choose product"/);
+  assert.match(page, /\{label:"Drafts",index:2,title:"Create and finish drafts"/);
+  assert.match(page, /\{label:"Finish",index:8,title:"Review \+ finish"/);
   assert.match(page, /<em className="progress-bubble-label">\{stage\.label\}<\/em>/);
   assert.match(page, /className="progress-bubble-label"/);
   assert.match(styles, /\.app-shell \.progress-bubble-label\{/);
@@ -1739,7 +1739,7 @@ test("acknowledges slow workflow actions immediately and blocks repeat clicks",a
   assert.match(workflow,/Loading product details…/);
   assert.match(workflow,/className="goldie-spinner"[\s\S]{0,120}Preparing \{included\.length\} products/);
   assert.match(workflow,/actionLock\.current/);
-  assert.match(page,/Preparing Etsy details…/);
+  assert.match(page,/Preparing Etsy details automatically…/);
   assert.doesNotMatch(page,/className="secondary-action prepare-etsy"/);
   assert.match(page,/aria-busy=\{running\|\|preparingEtsy\|\|Boolean\(bundleRun\)\}/);
   assert.match(page,/aria-busy=\{publishing\}/);
@@ -2003,7 +2003,7 @@ test("makes Batch History visual, identifiable, reversible, and truthful",async(
   assert.match(styles,/\.batch-history-thumbnail/);assert.match(styles,/\.batch-history-controls/);
 });
 
-test("D1238: the rail is seven stages, and every legacy phase has a home",async()=>{
+test("D1238: the rail is four stages, and every legacy phase has a home",async()=>{
   const page=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
 
   /* This test used to pin the Finish subrail: four phases nested under a fifth
@@ -2012,9 +2012,9 @@ test("D1238: the rail is seven stages, and every legacy phase has a home",async(
      What matters is that no legacy index was orphaned by the merge. */
   const stages=page.slice(page.indexOf("const RAIL_STAGES"),page.indexOf("const RAIL_TOP"));
   assert.match(stages,/\{label:"Product",index:1,.*covers:\[1\]\}/);
-  assert.match(stages,/\{label:"Designs",index:2,.*covers:\[2\]\}/,
+  assert.match(stages,/\{label:"Drafts",index:2,.*covers:\[2,3,4,7\]\}/,
     "design upload and draft creation share one screen");
-  assert.match(stages,/\{label:"Final review",index:8,.*covers:\[8\]\}/,
+  assert.match(stages,/\{label:"Finish",index:8,.*covers:\[8\]\}/,
     "every listing correction and final handoff share Review");
 
   const covered=[...stages.matchAll(/covers:\[([0-9,]+)\]/g)].flatMap(m=>m[1].split(",").map(Number));
@@ -2214,7 +2214,7 @@ test("keeps a forward path from setup, designs, and pricing after drafts exist (
    * for this batch" unreachable: choosing it disabled the only way forward.
    * See D110. */
   assert.match(app,/\(workflowStep==="designs"&&!complete\)\|\|\(workflowStep==="setup"&&Boolean\(templateDetails\)&&productSelected&&!failedBundleNames\(\)\.length&&!bundleCreationMode\)\?"active-panel":"hidden-panel"/);
-  assert.match(app,/!\(workflowStep==="review"\)\|\|complete/,
+  assert.match(app,/!\(workflowStep==="designs"\)\|\|complete/,
     "after drafts exist, upload and launch surfaces leave the page instead of stacking over product work");
   assert.match(app,/task:"draft-pricing"/);
   assert.match(app,/task:"draft-shipping"/);
@@ -2283,8 +2283,8 @@ test("D994: upload starts with the choices and primary workflow cards have a cri
 
 test("D903: the Images page describes only work performed on that page",async()=>{
   const app=await readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8");
-  assert.match(app,/designs: complete[\s\S]*title: "Review photos and final product choices"[\s\S]*title: "Create Printify drafts"/);
-  assert.match(app,/copy: "Choose listing photos and confirm the finished prices and shipping\."/);
+  assert.match(app,/designs: complete[\s\S]*title: "Finish your Printify drafts"[\s\S]*title: "Create Printify drafts"/);
+  assert.match(app,/copy: "Check artwork, colors, sizes, pricing, shipping, and listing photos\."/);
   assert.doesNotMatch(app,/choose and arrange the listing photos/);
 });
 
@@ -2351,7 +2351,7 @@ test("traverses every workflow phase with one shared gate and never enables an i
   assert.match(app,/issues\[0\]\|\|`\$\{progressStatus/);
   /* D545 - and a batch whose saving is paused because another tab holds it must
      not run work that costs credits and is then thrown away. */
-  assert.match(app,/\{!reviewEditing&&<FactoryFooter status=\{savingEtsyDetails/);
+  assert.match(app,/\{!reviewEditing&&\(!etsyDetailsPrepared\?<FactoryFooter status=\{preparingEtsy\?"Preparing Etsy details automatically…"/);
   assert.doesNotMatch(app,/className="secondary-action prepare-etsy"/);
   assert.match(app,/function markShippingEdit\(\)\{onApprovalChange\(false\)/);
   assert.doesNotMatch(app,/if\(!selectedProfile\|\|customDirty\)onApprovalChange/);
@@ -3054,7 +3054,7 @@ test("creating drafts stays on Images, and the final check says what is wrong �
   const afterCreate = app.slice(app.indexOf("const createdNow="), app.indexOf("const createdNow=") + 900);
   assert.doesNotMatch(afterCreate, /goToStep\("finish"/,
     "creating drafts must not leave the Images page");
-  assert.match(afterCreate, /enterListingDetails\(\)/,
+  assert.match(afterCreate, /goToStep\("designs",false,true\)/,
     "it opens the finished-listing review once drafts are ready");
 
   /* D438 · A short title is a warning, not a failure. It used to build the title,
@@ -3947,7 +3947,7 @@ test("a bundle's shared action sits below its products, not inside one — D486"
   assert.match(app, /footer:ReactNode=null,showCards=true,header:ReactNode=null\)\{\n\s*const sharedAction=Boolean\(footer\)/);
   /* D507 - step 2 lists no products at all now: the designs are uploaded once and
      carried to every product, so there is no per-product state to report there. */
-  assert.match(app, /stepProductCards\(bundleCardStatus\("images"\),null,!\(workflowStep==="review"\)\|\|complete,<aside/,
+  assert.match(app, /stepProductCards\(bundleCardStatus\("images"\),null,!\(workflowStep==="designs"\)\|\|complete,<aside/,
     "the designs step passes its action as a footer");
   assert.match(app, /<\/aside>,false\)\}/, "and asks for no cards");
 
@@ -4116,7 +4116,7 @@ test("a bundle run saves each product's work before moving on — D493", async (
   assert.match(body, /requestedStep\.current=workflowStep;/);
 
   // And the three product cards vanished the moment drafts existed.
-  assert.match(app, /,null,!\(workflowStep==="review"\)\|\|complete,<aside/);
+  assert.match(app, /,null,!\(workflowStep==="designs"\)\|\|complete,<aside/);
 });
 
 test("named listings stay distinguishable — D494", async () => {
@@ -5020,11 +5020,11 @@ test("steps 2, 3 and 4 are the same shape and no row is a bookmark — D541", as
      to be in. Keying it on finishPhase==="details" meant the button never swapped
      for Next step, because D221 had already made that phase permanent - so step 3
      had no way forward at all. */
-  assert.match(app, /\{!reviewEditing&&<FactoryFooter status=\{savingEtsyDetails/,
+  assert.match(app, /\{!reviewEditing&&\(!etsyDetailsPrepared\?<FactoryFooter status=\{preparingEtsy\?"Preparing Etsy details automatically…"/,
     "automatic Etsy preparation reports progress under the cards, while a focused editor keeps only its Review return");
   assert.doesNotMatch(app, /className="secondary-action prepare-etsy"/);
   assert.match(app, /const etsyDetailsPrepared=files\.length>0&&files\.every\(file=>Boolean\(file\.etsy\)\)/);
-  assert.match(app, /url\.searchParams\.set\("phase","etsy"\)/,
+  assert.doesNotMatch(app, /url\.searchParams\.set\("phase","etsy"\)/,
     "and the URL never claims a phase the app is not in");
 });
 

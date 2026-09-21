@@ -182,15 +182,15 @@ test("D224: no saved batch can land on a step that has no page", async () => {
   /* D623 widened this function - it now also refuses any value that is not a
      step at all - so the assertion is on what it must still do, not on the one
      line it used to be. */
-  assert.match(source, /function normalizeStep\(step:WorkflowStep\):WorkflowStep\{[\s\S]*?const known=canonicalStep\(step\)\?\?"connect";\s*return known;/,
-    "the restored Create stage remains a valid route");
+  assert.match(source, /function normalizeStep\(step:WorkflowStep\):WorkflowStep\{[\s\S]*?==="review"\?"designs":/,
+    "normalizeStep must still send review to designs");
   assert.match(source, /function goToStep\(rawStep:WorkflowStep,replace=false,force=false\)\{\s*const step=normalizeStep\(rawStep\);/);
 
   const setters = source.match(/setWorkflowStep\([^)]*\)/g) || [];
   for (const setter of setters) {
     const literal = /setWorkflowStep\(["'](\w+)["']/.exec(setter);
     if (literal) {
-      assert.ok(["connect","setup","designs","review","finish"].includes(literal[1]), `${setter} must target a real stage`);
+      assert.notEqual(literal[1], "review", `${setter} sends the seller to a page that does not exist`);
     } else {
       assert.match(setter, /normalizeStep/, `${setter} must normalise a non-literal step`);
     }
@@ -319,9 +319,8 @@ test("D376: every restored finish phase is one that actually renders", async () 
     assert.match(app, new RegExp(`if\\(task==="${task}"\\)return <`), `step 3 builds the ${task} panel`);
   }
 
-  /* And nothing may branch on the dead phase. */
-  assert.match(app, /finishPhase==="mockups"&&/,
-    "the restored photos stage has a footer and renders its product work");
+  /* Legacy photo bookmarks recover into the Drafts editor. */
+  assert.match(app, /finishPhase==="mockups"\)\{\s*setActiveTask\("photos"\);goToStep\("designs",true,true\)/);
 
   /* Restoring must launder the saved value, not trust it. */
   assert.match(app, /const safeSaved=drawableFinishPhase\(saved,complete\)/);
@@ -366,12 +365,12 @@ test("step 3 always has a way forward — D544", async () => {
   /* D767 · Both branches sit in the step's footer row now, the same one every
      other step uses. The rule is unchanged: exactly one of the two, chosen by
      whether the work is done, so there is never a step 3 with neither. */
-  const footer = app.slice(app.indexOf('{!reviewEditing&&<FactoryFooter status={savingEtsyDetails'));
+  const footer = app.slice(app.indexOf('{!reviewEditing&&(!etsyDetailsPrepared?<FactoryFooter'));
   assert.ok(footer.indexOf('className="workflow-next"') > 0, "the other branch is Next step");
   assert.ok(footer.indexOf('className="workflow-next"') < footer.indexOf("</FactoryFooter>}"), "in the same footer");
 
   // The URL is not allowed to claim a phase the app never enters.
-  assert.match(app, /url\.searchParams\.set\("phase","etsy"\)/);
+  assert.doesNotMatch(app, /url\.searchParams\.set\("phase","etsy"\)/);
   assert.match(app, /url\.searchParams\.set\("phase","details"\)/);
 
   /* And nothing may go back to gating step 3's forward button on the phase,

@@ -360,13 +360,10 @@ const PROGRESS_STEPS = ["Connect Printify","Choose product","Add designs","Revie
    indices no longer get bubbles of their own. The 0-8 indices are untouched, so
    every gate, status and deep link still resolves. */
 const RAIL_STAGES: Array<{label:string;title:string;index:number;covers:number[]}> = [
-  {label:"Product",index:1,title:"Choose your product",covers:[1]},
-  {label:"Designs",index:2,title:"Add your artwork",covers:[2]},
-  {label:"Create drafts",index:3,title:"Review and create Printify drafts",covers:[3,4]},
-  {label:"Listing details",index:5,title:"Titles, tags, and descriptions",covers:[5]},
-  {label:"Etsy details",index:6,title:"Category, attributes, and personalization",covers:[6]},
-  {label:"Photos",index:7,title:"Choose listing photos",covers:[7]},
-  {label:"Final review",index:8,title:"Review and save to Etsy Drafts",covers:[8]},
+  {label:"Product",index:1,title:"Choose product",covers:[1]},
+  {label:"Drafts",index:2,title:"Create and finish drafts",covers:[2,3,4,7]},
+  {label:"Listing",index:5,title:"Titles + Etsy details",covers:[5,6]},
+  {label:"Finish",index:8,title:"Review + finish",covers:[8]},
 ];
 /* D222 · RAIL_TOP, RAIL_PRICING, RAIL_DRAFTS, RAIL_FINISH, RAIL_FINISH_FIRST and
    FINISH_RAIL_LABELS described the old five-bubble rail with its nested Finish
@@ -1554,7 +1551,7 @@ export default function ListingFactoryApp() {
   const missingRequirement = !connected ? "Connect Printify first" : !listingRunMode ? "Choose one listing or a batch" : !productSelected ? "Choose or add a saved product" : !templateLoaded ? (loadingTemplateVersion>0?"Loading product details…":"Connect its Printify template") : files.length === 0 ? "Add at least one design" : !designsFinished ? `Checking ${designsPreparing} ${designsPreparing===1?"design":"designs"}\u2026` : "";
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
   const [activeTask,setActiveTask]=useState<string>("");
-  const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?(complete&&reviewEditing?8:complete&&finishPhase==="mockups"?7:2):running?4:3;
+  const progressIndex = workflowStep==="finish" ? finishPhase==="details"?5:finishPhase==="etsy"?6:finishPhase==="mockups"?7:8 : workflowStep==="connect"?0:workflowStep==="setup"?1:workflowStep==="designs"?(complete&&reviewEditing?8:2):running?4:3;
   const measuredCreationProgress=measuredDraftCreationPercent(draftCreationPhases,runTotal);
   const creationProgressComplete=runTotal>0&&processed>=runTotal;
   const creationProgressPercent=running?Math.max(3,creationProgressComplete?100:visibleDraftCreationPercent):0;
@@ -1948,8 +1945,8 @@ export default function ListingFactoryApp() {
     /* D220 · Draft creation is on this page now. If the drafts already exist the
        photos are below, so this moves on to the listing text; if they do not, the
        Create-drafts panel is what comes next and it is right here. */
-    if(complete)return void goToStep("review",false,true);
-    void goToStep("review",false,true);
+    if(complete)return void enterListingDetails();
+    document.querySelector(".launch-panel")?.scrollIntoView({block:"start"});
   }
   async function enterListingDetails(){
     if(activeBundle&&bundleRecipes.length>1&&bundleIndex!==0)await openBundleProduct(0);
@@ -1960,14 +1957,6 @@ export default function ListingFactoryApp() {
     await goToStep("finish",false,true);
     const url=new URL(window.location.href);url.searchParams.set("phase","details");window.history.replaceState({},"",url);
     window.scrollTo(0,0);
-  }
-  function openPhotoStage(){
-    setReviewEditing(null);setFinishPhase("mockups");setActiveTask("photos");goToStep("designs",false,true);
-    const url=new URL(window.location.href);url.searchParams.set("phase","mockups");window.history.replaceState({},"",url);
-  }
-  function openEtsyStage(){
-    setReviewEditing(null);setFinishPhase("etsy");goToStep("finish",false,true);
-    const url=new URL(window.location.href);url.searchParams.set("phase","etsy");window.history.replaceState({},"",url);
   }
   function openFinishedReview(replace=true){
     setReviewEditing(null);
@@ -2118,7 +2107,7 @@ export default function ListingFactoryApp() {
     /* D220 · Draft creation (3, 4) and mockups (7) live on the Images page now, so
        any legacy index pointing at them resolves there. Deep links and saved batch
        state still use the 0-8 numbering. */
-    const index=rawIndex;if(localPreview){if(index===0)return goToStep("connect",false,true);if(index===1)return goToStep("setup",false,true);if(index===2)return goToStep("designs",false,true);if(index>=3&&!templateDetails)await loadPreviewDemo();if(index===3||index===4)return goToStep("review",false,true);setFinishPhase(index===8?"final":"details");return goToStep("finish",false,true)}
+    const index=rawIndex===3||rawIndex===4||rawIndex===7?2:rawIndex;if(localPreview){if(index===0)return goToStep("connect",false,true);if(index===1)return goToStep("setup",false,true);if(index===2)return goToStep("designs",false,true);if(index>=3&&!templateDetails)await loadPreviewDemo();if(index===3||index===4)return goToStep("review",false,true);setFinishPhase(index===8?"final":"details");return goToStep("finish",false,true)}
     /* D1239 · Review is one top-level stage with several focused editors inside
        it. When a listing card sent the seller to titles, prices, or photos,
        clicking the active Review step was treated like advancing to the final
@@ -2130,7 +2119,7 @@ export default function ListingFactoryApp() {
     const targetStage=RAIL_STAGES.findIndex(stage=>stage.covers.includes(index));
     const movingBackward=targetStage>=0&&targetStage<stagePosition;
     if(!movingBackward){const issues=requiredForProgress(index);if(issues.length)return stopWith("Finish all sections first.",issues)}
-    if(index===0)return goToStep("connect",false,movingBackward);if(index===1)return goToStep("setup",false,movingBackward);if(index===2){setFinishPhase("details");setActiveTask("draft-artwork");goToStep("designs",false,movingBackward);const url=new URL(window.location.href);url.searchParams.set("phase","details");window.history.replaceState({},"",url);return;}if(index===3)return goToStep("review",false,movingBackward);if(index===4){goToStep("review",false,movingBackward);return createDrafts()}if(index===5)return enterListingDetails();if(index===6)return openEtsyStage();if(index===7)return openPhotoStage();setFinishPhase("final");goToStep("finish",false,movingBackward)}
+    if(index===0)return goToStep("connect",false,movingBackward);if(index===1)return goToStep("setup",false,movingBackward);if(index===2)return goToStep("designs",false,movingBackward);if(index===3)return goToStep("review",false,movingBackward);if(index===4){goToStep("review",false,movingBackward);return createDrafts()}if(index===5||index===6)return enterListingDetails();setFinishPhase("final");goToStep("finish",false,movingBackward)}
 
   async function goBackOneStep(){
     if(!await confirmUploadInterruption())return;
@@ -2140,9 +2129,7 @@ export default function ListingFactoryApp() {
     if(progressIndex===2)return goToStep("setup",false,true);
     if(progressIndex===3||progressIndex===4)return goToStep(progressIndex===3?"designs":"review",false,true);
     if(progressIndex===5)return goToStep("review",false,true);
-    if(progressIndex===6)return void await enterListingDetails();
-    if(progressIndex===7)return openEtsyStage();
-    openPhotoStage();
+    await enterListingDetails();
   }
 
   function canOpenStep(step:WorkflowStep){if(localPreview)return true;if(step==="connect")return true;if(step==="setup")return connected&&etsyConnected;if(step==="designs")return connected&&etsyConnected&&productSelected&&templateLoaded;if(step==="review")return etsyConnected&&ready;return etsyConnected&&productSelected&&complete}
@@ -2156,7 +2143,7 @@ export default function ListingFactoryApp() {
        of the five would render a hero of undefined, so an unknown value settles
        on the first step rather than taking the page down. */
     const known=canonicalStep(step)??"connect";
-    return known;
+    return known==="review"?"designs":known;
   }
   /* D487 - opening a saved batch at ?step=setup landed on "Connect your
      accounts", with both accounts shown as connected and verified, and stayed
@@ -3960,7 +3947,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
     const titled=files.filter(item=>(item.title||"").trim()).length;
     const titleSetsReady=files.every(item=>Boolean(item.title.trim()&&item.tags.length));
     const showListing=(id:string,source:HTMLElement)=>{const editor=source.closest(".factory-listing-screen")?.querySelector<HTMLElement>(".factory-listing-grid"),draft=drafts.find(item=>item.clientId===id);setActiveDesign(id);if(draft?.id)setReviewEditing({id:draft.id,clientId:id,section:reviewEditing?.section});window.requestAnimationFrame(()=>window.requestAnimationFrame(()=>editor?.scrollIntoView({block:"start"})))};
-    const focusedSection=reviewEditing?.clientId===design.id?(reviewEditing.section||"title"):finishPhase==="etsy"?"etsy":null;
+    const focusedSection=reviewEditing?.clientId===design.id?(reviewEditing.section||"title"):null;
     if(focusedSection){
       const focusedBody=focusedSection==="title"?titlesRows(undefined,true)
         :focusedSection==="description"?descriptionRows(undefined,true)
@@ -4029,7 +4016,7 @@ done:started&&counts.designs>0&&counts.titled===counts.designs,advice:started&&c
             values from the editable Etsy details directly beside it, forcing
             the seller to scan the same information twice. The actual editor
             now occupies that column, where the duplicate checklist used to be. */}
-        {finishPhase!=="details"&&<div className="factory-etsy-details-column">{etsyRows(design)}</div>}
+        <div className="factory-etsy-details-column">{etsyRows(design)}</div>
       </div>
       {files.length>1&&<nav className="factory-listing-next" aria-label="Move between listings"><button type="button" disabled={index===0} onClick={event=>showListing(files[index-1].id,event.currentTarget)}>← Previous listing</button><span>Listing {index+1} of {files.length}</span><button type="button" disabled={index===files.length-1} onClick={event=>showListing(files[index+1].id,event.currentTarget)}>Next listing →</button></nav>}
     </div>;
@@ -5156,7 +5143,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
            listing-photo tools appear on THIS page the moment the drafts exist, so
            this stays put and scrolls to them. Leaving Images is the Next step
            button's job, and that button refuses until every listing has a photo. */
-        void enterListingDetails();
+        setFinishPhase("details");void goToStep("designs",false,true);
       }else{
         setComplete(false);
         stopWith(
@@ -5411,12 +5398,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       /* D226 · Drafts have just been created, so the sidebar quota is now stale. */
       setUsageRevision(current=>current+1);
       /* D221 · Etsy details live on the Listing page; there is no separate phase to move to. */
-      setFinishPhase("etsy");
+      setFinishPhase("details");
       /* D544 - this wrote phase=etsy while the line above sets the state to
          "details", so the URL disagreed with the app. Reloading then restored a
          phase the app never actually uses and step 3 behaved differently before
          and after a refresh. The URL says what is true. */
-      const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","etsy");window.history.replaceState({},"",url);
+      const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","details");window.history.replaceState({},"",url);
       window.scrollTo(0,0);
     }finally{
       if(version===etsyPreparationVersion.current)setPreparingEtsy(false);
@@ -5426,7 +5413,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   async function saveAllEtsyDetails(){
     if(batchSaveConflict)return void stopWith("Reload the saved batch first.",[batchSaveConflict]);if(etsySaveActive.current)return;const unfinished=files.filter(file=>!etsyRequiredComplete(file.etsy));if(unfinished.length)return void stopWith("Finish every Etsy listing first.",unfinished.map(file=>`${file.name} still needs Etsy details.`));const invalid=files.map(file=>({file,problem:personalizationProblem(file.etsy)})).filter(item=>item.problem);if(invalid.length)return void stopWith("Finish the personalization options first.",invalid.map(item=>`${item.file.name}: ${item.problem}`));etsySaveActive.current=true;++etsyPreparationVersion.current;setPreparingEtsy(false);setSavingEtsyDetails(true);try{const failures:string[]=[];if(!localPreview)await runBounded(files.map((design,index)=>({design,index})),2,async item=>{try{await syncListingFields(item.design,item.design.etsy!);return true}catch(error){const message=error instanceof Error?error.message:"Etsy details could not be saved.";recordListingSyncError(item.design.id,message);failures.push(`Listing ${item.index+1}: ${message}`);return false}});if(failures.length)return void stopWith("Some Etsy details were not saved.",failures);if(activeRecipe){const physical=Object.fromEntries((files[0]?.etsy?.properties||[]).filter(property=>PHYSICAL_ETSY_FIELDS.test(property.label)&&property.value.trim()).map(property=>[property.label,property.value]));if(Object.keys(physical).length){const updated={...activeRecipe,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}};const response=await fetch("/api/product-recipes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:activeRecipe.id,name:activeRecipe.name,templateUrl:activeRecipe.templateUrl,etsyDefaults:{...activeRecipe.etsyDefaults,...physical}})});if(response.ok)setActiveRecipe(updated)}}/* D221 · Photos moved to the Images page, so completing Etsy details moves on to
        the Publish page rather than to a phase that no longer renders. */
-      openPhotoStage();window.scrollTo(0,0)}finally{etsySaveActive.current=false;setSavingEtsyDetails(false)}}
+      setFinishPhase("final");const url=new URL(window.location.href);url.searchParams.set("step","finish");url.searchParams.set("phase","final");window.history.replaceState({},"",url);window.scrollTo(0,0)}finally{etsySaveActive.current=false;setSavingEtsyDetails(false)}}
   /* D485 - a bundle made her press "Create Printify drafts" once per product,
      walking each one through the step by hand, when step 1 had already collected
      colours, sizes, prices and shipping for all of them at once. One press now
@@ -5605,7 +5592,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       setBundleCompletionRevision(current=>current+1);
       const sourceMember=members.find(member=>member.recipe.id===sourceRecipe.id);
       const sourcePricingApproved=Boolean(sourceMember?.results.length)&&sourceMember!.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved));
-      setPricingApproved(sourcePricingApproved);setBundleApproved(Object.fromEntries(members.map(member=>[member.recipe.id,member.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved))])));setComplete(Boolean(sourceMember?.results.some(draft=>draft.status==="Created"&&draft.id)));setUsageRevision(current=>current+1);setGoalRevision(current=>current+1);void enterListingDetails();
+      setPricingApproved(sourcePricingApproved);setBundleApproved(Object.fromEntries(members.map(member=>[member.recipe.id,member.results.every(draft=>!draft.costReview?.required||Boolean(draft.costReview.verified&&draft.costReview.approved))])));setComplete(Boolean(sourceMember?.results.some(draft=>draft.status==="Created"&&draft.id)));setUsageRevision(current=>current+1);setGoalRevision(current=>current+1);setFinishPhase("details");void goToStep("designs",false,true);
       /* The canonical results already live on the server. Release the review
          screen immediately while its Batch History snapshot finishes; the
          existing save guard still protects that short final write. */
@@ -5689,10 +5676,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
   const editingAllListingDetails=Boolean(reviewEditing&&(reviewEditing.section==="title"||reviewEditing.section==="description"));
   const focusedReviewSummary=reviewEditing?(editingAllListingDetails?`${files.length} ${files.length===1?"listing":"listings"}`:`Listing ${Math.max(1,files.findIndex(file=>file.id===reviewEditing.clientId)+1)} of ${files.length}`):"";
   const reviewEditorHero=reviewEditing?.section==="title"
-    ?{eyebrow:"STEP 7 OF 7 · REVIEW",title:"Edit titles and tags",copy:"Update every listing below, then return to Review."}
+    ?{eyebrow:"STEP 4 OF 4 · REVIEW",title:"Edit titles and tags",copy:"Update every listing below, then return to Review."}
     :reviewEditing?.section==="description"
-      ?{eyebrow:"STEP 7 OF 7 · REVIEW",title:"Edit descriptions",copy:"Update the shared description or any listing below, then return to Review."}
-      :{eyebrow:"STEP 7 OF 7 · REVIEW",title:"Edit this listing",copy:"Update any section below, then return to Review."};
+      ?{eyebrow:"STEP 4 OF 4 · REVIEW",title:"Edit descriptions",copy:"Update the shared description or any listing below, then return to Review."}
+      :{eyebrow:"STEP 4 OF 4 · REVIEW",title:"Edit this listing",copy:"Update any section below, then return to Review."};
   const heroSummary = workflowStep==="connect"
     ? undefined
     : workflowStep==="setup"
@@ -5714,20 +5701,19 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
          and eyebrow both still read PRODUCT. The rail's own stage title is
          "Choose product", so that is the name three places already agree on. The
          title stays put; the copy carries the state. */
-      ? { eyebrow: "STEP 1 OF 7", title: files.length?"Review your product and designs":"Add your designs", copy: "" }
+      ? { eyebrow: "STEP 1 OF 4", title: files.length?"Review your product and designs":"Add your designs", copy: "" }
       : !listingRunMode
-        ? { eyebrow: "STEP 1 OF 7", title: "Start new listings", copy: "Choose one listing or a batch." }
+        ? { eyebrow: "STEP 1 OF 4", title: "Start new listings", copy: "Choose one listing or a batch." }
         : listingRunMode==="single"
-          ? { eyebrow: "STEP 1 OF 7", title: "Choose your product", copy: "Select the saved product for this listing." }
-          : { eyebrow: "STEP 1 OF 7", title: "Choose products", copy: "Select a saved product or product bundle for this batch." },
+          ? { eyebrow: "STEP 1 OF 4", title: "Choose your product", copy: "Select the saved product for this listing." }
+          : { eyebrow: "STEP 1 OF 4", title: "Choose products", copy: "Select a saved product or product bundle for this batch." },
     designs: complete
       ? reviewEditing
         ? reviewEditorHero
-        : finishPhase!=="mockups"?{eyebrow:"STEP 2 OF 7",title:"Review your artwork",copy:"Check the artwork on each finished product."}
-        : { eyebrow: "STEP 6 OF 7", title: "Review photos and final product choices", copy: "Choose listing photos and confirm the finished prices and shipping." }
-      : { eyebrow: "STEP 2 OF 7", title: "Review your artwork", copy: "Check your designs before creating the drafts." },
-    review: complete?{eyebrow:"STEP 3 OF 7",title:"Your Printify drafts are created",copy:"Continue with the listing text for these saved drafts."}:{ eyebrow: "STEP 3 OF 7", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
-    finish: finishPhase==="details" ? (reviewEditing?reviewEditorHero:{eyebrow:"STEP 4 OF 7",title:"Titles, tags, and descriptions",copy:"Finish the words buyers will see for each listing."}) : finishPhase==="etsy" ? {eyebrow:"STEP 5 OF 7",title:"Review Etsy details",copy:"Choose the category, attributes, and personalization for each listing."} : { eyebrow: "STEP 7 OF 7", title: "Review your listings", copy: bundleProductsStillReading().length||!draftAvailabilitySettled?"Checking your saved drafts.":etsyDraftTransferState==="complete"?"Your Etsy drafts were created and verified.":etsyDraftTransferState==="working"?"Your Etsy drafts are being created and checked.":handoffBlockers().length?"Fix the missing items shown on the listing cards.":"Everything is ready. Save the batch to Etsy Drafts." },
+        : { eyebrow: "STEP 2 OF 4", title: "Finish your Printify drafts", copy: "Check artwork, colors, sizes, pricing, shipping, and listing photos." }
+      : { eyebrow: "STEP 2 OF 4", title: "Create Printify drafts", copy: "Check the products and designs below, then create the drafts." },
+    review: complete?{eyebrow:"STEP 2 OF 4",title:"Your Printify drafts are created",copy:"Continue with the listing text for these saved drafts."}:{ eyebrow: "STEP 2 OF 4", title: "Create Printify drafts", copy: "Review the plan, then create the private drafts." },
+    finish: finishPhase==="details" ? (reviewEditing?reviewEditorHero:{eyebrow:"STEP 3 OF 4",title:"Finish your listing details",copy:"Review titles, tags, descriptions, and Etsy details."}) : finishPhase==="etsy" ? {eyebrow:"STEP 3 OF 4",title:"Review Etsy details",copy:"Choose the category, attributes, and personalization for each listing."} : { eyebrow: "STEP 4 OF 4", title: "Review your listings", copy: bundleProductsStillReading().length||!draftAvailabilitySettled?"Checking your saved drafts.":etsyDraftTransferState==="complete"?"Your Etsy drafts were created and verified.":etsyDraftTransferState==="working"?"Your Etsy drafts are being created and checked.":handoffBlockers().length?"Fix the missing items shown on the listing cards.":"Everything is ready. Save the batch to Etsy Drafts." },
   }[workflowStep];
   const workflowHelp=workflowStep==="designs"
     ?complete
@@ -6265,7 +6251,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                 drafts do not exist, the forward once they do. */}
               {/* D728 - prototype .goldie-footer: the designs step's forward
                   action and its status share one bar. Same gate, same handler. */}
-              {workflowStep==="setup"&&<FactoryFooter status={setupForwardReady?`${files.length} ${files.length===1?"listing":"listings"} in this batch`:templateError||missingRequirement||failedBundleNames()[0]||`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`}><button className="workflow-next" disabled={!setupForwardReady} onClick={()=>goToStep("designs")}>{setupForwardReady?"Continue to designs":templateError||missingRequirement||"Finish the product above"} {setupForwardReady&&<span>→</span>}</button></FactoryFooter>}</>}
+              {workflowStep==="setup"&&<FactoryFooter status={setupForwardReady?`${files.length} ${files.length===1?"listing":"listings"} in this batch`:templateError||missingRequirement||failedBundleNames()[0]||`Preparing ${designsPreparing} ${designsPreparing===1?"design":"designs"}…`}><button className="workflow-next" disabled={!setupForwardReady} onClick={()=>goToStep("designs")}>{setupForwardReady?"Continue to drafts":templateError||missingRequirement||"Finish the product above"} {setupForwardReady&&<span>→</span>}</button></FactoryFooter>}</>}
               {workflowStep==="setup"&&files.length>0&&complete&&<FactoryFooter status="Your Printify drafts are ready"><button className="workflow-next" onClick={()=>goToStep("designs")}>Continue to drafts <span>→</span></button></FactoryFooter>}
             </div>
           </article>
@@ -6296,11 +6282,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               {/* D1303 · Focused editors used to repeat the same blocker and
                   correction button in the work area and the persistent footer.
                   Keep one reason and one next action in the predictable footer. */}
-              {!reviewEditing&&<FactoryFooter status={savingEtsyDetails?"Saving listing details…":preparingEtsy?"Preparing Etsy details…":"Your changes save automatically."}>
-                {finishPhase==="details"?<button className="workflow-next" disabled={preparingEtsy} onClick={()=>void continueToEtsyDetails()}>Continue to Etsy details →</button>
-                  :<button className="workflow-next" disabled={savingEtsyDetails} onClick={()=>void saveAllEtsyDetails()}>Continue to photos →</button>}
-              </FactoryFooter>}
-
+              {!reviewEditing&&(!etsyDetailsPrepared?<FactoryFooter status={preparingEtsy?"Preparing Etsy details automatically…":progressGateIssues(6)[0]||"Etsy details are preparing automatically."}/>:(()=>{const issues=progressGateIssues(7),priceTarget=costReviewDrafts().find(draft=>draft.status==="Created"&&!draft.costReview?.approved),canOpenPricing=Boolean(priceTarget)||(!gateState().pricingApproved&&costReviewGroups().length>0);const openPricing=()=>{if(priceTarget)editReviewedListing("pricing",priceTarget);else{setActiveTask("draft-pricing");goToStep("designs",false,true)}};return <FactoryFooter status={savingEtsyDetails?"Saving your latest listing changes before review…":issues[0]||"Every listing is ready for review"}><button className="workflow-next" aria-busy={savingEtsyDetails} disabled={savingEtsyDetails||Boolean(issues.length&&!canOpenPricing)} title={issues[0]} onClick={canOpenPricing?openPricing:()=>void saveAllEtsyDetails()}>{savingEtsyDetails?"Opening final review…":canOpenPricing?"Review item prices":"Review batch"} <span>→</span></button></FactoryFooter>})())}
             </>)}
           {workflowStep==="finish"&&finishPhase==="final"&&((bundleProductsStillReading().length||!draftAvailabilitySettled)?<section className="listing-review-gate is-saving bundle-final-loading" role="status" aria-live="polite"><b>{bundleProductsStillReading().length?"Loading every product in this batch…":draftAvailability.status==="error"?"The Printify drafts could not be confirmed.":"Checking every Printify draft…"}</b><p>{bundleProductsStillReading().length?"Checking the saved listings, prices, photos, and Etsy details before showing the final review.":draftAvailability.status==="error"?(draftAvailability.error||"Try the check again before saving to Etsy."):"Making sure the drafts still exist before showing the final review."}</p>{draftAvailability.status==="error"?<button type="button" className="secondary-action" onClick={()=>setDraftAvailabilityRevision(value=>value+1)}>Try again</button>:null}</section>:stepProductCards(bundleCardStatus("publish"),null,false,<>{/* D497 - publish covered one product until D495, so these cards kept their
     own open controls. Now one press publishes the whole bundle, and a card
@@ -6434,7 +6416,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             designs are shared across the bundle, the Printify drafts are not. It
             stays mounted across steps, so the rail takes the hidden state rather
             than the tree changing shape and remounting a panel mid-run. */}
-        {stepProductCards(bundleCardStatus("images"),null,!(workflowStep==="review")||complete,<aside className={`launch-panel workflow-panel ${workflowStep==="review"&&!complete?"active-panel":"hidden-panel"}`}>
+        {stepProductCards(bundleCardStatus("images"),null,!(workflowStep==="designs")||complete,<aside className={`launch-panel workflow-panel ${workflowStep==="designs"&&!complete?"active-panel":"hidden-panel"}`}>
           <div className={`step-number launch-step-icon create-drafts-icon`} aria-hidden="true"/>
           <div className="launch-top">
             <Image src="/goldie-g.png" width={2000} height={2000} alt="" className="goldie-g" />
@@ -6465,7 +6447,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
 
           {!complete ? (
             <>
-            {workflowStep==="review"&&<FactoryFooter status={running||preparingEtsy||Boolean(bundleRun)?preparationMessage||"Creating private Printify drafts…":bundleQualityGroups.length?`Review ${bundleQualityGroups.length} resolution ${bundleQualityGroups.length===1?"warning":"warnings"} above`:!ready?missingRequirement:activeBundle?`${files.length} design${files.length===1?"":"s"} · ${bundleRecoveryOnly?files.length:requestedListingCount} drafts to create`:`${files.length} ${files.length===1?"listing":"listings"} will be created`}><button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || bundleQualityGroups.length>0 || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>
+            {workflowStep==="designs"&&<FactoryFooter status={running||preparingEtsy||Boolean(bundleRun)?preparationMessage||"Creating private Printify drafts…":bundleQualityGroups.length?`Review ${bundleQualityGroups.length} resolution ${bundleQualityGroups.length===1?"warning":"warnings"} above`:!ready?missingRequirement:activeBundle?`${files.length} design${files.length===1?"":"s"} · ${bundleRecoveryOnly?files.length:requestedListingCount} drafts to create`:`${files.length} ${files.length===1?"listing":"listings"} will be created`}><button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || bundleQualityGroups.length>0 || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>
               {/* D485 - one press covers the whole bundle, so the button says so
                   rather than naming a single product, and reports which product
                   The Listing Factory is on while it works through them. */}
@@ -6486,8 +6468,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         {batchAuthenticationRequired&&<div className="batch-tab-conflict" role="alert"><b>Sign in again to save your changes.</b><span>Your changes are still here. Sign in, then return to this tab. Saving will retry automatically.</span><a href="/account/sign-in?return_to=%2Flisting-factory" target="_blank" rel="noopener noreferrer">Sign in to The Listing Factory ↗</a><button type="button" onClick={retryAuthenticatedSave}>Retry now</button></div>}
         {batchSaveConflict&&<div className="notice error" role="alert"><strong>Saving paused</strong><p>{batchSaveConflict}</p><button type="button" onClick={()=>void reloadConflictedBatch()}>Reload saved batch</button></div>}
             {batchHeldByAnotherTab&&<div className="batch-tab-conflict" role="status"><b>This batch is open in another tab.</b><span>Saving is paused here so the other tab is not overwritten. Continue in the other tab, or reload the latest saved version here to take over.</span><button type="button" onClick={takeOverBatchHere}>Reload saved batch here</button></div>}
-        {complete&&workflowStep==="review"&&<section className="listing-review-gate"><h2>{bundlePublishDrafts().filter(draft=>draft.status==="Created").length} Printify drafts created</h2><p>Your saved drafts are ready for listing details.</p><button className="workflow-next" onClick={()=>void enterListingDetails()}>Continue to listing details →</button></section>}
-        {!complete&&workflowStep==="designs"&&<FactoryFooter status={missingRequirement||"Review your artwork before creating drafts."}><button className="workflow-next" disabled={!setupForwardReady} onClick={continueFromDesigns}>Review draft plan →</button></FactoryFooter>}
         {!(complete&&workflowStep==="designs")&&<div className="workflow-footer-actions">{reviewEditing?null:progressIndex>0&&<button className="workflow-back" type="button" onClick={goBackOneStep}><span aria-hidden="true">←</span> Back</button>}<span className="autosave-note"><i aria-hidden="true">{batchAuthenticationRequired||batchSaveConflict||batchHeldByAnotherTab?"!":"✓"}</i> {batchAuthenticationRequired?"Sign in to save":batchSaveConflict?"Saving paused":batchHeldByAnotherTab?"Saving paused in this tab":"Saved automatically"}</span>{/* D776 - the step's own footer (status + forward) lands here, so the bar the seller can see is the bar with the way forward in it. */}<span className="factory-footer-slot"/>{reviewEditing?<button className="workflow-back review-return" type="button" onClick={()=>openFinishedReview(false)}><span aria-hidden="true">←</span> Back to Review</button>:<>{/* D386 - Saving a draft was only reachable from the Publish step, so
                 stopping halfway meant trusting the autosave and remembering the
                 batch later. Name it and park it from wherever you are. */}{workflowStep!=="connect"&&!(workflowStep==="finish"&&finishPhase==="final")&&(files.length>0||drafts.length>0||Boolean(templateDetails))&&<button className="save-draft-link" type="button" onClick={()=>{setBatchDisplayName(current=>current||suggestedBatchName());saveDialogOpener.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setDraftSaveOpen(true)}}>Save to Batch History</button>}</>}</div>}
@@ -6524,9 +6504,8 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             from a paragraph under the button to the left of the bar the button
             sits in, so the step states its own gate in one place. The button
             below is unchanged: same gate check, same handler. */}
-        {!reviewEditing&&finishPhase!=="mockups"&&<FactoryFooter status="Review the artwork on your saved drafts."><button className="workflow-next" onClick={()=>goToStep("review",false,true)}>Continue to created drafts →</button></FactoryFooter>}
-        {!reviewEditing&&finishPhase==="mockups"&&<FactoryFooter status={imagesStepIssues().length?(()=>{const next=unfinishedDraftGuidance();return <span className="draft-next-guidance"><span>{imagesStepIssues()[0]}</span>{next&&!savingDraftVariants&&!switchingProduct&&!restoringBatch&&<button type="button" className="draft-fix-link" onClick={()=>openGuidedDraftTask(next.task,next.index)}>Open {next.label.toLowerCase()}{activeBundle&&bundleRecipes.length>1?` · ${next.name}`:""} <span aria-hidden="true">↑</span></button>}</span>})():"Product choices, pricing, shipping, and photos are ready"}>
-        <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */openFinishedReview(false)}}>Continue to final review <span aria-hidden="true">→</span></button>
+        {!reviewEditing&&<FactoryFooter status={imagesStepIssues().length?(()=>{const next=unfinishedDraftGuidance();return <span className="draft-next-guidance"><span>{imagesStepIssues()[0]}</span>{next&&!savingDraftVariants&&!switchingProduct&&!restoringBatch&&<button type="button" className="draft-fix-link" onClick={()=>openGuidedDraftTask(next.task,next.index)}>Open {next.label.toLowerCase()}{activeBundle&&bundleRecipes.length>1?` · ${next.name}`:""} <span aria-hidden="true">↑</span></button>}</span>})():"Product choices, pricing, shipping, and photos are ready"}>
+        <button className="workflow-next" type="button" disabled={imagesStepIssues().length>0} title={imagesStepIssues()[0]} onClick={()=>{const missing=createdListingsMissingImages();if(missing.length){setImageStepError(`${missing.length} ${missing.length===1?"listing needs":"listings need"} at least one photo.`);setMissingPhotoDraftIds(missing.map(draft=>draft.clientId));return}setImageStepError("");setMissingPhotoDraftIds([]);/* D427 - one Next step on this page, and it is the one that checks every listing has a photo. The second copy in the card list bypassed that check entirely. Goes to Listing, not Publish. */setFinishPhase("details");void enterListingDetails()}}>Continue to listing details <span aria-hidden="true">→</span></button>
         </FactoryFooter>}
         </>
         ,true,
@@ -6566,7 +6545,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                  to make it again on the page behind. */
               const undecided=bundleQualityGroups.filter(group=>group.keys.some(key=>!bundleQualityDecisions[key]));
               if(undecided.length){decideAllQuality("include");beginDraftCreation();return}
-              if(complete){void goToStep("finish",false,true)}else{void goToStep("review",false,true)}}}>Proceed anyway</button></div></section></div>}
+              if(complete){void goToStep("finish",false,true)}else{document.querySelector(".launch-panel")?.scrollIntoView({block:"start"})}}}>Proceed anyway</button></div></section></div>}
 
       <footer><span>LISTING FACTORY</span><span>BE A WOLF BIZ · 2026</span></footer>
       <SupportChat screen={workflowScreen(workflowStep,finishPhase,complete)} />

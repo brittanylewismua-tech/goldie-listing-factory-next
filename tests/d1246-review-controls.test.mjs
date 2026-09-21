@@ -17,7 +17,7 @@ test("D1246: Review names the exact missing item without tool jargon",()=>{
 });
 
 test("D1246: Etsy details remain automatic without a manual preparation control",()=>{
-  assert.match(app,/Preparing Etsy details…/);
+  assert.match(app,/Preparing Etsy details automatically…/);
   assert.doesNotMatch(app,/className="secondary-action prepare-etsy"/);
   assert.doesNotMatch(app,/>Prepare Etsy details</);
   assert.match(footer,/children\?: ReactNode/);

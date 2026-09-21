@@ -8,7 +8,7 @@ const clarity=readFileSync(new URL("../app/clarity-pass.css",import.meta.url),"u
 test("D965: Step 2 renders one phase and one forward path",()=>{
   assert.match(app,/workflowStep==="designs"&&!complete/,
     "the upload/review surface must leave the page after drafts exist");
-  assert.match(app,/!\(workflowStep==="review"\)\|\|complete/,
+  assert.match(app,/!\(workflowStep==="designs"\)\|\|complete/,
     "the draft-launch surface must leave the page after drafts exist");
   assert.equal((app.match(/Back to finishing your listings/g)||[]).length,0,
     "Step 2 must never describe forward movement as going back");
