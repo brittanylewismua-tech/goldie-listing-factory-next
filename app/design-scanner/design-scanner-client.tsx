@@ -78,7 +78,7 @@ const currentLabel = (overall: string) => RETIRED_LABELS[overall] ?? overall;
 
 const STAGES = [
   "Reading your design",
-  "Finding listings with verified movement in this niche",
+  "Finding listings with recorded buyer activity",
   "Comparing how they are built",
 ];
 

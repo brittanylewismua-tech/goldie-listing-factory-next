@@ -794,7 +794,7 @@ test.skip("makes keyword bank saving unmistakable and prevents accidental duplic
   assert.match(home,/href="\/keywords" target="_blank"/);assert.match(home,/href="\/mockups" target="_blank"/);
 });
 
-test("creates unique validated AI titles in bulk with per-listing overrides", async()=>{
+test("creates validated AI titles in bulk with per-listing overrides", async()=>{
   const [page,tools,intelligence]=await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx",import.meta.url),"utf8"),
     readFile(new URL("../app/factory-tools.tsx",import.meta.url),"utf8"),
@@ -805,7 +805,7 @@ test("creates unique validated AI titles in bulk with per-listing overrides", as
   assert.match(page,/removeBatchKeyword/);assert.match(page,/clearBatchKeywords/);assert.match(page,/Applied to every listing/);
   assert.match(page,/Create a different title with AI/);assert.match(page,/Create title for this design/);
   assert.match(page,/autoTitleForDesign/);assert.match(page,/tags:item\.result\.tags/);
-  assert.match(page,/separately ranked Etsy tags created/);assert.match(page,/<KeywordBank compact selectionOnly/);
+  assert.match(page,/and Etsy tags created/);assert.match(page,/<KeywordBank compact selectionOnly/);
   /* D541 - the promise moved with the block that held it; this is the copy that
      carries it now, in the title builder itself. */
   assert.match(page,/completedGeneratedTags/);
