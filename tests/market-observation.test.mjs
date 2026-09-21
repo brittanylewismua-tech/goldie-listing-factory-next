@@ -297,7 +297,7 @@ test("a partly-read ingest file is resumed before a newer daily file starts", ()
   const tick = readFileSync(new URL(
     "../app/api/trademark/ingest-tick/route.ts", import.meta.url), "utf8");
   assert.match(tick, /DAILY FIRST, BUT NOT DAILY FOREVER/);
-  assert.match(tick, /WHERE state = 'partial' ORDER BY priority ASC/);
+  assert.match(tick, /WHERE state = 'partial' AND \(retry_after IS NULL OR retry_after <= \?\)\s+ORDER BY priority ASC/);
   assert.match(tick, /const next = resuming \?\?/);
 });
 

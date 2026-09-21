@@ -19,6 +19,7 @@
  */
 import { blocks, singleEntryDeflateStream } from "@/app/uspto-bulk";
 import { normalize, squeeze, readRecord, worthKeeping, type RegisterHit } from "@/app/trademark-record";
+import { TRADEMARK_ARCHIVE_DAY, trademarkFileDay } from "@/app/trademark-import-coverage";
 
 export { normalize, squeeze, readRecord, worthKeeping, PRINTED_CLASSES } from "@/app/trademark-record";
 export type { RegisterHit } from "@/app/trademark-record";
@@ -98,6 +99,25 @@ export async function ensureRegisterTables(db: D1Database): Promise<void> {
   await db.prepare(
     `CREATE INDEX IF NOT EXISTS tm_marks_squeezed ON tm_marks (squeezed)`).run();
 
+  for (const column of ["source_day TEXT NOT NULL DEFAULT ''", "searchable INTEGER NOT NULL DEFAULT 1"]) {
+    try {
+      await db.prepare(`ALTER TABLE tm_marks ADD COLUMN ${column}`).run();
+    } catch (error) {
+      if (!/duplicate column/i.test(error instanceof Error ? error.message : "")) throw error;
+    }
+  }
+  // Previously, importing the archive after a daily file could restore old
+  // wording or a cancelled mark. Replay the existing daily files once so their
+  // source dates and removals protect them from all subsequent older imports.
+  await db.prepare(`CREATE TABLE IF NOT EXISTS tm_ingest_repairs (id TEXT PRIMARY KEY)`).run();
+  await db.batch([
+    db.prepare(`UPDATE tm_ingest_files SET state = 'waiting', done_records = 0,
+      records = 0, kept = 0, finished = NULL, retry_after = NULL, strikes = 0, repeats = 0
+      WHERE product = 'TRTDXFAP' AND state = 'done' AND name LIKE '%.zip'
+        AND NOT EXISTS (SELECT 1 FROM tm_ingest_repairs WHERE id = 'source-day-v1')`),
+    db.prepare(`INSERT OR IGNORE INTO tm_ingest_repairs (id) VALUES ('source-day-v1')`),
+  ]);
+
   /*
     Backfill for rows written before the column existed. Derived in SQL from
     `normalized`, which is exactly what squeeze() does to it, so the two can
@@ -106,8 +126,8 @@ export async function ensureRegisterTables(db: D1Database): Promise<void> {
   */
   await db.prepare(
     `UPDATE tm_marks SET squeezed = REPLACE(normalized, ' ', '')
-      WHERE squeezed = '' AND serial IN (
-        SELECT serial FROM tm_marks WHERE squeezed = '' LIMIT 50000)`).run()
+      WHERE squeezed = '' AND normalized <> '' AND serial IN (
+        SELECT serial FROM tm_marks WHERE squeezed = '' AND normalized <> '' LIMIT 50000)`).run()
     .catch(() => {});
 }
 
@@ -122,11 +142,12 @@ const WRITE_BATCH = 100;
  */
 export async function ingestFile(
   db: D1Database,
-  file: { name: string; url: string; product: string },
+  file: { name: string; url: string; product: string; covers?: string },
   apiKey: string,
   options: { deadline?: number; skip?: number } = {},
 ): Promise<{ records: number; kept: number; complete: boolean }> {
   const deadline = options.deadline ?? Date.now() + 240_000;
+  const sourceDay = trademarkFileDay(file);
   /* A file too big to finish inside one firing is resumed by number of
      records, not by byte offset: a deflate stream cannot be re-entered part
      way, but skipping records already written costs only the inflating, and
@@ -153,15 +174,17 @@ export async function ingestFile(
   };
 
   const insert = db.prepare(
-    `INSERT INTO tm_marks (serial, normalized, squeezed, mark, owner, registration, status_code, classes, updated)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO tm_marks (serial, normalized, squeezed, mark, owner, registration, status_code, classes, updated, source_day, searchable)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(serial) DO UPDATE SET
        normalized = excluded.normalized, squeezed = excluded.squeezed,
        mark = excluded.mark, owner = excluded.owner,
        registration = excluded.registration, status_code = excluded.status_code,
-       classes = excluded.classes, updated = excluded.updated`,
+       classes = excluded.classes, updated = excluded.updated,
+       source_day = excluded.source_day, searchable = excluded.searchable
+     WHERE excluded.source_day >= tm_marks.source_day`,
   );
-  const drop = db.prepare(`DELETE FROM tm_marks WHERE serial = ?`);
+  const drop = db.prepare(`DELETE FROM tm_marks WHERE serial = ? AND source_day <= ?`);
 
   for await (const block of blocks(xml, "case-file")) {
     records += 1;
@@ -181,11 +204,19 @@ export async function ingestFile(
           record.statusCode,
           record.classes.join(","),
           now,
+          sourceDay,
+          1,
         ),
       );
-    } else if (!record.live) {
-      /* A mark that has died since we last saw it must stop being a warning. */
-      pending.push(drop.bind(record.serial));
+    } else if (sourceDay > TRADEMARK_ARCHIVE_DAY) {
+      // Keep only a small, non-searchable removal record. Without it, a later
+      // import of an older file could resurrect a cancelled/design-only mark.
+      pending.push(insert.bind(record.serial, "", "", "", "", "", record.statusCode,
+        "", now, sourceDay, 0));
+    } else {
+      // The archive predates every daily update; its millions of old dead
+      // records need no tombstones and cannot delete newer versions.
+      pending.push(drop.bind(record.serial, sourceDay));
     }
     if (pending.length >= WRITE_BATCH) await flush();
     /* Stop cleanly rather than being killed mid-file: the file stays unfinished
@@ -244,10 +275,10 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
       */
       `SELECT mark, owner, serial, registration, classes, status_code
          FROM tm_marks
-        WHERE normalized = ?1
+        WHERE searchable = 1 AND (normalized = ?1
            OR normalized LIKE ?2
            OR normalized = ?4
-           OR squeezed = ?3
+           OR squeezed = ?3)
         LIMIT 200`,
     )
     .bind(normalized, `${words[0]} %`, squeezed, words[0])
@@ -277,9 +308,9 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
 }
 
 export async function registerSize(db: D1Database): Promise<{ marks: number; files: { state: string; count: number }[] }> {
-  const marks = await db.prepare(`SELECT COUNT(*) AS n FROM tm_marks`).first<{ n: number }>();
+  const marks = await db.prepare(`SELECT COUNT(*) AS n FROM tm_marks WHERE searchable = 1`).first<{ n: number }>();
   const files = await db
-    .prepare(`SELECT state, COUNT(*) AS n FROM tm_ingest_files GROUP BY state`)
+    .prepare(`SELECT state, COUNT(*) AS n FROM tm_ingest_files WHERE name LIKE '%.zip' GROUP BY state`)
     .all<{ state: string; n: number }>();
   return {
     marks: Number(marks?.n ?? 0),

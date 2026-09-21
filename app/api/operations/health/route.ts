@@ -249,9 +249,9 @@ export const GET = withErrorLog("operations-health", async () => {
 
   await probe("trademarkIngest", async () => {
     const files = await db.prepare(
-      `SELECT state, COUNT(*) AS n FROM tm_ingest_files GROUP BY state`)
+      `SELECT state, COUNT(*) AS n FROM tm_ingest_files WHERE name LIKE '%.zip' GROUP BY state`)
       .all<{ state: string; n: number }>();
-    const marks = await db.prepare(`SELECT COUNT(*) AS n FROM tm_marks`)
+    const marks = await db.prepare(`SELECT COUNT(*) AS n FROM tm_marks WHERE searchable = 1`)
       .first<{ n: number }>();
     const byState: Record<string, number> = {};
     for (const row of files.results ?? []) byState[row.state] = Number(row.n) || 0;

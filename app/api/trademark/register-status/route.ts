@@ -59,7 +59,7 @@ export const GET = withErrorLog("trademark-register-status", async (request: Req
   /* A handful of real marks, so the lookup can be exercised against rows that
      actually exist rather than a phrase somebody hoped would be in there. */
   const sample = new URL(request.url).searchParams.get("sample")
-    ? (await db.prepare(`SELECT mark, owner, classes, status_code FROM tm_marks LIMIT 8`).all()).results
+    ? (await db.prepare(`SELECT mark, owner, classes, status_code FROM tm_marks WHERE searchable = 1 LIMIT 8`).all()).results
     : undefined;
 
   return NextResponse.json({

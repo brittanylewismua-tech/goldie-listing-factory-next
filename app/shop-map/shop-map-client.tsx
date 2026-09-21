@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { monthName } from "@/app/shop-map-month";
+import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
 type Niche = {
   worldId: string; label: string; listings: number; activeListings: number;
@@ -72,6 +73,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const [soldDays,setSoldDays]=useState(90);
   const [selectedMonth,setSelectedMonth]=useState("");
   const [refreshing,setRefreshing]=useState(false);
+  const [syncingMoney,setSyncingMoney]=useState(false);
+  const [moneyRefreshError,setMoneyRefreshError]=useState("");
   const requestSequence=useRef(0);
   const load = useCallback(async () => {
     const sequence=++requestSequence.current;
@@ -87,6 +90,20 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setLastGood(next);
   },[soldDays,selectedMonth]);
   useEffect(() => { void load(); }, [load]);
+
+  const refreshMoney = async () => {
+    if (syncingMoney) return;
+    setSyncingMoney(true);
+    setMoneyRefreshError("");
+    try {
+      await refreshShopFinances();
+    } catch (error) {
+      setMoneyRefreshError(error instanceof Error ? error.message : "Your numbers could not be refreshed. Try again.");
+    } finally {
+      await load();
+      setSyncingMoney(false);
+    }
+  };
 
   /*
     The browser knows where the member is; Shop Map asks rather than assumes.
@@ -256,6 +273,9 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
     {tab === "money" && <section className="shop-map-card shop-map-money shop-map-money-redesign">
       <label className="shop-map-period">Month <input type="month" value={selectedMonth||shown.month||""} onChange={event=>setSelectedMonth(event.target.value)}/></label><h2>Monthly profit</h2>
+      <button type="button" className="shop-map-confirm" disabled={syncingMoney} onClick={()=>void refreshMoney()}>{syncingMoney ? "Refreshing your numbers…" : "Refresh your numbers"}</button>
+      {syncingMoney&&<p role="status">Getting the latest sales, Etsy fees, and production costs. This may take a few minutes.</p>}
+      {moneyRefreshError&&<p role="alert" className="shop-map-reason">{moneyRefreshError}</p>}
       {refreshing?<p role="status">Loading this month’s totals…</p>:shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
         {detected ? <button className="shop-map-confirm" disabled={busy === "timezone"} onClick={() => void confirmTimezone()}>
           {busy === "timezone" ? "Saving…" : `My shop runs on ${detected}`}</button> : null}</>

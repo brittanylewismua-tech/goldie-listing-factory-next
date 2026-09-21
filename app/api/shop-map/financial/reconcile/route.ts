@@ -2,7 +2,6 @@ import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { classifyReceipt, classifyOrphan } from "@/app/finance-reconcile";
 import { periodsFor, periodOf, partialReason } from "@/app/finance-periods";
@@ -38,7 +37,7 @@ export async function GET() {
 export const POST = withErrorLog("shop-map-financial-reconcile", async (request: Request) => {
   if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
+  if (!user)
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
   await ensureFinanceTables();

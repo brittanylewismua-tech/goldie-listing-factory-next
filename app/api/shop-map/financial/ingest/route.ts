@@ -2,7 +2,6 @@ import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
-import { isOwner } from "@/app/mastermind/access";
 import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
@@ -46,7 +45,7 @@ export async function GET() {
 export const POST = withErrorLog("shop-map-financial-ingest", async (request: Request) => {
   if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const user = await getChatGPTUser();
-  if (!user || !isOwner(user))
+  if (!user)
     return NextResponse.json({ error: "Not authorized." }, { status: 403 });
 
   await ensureFinanceTables();
@@ -233,7 +232,7 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
   const previousComplete=await db.prepare(`SELECT refreshed_at FROM finance_sources WHERE user_id=? AND shop_id=? AND source='receipts-complete'`)
     .bind(user.userId,shopId).first<{refreshed_at:number}>();
   const maxReceiptPages = Math.min(40, Math.max(1, Number(parameters.get("receipts")) || 6));
-  const backfill = parameters.get("backfill") === "1";
+  const backfill = parameters.get("backfill") === "1" || !Number(previousComplete?.refreshed_at);
 
   for (let page = 0; page < maxReceiptPages; page += 1) {
     /*
@@ -316,14 +315,14 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
     .bind(user.userId).first<{ encrypted_token: string }>();
   let productionRows = 0;
   let orphans = 0;
+  let productionComplete=false;
+  let productionError=stored ? "" : "Connect Printify to refresh production costs.";
   if (stored) {
     const token = await decryptPrintifyToken(
       stored.encrypted_token, (env as unknown as { PRINTIFY_TOKEN_KEY: string }).PRINTIFY_TOKEN_KEY);
     const pairing=await db.prepare("SELECT DISTINCT printify_shop_id FROM shop_pairing_proofs WHERE user_id=? AND etsy_shop_id=?").bind(user.userId,shopId).all<{printify_shop_id:number}>();
     if(pairing.results.length!==1) return NextResponse.json({error:"Connect the matching Printify store before refreshing production costs."},{status:409});
     const printifyShop=Number(pairing.results[0].printify_shop_id);
-    let productionComplete=false;
-    let productionError="";
     for (let page = 1; page <= maxOrderPages; page += 1) {
       const response = await printifyCall(
         `https://api.printify.com/v1/shops/${printifyShop}/orders.json?limit=50&page=${page}`,
@@ -387,6 +386,8 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
     .bind(user.userId, shopId).all<{ window_from: number; window_to: number; state: string }>();
 
   return NextResponse.json({
+    complete: !receiptFailure && !productionError && productionComplete && !windowErrors.length && !remaining.results?.length,
+    errors: [receiptFailure, productionError, ...windowErrors].filter(Boolean),
     etsyCalls: calls,
     ledger: { windowsPlanned: planned.length, staleWindowsSuperseded: superseded,
       windowsCompletedThisRun: windowsDone,

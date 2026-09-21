@@ -132,7 +132,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
     const post = async (url: string) => {
       const response = await fetch(url, { method: "POST" });
       const body = await response.json().catch(() => ({})) as {
-        error?: string; ledger?: { windowsOutstanding?: number }; salesStored?: number;
+        error?: string; complete?: boolean; errors?: string[]; ledger?: { windowsOutstanding?: number }; salesStored?: number;
       };
       if (!response.ok) throw new Error(body.error || "The import did not finish.");
       return body;
@@ -147,6 +147,8 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
         for (let pass = 0; pass < 3 && Number(finance.ledger?.windowsOutstanding ?? 0) > 0; pass += 1)
           finance = await post(
             "/api/shop-map/financial/ingest?windows=25&receipts=6&orders=10");
+        if (!finance.complete) throw new Error(finance.errors?.[0] || "Some financial history still needs to load. Use Refresh your numbers in Shop Map to continue.");
+        await post("/api/shop-map/financial/reconcile");
 
         /* A receipt can contain several sold listings. Walk enough bounded
            pages for the owner's known shop history, while the route safely

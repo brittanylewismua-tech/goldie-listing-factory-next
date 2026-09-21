@@ -6,6 +6,7 @@ import { env } from "cloudflare:workers";
 import { filesFromProduct, productFilesUrl } from "@/app/uspto-bulk";
 import { ensureRegisterTables, ingestFile, registerSize } from "@/app/trademark-register";
 import { isRateLimit, retryAfter, throttledOut, throttledOutNote } from "@/app/uspto-backoff";
+import { trademarkImportRanges } from "@/app/trademark-import-coverage";
 
 /**
  * ONE BULK FILE PER FIRING.
@@ -29,26 +30,16 @@ function key() {
   return (env as unknown as { USPTO_API_KEY?: string }).USPTO_API_KEY?.trim() || "";
 }
 
-/* Enough recent days to cover a gap of a fortnight without a special path. */
-const DAILY_DAYS = 21;
 /* How many identical failures before a file is parked regardless of what its
    error says. Three is enough to rule out a bad minute and small enough that
    one bad file cannot cost the queue a day. */
 const REPEATED_FAILURE_LIMIT = 3;
 const DEADLINE_MS = 120_000;
 
-function isoDay(offsetDays: number) {
-  return new Date(Date.now() - offsetDays * 86_400_000).toISOString().slice(0, 10);
-}
-
 async function seed(db: D1Database): Promise<number> {
   const apiKey = key();
-  const wanted: Array<{ product: string; from: string; to: string; priority: number }> = [
-    /* Yesterday and the fortnight behind it: the current edge of the register. */
-    { product: "TRTDXFAP", from: isoDay(DAILY_DAYS), to: isoDay(0), priority: 1 },
-    /* Everything the office has ever registered, filled in behind. */
-    { product: "TRTYRAP", from: "2025-01-01", to: "2025-12-31", priority: 5 },
-  ];
+  // Every update since the archive is needed, including time before launch.
+  const wanted = trademarkImportRanges();
 
   let added = 0;
   for (const want of wanted) {
@@ -139,7 +130,9 @@ async function runTick(db: D1Database, request: Request) {
   const resuming = await db
     .prepare(
       `SELECT name, product, url, done_records, strikes, repeats, note FROM tm_ingest_files
-        WHERE state = 'partial' ORDER BY priority ASC, name DESC LIMIT 1`)
+        WHERE state = 'partial' AND (retry_after IS NULL OR retry_after <= ?)
+        ORDER BY priority ASC, name DESC LIMIT 1`)
+    .bind(new Date().toISOString())
     .first<{ name: string; product: string; url: string; done_records: number;
       strikes: number; repeats: number; note: string }>();
 
@@ -367,4 +360,3 @@ export const POST = withErrorLog("trademark-ingest-tick", async (request: Reques
       { status: 500 });
   }
 });
-
