@@ -25,7 +25,7 @@ function TransferProgress({targets,deliveries,busy,prepared,startedAt}:{targets:
   {!done&&<p>You can leave this page. The batch continues in the background.</p>}
  </section>;
 }
-const PhotoDeliveryHandoff=forwardRef<PhotoDeliveryHandle,{targets:Target[];beforePrepare:()=>Promise<unknown>;onReview?:(id:string,photos:boolean)=>void;onStatusReady?:(ready:boolean)=>void;onTransferState?:(state:TransferState)=>void}>(({targets,beforePrepare,onReview,onStatusReady,onTransferState},ref)=>{
+const PhotoDeliveryHandoff=forwardRef<PhotoDeliveryHandle,{targets:Target[];savedRevision?:string;beforePrepare:()=>Promise<unknown>;onReview?:(id:string,photos:boolean)=>void;onStatusReady?:(ready:boolean)=>void;onTransferState?:(state:TransferState)=>void}>(({targets,savedRevision="",beforePrepare,onReview,onStatusReady,onTransferState},ref)=>{
  const [statusKnown,setStatusKnown]=useState(false);
  useEffect(()=>{onStatusReady?.(statusKnown);return()=>onStatusReady?.(false)},[statusKnown,onStatusReady]);
  const [deliveries,setDeliveries]=useState<Delivery[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[loading,setLoading]=useState(true),[prepared,setPrepared]=useState<number|null>(null),[startedAt,setStartedAt]=useState(0),[preparationErrors,setPreparationErrors]=useState<Record<string,string>>({});
@@ -56,6 +56,14 @@ const PhotoDeliveryHandoff=forwardRef<PhotoDeliveryHandle,{targets:Target[];befo
  // Membership and selections both determine whether the verified package is still current.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[targetKey]);
+ // An autosave can finish after Final review mounts. Recheck the remote
+ // receipt when saved text or product options change, even if photos did not.
+ const lastSavedRevision=useRef(savedRevision);
+ useEffect(()=>{
+  if(lastSavedRevision.current===savedRevision)return;
+  lastSavedRevision.current=savedRevision;statusReads.current.invalidate();
+  setStatusKnown(false);polling.current=true;pollSchedule.current.next=0;
+ },[savedRevision]);
  useImperativeHandle(ref,()=>({prepare:async()=>{
   if(!statusKnown){setError('Check saved progress before preparing or updating Etsy drafts.');return false}
   if(partnersLoading){setError('Your Etsy production partners are still loading. Try again in a moment.');return false}
