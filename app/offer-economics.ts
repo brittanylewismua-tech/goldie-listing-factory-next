@@ -25,3 +25,13 @@ export function comparablePrices(rows:Array<{priceCents:number|null;currency:str
   return {currency:currencies[0],count:prices.length,min:prices[0],max:prices.at(-1)!,
     median:prices.length%2?prices[mid]:(prices[mid-1]+prices[mid])/2};
 }
+
+/** Preserve overlapping catalog quotes; model the higher cost, never pick a cheap rate. */
+export function shippingScenario(profiles:Array<{variant_ids:number[];countries:string[];first_item:{cost:number;currency:string}}>,variant:number,country:string){
+  const matching=profiles.filter(p=>p.variant_ids.includes(variant));
+  const exact=matching.filter(p=>p.countries.includes(country));
+  const choices=(exact.length?exact:matching.filter(p=>p.countries.includes('REST_OF_THE_WORLD'))).map(p=>p.first_item);
+  if(!choices.length||choices.some(q=>!q||!Number.isFinite(q.cost)||q.cost<0||!q.currency)||new Set(choices.map(q=>q.currency)).size!==1)return null;
+  const costs=choices.map(q=>q.cost);
+  return {cost:Math.max(...costs),minimum:Math.min(...costs),currency:choices[0].currency};
+}

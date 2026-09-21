@@ -1,6 +1,6 @@
 'use client';
 import {useState} from 'react';
-import {offerEconomics,comparablePrices,type OfferInputs} from '@/app/offer-economics';
+import {offerEconomics,comparablePrices,shippingScenario,type OfferInputs} from '@/app/offer-economics';
 import ActionPlan from './action-plan';
 import './tools.css';
 type Listing={listingId:number;title:string;priceCents:number|null;currency:string;displayFresh:boolean};
@@ -16,10 +16,7 @@ export default function OfferPlanner({listings,phrase,source}:{listings:Listing[
  const money=(v:number)=>new Intl.NumberFormat(undefined,{style:'currency',currency}).format(v);
  const load=async()=>{setBusy(true);setError('');setProduct(null);setCostCurrency('');try{const r=await fetch(`/api/command-center/product?product=${encodeURIComponent(productLink)}${shop?`&shop=${shop}`:''}`);const b=await r.json() as Product & {shops?:Array<{id:number;title:string}>;error?:string};if(!r.ok)throw Error(b.error);if(b.shops){setShops(b.shops);if(!b.shops.length)setError('No Printify shops are available.')}else setProduct(b);}catch(e){setError(e instanceof Error?e.message:'Product could not load.')}finally{setBusy(false)}};
  const variants=product?.variants.map(v=>{
-   const profiles=product.shipping.filter(s=>s.variant_ids.includes(v.id));
-   const exact=profiles.filter(s=>s.countries.includes(country));
-   const choices=exact.length?exact:profiles.filter(s=>s.countries.includes('REST_OF_THE_WORLD'));
-   const shipping=choices.length===1?choices[0].first_item:null;
+   const shipping=shippingScenario(product.shipping,v.id,country);
    const valid=costCurrency===currency && shipping?.currency===currency && v.productionMinor!==null;
    const quote=valid?offerEconomics({...values,production:v.productionMinor!/100,shippingCost:shipping!.cost/100}):null;
    return {...v,shipping,quote};
@@ -40,7 +37,7 @@ export default function OfferPlanner({listings,phrase,source}:{listings:Listing[
  <div className="cc-actions"><button className="p-button p-button-quiet" disabled={busy||!productLink.trim()||(shops.length>0&&!shop)} onClick={()=>void load()}>{busy?'Reading Printify…':'Load product costs'}</button></div>{error&&<p role="alert">{error}</p>}
  {product&&<><h4>{product.title}</h4><p className="cc-note">{product.note}</p><div className="cc-fields"><label>Ship to<select value={country} onChange={e=>setCountry(e.target.value)}>{[...new Set(['US','GB','CA','AU',...product.shipping.flatMap(s=>s.countries).filter(c=>c!=='REST_OF_THE_WORLD')])].sort().map(c=><option key={c}>{c}</option>)}</select></label><label>Production cost currency confirmed in Printify<select value={costCurrency} onChange={e=>setCostCurrency(e.target.value)}><option value="">Confirm before calculating</option>{['USD','GBP','EUR','CAD','AUD'].map(c=><option key={c}>{c}</option>)}</select></label></div>
  {below.length>0&&<p className="cc-warning">{below.length} variants miss your target at this price. Use the minimum price below for those sizes or choose a different product.</p>}
- <div className="cc-table"><table><thead><tr><th>Variant</th><th>Production</th><th>Shipping quote</th><th>Contribution</th><th>Minimum price</th></tr></thead><tbody>{variants.map(v=><tr key={v.id}><td>{v.title}</td><td>{v.productionMinor===null?'Unavailable':`${(v.productionMinor/100).toFixed(2)} ${costCurrency||'(confirm currency)'}`}</td><td>{v.shipping?`${(v.shipping.cost/100).toFixed(2)} ${v.shipping.currency}`:'Unavailable'}</td><td>{v.quote?money(v.quote.contribution):'Inputs / currency needed'}</td><td>{v.quote?money(v.quote.minimumPrice):'—'}</td></tr>)}</tbody></table></div><p className="cc-note">One item per order. Missing or ambiguous shipping quotes stay unavailable. Mixed currencies are never added.</p></>}
+ <div className="cc-table"><table><thead><tr><th>Variant</th><th>Production</th><th>Shipping quote</th><th>Contribution</th><th>Minimum price</th></tr></thead><tbody>{variants.map(v=><tr key={v.id}><td>{v.title}</td><td>{v.productionMinor===null?'Unavailable':`${(v.productionMinor/100).toFixed(2)} ${costCurrency||'(confirm currency)'}`}</td><td>{v.shipping?`${v.shipping.minimum!==v.shipping.cost?`${(v.shipping.minimum/100).toFixed(2)}–`:''}${(v.shipping.cost/100).toFixed(2)} ${v.shipping.currency}`:'Unavailable'}</td><td>{v.quote?money(v.quote.contribution):'Inputs / currency needed'}</td><td>{v.quote?money(v.quote.minimumPrice):'—'}</td></tr>)}</tbody></table></div><p className="cc-note">One item per order. When Printify returns different rates for the same size and destination, the range is shown and calculations use the highest quoted rate. Confirm the applicable shipping method in Printify before setting prices. Missing quotes stay unavailable; mixed currencies are never added.</p></>}
  <ActionPlan feature="marketWatch" source={source} heading={`Offer test: ${phrase}`} notes={notes}/>
  </details></>;
 }

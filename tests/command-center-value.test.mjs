@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {offerEconomics,comparablePrices} from '../app/offer-economics.ts';
+import {offerEconomics,comparablePrices,shippingScenario} from '../app/offer-economics.ts';
 import {catalogActions} from '../app/shop-map-actions.ts';
 import {buyerAction} from '../app/buyer-actions.ts';
 import {validPlan} from '../app/command-center-plan.ts';
@@ -46,3 +46,14 @@ test('month boundaries reject overflow and account for daylight saving',()=>{
  assert.equal(printFit(768,1024,12,300).meets,false);
  assert.equal(printFit(3600,4800,0,300),null);
  });
+
+test('overlapping shipping rates use the higher cost and preserve the range',()=>{
+ const profile=(cost,currency='USD',countries=['US'])=>({variant_ids:[12],countries,first_item:{cost,currency}});
+ assert.deepEqual(shippingScenario([profile(799),profile(879)],12,'US'),{minimum:799,cost:879,currency:'USD'});
+ assert.deepEqual(shippingScenario([profile(799),profile(1599,'USD',['REST_OF_THE_WORLD'])],12,'US'),{minimum:799,cost:799,currency:'USD'});
+ assert.deepEqual(shippingScenario([profile(1599,'USD',['REST_OF_THE_WORLD'])],12,'CA'),{minimum:1599,cost:1599,currency:'USD'});
+ assert.equal(shippingScenario([profile(799),profile(879,'CAD')],12,'US'),null);
+ assert.equal(shippingScenario([profile(-1)],12,'US'),null);
+ assert.equal(shippingScenario([profile(799)],13,'US'),null);
+ const quality=buyerAction('great quality');assert.match(quality.change,/paper products/);assert.match(quality.change,/For apparel/);
+});

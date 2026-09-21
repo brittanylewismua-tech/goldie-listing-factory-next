@@ -150,7 +150,7 @@ function ShopCard({shop}:{shop:ShopView}){
       {card.listing?.title&&<h4>{card.listing.title}</h4>}
       <p className="pattern-headline">{card.pattern}</p>
       <span className="support">{card.evidence}{card.window?` · ${card.window}`:""}</span>
-      {Boolean(card.reviews?.length)&&<details><summary>Read buyer reviews</summary>{card.reviews!.map((review,i)=><blockquote key={i}><p>{review.review}</p><footer>{review.rating} / 5 · {new Date(review.createdAt*1000).toLocaleDateString()}</footer></blockquote>)}</details>}
+      {Boolean(card.reviews?.length)&&<details><summary>Read buyer reviews</summary>{card.reviews!.map((review,i)=><blockquote key={i}><p>{review.review}</p><footer className="buyer-review-meta">{review.rating} / 5 · {new Date(review.createdAt*1000).toLocaleDateString()}</footer></blockquote>)}</details>}
       {card.action&&<div className="cc-tool"><h4>Apply this to your offer</h4><p>{card.action.change}</p><p className="cc-note">{card.action.check}</p></div>}
       {card.because&&<details><summary>About this comparison</summary><p className="pattern-because">{card.because}</p></details>}
       {card.listing?.url&&<a href={card.listing.url} target="_blank" rel="noreferrer noopener">{card.listing.id?"View listing on Etsy":"View shop on Etsy"} ↗</a>}

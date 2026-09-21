@@ -302,7 +302,6 @@ body { min-width: 320px; }
 .app-shell .conn > h2,
 .app-shell .shop-map-card h2,
 .app-shell .scanner .block h2,
-.app-shell .mw .section h3,
 .app-shell .mw .patterns h2 {
   color: var(--pro-accent) !important;
   font-size: 11px !important;

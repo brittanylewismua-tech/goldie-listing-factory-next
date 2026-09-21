@@ -203,7 +203,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .mw .card,.mw .patterns,.mw .pattern{border-radius:9px;border-color:var(--suite-line);background:#fff;box-shadow:var(--suite-shadow)}
 .mw .card img,.mw .no-image{aspect-ratio:4/3}
 .mw .pattern{padding:17px}
-.mw .section h3,.mw .patterns h2{color:var(--suite-pink-deep);font-size:9px;font-weight:900;letter-spacing:.13em}
+.mw .section > h3,.mw .patterns h2{color:var(--suite-pink-deep);font-size:14px;font-weight:900;letter-spacing:.13em}
 .mw .back{margin-bottom:20px}
 
 /* Design Scanner */

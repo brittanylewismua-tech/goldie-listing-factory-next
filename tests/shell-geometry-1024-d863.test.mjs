@@ -50,7 +50,8 @@ test("D863: the 1024px shell allocates its sidebar exactly once",()=>{
 
 test("D863: full-width laptop bars are bounded by the pane, not viewport maths",()=>{
   const laptop=laptopRules();
-  assert.match(laptop,/\.factory-footer,[\s\S]*\.workflow-footer-actions,[\s\S]*\.factory-work footer,[\s\S]*\.workflow-footer-actions\.post-draft-footer\{\s*width:100%;margin-left:0\}/);
+  // Review attribution is excluded; the actual site footer retains pane bounds.
+  assert.match(laptop,/\.factory-footer,[\s\S]*\.workflow-footer-actions,[\s\S]*\.factory-work footer:not\(\.buyer-review-meta\),[\s\S]*\.workflow-footer-actions\.post-draft-footer\{\s*width:100%;margin-left:0\}/);
   assert.doesNotMatch(laptop,/100vw|50vw|calc\(/);
   const pane={left:240,width:784},workGutter=24,bar={left:240+workGutter,width:784-2*workGutter};
   assert.ok(bar.left>=pane.left&&bar.left+bar.width<=pane.left+pane.width);

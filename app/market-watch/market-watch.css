@@ -191,7 +191,7 @@
 
 /* -------------------------------------------------------- shop sections */
 .section { margin-bottom: 24px; }
-.section h3 {
+.section > h3 {
   font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--muted); margin: 0 0 10px; font-weight: 600;
 }
@@ -274,3 +274,5 @@
 .listing-price-row{display:flex;justify-content:space-between;gap:8px;align-items:center}.listing-price-row strong{font-size:15px}.listing-price-row span{padding:3px 7px;border-radius:999px;background:var(--p-good-soft,#eef7f0);color:var(--p-good);font-size:10px;font-weight:700}.listing-stat-grid{grid-template-columns:repeat(3,1fr);gap:5px}.listing-stat-grid div{padding:7px;border-radius:9px;background:var(--paper)}.listing-stat-grid dd{font-size:14px}
 @media (max-width:560px){.keyword-watch-head{display:block}.keyword-watch-head button{width:100%;margin-top:12px}.keyword-thumbs{grid-template-columns:repeat(2,1fr)}.tabs{overflow-x:auto}.tabs button{min-width:145px}}
 .section-note{margin:0 0 10px;color:var(--muted);font-size:11px;line-height:1.5;max-width:60ch}.keyword-stale{margin:0 0 12px;color:var(--stale);font-size:12px}
+
+.mw blockquote footer{display:block;margin-top:6px;font-size:12px;line-height:1.5;color:#645663;}
