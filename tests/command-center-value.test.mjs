@@ -57,3 +57,8 @@ test('overlapping shipping rates use the higher cost and preserve the range',()=
  assert.equal(shippingScenario([profile(799)],13,'US'),null);
  const quality=buyerAction('great quality');assert.match(quality.change,/paper products/);assert.match(quality.change,/For apparel/);
 });
+
+test('a zero-priced zero-cost scenario has no percentage discount ceiling',()=>{
+ const result=offerEconomics({price:0,discount:0,shippingCharged:0,production:0,shippingCost:0,feePercent:0,fixedFees:0,adPercent:0,target:0});
+ assert.equal(result.maximumDiscount,null);assert.equal(result.contribution,0);assert.equal(result.targetMet,true);
+});
