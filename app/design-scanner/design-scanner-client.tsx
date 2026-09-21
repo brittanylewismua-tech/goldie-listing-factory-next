@@ -105,7 +105,8 @@ async function normalizeImage(file: File): Promise<string> {
   context.fillStyle = "#ffffff";
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.86);
+  // The server measures pixels with its PNG decoder.
+  return canvas.toDataURL("image/png");
 }
 
 export default function DesignScannerClient({ signedInEmail }: { signedInEmail: string }) {
