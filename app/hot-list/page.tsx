@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import FactoryShell from "../factory-shell";
+import { decodeEntities } from "../shop-map-worlds";
 
 /**
  * THE HOT LIST.
@@ -183,7 +184,7 @@ export default function HotListPage() {
               <a href={hit.url} target="_blank" rel="noopener noreferrer" className="drop-shot">
                 {hit.image
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  ? <img src={hit.image} alt={hit.title} />
+                  ? <img src={hit.image} alt={decodeEntities(hit.title)} />
                   : <span className="drop-noshot">No picture</span>}
               </a>
               <figcaption>
@@ -193,7 +194,7 @@ export default function HotListPage() {
                 </p>
                 {hit.price !== null && <p className="drop-sub">{money(hit.price, hit.currency)}</p>}
                 <a className="drop-title" href={hit.url} target="_blank" rel="noopener noreferrer">
-                  {hit.title}</a>
+                  {decodeEntities(hit.title)}</a>
               </figcaption>
             </figure>)}
           </div>
@@ -274,7 +275,7 @@ export default function HotListPage() {
                     {listing.image
                       /* Never deferred — a lazy image is a 0x0 box until it scrolls in. */
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      ? <img src={listing.image} alt={listing.title} />
+                      ? <img src={listing.image} alt={decodeEntities(listing.title)} />
                       : <span className="drop-noshot">No picture</span>}
                     {/* The strongest thing this board can say. */}
                     {listing.soldOut && <span className="drop-badge sold-out">Sold out</span>}
@@ -286,7 +287,7 @@ export default function HotListPage() {
                     {listing.price !== null &&
                       <p className="drop-sub">{money(listing.price, listing.currency)}</p>}
                     <a className="drop-title" href={listing.url} target="_blank" rel="noopener noreferrer">
-                      {listing.title}</a>
+                      {decodeEntities(listing.title)}</a>
                   </figcaption>
                 </figure>)}
 
