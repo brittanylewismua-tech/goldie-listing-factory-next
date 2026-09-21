@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { STALE_AFTER_SECONDS } from "@/app/finance-freshness";
+import { STALE_AFTER_SECONDS, REQUIRED_FINANCIAL_SOURCES } from "@/app/finance-freshness";
 import { rollUp } from "@/app/finance-rollup";
 import { classifyLedgerType } from "@/app/finance-classify";
 import { monthWindow } from "@/app/finance-month";
@@ -64,7 +64,7 @@ export async function readFinancialMonth(userId:string,shopId:number,month:strin
   const currencies = new Set(ledgerRows.map(entry => String(entry.currency ?? "")).filter(Boolean));
   const sources = await db.prepare(`SELECT source,refreshed_at,last_error FROM finance_sources WHERE user_id=? AND shop_id=?`)
     .bind(userId,shopId).all<{source:string;refreshed_at:number;last_error:string}>();
-  const required=["ledger","receipts","printify","refunds"];
+  const required=REQUIRED_FINANCIAL_SOURCES;
   const now=Math.floor(Date.now()/1000);
   const staleSources=required.filter(name=>!sources.results?.some(row=>row.source===name&&!row.last_error&&now-Number(row.refreshed_at)<=STALE_AFTER_SECONDS));
   const ledgerWindows=await db.prepare(`SELECT window_from AS start,window_to AS end,state FROM finance_windows

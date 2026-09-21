@@ -17,7 +17,7 @@ import { monthWindow, monthOf } from "@/app/finance-month";
 import { shopTimezone } from "@/app/finance-store";
 import { explainGrouping } from "@/app/niche-grouping-explained";
 import { describePlacement } from "@/app/listing-placement";
-import { freshnessNote, isStale, salesAsOf } from "@/app/finance-freshness";
+import { freshnessNote, isStale, financialAsOf } from "@/app/finance-freshness";
 
 /**
  * THE MAP.
@@ -328,11 +328,10 @@ async function buildMap(request: Request) {
     is not on a clock, so a figure can be days old and look new.
   */
   const sourceRows = await db.prepare(
-    `SELECT refreshed_at FROM finance_sources WHERE user_id = ? AND shop_id = ?`)
-    .bind(user.userId, shopId).all<{ refreshed_at: number }>()
-    .catch(() => ({ results: [] as Array<{ refreshed_at: number }> }));
-  const asOf = salesAsOf(((sourceRows.results ?? []) as Array<{ refreshed_at: number }>)
-    .map(row => ({ refreshedAt: Number(row.refreshed_at) })));
+    `SELECT source, refreshed_at, last_error FROM finance_sources WHERE user_id = ? AND shop_id = ?`)
+    .bind(user.userId, shopId).all<{ source: string; refreshed_at: number; last_error: string }>();
+  const asOf = financialAsOf((sourceRows.results ?? [])
+    .map(row => ({ source: row.source, refreshedAt: Number(row.refreshed_at), lastError: row.last_error })));
   const nowSeconds = Math.floor(Date.now() / 1_000);
 
   /* Enough recent trade to make a 90-day view meaningful? */
@@ -408,7 +407,8 @@ async function buildMap(request: Request) {
       headline: profit === null ? "Profit unavailable" : "Verified profit",
       label: profit === null ? "unavailable" : "verified",
       salesAsOf: asOf, salesStale: isStale(asOf, nowSeconds),
-      freshness: freshnessNote({asOf,nowSeconds,timezone:timezone||"UTC"}),
+      freshness: asOf ? freshnessNote({asOf,nowSeconds,timezone:timezone||"UTC"})
+        : "The financial refresh is incomplete. Refresh your numbers to try again.",
       profitMinor: profit,
       accuracy: profit===null ? "Profit is unavailable until all orders, Etsy charges, refunds, adjustments, and production costs for this period are accounted for." : "Includes sales, Etsy fees, refunds, adjustments, and matched production costs.",
       coverage: {verified:productionCoverage,estimated:0,unavailable:1-productionCoverage},

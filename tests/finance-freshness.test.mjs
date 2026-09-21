@@ -80,7 +80,7 @@ test("no source name reaches the member", () => {
 
 test("the sentence is built on the server and rendered beside the figure", () => {
   const map = src("../app/api/shop-map/map/route.ts");
-  assert.match(map, /freshness: freshnessNote\(/);
+  assert.match(map, /freshness: asOf \? freshnessNote\(/);
   assert.match(map, /salesStale: isStale\(asOf, nowSeconds\)/);
   const client = src("../app/shop-map/shop-map-client.tsx");
   assert.match(client, /className="shop-map-freshness"/);
@@ -106,4 +106,13 @@ test("the same figure does not sit on two pages at two different ages", () => {
   const map = src("../app/api/shop-map/map/route.ts");
   for (const file of [home, map])
     assert.match(file, /from "@\/app\/finance-freshness"/);
+});
+
+test('financial freshness ignores unrelated reviews and requires every financial source', async () => {
+  const {financialAsOf,REQUIRED_FINANCIAL_SOURCES}=await import('../app/finance-freshness.ts');
+  const required=REQUIRED_FINANCIAL_SOURCES.map(source=>({source,refreshedAt:1000}));
+  assert.equal(financialAsOf([...required,{source:'own-reviews',refreshedAt:100},{source:'payments',refreshedAt:50}]),1000);
+  assert.equal(financialAsOf(required.slice(1)),0);
+  assert.equal(financialAsOf(required.map(row=>row.source==='printify'?{...row,refreshedAt:0}:row)),0);
+  assert.equal(financialAsOf(required.map(row=>row.source==='ledger'?{...row,lastError:'failed'}:row)),0);
 });

@@ -1,6 +1,13 @@
 export async function refreshShopFinances(request: typeof fetch = fetch) {
   const post = async (path: string) => {
-    const response = await request(path, { method: "POST" });
+    let response: Response;
+    try {
+      response = await request(path, { method: "POST", signal: AbortSignal.timeout(240_000) });
+    } catch (error) {
+      throw new Error(error instanceof Error && /Timeout|Abort/.test(error.name)
+        ? "That refresh took too long. Refresh again to continue."
+        : "Your numbers could not be refreshed. Try again.");
+    }
     const body = await response.json().catch(() => ({})) as {
       error?: string; complete?: boolean; errors?: string[];
       ledger?: { windowsOutstanding?: number };

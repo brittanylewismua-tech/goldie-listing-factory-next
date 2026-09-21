@@ -1,7 +1,7 @@
 import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
-import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { requireFeatureApi } from "@/app/require-feature";
 import { env } from "cloudflare:workers";
 import { etsyApiCredential, etsyConnection, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import { decryptPrintifyToken } from "@/app/api/printify/token-crypto";
@@ -44,9 +44,9 @@ export async function GET() {
 
 export const POST = withErrorLog("shop-map-financial-ingest", async (request: Request) => {
   if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
-  const user = await getChatGPTUser();
-  if (!user)
-    return NextResponse.json({ error: "Not authorized." }, { status: 403 });
+  const access = await requireFeatureApi("shopMap");
+  if (!access.ok) return access.response;
+  const user = access.user;
 
   await ensureFinanceTables();
   const parameters = new URL(request.url).searchParams;
@@ -148,13 +148,14 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
         break;
       }
       const entries = ((answer.body as { results?: Array<Record<string, unknown>> })?.results) ?? [];
+      const ledgerWrites: D1PreparedStatement[] = [];
       for (const entry of entries) {
         /* ledger_type is the real field. description repeats it. */
         const rawType = String(entry.ledger_type ?? entry.description ?? "");
         const kind = classifyLedgerType(rawType);
         const amount = Number(entry.amount ?? 0);
         const divisor = Number(entry.currency_divisor ?? 100) || 100;
-        await db.prepare(
+        ledgerWrites.push(db.prepare(
           `INSERT INTO finance_ledger
              (user_id, shop_id, source_id, receipt_id, transaction_id, raw_type,
               normalized_type, bucket, attribution, amount_minor, divisor, currency,
@@ -177,13 +178,17 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
             rawType, kind.normalized, kind.bucket, kind.attribution,
             Math.round(amount), divisor, String(entry.currency ?? "USD"),
             Number(entry.create_date ?? entry.created_timestamp ?? window.window_from),
-            Number(entry.update_date ?? 0) || null, now)
-          .run();
+            Number(entry.update_date ?? 0) || null, now));
         stored += 1;
       }
+      if (ledgerWrites.length) await db.batch(ledgerWrites);
       if (entries.length < 100) break;
       offset += 100;
     }
+
+    // Reaching the page limit does not prove the window ended. Keep profit
+    // unavailable until all entries have actually been read.
+    if (!failed && stored >= 2_000) failed = "The Etsy fee history for this period is incomplete.";
 
     await db.prepare(
       `UPDATE finance_windows SET state = ?, rows_ingested = ?, last_error = ?, updated_at = ?
@@ -247,6 +252,7 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
     const results = ((answer.body as { results?: Array<Record<string, unknown>> })?.results) ?? [];
     if (!results.length) {receiptsReadComplete=true;break;}
 
+    const receiptWrites: D1PreparedStatement[] = [];
     for (const receipt of results) {
       const receiptId = Number(receipt.receipt_id ?? 0);
       if (!receiptId) continue;
@@ -269,7 +275,7 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
       if (created < oldestSeen) oldestSeen = created;
 
       /* Buyer fields are never read. Only money, identity and status. */
-      await db.prepare(
+      receiptWrites.push(db.prepare(
         `INSERT INTO finance_receipts
            (user_id, shop_id, receipt_id, subtotal_minor, shipping_minor, tax_minor,
             seller_discount_minor, marketplace_discount_minor, grand_total_minor,
@@ -281,17 +287,21 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
            tax_minor = excluded.tax_minor,
            grand_total_minor = excluded.grand_total_minor,
            canceled = excluded.canceled, refunded = excluded.refunded,
-           source_updated_at = excluded.source_updated_at`)
+           source_updated_at = excluded.source_updated_at,
+           source_created_at = excluded.source_created_at,
+           seller_discount_minor = excluded.seller_discount_minor,
+           divisor = excluded.divisor, currency = excluded.currency,
+           ingested_at = excluded.ingested_at`)
         .bind(user.userId, shopId, receiptId, subtotal.minor, shipping.minor,
           tax.minor + vat.minor, Math.abs(discount.minor), 0, grand.minor,
           grand.divisor, grand.currency,
           /^(canceled|cancelled)$/i.test(status) ? 1 : 0,
           refunds.length ? 1 : 0, created,
-          Number(receipt.updated_timestamp ?? receipt.update_timestamp ?? 0) || null, now)
-        .run();
+          Number(receipt.updated_timestamp ?? receipt.update_timestamp ?? 0) || null, now));
       receiptsStored += 1;
       transactionsStored += ((receipt.transactions ?? []) as unknown[]).length;
     }
+    if (receiptWrites.length) await db.batch(receiptWrites);
     if (results.length < 100) {receiptsReadComplete=true;break;}
     /*
       Everything from here back is already held, plus the overlap - unless a

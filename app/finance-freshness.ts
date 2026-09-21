@@ -23,6 +23,14 @@ export function salesAsOf(sources: Array<{ refreshedAt: number }>): number {
   return times.length ? Math.min(...times) : 0;
 }
 
+export const REQUIRED_FINANCIAL_SOURCES = ["ledger", "receipts", "printify", "refunds"];
+
+export function financialAsOf(sources: Array<{ source: string; refreshedAt: number; lastError?: string }>): number {
+  const required = REQUIRED_FINANCIAL_SOURCES.map(name => sources.find(row => row.source === name));
+  if (required.some(row => !row || row.lastError || !(row.refreshedAt > 0))) return 0;
+  return salesAsOf(required as Array<{ refreshedAt: number }>);
+}
+
 /** The same day a source is called stale elsewhere. One rule, one place. */
 export const STALE_AFTER_SECONDS = 86_400;
 
