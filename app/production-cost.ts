@@ -40,16 +40,16 @@ export const EXPLANATION: Record<UnmatchedReason, string> = {
     "This order was fulfilled outside Printify, so there is no production "
     + "cost for it.",
   "metadata-missing":
-    "The Printify order exists but does not carry the Etsy order number, so "
-    + "There is no way to be certain the two belong together.",
+    "An unlinked Printify order is close in date and uses the same currency. "
+    + "Review both orders before confirming whether they belong together.",
   "receipt-id-missing":
     "This Etsy order has no receipt number to match against.",
   canceled: "This order was cancelled, so there is no production cost.",
   "fulfilled-elsewhere":
     "Another production service made this order. Only Printify is read.",
   "outside-reconciliation-window":
-    "The matching Printify order falls outside the period that has been read. It "
-    + "will match once that period is filled in.",
+    "This Etsy sale is newer than the last Printify refresh. Refresh your numbers "
+    + "to check whether Printify has a matching order.",
   unknown:
     "The reason this order has no production cost could not be worked out.",
 };

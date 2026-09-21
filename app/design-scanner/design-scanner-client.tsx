@@ -1,5 +1,7 @@
 "use client";
 
+import PrintCheck from "@/app/command-center/print-check";
+import ActionPlan from "@/app/command-center/action-plan";
 import { nextScanAt } from "@/app/scan-reset";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -111,6 +113,8 @@ async function normalizeImage(file: File): Promise<string> {
 
 export default function DesignScannerClient({ signedInEmail }: { signedInEmail: string }) {
   void signedInEmail;
+  const [original,setOriginal]=useState<{width:number;height:number;url:string}|null>(null);
+  useEffect(()=>()=>{if(original)URL.revokeObjectURL(original.url)},[original]);
   const [preview, setPreview] = useState("");
   const [dataUrl, setDataUrl] = useState("");
   const [artworkHash, setArtworkHash] = useState("");
@@ -171,6 +175,9 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
     setResult(null);
     try {
       const [hash, normalized] = await Promise.all([hashOf(file), normalizeImage(file)]);
+      const bitmap=await createImageBitmap(file);
+      setOriginal({width:bitmap.width,height:bitmap.height,url:URL.createObjectURL(file)});
+      bitmap.close();
       setArtworkHash(hash);
       setDataUrl(normalized);
       setPreview(normalized);
@@ -290,7 +297,16 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
 
       {error && <p className="error p-notice p-notice-bad" role="alert">{error}</p>}
 
-      {result && <ScanResult result={result} />}
+      {original&&artworkHash&&<PrintCheck width={original.width} height={original.height} preview={original.url}/>}
+      {result && <><ScanResult result={result} /><ActionPlan feature="designScanner" source={result.scanId||artworkHash||result.niche} heading={`Design revision: ${result.niche}`} notes={`Scan finding: ${currentLabel(result.overall)}
+${result.opportunity||result.refusal?.because||''}
+${result.imageQuality?.notes?.join('\n')||''}
+
+Keep: ${result.working?.join('; ')||'Record what should stay unchanged.'}
+
+One change for the next version:
+
+Recheck at the same thumbnail size and intended print size. Upload the revised file and compare the same niche. Record whether the original issue improved.`}/></>}
 
       {historyFailed && history.length === 0 && (
         <p className="p-notice" role="status">

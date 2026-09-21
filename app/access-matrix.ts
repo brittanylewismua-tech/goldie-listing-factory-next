@@ -29,6 +29,9 @@ export type Rule =
   | { kind: "owner" };
 
 export const ACCESS: Record<string, Rule> = {
+  // Plans check the requested feature entitlement for every read and write.
+  "/api/command-center/plans": { kind: "open" },
+  "/api/command-center/product": { kind: "feature", feature: "marketWatch" },
   /* ---------------------------------------------------------------- public */
   "/account/sign-in": { kind: "public" },
   "/signup": { kind: "public" },

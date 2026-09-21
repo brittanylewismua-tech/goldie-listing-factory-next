@@ -94,3 +94,16 @@ test('documentation is not missing data, and daily repair replay happens only on
   add.run('broken.zip', 'TRTYRAP', 'https://example.invalid/broken', 'skipped');
   assert.ok((await mod.registerSize(db)).files.some(x => x.state === 'skipped' && x.count === 1));
 });
+
+test('overlapping background ticks cannot claim different files concurrently',()=>{
+ const sqlite=new DatabaseSync(':memory:');
+ sqlite.exec("CREATE TABLE tm_ingest_files(name TEXT,state TEXT,started TEXT); INSERT INTO tm_ingest_files VALUES('a','waiting',NULL),('b','partial',NULL)");
+ const route=readFileSync(new URL('../app/api/trademark/ingest-tick/route.ts',import.meta.url),'utf8');
+ const query=route.match(/const claimed = await db\s*\.prepare\(`([\s\S]*?)`\)/)[1];
+ const claim=sqlite.prepare(query);
+ assert.equal(claim.run('2026-09-21T00:00:00Z','a').changes,1);
+ assert.equal(claim.run('2026-09-21T00:00:00Z','b').changes,0);
+ sqlite.exec("UPDATE tm_ingest_files SET state='done' WHERE name='a'");
+ assert.equal(claim.run('2026-09-21T00:01:00Z','b').changes,1);
+ sqlite.close();
+});

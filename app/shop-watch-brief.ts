@@ -39,7 +39,7 @@ export const SHOP_WATCH_FLAG = "shopWatchInternalBeta";
  * 1  the original raw-count cards
  * 2  D1586 — findings rather than counts, and the bare arrival count removed
  */
-export const BRIEF_CARD_VERSION = 2;
+export const BRIEF_CARD_VERSION = 3;
 
 export const SUMMARY_WORKLOAD = "shopWatchSummary";
 export const SUMMARY_ENABLED = false;

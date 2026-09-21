@@ -1,0 +1,11 @@
+'use client';
+import {useState} from 'react';
+import './tools.css';
+import {printFit} from "@/app/print-fit";
+export default function PrintCheck({width,height,preview}:{width:number;height:number;preview:string}){
+ const [inches,setInches]=useState('12'),[ppi,setPpi]=useState('300'),[background,setBackground]=useState('#ffffff');
+ const fit=printFit(width,height,Number(inches),Number(ppi));
+ return <details className="cc-tool"><summary><strong>Check the actual print size and thumbnail</strong></summary><p>Your original file is {width.toLocaleString()} × {height.toLocaleString()} pixels. These measurements use the uploaded file before the scanner reduces it.</p><div className="cc-fields"><label>Intended print width (inches)<input type="number" min="0.1" step="0.1" value={inches} onChange={e=>setInches(e.target.value)}/></label><label>Provider’s required pixels per inch<input type="number" min="1" step="1" value={ppi} onChange={e=>setPpi(e.target.value)}/></label><label>Preview background<select value={background} onChange={e=>setBackground(e.target.value)}><option value="#ffffff">White</option><option value="#171717">Black</option><option value="#e7c8d4">Pink</option><option value="#bdb6ab">Neutral</option></select></label></div>
+ {fit&&<><dl className="cc-results"><div><dt>Effective resolution</dt><dd>{Math.floor(fit.effectivePpi)} PPI</dd></div><div><dt>Height at this width</dt><dd>{fit.heightInches.toFixed(1)}″</dd></div><div><dt>Largest size at {ppi} PPI</dt><dd>{fit.maxWidth.toFixed(1)} × {fit.maxHeight.toFixed(1)}″</dd></div></dl><p>{fit.meets?'The pixel dimensions support this size at your chosen resolution.':'This file needs to be printed smaller or exported from the original design at higher resolution. Enlarging these same pixels does not restore detail.'}</p></>}
+ <img src={preview} alt="Your artwork at thumbnail size on the selected background" width={150} height={150} style={{objectFit:'contain',background,padding:10,border:'1px solid #aaa',boxSizing:'content-box'}}/><p className="cc-note">Read it at this thumbnail size. Check the provider’s exact print area, bleed and file requirements. The 300 PPI starting value is an editable planning target, not a universal requirement. Transparent margins count toward file dimensions; a pixel-size check cannot certify sharpness or print quality.</p></details>;
+}

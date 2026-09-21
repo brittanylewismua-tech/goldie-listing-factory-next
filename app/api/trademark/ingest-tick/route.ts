@@ -37,7 +37,10 @@ const REPEATED_FAILURE_LIMIT = 3;
 const DEADLINE_MS = 120_000;
 
 async function seed(db: D1Database): Promise<number> {
+  const stamp = `seed-${new Date().toISOString().slice(0,10)}`;
+  if (await db.prepare('SELECT id FROM tm_ingest_repairs WHERE id=?').bind(stamp).first()) return 0;
   const apiKey = key();
+  let complete = true;
   // Every update since the archive is needed, including time before launch.
   const wanted = trademarkImportRanges();
 
@@ -46,20 +49,17 @@ async function seed(db: D1Database): Promise<number> {
     const response = await fetch(productFilesUrl(want.product, want.from, want.to), {
       headers: { "X-API-KEY": apiKey, "user-agent": "Goldie/1.0 (+https://thegoldiesuite.com)" },
     });
-    if (!response.ok) continue;
+    if (!response.ok) { complete=false; continue; }
     const files = filesFromProduct(await response.json());
-    for (const file of files) {
-      const result = await db
-        .prepare(
-          `INSERT INTO tm_ingest_files (name, product, url, covers, bytes, priority)
-           VALUES (?, ?, ?, ?, ?, ?)
-           ON CONFLICT(name) DO NOTHING`,
-        )
-        .bind(file.name, want.product, file.url, file.to, file.bytes, want.priority)
-        .run();
-      added += result.meta?.changes ?? 0;
+    for (let offset=0;offset<files.length;offset+=100) {
+      const results=await db.batch(files.slice(offset,offset+100).map(file=>db.prepare(
+        `INSERT INTO tm_ingest_files (name, product, url, covers, bytes, priority)
+         VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(name) DO NOTHING`)
+        .bind(file.name,want.product,file.url,file.to,file.bytes,want.priority)));
+      added += results.reduce((sum,result)=>sum+Number(result.meta?.changes??0),0);
     }
   }
+  if(complete)await db.prepare('INSERT OR IGNORE INTO tm_ingest_repairs(id) VALUES(?)').bind(stamp).run();
   return added;
 }
 
@@ -182,10 +182,13 @@ async function runTick(db: D1Database, request: Request) {
 
   if (!next) return NextResponse.json({ added, idle: true, ...(await registerSize(db)) });
 
-  await db
-    .prepare(`UPDATE tm_ingest_files SET state = 'running', started = ? WHERE name = ?`)
+  const claimed = await db
+    .prepare(`UPDATE tm_ingest_files SET state = 'running', started = ? WHERE name = ?
+      AND state IN ('waiting','partial')
+      AND NOT EXISTS (SELECT 1 FROM tm_ingest_files WHERE state = 'running')`)
     .bind(new Date().toISOString(), next.name)
     .run();
+  if (!claimed.meta?.changes) return NextResponse.json({busy:true,added});
 
   try {
     const result = await ingestFile(db, next, key(), {

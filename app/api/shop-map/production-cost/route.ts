@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
-import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
+import { ensureFinanceTables, shopTimezone } from "@/app/finance-store";
+import { monthOf, monthWindow } from "@/app/finance-month";
 import { requireFeatureApi } from "@/app/require-feature";
 import { env } from "cloudflare:workers";
 import {
@@ -28,21 +30,17 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
   const user = access.user;
 
   const db = (env as unknown as { DB: D1Database }).DB;
-  const month = (new URL(request.url).searchParams.get("month")
-    ?? new Date().toISOString().slice(0, 7)).slice(0, 7);
-
-  /*
-    THE COLUMNS THE FINANCE TABLES ACTUALLY HAVE.
-
-    Receipts carry `source_created_at` as an epoch integer and `grand_total_minor`,
-    not `created_at` and `revenue_minor`. A first draft of this used the names
-    that read well rather than the names that exist, D1 threw, and the member
-    would have seen a broken screen. There is now a test comparing every column
-    this route reads against the CREATE statements.
-  */
-  const monthStart = Math.floor(Date.parse(`${month}-01T00:00:00Z`) / 1000);
-  const monthEnd = Math.floor(Date.parse(
-    `${month}-01T00:00:00Z`) / 1000) + 32 * 86_400;
+  await ensureFinanceTables();
+  const shop = await db.prepare(`SELECT shop_id FROM etsy_connections WHERE user_id = ? AND is_active = 1 LIMIT 1`)
+    .bind(user.userId).first<{shop_id:number}>();
+  if (!shop) return NextResponse.json({error:"Connect an Etsy shop first."},{status:400});
+  const shopId = Number(shop.shop_id);
+  const timezone = await shopTimezone(user.userId, shopId);
+  const month = new URL(request.url).searchParams.get("month")
+    ?? (timezone ? monthOf(Math.floor(Date.now()/1000), timezone) : null);
+  const period = timezone && month ? monthWindow(month, timezone) : null;
+  if (!period) return NextResponse.json({error:"Choose a valid month and confirm your shop timezone in Shop Map."},{status:400});
+  const monthStart = period.from, monthEnd = period.to + 1;
   const rows = await db.prepare(
     /*
       SELLER REVENUE, THE SAME NUMBER SHOP MAP AND HOME SHOW.
@@ -54,7 +52,7 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
       contradiction that makes somebody distrust all three.
     */
     `SELECT r.receipt_id AS receiptId, r.source_created_at AS createdAt,
-            (r.subtotal_minor + r.shipping_minor - r.seller_discount_minor)
+            (r.subtotal_minor + r.shipping_minor)
               AS revenueMinor,
             r.currency AS currency,
             r.shop_id AS shopId, r.canceled AS receiptCanceled,
@@ -64,12 +62,20 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
             a.amount_minor AS adjustmentMinor, a.kind AS adjustmentKind,
             a.currency AS adjustmentCurrency
        FROM finance_receipts r
-       LEFT JOIN finance_production p
-         ON p.receipt_id = r.receipt_id AND p.user_id = r.user_id
+       LEFT JOIN (
+         SELECT user_id, shop_id, receipt_id, MIN(printify_order_id) AS printify_order_id,
+                SUM(cost_minor) AS cost_minor, SUM(shipping_minor) AS shipping_minor,
+                MIN(status) AS status, MAX(canceled) AS canceled
+         FROM finance_production WHERE counts_as_etsy_cost = 1 AND canceled = 0
+         GROUP BY user_id, shop_id, receipt_id
+       ) p ON p.receipt_id = r.receipt_id AND p.user_id = r.user_id AND p.shop_id = r.shop_id
        LEFT JOIN finance_adjustments a
-         ON a.receipt_id = r.receipt_id AND a.user_id = r.user_id
-      WHERE r.user_id = ? AND r.source_created_at >= ? AND r.source_created_at < ?`)
-    .bind(user.userId, monthStart, monthEnd)
+         ON a.id = (SELECT a2.id FROM finance_adjustments a2
+          WHERE a2.receipt_id = r.receipt_id AND a2.user_id = r.user_id AND a2.shop_id = r.shop_id
+            AND a2.kind IN ('manual-production-cost','estimated-production-cost') AND a2.reversed_by IS NULL
+          ORDER BY a2.created_at DESC, a2.id DESC LIMIT 1)
+      WHERE r.user_id = ? AND r.shop_id = ? AND r.source_created_at >= ? AND r.source_created_at < ?`)
+    .bind(user.userId, shopId, monthStart, monthEnd)
     .all<{ receiptId: number; createdAt: number; revenueMinor: number; currency: string;
       shopId: number; receiptCanceled: number | null;
       printifyOrderId: string | null; costMinor: number | null;
@@ -79,7 +85,7 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
     .catch(error => ({ results: [], error: error instanceof Error ? error.message : "failed" }));
 
   const failure = (rows as { error?: string }).error;
-  if (failure) return NextResponse.json({ error: failure }, { status: 500 });
+  if (failure) return NextResponse.json({ error: "Production costs could not load. Please try again." }, { status: 500 });
 
   /* Printify orders this member has that are not attached to any receipt —
      the only pool a link may be offered from. */
@@ -88,8 +94,8 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
             shipping_minor AS shippingMinor, currency, status,
             COALESCE(fulfilled_at, ingested_at) AS createdAt
        FROM finance_production
-      WHERE user_id = ? AND (receipt_id IS NULL OR receipt_id = 0)`)
-    .bind(user.userId)
+      WHERE user_id = ? AND shop_id = ? AND canceled = 0 AND counts_as_etsy_cost = 1 AND (receipt_id IS NULL OR receipt_id = 0)`)
+    .bind(user.userId, shopId)
     .all<{ id: string; costMinor: number; shippingMinor: number; currency: string;
       status: string; createdAt: number }>()
     .catch(() => ({ results: [] as Array<{ id: string; costMinor: number;
@@ -111,9 +117,12 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
   const window = await db.prepare(
     `SELECT MIN(COALESCE(fulfilled_at, ingested_at)) AS from_,
             MAX(COALESCE(fulfilled_at, ingested_at)) AS to_
-       FROM finance_production WHERE user_id = ?`)
-    .bind(user.userId).first<{ from_: number; to_: number }>().catch(() => null);
+       FROM finance_production WHERE user_id = ? AND shop_id = ?`)
+    .bind(user.userId, shopId).first<{ from_: number; to_: number }>().catch(() => null);
 
+  const imported = await db.prepare(`SELECT refreshed_at, last_error FROM finance_sources
+    WHERE user_id=? AND shop_id=? AND source='printify'`).bind(user.userId,shopId)
+    .first<{refreshed_at:number;last_error:string}>();
   const diagnose = (row: typeof rows.results[number]): UnmatchedReason => {
     if (Number(row.canceled ?? 0) === 1 || Number(row.receiptCanceled ?? 0) === 1)
       return "canceled";
@@ -123,9 +132,11 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
       return "printify-order-delayed";
     if (!row.printifyOrderId) {
       const created = Number(row.createdAt) || 0;
-      if (window?.to_ && created > Number(window.to_))
+      if (imported?.refreshed_at && created > Number(imported.refreshed_at))
         return "outside-reconciliation-window";
-      if ((loose.results ?? []).length > 0) return "metadata-missing";
+      if (imported?.last_error || (window?.from_ && created < Number(window.from_))) return "unknown";
+      if ((loose.results ?? []).some(order=>plausibleLink({receiptAt:created,orderAt:Number(order.createdAt)||0,
+        receiptCurrency:row.currency,orderCurrency:order.currency}).ok)) return "metadata-missing";
       return "absent-from-printify";
     }
     return "unknown";
@@ -212,6 +223,8 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
  * because it IS an exact record. Nothing promotes an estimate.
  */
 export const POST = withErrorLog("shop-map-production-cost-save", async (request: Request) => {
+  if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, {status:403});
+  await ensureFinanceTables();
   const access = await requireFeatureApi("shopMap");
   if (!access.ok) return access.response;
   const user = access.user;
@@ -224,18 +237,22 @@ export const POST = withErrorLog("shop-map-production-cost-save", async (request
 
   const receipt = await db.prepare(
     `SELECT shop_id AS shopId, currency, source_created_at AS createdAt
-       FROM finance_receipts WHERE user_id = ? AND receipt_id = ?`)
-    .bind(user.userId, receiptId)
+       FROM finance_receipts WHERE user_id = ? AND receipt_id = ?
+         AND shop_id = (SELECT shop_id FROM etsy_connections WHERE user_id = ? AND is_active = 1 LIMIT 1)`)
+    .bind(user.userId, receiptId, user.userId)
     .first<{ shopId: number; currency: string; createdAt: number }>().catch(() => null);
   if (!receipt) return NextResponse.json({ error: "That order was not found." }, { status: 404 });
 
-  const month = new Date(Number(receipt.createdAt) * 1000).toISOString().slice(0, 7);
+  const shopId = receipt.shopId;
+  const timezone = await shopTimezone(user.userId, shopId);
+  const month = timezone ? monthOf(Number(receipt.createdAt), timezone) : null;
+  if (!month) return NextResponse.json({error:"Confirm your shop timezone first."},{status:400});
   const now = Math.floor(Date.now() / 1000);
   const id = crypto.randomUUID();
 
   if (body?.kind === "manual") {
-    const amount = Number(String(body.amount ?? "").replace(/[^0-9.]/g, ""));
-    if (!Number.isFinite(amount) || amount <= 0)
+    const amount = (/^\d+(?:\.\d{1,2})?$/.test(String(body.amount ?? "").trim()) ? Number(body.amount) : NaN);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000)
       return NextResponse.json({ error: "Enter the amount as a number." }, { status: 400 });
     const currency = String(body.currency ?? "").toUpperCase().slice(0, 3) || "USD";
     /* Currencies are never mixed inside a month. */
@@ -244,15 +261,20 @@ export const POST = withErrorLog("shop-map-production-cost-save", async (request
         error: `That order was paid in ${receipt.currency}. Enter the cost in `
           + `${receipt.currency} so the month adds up.` }, { status: 400 });
 
-    await db.prepare(
+    await db.batch([
+      db.prepare(`UPDATE finance_adjustments SET reversed_by=?
+        WHERE user_id=? AND shop_id=? AND receipt_id=?
+          AND kind IN ('manual-production-cost','estimated-production-cost') AND reversed_by IS NULL`)
+        .bind(id,user.userId,shopId,receiptId),
+      db.prepare(
       `INSERT INTO finance_adjustments
          (id, user_id, shop_id, month, receipt_id, printify_order_id, kind,
-          amount_minor, currency, estimated, reason)
-       VALUES (?,?,?,?,?,'', 'manual-production-cost', ?,?,0,?)`)
+          amount_minor, currency, estimated, reason, created_at)
+       VALUES (?,?,?,?,?,'', 'manual-production-cost', ?,?,0,?,?)`)
       .bind(id, user.userId, receipt.shopId, month, receiptId,
         Math.round(amount * 100), currency,
-        "entered by the member because no Printify order matched")
-      .run();
+        "entered by the member because no Printify order matched", now)
+    ]);
     return NextResponse.json({ ok: true, basis: "manually-confirmed", month, id });
   }
 
@@ -264,8 +286,8 @@ export const POST = withErrorLog("shop-map-production-cost-save", async (request
               shipping_minor AS shippingMinor, currency,
               COALESCE(fulfilled_at, ingested_at) AS createdAt
          FROM finance_production
-        WHERE user_id = ? AND (receipt_id IS NULL OR receipt_id = 0)`)
-      .bind(user.userId)
+        WHERE user_id = ? AND shop_id = ? AND canceled = 0 AND counts_as_etsy_cost = 1 AND (receipt_id IS NULL OR receipt_id = 0)`)
+      .bind(user.userId, shopId)
       .all<{ id: string; costMinor: number; shippingMinor: number;
         currency: string; createdAt: number }>()
       .catch(() => ({ results: [] as Array<{ id: string; costMinor: number;
@@ -281,15 +303,15 @@ export const POST = withErrorLog("shop-map-production-cost-save", async (request
 
     await db.prepare(
       `UPDATE finance_production SET receipt_id = ?
-        WHERE user_id = ? AND printify_order_id = ?`)
-      .bind(receiptId, user.userId, candidates[0].id).run();
+        WHERE user_id = ? AND shop_id = ? AND printify_order_id = ? AND (receipt_id IS NULL OR receipt_id = 0)`)
+      .bind(receiptId, user.userId, shopId, candidates[0].id).run();
     await db.prepare(
       `INSERT INTO finance_adjustments
          (id, user_id, shop_id, month, receipt_id, printify_order_id, kind,
-          amount_minor, currency, estimated, reason)
-       VALUES (?,?,?,?,?,?, 'linked-printify-order', 0, ?, 0, ?)`)
+          amount_minor, currency, estimated, reason, created_at)
+       VALUES (?,?,?,?,?,?, 'linked-printify-order', 0, ?, 0, ?, ?)`)
       .bind(id, user.userId, receipt.shopId, month, receiptId, candidates[0].id,
-        receipt.currency, "linked by the member to the one plausible Printify order")
+        receipt.currency, "linked by the member to the one plausible Printify order", now)
       .run();
     return NextResponse.json({ ok: true, basis: "printify-verified", month, id });
   }

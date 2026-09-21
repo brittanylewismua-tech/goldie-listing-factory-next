@@ -154,6 +154,12 @@ export default {
       only reason it was caught is that the ingest counters sit in the health
       view, which is the whole argument for putting them there.
     */
+    // A dedicated minute tick drains historical trademark files. The route
+    // claims one file atomically and retains per-file rate-limit cooldowns.
+    if (event.cron === "* * * * *") {
+      run("/api/trademark/ingest-tick");
+      return;
+    }
     if (event.cron === "*/10 * * * *") {
       run("/api/market/poll-tick");
       /*

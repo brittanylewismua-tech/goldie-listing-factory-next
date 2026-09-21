@@ -1,5 +1,6 @@
 "use client";
 
+import ActionPlan from "@/app/command-center/action-plan";
 import { useEffect, useRef, useState } from "react";
 import type { FullVerdict } from "../trademark-check";
 import "./trademark.css";
@@ -57,6 +58,7 @@ const classPhrase = (classes: string[]) => {
 };
 
 export default function TrademarkPage({ initialPhrase }: { initialPhrase?: string } = {}) {
+  const [productClass,setProductClass]=useState("");
   const [phrase, setPhrase] = useState(initialPhrase ?? "");
   const [verdict, setVerdict] = useState<FullVerdict | null>(null);
   const [checking, setChecking] = useState(false);
@@ -240,8 +242,9 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         {/* The register's own findings, kept visually separate from the
             curated list: they are a different kind of fact and a seller
             should be able to tell which one is talking. */}
+        <div className="cc-tool"><label>Review this product category first<select value={productClass} onChange={e=>setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label><p className="cc-note">This changes the order of the matches; every match remains visible. Related goods can be in different classes. Open each record and compare the actual goods and services, wording, owner and current status.</p><a href="https://www.uspto.gov/trademarks/search/likelihood-confusion" target="_blank" rel="noopener noreferrer">How the USPTO explains related goods ↗</a></div>
         {(verdict.register ?? []).length > 0 && <ul className="tm-hits tm-register p-card-quiet">
-          {(verdict.register ?? []).map((match, index) =>
+          {[...(verdict.register ?? [])].sort((a,b)=>Number(b.classes.some(c=>c.padStart(3,"0")===productClass))-Number(a.classes.some(c=>c.padStart(3,"0")===productClass))).map((match, index) =>
             /* Two records for one brand share a mark and carry no
                registration number until they register, so the previous key
                collided and React kept only one of them. */
@@ -259,6 +262,17 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         <button className="tm-watch-button" type="button" disabled={watchBusy === verdict.phrase}
           onClick={() => void watchPhrase()}>{watches.some(watch => watch.phrase.toLowerCase() === verdict.phrase.toLowerCase())
             ? "Update watched phrase" : "Watch this phrase"}</button>
+        <ActionPlan feature="trademarkStandalone" source={verdict.phrase.toLowerCase().slice(0,180)} heading={`Phrase review: ${verdict.phrase}`} notes={`Phrase: ${verdict.phrase}
+Intended product: ${CLASS_NAMES[productClass]||'Add the exact product'}
+Register search ${verdict.registerReady?'available':'incomplete'} when reviewed.
+${(verdict.register??[]).map(m=>`${m.mark} · ${m.registered?'registration':'pending application'} · ${classPhrase(m.classes)} · serial ${m.serial||'unavailable'}`).join('\n')}
+
+Records reviewed and current status:
+Actual goods/services and similarities to my product:
+Wording alternatives to check:
+Next step / professional advice needed:
+
+This note records my review; it is not clearance to use the phrase.`}/>
       </section>}
 
       <p className="tm-note">

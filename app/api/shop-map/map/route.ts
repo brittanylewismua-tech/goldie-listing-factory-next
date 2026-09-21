@@ -1,3 +1,4 @@
+import { catalogActions } from "@/app/shop-map-actions";
 import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
@@ -393,6 +394,7 @@ async function buildMap(request: Request) {
     .sort((a,b)=>b.sales-a.sales||Number(b.state==="active")-Number(a.state==="active"));
 
   return NextResponse.json({
+    catalogActions: catalogActions(rows, saleRows.results ?? [], now),
     shop: { shopId, shopName: shopRow.shop_name, imageUrl: shopRow.image_url, timezone },
     /* The money section is blocked until this shop's own timezone is set. */
     timezoneNeeded: !timezone,
@@ -404,13 +406,13 @@ async function buildMap(request: Request) {
       refundsMinor: financial?.refundsMinor ?? null,
       adjustmentsMinor: financial?.adjustmentsMinor ?? null,
       currency: financial?.currency ?? "USD",
-      headline: profit === null ? "Profit unavailable" : "Verified profit",
+      headline: profit === null ? "Profit unavailable" : financial?.manualCostCount ? "Profit with your entered costs" : "Verified profit",
       label: profit === null ? "unavailable" : "verified",
       salesAsOf: asOf, salesStale: isStale(asOf, nowSeconds),
       freshness: asOf ? freshnessNote({asOf,nowSeconds,timezone:timezone||"UTC"})
         : "The financial refresh is incomplete. Refresh your numbers to try again.",
       profitMinor: profit,
-      accuracy: profit===null ? "Profit is unavailable until all orders, Etsy charges, refunds, adjustments, and production costs for this period are accounted for." : "Includes sales, Etsy fees, refunds, adjustments, and matched production costs.",
+      accuracy: profit===null ? "Profit is unavailable until all orders, Etsy charges, refunds, adjustments, and production costs for this period are accounted for." : `Includes sales, Etsy fees, refunds, adjustments, and production costs.${financial?.manualCostCount ? ` ${financial.manualCostCount} order costs were entered by you.` : ""}`,
       coverage: {verified:productionCoverage,estimated:0,unavailable:1-productionCoverage},
       orders: financial?.coverage.receipts ?? 0,
     },

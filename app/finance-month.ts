@@ -39,6 +39,7 @@ export function isKnownTimezone(timezone: string): boolean {
 export function monthWindow(month: string, timezone: string): MonthWindow | null {
   if (!/^\d{4}-\d{2}$/.test(month) || !isKnownTimezone(timezone)) return null;
   const [year, monthNumber] = month.split("-").map(Number);
+  if (year < 1000 || monthNumber < 1 || monthNumber > 12) return null;
 
   const boundary = (y: number, m: number) => {
     const naive = Date.UTC(y, m - 1, 1, 0, 0, 0) / 1_000;

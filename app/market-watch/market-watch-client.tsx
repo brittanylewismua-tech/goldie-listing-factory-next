@@ -1,5 +1,7 @@
 "use client";
 
+import ActionPlan from "@/app/command-center/action-plan";
+import OfferPlanner from "@/app/command-center/offer-planner";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 type Listing = {
@@ -14,7 +16,7 @@ type NicheView = { key: string; phrase: string; stale?: boolean; gathering?: boo
   listings?: Listing[]; window?: string | null; error?: string; history?: Array<{day:string;moving:number;repeated:number;shops:number}> };
 type WatchRow = { key: string; phrase: string; moving: number; repeated: number;
   shops: number; lastCheckedAt: number; stale: boolean; listings: Listing[] };
-type ShopPattern = { pattern?: string; because?: string; evidence?: string; window?: string;
+type ShopPattern = { action?:{change:string;check:string}|null; pattern?: string; because?: string; evidence?: string; window?: string;
   reviews?: Array<{rating:number;review:string;createdAt:number}>; listing?: { id: number | null; url: string; title?:string;imageUrl?:string;priceCents?:number|null;currency?:string } };
 type ShopView = { shopId: number; shopName: string; etsy: string; displayUnavailable?:boolean;
   gettingAttention: ShopPattern[]; whatBuyersLove: ShopPattern[];
@@ -109,6 +111,7 @@ function NicheDetail({view,onBack,onRefresh,refreshing}:{view:NicheView;onBack:(
   const listings=(view.listings??[]).filter(listing=>!currency||(listing.currency||"USD")===currency).sort((a,b)=>sort==="price"?(a.priceCents??Infinity)-(b.priceCents??Infinity):sort==="newest"?(a.ageDays??Infinity)-(b.ageDays??Infinity):sort==="reviews"?b.reviewsOnThisListing-a.reviewsOnThisListing:(b.favorites??-1)-(a.favorites??-1));
   return <main className="mw"><button className="back p-button p-button-quiet" onClick={onBack}>← Tracked keywords</button><header className="mw-detail-head"><p className="mini-label">MARKET WATCH</p><h1>{view.phrase}</h1><p>Compare Etsy listings for this keyword.</p></header>
     {view.stale&&<p className="stale-flag" role="status">{view.error || "Current Etsy data could not be refreshed. Showing saved results."}</p>}
+    <OfferPlanner key={view.key} source={view.key} phrase={view.phrase} listings={view.listings??[]}/>
     <div className="market-toolbar"><label>Sort by <select value={sort} onChange={event=>setSort(event.target.value)}><option value="favorites">Most favorites</option><option value="reviews">Most recorded reviews</option><option value="newest">Newest listing</option><option value="price" disabled={mixedCurrencies}>Lowest price</option></select></label>{currencies.length>1&&<label>Currency <select value={currency} onChange={event=>{setCurrency(event.target.value);if(!event.target.value&&sort==="price")setSort("favorites")}}><option value="">All currencies</option>{currencies.map(code=><option key={code} value={code}>{code}</option>)}</select></label>}<button className="p-button p-button-quiet" disabled={refreshing} onClick={onRefresh}>{refreshing?"Refreshing…":"Refresh listings"}</button></div>
     {mixedCurrencies&&<p className="market-note">Choose one currency to sort by price.</p>}
     <p className="market-note">Favorites and views are current listing totals. Recorded activity reflects changes observed over time; it does not establish how many units an individual listing sold.</p>
@@ -148,7 +151,11 @@ function ShopCard({shop}:{shop:ShopView}){
       <p className="pattern-headline">{card.pattern}</p>
       <span className="support">{card.evidence}{card.window?` · ${card.window}`:""}</span>
       {Boolean(card.reviews?.length)&&<details><summary>Read buyer reviews</summary>{card.reviews!.map((review,i)=><blockquote key={i}><p>{review.review}</p><footer>{review.rating} / 5 · {new Date(review.createdAt*1000).toLocaleDateString()}</footer></blockquote>)}</details>}
+      {card.action&&<div className="cc-tool"><h4>Apply this to your offer</h4><p>{card.action.change}</p><p className="cc-note">{card.action.check}</p></div>}
       {card.because&&<details><summary>About this comparison</summary><p className="pattern-because">{card.because}</p></details>}
       {card.listing?.url&&<a href={card.listing.url} target="_blank" rel="noreferrer noopener">{card.listing.id?"View listing on Etsy":"View shop on Etsy"} ↗</a>}
-    </article>)}</div></div>:null)}</section>;
+    </article>)}</div></div>:null)}<ActionPlan feature="marketWatch" source={`shop-${shop.shopId}`} heading={`Offer improvement: ${shop.shopName}`} notes={[...shop.whatBuyersDislike,...shop.whatBuyersLove].filter(c=>c.action).slice(0,3).map(c=>`${c.pattern}
+Evidence: ${c.because}
+Change to test: ${c.action!.change}
+How to check: ${c.action!.check}`).join('\n\n')||'Choose a specific product and buyer need. Record the evidence, one change to test, and how you will measure the result.'}/></section>;
 }

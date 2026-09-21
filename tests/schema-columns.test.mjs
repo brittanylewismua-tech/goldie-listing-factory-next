@@ -193,7 +193,10 @@ test("the production-cost route reads only real finance columns", () => {
     path.join(appDir, "api/shop-map/production-cost/route.ts"), "utf8");
   assert.match(route, /r\.source_created_at AS createdAt/);
   /* Seller revenue, matching Home and Shop Map — not the buyer's grand total. */
-  assert.match(route, /r\.subtotal_minor \+ r\.shipping_minor - r\.seller_discount_minor/);
+  // Etsy subtotal already reflects discounts; subtracting them again understated revenue.
+  // The integration test executes this query against a discounted receipt.
+  assert.match(route, /r\.subtotal_minor \+ r\.shipping_minor/);
+  assert.doesNotMatch(route, /r\.subtotal_minor \+ r\.shipping_minor - r\.seller_discount_minor/);
   assert.ok(!route.includes("r.grand_total_minor AS revenueMinor"),
     "the cost screen shows the buyer's total while Shop Map shows seller revenue");
   assert.ok(!route.includes("r.created_at"));

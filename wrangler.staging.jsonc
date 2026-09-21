@@ -11,7 +11,7 @@
   // Ten minutes for the listing poller, which is the detector; twenty for
   // everything else. Cloudflare fires a named event per expression, so the
   // handler can tell them apart.
-  "triggers": { "crons": ["*/10 * * * *", "*/20 * * * *"] },
+  "triggers": { "crons": ["* * * * *", "*/10 * * * *", "*/20 * * * *"] },
   "no_bundle": true,
   "workers_dev": true,
   "preview_urls": true,

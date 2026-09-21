@@ -70,10 +70,10 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
 
   const load = useCallback(async () => {
     try {
-      const response = await fetch("/api/shop-map/production-cost");
+      const response = await fetch(`/api/shop-map/production-cost${window.location.search}`);
       const body = await response.json() as Payload;
       if (!response.ok) setError(memberError(body.error));
-      else { setData(body); setCurrency(body.currency?.currency ?? "USD"); }
+      else { setError(""); setData(body); setCurrency(body.currency?.currency ?? "USD"); }
     } catch { setError("These orders could not be loaded."); }
   }, []);
 
@@ -148,7 +148,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
 
           {order.why && <p className="why">{order.why}</p>}
 
-          {order.costBasis === "unavailable" && (
+          {order.costBasis !== "printify-verified" && (
             <>
               <div className="actions">
                 {order.linkCandidate && (
@@ -160,9 +160,10 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
                 )}
                 <button onClick={() => {
                   setEditing(editing === order.receiptId ? null : order.receiptId);
+                  setCurrency(order.currency); setAmount(order.productionCostMinor===null?"":(order.productionCostMinor/100).toFixed(2));
                   setConfirming(false);
                 }}>
-                  Enter what it cost
+                  {order.costBasis === "unavailable" ? "Enter what it cost" : "Change recorded cost"}
                 </button>
               </div>
 

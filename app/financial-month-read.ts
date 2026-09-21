@@ -29,13 +29,25 @@ export async function readFinancialMonth(userId:string,shopId:number,month:strin
       currency: string; canceled: number; counts_as_etsy_cost: number }>();
 
   const adjustments = await db.prepare(
-    `SELECT id, month, amount_minor, currency, kind, estimated, reversed_by
+    `SELECT id, month, receipt_id, amount_minor, currency, kind, estimated, reversed_by, created_at
        FROM finance_adjustments
       WHERE user_id = ? AND shop_id = ? AND month = ?`)
     .bind(userId, shopId, month)
     .all<{ id: string; month: string; amount_minor: number; currency: string;
-      kind: string; estimated: number; reversed_by: string | null }>();
+      kind: string; estimated: number; reversed_by: string | null; receipt_id:number|null; created_at:number }>();
 
+  const manualCosts = (adjustments.results ?? []).filter(entry =>
+    entry.kind === "manual-production-cost" && !entry.reversed_by && entry.receipt_id
+    && entry.amount_minor > 0 && !entry.estimated)
+    .sort((a,b)=>b.created_at-a.created_at || b.id.localeCompare(a.id))
+    .filter((entry,index,all)=>all.findIndex(other=>other.receipt_id===entry.receipt_id)===index)
+    .filter(entry=>!(production.results??[]).some(row=>row.receipt_id===entry.receipt_id && !row.canceled && row.counts_as_etsy_cost && row.cost_minor>0));
+  const manualIds = new Set(manualCosts.map(row=>row.receipt_id));
+  const manualMatched = await db.prepare(`SELECT receipt_id FROM finance_receipts
+    WHERE user_id=? AND shop_id=? AND source_created_at BETWEEN ? AND ?
+      AND match_status NOT IN ('fully-matched','canceled','refunded','ambiguous')`)
+    .bind(userId,shopId,window.from,window.to).all<{receipt_id:number}>();
+  const extraMatched = (manualMatched.results??[]).filter(row=>manualIds.has(row.receipt_id)).length;
   const receiptRow = await db.prepare(
     `SELECT COUNT(*) AS receipts,
             COALESCE(SUM(subtotal_minor), 0) AS subtotal,
@@ -89,18 +101,20 @@ export async function readFinancialMonth(userId:string,shopId:number,month:strin
       amountMinor: entry.amount_minor, currency: entry.currency,
       atSeconds: entry.source_created_at, receiptId: entry.receipt_id,
     })),
-    production: (production.results ?? []).map(entry => ({
+    production: [...(production.results ?? []).filter(entry=>!manualIds.has(entry.receipt_id)).map(entry => ({
       receiptId: entry.receipt_id, costMinor: entry.cost_minor,
       shippingMinor: entry.shipping_minor, currency: entry.currency,
       canceled: Boolean(entry.canceled), countsAsEtsyCost: Boolean(entry.counts_as_etsy_cost),
-    })),
-    adjustments: (adjustments.results ?? []).map(entry => ({
+    })), ...manualCosts.map(entry=>({receiptId:entry.receipt_id,costMinor:entry.amount_minor,
+      shippingMinor:0,currency:entry.currency,canceled:false,countsAsEtsyCost:true}))],
+    adjustments: (adjustments.results ?? []).filter(entry=>
+      !['manual-production-cost','linked-printify-order'].includes(entry.kind)).map(entry => ({
       id: entry.id, month: entry.month, amountMinor: entry.amount_minor,
       currency: entry.currency, kind: entry.kind as never,
       estimated: Boolean(entry.estimated), reversedBy: entry.reversed_by,
     })),
     receipts: receiptRow?.receipts ?? 0,
-    matchedReceipts: receiptRow?.matched ?? 0,
+    matchedReceipts: Number(receiptRow?.matched ?? 0) + extraMatched,
     staleSources,
     incompleteWindows: Math.max(Number(windowsRow?.incomplete??0),missingCoverage?1:0),
     currencyConflict: new Set(currenciesAll.filter(Boolean)).size > 1,
@@ -112,5 +126,5 @@ export async function readFinancialMonth(userId:string,shopId:number,month:strin
     ],
   });
 
-  return summary;
+  return {...summary, manualCostCount: manualCosts.length};
 }

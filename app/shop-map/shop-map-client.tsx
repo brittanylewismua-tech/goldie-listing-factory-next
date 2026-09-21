@@ -1,4 +1,6 @@
 "use client";
+import ActionPlan from "@/app/command-center/action-plan";
+import type {CatalogAction} from "@/app/shop-map-actions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { monthName } from "@/app/shop-map-month";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
@@ -13,9 +15,10 @@ type Niche = {
 };
 type Focus = { nicheId: string; label: string; headline: string; advice: string; reason: string };
 type ShopMap = {
+  catalogActions?: CatalogAction[];
   displayUnavailable?:boolean;
   topListings?: Array<{listingId:number;title:string;imageUrl:string;favorites:number|null;sales:number;revenueMinor:number}>;
-  shop?: { shopName: string; imageUrl?: string };
+  shop?: { shopId?:number; shopName: string; imageUrl?: string };
   month?: string;
   thisMonth?: { revenueMinor: number|null; etsyFeesMinor: number|null; productionCostMinor: number|null; refundsMinor?:number|null;adjustmentsMinor?:number|null;
     currency?:string; headline: string; profitMinor: number | null; accuracy: string; orders: number;
@@ -241,6 +244,14 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           </article>)}</div> : <div className="shop-map-empty"><b>No sales in the last 90 days.</b>
             <p>Your sold listings will appear here after the next Etsy sales import.</p></div>}
       </section>
+      <section className="cc-tool"><p className="mini-label">WHERE TO SPEND YOUR TIME</p><h2>Work on the listings you already have.</h2><p className="cc-note">Based on imported orders and the last recorded listing details. Confirm the current state on Etsy before making changes.</p>{shown.catalogActions?.length?shown.catalogActions.map(action=><details key={action.listingId} className="cc-saved-plan"><summary>{action.headline}: {action.title}</summary><p>{action.evidence}</p><p>{action.nextStep}</p><a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy ↗</a><ActionPlan feature="shopMap" source={`shop-${shown.shop?.shopId}-listing-${action.listingId}`} heading={action.headline} notes={`${action.title}
+${action.evidence}
+
+${action.nextStep}
+
+Change I will test:
+Start and end dates:
+What would make this worth repeating:`}/></details>):<p>No listing meets the current checks for an inactive recent seller, a sharp sales slowdown, or an older unsold listing with favorites. Use your sold listings to choose a focused test.</p>}</section>
       <section className="shop-map-summary-grid">
         <article><span>Orders this month</span><strong>{month?.orders ?? 0}</strong><small>{money(month?.revenueMinor,month?.currency)} revenue</small></article>
         <article><span>Active listings</span><strong>{shown.shopTotals?.activeListings ?? 0}</strong><small>in your current catalog</small></article>
@@ -286,7 +297,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           <div><dt>Revenue</dt><dd>{money(month?.revenueMinor,month?.currency)}</dd></div><div><dt>Etsy fees</dt><dd>{money(month?.etsyFeesMinor,month?.currency)}</dd></div>
           <div><dt>Production</dt><dd>{month?.productionCostMinor == null || month?.coverage?.unavailable ? "Not available" : money(-month.productionCostMinor,month.currency)}</dd></div>
           <div><dt>Refunds recorded</dt><dd>{money(month?.refundsMinor,month?.currency)}</dd></div><div><dt>Adjustments</dt><dd>{money(month?.adjustmentsMinor,month?.currency)}</dd></div><div><dt>Orders</dt><dd>{month?.orders ?? 0}</dd></div></dl>
-        {month?.coverage?.unavailable ? <a className="shop-map-fix" href="/shop-map/costs">Add production costs</a> : null}</>}
+        {month?.coverage?.unavailable ? <a className="shop-map-fix" href={`/shop-map/costs?month=${encodeURIComponent(shown.month ?? "")}`}>Add production costs</a> : null}</>}
     </section>}
     {signedInEmail ? null : null}
   </main>;

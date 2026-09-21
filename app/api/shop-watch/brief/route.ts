@@ -63,9 +63,9 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
       etsy: `https://www.etsy.com/shop/${encodeURIComponent(row.shop_name)}`,
       /* Four sections. Each card says what the pattern is, which listing it
          is about, how much evidence stands behind it, and how fresh it is. */
-      gettingAttention: (brief.attention ?? []).map((card: Parameters<typeof present>[0] & {evidenceClass?:string}) => present(card, row.shop_name)),
-      whatBuyersLove: (brief.love ?? []).map((card: Parameters<typeof present>[0] & {evidenceClass?:string}) => present(card, row.shop_name)),
-      whatBuyersDislike: (brief.dislike ?? []).map((card: Parameters<typeof present>[0] & {evidenceClass?:string}) => present(card, row.shop_name)),
+      gettingAttention: (brief.attention ?? []).map((card: Parameters<typeof present>[0] & {evidenceClass?:string;supportingReviewIds?:number[]}) => ({...present(card, row.shop_name), reviewIds:(card.supportingReviewIds??[]).filter(Number.isSafeInteger).slice(0,3)})),
+      whatBuyersLove: (brief.love ?? []).map((card: Parameters<typeof present>[0] & {evidenceClass?:string;supportingReviewIds?:number[]}) => ({...present(card, row.shop_name), reviewIds:(card.supportingReviewIds??[]).filter(Number.isSafeInteger).slice(0,3)})),
+      whatBuyersDislike: (brief.dislike ?? []).map((card: Parameters<typeof present>[0] & {evidenceClass?:string;supportingReviewIds?:number[]}) => ({...present(card, row.shop_name), reviewIds:(card.supportingReviewIds??[]).filter(Number.isSafeInteger).slice(0,3)})),
       /*
         The two cards in this section are not built from reviews, so the
         weight of their evidence is not a review count. The translation
@@ -87,11 +87,12 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
   const enriched = await Promise.all(shops.map(async shop => {
     const enrich = async (card: typeof cards[number]) => {
       const row = card.listing.id ? listings.get(card.listing.id) : undefined;
-      const reviews = card.listing.id ? await db.prepare(`SELECT rating, review, created_at AS createdAt
-        FROM shop_reviews WHERE shop_id = ? AND listing_id = ? AND review <> ''
-        ORDER BY created_at DESC LIMIT 3`).bind(shop.shopId,card.listing.id)
+      const {reviewIds:ids,...displayCard}=card;
+      const reviews = ids.length ? await db.prepare(`SELECT rating, review, created_at AS createdAt
+        FROM shop_reviews WHERE shop_id = ? AND transaction_id IN (${ids.map(()=>"?").join(",")}) AND review <> ''
+        ORDER BY created_at DESC LIMIT 3`).bind(shop.shopId,...ids)
         .all<{rating:number;review:string;createdAt:number}>() : {results:[]};
-      return {...card, listing: {...card.listing, title: row?.title ?? "", imageUrl: row ? listingPhoto(row) : "",
+      return {...displayCard, listing: {...card.listing, title: row?.title ?? "", imageUrl: row ? listingPhoto(row) : "",
         priceCents: row ? listingPrice(row) : null, currency: row?.price?.currency_code ?? "USD"}, reviews: (reviews.results ?? []).map(review=>({...review,review:decodeEntities(review.review)}))};
     };
     return {...shop, gettingAttention:await Promise.all(shop.gettingAttention.map(enrich)),
@@ -114,11 +115,13 @@ export const GET = withErrorLog("shop-watch-brief", async (request: Request) => 
 /* What a card looks like to a member: the pattern, the listing, the weight of
    evidence, and nothing about how it was computed. */
 function present(card: {
+  action?: {change:string;check:string}|null;
   headline: string; because: string; listingId: number | null; sampleSize: number;
   windowFrom: number; windowTo: number;
 }, shopName: string, weight = "") {
   return {
     pattern: card.headline,
+    action: card.action ?? null,
     /* The reasoning, which the selection rule computed and then discarded.
        Without it, "9 of the last 496 reviews" is a true sentence nobody can
        act on: whether nine is a lot depends on a denominator the card never

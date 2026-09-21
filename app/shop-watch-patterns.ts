@@ -1,3 +1,4 @@
+import { buyerAction } from "./buyer-actions.ts";
 /**
  * WHAT THE REVIEWS ACTUALLY SHOW.
  *
@@ -45,6 +46,7 @@ export type EvidenceClass =
   | "unresolved";
 
 export type Pattern = {
+  action?: {change:string;check:string}|null;
   section: "attention" | "love" | "dislike" | "changed";
   headline: string;
   /* WHY THE NUMBER MATTERS, NOT JUST WHAT IT IS.
@@ -139,7 +141,14 @@ const OCCASIONS = ["birthday", "christmas", "anniversary", "wedding", "graduatio
 
 const mentions = (text: string, phrase: string) => {
   const words = ` ${text.toLocaleLowerCase().replace(/[^a-z' ]+/g, " ").replace(/\s+/g, " ").trim()} `;
-  return words.includes(` ${phrase} `);
+  const needle=` ${phrase} `;
+  let start=words.indexOf(needle);
+  while(start>=0){
+    const before=words.slice(Math.max(0,start-24),start).trim();
+    if(!/(?:\bnot|\bnever|\bno|n't)(?:\s+\w+){0,2}$/.test(before))return true;
+    start=words.indexOf(needle,start+needle.length-1);
+  }
+  return false;
 };
 
 function phrasePatterns(
@@ -159,6 +168,7 @@ function phrasePatterns(
     .slice(0, 6)
     .map(entry => ({
       section,
+      action: buyerAction(entry.phrase),
       headline: shape(entry.phrase, entry.hits.length),
       because: explain(entry.phrase, entry.hits.length, recent.length,
         new Set(entry.hits.map(hit => hit.listingId)).size),
