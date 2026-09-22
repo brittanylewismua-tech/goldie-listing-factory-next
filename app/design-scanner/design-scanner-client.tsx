@@ -244,7 +244,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
           onChange={event => void onFile(event.target.files?.[0])} />
       </label></div>
 
-      <div className="scanner-settings"><h2 className="utility-heading">Set up your scan</h2><p className="scanner-help">Add your artwork and choose its audience to find a relevant comparison.</p><div className="field">
+      <div className="scanner-settings"><h2 className="utility-heading">Set up your scan</h2><div className="field">
         <label htmlFor="niche">Who is it for?</label>
         <input id="niche" type="text" value={niche} placeholder="bachelorette, dog mom, teacher…"
           onChange={event => setNiche(event.target.value)} />

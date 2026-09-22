@@ -17,14 +17,6 @@ const stroke = {
 
 const TOOLS = [
   {
-    href: "/listing-factory?step=setup",
-    name: "Listing Factory",
-    what: "Create one Etsy listing or build a batch.",
-    desktopOnly: true,
-    icon: <svg viewBox="0 0 24 24" width="22" height="22" {...stroke} aria-hidden="true">
-      <path d="M3 20h18" /><path d="M5 20V9l5 3V9l5 3V6l4 3v11" /></svg>,
-  },
-  {
     href: "/market-watch",
     name: "Market Watch",
     what: "Compare Etsy listings for your keywords and watched shops.",
@@ -79,7 +71,7 @@ export default function HomeView() {
       <Link className="home-secondary-action" href="/batches"><span>BATCH HISTORY</span><strong>Continue your work</strong><p>Return to your saved batches and listing drafts.</p><i aria-hidden="true">→</i></Link>
     </section>
 
-    <div className="hub-section-head home-workspaces-head"><div><h2>Your tools</h2><p>Research, refine, and manage your shop.</p></div></div>
+    <div className="hub-section-head home-workspaces-head"><div><h2>Command Center</h2><p>Research, refine, and manage your shop.</p></div></div>
     <section className="hub-grid">
       {TOOLS.map((tool) => (
         <Link key={tool.name} className="hub-tool" href={tool.href}>

@@ -286,8 +286,8 @@ What would make this worth repeating:`}/></details>):<p>No listing meets the cur
     {tab === "sold" && <section className="shop-map-card shop-map-sold">
       <div className="shop-map-section-head"><div><p className="mini-label">SOLD LISTINGS</p><h2>Sold listings · last {soldDays} days</h2>
         <p>Sales and revenue come from Etsy transactions. Favorites come from the current listing record.</p></div></div>
-      <label className="shop-map-period">Sales period <select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label>
-      <div className="shop-map-browse-controls"><label>Search sold listings<input type="search" value={soldQuery} onChange={e=>setSoldQuery(e.target.value)} placeholder="Find a listing"/></label><label>Sort sold listings<select value={soldSort} onChange={e=>setSoldSort(e.target.value as "sales"|"favorites"|"revenue")}><option value="sales">Most units sold</option><option value="revenue">Highest revenue</option><option value="favorites">Highest favorites</option></select></label></div>
+
+      <div className="shop-map-browse-controls"><label>Sales period <select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label><label>Search sold listings<input type="search" value={soldQuery} onChange={e=>setSoldQuery(e.target.value)} placeholder="Find a listing"/></label><label>Sort sold listings<select value={soldSort} onChange={e=>setSoldSort(e.target.value as "sales"|"favorites"|"revenue")}><option value="sales">Most units sold</option><option value="revenue">Highest revenue</option><option value="favorites">Highest favorites</option></select></label></div>
       {!refreshing&&<p role="status">{browseOwnListings(sold,soldSort,soldQuery).length} of {sold.length} sold listings shown</p>}
       {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-table"><div className="head"><span>Listing</span><span>Sold</span><span>Favorites</span><span>Revenue</span></div>
         {browseOwnListings(sold,soldSort,soldQuery).map(listing => <article key={listing.listingId}><div>{listing.imageUrl ? <img src={listing.imageUrl} alt=""/> : <i>G</i>}
@@ -296,7 +296,7 @@ What would make this worth repeating:`}/></details>):<p>No listing meets the cur
 
     {tab === "money" && <section className="shop-map-card shop-map-money shop-map-money-redesign">
       <label className="shop-map-period">Month <input type="month" value={selectedMonth||shown.month||""} onInput={event=>{const value=event.currentTarget.value;if(/^\d{4}-(0[1-9]|1[0-2])$/.test(value))setSelectedMonth(value)}} onChange={event=>setSelectedMonth(event.target.value)}/></label><h2>Monthly profit</h2>
-      <button type="button" className="shop-map-confirm" disabled={syncingMoney} onClick={()=>void refreshMoney()}>{syncingMoney ? "Refreshing your numbers…" : "Refresh your numbers"}</button>
+      <button type="button" className="shop-map-confirm p-button p-button-quiet" disabled={syncingMoney} onClick={()=>void refreshMoney()}>{syncingMoney ? "Refreshing your numbers…" : "Refresh your numbers"}</button>
       {syncingMoney&&<p role="status">Getting the latest sales, Etsy fees, and production costs. This may take a few minutes.</p>}
       {moneyRefreshError&&<p role="alert" className="shop-map-reason">{moneyRefreshError}</p>}
       {refreshing?<p role="status">Loading this month’s totals…</p>:selectedMonth && shown.month!==selectedMonth ? <p role="alert">This month could not be loaded. <button type="button" onClick={()=>void load()}>Try again</button></p>:shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>

@@ -6,17 +6,17 @@
   --work-radius:10px; --work-paper:#fff;
 }
 .app-shell.command-workspace .factory-work {max-width:1440px;padding:32px 40px 72px!important}
-.app-shell.command-workspace :is(.hub,.mw,.scanner,.shop-map,.tm-page,.conn,.interior-page) {
+.app-shell.command-workspace :is(.hub,.mw,.scanner,.shop-map,.tm-page,.tm-standalone,.conn,.costs,.interior-page,.tools-settings,.tools-settings>.p-page) {
   width:100%;max-width:1160px!important;margin:0 auto!important;padding:0!important;
   font-family:'Manrope Variable',Manrope,sans-serif;font-size:16px;line-height:1.55;
   background:transparent!important;min-width:0;
 }
 .app-shell.command-workspace :is(.hub-head,.mw-intro,.mw-detail-head,.command-page-heading,.tm-page .drop-head) {margin:0 0 24px!important;padding:0;max-width:none!important}
-.app-shell.command-workspace :is(.hub-head h1,.mw h1,.command-page-heading h1,.tm-page h1,.shop-map-head h1) {
+.app-shell.command-workspace :is(.hub-head h1,.mw h1,.command-page-heading h1,.tm-page h1,.shop-map-head h1,.conn h1,.costs h1,.tools-settings h1,.drop-head h1) {
   margin:0 0 8px!important;font:400 clamp(30px,2.6vw,38px)/1.15 'DM Serif Display',Georgia,serif!important;letter-spacing:-.025em!important;
 }
-.app-shell.command-workspace :is(.hub-intro,.lede,.drop-head>p:last-child,.scanner-help) {font-size:16px!important;line-height:1.6;max-width:70ch;margin:0!important;color:var(--work-muted)!important}
-.app-shell.command-workspace :is(.mw,.scanner,.shop-map,.tm-page,.hub) h2 {
+.app-shell.command-workspace :is(.hub-intro,.lede,.drop-head>p:last-child) {font-size:16px!important;line-height:1.6;max-width:70ch;margin:0!important;color:var(--work-muted)!important}
+.app-shell.command-workspace :is(.mw,.scanner,.shop-map,.tm-page,.hub,.costs) h2 {
   font:750 20px/1.35 'Manrope Variable',Manrope,sans-serif!important;letter-spacing:-.02em!important;text-transform:none!important;
 }
 .app-shell.command-workspace :is(.mini-label,.p-eyebrow) {font-size:12px!important;line-height:1.5;letter-spacing:.075em!important;margin:0 0 6px;color:var(--work-accent)!important}
@@ -26,7 +26,7 @@
 .app-shell.command-workspace :is(.p-button-primary,.keyword-watch-head button) {background:#171318!important;color:#fff!important;border:1px solid #171318!important}
 .app-shell.command-workspace .p-button-quiet {background:#fff!important;color:#29232a!important;border:1px solid #cbbfc8!important}
 .app-shell.command-workspace :is(button,a,input,select,textarea):focus-visible {outline:3px solid #ce258c;outline-offset:3px}
-.app-shell.command-workspace button:disabled {cursor:not-allowed;opacity:.5}
+.app-shell.command-workspace .factory-work button.p-button:disabled {cursor:not-allowed;opacity:1!important;background:#eee7ec!important;color:#74616d!important;border-color:#dfd4dc!important;box-shadow:none!important}
 .app-shell.command-workspace :is(.tabs.p-tabs,.shop-map-tabs) {display:flex;gap:0;padding:0;margin:0 0 24px;border:0;border-bottom:1px solid #d6cdd3;border-radius:0;background:transparent;box-shadow:none;overflow:auto}
 .app-shell.command-workspace :is(.tabs .p-tab,.shop-map-tabs button) {
   position:relative;flex:0 0 auto;min-height:46px;padding:10px 20px!important;margin:0 6px 0 0;border:1px solid #d6cdd3!important;border-bottom:0!important;border-radius:8px 8px 0 0!important;
@@ -35,6 +35,7 @@
 .app-shell.command-workspace :is(.p-tab[aria-selected="true"],.shop-map-tabs button[aria-current="page"]) {color:#171318!important;border-color:#aba0a8!important;box-shadow:inset 0 -3px #ef43ab!important}
 .app-shell.command-workspace .shop-map-tabs button::after {display:none}
 /* Home: two working entry points, then a balanced directory. */
+.app-shell.command-workspace .hub::before {display:none}
 .app-shell.command-workspace .home-dashboard-date {font-size:12px!important;letter-spacing:.02em!important;text-transform:none;font-weight:650!important;margin:0 0 10px!important}
 .app-shell.command-workspace .home-dashboard-date span {width:6px;height:6px;box-shadow:none}
 .app-shell.command-workspace .home-primary-actions {gap:20px;margin:0 0 32px;grid-template-columns:1fr 1fr}
@@ -51,7 +52,7 @@
 .app-shell.command-workspace .home-workspaces-head p {margin:0;color:var(--work-muted);font-size:14px}
 .app-shell.command-workspace .hub-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;border:1px solid var(--work-line);border-radius:12px;padding:4px 24px;background:white}
 .app-shell.command-workspace .hub-tool:nth-child(n) {grid-column:auto;grid-template-columns:40px minmax(0,1fr);grid-template-rows:auto auto;gap:5px 14px;min-height:122px;padding:22px 26px 22px 0;border:0!important;border-bottom:1px solid var(--work-line)!important;border-radius:0!important;background:white!important;color:#171318!important;box-shadow:none!important;transform:none}
-.app-shell.command-workspace .hub-tool:nth-last-child(-n+1) {border-bottom:0!important}
+.app-shell.command-workspace .hub-tool:nth-last-child(-n+2) {border-bottom:0!important}
 .app-shell.command-workspace .hub-tool:first-child :is(b,.hub-what) {color:inherit!important}
 .app-shell.command-workspace .hub-tool b {font-size:16px;line-height:1.4;letter-spacing:-.015em;align-self:end}
 .app-shell.command-workspace .hub-tool .hub-what {font-size:14px;line-height:1.5;color:var(--work-muted)!important}
@@ -144,7 +145,6 @@
 .app-shell.command-workspace .scanner .pick {display:block;position:relative;text-align:center;padding:12px;background:#fff;border:1px solid #cbbfc8;border-radius:8px;min-height:44px;font-size:14px;font-weight:750;color:#30242d;cursor:pointer;box-shadow:none}
 .app-shell.command-workspace .scanner-settings {min-width:0}
 .app-shell.command-workspace .scanner-settings h2 {margin:0 0 8px}
-.app-shell.command-workspace .scanner-help {font-size:14px!important}
 .app-shell.command-workspace .scanner .field {padding:0;margin:24px 0 20px;background:transparent;border:0;box-shadow:none}
 .app-shell.command-workspace .scanner .field label {font-size:14px;font-weight:700;margin-bottom:8px}
 .app-shell.command-workspace .scanner .field :is(input,select) {background:white;border:1px solid #cbbfc8;font:400 16px/1.5 'Manrope Variable',sans-serif;border-radius:8px;min-height:44px}
@@ -169,6 +169,30 @@
 .app-shell.command-workspace .tm-hit {border-color:var(--work-line);padding:18px}
 .app-shell.command-workspace .tm-hit .tm-cat {font-size:12px}
 .app-shell.command-workspace .tm-note {color:#625862;font-size:13px}
+.app-shell.command-workspace .costs {border:0!important;border-radius:0!important;box-shadow:none!important}
+.app-shell.command-workspace .costs .back {padding:8px 14px;margin:0 0 20px;min-height:38px;background:#fff;border:1px solid #cbbfc8;border-radius:8px;font-size:14px;color:#29232a}
+.app-shell.command-workspace .costs .cost-month {margin:20px 0 12px;font-size:14px;font-weight:700;color:#625862}
+.app-shell.command-workspace .costs .verdict {padding:20px;border:1px solid var(--work-line)!important;border-left:3px solid #b9883c!important;box-shadow:none!important;border-radius:10px}
+.app-shell.command-workspace .costs .order {padding:22px;border-color:var(--work-line);border-radius:10px;box-shadow:none!important}
+.app-shell.command-workspace .costs .basis {font-size:12px}
+/* Supporting pages share the same spacing, controls and readable text. */
+.app-shell.command-workspace .tools-settings>.p-page {width:100%;max-width:1160px;margin:0;padding:0}
+.app-shell.command-workspace .tools-settings .p-head {margin:0 0 28px;padding:0 0 20px;border-bottom:1px solid var(--work-line)}
+.app-shell.command-workspace .tools-settings .p-head p {font-size:16px;line-height:1.6}
+.app-shell.command-workspace .tools-settings .ts-heading,.app-shell.command-workspace .conn .utility-heading {font:750 20px/1.4 'Manrope Variable',sans-serif!important;text-transform:none!important;letter-spacing:-.015em!important;color:#29232a!important;margin:24px 0 14px}
+.app-shell.command-workspace .tools-settings .ts-group {margin:0 0 28px}
+.app-shell.command-workspace .tools-settings .ts-row {padding:18px;border:1px solid var(--work-line);border-radius:10px;box-shadow:none!important;background:white}
+.app-shell.command-workspace .tools-settings .ts-text b {font-size:16px;line-height:1.5}
+.app-shell.command-workspace .tools-settings .ts-text small {font-size:14px;line-height:1.5;color:#625862}
+.app-shell.command-workspace .tools-settings .ts-icon {background:#fff4fa;color:#9d1269;border:1px solid #f0cce3;box-shadow:none}
+.app-shell.command-workspace .conn>h1 {margin-bottom:10px!important}
+.app-shell.command-workspace .conn>.lede {margin-bottom:24px!important}
+.app-shell.command-workspace .conn .shop {border:1px solid var(--work-line);border-radius:10px;box-shadow:none;padding:22px}
+.app-shell.command-workspace .conn button {font:750 14px/1.5 'Manrope Variable',sans-serif;min-height:42px;border-radius:8px;box-shadow:none!important}
+.app-shell.command-workspace .drop-card {box-shadow:none!important;border:1px solid var(--work-line)!important;border-radius:10px!important}
+.app-shell.command-workspace .drop-card .drop-title {font-size:14px!important;line-height:1.5!important}
+.app-shell.command-workspace .drop-card :is(.drop-unit,.drop-sub) {font-size:13px!important}
+.app-shell.command-workspace .drop-tabs button {font-size:13px!important}
 @media(max-width:1200px){
  .app-shell.command-workspace .factory-work {padding:28px!important}
  .app-shell.command-workspace .mw .card>.body {grid-template-columns:minmax(0,1fr)}
@@ -193,6 +217,10 @@
  .app-shell.command-workspace .hub-tool:nth-child(n) {min-height:116px;padding-top:20px;padding-bottom:20px}
  .app-shell.command-workspace :is(.tabs.p-tabs,.shop-map-tabs) {display:flex;flex-wrap:nowrap;overflow:auto;gap:0;padding-bottom:1px}
  .app-shell.command-workspace :is(.tabs .p-tab,.shop-map-tabs button) {padding:10px 14px!important;font-size:14px!important;white-space:nowrap}
+ .app-shell.command-workspace :is(.shop-map-tabs,.tabs.shop-detail-tabs) {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;border:0;overflow:visible}
+ .app-shell.command-workspace :is(.shop-map-tabs button,.shop-detail-tabs .p-tab) {margin:0;border:1px solid #d6cdd3!important;border-radius:8px!important;white-space:normal}
+ .app-shell.command-workspace .hub-tool:nth-child(n) {border-bottom:1px solid var(--work-line)!important}
+ .app-shell.command-workspace .hub-tool:last-child {border-bottom:0!important}
  .app-shell.command-workspace .mw>.add {display:grid;grid-template-columns:minmax(0,1fr);padding:14px}
  .app-shell.command-workspace .mw>.add button {width:100%}
  .app-shell.command-workspace .mw .market-browser-controls {padding:14px;gap:12px}
