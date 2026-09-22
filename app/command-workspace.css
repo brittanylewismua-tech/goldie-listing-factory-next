@@ -235,9 +235,6 @@
  .app-shell.command-workspace .mw .card .title {-webkit-line-clamp:3;font-size:14px!important}
  .app-shell.command-workspace .listing-stat-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:4px 0 0}
  .app-shell.command-workspace .mw .card>a {grid-column:2;grid-row:2;justify-self:start;min-height:40px;padding:10px 14px}
- .app-shell.command-workspace .market-results-sort {display:flex;justify-content:flex-end;align-items:end;flex-wrap:wrap;gap:16px;margin:16px 0 12px}
-.app-shell.command-workspace .market-results-sort label {display:grid;gap:6px;font-size:13px;font-weight:650}
-.app-shell.command-workspace .market-results-sort select {min-height:42px;max-width:100%;padding:8px 32px 8px 12px;border:1px solid #cbbfc8;border-radius:8px;background:white;color:#29232a;font:inherit}
 .app-shell.command-workspace .market-result-bar {align-items:start;gap:12px}
  .app-shell.command-workspace .scanner-compose {padding:18px;gap:24px}
  .app-shell.command-workspace .scanner .stage {min-height:190px}
