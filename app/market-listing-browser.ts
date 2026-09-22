@@ -2,7 +2,7 @@ export type ListingOrder = 'newest' | 'favorites' | 'views' | 'reviews' | 'price
 export type ResearchListing = {
   listingId:number; title:string; currency:string; priceCents:number|null;
   favorites:number|null; views:number|null; ageDays:number|null;
-  createdAt?:number|null; reviewsOnThisListing:number;
+  createdAt?:number|null; reviewsOnThisListing:number|null;
 };
 // Missing measurements always sort last; zero is a real measurement.
 function compare(a:number|null|undefined,b:number|null|undefined,ascending=false){

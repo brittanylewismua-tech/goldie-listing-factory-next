@@ -161,8 +161,10 @@ test("a tracked keyword shows current listings while sales evidence gathers", ()
 
   const client = readFileSync(new URL(
     "../app/market-watch/market-watch-client.tsx", import.meta.url), "utf8");
-  assert.match(client, /it does not establish how many units an individual listing sold/);
-  assert.match(client, /current listing totals/);
+  // Search cards show totals and dates, never inferred unit sales.
+  assert.match(client, /Total favorites/);
+  assert.match(client, /Total views/);
+  assert.doesNotMatch(client, /listing\.sold7|listing\.sold30/);
 });
 
 test("internal candidate counts are never shown to members", () => {

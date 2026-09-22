@@ -682,7 +682,7 @@ test("the review caveat is said once per section, not on every card", () => {
 test("keyword cards use labels instead of generated count sentences", () => {
   /* "feminist · 1 moving · 1 repeated · 1 shops" on the live page. */
   const client = read("market-watch/market-watch-client.tsx");
-  assert.match(client, /Favorites/);
+  assert.match(client, /Total favorites/);
   assert.match(client, /Recorded reviews/);
   assert.doesNotMatch(client, /across .*shops/);
 });
@@ -700,8 +700,10 @@ test("a keyword page separates current listings from confirmed sales", () => {
     sentence is, so it stops contradicting what sits underneath it.
   */
   const client = read("market-watch/market-watch-client.tsx");
-  assert.match(client, /it does not establish how many units an individual listing sold/);
-  assert.match(client, /Favorites and views are current listing totals/);
+  // Search cards show totals and dates, never inferred unit sales.
+  assert.match(client, /Total favorites/);
+  assert.match(client, /Total views/);
+  assert.doesNotMatch(client, /listing\.sold7|listing\.sold30/);
 
   /* And the bar itself is untouched — this is not a threshold change. */
   const watch = read("niche-watch.ts");

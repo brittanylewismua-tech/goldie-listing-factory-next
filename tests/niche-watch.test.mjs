@@ -234,12 +234,15 @@ test("the interface never shows a sale count, score or raw review feed", () => {
 
 test("a stale watch is labelled, not emptied", () => {
   assert.match(MW, /Showing saved results/);
-  assert.match(MW, /stale-flag/);
+  assert.match(MW, /keyword-stale/);
 });
 
 test("empty and gathering states say what is happening", () => {
-  assert.match(MW, /it does not establish how many units an individual listing sold/);
-  assert.match(MW, /Current Etsy data could not be refreshed/);
+  // Search cards show totals and dates, never inferred unit sales.
+  assert.match(MW, /Total favorites/);
+  assert.match(MW, /Total views/);
+  assert.doesNotMatch(MW, /listing\.sold7|listing\.sold30/);
+  assert.match(MW, /Etsy search could not load/);
   // Catalog, feedback, and changes now have separate empty states.
   assert.match(MW, /No recent review summary is available for this shop/);
   assert.match(MW, /No shop changes have been recorded yet/);

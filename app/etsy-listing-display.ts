@@ -4,7 +4,7 @@ import { decodeEntities } from "@/app/shop-map-worlds";
 export type EtsyDisplayListing = {
   listing_id?: number; shop_id?: number; title?: string; tags?: string[]; state?: string;
   price?: { amount?: number; divisor?: number; currency_code?: string };
-  num_favorers?: number; views?: number; original_creation_timestamp?: number;
+  num_favorers?: number; views?: number; original_creation_timestamp?: number; creation_timestamp?: number; created_timestamp?: number;
   images?: Array<{ rank?: number; url_570xN?: string; url_fullxfull?: string; url_300x300?: string }>;
   shop?: { shop_name?: string; icon_url_fullxfull?: string };
 };
