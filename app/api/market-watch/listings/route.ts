@@ -15,7 +15,7 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
   const params=new URL(request.url).searchParams;
   const key=params.get('key')??'';
   const offset=Number(params.get('offset')??0);
-  const order=params.get('sort')??'newest';
+  const order=params.get('sort')??'relevance';
   if(!Number.isSafeInteger(offset)||offset<0||!['newest','relevance','price','price-desc'].includes(order))
     return NextResponse.json({error:'Choose a valid search page and sort order.'},{status:400});
   const watch=(await watchesFor(access.user.userId)).find(row=>row.key===key);

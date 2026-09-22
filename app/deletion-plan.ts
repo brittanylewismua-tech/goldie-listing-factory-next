@@ -32,6 +32,9 @@ export type PlanStep = {
 };
 
 export const DELETION_PLAN: PlanStep[] = [
+  { table: "market_keyword_collections", disposition: "delete",
+    sql: `DELETE FROM market_keyword_collections WHERE user_id = ?`,
+    say: "Your saved competitor comparisons." },
   { table: "command_center_plans", disposition: "delete",
     sql: `DELETE FROM command_center_plans WHERE user_id = ?`,
     say: "Your Command Center plans, experiments and results." },

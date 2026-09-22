@@ -2,6 +2,8 @@
 
 import ActionPlan from "@/app/command-center/action-plan";
 import OfferPlanner from "@/app/command-center/offer-planner";
+import {competitorChanges,type CollectionEntry} from "@/app/market-collection";
+import type {KeywordOrder} from "@/app/keyword-search";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import {browseListings,type ListingOrder} from "@/app/market-listing-browser";
@@ -9,8 +11,8 @@ import {browseListings,type ListingOrder} from "@/app/market-listing-browser";
 type Listing = {
   createdAt?:number|null; listedAt?:number|null;
   listingId: number; title: string; imageUrl: string; etsyUrl: string;
-  state: string; label: string; confirmedAt: number; intervals: number;
-  sold7: number; sold30: number; priceCents: number | null; currency: string;
+  state?: string; label?: string; confirmedAt?: number; intervals: number;
+  sold7?: number; sold30?: number; priceCents: number | null; currency: string;
   favorites: number | null; views: number | null; ageDays: number | null;
   reviewsOnThisListing: number|null; displayFresh: boolean;
 };
@@ -117,9 +119,29 @@ function WatchList({load,onRetry,failure,empty,children}:{load:{status:"loading"
 }
 
 function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=>void;refreshing:boolean}){
-  const [sort,setSort]=useState<ListingOrder|"relevance">("newest");
-  const [source,setSource]=useState<"newest"|"relevance">("newest");
-  const [currency,setCurrency]=useState("");
+  const [sort,setSort]=useState<KeywordOrder>("relevance");
+  const [section,setSection]=useState<"search"|"saved">("search");
+  const [entries,setEntries]=useState<CollectionEntry[]>([]);
+  const [collectionLoading,setCollectionLoading]=useState(true);
+  const [collectionBusy,setCollectionBusy]=useState(false);
+  const [collectionError,setCollectionError]=useState("");
+  const [collectionSort,setCollectionSort]=useState<ListingOrder>("favorites");
+  const [collectionCurrency,setCollectionCurrency]=useState("");
+  const collectionRequest=useRef(false);
+  const collectionUrl=`/api/market-watch/collection?key=${encodeURIComponent(view.key)}`;
+  const loadCollection=useCallback(async()=>{
+    setCollectionLoading(true);setCollectionError("");
+    try{const response=await fetch(collectionUrl);const body=await response.json() as {entries?:CollectionEntry[];error?:string};if(!response.ok)throw new Error(body.error||"Saved comparisons could not load.");setEntries(body.entries??[]);}
+    catch(e){setCollectionError(e instanceof Error?e.message:"Saved comparisons could not load.");}
+    finally{setCollectionLoading(false);}
+  },[collectionUrl]);
+  useEffect(()=>{void loadCollection()},[loadCollection]);
+  const updateCollection=async(action:"save"|"remove"|"refresh",listingId?:number)=>{
+    if(collectionRequest.current)return;collectionRequest.current=true;setCollectionBusy(true);setCollectionError("");
+    try{const response=await fetch(collectionUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,listingId})});const body=await response.json() as {entries?:CollectionEntry[];error?:string};if(!response.ok)throw new Error(body.error||"The collection update could not be confirmed.");setEntries(body.entries??[]);}
+    catch(e){setCollectionError(e instanceof Error?e.message:"The collection update could not be confirmed. Reload before trying again.");}
+    finally{collectionRequest.current=false;setCollectionBusy(false);}
+  };
   const [query,setQuery]=useState("");
   const [search,setSearch]=useState("");
   const [rows,setRows]=useState<Listing[]>([]);
@@ -135,7 +157,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     setLoading(true);setError("");setRetryOffset(offset);
     if(offset===0){setRows([]);setTotal(null);setNextOffset(null);}
     try{
-      const params=new URLSearchParams({key:view.key,sort:source,query:search,offset:String(offset)});
+      const params=new URLSearchParams({key:view.key,sort,query:search,offset:String(offset)});
       const response=await fetch(`/api/market-watch/listings?${params}`,{signal:controller.signal});
       const body=await response.json() as {listings?:Listing[];total?:number|null;nextOffset?:number|null;error?:string};
       if(!response.ok)throw new Error(body.error||"Etsy search could not load.");
@@ -144,36 +166,53 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
       setTotal(body.total??null);setNextOffset(body.nextOffset??null);
     }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:"Etsy search could not load.");}
     finally{if(active.current===controller){active.current=null;setLoading(false);}}
-  },[view.key,source,search]);
+  },[view.key,sort,search]);
   useEffect(()=>{void load();return()=>{active.current?.abort();active.current=null}},[load]);
-  const currencies=[...new Set(rows.map(row=>row.currency||"USD"))].sort();
-  useEffect(()=>{if(!currency&&currencies.length>1&&(sort==="price"||sort==="price-desc"))setSort(source)},[currency,currencies.length,sort,source]);
-  const listings=sort==="newest"||sort==="relevance"?rows.filter(row=>!currency||row.currency===currency):browseListings(rows,sort,"",currency);
-  const changeSort=(value:ListingOrder|"relevance")=>{setSort(value);if(value==="newest"||value==="relevance"){setSource(value);setCurrency("");}};
+  const listings=rows;
+  const savedIds=new Set(entries.map(entry=>entry.listing.listingId));
+  const collectionCurrencies=[...new Set(entries.map(entry=>entry.listing.currency))].sort();
+  const compared=browseListings(entries.map(entry=>entry.listing),collectionSort,"",collectionCurrency);
+  const entryById=new Map(entries.map(entry=>[entry.listing.listingId,entry]));
   return <main className="mw"><button className="back p-button p-button-quiet" onClick={onBack}>← Tracked keywords</button><header className="mw-detail-head"><p className="mini-label">MARKET WATCH</p><h1>{view.phrase}</h1><p>Explore matching listings on Etsy.</p></header>
-    <form className="market-browser-controls" onSubmit={event=>{event.preventDefault();setCurrency("");if(search===query.trim())void load();else setSearch(query.trim())}}>
+    <div className="tabs p-tabs" role="tablist" aria-label="Keyword research"><button className="p-tab" role="tab" id="keyword-search-tab" aria-controls="keyword-search-panel" aria-selected={section==="search"} onClick={()=>setSection("search")}>Search Etsy</button><button className="p-tab" role="tab" id="keyword-saved-tab" aria-controls="keyword-saved-panel" aria-selected={section==="saved"} onClick={()=>setSection("saved")}>Saved comparisons{collectionLoading?"":` (${entries.length})`}</button></div>
+    {collectionError&&<p className="p-notice failed" role="alert">{collectionError} <button className="p-button p-button-quiet" disabled={collectionBusy||collectionLoading} onClick={()=>void loadCollection()}>Reload collection</button></p>}
+    {section==="search"&&<section id="keyword-search-panel" role="tabpanel" aria-labelledby="keyword-search-tab">
+    <form className="market-browser-controls" onSubmit={event=>{event.preventDefault();if(search===query.trim())void load();else setSearch(query.trim())}}>
       <label className="market-search">Search within this keyword<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find a product or phrase"/></label><button className="p-button p-button-primary" disabled={loading}>Search Etsy</button>
-      {(query||search)&&<button type="button" className="p-button p-button-quiet" onClick={()=>{setQuery("");setSearch("");setCurrency("")}}>Clear search</button>}
+      {(query||search)&&<button type="button" className="p-button p-button-quiet" onClick={()=>{setQuery("");setSearch("")}}>Clear search</button>}
     </form>
     <div className="market-result-bar"><p role="status">{loading&&!rows.length?"Searching Etsy…":`${listings.length}${total===null?"":` of ${total.toLocaleString()}`} Etsy matches shown`}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Refresh listings</button></div>
-    <div className="market-results-sort">
-      {currencies.length>1&&<label>Show currency<select value={currency} onChange={e=>{setCurrency(e.target.value);if(!e.target.value&&(sort==="price"||sort==="price-desc"))changeSort(source)}}><option value="">All currencies</option>{currencies.map(c=><option key={c} value={c}>{c}</option>)}</select></label>}
-      <label>Sort listings<select value={sort} onChange={e=>changeSort(e.target.value as ListingOrder|"relevance")}><optgroup label="Search Etsy"><option value="newest">Newest listed / renewed</option><option value="relevance">Most relevant</option></optgroup><optgroup label="Compare loaded listings"><option value="favorites">Highest favorites · loaded</option><option value="views">Highest views · loaded</option><option value="price" disabled={!currency&&currencies.length>1}>Lowest price · loaded</option><option value="price-desc" disabled={!currency&&currencies.length>1}>Highest price · loaded</option></optgroup></select></label>
-    </div>
+    <div className="market-results-sort"><label>Sort Etsy results<select value={sort} onChange={e=>setSort(e.target.value as KeywordOrder)}><option value="relevance">Most relevant</option><option value="newest">Recently listed / renewed</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label></div>
     {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load(retryOffset)}>Try again</button></p>}
-    {!loading&&!error&&!listings.length&&<p className="empty">{currency?"No loaded listings in this currency. Load more or choose all currencies.":"No Etsy listings match this search."}</p>}
-    <div className="cards" aria-busy={loading}>{listings.map(listing=><ListingCard key={listing.listingId} listing={listing}/>)}</div>
+    {!loading&&!error&&!listings.length&&<p className="empty">No Etsy listings match this search.</p>}
+    <div className="cards" aria-busy={loading}>{listings.map(listing=><ListingCard key={listing.listingId} listing={listing} action={<button className="p-button p-button-quiet" disabled={collectionLoading||collectionBusy||Boolean(collectionError)||savedIds.has(listing.listingId)} onClick={()=>void updateCollection("save",listing.listingId)}>{savedIds.has(listing.listingId)?"Saved to comparisons":"Save to compare"}</button>}/>)}</div>
     {nextOffset!==null&&<div className="market-pagination"><button className="p-button p-button-primary" disabled={loading} onClick={()=>void load(nextOffset)}>{loading?"Loading listings…":"Load more listings"}</button><span>{rows.length} loaded</span></div>}
-    {rows.length>0&&<OfferPlanner key={view.key} source={view.key} phrase={view.phrase} listings={rows}/>}
+    </section>}
+    {section==="saved"&&<section className="keyword-collection" id="keyword-saved-panel" role="tabpanel" aria-labelledby="keyword-saved-tab">
+      <div className="market-result-bar"><div><h2>Saved comparisons</h2><p>{entries.length} of 100 listings · Chosen by you</p></div><button className="p-button p-button-primary" disabled={collectionLoading||collectionBusy||!entries.length||Boolean(collectionError)} onClick={()=>void updateCollection("refresh")}>{collectionBusy?"Updating…":"Check for changes"}</button></div>
+      {collectionLoading?<p role="status">Loading saved comparisons…</p>:!entries.length&&!collectionError?<p className="empty">Save listings from Search Etsy to compare them here and follow changes in their favorites, views, and prices.</p>:null}
+      {entries.length>0&&<>
+        <div className="market-results-sort">{collectionCurrencies.length>1&&<label>Currency<select value={collectionCurrency} onChange={e=>{setCollectionCurrency(e.target.value);if(!e.target.value&&(collectionSort==="price"||collectionSort==="price-desc"))setCollectionSort("favorites")}}><option value="">All currencies</option>{collectionCurrencies.map(c=><option key={c} value={c}>{c}</option>)}</select></label>}<label>Sort saved listings<select value={collectionSort} onChange={e=>setCollectionSort(e.target.value as ListingOrder)}><option value="favorites">Highest favorites</option><option value="views">Highest views</option><option value="newest">Newest original listing</option><option value="price" disabled={!collectionCurrency&&collectionCurrencies.length>1}>Price: low to high</option><option value="price-desc" disabled={!collectionCurrency&&collectionCurrencies.length>1}>Price: high to low</option></select></label></div>
+        <div className="cards">{compared.map(listing=>{const entry=entryById.get(listing.listingId)!;return <ListingCard key={listing.listingId} listing={listing} action={<button className="p-button p-button-quiet" disabled={collectionBusy||collectionLoading} onClick={()=>void updateCollection("remove",listing.listingId)}>Remove from comparisons</button>} extra={<CompetitorChange entry={entry}/>}/>})}</div>
+        <OfferPlanner key={view.key} source={view.key} phrase={view.phrase} listings={entries.map(entry=>entry.listing)}/>
+      </>}
+    </section>}
   </main>;
 }
 
-function ListingCard({listing}:{listing:Listing}){return <article className="card">
+function ListingCard({listing,action,extra}:{listing:Listing;action?:ReactNode;extra?:ReactNode}){return <article className="card">
   {listing.imageUrl && listing.displayFresh?<img src={listing.imageUrl} alt={listing.title} loading="lazy" width={570} height={570}/>:<p className="no-image">{listing.imageUrl ? "Photo needs refreshing" : "Photo unavailable from Etsy"}</p>}
   <div className="body"><div className="listing-price-row"><strong>{money(listing)}</strong>{!listing.displayFresh&&<span>Saved details</span>}</div><h2 className="title">{listing.title}</h2><dl className="listing-stat-grid"><div><dt>Total favorites</dt><dd>{listing.favorites??"Unavailable"}</dd></div><div><dt>Total views</dt><dd>{listing.views??"Unavailable"}</dd></div>{listing.listedAt!==undefined?<div><dt>Listed / renewed</dt><dd>{listing.listedAt?new Date(listing.listedAt*1000).toLocaleDateString():"Unavailable"}</dd></div>:<div><dt>Recorded reviews</dt><dd>{listing.reviewsOnThisListing??"Unavailable"}</dd></div>}<div><dt>Original age</dt><dd>{listing.ageDays==null?"Unavailable":`${listing.ageDays} ${listing.ageDays===1?"day":"days"}`}</dd></div></dl>
     {listing.intervals>0&&<p className="listing-evidence">Activity observed on {listing.intervals} occasion{listing.intervals===1?"":"s"} in the last 30 days{listing.confirmedAt?` · latest ${new Date(listing.confirmedAt*1000).toLocaleDateString()}`:""}.</p>}
-  </div><a href={listing.etsyUrl} target="_blank" rel="noreferrer noopener">View on Etsy ↗</a>
+    {extra}
+  </div>{action?<div className="research-card-actions">{action}<a href={listing.etsyUrl} target="_blank" rel="noreferrer noopener">View on Etsy ↗</a></div>:<a href={listing.etsyUrl} target="_blank" rel="noreferrer noopener">View on Etsy ↗</a>}
   </article>}
+
+function CompetitorChange({entry}:{entry:CollectionEntry}){
+ const changes=competitorChanges(entry);
+ const signed=(n:number|null)=>n===null?"Unavailable":`${n>0?"+":""}${n.toLocaleString()}`;
+ return <div className="competitor-changes"><p>Saved {new Date(entry.savedAt*1000).toLocaleDateString()} · Checked {new Date(entry.checkedAt*1000).toLocaleString()}</p>{entry.unavailable?<p role="status">Etsy could not return this listing. Showing its last saved details.</p>:entry.checkedAt<=entry.savedAt?<p>Changes will appear after your next check.</p>:<><strong>Change since saved</strong><dl className="listing-stat-grid"><div><dt>Favorites</dt><dd>{signed(changes.favorites)}</dd></div><div><dt>Views</dt><dd>{signed(changes.views)}</dd></div><div><dt>Price</dt><dd>{changes.priceCents===null?"Unavailable":changes.priceCents===0?"Unchanged":`${changes.priceCents>0?"+":"−"}${new Intl.NumberFormat(undefined,{style:"currency",currency:entry.listing.currency}).format(Math.abs(changes.priceCents)/100)}`}</dd></div></dl></>}</div>;
+}
 
 function ShopCard({shop}:{shop:ShopView}){
   const [section,setSection]=useState<"listings"|"reviews"|"changes"|"notes">("listings");

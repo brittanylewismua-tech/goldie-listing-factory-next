@@ -105,6 +105,16 @@
 .app-shell.command-workspace .listing-stat-grid dd {font-size:14px;font-weight:750;line-height:1.5;margin:5px 0 0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .app-shell.command-workspace .listing-evidence {grid-column:1/-1;margin:4px 0 0;font-size:12px;line-height:1.5}
 .app-shell.command-workspace .mw .card>a {grid-column:3;grid-row:1;min-height:36px;margin:0;padding:8px 10px;border:1px solid #d7cbd3;border-radius:7px;background:white;font-size:12px;line-height:1.5;text-align:center;color:#3f303a;font-weight:700;white-space:nowrap}
+/* Keyword comparisons have explicit save/remove actions; shop rows keep their existing link. */
+.app-shell.command-workspace .research-card-actions {grid-column:3;grid-row:1;display:grid;gap:10px;min-width:0}
+.app-shell.command-workspace .research-card-actions :is(button,a) {height:auto;min-height:42px;padding:9px 10px;border:1px solid #d7cbd3;border-radius:7px;background:white;color:#3f303a;font:700 12px/1.4 'Manrope Variable',sans-serif;text-align:center;white-space:normal;text-decoration:none}
+.app-shell.command-workspace .research-card-actions button:disabled {opacity:.55;cursor:default}
+.app-shell.command-workspace .competitor-changes {grid-column:1/-1;grid-row:4;border-top:1px solid var(--work-line);padding-top:12px;margin-top:8px}
+.app-shell.command-workspace .competitor-changes p {font-size:12px;line-height:1.5;margin:0 0 8px;color:#625862}
+.app-shell.command-workspace .competitor-changes strong {font-size:13px}
+.app-shell.command-workspace .competitor-changes .listing-stat-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:8px 0 0}
+.app-shell.command-workspace .keyword-collection>.market-result-bar {margin-top:20px;flex-wrap:wrap}
+.app-shell.command-workspace .keyword-collection h2 {font-size:20px;margin:0 0 8px}
 .app-shell.command-workspace .market-pagination {margin-top:24px;padding-top:24px;border-top:1px solid #d6cdd3}
 .app-shell.command-workspace .mw .pattern {border-color:var(--work-line);border-radius:10px;padding:20px;box-shadow:none}
 .app-shell.command-workspace .mw .pattern :is(.support,details) {font-size:14px}
@@ -234,6 +244,7 @@
  .app-shell.command-workspace .mw .card>.body {gap:8px;grid-template-columns:minmax(0,1fr)}
  .app-shell.command-workspace .mw .card .title {-webkit-line-clamp:3;font-size:14px!important}
  .app-shell.command-workspace .listing-stat-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:4px 0 0}
+ .app-shell.command-workspace .research-card-actions {grid-column:1/-1;grid-row:2;display:flex;flex-wrap:wrap}
  .app-shell.command-workspace .mw .card>a {grid-column:2;grid-row:2;justify-self:start;min-height:40px;padding:10px 14px}
 .app-shell.command-workspace .market-result-bar {align-items:start;gap:12px}
  .app-shell.command-workspace .scanner-compose {padding:18px;gap:24px}

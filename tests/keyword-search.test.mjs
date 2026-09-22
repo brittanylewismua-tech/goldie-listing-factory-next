@@ -37,6 +37,6 @@ test('keyword UI cannot silently sort a saved pool as newest or retain results a
  const client=readFileSync(new URL('../app/market-watch/market-watch-client.tsx',import.meta.url),'utf8');
  const detail=client.slice(client.indexOf('function NicheDetail'),client.indexOf('function ListingCard'));
  assert.match(detail,/api\/market-watch\/listings/);assert.doesNotMatch(detail,/view.listings/);
- assert.match(detail,/Compare loaded listings/);assert.match(detail,/controller.signal.aborted/);
+ assert.doesNotMatch(detail,/Compare loaded listings|Highest favorites · loaded/);assert.match(detail,/useState<KeywordOrder>\("relevance"\)/);assert.match(detail,/Sort Etsy results/);assert.match(detail,/controller.signal.aborted/);
  assert.match(detail,/setRows\(\[\]\)/);assert.doesNotMatch(client,/About these numbers/);
 });
