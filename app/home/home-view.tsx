@@ -74,12 +74,26 @@ function initialsOf(name: string) {
 export default function HomeView() {
   const [shop, setShop] = useState<string | null>(null);
   const [shopRead, setShopRead] = useState(false);
+  /*
+    THE ACCOUNT'S NAME FIRST, THE ETSY SHOP SECOND.
+
+    /api/etsy returns what Etsy stores as shop_name, which is the shop's URL
+    handle: "shesawolfclothing". Printed at display size that is not a name,
+    it is a slug, and there is no reliable way to put the apostrophes and the
+    capitals back into one. The account's own display name is the same shop
+    written the way its owner writes it, so it leads and the handle is the
+    fallback for an account that has not set one.
+  */
   useEffect(() => {
-    void fetch("/api/etsy").then(response => response.json() as Promise<{ shopName?: string }>)
-      .then(result => { setShop(result.shopName || null); setShopRead(true); })
-      /* No shop name is a state, not a failure: the heading falls back rather
-         than the page showing an error for something it only decorates. */
-      .catch(() => setShopRead(true));
+    void Promise.all([
+      fetch("/api/account").then(response => response.json() as Promise<{ name?: string }>).catch(() => ({} as { name?: string })),
+      fetch("/api/etsy").then(response => response.json() as Promise<{ shopName?: string }>).catch(() => ({} as { shopName?: string })),
+    ]).then(([account, etsy]) => {
+      setShop(account.name || etsy.shopName || null);
+      setShopRead(true);
+    /* No name is a state, not a failure: the heading falls back rather than
+       the page showing an error for something it only decorates. */
+    }).catch(() => setShopRead(true));
   }, []);
   /* Nothing is printed until the read settles, so the heading never flips from
      a fallback to the shop's name in front of the member. */

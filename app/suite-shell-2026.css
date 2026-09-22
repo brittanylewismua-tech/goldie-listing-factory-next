@@ -34,6 +34,10 @@
 }
 
 /* -------------------------------------------------------------------- rail */
+/* 272px wrapped "Command Center" onto two lines, which is the group that
+   names half the product. The approved rail is 292. */
+.app-shell{grid-template-columns:292px minmax(0,1fr)}
+.app-shell>.topbar{width:292px}
 .app-shell>.topbar{background:var(--suite-rail);border-right:1px solid var(--suite-rail-line)}
 /* The rail carried a large gear watermark behind the links. It sat under the
    navigation at low contrast and read as a printing artefact. */
@@ -45,10 +49,18 @@
 .app-shell>.topbar .top-nav a.active::before{
   content:"";position:absolute;left:-7px;top:9px;bottom:9px;width:3px;border-radius:0 6px 6px 0;background:var(--suite-pink);
 }
-.suite-nav-children{display:grid;gap:2px;margin:2px 0 6px;padding-left:14px;border-left:1px solid var(--suite-rail-line)}
-.suite-nav-children a{font-weight:650!important}
-.suite-nav-parent{display:flex;align-items:center;gap:2px}
-.suite-nav-parent>a,.suite-nav-heading{flex:1 1 auto;min-width:0}
+/* suite-redesign.css lays the parent row out as `28px minmax(0,1fr)` with the
+   chevron in the first column. The approved design puts the chevron at the far
+   end of the row instead, so the label lines up with Home and Connections
+   rather than sitting one column in. Overriding that needs the same `>.topbar`
+   depth or the grid wins on specificity and the label is squeezed into a 28px
+   column - which is exactly what it did: "Listing Factory" rendered as an icon
+   and nothing else. */
+.app-shell>.topbar .suite-nav-children{display:grid;gap:2px;margin:2px 0 6px 12px;padding-left:14px;border-left:1px solid var(--suite-rail-line)}
+.app-shell>.topbar .suite-nav-children a{font-weight:650!important}
+.app-shell>.topbar .suite-nav-parent{position:relative;display:flex;align-items:center;gap:2px;grid-template-columns:none}
+.app-shell>.topbar .suite-nav-parent>a,
+.app-shell>.topbar .suite-nav-heading{flex:1 1 auto;min-width:0;padding-left:11px!important;padding-right:34px}
 .suite-nav-heading{
   display:flex;align-items:center;gap:11px;min-height:44px;padding:0 11px;border:0;border-radius:10px;
   background:none;color:#b9b2b7;font:inherit;font-size:14px;font-weight:750;text-align:left;cursor:pointer;
@@ -58,15 +70,15 @@
 /* The chevron marks the group; it is at the end of the row in the approved
    design, not in front of the label where it pushed every group out of line
    with Home and Connections. */
-.suite-nav-parent{position:relative}
-.suite-nav-toggle{
+.app-shell>.topbar .suite-nav-toggle{
   position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:1;
   width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:7px;
   background:none;color:#8c848a;cursor:pointer;
 }
-.suite-nav-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.suite-nav-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
-.suite-nav-toggle:hover{color:#fff;background:#201d20}
+.app-shell>.topbar .suite-nav-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.app-shell>.topbar .suite-nav-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
+.app-shell>.topbar .suite-nav-toggle[aria-expanded="false"] svg{transform:none}
+.app-shell>.topbar .suite-nav-toggle:hover{color:#fff;background:#201d20}
 
 /* --------------------------------------------------- the account, at the foot */
 .app-shell>.topbar>.approved-sidebar-footer .factory-account-wrap{
