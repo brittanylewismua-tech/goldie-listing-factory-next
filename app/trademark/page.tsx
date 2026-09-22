@@ -181,23 +181,6 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
             onClick={() => { setPhrase(example); run(example); }}>{example}</button>)}
       </div>
 
-      {watches.length > 0 && <section className="tm-watches" aria-labelledby="tm-watches-title">
-        <div className="tm-watches-head"><div><p className="mini-label">WATCHED PHRASES</p>
-          <h2 id="tm-watches-title">Status changes show up here.</h2></div></div>
-        <div className="tm-watch-list">{watches.map(watch => <article key={watch.phrase}
-          className={watch.changed ? "changed" : ""}>
-          <div><strong>{watch.phrase}</strong><span>{watch.changed
-            ? `${watch.matches || "New"} ${watch.matches === 1 ? "result needs" : "results need"} review${watch.pending ? " · includes pending applications" : ""}`
-            : watch.pending ? "Includes pending applications"
-              : watch.matches ? `${watch.matches} matching record${watch.matches === 1 ? "" : "s"}`
-                : null}</span></div>
-          <span className={`tm-watch-risk ${watch.risk}`}>{watch.matches ? "Review matches" : "No match found"}</span>
-          <button type="button" onClick={() => { setPhrase(watch.phrase); void run(watch.phrase, true); }}>Review</button>
-          <button type="button" className="quiet" disabled={watchBusy === watch.phrase}
-            onClick={() => void removeWatch(watch.phrase)}>Remove</button>
-        </article>)}</div>
-      </section>}
-
       {error && <section className="drop-error p-notice p-notice-bad" role="alert">
         <h2>This could not be checked</h2>
         <p>{error}</p>
@@ -274,6 +257,22 @@ Wording alternatives to check:
 Next step / professional advice needed:
 
 This note records my review; it is not clearance to use the phrase.`}/>
+      </section>}
+
+      {watches.length > 0 && <section className="tm-watches" aria-labelledby="tm-watches-title">
+        <div className="tm-watches-head"><div><h2 id="tm-watches-title">Watched phrases</h2></div></div>
+        <div className="tm-watch-list">{watches.map(watch => <article key={watch.phrase}
+          className={watch.changed ? "changed" : ""}>
+          <div><strong>{watch.phrase}</strong><span>{watch.changed
+            ? `${watch.matches || "New"} ${watch.matches === 1 ? "result needs" : "results need"} review${watch.pending ? " · includes pending applications" : ""}`
+            : watch.pending ? "Includes pending applications"
+              : watch.matches ? `${watch.matches} matching record${watch.matches === 1 ? "" : "s"}`
+                : null}</span></div>
+          <span className={`tm-watch-risk ${watch.risk}`}>{watch.matches ? "Review matches" : "No match found"}</span>
+          <button type="button" onClick={() => { setPhrase(watch.phrase); void run(watch.phrase, true); }}>Review</button>
+          <button type="button" className="quiet" disabled={watchBusy === watch.phrase}
+            onClick={() => void removeWatch(watch.phrase)}>Remove</button>
+        </article>)}</div>
       </section>}
 
       <p className="tm-note">

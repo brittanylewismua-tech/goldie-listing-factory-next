@@ -75,16 +75,15 @@ export default function HomeView() {
     </header>
 
     <section className="home-primary-actions" aria-label="Quick actions">
-      <Link className="home-primary-action" href="/listing-factory?step=setup"><span>CREATE LISTINGS</span><strong>Start in Listing Factory</strong><i aria-hidden="true">→</i></Link>
-      <Link className="home-secondary-action" href="/batches"><span>KEEP WORKING</span><strong>Open Batch History</strong><i aria-hidden="true">→</i></Link>
+      <Link className="home-primary-action" href="/listing-factory?step=setup"><span>LISTING FACTORY</span><strong>Create a listing or batch</strong><p>Turn your artwork into ready-to-review Etsy drafts.</p><i aria-hidden="true">→</i></Link>
+      <Link className="home-secondary-action" href="/batches"><span>BATCH HISTORY</span><strong>Continue your work</strong><p>Return to your saved batches and listing drafts.</p><i aria-hidden="true">→</i></Link>
     </section>
 
-    <div className="hub-section-head home-workspaces-head"><div><p className="mini-label">TOOLS</p><h2>Everything in Goldie Suite</h2></div></div>
+    <div className="hub-section-head home-workspaces-head"><div><h2>Your tools</h2><p>Research, refine, and manage your shop.</p></div></div>
     <section className="hub-grid">
-      {TOOLS.map((tool, index) => (
+      {TOOLS.map((tool) => (
         <Link key={tool.name} className="hub-tool" href={tool.href}>
           <span className="hub-icon" aria-hidden="true">{tool.icon}</span>
-          <span className="hub-tool-number">0{index + 1}</span>
           <b>{tool.name}</b>
           <span className="hub-what">{tool.what}</span>
           {/* "Desktop" told a member nothing. This is a bulk publishing

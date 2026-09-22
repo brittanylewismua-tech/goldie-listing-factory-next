@@ -316,7 +316,7 @@ html, body { background: var(--pro-canvas) !important; }
 
 /* Final product-wide type and navigation pass. */
 html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",Arial,sans-serif}
-.app-shell :is(h1,h2:not(.acc-heading):not(.ts-heading):not(.utility-heading),.hub-head h1){font-family:"DM Serif Display",Georgia,serif;font-weight:400!important;letter-spacing:-.025em!important}
+.app-shell :is(h1,.hub-head h1),.app-shell:not(.command-workspace) h2:not(.acc-heading):not(.ts-heading):not(.utility-heading):not(.title){font-family:"DM Serif Display",Georgia,serif;font-weight:400!important;letter-spacing:-.025em!important}
 .app-shell :is(.top-nav,.shop-map-tabs,.hub-tool,.tm-page,.mw,.scanner){font-family:"Manrope Variable","Manrope",Arial,sans-serif}
 
 .app-shell>.topbar .suite-brand{display:flex!important;align-items:center;gap:12px;width:100%;min-height:56px;margin:0 0 24px;padding:4px 8px;text-decoration:none}

@@ -163,7 +163,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
     : usageFailed ? "Couldn't load — reopen to retry"
     : "Loading usage…";
 
-  return <main className={`app-shell interior-shell${desktopOnly ? "" : " responsive-shell"}`}>
+  return <main className={`app-shell interior-shell${desktopOnly ? "" : " responsive-shell"}${["home","market-watch","shop-map","design-scanner","trademark","hotlist","more","connections"].includes(active) ? " command-workspace" : ""}`}>
     {/* D828 · the shell hides every child but this one on a phone. Without it
         these pages rendered as a blank screen. */}
     {desktopOnly && <MobileGate />}

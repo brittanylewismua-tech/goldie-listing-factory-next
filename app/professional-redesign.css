@@ -532,8 +532,8 @@ body { min-width: 320px; }
 .hub-tool > b { font-size: 18px !important; font-weight: 720 !important; letter-spacing: -.025em !important; }
 .hub-what { color: var(--pro-muted) !important; font-size: 13px !important; line-height: 1.5 !important; }
 .hub-tool:first-child .hub-what { max-width: 56ch !important; color: rgba(255,255,255,.76) !important; }
-.hub-tool-number { right: 22px !important; top: 21px !important; color: var(--pro-subtle) !important; font-size: 10px !important; }
-.hub-tool:first-child .hub-tool-number { color: rgba(255,255,255,.48) !important; }
+
+
 .hub-open { right: 22px !important; bottom: 17px !important; color: var(--pro-accent) !important; }
 .hub-tool:first-child .hub-open { color: #fff !important; }
 .hub-foot { margin-top: 38px !important; border-color: var(--pro-line) !important; }

@@ -226,12 +226,12 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
 
   return (
     <main className="scanner p-grid">
-      <h1>Design Scanner</h1>
+      <header className="command-page-heading"><h1>Design Scanner</h1>
       <p className="lede">
         Compare your design with Etsy listings that have recorded buyer activity.
-      </p>
+      </p></header>
 
-      <div className="stage">
+      <section className="scanner-compose" aria-label="New design scan"><div className="scanner-artwork"><div className="stage">
         {preview
           ? <img src={preview} alt="Your design" />
           : <div className="empty p-empty"><b>No design yet</b><p>Upload your artwork to compare its style, layout, and colors with relevant Etsy listings.</p></div>}
@@ -242,9 +242,9 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
         {preview ? "Choose a different design" : "Choose a design"}
         <input type="file" accept="image/png,image/jpeg,image/webp"
           onChange={event => void onFile(event.target.files?.[0])} />
-      </label>
+      </label></div>
 
-      <div className="field">
+      <div className="scanner-settings"><h2 className="utility-heading">Set up your scan</h2><p className="scanner-help">Add your artwork and choose its audience to find a relevant comparison.</p><div className="field">
         <label htmlFor="niche">Who is it for?</label>
         <input id="niche" type="text" value={niche} placeholder="bachelorette, dog mom, teacher…"
           onChange={event => setNiche(event.target.value)} />
@@ -299,6 +299,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
       )}
 
       {error && <p className="error p-notice p-notice-bad" role="alert">{error}</p>}
+      </div></section>
 
       {original&&artworkHash&&<PrintCheck width={original.width} height={original.height} preview={original.url}/>}
       {selectedScan && <p className="p-notice" role="status">{`Saved scan for ${selectedScan.niche} · ${new Date(selectedScan.createdAt*1000).toLocaleString()}. ${!preview ? "The original artwork is not stored with this result. Upload it again to run a new scan." : ""}`}</p>}
