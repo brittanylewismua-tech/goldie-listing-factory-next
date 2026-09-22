@@ -233,7 +233,9 @@
    anything but auto makes Chrome ignore every ::-webkit-scrollbar rule, and
    on macOS "thin" is an invisible overlay. Also changes the white current-page
    pill at source rather than overriding it. */
-export const BUILD_MARKER = "D1770";
+/* D1771 makes the current link legible again: its colour was near-black,
+   written for the white pill D1770 replaced with a dark chip. */
+export const BUILD_MARKER = "D1771";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

@@ -87,7 +87,11 @@ html, body { background: var(--pro-canvas) !important; }
   position: absolute; left: -7px; top: 9px; bottom: 9px;
   width: 3px; border-radius: 0 6px 6px 0; background: var(--suite-pink, #ff2ca6);
 }
-.app-shell > .topbar .suite-nav-parent > .suite-nav-heading { position: relative; }
+.app-shell > .topbar .suite-nav-parent > .suite-nav-heading { position: relative; overflow: visible; }
+/* The heading's own box starts at the rail's inner edge, so a bar at -7px
+   would sit outside it. Its section is the positioned ancestor that has the
+   room. */
+.app-shell > .topbar .suite-nav-section.current > .suite-nav-parent > .suite-nav-heading::before { left: -7px; }
 .app-shell > .topbar .top-nav a > small {
   border: 1px solid var(--pro-accent) !important;
   border-radius: 50% !important;

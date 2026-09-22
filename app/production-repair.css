@@ -6,7 +6,10 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .app-shell .factory-top {gap:16px}
 .app-shell .factory-breadcrumb {min-width:0;overflow-wrap:anywhere}
 .app-shell .topbar .suite-nav-children a {font-size:12px!important;color:#c6b8c1!important}
-.app-shell .topbar .suite-nav-children a.active {color:#171318!important}
+/* D1770 · This was near-black because the current link used to be a white
+   pill. The pill is a dark chip now, so black on it is a label you cannot
+   read - measured on the live rail, "Market Watch" was invisible. */
+.app-shell .topbar .suite-nav-children a.active {color:#fff!important}
 .app-shell .workflow-progress {min-width:0}
 .app-shell .workflow-progress button:not(.active):not(.done) {background:transparent!important;box-shadow:none!important;border-color:transparent!important}
 .app-shell .workflow-progress button {min-width:0;white-space:normal}
