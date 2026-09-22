@@ -88,7 +88,7 @@ test("the keyword bank page and the title generator share one noun list — D90"
   assert.match(page, /setSavedId\(list\.id\);setScrollToEditor\(true\)/,
     "Edit bank must flag the scroll, not perform it inline.");
   assert.match(page, /useEffect\(\(\)=>\{\s*if\(!scrollToEditor\)return;/);
-  assert.match(page, /window\.scrollTo\(0,form\.getBoundingClientRect\(\)\.top\+window\.scrollY/);
+  assert.match(page, /scrollWorkspaceTo\(form\)/);
   /* And not smoothly. Verified live: window.scrollTo({behavior:"smooth"}) never
    * moves the page on a management screen — scrollY stays 0 indefinitely —
    * while the same call without `behavior` scrolls instantly. */

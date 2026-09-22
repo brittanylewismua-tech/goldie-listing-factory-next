@@ -669,7 +669,7 @@ test("uses the full Mockup Library width and previews five compact scenes before
   assert.match(page, /items\.slice\(0,5\)/);
   assert.match(css, /\.managementSetList\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
   assert.match(css, /\.managementSetList \.setPreview\s*\{[\s\S]*grid-template-columns:\s*repeat\(5, 64px\)/);
-  assert.match(css, /\.managementSetList \.setPreview img\s*\{[\s\S]*height:\s*72px/);
+  assert.match(css, /\.managementSetList \.setPreview img\s*\{[\s\S]*height:\s*80px/);
 });
 
 test("validates and isolates staged artwork without decoding or buffering it", async () => {

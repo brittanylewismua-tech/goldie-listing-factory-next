@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { phrasesFromErank } from "../seo-utils";
 import { excludedProductNouns, namesExcludedProduct } from "../product-type-utils";
 import FactoryShell from "../factory-shell";
+import {scrollWorkspaceTo} from "../workspace-scroll";
 import { confirmAction } from "../confirm-dialog";
 
 type List = { id: string; name: string; keywords: string[] };
@@ -38,7 +39,7 @@ export default function KeywordBanks() {
     if(!scrollToEditor)return;
     setScrollToEditor(false);
     const form=document.querySelector(".management-create");
-    if(form)window.scrollTo(0,form.getBoundingClientRect().top+window.scrollY-20);
+    scrollWorkspaceTo(form);
   },[scrollToEditor,savedId]);
   const reload=async()=>{setLoading(true);setLoadError(false);try{const response=await fetch("/api/keyword-lists");if(!response.ok)throw new Error("load");const result=await responseJson<{lists?:List[]}>(response);setLists(result.lists||[])}catch{setLoadError(true)}finally{setLoading(false)}};
   useEffect(()=>{void reload();fetch("/api/product-recipes").then(r=>responseJson<{recipes?:ProductUse[]}>(r)).then(r=>setProducts(r.recipes||[])).catch(()=>setProducts([]));const batch=window.localStorage.getItem("goldie-active-batch");setReturnHref(batch?`/listing-factory?batch=${encodeURIComponent(batch)}`:"/listing-factory?step=setup")},[]);

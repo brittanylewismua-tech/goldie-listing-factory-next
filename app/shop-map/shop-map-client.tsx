@@ -8,7 +8,7 @@ import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
 type Niche = {
   worldId: string; label: string; listings: number; activeListings: number;
-  period: string; orders: number; revenueMinor: number;
+  period: string; orders: number; units?:number;lifetimeUnits?:number;revenueMinor: number;
   lifetimeOrders: number; lifetimeRevenueMinor: number; evidence: string;
   productFamilies: Array<{ family: string; listings: number }>;
   memberListings?:Array<{listingId:number;title:string;imageUrl:string;favorites:number|null;sales:number;state:string}>;
@@ -262,7 +262,7 @@ What would make this worth repeating:`}/></details>):<p>No listing meets the cur
       <section className="shop-map-summary-grid">
         <article><span>Orders this month</span><strong>{month?.orders ?? 0}</strong><small>{money(month?.revenueMinor,month?.currency)} revenue</small></article>
         <article><span>Active listings</span><strong>{shown.shopTotals?.activeListings ?? 0}</strong><small>in your current catalog</small></article>
-        <article><span>Top product theme</span><strong>{niches[0]?.label ?? "Not enough data"}</strong><small>{niches[0] ? `${niches[0].orders} orders in 90 days` : "Sales will reveal this"}</small></article>
+        <article><span>Top product theme</span><strong>{niches[0]?.label ?? "Not enough data"}</strong><small>{niches[0] ? `${niches[0].units??"—"} units sold in 90 days` : "Sales will reveal this"}</small></article>
       </section>
     </div>}
 
@@ -273,9 +273,9 @@ What would make this worth repeating:`}/></details>):<p>No listing meets the cur
         return <li key={niche.worldId} className={open === niche.worldId ? "theme-expanded" : undefined}><button type="button" className="shop-map-world"
           aria-expanded={open === niche.worldId} onClick={() => {setOpen(open === niche.worldId ? "" : niche.worldId);setThemeQuery("");setThemeState("all")}}>
           <span className="shop-map-world-label">{niche.label}</span><span className="shop-map-world-figure">{money(niche.revenueMinor)}</span>
-          <span className="shop-map-world-meta">{niche.activeListings} active listings · {niche.orders} orders</span>
+          <span className="shop-map-world-meta">{niche.activeListings} active listings · {niche.units??"—"} units sold</span>
           <span className="shop-map-bar"><span style={{width:`${Math.max(2,Math.round(share*100))}%`}}/></span>
-          <span className="shop-map-lifetime">Lifetime: {money(niche.lifetimeRevenueMinor)} from {niche.lifetimeOrders} orders</span>
+          <span className="shop-map-lifetime">Recorded history: {money(niche.lifetimeRevenueMinor)} · {niche.lifetimeUnits??"—"} units sold</span>
         </button>{open === niche.worldId ? <div className="shop-map-evidence"><p>{niche.evidence}</p>
           <p>{niche.listings} total listings: {niche.activeListings} active and {Math.max(0,niche.listings-niche.activeListings)} inactive. Sales below cover the last 90 days.</p>
           <div className="shop-map-browse-controls"><label>Search this theme<input type="search" value={themeQuery} onChange={e=>setThemeQuery(e.target.value)} placeholder="Find a listing"/></label><label>Listing status<select value={themeState} onChange={e=>setThemeState(e.target.value)}><option value="all">All statuses</option><option value="active">Active only</option><option value="inactive">Inactive only</option></select></label></div>

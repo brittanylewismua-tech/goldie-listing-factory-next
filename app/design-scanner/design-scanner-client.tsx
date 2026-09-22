@@ -1,5 +1,6 @@
 "use client";
 
+import {scrollWorkspaceTo} from "@/app/workspace-scroll";
 import PrintCheck from "@/app/command-center/print-check";
 import ActionPlan from "@/app/command-center/action-plan";
 import { nextScanAt } from "@/app/scan-reset";
@@ -133,6 +134,8 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
   const [left, setLeft] = useState<number | null>(null);
   const [nextAt, setNextAt] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
+  const resultAnchor=useRef<HTMLDivElement>(null);
+  useEffect(()=>{if(result)scrollWorkspaceTo(resultAnchor.current)},[result]);
   const fileVersion=useRef(0);
   const [preparing,setPreparing]=useState(false);
   const [historyQuery,setHistoryQuery]=useState("");
@@ -319,7 +322,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
 
       {original&&artworkHash&&<PrintCheck width={original.width} height={original.height} preview={original.url}/>}
       {selectedScan && <p className="p-notice" role="status">{`Saved scan for ${selectedScan.niche} · ${new Date(selectedScan.createdAt*1000).toLocaleString()}. ${!preview ? "The original artwork is not stored with this result. Upload it again to run a new scan." : ""}`}</p>}
-      {result && <><ScanResult result={result} /><ActionPlan feature="designScanner" source={result.scanId||artworkHash||result.niche} heading={`Design revision: ${result.niche}`} notes={`Scan finding: ${currentLabel(result.overall)}
+      {result && <div ref={resultAnchor} className="scanner-result-anchor"><ScanResult result={result} /><ActionPlan feature="designScanner" source={result.scanId||artworkHash||result.niche} heading={`Design revision: ${result.niche}`} notes={`Scan finding: ${currentLabel(result.overall)}
 ${result.opportunity||result.refusal?.because||''}
 ${result.imageQuality?.notes?.join('\n')||''}
 
@@ -327,7 +330,7 @@ Keep: ${result.working?.join('; ')||'Record what should stay unchanged.'}
 
 One change for the next version:
 
-Recheck at the same thumbnail size and intended print size. Upload the revised file and compare the same niche. Record whether the original issue improved.`}/></>}
+Recheck at the same thumbnail size and intended print size. Upload the revised file and compare the same niche. Record whether the original issue improved.`}/></div>}
 
       {historyFailed && (
         <p className="p-notice" role="status">

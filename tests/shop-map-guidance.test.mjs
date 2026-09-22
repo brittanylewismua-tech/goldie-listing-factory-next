@@ -25,7 +25,7 @@ const client = readFileSync(new URL(
 test("the overview names the leading product theme", () => {
   assert.match(client, /Top product theme/);
   assert.match(client, /niches\[0\]\?\.label/);
-  assert.match(client, /orders in 90 days/);
+  assert.match(client, /units sold in 90 days/);
 });
 
 test("product themes are kept together in their own tab", () => {
@@ -44,7 +44,7 @@ test("the grouping mechanics stay off the page, as the existing rule requires", 
 });
 
 test("the section stays absent when there is nothing to say", () => {
-  assert.match(client, /niches\[0\] \? `\$\{niches\[0\]\.orders\} orders in 90 days` : "Sales will reveal this"/);
+  assert.match(client, /niches\[0\] \? `\$\{niches\[0\]\.units\?\?"—"\} units sold in 90 days` : "Sales will reveal this"/);
 });
 
 test("pointingHere is deliberately not rendered", () => {

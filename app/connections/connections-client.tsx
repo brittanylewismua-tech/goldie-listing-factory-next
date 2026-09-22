@@ -230,6 +230,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
             </p>
           )}
           <div className="row">
+            {shop.activeForListingFactory&&shop.canReadSales&&!shop.needsReconnect&&<a className="p-button p-button-primary" href="/shop-map">Open Shop Map</a>}
             {shop.needsReconnect && <a href="/api/etsy/connect">Reconnect</a>}
             {!shop.canReadSales && shop.authorizeSalesUrl && (
               <a href={shop.authorizeSalesUrl}>Let the platform see sales</a>
@@ -275,7 +276,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
         </p>
         <div className="row">
           {printify?.connected
-            ? <a href="/api/printify/connect">Reconnect</a>
+            ? <><a className="p-button p-button-primary" href="/listing-factory?step=setup">Open Listing Factory</a><a className="p-button p-button-quiet" href="/api/printify/connect">Reconnect</a></>
             : <a href="/api/printify/connect">Connect Printify</a>}
         </div>
       </div>}

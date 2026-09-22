@@ -196,9 +196,9 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
           {verdict.risk === "clear" ? "No match found" : "Matches to review"}
         </span>
         <p className="tm-phrase">{marked()}</p>
-        {verdict.registerReady === false && <p className="p-notice" role="status"><strong>This search is incomplete.</strong> Older records are still being added. Review the USPTO records before deciding whether to use this phrase.</p>}
+        {verdict.registerReady === false && <p className="p-notice" role="status"><strong>Search incomplete.</strong> Review the current USPTO records before using this phrase.</p>}
         <p>{(verdict.register ?? []).length > 0
-          ? `${verdict.register!.length} matching record${verdict.register!.length === 1 ? "" : "s"}. A pending application is not a registration. Compare the goods and services with your intended product.`
+          ? `${verdict.register!.length} matching record${verdict.register!.length === 1 ? "" : "s"}.`
           : verdict.risk === "clear" ? "No matching mark was found for this phrase. This does not establish that the phrase is available to use."
             : "This phrase contains a brand or name that needs review before use."}</p>
 
@@ -214,7 +214,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         {/* The register's own findings, kept visually separate from the
             curated list: they are a different kind of fact and a seller
             should be able to tell which one is talking. */}
-        {(verdict.register ?? []).length > 0 && <div className="tm-category-sort"><label>Prioritize product category<select value={productClass} onChange={e=>setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label><p className="cc-note">All matches stay visible. Compare the goods and services in each record.</p><a href="https://www.uspto.gov/trademarks/search/likelihood-confusion" target="_blank" rel="noopener noreferrer">How the USPTO explains related goods ↗</a></div>}
+        {(verdict.register ?? []).length > 0 && <div className="tm-category-sort"><label>Prioritize product category<select value={productClass} onChange={e=>setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label><p className="cc-note">All matches stay visible. Compare the goods and services in each record.</p></div>}
         {(verdict.register ?? []).length > 0 && <ul className="tm-hits tm-register p-card-quiet">
           {[...(verdict.register ?? [])].sort((a,b)=>Number(b.classes.some(c=>c.padStart(3,"0")===productClass))-Number(a.classes.some(c=>c.padStart(3,"0")===productClass))).map((match, index) =>
             /* Two records for one brand share a mark and carry no

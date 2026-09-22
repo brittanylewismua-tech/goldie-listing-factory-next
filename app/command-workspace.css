@@ -166,7 +166,7 @@
 .app-shell.command-workspace .tm-watch-list article {padding:16px;border-color:var(--work-line);border-radius:8px}
 .app-shell.command-workspace .tm-watch-list :is(strong,button) {font-size:14px}
 .app-shell.command-workspace .tm-watch-list article>div span,.app-shell.command-workspace .tm-watch-risk {font-size:12px}
-.app-shell.command-workspace .tm-verdict {border-radius:10px!important;box-shadow:none!important;padding:24px!important}
+.app-shell.command-workspace .tm-verdict {border-radius:10px!important;box-shadow:none!important;padding:20px!important;background:#fff!important;gap:12px!important}
 .app-shell.command-workspace .tm-hit {border-color:var(--work-line);padding:18px}
 .app-shell.command-workspace .tm-hit .tm-cat {font-size:12px}
 .app-shell.command-workspace .tm-note {color:#625862;font-size:13px}
@@ -277,11 +277,10 @@
 .app-shell.command-workspace .managementSetList .thumbs{padding:0 18px 18px}
 .app-shell.command-workspace .scanner .history>button{margin:8px 0;min-height:48px;padding:12px 14px;background:#fff;border:1px solid var(--work-line);border-radius:8px;box-shadow:none;text-align:left}
 .app-shell.command-workspace .scanner .history>button[aria-pressed=true]{border-color:var(--work-accent);box-shadow:inset 3px 0 #ef43ab}
-.app-shell.command-workspace .tm-phrase{margin:12px 0;padding:0;border:0;background:transparent;font-size:20px}
-.tm-category-sort{display:flex;align-items:end;gap:16px;flex-wrap:wrap;padding:16px 0;margin:12px 0;border-block:1px solid #e3dce1}
+.app-shell.command-workspace .tm-phrase{margin:0;padding:0;border:0;background:transparent;font-size:20px}
+.tm-category-sort{display:flex;align-items:end;gap:16px;flex-wrap:wrap;padding:12px 0;margin:0;border-block:1px solid #e3dce1}
 .tm-category-sort label{font-size:13px;font-weight:700;min-width:230px}
 .tm-category-sort .cc-note{flex:1;font-size:13px;margin:0;min-width:200px}
-.tm-category-sort>a{font-size:13px}
 @media(max-width:760px){
  .library-controls{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
  .library-controls>label:first-child{min-width:0}
@@ -299,3 +298,10 @@
 
 .preference-settings{border:0;padding:0;margin:0;min-width:0;display:grid;gap:24px}
 .preference-settings:disabled{opacity:.65}
+
+.app-shell.command-workspace .management-create{scroll-margin-top:96px}
+
+.app-shell.command-workspace .tm-verdict>.p-notice{padding:10px 12px!important;margin:0!important;font-size:14px}
+.scanner-result-anchor{scroll-margin-top:96px}
+
+.app-shell.command-workspace .bank-library>div:first-child>span{white-space:nowrap;flex-shrink:0;align-self:flex-start}

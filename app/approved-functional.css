@@ -1233,8 +1233,6 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
 .app-shell .everything-else{border-radius:16px 16px 0 0!important}
 
 /* PASS 2C remaining layout defects: D31 and D70. */
-.managementOnly .managementSetList .setPreview{grid-template-columns:repeat(5,minmax(120px,1fr))!important;gap:10px!important}
-.managementOnly .managementSetList .setPreview img{aspect-ratio:4/5!important}
 
 /* Audit pass 2: the frequent action is primary; setup and destructive actions recede. */
 /* D215 · `.app-shell[data-product-selected="true"] .recipe-tile:not(.selected)`
