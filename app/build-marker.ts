@@ -219,7 +219,11 @@
 /* D1766 stops the home panels running off the right of the page: the grid
    column was implicit, and an implicit column will not shrink below the
    min-content width of four tiles standing side by side. */
-export const BUILD_MARKER = "D1766";
+/* D1767 portals the search panel to the body. .factory-top has a
+   backdrop-filter, which makes it the containing block for fixed children,
+   so the overlay resolved against the top bar and opened as a 72px strip
+   with an invisible input inside it. */
+export const BUILD_MARKER = "D1767";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
