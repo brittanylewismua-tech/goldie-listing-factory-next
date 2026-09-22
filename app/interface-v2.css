@@ -164,7 +164,6 @@ html, body { background: var(--lf-paper); }
 /* D786 · The star over the Goldie "i" breathes: 3.2s, ease-in-out, forever.
    The prototype has it; production had the glyph and none of the motion. */
 @keyframes approved-star{50%{transform:translateX(-50%) scale(1.14);filter:drop-shadow(0 0 8px rgba(115,63,106,.45))}}
-@media (prefers-reduced-motion: reduce){}
 
 /* work column — prototype .goldie-work */
 .app-shell .factory-work {
@@ -4561,23 +4560,6 @@ html, body { background: var(--lf-paper); }
 @media (prefers-reduced-motion:reduce){.hub::before{animation:none}}
 .hub > *{position:relative;z-index:1}
 
-.hub-head{max-width:1120px;margin:0 auto 40px}
-.hub-head .mini-label{color:#ff4fc3;margin:0 0 8px}
-.hub-head h1{margin:0;font-size:32px;letter-spacing:-.02em;font-weight:800}
-
-.hub-grid{max-width:1120px;margin:0 auto;display:grid;gap:16px;
-  grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
-
-.hub-tool{display:grid;gap:8px;align-content:start;padding:24px;border-radius:16px;
-  background:#fff;color:#1b0e17;text-decoration:none;border:1px solid transparent;
-  transition:transform 160ms ease,border-color 160ms ease}
-.hub-tool:hover{transform:translateY(-2px);border-color:#ff4fc3}
-.hub-tool:focus-visible{outline:2px solid #ff4fc3;outline-offset:3px}
-.hub-icon{display:flex;align-items:center;justify-content:center;width:40px;height:40px;
-  border-radius:12px;background:#ffe6f6;color:#b02371;margin-bottom:4px}
-.hub-tool b{font-size:16px;letter-spacing:-.01em}
-.hub-what{font-size:13px;line-height:1.45;color:#6b6570}
-
 /* Not ready, and visibly so. Hiding it would leave no sense of what is
    coming; making it look live would be a lie you discover by clicking. */
 /* The suite mark on Home. Plain type rather than the factory lockup, because
@@ -4586,8 +4568,6 @@ html, body { background: var(--lf-paper); }
 /* The coming-soon tile is gone with the tools it advertised. A permanent
    "coming soon" is a promise nobody made, and the two tools it named — Hot
    List and a customer-service bot — are not part of Goldie. */
-.hub-desktop{margin-top:4px;font-size:11px;font-weight:800;letter-spacing:.08em;
-  text-transform:uppercase;color:#8d8d8d}
 
 /* The status strip above the doors. Every line is a link to the thing it is
    about, and the whole strip is absent when it has nothing to say. */
@@ -4613,7 +4593,6 @@ html, body { background: var(--lf-paper); }
 
 @media (max-width:640px){
   .hub{padding:32px 20px}
-  .hub-head h1{font-size:24px}
 }
 
 

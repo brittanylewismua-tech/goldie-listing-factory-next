@@ -425,7 +425,7 @@ test("D818: the interior pages are inside the shell, and the plan name is legibl
   const shell = await fs.promises.readFile(new URL("../app/factory-shell.tsx", import.meta.url), "utf8");
   /* D1575 · the class list is built now, because a page that works on a phone
      adds `responsive-shell` and opts out of the Listing Factory's gate. */
-  assert.match(shell, /app-shell interior-shell\$\{desktopOnly \? "" : " responsive-shell"\}/);
+  assert.match(shell, /app-shell interior-shell\$\{railOpen \? "" : " rail-collapsed"\}\$\{desktopOnly \? "" : " responsive-shell"\}/);
   assert.match(shell, /className="factory-work"/);
 
   /* D798 declared the light ink for the dark plan banner and never won, because

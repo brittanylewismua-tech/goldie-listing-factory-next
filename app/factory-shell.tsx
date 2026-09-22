@@ -25,6 +25,7 @@ import { useEffect, useState } from "react";
 import {readBatchHistory,preparedDaysFromHistory} from "./batch-history-read";
 import SuiteBrand from "./suite-brand";
 import SuiteSidebarNav, { type SuiteNavItem } from "./suite-sidebar-nav";
+import SuiteSearch from "./suite-search";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
@@ -102,12 +103,16 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
   const [goalDays, setGoalDays] = useState<PublishedDay[]>([]);
   const [goalDaysLoaded, setGoalDaysLoaded] = useState(false);
   const [goalDaysError,setGoalDaysError]=useState(false);
-  const [account, setAccount] = useState<{ name: string; initials: string; signedIn: boolean } | null>(null);
+  const [account, setAccount] = useState<{ name: string; initials: string; signedIn: boolean; owner?: boolean } | null>(null);
   /* D835 · Every Etsy shop this seller has connected. The active one is the shop
      the product bank is scoped to; switching is a menu choice, not an OAuth
      round trip, because the token for each shop is already stored. */
   const [shops, setShops] = useState<{ shopId: number; shopName: string; active: boolean }[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
+  /* The rail collapses to give the work the full width. It starts open on
+     every load: a hidden navigation is a reasonable thing to choose and a
+     terrible thing to inherit, especially on the first visit of a session. */
+  const [railOpen, setRailOpen] = useState(true);
   const [switchError, setSwitchError] = useState("");
   const [switching, setSwitching] = useState(0);
   /* Whether the allowance could not be read, as distinct from not yet read. */
@@ -142,8 +147,8 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
     void (fetch("/api/etsy").then(response => response.json()) as Promise<{ shops?: { shopId: number; shopName: string; active: boolean }[] }>).then((result: { shops?: { shopId: number; shopName: string; active: boolean }[] }) => {
       setShops(result.shops || []);
     }).catch(() => undefined);
-    void (fetch("/api/account").then(response => response.json()) as Promise<{ signedIn?: boolean; name?: string; initials?: string }>).then((result: { signedIn?: boolean; name?: string; initials?: string }) => {
-      setAccount({ signedIn: Boolean(result.signedIn), name: result.name || "", initials: result.initials || "" });
+    void (fetch("/api/account").then(response => response.json()) as Promise<{ signedIn?: boolean; name?: string; initials?: string; owner?: boolean }>).then((result: { signedIn?: boolean; name?: string; initials?: string; owner?: boolean }) => {
+      setAccount({ signedIn: Boolean(result.signedIn), name: result.name || "", initials: result.initials || "", owner: Boolean(result.owner) });
     }).catch(() => undefined);
   }, []);
 
@@ -163,7 +168,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
     : usageFailed ? "Couldn't load — reopen to retry"
     : "Loading usage…";
 
-  return <main className={`app-shell interior-shell${desktopOnly ? "" : " responsive-shell"}${["home","market-watch","shop-map","design-scanner","trademark","hotlist","more","connections","batches","keywords","mockups","usage","account"].includes(active) ? " command-workspace" : ""}`}>
+  return <main className={`app-shell interior-shell${railOpen ? "" : " rail-collapsed"}${desktopOnly ? "" : " responsive-shell"}${["home","market-watch","shop-map","design-scanner","trademark","hotlist","more","connections","batches","keywords","mockups","usage","account"].includes(active) ? " command-workspace" : ""}`}>
     {/* D828 · the shell hides every child but this one on a phone. Without it
         these pages rendered as a blank screen. */}
     {desktopOnly && <MobileGate />}
@@ -204,6 +209,53 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
           {goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span>}</a>}
         <small>&copy; 2026 Be A Wolf Biz</small>
         <p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>
+        {/*
+          THE ACCOUNT SITS WITH THE NAVIGATION, NOT OVER THE WORK.
+
+          It lived in the top bar, where it was the only thing on that row and
+          took the width a page title and a search field needed. Down here it
+          is where every other application of this shape keeps it, and the
+          menu it opens - shop switcher, settings, usage, sign out - is next
+          to the links it belongs with instead of floating above the page.
+        */}
+        <div className="factory-account-wrap">
+          <button type="button" className="factory-account" aria-haspopup="menu"
+            aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>
+            <span className="factory-avatar" aria-hidden="true">{account?.initials || "•"}</span>
+            <span className="factory-account-label"><strong>{account?.name || "Your account"}</strong><small>{account?.owner ? "Suite owner" : account?.signedIn ? "Member" : "Not signed in"}</small></span>
+            <span className="factory-account-caret" aria-hidden="true">&#8964;</span>
+          </button>
+          {menuOpen && <div className="factory-account-menu open" role="menu">
+            {shops.length > 0 && <div className="factory-account-shops" role="group" aria-label="Etsy shop">
+              <small>Etsy shop</small>
+              {shops.map(shop => <button key={shop.shopId} type="button" role="menuitemradio" aria-checked={shop.active}
+                className={shop.active ? "is-active" : undefined} disabled={shop.active}
+                /* D836 · A failed switch used to reload anyway, so the seller
+                   landed back on the same shop with no idea why. */
+                onClick={async () => {
+                  setSwitchError(""); setSwitching(shop.shopId);
+                  try {
+                    const response = await fetch("/api/etsy/active", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shopId: shop.shopId }) });
+                    const result = await response.json().catch(() => ({})) as { error?: string };
+                    if (!response.ok) throw new Error(result.error || "That shop could not be opened.");
+                    window.location.reload();
+                  } catch (error) {
+                    setSwitchError(error instanceof Error ? error.message : "That shop could not be opened.");
+                    setSwitching(0);
+                  }
+                }}>
+                {shop.shopName}{shop.active ? " ✓" : switching === shop.shopId ? " …" : ""}</button>)}
+              {switchError && <small role="alert" className="factory-account-shop-error">{switchError}</small>}
+            </div>}
+            <a role="menuitem" href="/account/settings">Account settings</a>
+            <a role="menuitem" href="/usage">Usage and limits</a>
+            <a role="menuitem" href="/connections">Connections</a>
+            {account && <a role="menuitem" href={account.signedIn
+              ? "/account/sign-out?return_to=%2Flisting-factory"
+              : "/account/sign-in?return_to=%2Flisting-factory"}>{account.signedIn ? "Sign out" : "Sign in"}</a>}
+          </div>}
+        </div>
+
         {/* "Powered by Goldıe AI" stood here. The shared footer names no
             product until there is one to name. */}
       </div>
@@ -212,53 +264,27 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
     <div className="factory-main">
       <header className="factory-top">
         {/*
-          THE PAGE NAMES ITSELF. IT DOES NOT NEED A PARENT.
+          THE CRUMB IS A LINK, WHICH IS WHY IT IS BACK.
 
-          This read "Suite › Home". "Suite" is not a place a member can go, not
-          a name the product uses, and not a level of anything — a breadcrumb
-          trail of one invented ancestor. What is left is the only part that
-          was ever true: which page you are on.
+          "Suite › Home" was removed once because "Suite" named a place a
+          member could not go: an invented ancestor with no page behind it.
+          The product has a home page now and this is it, so the crumb is a
+          real destination rather than a decoration, and it is the way back
+          from every interior surface.
         */}
         <a className="suite-mobile-brand" href="/home"><SuiteBrand /></a>
-        <div className="factory-breadcrumb"><b className="factory-top-batch">{title}</b></div>
+        <button type="button" className="factory-rail-toggle" aria-expanded={railOpen}
+          aria-label={railOpen ? "Hide navigation" : "Show navigation"}
+          onClick={() => setRailOpen(open => !open)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15"/></svg>
+        </button>
+        <div className="factory-breadcrumb">
+          <a className="factory-crumb-root" href="/home">Suite</a>
+          <i aria-hidden="true">&#8250;</i>
+          <b className="factory-top-batch">{title}</b>
+        </div>
         <div className="factory-top-right">
-          <div className="factory-account-wrap">
-            <button type="button" className="factory-account" aria-haspopup="menu"
-              aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>
-              <span className="factory-avatar" aria-hidden="true">{account?.initials || "•"}</span>
-              <span className="factory-account-label"><strong>{account?.name || "Your account"}</strong><small>Account</small></span>
-              <span className="factory-account-caret" aria-hidden="true">&#8964;</span>
-            </button>
-            {menuOpen && <div className="factory-account-menu open" role="menu">
-              {shops.length > 0 && <div className="factory-account-shops" role="group" aria-label="Etsy shop">
-                <small>Etsy shop</small>
-                {shops.map(shop => <button key={shop.shopId} type="button" role="menuitemradio" aria-checked={shop.active}
-                  className={shop.active ? "is-active" : undefined} disabled={shop.active}
-                  /* D836 · A failed switch used to reload anyway, so the seller
-                     landed back on the same shop with no idea why. */
-                  onClick={async () => {
-                    setSwitchError(""); setSwitching(shop.shopId);
-                    try {
-                      const response = await fetch("/api/etsy/active", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ shopId: shop.shopId }) });
-                      const result = await response.json().catch(() => ({})) as { error?: string };
-                      if (!response.ok) throw new Error(result.error || "That shop could not be opened.");
-                      window.location.reload();
-                    } catch (error) {
-                      setSwitchError(error instanceof Error ? error.message : "That shop could not be opened.");
-                      setSwitching(0);
-                    }
-                  }}>
-                  {shop.shopName}{shop.active ? " ✓" : switching === shop.shopId ? " …" : ""}</button>)}
-                {switchError && <small role="alert" className="factory-account-shop-error">{switchError}</small>}
-              </div>}
-              <a role="menuitem" href="/account/settings">Account settings</a>
-              <a role="menuitem" href="/usage">Usage and limits</a>
-              <a role="menuitem" href="/connections">Connections</a>
-              {account && <a role="menuitem" href={account.signedIn
-                ? "/account/sign-out?return_to=%2Flisting-factory"
-                : "/account/sign-in?return_to=%2Flisting-factory"}>{account.signedIn ? "Sign out" : "Sign in"}</a>}
-            </div>}
-          </div>
+          <SuiteSearch items={NAV} />
         </div>
       </header>
       <div className="factory-work">{children}</div>

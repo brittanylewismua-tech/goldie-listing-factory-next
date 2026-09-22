@@ -33,8 +33,20 @@ function LockIcon() {
 
 export default function SuiteSidebarNav({ active, items, onNavigate,
   keywordBankInNewTab = false }: Props) {
-  const [factoryOpen, setFactoryOpen] = useState(FACTORY_KEYS.has(active));
-  const [commandOpen, setCommandOpen] = useState(COMMAND_KEYS.has(active));
+  /*
+    BOTH GROUPS OPEN ON ARRIVAL.
+
+    These used to open only when you were already standing inside them, so on
+    Home - the page every session starts on - the rail showed three collapsed
+    words and nothing else. A member who had never opened Listing Factory had
+    no way to learn from the rail that Batch History, Keyword Banks, Mockup
+    Sets and Usage exist at all; the navigation hid the product from the
+    people who most needed to see it. The approved design shows both groups
+    expanded, which is also what the collapse control is for: closing a group
+    is a choice the member makes, not the state they inherit.
+  */
+  const [factoryOpen, setFactoryOpen] = useState(true);
+  const [commandOpen, setCommandOpen] = useState(true);
   const [commandCenterAccess, setCommandCenterAccess] = useState<boolean|null>(null);
   const [lockedTool, setLockedTool] = useState("");
 

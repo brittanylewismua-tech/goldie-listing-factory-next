@@ -1,10 +1,6 @@
 /* Shared layout corrections verified against the authenticated member pages. */
 html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable',Manrope,sans-serif}
 .app-shell .factory-work {min-width:0;max-width:1320px;padding:32px 36px 72px}
-.app-shell :is(.hub-head h1,.shop-map-head h1,.mw h1,.scanner>h1,.tm-page h1) {font-family:'DM Serif Display',serif!important;font-weight:400!important;font-size:clamp(28px,2.8vw,36px)!important;line-height:1.15!important;letter-spacing:-.02em!important;overflow-wrap:anywhere}
-.app-shell :is(.hub-tool,.keyword-watch,.shop-map-card,.shop-map-leaders,.tm-verdict,.tm-watches,.mw .card) {box-shadow:0 5px 18px #20101c08!important;border:1px solid #dacdd6!important;border-radius:14px!important}
-.app-shell :is(.hub-tool,.keyword-watch,.mw .card) {transition:border-color .15s ease,box-shadow .15s ease}
-.app-shell :is(.hub-tool:hover,.keyword-watch:hover,.mw .card:hover) {border-color:#ed7fbb!important;box-shadow:0 8px 24px #46192f12!important}
 .app-shell :is(button,a,input,select,textarea):focus-visible {outline:3px solid #d30c85;outline-offset:3px}
 .suite-mobile-brand {display:none}
 .app-shell .factory-top {gap:16px}
@@ -75,7 +71,6 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
  .app-shell .factory-top {padding:12px 18px!important;min-height:70px;height:auto!important;flex-wrap:wrap}
  .suite-mobile-brand {display:flex;text-decoration:none;margin-right:auto}
  .suite-mobile-brand .suite-brand {color:#171318;font-size:15px}
- .suite-mobile-brand .suite-brand-mark {width:30px;height:30px;flex-basis:30px}
  .suite-mobile-brand svg {width:28px;height:28px}
  .app-shell .factory-breadcrumb {display:none}
  .app-shell .shop-map-leader-grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}

@@ -207,7 +207,12 @@
    retry, and per-step counts as evidence. Exercised against a seeded store and
    a disposable identity; the owner's own account is refused while the product
    is being finished. */
-export const BUILD_MARKER = "D1763";
+/* D1764 finishes the suite redesign that was reverted half-applied: the rail
+   opens both groups and carries the account at its foot, the top bar gets a
+   crumb back to Home and a search that actually resolves, and the home page
+   is the shop's name over one Listing Factory panel instead of a greeting
+   over two doors into the same room. */
+export const BUILD_MARKER = "D1764";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

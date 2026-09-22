@@ -1,13 +1,17 @@
+/*
+  THE WORDMARK.
+
+  This was a gear glyph plus "Goldie Suite / SELLER TOOLS", written while the
+  umbrella product had no name. It has one, and the approved design draws it
+  as a wordmark - GOLDIE in white, SUITE in pink beside it - with no icon,
+  because a mark nobody has drawn is a placeholder, and a placeholder in the
+  corner of every page is how a temporary thing quietly becomes permanent.
+
+  The two words are separate elements so the second carries its own colour and
+  tracking without a nested font stack.
+*/
 export default function SuiteBrand() {
   return <a className="suite-brand approved-brand" href="/home" aria-label="Goldie Suite home">
-    <span className="suite-brand-mark" aria-hidden="true">
-      <svg viewBox="0 0 32 32" fill="none">
-        <path d="M16 3v4M16 25v4M3 16h4M25 16h4M6.8 6.8l2.8 2.8M22.4 22.4l2.8 2.8M25.2 6.8l-2.8 2.8M9.6 22.4l-2.8 2.8" />
-        <circle cx="16" cy="16" r="7.5" />
-        <circle cx="16" cy="16" r="2.5" />
-      </svg>
-      <i />
-    </span>
-    <span className="suite-brand-copy"><strong>Goldie Suite</strong><small>SELLER TOOLS</small></span>
+    <span className="suite-wordmark"><b>GOLDIE</b><i>SUITE</i></span>
   </a>;
 }

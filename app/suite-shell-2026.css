@@ -1,0 +1,230 @@
+/* ============================================================================
+ * THE APPROVED SUITE SHELL.
+ *
+ * The redesign was applied once, judged wrong, reverted, re-applied and
+ * dropped again, which left professional-redesign.css in the tree importing
+ * from nowhere and the product wearing half of a design nobody signed off on.
+ * That file is still not imported - it is the reskin that was rejected, and
+ * re-importing it would ship the thing that was explicitly reverted.
+ *
+ * This file is the other half, written against the approved preview: the rail
+ * with both groups open and the account at its foot, a top bar that carries a
+ * crumb and a real search, and a home page built from panels instead of a
+ * greeting. It loads last, so where it disagrees with an older stylesheet it
+ * wins on order rather than on !important.
+ * ==========================================================================*/
+
+:root{
+  --suite-rail:#0a0a0a;
+  --suite-rail-line:#232023;
+  --suite-rail-chip:#1b181b;
+  --suite-edge:#0a0a0a;
+}
+
+/* ---------------------------------------------------------------- wordmark */
+.app-shell>.topbar>.brand-lockup{margin:0 4px 20px;padding:0 8px 20px;border-bottom:1px solid var(--suite-rail-line)}
+.suite-brand{gap:0}
+.suite-wordmark{display:flex;align-items:baseline;gap:9px}
+.suite-wordmark b{
+  color:#fff;font-size:23px;font-weight:800;letter-spacing:.06em;line-height:1;
+}
+.suite-wordmark i{
+  color:var(--suite-pink);font-size:13px;font-style:normal;font-weight:800;
+  letter-spacing:.24em;line-height:1;
+}
+
+/* -------------------------------------------------------------------- rail */
+.app-shell>.topbar{background:var(--suite-rail);border-right:1px solid var(--suite-rail-line)}
+/* The rail carried a large gear watermark behind the links. It sat under the
+   navigation at low contrast and read as a printing artefact. */
+.app-shell>.topbar::before{display:none}
+.app-shell>.topbar .top-nav a{min-height:44px;border-radius:10px;font-size:14px;color:#b9b2b7}
+.app-shell>.topbar .top-nav a svg{width:19px;height:19px;flex:0 0 19px}
+.app-shell>.topbar .top-nav a:hover{background:#151315;color:#fff}
+.app-shell>.topbar .top-nav a.active{background:var(--suite-rail-chip);color:#fff;font-weight:800}
+.app-shell>.topbar .top-nav a.active::before{
+  content:"";position:absolute;left:-7px;top:9px;bottom:9px;width:3px;border-radius:0 6px 6px 0;background:var(--suite-pink);
+}
+.suite-nav-children{display:grid;gap:2px;margin:2px 0 6px;padding-left:14px;border-left:1px solid var(--suite-rail-line)}
+.suite-nav-children a{font-weight:650!important}
+.suite-nav-parent{display:flex;align-items:center;gap:2px}
+.suite-nav-parent>a,.suite-nav-heading{flex:1 1 auto;min-width:0}
+.suite-nav-heading{
+  display:flex;align-items:center;gap:11px;min-height:44px;padding:0 11px;border:0;border-radius:10px;
+  background:none;color:#b9b2b7;font:inherit;font-size:14px;font-weight:750;text-align:left;cursor:pointer;
+}
+.suite-nav-heading svg{width:19px;height:19px;flex:0 0 19px}
+.suite-nav-heading:hover{background:#151315;color:#fff}
+/* The chevron marks the group; it is at the end of the row in the approved
+   design, not in front of the label where it pushed every group out of line
+   with Home and Connections. */
+.suite-nav-parent{position:relative}
+.suite-nav-toggle{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:1;
+  width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:7px;
+  background:none;color:#8c848a;cursor:pointer;
+}
+.suite-nav-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.suite-nav-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
+.suite-nav-toggle:hover{color:#fff;background:#201d20}
+
+/* --------------------------------------------------- the account, at the foot */
+.app-shell>.topbar>.approved-sidebar-footer .factory-account-wrap{
+  position:relative;margin-top:14px;padding-top:14px;border-top:1px solid var(--suite-rail-line);
+}
+.app-shell>.topbar .factory-account{
+  display:flex;align-items:center;gap:11px;width:100%;padding:8px 6px;
+  border:0;border-radius:10px;background:none;cursor:pointer;text-align:left;
+}
+.app-shell>.topbar .factory-account:hover{background:#151315}
+.app-shell>.topbar .factory-avatar{
+  display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border-radius:12px;
+  background:#fff;color:#0a0a0a;font-size:13px;font-weight:800;letter-spacing:.02em;
+}
+.app-shell>.topbar .factory-account-label{display:grid;gap:1px;min-width:0}
+.app-shell>.topbar .factory-account-label strong{color:#fff;font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-shell>.topbar .factory-account-label small{color:#8c848a;font-size:12px}
+.app-shell>.topbar .factory-account-caret{margin-left:auto;color:#8c848a;transform:rotate(-90deg)}
+.app-shell>.topbar .factory-account-menu{
+  position:absolute;left:0;right:0;bottom:calc(100% + 8px);top:auto;
+  padding:7px;border:1px solid var(--suite-line);border-radius:12px;background:#fff;
+  box-shadow:0 18px 40px rgba(0,0,0,.35);z-index:40;
+}
+.app-shell>.topbar .approved-sidebar-footer>small,
+.app-shell>.topbar .approved-sidebar-footer>.etsy-api-disclosure{color:#6d666b}
+
+/* ------------------------------------------------------------------ top bar */
+.app-shell .factory-top{gap:14px;background:rgba(255,255,255,.9);border-bottom:1px solid var(--suite-line)}
+.factory-rail-toggle{
+  display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;
+  border:0;border-radius:9px;background:none;color:#5d545a;cursor:pointer;
+}
+.factory-rail-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.factory-rail-toggle:hover{background:#f4ecf1;color:var(--suite-ink)}
+.app-shell .factory-breadcrumb{gap:7px;font-size:14px}
+.factory-crumb-root{color:#8c8189;font-size:14px;font-weight:600;text-decoration:none}
+.factory-crumb-root:hover{color:var(--suite-ink);text-decoration:underline;text-underline-offset:3px}
+.app-shell .factory-breadcrumb>i{color:#bdb0b8;font-size:15px;font-style:normal;font-weight:500}
+.app-shell .factory-top-batch{font-size:14px;font-weight:800}
+.app-shell .factory-top-right{margin-left:auto}
+
+/* ------------------------------------------------------------------- search */
+.suite-search-trigger{
+  display:flex;align-items:center;gap:10px;min-width:260px;padding:9px 10px 9px 13px;
+  border:1px solid var(--suite-line);border-radius:12px;background:#fff;color:#8c8189;
+  font:inherit;font-size:14px;cursor:pointer;
+}
+.suite-search-trigger:hover{border-color:#cdbcc7;color:var(--suite-ink)}
+.suite-search-trigger svg{width:17px;height:17px;flex:0 0 17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.suite-search-trigger span{flex:1 1 auto;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.suite-search-trigger kbd{
+  padding:3px 7px;border-radius:6px;background:#f5eef2;color:#8c8189;
+  font:inherit;font-size:12px;font-weight:700;
+}
+.suite-search-backdrop{
+  position:fixed;inset:0;z-index:90;display:flex;justify-content:center;padding:14vh 18px 18px;
+  background:rgba(18,10,15,.42);backdrop-filter:blur(3px);
+}
+.suite-search-panel{
+  width:100%;max-width:560px;max-height:min(62vh,520px);display:flex;flex-direction:column;
+  border:1px solid var(--suite-line);border-radius:16px;background:#fff;overflow:hidden;
+  box-shadow:0 30px 70px rgba(28,12,22,.34);
+}
+.suite-search-field{display:flex;align-items:center;gap:11px;padding:15px 17px;border-bottom:1px solid var(--suite-line)}
+.suite-search-field svg{width:19px;height:19px;flex:0 0 19px;fill:none;stroke:#8c8189;stroke-width:1.8;stroke-linecap:round}
+.suite-search-field input{flex:1 1 auto;min-width:0;border:0;outline:0;background:none;color:var(--suite-ink);font:inherit;font-size:16px}
+.suite-search-hits{overflow-y:auto;padding:7px}
+.suite-search-hits a{
+  display:flex;align-items:baseline;gap:10px;padding:11px 12px;border-radius:9px;
+  color:var(--suite-ink);text-decoration:none;
+}
+.suite-search-hits a.current{background:var(--suite-pink-wash)}
+.suite-search-hits a b{font-size:14px;font-weight:750}
+.suite-search-hits a small{margin-left:auto;color:#8c8189;font-size:12px}
+.suite-search-empty{margin:0;padding:18px 12px;color:#8c8189;font-size:14px}
+
+/* ------------------------------------------------------- the collapsed rail */
+.app-shell.rail-collapsed{grid-template-columns:0 minmax(0,1fr)}
+.app-shell.rail-collapsed>.topbar{width:0;padding-inline:0;border-right:0;overflow:hidden;visibility:hidden}
+
+/* ================================================================== home ==== */
+.home-dashboard{display:grid;gap:22px}
+.home-shop-head{display:flex;align-items:center;gap:20px;min-height:76px;margin:6px 0 4px}
+.home-shop-mark{
+  display:grid;place-items:center;width:66px;height:66px;flex:0 0 66px;border-radius:16px;
+  background:#141114;color:#fff;font-size:19px;font-weight:800;letter-spacing:.04em;
+  box-shadow:5px 5px 0 var(--suite-pink);
+}
+.home-shop-mark:empty{display:none}
+.home-shop-head h1{
+  margin:0;color:var(--suite-ink);font-size:clamp(34px,4.6vw,56px);font-weight:800;
+  letter-spacing:-.035em;line-height:1.02;
+}
+
+/* The panel: a black keyline with an offset block behind it. It is the one
+   card shape in the approved design and every group on this page wears it. */
+.home-panel{
+  border:2px solid var(--suite-edge);border-radius:16px;background:#fff;overflow:hidden;
+  box-shadow:6px 6px 0 var(--suite-edge);
+}
+.home-panel-head{display:flex;align-items:center;gap:16px;padding:20px 22px;border-bottom:1px solid var(--suite-line)}
+.home-panel-mark{
+  display:grid;place-items:center;width:50px;height:50px;flex:0 0 50px;border-radius:14px;
+  background:#141114;color:var(--suite-pink);box-shadow:4px 4px 0 var(--suite-pink);
+}
+.home-panel-copy{display:grid;gap:3px;min-width:0}
+.home-panel-copy small{color:var(--suite-pink-deep);font-size:12px;font-weight:800;letter-spacing:.14em}
+.home-panel-copy h2{margin:0;color:var(--suite-ink);font-size:clamp(20px,2.2vw,26px);font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.home-panel-cta{
+  margin-left:auto;display:inline-flex;align-items:center;gap:9px;padding:13px 19px;
+  border-radius:12px;background:#0a0a0a;color:#fff;font-size:14px;font-weight:800;text-decoration:none;
+  box-shadow:4px 4px 0 var(--suite-pink);
+}
+.home-panel-cta:hover{transform:translate(1px,1px);box-shadow:3px 3px 0 var(--suite-pink)}
+.home-panel-cta i{font-style:normal}
+
+.home-panel-tiles{display:grid}
+.home-panel-tiles-four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.home-panel-tiles-two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.home-tile{
+  display:flex;align-items:flex-start;gap:14px;padding:20px 22px;
+  border-right:1px solid var(--suite-line);border-bottom:1px solid var(--suite-line);
+  color:var(--suite-ink);text-decoration:none;
+}
+.home-panel-tiles-four .home-tile:nth-child(4n),
+.home-panel-tiles-two .home-tile:nth-child(2n){border-right:0}
+.home-panel-tiles-four .home-tile:nth-last-child(-n+4),
+.home-panel-tiles-two .home-tile:nth-last-child(-n+2){border-bottom:0}
+.home-tile:hover{background:var(--suite-pink-wash)}
+.home-tile-icon{display:grid;place-items:center;flex:0 0 26px;color:var(--suite-pink)}
+.home-tile-copy{display:grid;gap:4px;min-width:0}
+.home-tile-copy b{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.home-tile-copy small{color:var(--suite-muted);font-size:13px;line-height:1.4}
+.home-tile-go{margin-left:auto;align-self:center;color:#b0a3ab;font-size:19px;font-style:normal}
+.home-tile:hover .home-tile-go{color:var(--suite-pink-deep)}
+.home-panel-single .home-tile{border:0;padding:22px}
+
+.home-dashboard .hub-foot{margin:6px 0 0;padding:0;border:0}
+
+/* ------------------------------------------------------------ narrow widths */
+@media (max-width:1180px){
+  .home-panel-tiles-four{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .home-panel-tiles-four .home-tile:nth-child(2n){border-right:0}
+  .home-panel-tiles-four .home-tile:nth-child(4n+1){border-right:1px solid var(--suite-line)}
+  .home-panel-tiles-four .home-tile:nth-last-child(-n+4){border-bottom:1px solid var(--suite-line)}
+  .home-panel-tiles-four .home-tile:nth-last-child(-n+2){border-bottom:0}
+  .suite-search-trigger{min-width:0}
+  .suite-search-trigger span{display:none}
+}
+@media (max-width:860px){
+  .home-panel-head{flex-wrap:wrap}
+  .home-panel-cta{margin-left:0;width:100%;justify-content:center}
+  .home-panel-tiles-four,.home-panel-tiles-two{grid-template-columns:minmax(0,1fr)}
+  .home-panel-tiles .home-tile{border-right:0;border-bottom:1px solid var(--suite-line)}
+  .home-panel-tiles .home-tile:last-child{border-bottom:0}
+  .home-shop-head{gap:14px}
+  .home-shop-mark{width:52px;height:52px;flex:0 0 52px;border-radius:14px;font-size:16px}
+  .factory-rail-toggle{display:none}
+  .app-shell .factory-breadcrumb .factory-crumb-root,
+  .app-shell .factory-breadcrumb>i{display:none}
+}
