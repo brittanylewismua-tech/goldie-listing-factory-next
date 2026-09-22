@@ -47,6 +47,14 @@ export default function MarketWatchClient(
   const [opening,setOpening]=useState("");
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
+  // The desktop shell scrolls its main pane; phones scroll the document.
+  // Reset only when entering/leaving a detail, not when refreshing or sorting it.
+  const detailKey=selectedShop?`shop:${selectedShop.shopId}`:open?`keyword:${open.key}`:"watchlist";
+  useEffect(()=>{
+    document.querySelector(".factory-main")?.scrollTo({top:0,behavior:"instant"});
+    window.scrollTo({top:0,behavior:"instant"});
+  },[detailKey]);
+
 
   const loadNiches=useCallback(async(quiet=false)=>{if(!quiet)setWatches(w=>({...w,status:"loading"}));try{const response=await fetch("/api/market-watch/niches");if(!response.ok)throw new Error();const body=await response.json() as {watches:WatchRow[]};setWatches({status:"ready",data:body.watches??[]})}catch{setWatches(w=>({status:"failed",data:w.data}))}},[]);
   const loadShops=useCallback(async(quiet=false)=>{if(!quiet)setShops(w=>({...w,status:"loading"}));try{const response=await fetch("/api/shop-watch/brief");if(!response.ok)throw new Error();const body=await response.json() as {shops:ShopView[]};setShops({status:"ready",data:body.shops??[]})}catch{setShops(w=>({status:"failed",data:w.data}))}},[]);

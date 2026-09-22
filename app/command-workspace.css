@@ -172,7 +172,7 @@
 .app-shell.command-workspace .costs {border:0!important;border-radius:0!important;box-shadow:none!important}
 .app-shell.command-workspace .costs .back {padding:8px 14px;margin:0 0 20px;min-height:38px;background:#fff;border:1px solid #cbbfc8;border-radius:8px;font-size:14px;color:#29232a}
 .app-shell.command-workspace .costs .cost-month {margin:20px 0 12px;font-size:14px;font-weight:700;color:#625862}
-.app-shell.command-workspace .costs .verdict {padding:20px;border:1px solid var(--work-line)!important;border-left:3px solid #b9883c!important;box-shadow:none!important;border-radius:10px}
+.app-shell.command-workspace .costs .verdict {padding:20px;border:1px solid var(--work-line)!important;border-left:3px solid #ce258c!important;box-shadow:none!important;border-radius:10px}
 .app-shell.command-workspace .costs .order {padding:22px;border-color:var(--work-line);border-radius:10px;box-shadow:none!important}
 .app-shell.command-workspace .costs .basis {font-size:12px}
 /* Supporting pages share the same spacing, controls and readable text. */
