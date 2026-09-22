@@ -30,18 +30,19 @@ function Meter({label,used,limit,period="month"}:{label:string;used:number;limit
 export default function UsagePage(){
   const [interval, setInterval] = useState<BillingInterval>("month");
   const[data,setData]=useState<Data|null>(null),[loadError,setLoadError]=useState(""),[fees,setFees]=useState<Fees>({etsyFeePercent:9.5,fixedFee:.25,listingFee:.20}),[goal,setGoal]=useState<Goal>({enabled:true,period:"week",target:20}),[goalMessage,setGoalMessage]=useState(""),[feeMessage,setFeeMessage]=useState(""),[billingMessage,setBillingMessage]=useState(""),[checkoutPlan,setCheckoutPlan]=useState<"goldie"|"pro"|"scale"|null>(null);
-  useEffect(()=>{fetch("/api/usage").then(async response=>{const result=await responseJson<Partial<Data>&{error?:string}>(response);if(!response.ok||!result.plan||!result.usage||!result.resetAt)throw new Error(result.error||"Your usage could not be loaded.");setData(result as Data)}).catch(()=>setLoadError("Your plan and usage could not be loaded. Reload the page to try again."));fetch("/api/seller-preferences").then(r=>responseJson<{pricing?:Partial<Fees>;listingGoal?:Goal}>(r)).then(r=>{if(r.pricing)setFees(current=>({...current,...r.pricing}));if(r.listingGoal)setGoal(r.listingGoal)}).catch(()=>undefined)},[]);
+  const [preferencesLoaded,setPreferencesLoaded]=useState(false),[preferencesError,setPreferencesError]=useState("");
+  useEffect(()=>{fetch("/api/usage").then(async response=>{const result=await responseJson<Partial<Data>&{error?:string}>(response);if(!response.ok||!result.plan||!result.usage||!result.resetAt)throw new Error(result.error||"Your usage could not be loaded.");setData(result as Data)}).catch(()=>setLoadError("Your plan and usage could not be loaded. Reload the page to try again."));fetch("/api/seller-preferences").then(r=>{if(!r.ok)throw Error();return responseJson<{pricing?:Partial<Fees>;listingGoal?:Goal}>(r)}).then(r=>{if(r.pricing)setFees(current=>({...current,...r.pricing}));if(r.listingGoal)setGoal(r.listingGoal);setPreferencesLoaded(true)}).catch(()=>setPreferencesError("Your saved goal and pricing settings could not be loaded."))},[]);
   /* D341 · One switch. The sidebar bar and the receipt line are the same
      feature seen twice, so they cannot be turned on independently — half a
      progress display is more confusing than none. */
   async function saveGoal(next:Goal){
     setGoal(next);setGoalMessage("Saving…");
-    const response=await fetch("/api/seller-preferences",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({listingGoal:next})});
-    setGoalMessage(response.ok?"Saved":"Could not save your goal.");
-    window.setTimeout(()=>setGoalMessage(current=>current==="Saved"?"":current),2200);
+    try { const response=await fetch("/api/seller-preferences",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({listingGoal:next})});
+      setGoalMessage(response.ok?"Saved":"Could not save your goal. Try again.");
+    } catch {setGoalMessage("Saving could not be confirmed. Check your connection and try again.");}
   }
-  async function saveFees(){setFeeMessage("Saving…");const response=await fetch("/api/seller-preferences",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pricing:fees})});setFeeMessage(response.ok?"Pricing profile saved for every future batch.":"Pricing profile could not be saved.")}
-  async function manageBilling(){setBillingMessage("Opening secure billing…");const response=await fetch("/api/billing/portal",{method:"POST"}),result=await response.json() as {url?:string;error?:string};if(response.ok&&result.url){window.location.href=result.url;return}setBillingMessage(result.error||"Billing could not be opened.")}
+  async function saveFees(){setFeeMessage("Saving…");try{const response=await fetch("/api/seller-preferences",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pricing:fees})});setFeeMessage(response.ok?"Pricing profile saved for every future batch.":"Pricing profile could not be saved.")}catch{setFeeMessage("Saving could not be confirmed. Your entries are still here; try again.")}}
+  async function manageBilling(){setBillingMessage("Opening secure billing…");try{const response=await fetch("/api/billing/portal",{method:"POST"}),result=await response.json() as {url?:string;error?:string};if(response.ok&&result.url){window.location.href=result.url;return}setBillingMessage(result.error||"Billing could not be opened.")}catch{setBillingMessage("Billing could not be opened. Please try again.")}}
   async function choosePlan(plan:"goldie"|"pro"|"scale"){if(data?.billing?.active){await manageBilling();return}setCheckoutPlan(plan);setBillingMessage("");try{const response=await fetch("/api/billing/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan,interval})}),result=await response.json() as {url?:string;error?:string};if(response.ok&&result.url){window.location.href=result.url;return}setBillingMessage(result.error||"Secure checkout could not be opened.")}catch{setBillingMessage("Checkout could not be opened. Please try again.")}finally{setCheckoutPlan(null)}}
   const billingTerms = data?.billing?.terms;
   const currentPrice = billingTerms ? `${new Intl.NumberFormat("en-US",{style:"currency",currency:billingTerms.currency}).format(billingTerms.amount/100)} / ${billingTerms.intervalCount > 1 ? `${billingTerms.intervalCount} ` : ""}${billingTerms.interval}` : "Renewal details in Manage billing";
@@ -74,10 +75,11 @@ export default function UsagePage(){
         {/* Never a scold, and never a countdown to failure. Below target it
             says what is unlocked by carrying on; at target it says well done
             and points at the reward rather than at the next obligation. */}
-        <p className="streak-reward">{data.streak.hit
-          ?<>Your full Hot List is open. <a href="/hot-list">Open Hot List</a></>
-          :<>Create listings on five days in a seven-day period to open the full Hot List. <a href="/hot-list">See the preview</a></>}</p>
+        <p className="streak-reward"><a href="/hot-list">Explore recent listing activity →</a></p>
       </section>}
+      {preferencesError&&<p role="alert">{preferencesError} <button type="button" onClick={()=>window.location.reload()}>Reload settings</button></p>}
+      {!preferencesLoaded&&!preferencesError&&<p role="status">Loading saved settings…</p>}
+      <fieldset className="preference-settings" disabled={!preferencesLoaded||goalMessage==="Saving…"||feeMessage==="Saving…"}>
       <section id="listing-goal" className="listing-goal-settings">
       <p className="mini-label">YOUR TARGET</p>
       <h2>Listing goal</h2>
@@ -103,6 +105,7 @@ export default function UsagePage(){
       {goalMessage&&<p className="listing-goal-message" role="status">{goalMessage}</p>}
     </section>
     <section className="pricing-profile"><div><p className="mini-label">SAVED ONCE · USED IN EVERY LISTING SETUP</p><h2>Etsy fee profile</h2><p>The US defaults are 6.5% Etsy transaction + 3% Etsy Payments, $0.25 payment processing, and $0.20 listing/renewal. If your bank is outside the US, enter Etsy’s rates for your country once here.</p></div><div className="pricing-profile-grid"><label>Combined percentage fee<DecimalField value={fees.etsyFeePercent} min={0} max={40} step="0.1" label="Etsy fee percent" onCommit={next=>setFees({...fees,etsyFeePercent:next})}/><small>Transaction + payment processing + any regulatory fee</small></label><label>Fixed payment fee<DecimalField value={fees.fixedFee} min={0} step="0.01" label="Fixed fee" onCommit={next=>setFees({...fees,fixedFee:next})}/></label><label>Listing / renewal fee<DecimalField value={fees.listingFee} min={0} step="0.01" label="Listing fee" onCommit={next=>setFees({...fees,listingFee:next})}/></label></div><button onClick={()=>void saveFees()}>Save pricing profile</button>{feeMessage&&<span role="status">{feeMessage}</span>}<small className="pricing-caveat">The Listing Factory calculates item prices from each variant’s live Printify product cost and this Etsy fee profile. Shipping is configured and charged separately, so it is not deducted from the item-profit figures shown on the pricing page.</small></section>
+      </fieldset>
       {/*
         D1692 · TWO ANSWERS TO "IS GOLDIE ON SALE", WHICH IS WHAT THE GATE
         EXISTS TO PREVENT.

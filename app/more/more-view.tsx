@@ -40,8 +40,12 @@ const GROUPS: Group[] = [
     {href:"/mockups",name:"Mockup Sets",icon:"mockups",what:"Manage the photos used for your listings."},
   ]},
   {
-    heading: "Tools",
+    heading: "Command Center",
     rows: [
+      {href:"/market-watch",name:"Market Watch",icon:"marketWatch",what:"Compare current Etsy listings and follow keywords and shops."},
+      {href:"/shop-map",name:"Shop Map",icon:"shopMap",what:"Review your catalog, sold listings, and monthly numbers."},
+      {href:"/design-scanner",name:"Design Scanner",icon:"designScanner",what:"Check artwork readability and compare visual patterns."},
+      {href:"/hot-list",name:"Hot List",icon:"marketWatch",what:"Browse recent activity by product type and keyword."},
       { href: "/trademark", name: "Trademark Tracker", icon: "trademark",
         /* D1693 · "the federal register" claims a complete search. The tool
            itself says "the trademark records currently loaded", and the
@@ -65,9 +69,9 @@ const GROUPS: Group[] = [
       { href: "/account/settings", name: "Account", icon: "account",
         what: "Who you are signed in as, your access, and the data held about you." },
       { href: "/usage", name: "Usage and limits", icon: "usage",
-        what: "What you have used today, and what is left." },
+        what: "Your monthly listing allowance and remaining credits." },
       { href: "/goals", name: "Listing goal", icon: "goals",
-        what: "How many drafts you have ready to publish this period." },
+        what: "Drafts created toward your weekly or monthly goal." },
     ],
   },
 ];

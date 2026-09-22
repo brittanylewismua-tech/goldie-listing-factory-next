@@ -174,10 +174,10 @@ test("offers real account sign-in choices and preserves the selected destination
   /*
     D1606 · The sign-in page is not inside the Listing Factory, so it only
     calls itself that when that is genuinely where the member is heading.
-    This destination is /mastermind, so it says "Sign in." and shows no
+    This destination is /mastermind, so it says "Sign in to Goldie Suite." and shows no
     Listing Factory wordmark.
   */
-  assert.match(html, /Sign in\./);
+  assert.match(html, /Sign in to Goldie Suite\./);
   assert.doesNotMatch(html, /Sign in to your Listing Factory/);
   assert.match(html, /Continue with Google/);
   assert.match(html, /Email me a sign-in link/);
@@ -661,15 +661,15 @@ test("rejects wrong garment nouns using the exact Printify blueprint", async () 
   assert.equal(namesExcludedProduct("Bride Hoodie", hoodieExclusions), false);
 });
 
-test("uses the full Mockup Library width and previews up to ten scenes before expansion — D83", async () => {
+test("uses the full Mockup Library width and previews five compact scenes before expansion — D83", async () => {
   const [page, css] = await Promise.all([
     readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/mockups/management.css", import.meta.url), "utf8"),
   ]);
-  assert.match(page, /items\.slice\(0,10\)/);
+  assert.match(page, /items\.slice\(0,5\)/);
   assert.match(css, /\.managementSetList\s*\{\s*grid-template-columns:\s*minmax\(0, 1fr\)/);
-  assert.match(css, /\.managementSetList \.setPreview\s*\{[\s\S]*grid-template-columns:\s*repeat\(5, minmax\(120px, 1fr\)\)/);
-  assert.match(css, /\.managementSetList \.setPreview img\s*\{[\s\S]*aspect-ratio:\s*4 \/ 5/);
+  assert.match(css, /\.managementSetList \.setPreview\s*\{[\s\S]*grid-template-columns:\s*repeat\(5, 64px\)/);
+  assert.match(css, /\.managementSetList \.setPreview img\s*\{[\s\S]*height:\s*72px/);
 });
 
 test("validates and isolates staged artwork without decoding or buffering it", async () => {
@@ -1791,7 +1791,7 @@ test("shows each saved mockup once with visible controls and a real enlarged pre
   ]);
   const managementMarkup=page.slice(page.indexOf('managementSetList'),page.indexOf('{showAddSet&&'));
   assert.match(managementMarkup,/setPreview/);
-  assert.match(managementMarkup,/items\.slice\(0,10\)/);
+  assert.match(managementMarkup,/items\.slice\(0,5\)/);
   assert.match(managementMarkup,/!open&&/);
   assert.match(managementMarkup,/savedMockupPreview/);
   assert.match(page,/libraryPreview\.src/);
@@ -4469,7 +4469,7 @@ test("a card that says Ready is not also asking to approve — D505/D506", async
   assert.match(clarity, /\.batch-row-actions\{[^}]*background:none/);
 });
 
-test("step 2 lists no products, and collapsed mockup sets preview ten — D507/D508", async () => {
+test("step 2 lists no products, and collapsed mockup sets preview five — D507/D508", async () => {
   const [app, mockups, mockupCss] = await Promise.all([
     readFile(new URL("../app/listing-factory-app.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/mockups/page.tsx", import.meta.url), "utf8"),
@@ -4486,10 +4486,10 @@ test("step 2 lists no products, and collapsed mockup sets preview ten — D507/D
   assert.match(app, /<\/aside>,false\)\}/, "the designs step asks for no cards");
   assert.doesNotMatch(app, /\{label:"Designs",value:started\?plural/, "and has no row set left");
 
-  // The live management screen previews ten while collapsed and exposes its full
+  // The live management screen previews five while collapsed and exposes its full
   // saved set when opened. The removed second return was unreachable legacy UI.
   const managementMarkup=mockups.slice(mockups.indexOf('managementSetList'),mockups.indexOf('{showAddSet&&'));
-  assert.match(managementMarkup,/!open&&<span className="setPreview">\{items.slice\(0,10\).map/);
+  assert.match(managementMarkup,/!open&&<span className="setPreview">\{items.slice\(0,5\).map/);
   assert.match(managementMarkup,/open&&<>/);
   assert.match(managementMarkup,/className="thumbs">\{items.map/);
   assert.match(mockupCss, /\.thumbs\{grid-template-columns:repeat\(auto-fill,minmax\(100px,140px\)\)/);

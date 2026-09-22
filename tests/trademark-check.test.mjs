@@ -12,13 +12,10 @@ test("D1691: a clear result does not say the same words twice", () => {
     give, and the only thing that would fill the slot is encouragement to go
     ahead, which a screening tool cannot give.
   */
-  assert.match(verdict, /verdict\.risk !== "clear" && \(/,
-    "a clear result must not repeat its own badge as its headline");
-  const headline = verdict.slice(verdict.indexOf('className="tm-headline"'),
-    verdict.indexOf('className="tm-phrase"'));
-  assert.doesNotMatch(headline, /Nothing found/);
-  assert.match(headline, /Review the matching names and categories/);
-  assert.doesNotMatch(headline, /Somebody owns part of this|Do not print this/);
+  assert.doesNotMatch(verdict, /className="tm-headline"/, "do not repeat the verdict badge as another headline");
+  assert.match(verdict, /No matching mark was found/);
+  assert.match(verdict, /does not establish that the phrase is available/);
+  assert.doesNotMatch(verdict, /Somebody owns part of this|Do not print this/);
 });
 
 test("D1691: a clear result never encourages printing", () => {

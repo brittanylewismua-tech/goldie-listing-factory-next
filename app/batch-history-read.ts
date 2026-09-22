@@ -1,7 +1,8 @@
 import type {PublishedDay} from './listing-goal';
-export type HistoryData<T>={batches:T[];prepared?:PublishedDay[];preparedAvailable?:boolean};
-export async function readBatchHistory<T>(fetcher:typeof fetch=fetch,timeoutMs=25000):Promise<HistoryData<T>>{
- const response=await fetcher('/api/batches',{signal:AbortSignal.timeout(timeoutMs)});
+export type HistoryData<T>={batches:T[];prepared?:PublishedDay[];preparedAvailable?:boolean;total?:number;page?:number;pageSize?:number};
+export async function readBatchHistory<T>(fetcher:typeof fetch=fetch,timeoutMs=25000,options?:{query:string;page:number;sort:string}):Promise<HistoryData<T>>{
+ const suffix=options?'?'+new URLSearchParams({query:options.query,page:String(options.page),sort:options.sort}):'';
+ const response=await fetcher('/api/batches'+suffix,{signal:AbortSignal.timeout(timeoutMs)});
  if(response.status===401)throw Error('Sign in to The Listing Factory, then reload your saved history.');
  const payload=await response.json() as HistoryData<T>&{error?:string};
  if(!response.ok)throw Error(response.status===401?'Sign in to The Listing Factory, then reload your saved history.':payload.error||'Saved history could not be loaded. Try again.');

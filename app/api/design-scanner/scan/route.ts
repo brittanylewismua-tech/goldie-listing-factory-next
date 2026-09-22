@@ -555,18 +555,22 @@ export const POST = withErrorLog("design-scanner-scan", async (request: Request)
 });
 
 /** A member's own scan history. Reopening a saved result is free. */
-export const GET = withErrorLog("design-scanner-history", async () => {
+export const GET = withErrorLog("design-scanner-history", async (request:Request) => {
   /* The entitlement decides, not the owner flag: a complimentary beta
      member reaches this and a Listing Factory member does not. */
   const access = await requireFeatureApi("designScanner");
   if (!access.ok) return access.response;
   const user = access.user;
   const db = (env as unknown as { DB: D1Database }).DB;
+  const params=new URL(request.url).searchParams;
+  const query=(params.get("query")||"").trim().slice(0,200);
+  const offset=Math.max(0,Math.min(100000,Math.floor(Number(params.get("offset"))||0)));
   const rows = await db.prepare(
     `SELECT id, niche, result_json AS result, created_at AS createdAt, artwork_hash AS artworkHash
-       FROM scan_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 25`)
-    .bind(user.userId).all<{ id: string; niche: string; result: string;
-      createdAt: number; artworkHash: string }>().catch(() => ({ results: [] }));
+       FROM scan_history WHERE user_id = ? AND instr(lower(niche),lower(?))>0 ORDER BY created_at DESC,id DESC LIMIT 7 OFFSET ?`)
+    .bind(user.userId,query,offset).all<{ id: string; niche: string; result: string;
+      createdAt: number; artworkHash: string }>();
+  const nextOffset=rows.results.length>6?offset+6:null;
   const usage = await memberUsage(user.userId, WORKLOAD);
 
   /*
@@ -581,7 +585,7 @@ export const GET = withErrorLog("design-scanner-history", async () => {
     artwork — one indexed SELECT against rows that exist. No provider call, no
     decode, no allowance: reopening a saved scan stays free.
   */
-  const parsed = (rows.results ?? []).map(row => ({ row,
+  const parsed = (rows.results ?? []).slice(0,6).map(row => ({ row,
     result: JSON.parse(row.result) as { comparisonVersion?: number } }));
   const stale = parsed.filter(entry => entry.result?.comparisonVersion !== COMPARISON_VERSION);
   const measurements = new Map<string, ImageQuality | undefined>();
@@ -606,7 +610,7 @@ export const GET = withErrorLog("design-scanner-history", async () => {
   }
 
   return NextResponse.json({
-    scansLeftToday: usage.remaining, dailyLimit: usage.limit,
+    nextOffset,scansLeftToday: usage.remaining, dailyLimit: usage.limit,
     /* At the limit, when one comes back is the only useful thing left to
        say. The allowance is a rolling day, so it is not midnight — it is
        when the oldest scan ages out, which was already computed and

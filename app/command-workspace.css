@@ -245,3 +245,57 @@
  .app-shell.command-workspace .tm-page .tm-form input {flex-basis:100%;min-width:0}
  .app-shell.command-workspace .tm-page .tm-form button {width:100%}
 }
+
+/* Saved-work and account screens share the Command Center's working scale. */
+.app-shell.command-workspace :is(.management-page,.usage-page)>header{margin:0 0 24px!important;padding:0 0 20px!important}
+.app-shell.command-workspace :is(.management-create,.bank-library,.usage-card,.goals-history,.managementLibrary){border:1px solid var(--work-line)!important;border-radius:10px!important;box-shadow:none!important;background:#fff!important}
+.app-shell.command-workspace .keyword-workspace{padding:0!important}
+.app-shell.command-workspace .keyword-hero{align-items:center;gap:20px}
+.app-shell.command-workspace .keyword-hero>button{flex-shrink:0}
+.app-shell.command-workspace .batch-history-summary h2{font-size:17px!important}
+.app-shell.command-workspace .batch-history>article{padding:20px!important}
+.app-shell.command-workspace .batch-history>p[role=status]{margin:0;padding:12px 20px;font-size:14px;color:var(--work-muted)}
+.app-shell.command-workspace .batch-history-search{padding:0;border:0;background:none;margin:0}
+.library-controls{display:flex;align-items:end;gap:16px;margin:18px 0;flex-wrap:wrap}
+.library-controls>label:first-child{flex:1;min-width:200px}
+.library-controls label,.library-search{display:block;font-size:13px;font-weight:700;color:#29232a}
+.library-controls :is(input,select),.library-search input,.tm-category-sort select{display:block;width:100%;min-height:44px;padding:10px 12px;margin:6px 0 0;border:1px solid #cbbfc8;border-radius:8px;background:#fff;color:#171318;font:500 16px/1.4 'Manrope Variable',sans-serif}
+.library-search{margin:16px 0}
+.app-shell.command-workspace .batch-history>.library-controls{margin:0;padding:18px 20px;border-bottom:1px solid var(--work-line)}
+.history-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px;border-top:1px solid var(--work-line);font-size:14px}
+.app-shell.command-workspace :is(.primary-action,.history-pagination button,.keyword-hero>button,.new-bank-button,.edit-bank,.batch-row-actions button){min-height:44px;padding:10px 16px!important;border:1px solid #171318!important;border-radius:8px!important;background:#171318!important;color:#fff!important;box-shadow:none!important;font:750 14px/1.4 'Manrope Variable',sans-serif!important}
+.app-shell.command-workspace .history-pagination button:disabled{background:#eee7ec!important;color:#74616d!important;border-color:#dfd4dc!important;cursor:not-allowed}
+.app-shell.command-workspace .bank-grid{gap:16px}
+.app-shell.command-workspace .bank-grid article{padding:18px;border-color:var(--work-line);box-shadow:none}
+.app-shell.command-workspace .bank-grid article span{font-size:12px!important}
+.app-shell.command-workspace .bank-grid .edit-bank{width:auto;min-width:112px}
+.app-shell.command-workspace .managementOnly .mockupWorkspace{padding:0!important}
+.app-shell.command-workspace .managementLibraryHead{gap:20px;align-items:center}
+.app-shell.command-workspace .managementSetList .collection{padding:0;border:1px solid var(--work-line);box-shadow:none}
+.app-shell.command-workspace .managementSetList .collectionToggle{padding:18px!important;border:0!important;min-height:0}
+.app-shell.command-workspace .managementSetList .collectionActions{padding:0 18px 16px}
+.app-shell.command-workspace .managementSetList .thumbs{padding:0 18px 18px}
+.app-shell.command-workspace .scanner .history>button{margin:8px 0;min-height:48px;padding:12px 14px;background:#fff;border:1px solid var(--work-line);border-radius:8px;box-shadow:none;text-align:left}
+.app-shell.command-workspace .scanner .history>button[aria-pressed=true]{border-color:var(--work-accent);box-shadow:inset 3px 0 #ef43ab}
+.app-shell.command-workspace .tm-phrase{margin:12px 0;padding:0;border:0;background:transparent;font-size:20px}
+.tm-category-sort{display:flex;align-items:end;gap:16px;flex-wrap:wrap;padding:16px 0;margin:12px 0;border-block:1px solid #e3dce1}
+.tm-category-sort label{font-size:13px;font-weight:700;min-width:230px}
+.tm-category-sort .cc-note{flex:1;font-size:13px;margin:0;min-width:200px}
+.tm-category-sort>a{font-size:13px}
+@media(max-width:760px){
+ .library-controls{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+ .library-controls>label:first-child{min-width:0}
+ .history-pagination{flex-wrap:wrap;gap:10px;padding:16px}
+ .history-pagination>span{order:-1;width:100%;text-align:center}
+ .history-pagination button{flex:1}
+ .app-shell.command-workspace .keyword-hero>button{width:100%}
+ .app-shell.command-workspace .managementLibraryHead{align-items:stretch;flex-direction:column}
+ .app-shell.command-workspace .managementSetList .collectionToggle{padding:14px!important}
+ .tm-category-sort{display:block}.tm-category-sort :is(label,.cc-note,a){display:block;margin:10px 0}
+}
+
+.signup-member-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:20px;padding:10px 18px;border:1px solid #171318;border-radius:8px;background:#171318;color:#fff;font:750 14px/1.4 'Manrope Variable',sans-serif;text-decoration:none}
+.app-shell.command-workspace .costs .actions .primary{min-height:44px;background:#171318;color:#fff;border:1px solid #171318;border-radius:8px;padding:10px 16px}
+
+.preference-settings{border:0;padding:0;margin:0;min-width:0;display:grid;gap:24px}
+.preference-settings:disabled{opacity:.65}

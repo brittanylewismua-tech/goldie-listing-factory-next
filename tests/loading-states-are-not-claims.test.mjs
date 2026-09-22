@@ -24,13 +24,13 @@ test("connections never claims a shop is disconnected before it has looked", () 
   const source = read("connections/connections-client.tsx");
   assert.match(source, /const \[loaded, setLoaded\] = useState\(false\)/,
     "the page must be able to tell 'not asked yet' from 'the answer is none'");
-  assert.match(source, /finally \{ setLoaded\(true\); \}/,
+  assert.match(source, /setLoaded\(true\);/,
     "loaded must be set even when the request fails, or the page waits forever");
   /* The empty state is gated on having an answer. */
   assert.match(source, /\{loaded && !failed && shops\.length === 0 && \(/);
   assert.match(source, /\{!loaded && \(/);
   /* And the Printify block too — it made the same claim. */
-  assert.match(source, /\{loaded && !failed && <div className="shop">/);
+  assert.match(source, /\{loaded && !printifyFailed && <div className="shop">/);
   /*
     A FAILED LOAD IS NOT AN EMPTY ONE.
 
@@ -40,14 +40,13 @@ test("connections never claims a shop is disconnected before it has looked", () 
     the same false claim reached through the other door.
   */
   assert.match(source, /const \[failed, setFailed\] = useState\(false\)/);
-  assert.match(source, /setFailed\(true\)/);
+  assert.match(source, /setFailed\(etsy.status === "rejected"\)/);
 });
 
 test("a failed load says nothing changed, rather than showing an empty shop", () => {
   const source = read("connections/connections-client.tsx");
-  assert.match(source, /Nothing has changed — /,
-    "a member who sees an error about their connections needs to know their "
-    + "shop was not altered by it");
+  assert.match(source, /connection status could not be checked/,
+    "a failed lookup must report unknown status, not disconnection");
 });
 
 test("pages that wait on a provider draw the shape of what is coming", () => {

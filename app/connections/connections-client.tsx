@@ -68,28 +68,22 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
     it. The same false claim as before, reached through the other door.
   */
   const [failed, setFailed] = useState(false);
+  const [printifyFailed,setPrintifyFailed]=useState(false);
   const [salesImport, setSalesImport] = useState<"" | "running" | "done" | "failed">("");
   const [salesImportError, setSalesImportError] = useState("");
   const salesImportStarted = useRef(false);
 
   const load = useCallback(async () => {
-    try {
-      const [etsy, print] = await Promise.all([
-        fetch("/api/shop-map/connections"),
-        fetch("/api/connections/printify"),
-      ]);
-      if (etsy.ok) setShops(((await etsy.json()) as { connections: Connection[] }).connections ?? []);
-      if (print.ok) setPrintify(await print.json() as Printify);
-      if (!etsy.ok && !print.ok) {
-        setFailed(true);
-        setError("Your connections could not be loaded just now. Nothing has changed — "
-          + "reload the page to try again.");
-      }
-    } catch {
-      setFailed(true);
-      setError("Your connections could not be loaded just now. Nothing has changed — "
-        + "reload the page to try again.");
-    } finally { setLoaded(true); }
+    const outcomes = await Promise.allSettled([
+      fetch("/api/shop-map/connections").then(async response => { if (!response.ok) throw Error(); return await response.json() as {connections:Connection[]}; }),
+      fetch("/api/connections/printify").then(async response => { if (!response.ok) throw Error(); return await response.json() as Printify; }),
+    ]);
+    const [etsy, print] = outcomes;
+    setFailed(etsy.status === "rejected");
+    setPrintifyFailed(print.status === "rejected");
+    if (etsy.status === "fulfilled") setShops(etsy.value.connections ?? []);
+    if (print.status === "fulfilled") setPrintify(print.value);
+    setLoaded(true);
   }, []);
 
   useEffect(() => { void load(); }, [load]);
@@ -174,13 +168,13 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
     <main className="conn p-grid">
       <h1>Connections</h1>
       <p className="lede">
-        The Listing Factory reads your Etsy shop so it can build listings and show you what
-        they earned. It never changes a listing you did not ask it to.
+        Manage the Etsy and Printify shops used for your drafts and Shop Map.
       </p>
 
       {error && <p className="p-notice p-notice-bad" role="alert">{error}</p>}
 
       <h2 className="utility-heading">Etsy</h2>
+      {failed && <p className="p-notice" role="alert">Etsy connection status could not be checked. <button type="button" onClick={()=>void load()}>Try again</button></p>}
       {salesImport === "running" && (
         <p className="p-notice" role="status">
           Sales access is approved. Importing sold listings, revenue, Etsy fees, and Printify costs now…
@@ -271,7 +265,8 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
           <div className="p-skeleton p-skeleton-card" />
         </div>
       )}
-      {loaded && !failed && <div className="shop">
+      {printifyFailed && <p className="p-notice" role="alert">Printify connection status could not be checked. <button type="button" onClick={()=>void load()}>Try again</button></p>}
+      {loaded && !printifyFailed && <div className="shop">
         <span className="name">{printify?.connected ? (printify.shopName || "Connected") : "Not connected"}</span>
         <p className="fact">
           {printify?.connected

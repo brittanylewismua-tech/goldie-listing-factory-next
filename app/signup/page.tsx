@@ -26,6 +26,7 @@ export default async function SignupPage(
           <p className="mini-label">GOLDIE SUITE</p>
           <h1>{CLOSED_HEADLINE}</h1>
           <p>{CLOSED_BODY}</p>
+          <a className="signup-member-link" href={user?"/home":"/account/sign-in"}>{user?"Open your workspace":"Already a member? Sign in"}</a>
         </section>
       </main>
     );

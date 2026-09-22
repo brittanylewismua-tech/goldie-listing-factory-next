@@ -4668,3 +4668,7 @@ html, body { background: var(--lf-paper); }
 .admin-access-shell .revoke-hard:hover{background:#fdf3f4}
 
 
+
+/* Utility headings share the working scale; Factory typography stays unchanged. */
+.app-shell.command-workspace :is(.management-page,.usage-page) h2{font:750 20px/1.35 'Manrope Variable',Manrope,sans-serif!important;letter-spacing:-.02em!important}
+.app-shell.command-workspace :is(.management-page,.usage-page) h3{font:750 16px/1.4 'Manrope Variable',Manrope,sans-serif!important}

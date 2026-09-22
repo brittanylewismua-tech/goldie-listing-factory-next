@@ -133,21 +133,33 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
   const [left, setLeft] = useState<number | null>(null);
   const [nextAt, setNextAt] = useState<string | null>(null);
   const timers = useRef<number[]>([]);
+  const fileVersion=useRef(0);
+  const [preparing,setPreparing]=useState(false);
+  const [historyQuery,setHistoryQuery]=useState("");
+  const [historyOffset,setHistoryOffset]=useState(0);
+  const [nextHistoryOffset,setNextHistoryOffset]=useState<number|null>(null);
+  const historyRequest=useRef(0);
+  const matchingHistory=history.filter(row=>row.niche.toLowerCase().includes(historyQuery.trim().toLowerCase()));
+  useEffect(()=>()=>{if(original?.url)URL.revokeObjectURL(original.url)},[original]);
 
   const loadHistory = useCallback(async () => {
+    const version=++historyRequest.current;
     try {
-      const response = await fetch("/api/design-scanner/scan");
+      const response = await fetch(`/api/design-scanner/scan?query=${encodeURIComponent(historyQuery)}&offset=${historyOffset}`);
+      if(version!==historyRequest.current)return;
       if (!response.ok) { setHistoryFailed(true); return; }
       const body = await response.json() as
-        { scans: HistoryRow[]; scansLeftToday: number | null; nextScanAt?: string | null };
-      setHistory(body.scans ?? []);
+        { scans: HistoryRow[]; nextOffset?:number|null;scansLeftToday: number | null; nextScanAt?: string | null };
+      if(version!==historyRequest.current)return;
+      setHistory(current=>historyOffset?[...current,...(body.scans??[]).filter(row=>!current.some(saved=>saved.id===row.id))]:body.scans??[]);
+      setNextHistoryOffset(body.nextOffset??null);
       setLeft(body.scansLeftToday);
       setNextAt(body.nextScanAt ?? null);
       setHistoryFailed(false);
-    } catch { setHistoryFailed(true); }
-  }, []);
+    } catch { if(version===historyRequest.current)setHistoryFailed(true); }
+  }, [historyQuery,historyOffset]);
 
-  useEffect(() => { void loadHistory(); }, [loadHistory]);
+  useEffect(() => {const timer=window.setTimeout(()=>void loadHistory(),200);return()=>{window.clearTimeout(timer);++historyRequest.current}}, [loadHistory]);
 
   useEffect(() => {
     /*
@@ -171,21 +183,24 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
   }, []);
 
   const onFile = async (file: File | undefined) => {
-    if (!file) return;
+    if (!file || scanning) return;
+    const version=++fileVersion.current;setPreparing(true);
+    setArtworkHash("");setDataUrl("");setPreview("");setOriginal(null);
     setError("");
     setSelectedScan(null);
     setResult(null);
     try {
       const [hash, normalized] = await Promise.all([hashOf(file), normalizeImage(file)]);
       const bitmap=await createImageBitmap(file);
+      if(version!==fileVersion.current){bitmap.close();return;}
       setOriginal({width:bitmap.width,height:bitmap.height,url:URL.createObjectURL(file)});
       bitmap.close();
       setArtworkHash(hash);
       setDataUrl(normalized);
       setPreview(normalized);
     } catch {
-      setError("That file could not be opened. PNG or JPG works best.");
-    }
+      if(version===fileVersion.current)setError("That file could not be opened. PNG or JPG works best.");
+    } finally {if(version===fileVersion.current)setPreparing(false)}
   };
 
   const scan = async () => {
@@ -210,7 +225,8 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
       else { setResult(body); setLeft(body.scansLeftToday);
         setNextAt(body.nextScanAt ?? null); void loadHistory(); }
     } catch {
-      setError("That scan did not complete. It has not been counted against your daily scans.");
+      setError("The scan result could not be confirmed. Check your saved scans before trying again.");
+      void loadHistory();
     } finally {
       /* The animation stops with the work. It is not padded out to look busy. */
       timers.current.forEach(window.clearTimeout);
@@ -221,8 +237,8 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
 
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
 
-  const ready = useMemo(() => Boolean(artworkHash && niche.trim() && !scanning),
-    [artworkHash, niche, scanning]);
+  const ready = useMemo(() => Boolean(artworkHash && niche.trim() && !scanning && !preparing && left!==0),
+    [artworkHash, niche, scanning, preparing, left]);
 
   return (
     <main className="scanner p-grid">
@@ -240,16 +256,16 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
 
       <label className="pick">
         {preview ? "Choose a different design" : "Choose a design"}
-        <input type="file" accept="image/png,image/jpeg,image/webp"
+        <input type="file" disabled={scanning||preparing} accept="image/png,image/jpeg,image/webp"
           onChange={event => void onFile(event.target.files?.[0])} />
       </label></div>
 
       <div className="scanner-settings"><h2 className="utility-heading">Set up your scan</h2><div className="field">
         <label htmlFor="niche">Who is it for?</label>
-        <input id="niche" type="text" value={niche} placeholder="bachelorette, dog mom, teacher…"
+        <input id="niche" disabled={scanning} type="text" value={niche} placeholder="bachelorette, dog mom, teacher…"
           onChange={event => setNiche(event.target.value)} />
         {savedNiches.length > 0 && (
-          <select aria-label="Use a tracked keyword" value=""
+          <select disabled={scanning} aria-label="Use a tracked keyword" value=""
             onChange={event => event.target.value && setNiche(event.target.value)}
             style={{ marginTop: 10 }}>
             <option value="">Choose a tracked keyword…</option>
@@ -268,7 +284,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
         which of the two things above it is missing — and the design is chosen
         through a file picker, so it is genuinely easy to think you have.
       */}
-      {!ready && !scanning && (
+      {!ready && !scanning && left!==0 && (
         <p className="go-needs" role="status">
           {!artworkHash && !niche.trim() ? "Choose a design and say who it is for."
             : !artworkHash ? "Choose a design to scan."
@@ -313,7 +329,7 @@ One change for the next version:
 
 Recheck at the same thumbnail size and intended print size. Upload the revised file and compare the same niche. Record whether the original issue improved.`}/></>}
 
-      {historyFailed && history.length === 0 && (
+      {historyFailed && (
         <p className="p-notice" role="status">
           Your saved scans could not be loaded. None of them have been changed.{" "}
           <button type="button" className="p-button p-button-quiet"
@@ -321,13 +337,15 @@ Recheck at the same thumbnail size and intended print size. Upload the revised f
         </p>
       )}
 
-      {history.length > 0 && (
+      {(history.length > 0 || historyQuery) && (
         <section className="history p-card-quiet">
           <h2 className="utility-heading">Your scans</h2>
-          {history.map(row => (
-            <button key={row.id} aria-pressed={selectedScan?.id===row.id} onClick={() => { setSelectedScan(row); setResult(row.result); setNiche(row.niche); if(row.artworkHash!==artworkHash){setPreview("");setDataUrl("");setArtworkHash("");} }}>
+          <label className="library-search">Find a saved scan<input type="search" value={historyQuery} onChange={e=>{setHistoryQuery(e.target.value);setHistoryOffset(0)}} placeholder="Search by keyword"/></label>
+          {!matchingHistory.length&&<p role="status">No scans match this keyword.</p>}
+          {matchingHistory.map(row => (
+            <button disabled={scanning||preparing} key={row.id} aria-pressed={selectedScan?.id===row.id} onClick={() => { setSelectedScan(row); setResult(row.result); setNiche(row.niche); if(row.artworkHash!==artworkHash){setPreview("");setDataUrl("");setArtworkHash("");} }}>
               {row.niche}
-              <span className="when"> · {new Date(row.createdAt * 1000).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit"})}</span>
+              <span className="when"> · {new Date(row.createdAt * 1000).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</span>
               {/* What it said, so a list of seven scans is not seven identical
                   rows the member has to open one by one to tell apart. */}
               {row.result?.overall && (
@@ -335,6 +353,7 @@ Recheck at the same thumbnail size and intended print size. Upload the revised f
               )}
             </button>
           ))}
+          {nextHistoryOffset!==null&&<button className="secondary-action" onClick={()=>setHistoryOffset(nextHistoryOffset)}>Show more scans</button>}
         </section>
       )}
     </main>
@@ -422,6 +441,7 @@ function ScanResult({ result }: { result: Result }) {
           <h2 className="utility-heading">Trademark</h2>
           <div className="tm" data-risk={result.trademark.risk}>
             <p>{result.trademark.summary}</p>
+            <a className="secondary-action" href={`/trademark?phrase=${encodeURIComponent(result.trademark.phrase)}`}>Review phrase in Trademark Tracker →</a>
             {!result.trademark.registerReady && (
               <p className="loading">
                 The trademark search is incomplete. Review the matching records before deciding whether to use the phrase.

@@ -31,12 +31,6 @@
 /* Amber, not red: a registration on an ordinary word is a thing to look at,
    not a thing to stop for, and the colour has to say which. */
 .tm-verdict.caution { border-color: #c98a1e; background: #fffaef; }
-.tm-verdict .tm-headline {
-  margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.015em;
-}
-.tm-verdict.high .tm-headline { color: #92222b; }
-.tm-verdict.clear .tm-headline { color: #1f6b49; }
-.tm-verdict.caution .tm-headline { color: #8a5c05; }
 .tm-verdict p { margin: 0; font-size: 15px; color: var(--ink, #4b283e); line-height: 1.55; }
 
 /* The phrase with the risky words marked in it, so the seller sees exactly

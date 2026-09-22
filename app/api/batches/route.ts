@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import {batchHistoryQuery} from "@/app/batch-history-query";
 import { NextResponse } from "next/server";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { isOwner } from "@/app/mastermind/access";
@@ -264,7 +265,10 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
      own; a child never appears on its own. Legacy sibling rows predate the
      column, so parent_batch_id is NULL on all of them and they list exactly as
      they do today - ungrouped, untouched. */
-  const rows=await database.prepare("SELECT id,status,step,setup_name,product_title,design_count,state_json,created_at,updated_at FROM listing_batches WHERE user_id=? AND parent_batch_id IS NULL ORDER BY updated_at DESC LIMIT 20").bind(user.userId).all<Record<string,unknown>>();
+  const browsing=batchHistoryQuery(url.searchParams);
+  const count=await database.prepare(browsing.countSql).bind(user.userId,...browsing.searchBindings).first<{total:number}>();
+  const total=count?.total??0;
+  const rows=await database.prepare(browsing.selectSql).bind(user.userId,...browsing.searchBindings,browsing.limit,browsing.offset).all<Record<string,unknown>>();
   /* Each run's children, for the aggregate the card reports. One query. */
   const parentIds=(rows.results||[]).map(row=>String(row.id));
   const childRows=parentIds.length
@@ -357,7 +361,7 @@ export async function GET(request:Request){const user=await getChatGPTUser();if(
   }catch(error){
     preparedAvailable=false;console.error("batches: listing goal count failed, serving batches without it",error);
   }
-  return NextResponse.json({batches:rows.results.map(row=>{const item=batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct);const children=childrenByParent.get(String(row.id))||[];return children.length?withRunProgress(item,row,children,publishedByBatch,publishedAtByProduct):item}),prepared:preparedDays,preparedAvailable,published:publishedDays})}
+  return NextResponse.json({batches:rows.results.map(row=>{const item=batchListItem(row,publishedByBatch,publishedAtByBatch,publishedAtByProduct);const children=childrenByParent.get(String(row.id))||[];return children.length?withRunProgress(item,row,children,publishedByBatch,publishedAtByProduct):item}),prepared:preparedDays,preparedAvailable,published:publishedDays,total,page:browsing.page,pageSize:browsing.limit})}
 
 export async function PATCH(request:Request){
   const user=await getChatGPTUser();if(!user)return NextResponse.json({error:"Sign in to continue."},{status:401});

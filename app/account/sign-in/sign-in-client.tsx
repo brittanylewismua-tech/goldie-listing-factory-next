@@ -56,8 +56,8 @@ export default function SignInClient({ returnTo, initialError = "" }: { returnTo
     {listingFactoryBound && (
       <div className="account-wordmark"><ListingFactoryWordmark /></div>
     )}
-    <p className="account-eyebrow">WELCOME</p>
-    <h1>{listingFactoryBound ? "Sign in to your Listing Factory." : "Sign in."}</h1>
+    <p className="account-eyebrow">{listingFactoryBound?"WELCOME":"GOLDIE SUITE"}</p>
+    <h1>{listingFactoryBound ? "Sign in to your Listing Factory." : "Sign in to Goldie Suite."}</h1>
     <p className="account-intro">Choose the easiest option for you. Your saved products, batches, keyword banks, and plan stay with your account.</p>
     <button className="account-provider" type="button" onClick={() => void googleSignIn()} disabled={Boolean(busy)}><b className="google-mark">G</b><span>{busy === "google" ? "Opening Google…" : "Continue with Google"}</span></button>
     <div className="account-divider"><span>or</span></div>

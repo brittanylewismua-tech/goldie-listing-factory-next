@@ -1,3 +1,4 @@
+import {batchHistoryQuery} from "../app/batch-history-query.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -43,7 +44,7 @@ test("a child names its parent, and cannot be orphaned by a later autosave", () 
 });
 
 test("history lists runs, never a run's own product records", () => {
-  assert.match(route, /FROM listing_batches WHERE user_id=\? AND parent_batch_id IS NULL ORDER BY updated_at DESC/);
+  assert.match(batchHistoryQuery(new URLSearchParams()).selectSql, /FROM listing_batches WHERE user_id=\? AND parent_batch_id IS NULL ORDER BY updated_at DESC/);
   /* Legacy sibling rows predate the column, so parent_batch_id is NULL on all
      of them: they list exactly as they do today, ungrouped and unaltered. */
   assert.doesNotMatch(route, /groupBundleBatches/,

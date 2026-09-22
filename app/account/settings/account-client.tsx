@@ -178,7 +178,7 @@ function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void 
                   say: answer.say ?? "Your data has been removed." });
                 onDone();
               } catch {
-                setError("That did not go through. Nothing was changed.");
+                setError("The deletion result could not be confirmed. Reload your account before trying again.");
               } finally { setBusy(false); }
             }}>
             {busy ? "Removing…" : "Delete my data"}
@@ -232,7 +232,7 @@ export default function AccountClient({ email }: { email: string }) {
         ]);
         if (held.ok) setData(await held.json() as DataView);
         if (plan.ok) setUsage(await plan.json() as Usage);
-        if (!held.ok && !plan.ok)
+        if (!held.ok || !plan.ok)
           setError("Your account details could not be loaded just now. Nothing has changed.");
       } catch {
         setError("Your account details could not be loaded just now. Nothing has changed.");
@@ -249,7 +249,7 @@ export default function AccountClient({ email }: { email: string }) {
         <p>Your sign-in, subscription, and saved data.</p>
       </header>
 
-      {error && <p className="p-notice p-notice-bad" role="alert">{error}</p>}
+      {error && <p className="p-notice p-notice-bad" role="alert">{error} <button type="button" onClick={()=>window.location.reload()}>Reload account</button></p>}
 
       <section className="acc-group">
         <h2 className="acc-heading">Signed in</h2>
@@ -268,7 +268,7 @@ export default function AccountClient({ email }: { email: string }) {
           {loaded && (
             <div className="acc-line">
               <span>Access</span>
-              <b>{usage?.plan?.name || "Not established"}</b>
+              <b>{usage?.plan?.name || "Could not load access"}</b>
             </div>
           )}
           {loaded && usage?.billing?.subscription?.status && (
@@ -308,7 +308,7 @@ export default function AccountClient({ email }: { email: string }) {
               ))}
             </ul>
           )}
-          {loaded && rows.length === 0 && (
+          {loaded && data && rows.length === 0 && (
             <p className="acc-none">Nothing is held about you yet beyond your sign-in.</p>
           )}
           {loaded && data?.kept && data.kept.length > 0 && (
@@ -319,7 +319,7 @@ export default function AccountClient({ email }: { email: string }) {
               ))}</ul>
             </details>
           )}
-          {loaded && <DeleteAccount counts={rows.length} onDone={() => setData({ yours: {} })} />}
+          {loaded && data && <DeleteAccount counts={rows.length} onDone={() => setData({ yours: {} })} />}
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import FactoryShell from "../factory-shell";
 import { decodeEntities } from "../shop-map-worlds";
 
@@ -90,7 +90,9 @@ export default function HotListPage() {
   const [looking, setLooking] = useState(false);
   const [note, setNote] = useState("");
 
-  const load = (next = view, custom = madeToOrder, licensed = rights) => {
+  const boardRequest=useRef(0),searchRequest=useRef(0);
+  const load = (next = view, custom = madeToOrder, licensed = rights, preferLongest=false) => {
+    const request=++boardRequest.current;++searchRequest.current;setLooking(false);
     setBoard(null); setError(""); setView(next); setHits(null); setNote("");
     setMadeToOrder(custom); setRights(licensed);
     /* no-store: an open tab must not reuse a board from before a repair. */
@@ -100,6 +102,7 @@ export default function HotListPage() {
       .then(async response => {
         const result = await response.json() as Board & { error?: string };
         if (!response.ok) throw new Error(result.error || "This could not be loaded.");
+        if(request!==boardRequest.current)return;
         setBoard(result);
         setProduct("all");
         setCovered(result.coveredHours ?? 0);
@@ -107,11 +110,11 @@ export default function HotListPage() {
         /* The longest honourable period leads. Once a week of history exists
            this becomes the week, on its own, with nothing to announce. */
         const lead = list[list.length - 1];
-        if (lead && lead.hours > next.hours) load(lead, custom, licensed);
+        if (preferLongest && lead && lead.hours > next.hours) load(lead, custom, licensed);
       })
-      .catch(e => setError(e instanceof Error ? e.message : "This could not be loaded."));
+      .catch(e => {if(request===boardRequest.current)setError(e instanceof Error ? e.message : "This could not be loaded.")});
   };
-  useEffect(() => { load(VIEWS[0]); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => { load(VIEWS[0],false,false,true); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   /*
     LOOK A PHRASE UP AGAINST WHAT SOLD.
@@ -123,18 +126,20 @@ export default function HotListPage() {
   async function search(event: React.FormEvent) {
     event.preventDefault();
     if (!term.trim() || looking) return;
-    setLooking(true); setNote(""); setHits([]); setSearchedTerm(term.trim());
+    const request=++searchRequest.current,keyword=term.trim();
+    setLooking(true); setNote(""); setHits([]); setSearchedTerm(keyword);
     try {
       const response = await fetch(
         `/api/sold-overnight/search?keyword=${encodeURIComponent(term.trim())}&hours=${view.hours}`, { cache: "no-store" });
       const result = await response.json() as { listings?: Hit[]; error?: string };
       if (!response.ok) throw new Error(result.error || "That could not be looked up.");
+      if(request!==searchRequest.current)return;
       setHits(result.listings ?? []);
       if (!result.listings?.length)
         setNote(`Nothing matching \u201c${term.trim()}\u201d has recorded activity in this period.`);
     } catch (error) {
-      setNote(error instanceof Error ? error.message : "That could not be looked up.");
-    } finally { setLooking(false); }
+      if(request===searchRequest.current)setNote(error instanceof Error ? error.message : "That could not be looked up.");
+    } finally { if(request===searchRequest.current)setLooking(false); }
   }
 
   const shown = board
@@ -173,7 +178,7 @@ export default function HotListPage() {
           <button type="submit" disabled={!term.trim() || looking}>
             {looking ? "Searching" : "Search"}</button>
           {hits !== null && <button type="button" className="hot-search-clear"
-            onClick={() => { setHits(null); setNote(""); setTerm(""); }}>Clear</button>}
+            onClick={() => { ++searchRequest.current;setLooking(false);setHits(null); setNote(""); setTerm(""); }}>Clear</button>}
         </form>
 
         {note && <p className="hot-note" role="status">{note}</p>}

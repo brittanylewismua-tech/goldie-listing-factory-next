@@ -1,3 +1,4 @@
+import {batchHistoryQuery} from "../app/batch-history-query.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -17,7 +18,8 @@ const sqlIn = (needle) => {
   return route.slice(start, route.indexOf('"', at));
 };
 const UPSERT = sqlIn("INSERT INTO listing_batches (id,user_id,status,step,setup_name,product_title,design_count,state_json,parent_batch_id");
-const LIST = sqlIn("SELECT id,status,step,setup_name,product_title,design_count,state_json,created_at,updated_at FROM listing_batches WHERE user_id=? AND parent_batch_id IS NULL");
+const browsing=batchHistoryQuery(new URLSearchParams());
+const LIST=browsing.selectSql;
 const DELETE_CHILDREN = sqlIn("DELETE FROM listing_batches WHERE user_id=? AND parent_batch_id=?");
 const DELETE_ONE = sqlIn("DELETE FROM listing_batches WHERE id=? AND user_id=?");
 
@@ -33,7 +35,7 @@ function freshDb() {
   const save = (id, parent, state, name = "") =>
     db.prepare(UPSERT.replace(",CURRENT_TIMESTAMP)", ")").replace(",updated_at)", ")"))
       .run(id, "u", "draft", "designs", name, "", 2, JSON.stringify(state), parent, db.prepare("SELECT revision FROM listing_batches WHERE id=?").get(id)?.revision??0);
-  const topLevel = () => db.prepare(LIST).all("u").map(r => r.id);
+  const topLevel = () => db.prepare(LIST).all("u",browsing.limit,browsing.offset).map(r => r.id);
   const childrenOf = id => db.prepare("SELECT id FROM listing_batches WHERE parent_batch_id=? ORDER BY id").all(id).map(r => r.id);
   return { db, save, topLevel, childrenOf };
 }

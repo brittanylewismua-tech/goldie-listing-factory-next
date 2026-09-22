@@ -244,12 +244,12 @@
 .usage-page .pricing-profile-grid label{font-size:12px!important}
 .usage-page .pricing-profile-grid small{font-size:11px!important;line-height:1.45!important}
 
-/* D45: creating another set is occasional setup, not the primary library action. */
+/* Keep the library's create action visible and consistent with other tools. */
 .mockupFactory.managementOnly .managementLibraryHead .newSetButton{
-  border:0!important;
-  background:transparent!important;
-  background-image:none!important;
-  color:#704d75!important;
+  border:1px solid #171318!important;
+  background:#171318!important;
+  color:#fff!important;
   box-shadow:none!important;
-  text-decoration:underline!important;
+  text-decoration:none!important;
+  min-height:44px;padding:10px 16px!important;font-size:14px!important;
 }

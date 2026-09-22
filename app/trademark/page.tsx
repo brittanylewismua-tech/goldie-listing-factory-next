@@ -80,9 +80,10 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
 
   const started = useRef(false);
   useEffect(() => {
-    if (!initialPhrase || started.current) return;
+    const requested=initialPhrase || new URLSearchParams(window.location.search).get("phrase")?.trim().slice(0,300);
+    if (!requested || started.current) return;
     started.current = true;
-    void run(initialPhrase);
+    setPhrase(requested);void run(requested);
     /* Once, on mount, for the preview only. */
   }, [initialPhrase]);
 
@@ -163,6 +164,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
           className="p-input"
           type="search"
           value={phrase}
+          disabled={checking}
           onChange={event => setPhrase(event.target.value)}
           placeholder="Type a title, phrase or design idea"
           aria-label="Phrase to check"
@@ -175,11 +177,11 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
 
       {/* Real phrases rather than "try me" filler, so the first click shows
           the tool doing something true. */}
-      <div className="tm-examples">
+      {!verdict && <div className="tm-examples">
         {EXAMPLES.map(example =>
-          <button key={example} type="button"
+          <button key={example} type="button" disabled={checking}
             onClick={() => { setPhrase(example); run(example); }}>{example}</button>)}
-      </div>
+      </div>}
 
       {error && <section className="drop-error p-notice p-notice-bad" role="alert">
         <h2>This could not be checked</h2>
@@ -193,20 +195,6 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
           : verdict.risk === "caution" ? "p-badge p-badge-warn" : "p-badge p-badge-good"}>
           {verdict.risk === "clear" ? "No match found" : "Matches to review"}
         </span>
-        {/*
-          D1691 · The clear result said "Nothing found" twice — once as the
-          badge, once as the headline directly beneath it. The other two risks
-          use the badge for the verdict and the headline for what to do about
-          it ("High risk" → "Do not print this"), and a clear result has no
-          instruction to give: the only honest thing to add would be
-          encouragement to go ahead, which this tool cannot give. So it has no
-          headline rather than an echo of its own badge.
-        */}
-        {verdict.risk !== "clear" && (
-          <p className="tm-headline">
-            {"Review the matching names and categories"}
-          </p>
-        )}
         <p className="tm-phrase">{marked()}</p>
         {verdict.registerReady === false && <p className="p-notice" role="status"><strong>This search is incomplete.</strong> Older records are still being added. Review the USPTO records before deciding whether to use this phrase.</p>}
         <p>{(verdict.register ?? []).length > 0
@@ -226,7 +214,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         {/* The register's own findings, kept visually separate from the
             curated list: they are a different kind of fact and a seller
             should be able to tell which one is talking. */}
-        {(verdict.register ?? []).length > 0 && <div className="cc-tool"><label>Review this product category first<select value={productClass} onChange={e=>setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label><p className="cc-note">This changes the order of the matches; every match remains visible. Related goods can be in different classes. Open each record and compare the actual goods and services, wording, owner and current status.</p><a href="https://www.uspto.gov/trademarks/search/likelihood-confusion" target="_blank" rel="noopener noreferrer">How the USPTO explains related goods ↗</a></div>}
+        {(verdict.register ?? []).length > 0 && <div className="tm-category-sort"><label>Prioritize product category<select value={productClass} onChange={e=>setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label><p className="cc-note">All matches stay visible. Compare the goods and services in each record.</p><a href="https://www.uspto.gov/trademarks/search/likelihood-confusion" target="_blank" rel="noopener noreferrer">How the USPTO explains related goods ↗</a></div>}
         {(verdict.register ?? []).length > 0 && <ul className="tm-hits tm-register p-card-quiet">
           {[...(verdict.register ?? [])].sort((a,b)=>Number(b.classes.some(c=>c.padStart(3,"0")===productClass))-Number(a.classes.some(c=>c.padStart(3,"0")===productClass))).map((match, index) =>
             /* Two records for one brand share a mark and carry no
@@ -269,7 +257,7 @@ This note records my review; it is not clearance to use the phrase.`}/>
               : watch.matches ? `${watch.matches} matching record${watch.matches === 1 ? "" : "s"}`
                 : null}</span></div>
           <span className={`tm-watch-risk ${watch.risk}`}>{watch.matches ? "Review matches" : "No match found"}</span>
-          <button type="button" onClick={() => { setPhrase(watch.phrase); void run(watch.phrase, true); }}>Review</button>
+          <button type="button" disabled={checking} onClick={() => { setPhrase(watch.phrase); void run(watch.phrase, true); }}>Review</button>
           <button type="button" className="quiet" disabled={watchBusy === watch.phrase}
             onClick={() => void removeWatch(watch.phrase)}>Remove</button>
         </article>)}</div>
@@ -277,8 +265,7 @@ This note records my review; it is not clearance to use the phrase.`}/>
 
       <p className="tm-note">
         A clear result means nothing was found rather than nobody owns it.{" "}
-        {verdict && verdict.registerReady === false &&
-          <strong>Search results are currently incomplete. Try again later.</strong>}
+
         {" "}This is screening information, not legal advice.
       </p>
     </div>
