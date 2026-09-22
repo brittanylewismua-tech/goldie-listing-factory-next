@@ -22,12 +22,7 @@ test("every desktop shell renders the Goldie Suite home link", () => {
      permanent, and "seller command center" was printed here, in the rail's
      first group heading, and on the home page's eyebrow all at once. */
   assert.match(brand, /aria-label="Goldie Suite home"/);
-  /* The lockup used to print "Goldie Suite" as one string. The approved
-     design sets the two words in different colours, so they are two elements
-     and the assertion is on both halves rather than on a run of text that no
-     longer exists in that form. */
-  assert.match(strip(brand), />GOLDIE</);
-  assert.match(strip(brand), />SUITE</);
+  assert.match(strip(brand), />Goldie Suite</);
   assert.equal((shell.match(/<SuiteBrand\s*\/>/g) ?? []).length, 2);
   assert.equal((workflow.match(/<SuiteBrand\s*\/>/g) ?? []).length, 1);
 });

@@ -21,17 +21,15 @@
   --suite-edge:#0a0a0a;
 }
 
-/* ---------------------------------------------------------------- wordmark */
+/* ------------------------------------------------------------------- brand */
+/* D1769 puts the gear mark back. D1764 replaced it with a GOLDIE SUITE
+   wordmark because the approved preview drew one - which was reading a
+   picture as an instruction nobody had given. The lockup keeps the rule the
+   redesign did add: a divider under it, so the rail's navigation starts at a
+   visible edge rather than floating under the logo. */
 .app-shell>.topbar>.brand-lockup{margin:0 4px 20px;padding:0 8px 20px;border-bottom:1px solid var(--suite-rail-line)}
-.suite-brand{gap:0}
-.suite-wordmark{display:flex;align-items:baseline;gap:9px}
-.suite-wordmark b{
-  color:#fff;font-size:23px;font-weight:800;letter-spacing:.06em;line-height:1;
-}
-.suite-wordmark i{
-  color:var(--suite-pink);font-size:13px;font-style:normal;font-weight:800;
-  letter-spacing:.24em;line-height:1;
-}
+
+.suite-brand-mark i{box-shadow:0 0 0 3px var(--suite-rail)}
 
 /* -------------------------------------------------------------------- rail */
 /* 272px wrapped "Command Center" onto two lines, which is the group that
@@ -42,12 +40,89 @@
 /* The rail carried a large gear watermark behind the links. It sat under the
    navigation at low contrast and read as a printing artefact. */
 .app-shell>.topbar::before{display:none}
+/*
+  D1769 · THE RAIL LOOKED LIKE IT ENDED AT MARKET WATCH.
+
+  The navigation is a scroll container and macOS hides overlay scrollbars
+  until something moves, so at this height the list simply stopped mid-item
+  with no bar, no edge and no hint - Design Scanner, Shop Map, Trademark
+  Tracker and Connections were all below the fold and there was nothing on
+  screen to suggest they existed. Reported as "I just thought Market Watch
+  was the only thing showing", which is exactly what it looked like.
+
+  Two things fix it, and both are needed. The scrollbar is given a width and
+  a visible thumb so it is drawn whether or not the pointer is moving. And
+  the scroller carries the classic four-gradient scroll shadow: two cover
+  gradients attached `local` that ride with the content, and two shadows
+  attached `scroll` that stay put - so a soft edge appears at the bottom only
+  while there is more below it, and goes away at the end of the list. No
+  markup, no JavaScript, and it is honest about which direction has more.
+*/
+.app-shell>.topbar>.top-actions{
+  scrollbar-width:thin;scrollbar-color:#4b444b transparent;
+  background:
+    linear-gradient(var(--suite-rail) 30%,rgba(10,10,10,0)) top/100% 22px local no-repeat,
+    linear-gradient(rgba(10,10,10,0),var(--suite-rail) 70%) bottom/100% 22px local no-repeat,
+    linear-gradient(rgba(255,255,255,.13),rgba(255,255,255,0)) top/100% 14px scroll no-repeat,
+    linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.13)) bottom/100% 14px scroll no-repeat;
+}
+.app-shell>.topbar>.top-actions::-webkit-scrollbar{width:10px}
+.app-shell>.topbar>.top-actions::-webkit-scrollbar-track{background:transparent}
+.app-shell>.topbar>.top-actions::-webkit-scrollbar-thumb{
+  border:3px solid transparent;border-radius:8px;background:#4b444b;background-clip:content-box;
+}
+.app-shell>.topbar>.top-actions:hover::-webkit-scrollbar-thumb{background:#6a626a;background-clip:content-box}
+
 .app-shell>.topbar .top-nav a{min-height:44px;border-radius:10px;font-size:14px;color:#b9b2b7}
 .app-shell>.topbar .top-nav a svg{width:19px;height:19px;flex:0 0 19px}
 .app-shell>.topbar .top-nav a:hover{background:#151315;color:#fff}
-.app-shell>.topbar .top-nav a.active{background:var(--suite-rail-chip);color:#fff;font-weight:800}
-.app-shell>.topbar .top-nav a.active::before{
-  content:"";position:absolute;left:-7px;top:9px;bottom:9px;width:3px;border-radius:0 6px 6px 0;background:var(--suite-pink);
+/*
+  D1769 · ONE HIGHLIGHT, AND IT IS NOT A WHITE BUTTON.
+
+  The page you are on was drawn as a solid white pill with a drop shadow, on
+  a black rail where nothing else is white. It did not read as "you are here";
+  it read as a button someone had left switched on - and because Listing
+  Factory is the only group that is also a page, it was the only group that
+  ever got it. Command Center could not: its row is a heading, not a link,
+  so a member saw one group lit up and the other never.
+
+  So the marker is the approved one - a slightly lifted chip with a pink bar
+  at its edge - and the Command Center heading wears the same chip when you
+  are inside one of its tools. The two groups behave alike now.
+
+  This needs .suite-sidebar-nav in the selector to outrank the white rule in
+  suite-redesign.css, which is the same weight as a plain `.top-nav a.active`
+  and would otherwise win or lose on import order alone.
+*/
+.app-shell>.topbar .suite-sidebar-nav a.active,
+.app-shell>.topbar .suite-nav-section.current>.suite-nav-parent>.suite-nav-heading{
+  background:var(--suite-rail-chip);color:#fff;font-weight:800;box-shadow:none;
+}
+.app-shell>.topbar .suite-sidebar-nav a.active::before,
+.app-shell>.topbar .suite-nav-section.current>.suite-nav-parent>.suite-nav-heading::before{
+  content:"";position:absolute;left:-7px;top:9px;bottom:9px;width:3px;
+  border-radius:0 6px 6px 0;background:var(--suite-pink);display:block;
+}
+.app-shell>.topbar .suite-nav-parent>.suite-nav-heading{position:relative}
+/* A parent whose child is the open page is emphasised, not marked: two "you
+   are here" chips in one rail is two answers to one question. */
+.app-shell>.topbar .suite-nav-section.current>.suite-nav-parent>a:not(.active){color:#fff}
+
+/*
+  D1769 · START A NEW BATCH IS NOT THE LAST ITEM IN COMMAND CENTER.
+
+  It sat below the whole navigation inside the same scroller, so scrolling
+  down to reach Shop Map or Trademark Tracker brought it into view directly
+  underneath them and it read as one of their actions. It belongs to the
+  Listing Factory, so it now sits above the links, pinned, where the rail
+  cannot scroll it into somebody else's group.
+*/
+.app-shell>.topbar>.top-actions>.workflow-restart-button{flex:0 0 auto;margin:0 0 12px}
+/* Anything that follows the links is a different kind of thing - an account
+   action, an allowance - and without a rule between them the first one reads
+   as the last item of the last group. */
+.app-shell>.topbar>.top-actions>.suite-sidebar-nav:not(:last-child){
+  padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--suite-rail-line);
 }
 /* suite-redesign.css lays the parent row out as `28px minmax(0,1fr)` with the
    chevron in the first column. The approved design puts the chevron at the far

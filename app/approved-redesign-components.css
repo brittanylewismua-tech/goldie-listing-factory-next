@@ -40,7 +40,13 @@ html, body { background: var(--pro-canvas) !important; }
   color: #fff !important;
 }
 
-.app-shell > .topbar .suite-brand { color: var(--pro-accent) !important; }
+.app-shell > .topbar .suite-brand,
+.app-shell > .topbar .suite-brand-mark { color: var(--pro-accent) !important; }
+.app-shell > .topbar .suite-brand-mark {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
 
 .app-shell > .topbar .top-nav a {
   color: #aaa1a8 !important;
@@ -255,6 +261,12 @@ html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",
 .app-shell:not(.command-workspace) h2:not(.acc-heading):not(.ts-heading):not(.utility-heading):not(.title){font-family:"DM Serif Display",Georgia,serif;font-weight:400!important;letter-spacing:-.025em!important}
 
 .app-shell>.topbar .suite-brand{display:flex!important;align-items:center;gap:12px;width:100%;min-height:56px;margin:0 0 24px;padding:4px 8px;text-decoration:none}
+.app-shell>.topbar .suite-brand-mark{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px}
+.app-shell>.topbar .suite-brand-mark svg{width:31px!important;height:31px!important}
+.app-shell>.topbar .suite-brand-mark i{display:none!important}
+.suite-brand-copy{display:grid;gap:2px;min-width:0;text-align:left}
+.suite-brand-copy strong{color:#fff;font-family:"DM Serif Display",Georgia,serif;font-size:22px;font-weight:400;line-height:1;letter-spacing:-.015em;white-space:nowrap}
+.suite-brand-copy small{color:#a79da4;font-size:8px;font-weight:800;letter-spacing:.16em}
 
 .suite-sidebar-nav{gap:5px!important}
 .suite-nav-section{display:grid;gap:4px}

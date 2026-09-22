@@ -82,6 +82,39 @@ test("the phone keeps the page title and loses the desktop-only chrome", () => {
     "the tiles stack rather than shrinking to four unreadable columns");
 });
 
+test("the rail says there is more below before you scroll it", () => {
+  /* macOS hides overlay scrollbars until something moves, so the list stopped
+     mid-item with no bar and no edge: Design Scanner, Shop Map, Trademark
+     Tracker and Connections were all below the fold and invisible. */
+  assert.match(sheet, /\.app-shell>\.topbar>\.top-actions\{[^}]*scrollbar-width:thin/);
+  assert.match(sheet, /\.app-shell>\.topbar>\.top-actions\{[^}]*local no-repeat/);
+  assert.match(sheet, /\.app-shell>\.topbar>\.top-actions::-webkit-scrollbar-thumb\{/);
+});
+
+test("one highlight, and both rail groups can wear it", () => {
+  /* The white pill was the only white thing on a black rail, and only Listing
+     Factory could ever get it because it is the only group that is also a
+     page. The Command Center heading gets the same chip when current. */
+  assert.match(sheet, /\.suite-nav-section\.current>\.suite-nav-parent>\.suite-nav-heading\{/);
+  assert.match(sheet, /\.app-shell>\.topbar \.suite-sidebar-nav a\.active,/);
+});
+
+test("Start a new batch sits above the links, not under Command Center", () => {
+  const workflow = read("listing-factory-app.tsx");
+  const button = workflow.indexOf("workflow-restart-button");
+  const nav = workflow.indexOf('<SuiteSidebarNav active="factory"');
+  assert.ok(button > -1 && nav > -1);
+  assert.ok(button < nav, "the batch button is a Listing Factory action and comes first");
+});
+
+test("the rail keeps the gear mark", () => {
+  /* D1764 swapped it for a wordmark because the preview drew one. Nobody
+     asked for that. */
+  const brand = read("suite-brand.tsx");
+  assert.match(brand, /suite-brand-mark/);
+  assert.doesNotMatch(brand, /suite-wordmark/);
+});
+
 test("the home heading prefers a written name over the Etsy URL handle", () => {
   const home = read("home/home-view.tsx");
   /* /api/etsy returns shop_name, which is the handle: "shesawolfclothing". */

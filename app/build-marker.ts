@@ -225,7 +225,11 @@
    with an invisible input inside it. */
 /* D1768 makes the search panel hug its results instead of stretching to the
    full height of the overlay. */
-export const BUILD_MARKER = "D1768";
+/* D1769 puts the gear mark back in the rail, makes the rail look scrollable
+   before you scroll it, replaces the white "you are here" pill with the
+   approved chip and gives Command Center the same one, and lifts Start a
+   new batch above the links so it stops reading as a Command Center action. */
+export const BUILD_MARKER = "D1769";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

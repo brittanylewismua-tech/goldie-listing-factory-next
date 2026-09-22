@@ -5754,6 +5754,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       <header className="topbar">
         <div className="brand-lockup"><SuiteBrand /></div>
         <div className="top-actions">
+          <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}>{/* D362 · The glyph ↻ renders at text weight in most UI faces, so at 11px it
+              read as a stray mark rather than an arrow. A drawn icon keeps its
+              stroke and its arrowhead at any size. */}
+              <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16"/><path d="M3 21v-5h5"/></svg> Start a new batch</button>
           <SuiteSidebarNav active="factory" items={NAV} keywordBankInNewTab
             onNavigate={(event,href)=>guardNavigation(event,href)}/>
           {/* THE HOT LIST BUTTON IS GONE FROM HERE ON PURPOSE.
@@ -5764,10 +5768,6 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
               survived here for a deploy after it had been removed from the
               shared rail. The Hot List is not part of making a listing; it is
               reached from Home with the other tools. */}
-          <button className="workflow-restart-button" type="button" disabled={running} onClick={startOver}>{/* D362 · The glyph ↻ renders at text weight in most UI faces, so at 11px it
-              read as a stray mark rather than an arrow. A drawn icon keeps its
-              stroke and its arrowhead at any size. */}
-              <svg className="new-batch-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16"/><path d="M3 21v-5h5"/></svg> Start a new batch</button>
           <GoldieCommandBar data={commandCenterData} onUseProduct={recipe=>{void chooseRecipe(recipe).then(selected=>{if(selected)goToStep("setup")})}} onStartBlank={()=>{clearCurrentBatch(true);goToStep("setup")}}/>
           {owner && <a className="diagnostics-link" href="/mastermind-admin" aria-label="Open Listing Factory diagnostics" title="Listing Factory diagnostics">★</a>}
           <a className="usage-link" href="/usage" onClick={event=>guardNavigation(event,"/usage")}>Usage and limits</a>

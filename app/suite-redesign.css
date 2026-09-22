@@ -30,6 +30,9 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell .factory-top-batch{color:var(--suite-ink);font-size:12px;font-weight:900}
 
 .suite-brand{display:flex;align-items:center;gap:11px;color:#fff;text-decoration:none}
+.suite-brand-mark{position:relative;display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;color:var(--suite-pink)}
+.suite-brand-mark svg{width:36px;height:36px;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.suite-brand-mark i{position:absolute;right:0;top:0;width:7px;height:7px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px #111011}
 .app-shell>.topbar>.brand-lockup{margin:0 7px 24px;padding:0}
 
 .app-shell>.topbar>.top-actions{display:block;padding:0!important;overflow-x:hidden;overflow-y:auto}
