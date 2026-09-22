@@ -229,7 +229,11 @@
    before you scroll it, replaces the white "you are here" pill with the
    approved chip and gives Command Center the same one, and lifts Start a
    new batch above the links so it stops reading as a Command Center action. */
-export const BUILD_MARKER = "D1769";
+/* D1770 makes the rail scrollbar actually draw: scrollbar-width being set to
+   anything but auto makes Chrome ignore every ::-webkit-scrollbar rule, and
+   on macOS "thin" is an invisible overlay. Also changes the white current-page
+   pill at source rather than overriding it. */
+export const BUILD_MARKER = "D1770";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

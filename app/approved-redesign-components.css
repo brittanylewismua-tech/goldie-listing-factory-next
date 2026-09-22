@@ -56,13 +56,38 @@ html, body { background: var(--pro-canvas) !important; }
   background: #19171b !important;
   color: #fff !important;
 }
-.app-shell > .topbar .top-nav a.active {
-  border-color: #fff !important;
-  background: #fff !important;
-  color: #171318 !important;
-  box-shadow: 4px 4px 0 var(--pro-accent) !important;
+/*
+  D1769 · THE PAGE YOU ARE ON IS NOT A WHITE BUTTON.
+
+  This drew the current link as a solid white block with a pink offset
+  shadow, and suppressed the pink edge bar underneath it. On a black rail it
+  was the only white thing on screen, so it read as a control someone had
+  left switched on rather than as a position - and it was worse than that,
+  because Listing Factory is the only group that is also a page, so it was
+  the only group that could ever be marked. Command Center is a heading; it
+  could not wear this at all, and a member saw one group permanently lit and
+  the other permanently not.
+
+  The marker is the approved chip and the pink bar now, and the Command
+  Center heading wears the same chip when you are standing inside one of its
+  tools. Changed here, where the rule lives, rather than overridden from a
+  later sheet.
+*/
+.app-shell > .topbar .top-nav a.active,
+.app-shell > .topbar .suite-nav-section.current > .suite-nav-parent > .suite-nav-heading {
+  border-color: transparent !important;
+  background: #1b181b !important;
+  color: #fff !important;
+  box-shadow: none !important;
 }
-.app-shell > .topbar .top-nav a.active::before { display: none !important; }
+.app-shell > .topbar .top-nav a.active::before,
+.app-shell > .topbar .suite-nav-section.current > .suite-nav-parent > .suite-nav-heading::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute; left: -7px; top: 9px; bottom: 9px;
+  width: 3px; border-radius: 0 6px 6px 0; background: var(--suite-pink, #ff2ca6);
+}
+.app-shell > .topbar .suite-nav-parent > .suite-nav-heading { position: relative; }
 .app-shell > .topbar .top-nav a > small {
   border: 1px solid var(--pro-accent) !important;
   border-radius: 50% !important;

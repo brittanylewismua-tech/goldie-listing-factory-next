@@ -95,8 +95,12 @@ test("one highlight, and both rail groups can wear it", () => {
   /* The white pill was the only white thing on a black rail, and only Listing
      Factory could ever get it because it is the only group that is also a
      page. The Command Center heading gets the same chip when current. */
-  assert.match(sheet, /\.suite-nav-section\.current>\.suite-nav-parent>\.suite-nav-heading\{/);
-  assert.match(sheet, /\.app-shell>\.topbar \.suite-sidebar-nav a\.active,/);
+  /* Changed at source in approved-redesign-components.css, which owned the
+     white rule, rather than overridden from a later sheet. */
+  const owner = read("approved-redesign-components.css");
+  assert.doesNotMatch(owner, /\.top-nav a\.active \{[^}]*background: #fff/);
+  assert.match(owner, /\.suite-nav-section\.current > \.suite-nav-parent > \.suite-nav-heading \{/);
+  assert.match(owner, /\.suite-nav-heading::before \{[\s\S]*?display: block/);
 });
 
 test("Start a new batch sits above the links, not under Command Center", () => {

@@ -59,12 +59,18 @@
   markup, no JavaScript, and it is honest about which direction has more.
 */
 .app-shell>.topbar>.top-actions{
-  scrollbar-width:thin;scrollbar-color:#4b444b transparent;
+  /* interface-v2.css sets scrollbar-width:thin here. Chrome ignores every
+     ::-webkit-scrollbar rule on an element whose scrollbar-width is set to
+     anything but auto, and on macOS "thin" is an overlay bar that reserves no
+     width and is invisible until something moves - which is the whole defect.
+     Returning it to auto is what lets the rules below draw a bar that is
+     always there and always takes up space. */
+  scrollbar-width:auto;scrollbar-color:auto;
   background:
     linear-gradient(var(--suite-rail) 30%,rgba(10,10,10,0)) top/100% 22px local no-repeat,
     linear-gradient(rgba(10,10,10,0),var(--suite-rail) 70%) bottom/100% 22px local no-repeat,
     linear-gradient(rgba(255,255,255,.13),rgba(255,255,255,0)) top/100% 14px scroll no-repeat,
-    linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.13)) bottom/100% 14px scroll no-repeat;
+    linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.22)) bottom/100% 18px scroll no-repeat;
 }
 .app-shell>.topbar>.top-actions::-webkit-scrollbar{width:10px}
 .app-shell>.topbar>.top-actions::-webkit-scrollbar-track{background:transparent}
@@ -76,34 +82,6 @@
 .app-shell>.topbar .top-nav a{min-height:44px;border-radius:10px;font-size:14px;color:#b9b2b7}
 .app-shell>.topbar .top-nav a svg{width:19px;height:19px;flex:0 0 19px}
 .app-shell>.topbar .top-nav a:hover{background:#151315;color:#fff}
-/*
-  D1769 · ONE HIGHLIGHT, AND IT IS NOT A WHITE BUTTON.
-
-  The page you are on was drawn as a solid white pill with a drop shadow, on
-  a black rail where nothing else is white. It did not read as "you are here";
-  it read as a button someone had left switched on - and because Listing
-  Factory is the only group that is also a page, it was the only group that
-  ever got it. Command Center could not: its row is a heading, not a link,
-  so a member saw one group lit up and the other never.
-
-  So the marker is the approved one - a slightly lifted chip with a pink bar
-  at its edge - and the Command Center heading wears the same chip when you
-  are inside one of its tools. The two groups behave alike now.
-
-  This needs .suite-sidebar-nav in the selector to outrank the white rule in
-  suite-redesign.css, which is the same weight as a plain `.top-nav a.active`
-  and would otherwise win or lose on import order alone.
-*/
-.app-shell>.topbar .suite-sidebar-nav a.active,
-.app-shell>.topbar .suite-nav-section.current>.suite-nav-parent>.suite-nav-heading{
-  background:var(--suite-rail-chip);color:#fff;font-weight:800;box-shadow:none;
-}
-.app-shell>.topbar .suite-sidebar-nav a.active::before,
-.app-shell>.topbar .suite-nav-section.current>.suite-nav-parent>.suite-nav-heading::before{
-  content:"";position:absolute;left:-7px;top:9px;bottom:9px;width:3px;
-  border-radius:0 6px 6px 0;background:var(--suite-pink);display:block;
-}
-.app-shell>.topbar .suite-nav-parent>.suite-nav-heading{position:relative}
 /* A parent whose child is the open page is emphasised, not marked: two "you
    are here" chips in one rail is two answers to one question. */
 .app-shell>.topbar .suite-nav-section.current>.suite-nav-parent>a:not(.active){color:#fff}
