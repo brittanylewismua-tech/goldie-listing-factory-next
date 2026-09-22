@@ -38,6 +38,7 @@ export default function MarketWatchClient(
   const [watches,setWatches]=useState<Load<WatchRow[]>>({status:"loading",data:[]});
   const [shops,setShops]=useState<Load<ShopView[]>>({status:"loading",data:[]});
   const [open,setOpen]=useState<NicheView|null>(null);
+  const [selectedShop,setSelectedShop]=useState<ShopView|null>(null);
   const [input,setInput]=useState("");
   const [busy,setBusy]=useState(false);
   const [opening,setOpening]=useState("");
@@ -73,6 +74,7 @@ export default function MarketWatchClient(
   const openNiche=async(key:string)=>{setError("");setOpening(key);try{const response=await fetch(`/api/market-watch/niches?key=${encodeURIComponent(key)}`),body=await response.json() as NicheView&{error?:string};if(!response.ok)setError(body.error??"Those listings could not be opened.");else setOpen(body)}catch{setError("Those listings could not be opened.")}finally{setOpening("")}};
   useEffect(()=>{if(startKeyword)void openNiche(startKeyword)},[]);
 
+  if(selectedShop)return <main className="mw"><button className="back p-button p-button-quiet" onClick={()=>setSelectedShop(null)}>← Tracked shops</button><ShopCard shop={selectedShop}/></main>;
   if(open)return <NicheDetail view={open} refreshing={Boolean(opening)} onRefresh={()=>void openNiche(open.key)} onBack={()=>{setOpen(null);void loadNiches(true)}}/>;
   return <main className="mw">
     <header className="mw-intro"><p className="mini-label">MARKET WATCH</p><h1>Explore Etsy listings.</h1><p className="lede">Compare listing photos, prices, favorites, and reviews for the keywords and shops you follow.</p></header>
@@ -92,7 +94,7 @@ export default function MarketWatchClient(
           <div className="keyword-thumbs">{(watch.listings??[]).slice(0,4).map(listing=>listing.imageUrl&&listing.displayFresh?<img key={listing.listingId} src={listing.imageUrl} alt="" width={180} height={180}/>:<span key={listing.listingId} aria-hidden="true"/>)}{(watch.listings??[]).length===0&&<p>Listings will appear after Etsy refreshes this keyword.</p>}</div>
           <p className="keyword-watch-caption">Open listings to compare photos, prices, favorites, and recorded activity.</p>
         </article>)}</div>
-      </WatchList>:<WatchList load={shops} onRetry={()=>void loadShops()} failure="Your tracked shops could not be loaded." empty="Add an Etsy shop to follow its listing activity.">{shops.data.map(shop=><ShopCard key={shop.shopId} shop={shop}/>)}</WatchList>}
+      </WatchList>:<WatchList load={shops} onRetry={()=>void loadShops()} failure="Your tracked shops could not be loaded." empty="Add an Etsy shop to follow its listing activity."><p className="watch-explainer">Choose a shop to see its current listings, buyer feedback, and recent changes. Only shops you track appear here, including your own if you added it.</p><div className="tracked-shop-grid">{shops.data.map(shop=><article className="tracked-shop-card" key={shop.shopId}><p className="mini-label">TRACKED SHOP</p><h2>{shop.shopName}</h2><p>Active listings · Buyer feedback · Shop changes</p><button className="p-button p-button-primary" onClick={()=>setSelectedShop(shop)}>Explore shop</button></article>)}</div></WatchList>}
     </div>
   </main>;
 }
@@ -128,34 +130,38 @@ function ListingCard({listing}:{listing:Listing}){return <article className="car
   </article>}
 
 function ShopCard({shop}:{shop:ShopView}){
-  const [showListings,setShowListings]=useState(false);
+  const [section,setSection]=useState<"listings"|"reviews"|"changes"|"notes">("listings");
   const [listings,setListings]=useState<Listing[]>([]);
   const [loading,setLoading]=useState(false);
   const [listingError,setListingError]=useState("");
   const loadListings=async()=>{
-    setShowListings(true);setLoading(true);setListingError("");
+    setLoading(true);setListingError("");
     try{const response=await fetch(`/api/shop-watch/listings?shop=${shop.shopId}`);const payload=await response.json() as {listings?:Listing[];error?:string;stale?:boolean};if(!response.ok)throw new Error(payload.error||"Listings could not load.");setListings(payload.listings??[]);if(payload.stale)setListingError("Etsy could not refresh these listings. Showing saved results.");}
     catch(error){setListingError(error instanceof Error?error.message:"Listings could not load.");}finally{setLoading(false);}
   };
 
+  useEffect(()=>{void loadListings()},[shop.shopId]);
   const sections:Array<[string,ShopPattern[]]>=[["Listings buyers reviewed",shop.gettingAttention??[]],["What buyers love",shop.whatBuyersLove??[]],["What buyers dislike",shop.whatBuyersDislike??[]],["Shop changes",shop.whatChanged??[]]];
-  const anything=sections.some(([,cards])=>cards.length);
-  return <section className="shop"><div className="shop-watch-heading"><h2 className="shop-name">{shop.shopName}</h2><a href={shop.etsy} target="_blank" rel="noopener noreferrer">View shop on Etsy ↗</a></div>
-    <button className="p-button p-button-quiet" disabled={loading} onClick={()=>showListings&&!listingError?setShowListings(false):void loadListings()}>{loading?"Loading listings…":showListings&&!listingError?"Hide listings":"View listings"}</button>
-    {showListings&&<div className="shop-listing-browser">{listingError&&<p role="alert">{listingError} <button onClick={()=>void loadListings()} disabled={loading}>Try again</button></p>}{!loading&&!listings.length&&!listingError&&<p>No active listings are available from Etsy.</p>}<div className="cards">{listings.map(listing=><ListingCard key={listing.listingId} listing={listing}/>)}</div></div>}
-    {!anything&&<p className="empty">No recorded reviews or changes yet. Open this shop’s listings to compare its current products.</p>}
-    {shop.displayUnavailable&&<p className="p-notice">Etsy could not refresh some listing photos. Review history remains available.</p>}
-    {sections.map(([name,cards])=>cards.length?<div className="section" key={name}><h3 className="section-name">{name}</h3>{name==="Listings buyers reviewed"&&<p className="section-note">Review dates show when feedback was posted, not when an item sold.</p>}<div className="shop-pattern-grid">{cards.map((card,index)=><article className="pattern" key={`${name}-${index}`}>
+  const visibleSections=sections.filter(([name])=>section==="changes"?name==="Shop changes":name!=="Shop changes");
+  const anything=visibleSections.some(([,cards])=>cards.length);
+  return <section className="shop"><header className="mw-detail-head"><p className="mini-label">TRACKED SHOP</p><div className="shop-watch-heading"><h1 className="shop-name">{shop.shopName}</h1><a href={shop.etsy} target="_blank" rel="noopener noreferrer">Open shop on Etsy ↗</a></div><p>Research for this shop only. Switch sections below to explore its products and feedback.</p></header>
+    <div className="tabs p-tabs shop-detail-tabs" role="tablist" aria-label={`${shop.shopName} sections`}>{([["listings","Active listings"],["reviews","Buyer feedback"],["changes","Shop changes"],["notes","My notes"]] as const).map(([key,label])=><button key={key} id={`shop-tab-${key}`} className="p-tab" role="tab" aria-selected={section===key} aria-controls="shop-detail-panel" onClick={()=>setSection(key)}>{label}</button>)}</div>
+    <div id="shop-detail-panel" role="tabpanel" aria-labelledby={`shop-tab-${section}`}>
+    {section==="listings"&&<div className="shop-listing-browser"><div className="market-toolbar"><p>Current products from {shop.shopName}{listings.length?` · ${listings.length} listings loaded`:""}</p><button className="p-button p-button-quiet" onClick={()=>void loadListings()} disabled={loading}>{loading?"Loading listings…":"Refresh active listings"}</button></div><p className="market-note">This is the shop’s active catalog. Buyer feedback is in its own tab.</p>{listingError&&<p role="alert">{listingError} <button onClick={()=>void loadListings()} disabled={loading}>Try again</button></p>}{loading&&!listings.length&&<p role="status">Loading this shop’s active listings…</p>}{!loading&&!listings.length&&!listingError&&<p className="empty">No active listings are available from Etsy.</p>}<div className="cards">{listings.map(listing=><ListingCard key={listing.listingId} listing={listing}/>)}</div></div>}
+    {(section==="reviews"||section==="changes")&&<>{!anything&&<p className="empty">{section==="reviews"?"No buyer feedback has been recorded for this tracked shop yet. You can still browse its active listings.":"No shop changes have been recorded yet. Changes appear after repeat checks."}</p>}
+    {section==="reviews"&&shop.displayUnavailable&&<p className="p-notice">Etsy could not refresh some listing photos. Review history remains available.</p>}
+    {visibleSections.map(([name,cards])=>cards.length?<div className="section" key={name}><h2 className="section-name">{name==="Listings buyers reviewed"?"Products mentioned in buyer reviews":name}</h2>{name==="Listings buyers reviewed"&&<p className="section-note">Review dates show when feedback was posted, not when an item sold.</p>}<div className="shop-pattern-grid">{cards.map((card,index)=><article className={`pattern${card.listing?.imageUrl?" has-listing-photo":""}`} key={`${name}-${index}`}>
       {card.listing?.imageUrl&&<img className="shop-listing-photo" src={card.listing.imageUrl} alt={card.listing.title||"Etsy listing"} loading="lazy" width={570} height={570}/>}
       {card.listing?.title&&<h4>{card.listing.title}</h4>}
       <p className="pattern-headline">{card.pattern}</p>
       <span className="support">{card.evidence}{card.window?` · ${card.window}`:""}</span>
       {Boolean(card.reviews?.length)&&<details><summary>Read buyer reviews</summary>{card.reviews!.map((review,i)=><blockquote key={i}><p>{review.review}</p><footer className="buyer-review-meta">{review.rating} / 5 · {new Date(review.createdAt*1000).toLocaleDateString()}</footer></blockquote>)}</details>}
-      {card.action&&<div className="cc-tool"><h4>Apply this to your offer</h4><p>{card.action.change}</p><p className="cc-note">{card.action.check}</p></div>}
+      {card.action&&<details className="buyer-idea"><summary>How to use this feedback</summary><p>{card.action.change}</p><p className="cc-note">{card.action.check}</p></details>}
       {card.because&&<details><summary>About this comparison</summary><p className="pattern-because">{card.because}</p></details>}
       {card.listing?.url&&<a href={card.listing.url} target="_blank" rel="noreferrer noopener">{card.listing.id?"View listing on Etsy":"View shop on Etsy"} ↗</a>}
-    </article>)}</div></div>:null)}<ActionPlan feature="marketWatch" source={`shop-${shop.shopId}`} heading={`Offer improvement: ${shop.shopName}`} notes={[...shop.whatBuyersDislike,...shop.whatBuyersLove].filter(c=>c.action).slice(0,3).map(c=>`${c.pattern}
+    </article>)}</div></div>:null)}</>}
+    {section==="notes"&&<ActionPlan expanded feature="marketWatch" context="shop" source={`shop-${shop.shopId}`} heading={`Offer improvement: ${shop.shopName}`} notes={[...shop.whatBuyersDislike,...shop.whatBuyersLove].filter(c=>c.action).slice(0,3).map(c=>`${c.pattern}
 Evidence: ${c.because}
 Change to test: ${c.action!.change}
-How to check: ${c.action!.check}`).join('\n\n')||'Choose a specific product and buyer need. Record the evidence, one change to test, and how you will measure the result.'}/></section>;
+How to check: ${c.action!.check}`).join('\n\n')||`Notes about ${shop.shopName}:\n\nProduct or idea to revisit:\nWhy it matters for my shop:`}/>}</div></section>;
 }

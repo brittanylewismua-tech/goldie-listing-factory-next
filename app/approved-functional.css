@@ -30,7 +30,7 @@ body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradi
    content. The space comes from the compact-height block instead. */
 
 
-.brand-lockup{display:block;text-align:center;margin-bottom:34px}.approved-brand{color:#4b283e}.goldie-wordmark-lockup{display:grid;justify-items:center;gap:7px;color:#4b283e}/* D1588 · this sized the single-word Goldıe display lockup. It carries the
+.brand-lockup{display:block;text-align:left;margin-bottom:34px}.approved-brand{color:#4b283e}.goldie-wordmark-lockup{display:grid;justify-items:center;gap:7px;color:#4b283e}/* D1588 · this sized the single-word Goldıe display lockup. It carries the
    words "Listing Factory" now, which needs a readable size rather than a
    64px display face. */
 .approved-wm{font:400 34px/1.05 'DM Serif Display',Georgia,serif;letter-spacing:-.02em}.wordmark{display:none}

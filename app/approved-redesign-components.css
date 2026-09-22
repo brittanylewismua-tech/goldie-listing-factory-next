@@ -235,13 +235,13 @@ html, body { background: var(--pro-canvas) !important; }
 .app-shell .shop-map-redesign > * { grid-column:auto!important; grid-row:auto!important; width:auto!important; }
 .app-shell .shop-map-redesign .shop-map-head { margin: 0 0 28px !important; }
 .app-shell .shop-map-redesign .shop-map-head h1 { max-width: 820px; margin: 7px 0 10px !important;
-  font-size: clamp(38px,4.5vw,60px) !important; line-height: 1 !important; letter-spacing: -.05em !important; }
+  font-size: clamp(28px,2.8vw,36px) !important; line-height: 1.15 !important; letter-spacing: -.05em !important; }
 .app-shell .shop-map-redesign .shop-map-head > p:last-of-type { margin: 0 !important; color:#70646e !important;
   font-size:15px !important; font-weight:500 !important; letter-spacing:0 !important; text-transform:none !important; }
-.shop-map-tabs { display: flex; gap: 28px; margin: 0 0 24px; border-bottom: 1px solid #cfc3ca; overflow-x: auto; }
-.shop-map-tabs button { position: relative; flex: 0 0 auto; min-height: 48px; padding: 0 2px; border: 0;
-  background: transparent; color: #70646e; font: 750 13px/1 inherit; cursor: pointer; }
-.shop-map-tabs button[aria-current="page"] { color: #171318; }
+.shop-map-tabs { display: flex; gap: 8px; margin: 0 0 24px; border-bottom: 1px solid #cfc3ca; overflow-x: auto; }
+.shop-map-tabs button { position: relative; flex: 0 0 auto; min-height: 48px; padding: 0 16px; border: 1px solid #d9ccd4; border-radius:8px 8px 0 0;
+  background: #fff; color: #70646e; font: 750 13px/1 inherit; cursor: pointer; }
+.shop-map-tabs button[aria-current="page"] { color: #171318; border-color:#171318; }
 .shop-map-tabs button[aria-current="page"]::after { content:""; position:absolute; left:0; right:0; bottom:-1px;
   height:4px; background:#ff2ca6; }
 .shop-map-tab-panel { display: grid; gap: 24px; }
@@ -323,7 +323,7 @@ html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",
 .app-shell>.topbar .suite-brand-mark{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px}
 .app-shell>.topbar .suite-brand-mark svg{width:31px!important;height:31px!important}
 .app-shell>.topbar .suite-brand-mark i{display:none!important}
-.suite-brand-copy{display:grid;gap:2px;min-width:0}
+.suite-brand-copy{display:grid;gap:2px;min-width:0;text-align:left}
 .suite-brand-copy strong{color:#fff;font-family:"DM Serif Display",Georgia,serif;font-size:22px;font-weight:400;line-height:1;letter-spacing:-.015em;white-space:nowrap}
 .suite-brand-copy small{color:#a79da4;font-size:8px;font-weight:800;letter-spacing:.16em}
 
@@ -340,7 +340,7 @@ html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",
 .suite-nav-children{display:grid;gap:3px;margin:0 0 5px 26px;padding-left:11px;border-left:1px solid #342d33}
 .app-shell>.topbar .suite-nav-children a{min-height:39px;padding:0 11px!important;font-size:12px}
 .app-shell>.topbar .suite-nav-child svg{width:16px;height:16px}
-.app-shell>.topbar .workflow-restart-button{width:100%!important;max-width:100%!important;box-sizing:border-box!important;white-space:normal!important}
+.app-shell>.topbar .workflow-restart-button{width:calc(100% - 4px)!important;max-width:100%!important;box-sizing:border-box!important;white-space:normal!important}
 
 .home-primary-actions{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;margin:0 0 42px}
 .home-primary-actions a{position:relative;display:grid;gap:10px;min-height:132px;padding:24px 62px 24px 24px;border:1px solid #171318;border-radius:14px;color:#171318;text-decoration:none;background:#fff;box-shadow:5px 5px 0 #171318;transition:transform .16s ease,box-shadow .16s ease}

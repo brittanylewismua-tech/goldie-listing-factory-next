@@ -18,33 +18,33 @@
   font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--muted); margin: 26px 0 10px; font-weight: 600;
 }
-.shop {
+.conn .shop {
   border: 1px solid var(--line); border-radius: 14px; background: #fff;
   padding: 16px; margin-bottom: 12px;
 }
-.shop .name { font-weight: 650; overflow-wrap: anywhere; display: block; }
-.shop .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
-.badge {
+.conn .shop .name { font-weight: 650; overflow-wrap: anywhere; display: block; }
+.conn .shop .badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+.conn .badge {
   font-size: 0.76rem; padding: 3px 9px; border-radius: 999px;
   border: 1px solid var(--line); color: var(--muted);
 }
 .badge[data-on="yes"] { color: var(--good); border-color: var(--good); }
 .badge[data-on="warn"] { color: var(--warn); border-color: var(--warn); }
-.shop .fact { color: var(--muted); font-size: 0.86rem; margin: 2px 0; }
-.shop .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.shop a, .shop button {
+.conn .shop .fact { color: var(--muted); font-size: 0.86rem; margin: 2px 0; }
+.conn .shop .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.conn .shop a, .conn .shop button {
   min-height: 44px; line-height: 44px; padding: 0 16px;
   border: 1px solid var(--line); border-radius: 12px; background: #fff;
   color: var(--ink); text-decoration: none; font-size: 14px; cursor: pointer;
 }
-.shop button.quiet { color: var(--muted); }
-.effect {
+.conn .shop button.quiet { color: var(--muted); }
+.conn .effect {
   border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px;
   margin-top: 10px; color: var(--muted); font-size: 0.88rem; background: var(--paper);
 }
-.empty { border: 1px dashed var(--line); border-radius: 14px; padding: 18px; color: var(--muted); background: #fff; }
-.empty { display: grid; gap: 12px; justify-items: start; }
-.empty p { margin: 0; }
+.conn .empty { border: 1px dashed var(--line); border-radius: 14px; padding: 18px; color: var(--muted); background: #fff; }
+.conn .empty { display: grid; gap: 12px; justify-items: start; }
+.conn .empty p { margin: 0; }
 /* A real target on a phone, not a word in a sentence. */
-.empty .p-button { min-height: 44px; padding: 0 16px; }
+.conn .empty .p-button { min-height: 44px; padding: 0 16px; }
 .conn .error { color: var(--risk); font-size: 0.92rem; }

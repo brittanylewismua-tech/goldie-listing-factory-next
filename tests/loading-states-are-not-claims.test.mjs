@@ -196,11 +196,11 @@ test("market watch tells waiting, broken and genuinely empty apart", () => {
 });
 
 test("a shop card's sections sit under the shop, not beside it", () => {
-  /* The shop name and every section heading were both <h3>, so nothing in the
-     document structure said which shop a section belonged to. */
+  /* A selected shop now has its own page-level heading. Its feedback sections
+     must remain subordinate, and only the selected shop can render details. */
   const source = read("market-watch/market-watch-client.tsx");
-  assert.match(source, /<h2 className="shop-name">\{shop\.shopName\}<\/h2>/);
-  assert.match(source, /<h3 className="section-name">\{name\}<\/h3>/);
+  assert.match(source, /<h1 className="shop-name">\{shop\.shopName\}<\/h1>/);
+  assert.match(source, /<h2 className="section-name">\{name==="Listings buyers reviewed"\?"Products mentioned in buyer reviews":name\}<\/h2>/);
 });
 
 test("every state fixture answers the endpoints its surface actually calls", () => {

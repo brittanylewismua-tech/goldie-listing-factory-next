@@ -78,7 +78,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .suite-access-actions a{background:#111;color:#fff;box-shadow:3px 3px 0 var(--suite-pink)}
 .suite-access-actions :is(button,a):focus-visible,.suite-access-close:focus-visible{outline:2px solid var(--suite-pink);outline-offset:2px}
 @media(max-width:560px){.suite-access-dialog{padding:28px 22px}.suite-access-dialog h2{font-size:24px}.suite-access-actions{display:grid}.suite-access-actions button,.suite-access-actions a{width:100%}}
-.app-shell>.topbar .workflow-restart-button{min-height:39px;margin:16px 6px 4px;border:1px solid #fff;border-radius:7px;background:#fff;color:#111;font-size:11px;font-weight:900;box-shadow:3px 3px 0 var(--suite-pink)}
+.app-shell>.topbar .workflow-restart-button{min-height:39px;margin:16px 0 4px;border:1px solid #fff;border-radius:7px;background:#fff;color:#111;font-size:11px;font-weight:900;box-shadow:3px 3px 0 var(--suite-pink)}
 .app-shell>.topbar .workflow-restart-button .new-batch-icon{color:var(--suite-pink-deep)}
 .app-shell>.topbar .approved-sidebar-footer{gap:7px;padding:12px 6px 0}
 .app-shell>.topbar .approved-usage,.app-shell>.topbar .listing-goal-side{border-radius:8px;padding:10px 11px}
@@ -114,8 +114,8 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell .p-input,.app-shell .p-select{border-radius:7px;border-color:#d9ccd4;background:#fff}
 .app-shell .p-input:focus,.app-shell .p-select:focus{border-color:var(--suite-pink);box-shadow:0 0 0 3px rgba(255,44,166,.12)}
 .app-shell .p-tabs{padding:0;border:0;border-bottom:1px solid #d9ccd4;border-radius:0;background:transparent}
-.app-shell .p-tab{position:relative;min-height:46px;padding:0 2px;margin-right:25px;border-radius:0;background:transparent!important;color:#786c73;font-size:11px;font-weight:900}
-.app-shell .p-tab[aria-selected="true"]{color:#111}
+.app-shell .p-tab{position:relative;min-height:46px;padding:0 18px;margin-right:0;border:1px solid #d9ccd4;border-radius:8px 8px 0 0;background:#fff!important;color:#786c73;font-size:11px;font-weight:900}
+.app-shell .p-tab[aria-selected="true"]{color:#111;border-color:#171318}
 .app-shell .p-tab[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--suite-pink)}
 .app-shell .p-badge{border-radius:16px}
 .app-shell .p-notice{border-radius:8px}
@@ -192,7 +192,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .mw>.update{grid-column:1/-1;margin:0 0 7px;padding:24px 26px;border:1px solid #111;border-left:1px solid #111;border-radius:10px;background:#151214;color:#fff;box-shadow:5px 5px 0 var(--suite-pink)}
 .mw>.update h2{color:#ff68be;font-size:9px;font-weight:900;letter-spacing:.14em}
 .mw>.update p,.mw>.update li{color:#d0c5cb;font-size:12px}
-.mw>.tabs{margin:8px 0 0}
+.mw>.tabs{margin:8px 0 16px}
 .mw>.add{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;margin:0 0 2px;padding:18px;border:1px solid var(--suite-line);border-radius:9px;background:rgba(255,255,255,.88)}
 .mw>.add input{min-height:42px}
 .mw .watch{position:relative;min-height:78px;margin-bottom:9px;padding:17px 18px;border-radius:9px;border-color:var(--suite-line);box-shadow:0 8px 28px rgba(42,20,33,.045)}
@@ -203,7 +203,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .mw .card,.mw .patterns,.mw .pattern{border-radius:9px;border-color:var(--suite-line);background:#fff;box-shadow:var(--suite-shadow)}
 .mw .card img,.mw .no-image{aspect-ratio:4/3}
 .mw .pattern{padding:17px}
-.mw .section > h3,.mw .patterns h2{color:var(--suite-pink-deep);font-size:14px;font-weight:900;letter-spacing:.13em}
+.mw .section > h2,.mw .patterns h2{color:var(--suite-pink-deep);font-size:14px;font-weight:900;letter-spacing:.13em}
 .mw .back{margin-bottom:20px}
 
 /* Design Scanner */
@@ -278,7 +278,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 /* Management pages */
 .app-shell :is(.management-page,.usage-page,.keyword-page,.account,.tools-settings,.conn){width:100%;max-width:none;margin:0;padding:6px 0 64px;background:transparent}
 .app-shell :is(.management-page,.usage-page)>header,.keyword-hero{margin:0 0 26px;padding:0 0 22px;border-bottom:1px solid var(--suite-line)}
-.app-shell :is(.management-page,.usage-page)>header h1,.keyword-hero h1{font-size:clamp(26px,2.8vw,34px)!important;line-height:1!important;font-weight:900!important;letter-spacing:-.055em!important}
+.app-shell :is(.management-page,.usage-page)>header h1,.keyword-hero h1{font-family:"DM Serif Display",Georgia,serif!important;font-size:clamp(26px,2.8vw,34px)!important;line-height:1!important;font-weight:400!important;letter-spacing:-.025em!important}
 /*
   THE PLAN BANNER IS NOT A WHITE CARD, AND THIS LIST WAS OUTRANKING THE RULE
   THAT SAID SO.
@@ -289,7 +289,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
   Usage: white on white, 1.00:1. The plan name, the renewal date and the
   "CURRENT PLAN" label were all invisible.
 */
-.app-shell :is(.management-create,.bank-library,.usage-card,.pricing-profile,.acc-card,.ts-rows,.conn .row){border:1px solid var(--suite-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:var(--suite-shadow)!important}
+.app-shell :is(.management-create,.bank-library,.usage-card,.pricing-profile,.acc-card,.ts-rows){border:1px solid var(--suite-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:var(--suite-shadow)!important}
 .app-shell .plan-banner{border:1px solid #111!important;border-radius:10px!important}
 .app-shell .management-create,.app-shell .bank-library{padding:24px}
 .app-shell .bank-grid{gap:14px}
@@ -315,7 +315,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell .ts-icon{border-radius:7px;background:#111;color:var(--suite-pink)}
 .app-shell .acc-card{overflow:hidden}
 .app-shell .acc-line{min-height:62px;padding:0 18px;border-color:#eee5ea}
-.app-shell .conn .row{padding:18px;margin-bottom:12px}
+.app-shell .conn .row{padding:0;margin:16px 0 0}
 
 /* Production costs is part of Shop Map and gets the same shell-like surface. */
 .costs{max-width:1000px!important;margin:32px auto!important;padding:34px!important;border:1px solid var(--suite-line);border-radius:10px;background:#fff!important;box-shadow:var(--suite-shadow)}
@@ -431,9 +431,9 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 
 /* Connections */
 .conn{max-width:none!important;margin:0!important}
-.conn>h1{margin:0;font-size:clamp(26px,2.8vw,34px)!important;font-weight:900!important;letter-spacing:-.055em!important}
+.conn>h1{margin:0;font-size:clamp(26px,2.8vw,34px)!important;font-weight:400!important;letter-spacing:-.025em!important}
 .conn>.lede{max-width:720px;margin:10px 0 30px!important;font-size:14px!important}
-.conn>h2{margin:28px 0 11px!important;color:var(--suite-pink-deep)!important;font-size:9px!important;font-weight:900!important;letter-spacing:.15em!important}
+.conn>h2{margin:28px 0 11px!important;color:var(--suite-pink-deep)!important;font-size:14px!important;font-weight:900!important;letter-spacing:.15em!important}
 .conn .shop,.conn .empty{margin:0 0 12px;padding:20px 21px;border:1px solid var(--suite-line);border-radius:10px;background:#fff;box-shadow:var(--suite-shadow)}
 .conn .shop:hover{border-color:#111}
 .conn .shop .name{color:#171316;font-size:16px;font-weight:900}
@@ -452,7 +452,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .usage-card,.listing-streak,.listing-goal-settings,.pricing-profile,.usage-plan-chooser,.usage-load-error{
   margin:0 0 16px!important;padding:23px!important;border:1px solid var(--suite-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:var(--suite-shadow)!important
 }
-.usage-card h2,.listing-streak h2,.listing-goal-settings h2,.pricing-profile h2,.usage-plan-chooser h2{color:#171316!important;font-weight:900!important;letter-spacing:-.03em!important}
+.usage-card h2,.listing-streak h2,.listing-goal-settings h2,.pricing-profile h2,.usage-plan-chooser h2{font-size:16px!important;color:#171316!important;font-weight:900!important;letter-spacing:-.03em!important}
 .usage-card b{font-size:27px!important;letter-spacing:-.04em}
 .usage-track{height:8px!important;border-radius:8px!important;background:#f1e6ed!important;overflow:hidden}
 .usage-track i{background:var(--suite-pink)!important}
@@ -473,7 +473,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 /* Account */
 .account .p-head{max-width:none!important}
 .acc-group{margin:0 0 18px!important}
-.acc-heading{margin:0 0 9px!important;color:var(--suite-pink-deep)!important;font-size:9px!important;font-weight:900!important;letter-spacing:.14em!important;text-transform:uppercase}
+.acc-heading{margin:0 0 9px!important;color:var(--suite-pink-deep)!important;font-size:13px!important;font-weight:900!important;letter-spacing:.14em!important;text-transform:uppercase}
 .acc-card{padding:21px 22px!important;border:1px solid var(--suite-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:var(--suite-shadow)!important}
 .acc-line{min-height:56px!important;border-color:#eee3e9!important}
 .acc-line b,.acc-counts b{color:#171316!important;font-weight:900!important}

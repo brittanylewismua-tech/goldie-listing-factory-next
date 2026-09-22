@@ -1,7 +1,7 @@
 /* Shared layout corrections verified against the authenticated member pages. */
 html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable',Manrope,sans-serif}
 .app-shell .factory-work {min-width:0;max-width:1320px;padding:32px 36px 72px}
-.app-shell :is(.hub-head h1,.shop-map-head h1,.mw h1,.tm-page h1) {font-family:'DM Serif Display',serif!important;font-weight:400!important;font-size:clamp(30px,3.2vw,44px)!important;line-height:1.15!important;letter-spacing:-.02em!important;overflow-wrap:anywhere}
+.app-shell :is(.hub-head h1,.shop-map-head h1,.mw h1,.scanner>h1,.tm-page h1) {font-family:'DM Serif Display',serif!important;font-weight:400!important;font-size:clamp(28px,2.8vw,36px)!important;line-height:1.15!important;letter-spacing:-.02em!important;overflow-wrap:anywhere}
 .app-shell :is(.hub-tool,.keyword-watch,.shop-map-card,.shop-map-leaders,.tm-verdict,.tm-watches,.mw .card) {box-shadow:0 5px 18px #20101c08!important;border:1px solid #dacdd6!important;border-radius:14px!important}
 .app-shell :is(.hub-tool,.keyword-watch,.mw .card) {transition:border-color .15s ease,box-shadow .15s ease}
 .app-shell :is(.hub-tool:hover,.keyword-watch:hover,.mw .card:hover) {border-color:#ed7fbb!important;box-shadow:0 8px 24px #46192f12!important}
@@ -21,8 +21,8 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .app-shell .shop-map-identity>div {min-width:0}
 .app-shell .shop-map-identity img {width:64px;height:64px;object-fit:cover;border-radius:50%;flex-shrink:0}
 .app-shell .shop-map-leader-grid {grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;gap:24px}
-.app-shell .shop-map-leader-grid article.lead,.app-shell .shop-map-leader-grid article:not(.lead) {display:flex;flex-direction:column;gap:14px;grid-column:auto;grid-row:auto;border:0;padding:0;min-width:0}
-.app-shell .shop-map-listing-image {aspect-ratio:1;width:100%;height:auto;overflow:hidden;border-radius:10px;background:#f5f0f3}
+.app-shell .shop-map-leader-grid article.lead,.app-shell .shop-map-leader-grid article:not(.lead) {display:grid;grid-template-columns:88px minmax(0,1fr);align-items:start;gap:14px;grid-column:auto;grid-row:auto;border:0;padding:0;min-width:0}
+.app-shell .shop-map-listing-image {aspect-ratio:1;width:88px;height:88px;overflow:hidden;border-radius:10px;background:#f5f0f3}
 .app-shell .shop-map-listing-image img {width:100%;height:100%;object-fit:cover}
 .app-shell .shop-map-leader-grid h3,.app-shell .shop-map-leader-grid .lead h3 {font-family:inherit;font-size:15px;line-height:1.5;letter-spacing:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .app-shell .shop-map-leader-grid a,.app-shell .shop-map-sold-table a {color:inherit;text-decoration:none}
@@ -37,12 +37,12 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .app-shell .shop-map-accuracy {max-width:68ch;line-height:1.65}
 .app-shell .shop-map-money .shop-map-figure {font-size:clamp(28px,4vw,44px);overflow-wrap:break-word}
 .app-shell .mw {max-width:1100px;margin:auto}
-.app-shell .mw .cards {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
-.app-shell .mw .card {display:flex;flex-direction:column;min-width:0;overflow:hidden;padding:0;background:white}
-.app-shell .mw .card>img {width:100%;height:auto;aspect-ratio:1;object-fit:cover}
-.app-shell .mw .card>.body {padding:18px;flex:1}
-.app-shell .mw .card .title {font:700 14px/1.55 'Manrope Variable',sans-serif;margin:14px 0;overflow-wrap:break-word}
-.app-shell .mw .card>a {display:block;padding:14px 18px;border-top:1px solid #eee2e9;font-size:12px;font-weight:800;color:#8d0055}
+.app-shell .mw .cards {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.app-shell .mw .card {display:grid;grid-template-columns:112px minmax(0,1fr);align-content:start;min-width:0;overflow:hidden;padding:16px;background:white;gap:12px 16px}
+.app-shell .mw .card>img,.app-shell .mw .card>.no-image {width:112px;height:112px;aspect-ratio:1;object-fit:contain;border-radius:8px;background:#faf6f8;margin:0;padding:0}
+.app-shell .mw .card>.body {padding:0;min-width:0}
+.app-shell .mw .card .title {font:700 14px/1.55 'Manrope Variable',sans-serif;margin:6px 0;overflow-wrap:break-word}
+.app-shell .mw .card>a {grid-column:1/-1;display:block;min-height:36px;line-height:1.5;margin:0;padding:10px 0 0;text-align:right;border-top:1px solid #eee2e9;font-size:12px;font-weight:800;color:#8d0055}
 .listing-stat-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
 .listing-stat-grid dt {font-size:11px;color:#756772;line-height:1.4}
 .listing-stat-grid dd {font-size:13px;font-weight:800;margin:3px 0 0}
@@ -53,9 +53,9 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .market-history :is(th,td) {padding:12px;text-align:left;border-bottom:1px solid #ede2e9}
 .shop-watch-heading {display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .shop-watch-heading>a {font-size:12px;color:#920456;font-weight:800}
-.shop-pattern-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.shop-pattern-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 .app-shell .mw .pattern {min-width:0;padding:16px;border:1px solid #e4d8e0;border-radius:12px;background:#fff}
-.shop-listing-photo {width:100%;height:auto;aspect-ratio:1;object-fit:cover;border-radius:8px}
+.shop-listing-photo {width:88px;height:88px;aspect-ratio:1;object-fit:contain;border-radius:8px;background:#faf6f8}
 .mw .pattern h4 {font-size:14px;line-height:1.5;margin:12px 0}
 .mw .pattern details {margin:12px 0;font-size:12px;line-height:1.6}
 .mw .pattern summary {cursor:pointer;font-weight:800}
@@ -90,7 +90,7 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 @media(max-width:600px){
  .app-shell .mw .cards,.shop-pattern-grid,.app-shell .shop-map-leader-grid {grid-template-columns:minmax(0,1fr)}
  .app-shell .shop-map-head h1 {font-size:29px!important}
- .app-shell .shop-map-leader-grid article.lead,.app-shell .shop-map-leader-grid article:not(.lead) {display:grid;grid-template-columns:104px minmax(0,1fr);gap:14px;padding-bottom:16px;border-bottom:1px solid #eee2e9}
+ .app-shell .shop-map-leader-grid article.lead,.app-shell .shop-map-leader-grid article:not(.lead) {display:grid;grid-template-columns:88px minmax(0,1fr);gap:14px;padding-bottom:16px;border-bottom:1px solid #eee2e9}
  .app-shell .shop-map-leader-grid h3,.app-shell .shop-map-leader-grid .lead h3 {font-size:13px;-webkit-line-clamp:3;margin-bottom:8px}
  .app-shell .shop-map-leader-grid p {flex-wrap:wrap;gap:4px}
  .app-shell .shop-map-section-head {flex-wrap:wrap;gap:14px}
@@ -135,3 +135,22 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
  .desktop-only-notice .mobile-work-links{justify-content:flex-start;margin:0;gap:10px}
  .desktop-only-notice .mobile-work-links a{padding:12px 16px;margin:0}
 }
+
+/* Research stays within the selected shop; thumbnails support readable details. */
+.tracked-shop-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.tracked-shop-card{padding:22px;border:1px solid #dacdd6;border-radius:12px;background:#fff;min-width:0}
+.tracked-shop-card h2{font-size:24px;margin:6px 0 10px;overflow-wrap:anywhere}
+.tracked-shop-card>p:not(.mini-label),.watch-explainer{font-size:13px;line-height:1.6;color:#6e5d68}
+.tracked-shop-card .p-button{margin-top:12px}
+.mw .shop-detail-tabs{margin:24px 0 20px}
+.mw .shop-detail-tabs .p-tab{flex:1;min-width:0;font-size:12px}
+.mw .pattern.has-listing-photo{display:grid;grid-template-columns:88px minmax(0,1fr);gap:8px 14px}
+.mw .pattern.has-listing-photo>img{grid-column:1;grid-row:1/3}
+.mw .pattern.has-listing-photo>h4{grid-column:2;grid-row:1;margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.mw .pattern.has-listing-photo>.pattern-headline{grid-column:2;font-size:13px}
+.mw .pattern.has-listing-photo>:not(img):not(h4):not(.pattern-headline){grid-column:1/-1}
+.mw .pattern .support{font-size:12px}
+.mw .buyer-idea{padding-top:12px;border-top:1px solid #eadfe5}
+.mw .shop-name{overflow-wrap:anywhere}
+@media(max-width:1100px){.app-shell .shop-map-leader-grid{grid-template-columns:1fr}.app-shell .mw .card{grid-template-columns:88px minmax(0,1fr);gap:12px}.app-shell .mw .card>img,.app-shell .mw .card>.no-image{width:88px;height:88px}}
+@media(max-width:700px){.tracked-shop-grid{grid-template-columns:1fr}.mw .shop-detail-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible}.mw .shop-detail-tabs .p-tab{white-space:normal;border-radius:8px}.mw .tabs .p-tab{padding:0 10px}.app-shell .mw .card .listing-stat-grid{gap:5px}.mw .market-toolbar>p{margin:0}}
