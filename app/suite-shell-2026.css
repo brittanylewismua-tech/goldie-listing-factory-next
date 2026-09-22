@@ -134,7 +134,9 @@
   font:inherit;font-size:12px;font-weight:700;
 }
 .suite-search-backdrop{
-  position:fixed;inset:0;z-index:90;display:flex;justify-content:center;padding:14vh 18px 18px;
+  /* align-items defaults to stretch, which pulled the panel down to the full
+     height of the overlay: one result sat at the top of 340px of white. */
+  position:fixed;inset:0;z-index:90;display:flex;align-items:flex-start;justify-content:center;padding:14vh 18px 18px;
   background:rgba(18,10,15,.42);backdrop-filter:blur(3px);
 }
 .suite-search-panel{

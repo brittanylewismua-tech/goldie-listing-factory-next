@@ -223,7 +223,9 @@
    backdrop-filter, which makes it the containing block for fixed children,
    so the overlay resolved against the top bar and opened as a 72px strip
    with an invisible input inside it. */
-export const BUILD_MARKER = "D1767";
+/* D1768 makes the search panel hug its results instead of stretching to the
+   full height of the overlay. */
+export const BUILD_MARKER = "D1768";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
