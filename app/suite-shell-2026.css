@@ -160,7 +160,14 @@
 .app-shell.rail-collapsed>.topbar{width:0;padding-inline:0;border-right:0;overflow:hidden;visibility:hidden}
 
 /* ================================================================== home ==== */
-.home-dashboard{display:grid;gap:22px}
+/* minmax(0,1fr), not the implicit `auto`. An auto column never shrinks below
+   its content's min-content width, and the min-content width of a panel
+   holding four tiles side by side is wider than the page: at 1440 the cards
+   ran 300px past the right edge and were clipped, with nothing to scroll to.
+   The tiles themselves already use minmax(0,1fr); this is the same fix one
+   level up, where the overflow was actually coming from. */
+.home-dashboard{display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
+.home-dashboard>*{min-width:0}
 .home-shop-head{display:flex;align-items:center;gap:20px;min-height:76px;margin:6px 0 4px}
 .home-shop-mark{
   display:grid;place-items:center;width:66px;height:66px;flex:0 0 66px;border-radius:16px;

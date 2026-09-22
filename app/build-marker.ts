@@ -216,7 +216,10 @@
    the chevron in a 28px first column and squeezed the label into it - widens
    it so "Command Center" sits on one line, and prints the shop the way its
    owner writes it instead of the Etsy URL handle. */
-export const BUILD_MARKER = "D1765";
+/* D1766 stops the home panels running off the right of the page: the grid
+   column was implicit, and an implicit column will not shrink below the
+   min-content width of four tiles standing side by side. */
+export const BUILD_MARKER = "D1766";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
