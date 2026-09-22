@@ -68,7 +68,7 @@ const GROUPS: Group[] = [
       { href: "/account/settings", name: "Account", icon: "account",
         what: "Who you are signed in as, your access, and the data held about you." },
       { href: "/usage", name: "Usage and limits", icon: "usage",
-        what: "What you have used today, and what is left." },
+        what: "Your monthly listing allowance and what is left." },
       { href: "/goals", name: "Listing goal", icon: "goals",
         what: "How many listings you have prepared this period." },
     ],

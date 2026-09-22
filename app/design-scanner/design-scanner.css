@@ -136,9 +136,9 @@
 
 .scanner .block { margin: 0 0 22px; }
 .scanner .block h2 {
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 17px;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--muted);
   margin: 0 0 8px;
   font-weight: 600;

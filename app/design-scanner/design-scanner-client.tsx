@@ -301,7 +301,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
       {error && <p className="error p-notice p-notice-bad" role="alert">{error}</p>}
 
       {original&&artworkHash&&<PrintCheck width={original.width} height={original.height} preview={original.url}/>}
-      {selectedScan && <p className="p-notice" role="status">Saved scan for <strong>{selectedScan.niche}</strong> · {new Date(selectedScan.createdAt*1000).toLocaleString()}. {!preview && "The original artwork is not stored with this result. Upload it again to run a new scan."}</p>}
+      {selectedScan && <p className="p-notice" role="status">{`Saved scan for ${selectedScan.niche} · ${new Date(selectedScan.createdAt*1000).toLocaleString()}. ${!preview ? "The original artwork is not stored with this result. Upload it again to run a new scan." : ""}`}</p>}
       {result && <><ScanResult result={result} /><ActionPlan feature="designScanner" source={result.scanId||artworkHash||result.niche} heading={`Design revision: ${result.niche}`} notes={`Scan finding: ${currentLabel(result.overall)}
 ${result.opportunity||result.refusal?.because||''}
 ${result.imageQuality?.notes?.join('\n')||''}

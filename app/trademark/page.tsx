@@ -188,9 +188,9 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
           className={watch.changed ? "changed" : ""}>
           <div><strong>{watch.phrase}</strong><span>{watch.changed
             ? `${watch.matches || "New"} ${watch.matches === 1 ? "result needs" : "results need"} review${watch.pending ? " · includes pending applications" : ""}`
-            : watch.pending ? "Pending application found"
+            : watch.pending ? "Includes pending applications"
               : watch.matches ? `${watch.matches} matching record${watch.matches === 1 ? "" : "s"}`
-                : "No matching record found"}</span></div>
+                : null}</span></div>
           <span className={`tm-watch-risk ${watch.risk}`}>{watch.matches ? "Review matches" : "No match found"}</span>
           <button type="button" onClick={() => { setPhrase(watch.phrase); void run(watch.phrase, true); }}>Review</button>
           <button type="button" className="quiet" disabled={watchBusy === watch.phrase}

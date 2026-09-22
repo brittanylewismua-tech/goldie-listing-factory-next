@@ -314,7 +314,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell .ts-row{min-height:76px;padding:15px 18px;border-color:#eee5ea}
 .app-shell .ts-icon{border-radius:7px;background:#111;color:var(--suite-pink)}
 .app-shell .acc-card{overflow:hidden}
-.app-shell .acc-line{min-height:62px;padding:0 18px;border-color:#eee5ea}
+.app-shell .acc-line{min-height:0;padding:0;border-color:#eee5ea}
 .app-shell .conn .row{padding:0;margin:16px 0 0}
 
 /* Production costs is part of Shop Map and gets the same shell-like surface. */
@@ -475,7 +475,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .acc-group{margin:0 0 18px!important}
 .app-shell .account .acc-heading{font-family:inherit;margin:0 0 9px!important;color:var(--suite-pink-deep)!important;font-size:13px!important;font-weight:900!important;letter-spacing:.14em!important;text-transform:uppercase}
 .acc-card{padding:21px 22px!important;border:1px solid var(--suite-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:var(--suite-shadow)!important}
-.acc-line{min-height:56px!important;border-color:#eee3e9!important}
+.acc-line{min-height:0!important;border-color:#eee3e9!important}
 .acc-line b,.acc-counts b{color:#171316!important;font-weight:900!important}
 .acc-line span,.acc-counts span,.acc-detail{color:#7b6f76!important}
 /* D1743 · 40px, under the 44px touch floor. */

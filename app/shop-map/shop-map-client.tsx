@@ -284,7 +284,7 @@ What would make this worth repeating:`}/></details>):<p>No listing meets the cur
     </section>}
 
     {tab === "money" && <section className="shop-map-card shop-map-money shop-map-money-redesign">
-      <label className="shop-map-period">Month <input type="month" value={selectedMonth||shown.month||""} onChange={event=>setSelectedMonth(event.target.value)}/></label><h2>Monthly profit</h2>
+      <label className="shop-map-period">Month <input type="month" value={selectedMonth||shown.month||""} onInput={event=>{const value=event.currentTarget.value;if(/^\d{4}-(0[1-9]|1[0-2])$/.test(value))setSelectedMonth(value)}} onChange={event=>setSelectedMonth(event.target.value)}/></label><h2>Monthly profit</h2>
       <button type="button" className="shop-map-confirm" disabled={syncingMoney} onClick={()=>void refreshMoney()}>{syncingMoney ? "Refreshing your numbers…" : "Refresh your numbers"}</button>
       {syncingMoney&&<p role="status">Getting the latest sales, Etsy fees, and production costs. This may take a few minutes.</p>}
       {moneyRefreshError&&<p role="alert" className="shop-map-reason">{moneyRefreshError}</p>}
