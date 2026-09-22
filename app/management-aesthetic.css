@@ -167,12 +167,16 @@
 
 @media(max-width:820px){
   :is(.keyword-page,.mockupFactory.managementOnly).management-page{
-    padding:20px 18px 70px!important;
+    padding:20px 0 70px!important;
     overflow-x:hidden!important;
   }
     :is(.keyword-page,.mockupFactory.managementOnly).management-page>header{margin:18px 0 24px!important}
   .keyword-page .keyword-workspace,
   .mockupFactory.managementOnly .mockupWorkspace{padding:8px 0 70px!important}
+  .mockupFactory.managementOnly .managementLibrary{padding:14px}
+  .mockupFactory.managementOnly .managementSetList{padding:0}
+  .mockupFactory.managementOnly .managementLibraryHead{padding:14px!important}
+  .mockupFactory.managementOnly .collectionToggle{padding:16px}
 }
 
 /* Management-page readability lock. These pages share one hierarchy and

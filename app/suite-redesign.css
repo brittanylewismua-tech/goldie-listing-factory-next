@@ -203,7 +203,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .mw .card,.mw .patterns,.mw .pattern{border-radius:9px;border-color:var(--suite-line);background:#fff;box-shadow:var(--suite-shadow)}
 .mw .card img,.mw .no-image{aspect-ratio:4/3}
 .mw .pattern{padding:17px}
-.mw .section > h2,.mw .patterns h2{color:var(--suite-pink-deep);font-size:14px;font-weight:900;letter-spacing:.13em}
+.app-shell .mw .section > h2,.mw .patterns h2{font-family:inherit;color:var(--suite-pink-deep);font-size:14px;font-weight:700!important;letter-spacing:0;text-transform:none}
 .mw .back{margin-bottom:20px}
 
 /* Design Scanner */
@@ -296,7 +296,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell .bank-grid article{border:1px solid var(--suite-line);border-radius:8px;background:#fff}
 .app-shell .bank-grid article:hover{border-color:#111;box-shadow:3px 3px 0 var(--suite-pink)}
 .app-shell .batch-history{border:1px solid var(--suite-line);border-radius:10px;background:#fff;box-shadow:var(--suite-shadow);overflow:hidden}
-.app-shell .batch-history-controls{padding:18px;border-bottom:1px solid var(--suite-line);background:#fcf8fa}
+.app-shell .batch-history-controls{padding:0;border:0;background:transparent}
 .app-shell .batch-history-members>article{border-bottom:1px solid #eee5ea}
 .app-shell .plan-banner{border-color:#111!important;background:#151214!important;color:#fff!important;box-shadow:5px 5px 0 var(--suite-pink)!important}
 .app-shell .plan-banner :is(h1,h2,h3,b){color:#fff!important}
@@ -433,7 +433,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .conn{max-width:none!important;margin:0!important}
 .conn>h1{margin:0;font-size:clamp(26px,2.8vw,34px)!important;font-weight:400!important;letter-spacing:-.025em!important}
 .conn>.lede{max-width:720px;margin:10px 0 30px!important;font-size:14px!important}
-.conn>h2{margin:28px 0 11px!important;color:var(--suite-pink-deep)!important;font-size:14px!important;font-weight:900!important;letter-spacing:.15em!important}
+.app-shell .conn>h2{font-family:inherit;margin:28px 0 11px!important;color:var(--suite-pink-deep)!important;font-size:14px!important;font-weight:900!important;letter-spacing:.15em!important}
 .conn .shop,.conn .empty{margin:0 0 12px;padding:20px 21px;border:1px solid var(--suite-line);border-radius:10px;background:#fff;box-shadow:var(--suite-shadow)}
 .conn .shop:hover{border-color:#111}
 .conn .shop .name{color:#171316;font-size:16px;font-weight:900}
@@ -473,7 +473,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 /* Account */
 .account .p-head{max-width:none!important}
 .acc-group{margin:0 0 18px!important}
-.acc-heading{margin:0 0 9px!important;color:var(--suite-pink-deep)!important;font-size:13px!important;font-weight:900!important;letter-spacing:.14em!important;text-transform:uppercase}
+.app-shell .account .acc-heading{font-family:inherit;margin:0 0 9px!important;color:var(--suite-pink-deep)!important;font-size:13px!important;font-weight:900!important;letter-spacing:.14em!important;text-transform:uppercase}
 .acc-card{padding:21px 22px!important;border:1px solid var(--suite-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:var(--suite-shadow)!important}
 .acc-line{min-height:56px!important;border-color:#eee3e9!important}
 .acc-line b,.acc-counts b{color:#171316!important;font-weight:900!important}
