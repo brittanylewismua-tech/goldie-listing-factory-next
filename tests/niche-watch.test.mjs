@@ -241,7 +241,7 @@ test("empty and gathering states say what is happening", () => {
   assert.match(MW, /it does not establish how many units an individual listing sold/);
   assert.match(MW, /Current Etsy data could not be refreshed/);
   // Catalog, feedback, and changes now have separate empty states.
-  assert.match(MW, /No buyer feedback has been recorded for this tracked shop yet/);
+  assert.match(MW, /No recent review summary is available for this shop/);
   assert.match(MW, /No shop changes have been recorded yet/);
   assert.match(MW, /No active listings are available from Etsy/);
 });

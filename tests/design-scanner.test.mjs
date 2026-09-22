@@ -515,7 +515,7 @@ test("no reference listing, shop or image is ever rendered", () => {
 
 test("trademark stays visually separate from the design read", () => {
   assert.match(STYLE, /\.tm\s*\{/);
-  assert.match(CLIENT, /<h2>Trademark<\/h2>/);
+  assert.match(CLIENT, /<h2(?: className="utility-heading")?>Trademark<\/h2>/);
   /* And an incomplete register always says so. */
   assert.match(CLIENT, /registerReady/);
   assert.match(CLIENT.replace(/\s+/g, " "), /The trademark search is incomplete/);

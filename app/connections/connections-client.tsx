@@ -180,7 +180,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
 
       {error && <p className="p-notice p-notice-bad" role="alert">{error}</p>}
 
-      <h2>Etsy</h2>
+      <h2 className="utility-heading">Etsy</h2>
       {salesImport === "running" && (
         <p className="p-notice" role="status">
           Sales access is approved. Importing sold listings, revenue, Etsy fees, and Printify costs now…
@@ -265,7 +265,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
         </div>
       ))}
 
-      <h2>Printify</h2>
+      <h2 className="utility-heading">Printify</h2>
       {!loaded && (
         <div className="p-stack" role="status" aria-label="Checking your Printify connection">
           <div className="p-skeleton p-skeleton-card" />
@@ -275,7 +275,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
         <span className="name">{printify?.connected ? (printify.shopName || "Connected") : "Not connected"}</span>
         <p className="fact">
           {printify?.connected
-            ? `Last successful sync: ${when(printify.lastSyncAt)}`
+            ? `Connection updated: ${when(printify.lastSyncAt)}`
             : "The Listing Factory needs Printify to build listings, and Shop Map needs it to work out what each order cost you to make."}
         </p>
         <div className="row">

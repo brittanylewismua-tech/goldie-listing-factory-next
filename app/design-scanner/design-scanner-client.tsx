@@ -125,6 +125,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
   const [history, setHistory] = useState<HistoryRow[]>([]);
+  const [selectedScan,setSelectedScan]=useState<HistoryRow|null>(null);
   /* A saved scan that failed to load is not a member who has never
      scanned, and the allowance count is not "unlimited" because the
      request that carries it fell over. */
@@ -172,6 +173,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
   const onFile = async (file: File | undefined) => {
     if (!file) return;
     setError("");
+    setSelectedScan(null);
     setResult(null);
     try {
       const [hash, normalized] = await Promise.all([hashOf(file), normalizeImage(file)]);
@@ -190,6 +192,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
     if (!artworkHash || !niche.trim() || scanning) return;
     setScanning(true);
     setError("");
+    setSelectedScan(null);
     setResult(null);
     setStage(0);
     timers.current.forEach(window.clearTimeout);
@@ -298,6 +301,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
       {error && <p className="error p-notice p-notice-bad" role="alert">{error}</p>}
 
       {original&&artworkHash&&<PrintCheck width={original.width} height={original.height} preview={original.url}/>}
+      {selectedScan && <p className="p-notice" role="status">Saved scan for <strong>{selectedScan.niche}</strong> · {new Date(selectedScan.createdAt*1000).toLocaleString()}. {!preview && "The original artwork is not stored with this result. Upload it again to run a new scan."}</p>}
       {result && <><ScanResult result={result} /><ActionPlan feature="designScanner" source={result.scanId||artworkHash||result.niche} heading={`Design revision: ${result.niche}`} notes={`Scan finding: ${currentLabel(result.overall)}
 ${result.opportunity||result.refusal?.because||''}
 ${result.imageQuality?.notes?.join('\n')||''}
@@ -318,11 +322,11 @@ Recheck at the same thumbnail size and intended print size. Upload the revised f
 
       {history.length > 0 && (
         <section className="history p-card-quiet">
-          <h2>Your scans</h2>
+          <h2 className="utility-heading">Your scans</h2>
           {history.map(row => (
-            <button key={row.id} onClick={() => { setResult(row.result); setNiche(row.niche); if(row.artworkHash!==artworkHash){setPreview("");setDataUrl("");setArtworkHash("");} }}>
+            <button key={row.id} aria-pressed={selectedScan?.id===row.id} onClick={() => { setSelectedScan(row); setResult(row.result); setNiche(row.niche); if(row.artworkHash!==artworkHash){setPreview("");setDataUrl("");setArtworkHash("");} }}>
               {row.niche}
-              <span className="when"> · {new Date(row.createdAt * 1000).toLocaleDateString()}</span>
+              <span className="when"> · {new Date(row.createdAt * 1000).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit"})}</span>
               {/* What it said, so a list of seven scans is not seven identical
                   rows the member has to open one by one to tell apart. */}
               {row.result?.overall && (
@@ -354,7 +358,7 @@ function ImageQuality({ quality }: { quality?: Result["imageQuality"] }) {
   if (!notes.length && !unverified) return null;
   return (
     <div className="block quality" role="status">
-      <h2>Before you list this</h2>
+      <h2 className="utility-heading">Before you list this</h2>
       {unverified && notes.length === 0
         ? <p className="quality-note">
             This design could not be measured, so its readability was not checked.
@@ -392,13 +396,13 @@ function ScanResult({ result }: { result: Result }) {
           </p>}
           {result.working && result.working.length > 0 && (
             <div className="block">
-              <h2>What is working</h2>
+              <h2 className="utility-heading">What is working</h2>
               <ul>{result.working.map(line => <li key={line}>{line}</li>)}</ul>
             </div>
           )}
           {result.opportunity && (
             <div className="block">
-              <h2>Biggest opportunity</h2>
+              <h2 className="utility-heading">Biggest opportunity</h2>
               <p>{result.opportunity}</p>
             </div>
           )}
@@ -414,7 +418,7 @@ function ScanResult({ result }: { result: Result }) {
 
       {result.trademark && (
         <div className="block">
-          <h2>Trademark</h2>
+          <h2 className="utility-heading">Trademark</h2>
           <div className="tm" data-risk={result.trademark.risk}>
             <p>{result.trademark.summary}</p>
             {!result.trademark.registerReady && (

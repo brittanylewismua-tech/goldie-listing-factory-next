@@ -4492,7 +4492,7 @@ test("step 2 lists no products, and collapsed mockup sets preview ten — D507/D
   assert.match(managementMarkup,/!open&&<span className="setPreview">\{items.slice\(0,10\).map/);
   assert.match(managementMarkup,/open&&<>/);
   assert.match(managementMarkup,/className="thumbs">\{items.map/);
-  assert.match(mockupCss, /\.thumbs\{grid-template-columns:repeat\(auto-fill,minmax\(112px,1fr\)\)/);
+  assert.match(mockupCss, /\.thumbs\{grid-template-columns:repeat\(auto-fill,minmax\(100px,140px\)\)/);
 });
 
 test("low resolution shows the table and never blocks — D509/D510/D511", async () => {

@@ -75,3 +75,5 @@
 .acc-deleted-partial{border:1px solid #e4cedb;background:var(--p-bad-soft);
   border-radius:var(--p-radius);padding:var(--p-4)}
 .acc-deleted-partial .acc-deleted-heading{color:#7d3346;font-size:15px}
+
+@media(max-width:600px){.acc-line{flex-direction:column;gap:4px;align-items:flex-start}.acc-line b{text-align:left;overflow-wrap:anywhere}.acc-counts{grid-template-columns:repeat(2,minmax(0,1fr))}.acc-card{padding:18px}}

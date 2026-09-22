@@ -85,6 +85,7 @@ export default function HotListPage() {
   */
   const [rights, setRights] = useState(false);
   const [term, setTerm] = useState("");
+  const [searchedTerm,setSearchedTerm]=useState("");
   const [hits, setHits] = useState<Hit[] | null>(null);
   const [looking, setLooking] = useState(false);
   const [note, setNote] = useState("");
@@ -122,7 +123,7 @@ export default function HotListPage() {
   async function search(event: React.FormEvent) {
     event.preventDefault();
     if (!term.trim() || looking) return;
-    setLooking(true); setNote(""); setHits(null);
+    setLooking(true); setNote(""); setHits([]); setSearchedTerm(term.trim());
     try {
       const response = await fetch(
         `/api/sold-overnight/search?keyword=${encodeURIComponent(term.trim())}&hours=${view.hours}`, { cache: "no-store" });
@@ -178,7 +179,7 @@ export default function HotListPage() {
         {note && <p className="hot-note" role="status">{note}</p>}
 
         {hits && hits.length > 0 && <section className="hot-hits">
-          <p className="mini-label">ACTIVITY IN THIS PERIOD FOR &ldquo;{term.trim()}&rdquo;</p>
+          <p className="mini-label">ACTIVITY IN THIS PERIOD FOR &ldquo;{searchedTerm}&rdquo;</p>
           <div className="drop-grid">
             {hits.map(hit => <figure key={hit.listingId} className="drop-card">
               <a href={hit.url} target="_blank" rel="noopener noreferrer" className="drop-shot">
@@ -211,7 +212,7 @@ export default function HotListPage() {
             Showing it greyed with the day it arrives says the opposite: this
             is coming, and here is when.
         */}
-        <nav className="sold-windows" aria-label="Period">
+        {hits === null && <><nav className="sold-windows" aria-label="Period">
           {VIEWS.map(v => {
             const ready = covered >= v.hours;
             const days = Math.max(1, Math.ceil((v.hours - covered) / 24));
@@ -294,11 +295,11 @@ export default function HotListPage() {
                 {shown.length === 0 && <p className="drop-none">
                   No activity was recorded for {product} in this period.</p>}
               </section>
-            </>}
+            </>}</>}
       </div>
 
       <details className="drop-note">
-        <summary>What these numbers mean</summary>
+        <summary>How these listings are selected</summary>
         <p>
           These listings changed while their shops reported additional sales.
           Etsy does not provide competitors’ order records, so this does not

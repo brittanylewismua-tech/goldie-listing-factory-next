@@ -30,7 +30,7 @@
 .scanner .lede { color: var(--muted); margin: 0 0 24px; font-size: 0.95rem; }
 
 /* ------------------------------------------------------------ the stage */
-.stage {
+.scanner .stage {
   position: relative;
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -47,10 +47,10 @@
   display: grid;
   place-items: center;
 }
-.stage:has(img) { aspect-ratio: 1 / 1; }
-.stage:has(.empty) { min-height: 190px; }
-.stage img { max-width: 100%; max-height: 100%; display: block; }
-.stage .empty {
+.scanner .stage:has(img) { aspect-ratio: 1 / 1; }
+.scanner .stage:has(.empty) { min-height: 190px; }
+.scanner .stage img { max-width: 100%; max-height: 100%; display: block; }
+.scanner .stage .empty {
   color: var(--muted);
   text-align: center;
   padding: 24px;
@@ -59,7 +59,7 @@
 
 /* The beam. One pass takes 1.4s and it is removed the moment the result is
    in hand — it never holds a finished answer back. */
-.beam {
+.scanner .beam {
   position: absolute;
   inset-inline: 0;
   height: 42%;
@@ -76,8 +76,8 @@
 }
 
 /* ------------------------------------------------------------- controls */
-.field { margin: 20px 0 0; }
-.field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+.scanner .field { margin: 20px 0 0; }
+.scanner .field label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
 .scanner input[type="text"],
 .scanner select {
   width: 100%;
@@ -89,7 +89,7 @@
   font-size: 16px; /* never smaller: iOS zooms the page below 16 */
   color: var(--ink);
 }
-.pick {
+.scanner .pick {
   display: block;
   min-height: 48px;
   line-height: 48px;
@@ -100,9 +100,9 @@
   cursor: pointer;
   margin-top: 12px;
 }
-.pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.scanner .pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
-.go {
+.scanner .go {
   width: 100%;
   min-height: 52px;
   margin-top: 20px;
@@ -114,17 +114,17 @@
   font-weight: 600;
   cursor: pointer;
 }
-.go[disabled] { opacity: 0.4; cursor: default; }
+.scanner .go[disabled] { opacity: 0.4; cursor: default; }
 
-.stages { margin: 16px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 0.9rem; }
-.stages li { padding: 3px 0; }
-.stages li[data-done="yes"] { color: var(--ink); }
+.scanner .stages { margin: 16px 0 0; padding: 0; list-style: none; color: var(--muted); font-size: 0.9rem; }
+.scanner .stages li { padding: 3px 0; }
+.scanner .stages li[data-done="yes"] { color: var(--ink); }
 
-.left { margin-top: 12px; font-size: 0.85rem; color: var(--muted); text-align: center; }
+.scanner .left { margin-top: 12px; font-size: 0.85rem; color: var(--muted); text-align: center; }
 
 /* -------------------------------------------------------------- result */
-.result { margin-top: 28px; }
-.overall {
+.scanner .result { margin-top: 28px; }
+.scanner .overall {
   font-size: 1.15rem;
   font-weight: 650;
   margin: 0 0 16px;
@@ -132,10 +132,10 @@
 }
 /* What was compared, said once, above the findings rather than buried
    under them. */
-.scope { margin: -6px 0 20px; color: var(--muted); font-size: 0.9rem; }
+.scanner .scope { margin: -6px 0 20px; color: var(--muted); font-size: 0.9rem; }
 
-.block { margin: 0 0 22px; }
-.block h2 {
+.scanner .block { margin: 0 0 22px; }
+.scanner .block h2 {
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -143,25 +143,25 @@
   margin: 0 0 8px;
   font-weight: 600;
 }
-.block ul { margin: 0; padding-left: 18px; }
-.block li { margin-bottom: 6px; }
-.block p { margin: 0; }
+.scanner .block ul { margin: 0; padding-left: 18px; }
+.scanner .block li { margin-bottom: 6px; }
+.scanner .block p { margin: 0; }
 
 /* Trademark sits apart from the design read on purpose: they are different
    kinds of risk and blending them makes both easier to ignore. */
-.tm {
+.scanner .tm {
   border: 1px solid var(--line);
   border-left: 3px solid var(--line);
   border-radius: 12px;
   padding: 14px 16px;
   background: #fff;
 }
-.tm[data-risk="clear"] { border-left-color: var(--good); }
-.tm[data-risk="caution"] { border-left-color: var(--warn); }
-.tm[data-risk="high"] { border-left-color: var(--risk); }
-.tm .loading { color: var(--warn); font-size: 0.85rem; margin-top: 8px; }
+.scanner .tm[data-risk="clear"] { border-left-color: var(--good); }
+.scanner .tm[data-risk="caution"] { border-left-color: var(--warn); }
+.scanner .tm[data-risk="high"] { border-left-color: var(--risk); }
+.scanner .tm .loading { color: var(--warn); font-size: 0.85rem; margin-top: 8px; }
 
-.evidence {
+.scanner .evidence {
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
@@ -169,54 +169,54 @@
   font-size: 0.85rem;
 }
 
-.refusal {
+.scanner .refusal {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 18px;
   background: #fff;
 }
-.refusal p { margin: 0; }
+.scanner .refusal p { margin: 0; }
 
 /* ------------------------------------------------------------- history */
-.history { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 20px; }
-.history h2 { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+.scanner .history { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 20px; }
+.scanner .history h2 { font-size: 17px; letter-spacing: 0; text-transform: none;
   color: var(--muted); margin: 0 0 10px; font-weight: 600; }
-.history button {
+.scanner .history button {
   display: block; width: 100%; text-align: left;
   min-height: 48px; padding: 10px 12px;
   border: 1px solid var(--line); border-radius: 12px; background: #fff;
   margin-bottom: 8px; cursor: pointer; font-size: 0.92rem; color: var(--ink);
 }
-.history .when { color: var(--muted); font-size: 0.8rem; }
-.history .verdict-line {
+.scanner .history .when { color: var(--muted); font-size: 0.8rem; }
+.scanner .history .verdict-line {
   display: block; color: var(--muted); font-size: 0.82rem; margin-top: 2px;
 }
 
-.error { color: var(--risk); margin-top: 14px; font-size: 0.92rem; }
+.scanner .error { color: var(--risk); margin-top: 14px; font-size: 0.92rem; }
 
 /* D1599 · A design that is not about the niche says so before the verdict.
    "Vintage Tractor Parts" scanned against bachelorette produced output
    identical to a real bachelorette design — the visual comparison was right,
    and read as approval. */
-.result .subject-warning{margin:0 0 10px;padding:11px 13px;border:1px solid #e4cedb;border-radius:10px;background:#fff7fb;color:#6b3552;font-size:12px;line-height:1.5;font-weight:600}
-.result .subject-off{color:#6b3552}
-.result .subject-unknown{background:#f7f5fa;color:#5b5266}
+.scanner .result .subject-warning{margin:0 0 10px;padding:11px 13px;border:1px solid #e4cedb;border-radius:10px;background:#fff7fb;color:#6b3552;font-size:12px;line-height:1.5;font-weight:600}
+.scanner .result .subject-off{color:#6b3552}
+.scanner .result .subject-unknown{background:#f7f5fa;color:#5b5266}
 
 
 /* D1604 · THE EMPTY STATE WAS A BOX INSIDE A BOX.
    The stage is already a bordered, rounded surface; putting a bordered empty
    card inside it drew two nested rectangles around a lot of nothing. The
    empty state IS the stage when there is no design. */
-.stage .p-empty{border:0;background:transparent;padding:var(--p-5);box-shadow:none}
-.stage{background:var(--p-card-quiet);border-color:var(--p-line)}
+.scanner .stage .p-empty{border:0;background:transparent;padding:var(--p-5);box-shadow:none}
+.scanner .stage{background:var(--p-card-quiet);border-color:var(--p-line)}
 
 /* The pick control is the primary action on an empty scanner, so it looks
    like one rather than a full-width unstyled bar. */
-.pick{display:inline-flex;align-items:center;justify-content:center;min-height:46px;
+.scanner .pick{display:inline-flex;align-items:center;justify-content:center;min-height:46px;
   margin-top:var(--p-4);padding:0 var(--p-5);border:1px solid var(--p-line-strong);
   border-radius:var(--p-radius);background:#fff;color:var(--p-ink);
   font-weight:750;font-size:13px;cursor:pointer}
-.pick:hover{background:var(--p-lavender);border-color:var(--p-pink)}
+.scanner .pick:hover{background:var(--p-lavender);border-color:var(--p-pink)}
 
 /* ------------------------------------------------- readability measurement
 
@@ -241,3 +241,5 @@
   line-height: 1.45;
   text-align: center;
 }
+
+.scanner .history button[aria-pressed="true"]{border-color:#b60b73;background:#fff1f8}.scanner .history{max-height:440px;overflow:auto}

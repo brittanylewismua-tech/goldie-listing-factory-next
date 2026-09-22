@@ -4382,15 +4382,15 @@ html, body { background: var(--lf-paper); }
 --------------------------------------------------------------------------- */
 .drop-page .drop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(176px,1fr));gap:18px}
 .drop-page .drop-card{margin:0;min-width:0;border:1px solid var(--line,rgba(0,0,0,.12));
-  border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
-.drop-page .drop-shot{position:relative;display:block;background:rgba(0,0,0,.04);aspect-ratio:1}
+  border-radius:12px;overflow:hidden;background:#fff;display:grid;grid-template-columns:88px minmax(0,1fr);padding:12px;gap:12px;align-items:start}
+.drop-page .drop-shot{position:relative;display:block;width:88px;height:88px;background:rgba(0,0,0,.04);aspect-ratio:1}
 .drop-page .drop-shot img{width:100%;height:100%;object-fit:cover;display:block}
 .drop-page .drop-noshot{display:flex;align-items:center;justify-content:center;height:100%;
   font-size:13px;color:var(--ink-3,#8b8380)}
 .drop-page .drop-badge{position:absolute;left:8px;top:8px;border-radius:12px;
   background:#0d0c0c;color:#fff;padding:2px 8px;font-size:10px;font-weight:800;letter-spacing:.04em}
 .drop-page .drop-badge.new{background:#ee6fc0;color:#1b0e17}
-.drop-page .drop-card figcaption{padding:12px 12px 13px;display:grid;gap:2px}
+.drop-page .drop-card figcaption{padding:0;min-width:0;display:grid;gap:2px}
 .drop-page .drop-figures{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px}
 .drop-page .drop-numeral{font-size:16px;font-weight:800;letter-spacing:-.045em;
   font-variant-numeric:tabular-nums;line-height:1}

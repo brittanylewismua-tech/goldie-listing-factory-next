@@ -67,6 +67,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
   const [currency, setCurrency] = useState("USD");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const validAmount = /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(amount.trim()) && Number.isFinite(Number(amount)) && Number(amount) <= 100000;
 
   const load = useCallback(async () => {
     try {
@@ -108,7 +109,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
 
   return (
     <main className="costs">
-      <button className="back" onClick={() => { window.location.href = "/shop-map"; }}>
+      <button className="back" onClick={() => { window.location.href = `/shop-map?tab=money&month=${encodeURIComponent(data.month)}`; }}>
         ← Shop Map
       </button>
       <h1>Production costs</h1>
@@ -117,6 +118,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
         Shop Map can report a complete profit figure.
       </p>
 
+      <p className="cost-month">Orders for {new Date(`${data.month}-01T12:00:00`).toLocaleDateString(undefined,{month:"long",year:"numeric"})}</p>
       <section className="verdict">
         <h2>{unresolved.length?`${unresolved.length} ${unresolved.length===1?"order needs":"orders need"} a production cost`:"Production costs recorded"}</h2>
         <p>{data.verdict.accuracy}</p>
@@ -183,11 +185,12 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
                     </select>
                   </div>
 
+                  {amount.trim() && !validAmount && <p className="error" role="status">Enter a cost from 0 to 100,000, with up to two decimal places.</p>}
                   {/* Confirmed before it is saved: a typo here changes a profit
                       figure the member will rely on. */}
                   {!confirming ? (
                     <div className="actions">
-                      <button className="primary" disabled={!amount.trim()}
+                      <button className="primary" disabled={!validAmount}
                         onClick={() => setConfirming(true)}>Continue</button>
                       <button onClick={() => setEditing(null)}>Cancel</button>
                     </div>

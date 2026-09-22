@@ -112,7 +112,7 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
  .app-shell .keyword-watch-head {flex-wrap:wrap;gap:12px}
 }
 
-.shop-map-theme-listings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px;max-height:540px;overflow:auto}.shop-map-theme-listings>a{display:flex;align-items:center;gap:12px;color:inherit;text-decoration:none;padding:10px;background:#fff;border:1px solid #eddae2;border-radius:12px}.shop-map-theme-listings img{width:68px;height:68px;object-fit:cover;border-radius:8px}.shop-map-theme-listings strong{display:block;font-size:13px;line-height:1.4}.shop-map-theme-listings small{display:block;margin-top:5px;color:#65535c}@media(max-width:640px){.shop-map-theme-listings{grid-template-columns:1fr}}
+.shop-map-theme-listings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px;max-height:540px;overflow:auto}.shop-map-theme-listings>a{display:flex;align-items:center;gap:12px;color:inherit;text-decoration:none;padding:10px;background:#fff;border:1px solid #eddae2;border-radius:12px}.shop-map-theme-listings img{flex:0 0 68px;width:68px;height:68px;object-fit:cover;border-radius:8px}.shop-map-theme-listings strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13px;line-height:1.4}.shop-map-theme-listings small{display:block;margin-top:5px;color:#65535c}@media(max-width:640px){.shop-map-theme-listings{grid-template-columns:1fr}}
 
 @media(max-width:600px){
  .app-shell .shop-map-redesign .shop-map-head h1{font-size:27px!important;line-height:1.15!important;letter-spacing:-.04em!important}
@@ -155,3 +155,7 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .mw .shop-name{overflow-wrap:anywhere}
 @media(max-width:1100px){.app-shell .shop-map-leader-grid{grid-template-columns:1fr}.app-shell .mw .card{grid-template-columns:88px minmax(0,1fr);gap:12px}.app-shell .mw .card>img,.app-shell .mw .card>.no-image{width:88px;height:88px}}
 @media(max-width:700px){.tracked-shop-grid{grid-template-columns:1fr}.mw .shop-detail-tabs{display:grid;grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible}.mw .shop-detail-tabs .p-tab{white-space:normal;border-radius:8px}.mw .tabs .p-tab{padding:0 10px}.app-shell .mw .card .listing-stat-grid{gap:5px}.mw .market-toolbar>p{margin:0}}
+
+.shop-map-worlds>li.theme-expanded{grid-column:1/-1}.shop-map-theme-listings>a>span{min-width:0}
+
+@media(max-width:700px){.app-shell .drop-grid{grid-template-columns:minmax(0,1fr)!important}.app-shell .drop-card-surface{padding:16px}.app-shell .managementSetList{padding:10px!important}.app-shell .managementLibraryHead{padding:16px!important}.app-shell .bank-grid>article{padding:16px!important}}

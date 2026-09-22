@@ -225,7 +225,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .scanner>.result{margin-top:30px;padding:28px;border:1px solid #111;border-radius:10px;background:#fff;box-shadow:6px 6px 0 #111}
 .scanner .overall{font-size:25px;font-weight:900;letter-spacing:-.035em}
 .scanner .block{padding:18px 0;margin:0;border-top:1px solid #eadfe5}
-.scanner .block h2{color:var(--suite-pink-deep);font-size:9px;font-weight:900}
+.scanner .block h2{color:#251b22;font-size:17px;font-weight:750;letter-spacing:0;text-transform:none}
 .scanner .tm{border-radius:8px}
 .scanner>.history{padding:23px;border:1px solid var(--suite-line);border-radius:10px;background:#fff;box-shadow:var(--suite-shadow)}
 .scanner>.history button{border-radius:7px}
@@ -415,12 +415,12 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .drop-page .drop-head h1{margin:0;font-size:clamp(26px,2.8vw,34px);font-weight:900;line-height:1;letter-spacing:-.055em}
 .drop-page .drop-head>p:last-child{max-width:720px;color:var(--suite-muted);font-size:14px;line-height:1.55}
 .drop-card-surface,.hot-search{border:1px solid var(--suite-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:var(--suite-shadow)!important}
-.hot-search{padding:16px!important}
+.hot-search{padding:0 0 16px!important;border:0!important;border-radius:0!important;box-shadow:none!important}
 .hot-search input{min-height:42px!important;border:1px solid #d9ccd4!important;border-radius:7px!important}
-.drop-tabs{border-bottom:1px solid #d9ccd4!important;background:transparent!important}
+.drop-tabs{border-bottom:1px solid #d9ccd4!important;background:transparent!important;flex-wrap:nowrap!important;overflow-x:auto;max-width:100%}.drop-tabs button{white-space:nowrap;flex-shrink:0}
 .drop-tabs button{min-height:45px!important;border-radius:0!important;background:transparent!important;font-size:11px!important;font-weight:900!important}
 .drop-tabs button[aria-selected="true"],.drop-tabs button.active{border-bottom:3px solid var(--suite-pink)!important;color:#111!important}
-.drop-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))!important;gap:14px!important}
+.drop-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important}
 .drop-card{border:1px solid var(--suite-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:var(--suite-shadow)!important;overflow:hidden}
 .drop-card:hover{transform:translateY(-2px);border-color:#111!important;box-shadow:4px 4px 0 var(--suite-pink)!important}
 .drop-shot,.drop-noshot{background:#f4eaf0!important}

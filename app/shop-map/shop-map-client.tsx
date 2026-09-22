@@ -75,6 +75,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
   const [soldDays,setSoldDays]=useState(90);
   const [selectedMonth,setSelectedMonth]=useState("");
+  useEffect(()=>{const params=new URLSearchParams(window.location.search);if(params.get("tab")==="money")setTab("money");const month=params.get("month")??"";if(/^\d{4}-(0[1-9]|1[0-2])$/.test(month))setSelectedMonth(month)},[]);
   const [refreshing,setRefreshing]=useState(false);
   const [syncingMoney,setSyncingMoney]=useState(false);
   const [moneyRefreshError,setMoneyRefreshError]=useState("");
@@ -263,14 +264,14 @@ What would make this worth repeating:`}/></details>):<p>No listing meets the cur
       <div className="shop-map-section-head"><div><p className="mini-label">PRODUCT THEMES</p><h2>Where your sales are coming from.</h2>
         <p>{shown.worldsPeriod}. Open a theme to see what is included.</p></div></div>
       <ul className="shop-map-worlds">{niches.map(niche => { const share = recentTotal ? niche.revenueMinor / recentTotal : 0;
-        return <li key={niche.worldId}><button type="button" className="shop-map-world"
+        return <li key={niche.worldId} className={open === niche.worldId ? "theme-expanded" : undefined}><button type="button" className="shop-map-world"
           aria-expanded={open === niche.worldId} onClick={() => setOpen(open === niche.worldId ? "" : niche.worldId)}>
           <span className="shop-map-world-label">{niche.label}</span><span className="shop-map-world-figure">{money(niche.revenueMinor)}</span>
           <span className="shop-map-world-meta">{niche.activeListings} active listings · {niche.orders} orders</span>
           <span className="shop-map-bar"><span style={{width:`${Math.max(2,Math.round(share*100))}%`}}/></span>
           <span className="shop-map-lifetime">Lifetime: {money(niche.lifetimeRevenueMinor)} from {niche.lifetimeOrders} orders</span>
         </button>{open === niche.worldId ? <div className="shop-map-evidence"><p>{niche.evidence}</p>
-          <p>{niche.listings} listings. Sales below cover the last 90 days.</p><div className="shop-map-theme-listings">{niche.memberListings?.map(listing=><a key={listing.listingId} href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.imageUrl?<img src={listing.imageUrl} alt="" loading="lazy" width={68} height={68}/>:null}<span><strong>{listing.title}</strong><small>{listing.sales} sold · {listing.favorites==null?"Favorites unavailable":`${listing.favorites} favorites`} · {listing.state}</small></span></a>)}</div></div> : null}</li>})}</ul>
+          <p>{niche.listings} total listings: {niche.activeListings} active and {Math.max(0,niche.listings-niche.activeListings)} inactive. Sales below cover the last 90 days.</p><div className="shop-map-theme-listings">{niche.memberListings?.map(listing=><a key={listing.listingId} href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.imageUrl?<img src={listing.imageUrl} alt="" loading="lazy" width={68} height={68}/>:null}<span><strong>{listing.title}</strong><small>{listing.sales} sold · {listing.favorites==null?"Favorites unavailable":`${listing.favorites} favorites`} · {listing.state}</small></span></a>)}</div></div> : null}</li>})}</ul>
     </section>}
 
     {tab === "sold" && <section className="shop-map-card shop-map-sold">
@@ -287,7 +288,7 @@ What would make this worth repeating:`}/></details>):<p>No listing meets the cur
       <button type="button" className="shop-map-confirm" disabled={syncingMoney} onClick={()=>void refreshMoney()}>{syncingMoney ? "Refreshing your numbers…" : "Refresh your numbers"}</button>
       {syncingMoney&&<p role="status">Getting the latest sales, Etsy fees, and production costs. This may take a few minutes.</p>}
       {moneyRefreshError&&<p role="alert" className="shop-map-reason">{moneyRefreshError}</p>}
-      {refreshing?<p role="status">Loading this month’s totals…</p>:shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
+      {refreshing?<p role="status">Loading this month’s totals…</p>:selectedMonth && shown.month!==selectedMonth ? <p role="alert">This month could not be loaded. <button type="button" onClick={()=>void load()}>Try again</button></p>:shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
         {detected ? <button className="shop-map-confirm" disabled={busy === "timezone"} onClick={() => void confirmTimezone()}>
           {busy === "timezone" ? "Saving…" : `My shop runs on ${detected}`}</button> : null}</>
       : <><p className="shop-map-figure" data-basis={monthBasis(month)}>{monthBasis(month)==="unavailable"||month?.profitMinor == null ? "Profit unavailable" : money(month.profitMinor,month.currency)}</p>

@@ -187,7 +187,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         <div className="tm-watch-list">{watches.map(watch => <article key={watch.phrase}
           className={watch.changed ? "changed" : ""}>
           <div><strong>{watch.phrase}</strong><span>{watch.changed
-            ? `${watch.matches || "New"} ${watch.matches === 1 ? "result needs" : "results need"} review${watch.pending ? " · pending application found" : ""}`
+            ? `${watch.matches || "New"} ${watch.matches === 1 ? "result needs" : "results need"} review${watch.pending ? " · includes pending applications" : ""}`
             : watch.pending ? "Pending application found"
               : watch.matches ? `${watch.matches} matching record${watch.matches === 1 ? "" : "s"}`
                 : "No matching record found"}</span></div>
@@ -225,6 +225,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
           </p>
         )}
         <p className="tm-phrase">{marked()}</p>
+        {verdict.registerReady === false && <p className="p-notice" role="status"><strong>This search is incomplete.</strong> Older records are still being added. Review the USPTO records before deciding whether to use this phrase.</p>}
         <p>{(verdict.register ?? []).length > 0
           ? `${verdict.register!.length} matching record${verdict.register!.length === 1 ? "" : "s"}. A pending application is not a registration. Compare the goods and services with your intended product.`
           : verdict.risk === "clear" ? "No matching mark was found for this phrase. This does not establish that the phrase is available to use."
@@ -242,7 +243,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         {/* The register's own findings, kept visually separate from the
             curated list: they are a different kind of fact and a seller
             should be able to tell which one is talking. */}
-        <div className="cc-tool"><label>Review this product category first<select value={productClass} onChange={e=>setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label><p className="cc-note">This changes the order of the matches; every match remains visible. Related goods can be in different classes. Open each record and compare the actual goods and services, wording, owner and current status.</p><a href="https://www.uspto.gov/trademarks/search/likelihood-confusion" target="_blank" rel="noopener noreferrer">How the USPTO explains related goods ↗</a></div>
+        {(verdict.register ?? []).length > 0 && <div className="cc-tool"><label>Review this product category first<select value={productClass} onChange={e=>setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label><p className="cc-note">This changes the order of the matches; every match remains visible. Related goods can be in different classes. Open each record and compare the actual goods and services, wording, owner and current status.</p><a href="https://www.uspto.gov/trademarks/search/likelihood-confusion" target="_blank" rel="noopener noreferrer">How the USPTO explains related goods ↗</a></div>}
         {(verdict.register ?? []).length > 0 && <ul className="tm-hits tm-register p-card-quiet">
           {[...(verdict.register ?? [])].sort((a,b)=>Number(b.classes.some(c=>c.padStart(3,"0")===productClass))-Number(a.classes.some(c=>c.padStart(3,"0")===productClass))).map((match, index) =>
             /* Two records for one brand share a mark and carry no

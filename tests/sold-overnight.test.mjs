@@ -172,7 +172,7 @@ test("the page explains what the numbers mean without describing the plumbing", 
      a seller does not need to know anything is being compared, and telling
      them makes a confident number sound like a workaround. */
   const page = read("hot-list/page.tsx");
-  assert.match(page, /What these numbers mean/);
+  assert.match(page, /How these listings are selected/);
   assert.match(page, /Etsy listings with observed activity/i);
   for (const leak of [/stock/i, /compare/i, /reading before/i, /listings we watch/i])
     assert.doesNotMatch(strip(page), leak,
