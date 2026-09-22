@@ -110,7 +110,7 @@
 .p-button-primary[disabled]{background:var(--p-lavender);color:#8b8194}
 .p-button-primary{background:var(--p-pink);color:#3d0b2b}
 .p-button-primary:hover{background:#ff6bcd}
-.p-button-quiet{background:transparent;color:var(--p-ink);border:1px solid var(--p-line-strong)}
+.p-button-quiet{background:#fff;color:var(--p-ink);border:1px solid var(--p-line-strong)}
 .p-button-quiet:hover{background:var(--p-lavender)}
 
 /* D1743 · 42px, just under the 44px touch floor. */

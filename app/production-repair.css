@@ -27,9 +27,8 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .app-shell .shop-map-leader-grid h3,.app-shell .shop-map-leader-grid .lead h3 {font-family:inherit;font-size:15px;line-height:1.5;letter-spacing:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .app-shell .shop-map-leader-grid a,.app-shell .shop-map-sold-table a {color:inherit;text-decoration:none}
 .app-shell .shop-map-leader-grid a:hover,.app-shell .shop-map-sold-table a:hover {text-decoration:underline}
-.shop-map-period,.market-toolbar {display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:20px 0;font-size:13px;font-weight:700}
-.shop-map-period :is(input,select),.market-toolbar select {min-height:42px;padding:8px 12px;border:1px solid #cdbec8;border-radius:8px;background:white;color:#201b20;font:inherit}
-.market-toolbar {justify-content:space-between}
+.shop-map-period {display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:20px 0;font-size:13px;font-weight:700}
+.shop-map-period :is(input,select) {min-height:42px;padding:8px 12px;border:1px solid #cdbec8;border-radius:8px;background:white;color:#201b20;font:inherit}
 .app-shell .shop-map-sold-table article {grid-template-columns:minmax(0,1fr) 64px 80px 90px;gap:14px;align-items:center}
 .app-shell .shop-map-sold-table article>div {min-width:0}
 .app-shell .shop-map-sold-table article strong {min-width:0;font-size:13px;line-height:1.5;overflow-wrap:break-word}
@@ -154,8 +153,9 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .mw .buyer-idea{padding-top:12px;border-top:1px solid #eadfe5}
 .mw .shop-name{overflow-wrap:anywhere}
 @media(max-width:1100px){.app-shell .shop-map-leader-grid{grid-template-columns:1fr}.app-shell .mw .card{grid-template-columns:88px minmax(0,1fr);gap:12px}.app-shell .mw .card>img,.app-shell .mw .card>.no-image{width:88px;height:88px}}
-@media(max-width:700px){.tracked-shop-grid{grid-template-columns:1fr}.mw .shop-detail-tabs{display:grid;grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible}.mw .shop-detail-tabs .p-tab{white-space:normal;border-radius:8px}.mw .tabs .p-tab{padding:0 10px}.app-shell .mw .card .listing-stat-grid{gap:5px}.mw .market-toolbar>p{margin:0}}
+@media(max-width:700px){.tracked-shop-grid{grid-template-columns:1fr}.mw .shop-detail-tabs{display:grid;grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible}.mw .shop-detail-tabs .p-tab{white-space:normal;border-radius:8px}.mw .tabs .p-tab{padding:0 10px}.app-shell .mw .card .listing-stat-grid{gap:5px}}
 
 .shop-map-worlds>li.theme-expanded{grid-column:1/-1}.shop-map-theme-listings>a>span{min-width:0}
 
 @media(max-width:700px){.app-shell .drop-grid{grid-template-columns:minmax(0,1fr)!important}.app-shell .drop-card-surface{padding:16px}.app-shell .managementSetList{padding:10px!important}.app-shell .managementLibraryHead{padding:16px!important}.app-shell .bank-grid>article{padding:16px!important}}
+.shop-map-browse-controls{display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin:20px 0;padding:16px;background:#fff;border:1px solid #dacdd6;border-radius:10px}.shop-map-browse-controls label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:750;min-width:160px;flex:1}.shop-map-browse-controls input,.shop-map-browse-controls select{box-sizing:border-box;width:100%;min-height:44px;padding:10px 12px;border:1px solid #bfaeb9;border-radius:8px;background:#fff;color:#211820;font:inherit;font-size:14px}@media(max-width:600px){.shop-map-browse-controls label{flex-basis:100%;min-width:0}.shop-map-browse-controls input,.shop-map-browse-controls select{font-size:16px}}

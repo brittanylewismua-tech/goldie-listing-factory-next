@@ -1,4 +1,5 @@
 "use client";
+import {browseOwnListings} from "@/app/market-listing-browser";
 import ActionPlan from "@/app/command-center/action-plan";
 import type {CatalogAction} from "@/app/shop-map-actions";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -67,6 +68,11 @@ const money = (minor: number | null | undefined,currency="USD") =>
 export default function ShopMapClient({ signedInEmail }: { signedInEmail?: string }) {
   const [map, setMap] = useState<ShopMap | null>(null);
   const [open, setOpen] = useState("");
+  const [themeQuery,setThemeQuery]=useState("");
+  const [themeState,setThemeState]=useState("all");
+  const [themeSort,setThemeSort]=useState<"sales"|"favorites">("sales");
+  const [soldSort,setSoldSort]=useState<"sales"|"favorites"|"revenue">("sales");
+  const [soldQuery,setSoldQuery]=useState("");
   const [busy, setBusy] = useState("");
   /* The last map that loaded. A failed refresh shows this rather than nothing. */
   const [lastGood, setLastGood] = useState<ShopMap | null>(null);
@@ -263,23 +269,28 @@ What would make this worth repeating:`}/></details>):<p>No listing meets the cur
     {tab === "themes" && <section className="shop-map-card shop-map-themes">
       <div className="shop-map-section-head"><div><p className="mini-label">PRODUCT THEMES</p><h2>Where your sales are coming from.</h2>
         <p>{shown.worldsPeriod}. Open a theme to see what is included.</p></div></div>
-      <ul className="shop-map-worlds">{niches.map(niche => { const share = recentTotal ? niche.revenueMinor / recentTotal : 0;
+      <ul className="shop-map-worlds">{niches.map(niche => { const share = recentTotal ? niche.revenueMinor / recentTotal : 0; const members=browseOwnListings(niche.memberListings??[],themeSort,themeQuery,themeState);
         return <li key={niche.worldId} className={open === niche.worldId ? "theme-expanded" : undefined}><button type="button" className="shop-map-world"
-          aria-expanded={open === niche.worldId} onClick={() => setOpen(open === niche.worldId ? "" : niche.worldId)}>
+          aria-expanded={open === niche.worldId} onClick={() => {setOpen(open === niche.worldId ? "" : niche.worldId);setThemeQuery("");setThemeState("all")}}>
           <span className="shop-map-world-label">{niche.label}</span><span className="shop-map-world-figure">{money(niche.revenueMinor)}</span>
           <span className="shop-map-world-meta">{niche.activeListings} active listings · {niche.orders} orders</span>
           <span className="shop-map-bar"><span style={{width:`${Math.max(2,Math.round(share*100))}%`}}/></span>
           <span className="shop-map-lifetime">Lifetime: {money(niche.lifetimeRevenueMinor)} from {niche.lifetimeOrders} orders</span>
         </button>{open === niche.worldId ? <div className="shop-map-evidence"><p>{niche.evidence}</p>
-          <p>{niche.listings} total listings: {niche.activeListings} active and {Math.max(0,niche.listings-niche.activeListings)} inactive. Sales below cover the last 90 days.</p><div className="shop-map-theme-listings">{niche.memberListings?.map(listing=><a key={listing.listingId} href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.imageUrl?<img src={listing.imageUrl} alt="" loading="lazy" width={68} height={68}/>:null}<span><strong>{listing.title}</strong><small>{listing.sales} sold · {listing.favorites==null?"Favorites unavailable":`${listing.favorites} favorites`} · {listing.state}</small></span></a>)}</div></div> : null}</li>})}</ul>
+          <p>{niche.listings} total listings: {niche.activeListings} active and {Math.max(0,niche.listings-niche.activeListings)} inactive. Sales below cover the last 90 days.</p>
+          <div className="shop-map-browse-controls"><label>Search this theme<input type="search" value={themeQuery} onChange={e=>setThemeQuery(e.target.value)} placeholder="Find a listing"/></label><label>Listing status<select value={themeState} onChange={e=>setThemeState(e.target.value)}><option value="all">All statuses</option><option value="active">Active only</option><option value="inactive">Inactive only</option></select></label><label>Sort theme listings<select value={themeSort} onChange={e=>setThemeSort(e.target.value as "sales"|"favorites")}><option value="sales">Most units sold</option><option value="favorites">Highest favorites</option></select></label></div>
+          <p role="status">{members.length} of {niche.memberListings?.length??0} listings shown</p>{members.length===0&&<p>No listings match this search and status. Change the filters to see more.</p>}
+          <div className="shop-map-theme-listings">{members.map(listing=><a key={listing.listingId} href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.imageUrl?<img src={listing.imageUrl} alt="" loading="lazy" width={68} height={68}/>:null}<span><strong>{listing.title}</strong><small>{listing.sales} sold · {listing.favorites==null?"Favorites unavailable":`${listing.favorites} favorites`} · {listing.state}</small></span></a>)}</div></div> : null}</li>})}</ul>
     </section>}
 
     {tab === "sold" && <section className="shop-map-card shop-map-sold">
       <div className="shop-map-section-head"><div><p className="mini-label">SOLD LISTINGS</p><h2>Sold listings · last {soldDays} days</h2>
         <p>Sales and revenue come from Etsy transactions. Favorites come from the current listing record.</p></div></div>
       <label className="shop-map-period">Sales period <select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label>
+      <div className="shop-map-browse-controls"><label>Search sold listings<input type="search" value={soldQuery} onChange={e=>setSoldQuery(e.target.value)} placeholder="Find a listing"/></label><label>Sort sold listings<select value={soldSort} onChange={e=>setSoldSort(e.target.value as "sales"|"favorites"|"revenue")}><option value="sales">Most units sold</option><option value="revenue">Highest revenue</option><option value="favorites">Highest favorites</option></select></label></div>
+      {!refreshing&&<p role="status">{browseOwnListings(sold,soldSort,soldQuery).length} of {sold.length} sold listings shown</p>}
       {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-table"><div className="head"><span>Listing</span><span>Sold</span><span>Favorites</span><span>Revenue</span></div>
-        {sold.map(listing => <article key={listing.listingId}><div>{listing.imageUrl ? <img src={listing.imageUrl} alt=""/> : <i>G</i>}
+        {browseOwnListings(sold,soldSort,soldQuery).map(listing => <article key={listing.listingId}><div>{listing.imageUrl ? <img src={listing.imageUrl} alt=""/> : <i>G</i>}
           <strong><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.title}</a></strong></div><b data-label="Sold">{listing.sales}</b><span data-label="Favorites">{listing.favorites??"Unavailable"}</span><span data-label="Revenue">{money(listing.revenueMinor)}</span></article>)}</div>}
     </section>}
 

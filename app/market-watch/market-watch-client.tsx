@@ -2,9 +2,12 @@
 
 import ActionPlan from "@/app/command-center/action-plan";
 import OfferPlanner from "@/app/command-center/offer-planner";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+
+import {browseListings,type ListingOrder} from "@/app/market-listing-browser";
 
 type Listing = {
+  createdAt?:number|null;
   listingId: number; title: string; imageUrl: string; etsyUrl: string;
   state: string; label: string; confirmedAt: number; intervals: number;
   sold7: number; sold30: number; priceCents: number | null; currency: string;
@@ -106,18 +109,18 @@ function WatchList({load,onRetry,failure,empty,children}:{load:{status:"loading"
 }
 
 function NicheDetail({view,onBack,onRefresh,refreshing}:{view:NicheView;onBack:()=>void;onRefresh:()=>void;refreshing:boolean}){
-  const [sort,setSort]=useState("favorites");
+  const [sort,setSort]=useState<ListingOrder>("favorites");
   const [currency,setCurrency]=useState("");
+  const [query,setQuery]=useState("");
   const currencies=[...new Set((view.listings??[]).map(listing=>listing.currency||"USD"))].sort();
-  const mixedCurrencies=!currency&&currencies.length>1;
-  const listings=(view.listings??[]).filter(listing=>!currency||(listing.currency||"USD")===currency).sort((a,b)=>sort==="price"?(a.priceCents??Infinity)-(b.priceCents??Infinity):sort==="newest"?(a.ageDays??Infinity)-(b.ageDays??Infinity):sort==="reviews"?b.reviewsOnThisListing-a.reviewsOnThisListing:(b.favorites??-1)-(a.favorites??-1));
+  const listings=browseListings(view.listings??[],sort,query,currency);
   return <main className="mw"><button className="back p-button p-button-quiet" onClick={onBack}>← Tracked keywords</button><header className="mw-detail-head"><p className="mini-label">MARKET WATCH</p><h1>{view.phrase}</h1><p>Compare Etsy listings for this keyword.</p></header>
     {view.stale&&<p className="stale-flag" role="status">{view.error || "Current Etsy data could not be refreshed. Showing saved results."}</p>}
     <OfferPlanner key={view.key} source={view.key} phrase={view.phrase} listings={view.listings??[]}/>
-    <div className="market-toolbar"><label>Sort by <select value={sort} onChange={event=>setSort(event.target.value)}><option value="favorites">Most favorites</option><option value="reviews">Most recorded reviews</option><option value="newest">Newest listing</option><option value="price" disabled={mixedCurrencies}>Lowest price</option></select></label>{currencies.length>1&&<label>Currency <select value={currency} onChange={event=>{setCurrency(event.target.value);if(!event.target.value&&sort==="price")setSort("favorites")}}><option value="">All currencies</option>{currencies.map(code=><option key={code} value={code}>{code}</option>)}</select></label>}<button className="p-button p-button-quiet" disabled={refreshing} onClick={onRefresh}>{refreshing?"Refreshing…":"Refresh listings"}</button></div>
-    {mixedCurrencies&&<p className="market-note">Choose one currency to sort by price.</p>}
+    <ListingControls sort={sort} setSort={setSort} query={query} setQuery={setQuery} currency={currency} setCurrency={setCurrency} currencies={currencies}/>
+    <div className="market-result-bar"><p role="status">{listings.length} of {view.listings?.length??0} results shown for this keyword</p><button className="p-button p-button-quiet" disabled={refreshing} onClick={onRefresh}>{refreshing?"Refreshing…":"Refresh listings"}</button></div>
     <p className="market-note">Favorites and views are current listing totals. Recorded activity reflects changes observed over time; it does not establish how many units an individual listing sold.</p>
-    {!listings.length?<p className="empty">Etsy could not load these listings. Your keyword is saved. Try refreshing.</p>:<div className="cards">{listings.map(listing=><ListingCard key={listing.listingId} listing={listing}/>)}</div>}
+    {!listings.length?<p className="empty">{view.listings?.length?"No loaded listings match these filters. Clear the search or change the currency.":"Etsy could not load these listings. Your keyword is saved. Try refreshing."}</p>:<div className="cards">{listings.map(listing=><ListingCard key={listing.listingId} listing={listing}/>)}</div>}
     {Boolean(view.history?.length)&&<details className="market-history"><summary>Keyword activity history</summary><p>Listings with recorded activity across the tracked keyword. These are not unit sales.</p><table><thead><tr><th>Date</th><th>Listings with activity</th><th>Repeated activity</th></tr></thead><tbody>{view.history!.map(row=><tr key={row.day}><td>{row.day}</td><td>{row.moving}</td><td>{row.repeated}</td></tr>)}</tbody></table></details>}
   </main>;
 }
@@ -133,23 +136,59 @@ function ShopCard({shop}:{shop:ShopView}){
   const [section,setSection]=useState<"listings"|"reviews"|"changes"|"notes">("listings");
   const [listings,setListings]=useState<Listing[]>([]);
   const [loading,setLoading]=useState(false);
+  const [loadingAll,setLoadingAll]=useState(false);
   const [listingError,setListingError]=useState("");
   const [nextOffset,setNextOffset]=useState<number|null>(null);
+  const [retryOffset,setRetryOffset]=useState(0);
   const [total,setTotal]=useState<number|null>(null);
-  const loadListings=async(offset=0)=>{
-    setLoading(true);setListingError("");
-    try{const response=await fetch(`/api/shop-watch/listings?shop=${shop.shopId}&offset=${offset}`);const payload=await response.json() as {listings?:Listing[];error?:string;stale?:boolean;nextOffset?:number|null;total?:number|null};if(!response.ok)throw new Error(payload.error||"Listings could not load.");setListings(old=>offset===0?payload.listings??[]:[...new Map([...old,...(payload.listings??[])].map(l=>[l.listingId,l])).values()]);setNextOffset(payload.nextOffset??null);setTotal(payload.total??null);if(payload.stale)setListingError("Etsy could not refresh these listings. Showing saved results.");}
-    catch(error){setListingError(error instanceof Error?error.message:"Listings could not load.");}finally{setLoading(false);}
+  const [sort,setSort]=useState<ListingOrder>("newest");
+  const [query,setQuery]=useState("");
+  const [currency,setCurrency]=useState("");
+  const activeRequest=useRef<AbortController|null>(null);
+  const currencies=[...new Set(listings.map(l=>l.currency||"USD"))].sort();
+  useEffect(()=>{if(!currency&&currencies.length>1&&(sort==="price"||sort==="price-desc"))setSort("newest")},[currency,currencies.length,sort]);
+  const visibleListings=browseListings(listings,sort,query,currency);
+  const loadListings=async(offset=0,all=false)=>{
+    if(activeRequest.current)return;
+    const controller=new AbortController();activeRequest.current=controller;
+    setLoading(true);setLoadingAll(all);setListingError("");
+    let cursor:number|null=offset;
+    try{
+      do{
+        const response=await fetch(`/api/shop-watch/listings?shop=${shop.shopId}&offset=${cursor}${all?"&limit=100":""}`,{signal:controller.signal});
+        const payload=await response.json() as {listings?:Listing[];error?:string;stale?:boolean;nextOffset?:number|null;total?:number|null};
+        if(!response.ok)throw new Error(payload.error||"Listings could not load.");
+        if(controller.signal.aborted)break;
+        const first=cursor===0;
+        setListings(old=>first?payload.listings??[]:[...new Map([...old,...(payload.listings??[])].map(l=>[l.listingId,l])).values()]);
+        setTotal(payload.total??null);setNextOffset(payload.nextOffset??null);
+        if(payload.stale){setListingError("Etsy could not refresh these listings. Showing saved results.");break;}
+        const next=payload.nextOffset??null;
+        if(next!==null&&next<=cursor)throw new Error("More listings could not be loaded. Try again.");
+        cursor=next;
+      }while(all&&cursor!==null&&!controller.signal.aborted);
+    }catch(error){if(!controller.signal.aborted){setRetryOffset(cursor??offset);setListingError(error instanceof Error?error.message:"Listings could not load.");}}
+    finally{if(activeRequest.current===controller){activeRequest.current=null;setLoading(false);setLoadingAll(false);}}
   };
-
-  useEffect(()=>{void loadListings()},[shop.shopId]);
+  useEffect(()=>{void loadListings();return()=>{activeRequest.current?.abort();activeRequest.current=null}},[shop.shopId]);
   const sections:Array<[string,ShopPattern[]]>=[["Listings buyers reviewed",shop.gettingAttention??[]],["What buyers love",shop.whatBuyersLove??[]],["What buyers dislike",shop.whatBuyersDislike??[]],["Shop changes",shop.whatChanged??[]]];
   const visibleSections=sections.filter(([name])=>section==="changes"?name==="Shop changes":name!=="Shop changes");
   const anything=visibleSections.some(([,cards])=>cards.length);
   return <section className="shop"><header className="mw-detail-head"><p className="mini-label">TRACKED SHOP</p><div className="shop-watch-heading"><h1 className="shop-name">{shop.shopName}</h1><a href={shop.etsy} target="_blank" rel="noopener noreferrer">Open shop on Etsy ↗</a></div><p>Research for this shop only. Switch sections below to explore its products and feedback.</p></header>
     <div className="tabs p-tabs shop-detail-tabs" role="tablist" aria-label={`${shop.shopName} sections`}>{([["listings","Active listings"],["reviews","Buyer feedback"],["changes","Shop changes"],["notes","My notes"]] as const).map(([key,label])=><button key={key} id={`shop-tab-${key}`} className="p-tab" role="tab" aria-selected={section===key} aria-controls="shop-detail-panel" onClick={()=>setSection(key)}>{label}</button>)}</div>
     <div id="shop-detail-panel" role="tabpanel" aria-labelledby={`shop-tab-${section}`}>
-    {section==="listings"&&<div className="shop-listing-browser"><div className="market-toolbar"><p>Current products from {shop.shopName}{listings.length?` · ${listings.length}${total===null?"":` of ${total}`} listings loaded`:""}</p><button className="p-button p-button-quiet" onClick={()=>void loadListings()} disabled={loading}>{loading?"Loading listings…":"Refresh active listings"}</button></div><p className="market-note">Browse active listings a page at a time. Buyer feedback is in its own tab.</p>{listingError&&<p role="alert">{listingError} <button onClick={()=>void loadListings()} disabled={loading}>Try again</button></p>}{loading&&!listings.length&&<p role="status">Loading this shop’s active listings…</p>}{!loading&&!listings.length&&!listingError&&<p className="empty">No active listings are available from Etsy.</p>}<div className="cards">{listings.map(listing=><ListingCard key={listing.listingId} listing={listing}/>)}</div>{nextOffset!==null&&<button type="button" className="p-button p-button-quiet" disabled={loading} onClick={()=>void loadListings(nextOffset)}>{loading?"Loading more listings…":"Load more listings"}</button>}</div>}
+    {section==="listings"&&<div className="shop-listing-browser" id="shop-catalog-controls">
+      <ListingControls sort={sort} setSort={setSort} query={query} setQuery={setQuery} currency={currency} setCurrency={setCurrency} currencies={currencies}/>
+      <div className="market-result-bar"><p role="status">{listings.length}{total===null?"":` of ${total}`} listings loaded{query||currency?` · ${visibleListings.length} match your filters`:""}</p><button className="p-button p-button-quiet" onClick={()=>void loadListings()} disabled={loading}>{loading&&!loadingAll?"Loading listings…":"Refresh active listings"}</button></div>
+      <div className="market-catalog-scope"><p>{nextOffset!==null?"Sorting and search cover the loaded listings. Load the full catalog to compare the whole shop.":total!==null&&listings.length<total?"Some Etsy listings are unavailable. Sorting and search cover the loaded listings only.":"Sorting and search cover all loaded active listings."}</p>{nextOffset!==null&&!loadingAll&&<button type="button" className="p-button p-button-quiet" disabled={loading} onClick={()=>void loadListings(nextOffset,true)}>Load full catalog</button>}{loadingAll&&<button type="button" className="p-button p-button-quiet" onClick={()=>activeRequest.current?.abort()}>Stop loading</button>}</div>
+      <p className="market-note">Favorites and views are lifetime listing totals, not sales. Newest uses the original listing date. Missing measurements appear last.</p>
+      {listingError&&<p role="alert">{listingError} <button className="p-button p-button-quiet" onClick={()=>void loadListings(retryOffset)} disabled={loading}>Try again</button></p>}
+      {loading&&!listings.length&&<p role="status">Loading this shop’s active listings…</p>}
+      {!loading&&!listings.length&&!listingError&&<p className="empty">No active listings are available from Etsy.</p>}
+      {listings.length>0&&!visibleListings.length&&<p className="empty">No loaded listings match these filters. Clear the search or change the currency{nextOffset!==null?", or load more of the shop’s catalog":""}.</p>}
+      <div className="cards">{visibleListings.map(listing=><ListingCard key={listing.listingId} listing={listing}/>)}</div>
+      {listings.length>0&&<div className="market-pagination">{nextOffset!==null&&<button type="button" className="p-button p-button-primary" disabled={loading} onClick={()=>void loadListings(nextOffset??0)}>{loading?"Loading more listings…":"Load more listings"}</button>}<span>{listings.length}{total===null?"":` of ${total}`} loaded{loadingAll?" · Loading full catalog…":""}</span><a className="p-button p-button-quiet" href="#shop-catalog-controls">Back to filters ↑</a></div>}
+    </div>}
     {(section==="reviews"||section==="changes")&&<>{!anything&&<p className="empty">{section==="reviews"?"No recent review summary is available for this shop. Recorded review counts may still appear on its active listings.":"No shop changes have been recorded yet. Changes appear after repeat checks."}</p>}
     {section==="reviews"&&shop.displayUnavailable&&<p className="p-notice">Etsy could not refresh some listing photos. Review history remains available.</p>}
     {visibleSections.map(([name,cards])=>cards.length?<div className="section" key={name}><h2 className="section-name">{name==="Listings buyers reviewed"?"Products mentioned in buyer reviews":name}</h2>{name==="Listings buyers reviewed"&&<p className="section-note">Review dates show when feedback was posted, not when an item sold.</p>}<div className="shop-pattern-grid">{cards.map((card,index)=><article className={`pattern${card.listing?.imageUrl?" has-listing-photo":""}`} key={`${name}-${index}`}>
@@ -166,4 +205,15 @@ function ShopCard({shop}:{shop:ShopView}){
 Evidence: ${c.because}
 Change to test: ${c.action!.change}
 How to check: ${c.action!.check}`).join('\n\n')||`Notes about ${shop.shopName}:\n\nProduct or idea to revisit:\nWhy it matters for my shop:`}/>}</div></section>;
+}
+
+function ListingControls({sort,setSort,query,setQuery,currency,setCurrency,currencies}:{sort:ListingOrder;setSort:(v:ListingOrder)=>void;query:string;setQuery:(v:string)=>void;currency:string;setCurrency:(v:string)=>void;currencies:string[]}){
+ const mixed=!currency&&currencies.length>1;
+ return <div className="market-browser-controls">
+   <label className="market-search">Search loaded listings<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find a product or phrase"/></label>
+   <label>Sort by<select value={sort} onChange={e=>setSort(e.target.value as ListingOrder)}><option value="newest">Newest first</option><option value="favorites">Highest favorites</option><option value="views">Highest views</option><option value="reviews">Most recorded reviews</option><option value="price" disabled={mixed}>Price: low to high</option><option value="price-desc" disabled={mixed}>Price: high to low</option></select></label>
+   {currencies.length>1&&<label>Currency<select value={currency} onChange={e=>{setCurrency(e.target.value);if(!e.target.value&&(sort==="price"||sort==="price-desc"))setSort("newest")}}><option value="">All currencies</option>{currencies.map(c=><option key={c} value={c}>{c}</option>)}</select></label>}
+   {(query||currency)&&<button type="button" className="p-button p-button-quiet" onClick={()=>{setQuery("");setCurrency("");if(sort==="price"||sort==="price-desc")setSort("newest")}}>Clear filters</button>}
+   {mixed&&<p className="market-sort-note">Choose a currency to compare prices.</p>}
+ </div>;
 }

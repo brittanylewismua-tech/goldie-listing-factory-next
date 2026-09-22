@@ -11,7 +11,7 @@ test('tracked shop pages keep watch authorization, bounded offsets, and deduplic
  const route=read('api/shop-watch/listings/route.ts');
  assert.match(route,/user_id=\? AND shop_id=\? AND paused=0/);
  assert.match(route,/Number.isSafeInteger\(offset\).*offset>12000/);
- assert.match(route,/limit=24&offset=\$\{offset\}/);
+ assert.match(route,/limit=\$\{limit\}&offset=\$\{offset\}/);
  assert.match(route,/offset===0&&cached/);
  assert.match(route,/nextOffset:returned>0/);
  const page=read('market-watch/market-watch-client.tsx');
