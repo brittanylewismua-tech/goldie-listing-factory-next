@@ -122,3 +122,26 @@ test('a keyword card with no displayable photo says so', () => {
   assert.match(client, /older than Etsy allows us to display/);
   assert.doesNotMatch(client, /<span key=\{listing\.listingId\} aria-hidden="true"\/>/);
 });
+
+test('the Command Center is a page, not four links in a group', () => {
+  /* Four links inside a collapsible sidebar group is a menu, and a menu has
+     done nothing by the time you look at it. A tool at this price opens on
+     work already done. */
+  const nav = readFileSync(new URL('../app/suite-sidebar-nav.tsx', import.meta.url), 'utf8');
+  assert.match(nav, /href="\/command-center"/, 'the group heading goes somewhere');
+  assert.doesNotMatch(nav, /className="suite-nav-heading" aria-expanded/,
+    'the heading is no longer a button whose only job is to open a list');
+
+  const client = readFileSync(new URL('../app/command-center/command-center-client.tsx', import.meta.url), 'utf8');
+  /* The question, not the file name: a member is buying the answer. */
+  for (const question of ['What is actually selling in this search',
+    'Is this listing ready to publish', 'Which of my designs actually make money',
+    'Can I legally print this phrase'])
+    assert.ok(client.includes(question), `missing: ${question}`);
+
+  const summary = readFileSync(new URL('../app/api/command-center/summary/route.ts', import.meta.url), 'utf8');
+  /* A landing page that spent the shared Etsy allowance to draw itself would
+     be the most expensive page in the product and the least useful. */
+  assert.doesNotMatch(summary, /openapi\.etsy\.com|etsyFetch|etsyGet/);
+  assert.match(summary, /refunded = 0/, 'a refunded sale is not a sale');
+});

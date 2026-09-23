@@ -3,7 +3,7 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { NavIcon, type NavKey as NavIconKey } from "./nav-icons";
 
-export type SuiteNavKey = "home" | "factory" | "batches" | "keywords" | "mockups" | "usage"
+export type SuiteNavKey = "home" | "factory" | "batches" | "keywords" | "mockups" | "usage" | "command-center"
   | "market-watch" | "design-scanner" | "shop-map" | "trademark" | "connections";
 
 export type SuiteNavItem = {
@@ -22,7 +22,7 @@ type Props = {
 };
 
 const FACTORY_KEYS = new Set(["factory", "batches", "keywords", "mockups", "usage"]);
-const COMMAND_KEYS = new Set(["market-watch", "design-scanner", "shop-map", "trademark"]);
+const COMMAND_KEYS = new Set(["command-center", "market-watch", "design-scanner", "shop-map", "trademark"]);
 
 function LockIcon() {
   return <svg className="suite-nav-lock" viewBox="0 0 24 24" aria-hidden="true">
@@ -117,10 +117,18 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
             aria-expanded={commandOpen} onClick={() => setCommandOpen(open => !open)}>
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
           </button>
-          <button type="button" className="suite-nav-heading" aria-expanded={commandOpen}
-            onClick={() => setCommandOpen(open => !open)}>
+          {/*
+            D1786 · The group heading was a button that only opened a list.
+            Clicking the name of the half of the product that costs forty-seven
+            dollars a month did nothing but reveal four links, which is what
+            made four tools read as a menu. It is a page now; the chevron
+            beside it still opens and closes the list.
+          */}
+          <a className={`suite-nav-heading${active === "command-center" ? " active" : ""}`}
+            href="/command-center" aria-current={active === "command-center" ? "page" : undefined}
+            onClick={event => onNavigate?.(event, "/command-center")}>
             <NavIcon name="marketWatch"/><span>Command Center</span>
-          </button>
+          </a>
         </div>
         {commandOpen && <div className="suite-nav-children">{command.map(item => link(item, true))}</div>}
       </div>

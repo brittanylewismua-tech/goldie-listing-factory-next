@@ -273,7 +273,9 @@
    every feature page keeps its stylesheet. */
 /* D1785 gives a long scan the shape of its answer while it waits, and turns
    a refusal that pointed at a panel into one that hands over the keyword. */
-export const BUILD_MARKER = "D1785";
+/* D1786 gives the Command Center a page. Four links in a sidebar group is a
+   menu, and a menu has done nothing by the time you look at it. */
+export const BUILD_MARKER = "D1786";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

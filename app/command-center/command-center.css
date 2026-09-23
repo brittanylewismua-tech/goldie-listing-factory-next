@@ -1,0 +1,41 @@
+/* ============================================================================
+ * D1786 · The Command Center's own page.
+ *
+ * Four links in a sidebar group read as a menu. A tile that carries the
+ * question it answers, what it does to answer it, and a live count of what is
+ * already being watched reads as a tool. The difference is entirely presence:
+ * the same four destinations, given the room to say what they are.
+ * ==========================================================================*/
+.cc-home{display:grid;gap:26px}
+.cc-home-head{max-width:70ch}
+.cc-home-head .mini-label{margin:0 0 8px;color:var(--suite-pink-deep,#d90c89);font-size:12px;font-weight:800;letter-spacing:.16em}
+.cc-home-head h1{
+  margin:0 0 12px;color:var(--suite-ink,#151214);
+  font-size:clamp(30px,3.6vw,46px);font-weight:800;letter-spacing:-.035em;line-height:1.04;
+}
+.cc-home-lede{margin:0;color:var(--suite-muted,#756a72);font-size:16px;line-height:1.55}
+
+.cc-home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.cc-home-tile{
+  position:relative;display:grid;gap:10px;align-content:start;
+  padding:26px;border:2px solid #0a0a0a;border-radius:16px;background:#fff;
+  color:var(--suite-ink,#151214);text-decoration:none;box-shadow:6px 6px 0 #0a0a0a;
+}
+.cc-home-tile:hover{transform:translate(1px,1px);box-shadow:5px 5px 0 var(--suite-pink,#ff2ca6)}
+.cc-home-icon{
+  display:grid;place-items:center;width:52px;height:52px;border-radius:14px;
+  background:#141114;color:var(--suite-pink,#ff2ca6);box-shadow:4px 4px 0 var(--suite-pink,#ff2ca6);
+}
+.cc-home-name{margin-top:6px;color:var(--suite-pink-deep,#d90c89);font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.cc-home-tile h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.025em;line-height:1.15}
+.cc-home-tile p{margin:0;color:var(--suite-muted,#756a72);font-size:14px;line-height:1.55}
+.cc-home-stat{
+  justify-self:start;margin-top:4px;padding:7px 12px;border-radius:10px;
+  background:var(--suite-pink-wash,#fff3fa);color:var(--suite-pink-deep,#d90c89);
+  font-size:13px;font-weight:800;
+}
+.cc-home-go{position:absolute;right:22px;top:26px;color:#b0a3ab;font-size:22px;font-style:normal}
+.cc-home-tile:hover .cc-home-go{color:var(--suite-pink-deep,#d90c89)}
+
+@media (max-width:1100px){.cc-home-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:860px){.cc-home-tile{padding:20px}.cc-home-go{display:none}}

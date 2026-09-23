@@ -110,6 +110,7 @@ export const ACCESS: Record<string, Rule> = {
   "/api/etsy/images": { kind: "feature", feature: "listingFactory" },
   "/api/etsy-capability": { kind: "feature", feature: "listingFactory" },
   "/api/design-scanner/listing-check": { kind: "feature", feature: "designScanner" },
+  "/api/command-center/summary": { kind: "feature", feature: "marketWatch" },
   "/api/unlocks": { kind: "feature", feature: "listingFactory" },
   "/api/drop": { kind: "feature", feature: "listingFactory" },
 
@@ -118,6 +119,9 @@ export const ACCESS: Record<string, Rule> = {
   "/api/design-scanner/scan": { kind: "feature", feature: "designScanner" },
 
   /* ------------------------------------------------------------ Market Watch */
+  /* The Command Center's own page. Same entitlement as the tools it opens:
+     a member who can reach none of them has no reason to see the index. */
+  "/command-center": { kind: "feature", feature: "marketWatch" },
   "/market-watch": { kind: "feature", feature: "marketWatch" },
   "/api/market-watch/collection": { kind: "feature", feature: "marketWatch" },
   "/api/market-watch/listings": { kind: "feature", feature: "marketWatch" },

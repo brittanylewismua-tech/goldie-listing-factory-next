@@ -29,7 +29,7 @@ import SuiteSearch from "./suite-search";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
-export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "mockups" | "usage"
+export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "mockups" | "usage" | "command-center"
   | "connections" | "market-watch" | "shop-map" | "design-scanner" | "more";
 
 /* D834 · Usage + Plan and Connections moved into the account menu, where the
@@ -168,7 +168,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
     : usageFailed ? "Couldn't load — reopen to retry"
     : "Loading usage…";
 
-  return <main className={`app-shell interior-shell${railOpen ? "" : " rail-collapsed"}${desktopOnly ? "" : " responsive-shell"}${["home","market-watch","shop-map","design-scanner","trademark","hotlist","more","connections","batches","keywords","mockups","usage","account"].includes(active) ? " command-workspace" : ""}`}>
+  return <main className={`app-shell interior-shell${railOpen ? "" : " rail-collapsed"}${desktopOnly ? "" : " responsive-shell"}${["home","command-center","market-watch","shop-map","design-scanner","trademark","hotlist","more","connections","batches","keywords","mockups","usage","account"].includes(active) ? " command-workspace" : ""}`}>
     {/* D828 · the shell hides every child but this one on a phone. Without it
         these pages rendered as a blank screen. */}
     {desktopOnly && <MobileGate />}
