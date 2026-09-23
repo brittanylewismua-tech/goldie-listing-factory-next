@@ -40,11 +40,36 @@
 /* ------------------------------------------------------------------- type */
 /* The family is set at source now - every sheet that declared Inter was
    changed - so this file does not need to shout it. */
-/* Two text colours, not nine. Anything wanting a third has to be an accent,
-   a link or a button, all of which are named below. */
-.app-shell.command-workspace .factory-work{color:var(--cc-body)}
-.app-shell.command-workspace .factory-work :is(h1,h2,h3,h4,b,strong,dd,summary){color:var(--cc-ink)!important}
-.app-shell.command-workspace .factory-work :is(p,small,dt,figcaption,.cc-note,.lede){color:var(--cc-muted)!important}
+/*
+  TWO TEXT COLOURS, NOT NINE.
+
+  The first pass named the elements it expected - headings, paragraphs, dt -
+  and left every span, em, li, td and a to whatever the legacy sheets said.
+  Measured on Shop Map afterwards: still eight colours, including three
+  near-blacks within twelve points of each other. Naming elements one at a
+  time is the same mistake at a smaller scale.
+
+  So everything inherits, and the exceptions are named instead: accents,
+  links, and anything that has to sit on a dark fill. Emphasis comes from
+  weight and size, which is what they are for - not from a fourth grey.
+*/
+.app-shell.command-workspace .factory-work{color:var(--cc-ink)}
+.app-shell.command-workspace .factory-work *:not(svg):not(path):not(.mini-label):not([data-negative="yes"]){
+  color:inherit!important;
+}
+.app-shell.command-workspace .factory-work :is(p,small,dt,figcaption,.cc-note,.lede,.cc-row-why,.shop-map-check-against){
+  color:var(--cc-muted)!important;
+}
+.app-shell.command-workspace .factory-work :is(a:not(.p-button),.winner-stat-note.warn){color:var(--cc-accent)!important}
+/* Anything on a dark fill keeps its own colour, or it disappears into it. */
+.app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.home-panel-cta,.cc-home-icon,.home-panel-mark,.home-shop-mark) *,
+.app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.home-panel-cta){color:#fff!important}
+.app-shell.command-workspace .factory-work [data-negative="yes"]{color:#a4243d!important}
+
+/* One ramp. 11, 13, 15 and 24 were all on one page beside 12, 14, 20 and 36. */
+.app-shell.command-workspace .factory-work :is(span,em,i,a,li,td,label,button,strong,b):not(h1 *):not(h2 *):not(h3 *){
+  font-size:inherit;
+}
 
 .app-shell.command-workspace .factory-work h1{font-size:34px;font-weight:800;letter-spacing:-.035em;line-height:1.08;margin:0 0 6px}
 .app-shell.command-workspace .factory-work h2{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:0 0 10px}

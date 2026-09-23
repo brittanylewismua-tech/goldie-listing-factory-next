@@ -304,7 +304,10 @@
 /* D1799 puts the shop's own numbers back at the top of Shop Map, and stops
    four listings reading as the same row because their SEO titles all open
    with the same three words. */
-export const BUILD_MARKER = "D1799";
+/* D1800 stops every span, link and table cell falling through the design
+   system into whatever the legacy sheets said. Everything inherits; the
+   exceptions are named. */
+export const BUILD_MARKER = "D1800";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
