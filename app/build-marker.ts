@@ -297,7 +297,9 @@
 /* D1795-96 puts one design system across every Command Center page, ends the
    two typefaces that were rendering at once, and rebuilds the take-home
    panel as the table it always was. */
-export const BUILD_MARKER = "D1796";
+/* D1797 collapses the last two near-blacks, which were four points apart
+   and from different passes. */
+export const BUILD_MARKER = "D1797";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

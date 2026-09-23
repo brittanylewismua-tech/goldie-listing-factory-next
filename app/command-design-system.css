@@ -21,7 +21,10 @@
  * ==========================================================================*/
 
 .app-shell.command-workspace{
-  --cc-ink:#141114;
+  /* #141114 and #151214 were both on the page, four points apart and from
+     different passes. One near-black. */
+  --cc-ink:#151214;
+  --suite-ink:#151214;
   --cc-body:#2b242a;
   --cc-muted:#6b6069;
   --cc-line:#e6dde3;
