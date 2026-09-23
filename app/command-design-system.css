@@ -170,6 +170,18 @@
 .app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.tm-watch-list button:not(.quiet),.tm-watch-button):hover:not(:disabled){
   background:#2f2a2f!important;
 }
+/*
+  BUTTONS WERE EXEMPTED FROM INHERITANCE SO THEIR LABELS WOULD SURVIVE A DARK
+  FILL, WHICH LEFT THE UNCLASSED ONES ON LEGACY COLOURS.
+
+  Shop Map's tabs and its month control are bare <button> elements with no
+  class, so they kept #171318 and #625862 from two different sheets - two more
+  near-blacks and two more greys, four points from the ones beside them. Any
+  button that is not on a dark fill takes the page's ink.
+*/
+.app-shell.command-workspace.command-workspace .factory-work button:not(.p-button-primary):not([type="submit"]):not(.tm-watch-list button):not(.tm-watch-button):not(.watch-remove){
+  color:var(--cc-ink)!important;
+}
 .app-shell.command-workspace .factory-work .p-button-quiet{
   border:1px solid var(--cc-line)!important;background:var(--cc-surface)!important;color:var(--cc-ink)!important;
 }

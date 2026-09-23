@@ -327,7 +327,9 @@
 /* D1808 ranks every design-system rule above the inherit rule explicitly.
    That rule carries :not() specificity of its own, so three plain classes
    written after it still lost - silently, one colour at a time. */
-export const BUILD_MARKER = "D1808";
+/* D1809 · exempting buttons from inheritance left the unclassed ones on two
+   legacy colours - Shop Map's tabs and month control. */
+export const BUILD_MARKER = "D1809";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
