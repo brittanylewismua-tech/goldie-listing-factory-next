@@ -251,7 +251,10 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           </article>)}</div> : <div className="shop-map-empty"><b>No sales in the last 90 days.</b>
             <p>Your sold listings will appear here after the next Etsy sales import.</p></div>}
       </section>
-      <section className="cc-tool"><h2>Listings to review</h2><p className="cc-note">Based on imported orders and the last recorded listing details. Confirm the current state on Etsy before making changes.</p>{shown.catalogActions?.length?shown.catalogActions.map(action=><details key={action.listingId} className="cc-saved-plan"><summary>{action.headline}: {action.title}</summary><p>{action.evidence}</p><p>{action.nextStep}</p><a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy ↗</a><ActionPlan feature="shopMap" source={`shop-${shown.shop?.shopId}-listing-${action.listingId}`} heading={action.headline} notes={`${action.title}
+      <section className="cc-tool"><h2>Listings to review</h2><p className="cc-note">Based on imported orders and the last recorded listing details. Confirm the current state on Etsy before making changes.</p>{shown.catalogActions?.length?shown.catalogActions.map(action=><details key={action.listingId} className="cc-saved-plan"><summary>{/* D1780 · The headline led, and the same rule fires for every listing that
+    qualifies, so the panel read as one instruction repeated three times with
+    different words after the colon. The listing is what distinguishes one row
+    from another, so it goes first. */}<b className="cc-row-title">{action.title}</b><span className="cc-row-why">{action.headline}</span></summary><p>{action.evidence}</p><p>{action.nextStep}</p><a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy ↗</a><ActionPlan feature="shopMap" source={`shop-${shown.shop?.shopId}-listing-${action.listingId}`} heading={action.headline} notes={`${action.title}
 ${action.evidence}
 
 ${action.nextStep}
@@ -304,7 +307,7 @@ What would make this worth repeating:`}/></details>):<p>No listing meets the cur
       {refreshing?<p role="status">Loading this month’s totals…</p>:selectedMonth && shown.month!==selectedMonth ? <p role="alert">This month could not be loaded. <button type="button" onClick={()=>void load()}>Try again</button></p>:shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
         {detected ? <button className="shop-map-confirm" disabled={busy === "timezone"} onClick={() => void confirmTimezone()}>
           {busy === "timezone" ? "Saving…" : `My shop runs on ${detected}`}</button> : null}</>
-      : <><p className="shop-map-figure" data-basis={monthBasis(month)}>{monthBasis(month)==="unavailable"||month?.profitMinor == null ? "Profit unavailable" : money(month.profitMinor,month.currency)}</p>
+      : <><p className="shop-map-figure" data-basis={monthBasis(month)}>{monthBasis(month)==="unavailable"||month?.profitMinor == null ? "Profit not worked out yet" : money(month.profitMinor,month.currency)}</p>
         <p className="shop-map-accuracy">{month?.accuracy}</p>
         {month?.freshness ? <p className="shop-map-freshness" data-stale={month.salesStale ? "yes" : "no"}>{month.freshness}</p> : null}
         <dl className="shop-map-rows">

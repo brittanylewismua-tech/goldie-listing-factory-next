@@ -258,6 +258,10 @@ async function buildMap(request: Request) {
   const financial = timezone ? await readFinancialMonth(user.userId,shopId,month,timezone) : null;
   const profit = financial?.knownOperatingProfitMinor ?? null;
   const productionCoverage = financial?.coverage.productionCoverage ?? 0;
+  /* How many orders are holding the profit figure back. The share is what the
+     coverage bar needs; the count is what a member can act on. */
+  const missingCosts = financial
+    ? Math.round((1 - productionCoverage) * (financial.coverage.receipts ?? 0)) : 0;
 
   /*
     THE UNCLASSIFIED PART OF THE SHOP, COUNTED.
@@ -406,13 +410,22 @@ async function buildMap(request: Request) {
       refundsMinor: financial?.refundsMinor ?? null,
       adjustmentsMinor: financial?.adjustmentsMinor ?? null,
       currency: financial?.currency ?? "USD",
-      headline: profit === null ? "Profit unavailable" : financial?.manualCostCount ? "Profit with your entered costs" : "Verified profit",
+      /* D1780 · "Profit unavailable" reads as a broken feature. The number is
+         being withheld deliberately, because it would be wrong, and the thing
+         withholding it is usually one order whose production cost nobody
+         knows. Naming the count turns a dead end into a task. */
+      headline: profit === null
+        ? (missingCosts === 1 ? "One order's cost is missing" : missingCosts > 1
+            ? `${missingCosts} order costs are missing` : "Profit not worked out yet")
+        : financial?.manualCostCount ? "Profit with your entered costs" : "Verified profit",
       label: profit === null ? "unavailable" : "verified",
       salesAsOf: asOf, salesStale: isStale(asOf, nowSeconds),
       freshness: asOf ? freshnessNote({asOf,nowSeconds,timezone:timezone||"UTC"})
         : "The financial refresh is incomplete. Refresh your numbers to try again.",
       profitMinor: profit,
-      accuracy: profit===null ? "Profit is unavailable until all orders, Etsy charges, refunds, adjustments, and production costs for this period are accounted for." : `Includes sales, Etsy fees, refunds, adjustments, and production costs.${financial?.manualCostCount ? ` ${financial.manualCostCount} order costs were entered by you.` : ""}`,
+      accuracy: profit===null ? (missingCosts > 0
+        ? `Revenue and Etsy fees are exact. The profit is held back until every order's production cost is known - ${missingCosts} ${missingCosts === 1 ? "is" : "are"} missing, usually an order that was not placed through Printify. Enter what ${missingCosts === 1 ? "it" : "they"} cost and the figure completes.`
+        : "Profit is held back until orders, Etsy charges, refunds, adjustments and production costs for this period are all accounted for.") : `Includes sales, Etsy fees, refunds, adjustments, and production costs.${financial?.manualCostCount ? ` ${financial.manualCostCount} order costs were entered by you.` : ""}`,
       coverage: {verified:productionCoverage,estimated:0,unavailable:1-productionCoverage},
       orders: financial?.coverage.receipts ?? 0,
     },

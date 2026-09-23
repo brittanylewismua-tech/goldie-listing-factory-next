@@ -38,7 +38,7 @@ test("product themes remain evidence-backed and expandable", () => {
 });
 
 test("money keeps unknown costs unknown and marks estimates", () => {
-  assert.match(client, /Profit unavailable/);
+  assert.match(client, /Profit not worked out yet/);
   assert.match(client, /data-basis=\{monthBasis\(month\)\}/);
   assert.doesNotMatch(client, /shop-map-basis-chip">Estimate/);
   assert.match(client, /Add production costs/);

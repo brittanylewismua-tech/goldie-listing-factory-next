@@ -83,3 +83,16 @@ test('the live check is on the page above the scan that can refuse', () => {
   assert.ok(client.indexOf('<ListingCheck />') < client.indexOf('scanner-compose'),
     'the half that always answers comes first');
 });
+
+test('a withheld profit names what is withholding it', () => {
+  /* "Profit unavailable" reads as a broken feature. The number is being held
+     back deliberately, because it would otherwise be wrong, and what holds it
+     back is usually one order nobody knows the production cost of. */
+  const route = readFileSync(new URL('../app/api/shop-map/map/route.ts', import.meta.url), 'utf8');
+  assert.match(route, /missingCosts === 1 \? "One order's cost is missing"/);
+  assert.match(route, /Revenue and Etsy fees are exact/);
+  assert.doesNotMatch(route, /headline: profit === null \? "Profit unavailable"/);
+  const client = readFileSync(new URL('../app/shop-map/shop-map-client.tsx', import.meta.url), 'utf8');
+  /* And the listing, not the rule, is what tells two rows apart. */
+  assert.match(client, /<b className="cc-row-title">\{action\.title\}<\/b>/);
+});

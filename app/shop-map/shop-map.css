@@ -165,3 +165,7 @@
   border:1px solid var(--p-line);background:transparent;color:var(--p-ink-soft);
   font-size:13px;font-weight:600;cursor:pointer;justify-self:start;margin-top:4px}
 .shop-map-move button.shop-map-clear-correction:disabled{opacity:.5;cursor:default}
+
+/* D1780 · The listing distinguishes the row; the rule does not. */
+.cc-saved-plan summary .cc-row-title{display:block;font-weight:800}
+.cc-saved-plan summary .cc-row-why{display:block;margin-top:2px;color:var(--suite-muted,#756a72);font-size:12px;font-weight:650}

@@ -48,7 +48,7 @@ test("The route labels profit verified only when the complete financial reader r
 test("Cached estimates and missing labels cannot display profit",()=>{
   const client=readFileSync(new URL("../app/shop-map/shop-map-client.tsx",import.meta.url),"utf8");
   assert.match(client,/return month\?\.label === "verified" \? "verified" : "unavailable"/);
-  assert.match(client,/monthBasis\(month\)==="unavailable"\|\|month\?\.profitMinor == null \? "Profit unavailable"/);
+  assert.match(client,/monthBasis\(month\)==="unavailable"\|\|month\?\.profitMinor == null \? "Profit not worked out yet"/);
 });
 
 test("the fixture matches what the server actually emits, and its arithmetic holds", () => {

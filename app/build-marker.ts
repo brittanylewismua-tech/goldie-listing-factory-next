@@ -259,7 +259,9 @@
 /* D1779 converts every price to USD before taking the winners band. Refusing
    a band unless the whole top fifty shared one currency sounded careful and
    produced, on a real search for "auntie shirt", no price finding at all. */
-export const BUILD_MARKER = "D1779";
+/* D1780 stops Shop Map reporting a deliberately withheld profit as a broken
+   feature, and stops the review panel printing one rule three times. */
+export const BUILD_MARKER = "D1780";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
