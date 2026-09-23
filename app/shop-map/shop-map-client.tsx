@@ -86,8 +86,7 @@ function DesignReach(){
   if(!read||!rows.length)return null;
   return <section className="cc-tool shop-map-reach">
     <h2>Sold, and only on one product</h2>
-    <p className="cc-note">These have already proven themselves. The artwork exists and the
-      market has answered; a second product is an afternoon of work against a settled question.</p>
+
     <ul>{rows.map(row=><li key={row.key}>
       {row.imageUrl?<img src={row.imageUrl} alt="" width={56} height={56} loading="lazy"/>:<span aria-hidden="true"/>}
       <span className="shop-map-reach-copy">
@@ -287,7 +286,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           </article>)}</div> : <div className="shop-map-empty"><b>No sales in the last 90 days.</b>
             <p>Your sold listings will appear here after the next Etsy sales import.</p></div>}
       </section>
-      <section className="cc-tool"><h2>Listings to review</h2><p className="cc-note">Based on imported orders and the last recorded listing details. Confirm the current state on Etsy before making changes.</p>{shown.catalogActions?.length?shown.catalogActions.map(action=><details key={action.listingId} className="cc-saved-plan"><summary>{/* D1780 · The headline led, and the same rule fires for every listing that
+      <section className="cc-tool"><h2>Listings to review</h2>{shown.catalogActions?.length?shown.catalogActions.map(action=><details key={action.listingId} className="cc-saved-plan"><summary>{/* D1780 · The headline led, and the same rule fires for every listing that
     qualifies, so the panel read as one instruction repeated three times with
     different words after the colon. The listing is what distinguishes one row
     from another, so it goes first. */}<b className="cc-row-title">{action.title}</b><span className="cc-row-why">{action.headline}</span></summary><p>{action.evidence}</p><p>{action.nextStep}</p><a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy ↗</a><ActionPlan feature="shopMap" source={`shop-${shown.shop?.shopId}-listing-${action.listingId}`} heading={action.headline} notes={`${action.title}

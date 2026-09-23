@@ -32,8 +32,12 @@ test('the winner profile describes, and never instructs', () => {
      that into advice. */
   const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
   const panel = client.slice(client.indexOf('function WinnerProfile'), client.indexOf('function ListingCard'));
-  assert.match(panel, /Subject matter to weigh, not tags to copy/);
-  assert.doesNotMatch(panel, /you should|make sure|we recommend|best practice|optimi[sz]e/i);
+  /* D1794 · The hedge text went into the code. A tool's interface is not the
+     place to narrate uncertainty: data too weak to state plainly does not
+     ship, and data strong enough is stated as a number. What remains must
+     still never instruct. */
+  assert.doesNotMatch(panel.replace(/\/\*[\s\S]*?\*\//g, ""),
+    /you should|make sure|we recommend|best practice|optimi[sz]e|will sell/i);
   const profile = readFileSync(new URL('../app/keyword-profile.ts', import.meta.url), 'utf8');
   /* Four of fifty is the floor for calling a word recurring; below it a
      "pattern" is two listings from one shop. */
@@ -215,7 +219,7 @@ test('the take-home figure uses the seller\'s own fee settings', () => {
   /* A loss is shown as a loss rather than floored at zero. */
   assert.match(client, /data-negative=\{keep\(cents\)<0\?"yes":undefined\}/);
   /* And nothing is claimed until a cost is entered. */
-  assert.match(client, /Enter what one costs you/);
+  assert.match(client, /this becomes take-home/);
 });
 
 test('an unfiltered price band says it spans every product type', () => {
@@ -224,6 +228,7 @@ test('an unfiltered price band says it spans every product type', () => {
      and confetti, and a shirt priced into that band is priced to lose money.
      The fix is one control away, so the line points at it. */
   const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
-  assert.match(client, /shelf\?"":"\. That is across every product type/);
-  assert.match(client, /pick one above to compare like for like/);
+  /* A caveat that is load-bearing becomes a chip beside the number rather
+     than a clause appended to a sentence. */
+  assert.match(client, /note:shelf\?undefined:"every product type",warn:!shelf/);
 });

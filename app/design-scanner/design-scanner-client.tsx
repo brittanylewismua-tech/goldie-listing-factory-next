@@ -187,22 +187,12 @@ function ListingCheck() {
   const matches = (findings ?? []).filter(finding => finding.kind === "ok");
 
   return <section className="listing-check" aria-label="Check a listing" ref={mine}>
-    <h2 className="utility-heading">Check a listing before you publish it</h2>
-    {/*
-      D1788 · "Search this listing is entering" was jargon, and wrong. A
-      listing does not enter one search - it ranks for its title and all
-      thirteen tags at once. What this actually does is compare the draft
-      against the winners of ONE phrase, so it asks for that phrase in the
-      words a seller would use, and says plainly that it is one at a time.
-    */}
-    <p className="listing-check-lede">Pick one phrase a buyer would type. This finds the fifty
-      most favorited live listings for it and measures your draft against them. Your listing
-      will rank for lots of phrases; check them one at a time.</p>
+    <h2 className="utility-heading">Check a listing</h2>
     <div className="listing-check-form">
       <label>What would a buyer type to find this?
         <input className="p-input" value={phrase} onChange={event => setPhrase(event.target.value)}
           placeholder="auntie shirt" /></label>
-      {mine_.length > 0 && <label>Or load one of your live listings
+      {mine_.length > 0 && <label>Your Etsy listing
         <select className="p-input" value="" onChange={event => {
           const chosen = mine_.find(row => String(row.listingId) === event.target.value);
           if (!chosen) return;
@@ -214,15 +204,15 @@ function ListingCheck() {
             {row.sold90 === 0 ? "0 sold · " : `${row.sold90} sold · `}{row.title.slice(0, 70)}
           </option>)}
         </select></label>}
-      <label>Your title
+      <label>Title
         <input className="p-input" value={title} onChange={event => setTitle(event.target.value)}
           placeholder="Cool Auntie Sweatshirt, Gift for Aunt" /></label>
-      <label>Your tags, comma separated
+      <label>Tags
         <input className="p-input" value={tags} onChange={event => setTags(event.target.value)}
-          placeholder="auntie shirt, aunt gift, cool aunt" /></label>
-      <label>Your price, USD
+          placeholder="auntie shirt, aunt gift" /></label>
+      <label>Price
         <input className="p-input" inputMode="decimal" value={price}
-          onChange={event => setPrice(event.target.value)} placeholder="38" /></label>
+          onChange={event => setPrice(event.target.value)} placeholder="$38" /></label>
       <button className="p-button p-button-primary" disabled={busy || !phrase.trim()}
         onClick={() => void run()}>{busy ? "Checking…" : "Check this listing"}</button>
     </div>
@@ -230,8 +220,7 @@ function ListingCheck() {
     {findings && !findings.length && <p className="empty">Nothing separates this draft from the winners on
       the things that can be measured here.</p>}
     {findings && findings.length > 0 && <p className="listing-check-against">
-      Compared against the fifty most favorited live listings for
-      &ldquo;{against}&rdquo;.</p>}
+      Top 50 for &ldquo;{against}&rdquo;</p>}
     {findings && findings.length > 0 && <div className="listing-check-findings">
       {gaps.map(finding => <article key={finding.key} className="finding finding-gap">
         <b>{finding.label}</b><p>{finding.detail}</p></article>)}
@@ -375,10 +364,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
   return (
     <main className="scanner p-grid">
       <header className="command-page-heading"><h1>Design Scanner</h1>
-      <p className="lede">
-        Check a listing against what is winning its search, and compare your artwork
-        with the listings buyers are responding to.
-      </p></header>
+</header>
 
       <ListingCheck />
 

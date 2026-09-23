@@ -57,14 +57,13 @@ export function checkListing(draft: Draft, profile: Profile): Finding[] {
   if (tags.length < TAG_LIMIT)
     findings.push({
       key: "tag-count", kind: "gap", label: `${TAG_LIMIT - tags.length} tag slots empty`,
-      detail: `Etsy gives every listing ${TAG_LIMIT}. This draft uses ${tags.length}. `
-        + `An empty slot is the only thing on this page that costs nothing to fix.`,
+      detail: `Using ${tags.length} of ${TAG_LIMIT}.`,
     });
   const tooLong = tags.filter(tag => tag.length > 20);
   if (tooLong.length)
     findings.push({
       key: "tag-length", kind: "gap", label: `${tooLong.length} tag${tooLong.length === 1 ? "" : "s"} over 20 characters`,
-      detail: `Etsy caps a tag at 20 characters and will not save a longer one: ${tooLong.slice(0, 3).join(", ")}.`,
+      detail: `Etsy caps tags at 20 characters: ${tooLong.slice(0, 3).join(", ")}.`,
     });
 
   /* ----------------------------------------------------------- the title */
@@ -75,16 +74,13 @@ export function checkListing(draft: Draft, profile: Profile): Finding[] {
   if (missing.length)
     findings.push({
       key: "subjects", kind: "gap",
-      label: `Words the top ${profile.sampleSize} use that this draft does not`,
-      detail: missing.map(subject => `${subject.word} (${subject.winners} of ${profile.sampleSize})`).join(", ")
-        + ". Subject matter to weigh, not words to paste in: a word common among the "
-        + "winners can be telling you about Etsy's ranking rather than about buyers.",
+      label: `Missing words the top ${profile.sampleSize} use`,
+      detail: missing.map(subject => `${subject.word} (${subject.winners})`).join(", "),
     });
   if (draft.title.trim().length < 40)
     findings.push({
       key: "title-short", kind: "gap", label: "Short title",
-      detail: `This one is ${draft.title.trim().length} characters. Etsy allows 140, and the `
-        + `first ${TITLE_FRONT} are what a buyer reads in the results.`,
+      detail: `${draft.title.trim().length} of 140 characters.`,
     });
   else findings.push({
     key: "title-front", kind: "ok", label: "What a buyer reads first",
@@ -103,21 +99,16 @@ export function checkListing(draft: Draft, profile: Profile): Finding[] {
     if (draftUsd < low)
       findings.push({
         key: "price-low", kind: "gap", label: `Priced under the winners`,
-        detail: `Half of the top ${profile.sampleSize} sit between ${money(low)} and ${money(high)}. `
-          + `This draft is ${money(draftUsd)}. Underpricing a print-on-demand listing is how `
-          + `the production cost and the Etsy fee end up taking the whole margin.`,
+        detail: `${money(draftUsd)} against a ${money(low)}–${money(high)} band.`,
       });
     else if (draftUsd > high)
       findings.push({
         key: "price-high", kind: "gap", label: "Priced above the winners",
-        detail: `Half of the top ${profile.sampleSize} sit between ${money(low)} and ${money(high)}. `
-          + `This draft is ${money(draftUsd)}, which is a position worth taking deliberately `
-          + `rather than by accident.`,
+        detail: `${money(draftUsd)} against a ${money(low)}–${money(high)} band.`,
       });
     else findings.push({
       key: "price-ok", kind: "ok", label: "Price sits with the winners",
-      detail: `${money(draftUsd)}, inside the ${money(low)}–${money(high)} band half of the top `
-        + `${profile.sampleSize} occupy.`,
+      detail: `${money(draftUsd)}, inside the ${money(low)}–${money(high)} band.`,
     });
   }
 
@@ -125,8 +116,7 @@ export function checkListing(draft: Draft, profile: Profile): Finding[] {
   if (profile.personalisedShare != null && profile.personalisedShare >= 0.4 && draft.personalizable === false)
     findings.push({
       key: "personalisation", kind: "gap", label: "Most of the winners take a personalisation",
-      detail: `${Math.round(profile.personalisedShare * 100)}% of the top ${profile.sampleSize} let the buyer `
-        + `add a name or a date. This draft does not. It changes what the product is, not just how it is listed.`,
+      detail: `${Math.round(profile.personalisedShare * 100)}% of the top ${profile.sampleSize} do. This does not.`,
     });
 
   return findings;

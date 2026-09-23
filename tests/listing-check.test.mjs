@@ -55,7 +55,8 @@ test('the subject words come from the winners of that search', () => {
   assert.match(subjects.detail, /desert|scottsdale/);
   /* And it is never phrased as an instruction: Etsy ranks its own search on
      titles, so the correlation cannot be separated from the ranking. */
-  assert.match(subjects.detail, /not words to paste in/);
+  /* D1794 · the hedge left the interface; the finding is the words and counts. */
+  assert.match(subjects.detail, /\(\d+\)/);
 });
 
 test('nothing in the check predicts, promises or instructs', () => {
@@ -155,7 +156,8 @@ test('the check asks for the phrase in a seller\'s words', () => {
   const bare = client.replace(/\/\*[\s\S]*?\*\//g, "");
   assert.doesNotMatch(bare, /Search this listing is entering/);
   assert.match(client, /What would a buyer type to find this\?/);
-  assert.match(client, /check them one at a time/);
+  /* D1794 · the explanatory paragraph was cut; the label carries it. */
+  assert.doesNotMatch(bare, /Pick one phrase a buyer would type/);
   /* And the result says which phrase it was measured against, held from the
      run so editing the box cannot relabel a finished result. */
   assert.match(client, /listing-check-against/);

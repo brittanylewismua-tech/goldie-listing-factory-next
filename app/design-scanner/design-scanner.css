@@ -250,7 +250,6 @@
   background:#fff;box-shadow:6px 6px 0 #0a0a0a;
 }
 .listing-check>h2{margin:0 0 6px}
-.listing-check-lede{margin:0 0 16px;color:var(--suite-muted,#756a72);font-size:13px;line-height:1.5;max-width:66ch}
 .listing-check-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:end}
 .listing-check-form label{display:grid;gap:5px;font-size:12px;font-weight:700}
 .listing-check-form .p-input{width:100%}

@@ -291,7 +291,10 @@
    to report: designs that sold and sit on exactly one product. */
 /* D1793 stops the database's word for a product reaching the page: it read
    "only on tee" and "only on phoneCase". */
-export const BUILD_MARKER = "D1793";
+/* D1794 takes the prose out of the interface. A tool is not the place to
+   narrate uncertainty: data too weak to state plainly does not ship, and
+   data strong enough is a number with a two-word label. */
+export const BUILD_MARKER = "D1794";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

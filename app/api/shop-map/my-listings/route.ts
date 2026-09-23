@@ -46,17 +46,20 @@ export const GET = withErrorLog('shop-map-my-listings', async () => {
        the listed price: it is what a buyer agreed to. Refunds are excluded -
        a refunded sale is not a sale. */
     db.prepare(
-      `SELECT listing_id, SUM(quantity) AS units, MAX(sold_at) AS lastAt
+      `SELECT listing_id, SUM(quantity) AS units, MAX(sold_at) AS lastAt,
+              MAX(price_minor) AS priceMinor
          FROM shop_map_listing_sales
         WHERE user_id = ? AND shop_id = ? AND refunded = 0 AND sold_at >= ?
         GROUP BY listing_id`)
       .bind(user.userId, shop.shopId, ninetyDaysAgo)
-      .all<{listing_id: number; units: number; lastAt: number}>()
+      .all<{listing_id: number; units: number; lastAt: number; priceMinor: number}>()
       .catch(() => null),
   ]);
 
-  type SaleRow = {listing_id: number; units: number; lastAt: number};
-  const sold = new Map((sales?.results ?? []).map((row: SaleRow) => [Number(row.listing_id), Number(row.units) || 0]));
+  type SaleRow = {listing_id: number; units: number; lastAt: number; priceMinor: number};
+  const sold = new Map<number, {units: number; priceMinor: number}>(
+    (sales?.results ?? []).map((row: SaleRow) =>
+      [Number(row.listing_id), {units: Number(row.units) || 0, priceMinor: Number(row.priceMinor) || 0}]));
   type ListingRow = {listing_id: number; title: string; tags: string; state: string;
     favorites: number | null; views: number | null; image_url: string; product_family: string};
   const listings = (rows?.results ?? []).map((row: ListingRow) => ({
@@ -68,7 +71,10 @@ export const GET = withErrorLog('shop-map-my-listings', async () => {
     favorites: row.favorites ?? null,
     views: row.views ?? null,
     imageUrl: String(row.image_url ?? ''),
-    sold90: sold.get(Number(row.listing_id)) ?? 0,
+    sold90: sold.get(Number(row.listing_id))?.units ?? 0,
+    /* What a buyer actually paid, which is worth more than a listed price
+       because somebody agreed to it. Absent on anything that has not sold. */
+    lastPriceCents: sold.get(Number(row.listing_id))?.priceMinor || null,
   }));
 
   return NextResponse.json({shop: {shopId: shop.shopId, shopName: shop.shopName}, listings},

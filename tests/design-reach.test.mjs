@@ -52,7 +52,7 @@ test('the scanner loads a live listing instead of asking it to be retyped', () =
      homework, and it meant the check could only run on drafts - never on the
      live listings that are already underperforming, where it is worth most. */
   const client = readFileSync(new URL('../app/design-scanner/design-scanner-client.tsx', import.meta.url), 'utf8');
-  assert.match(client, /Or load one of your live listings/);
+  assert.match(client, /Your Etsy listing/);
   assert.match(client, /fetch\("\/api\/shop-map\/my-listings"\)/);
   /* Worst performers first: favorites with nothing sold is exactly the
      listing worth checking. */

@@ -35,10 +35,8 @@ const TOOLS = (summary: Summary | null) => [
   {
     href: "/market-watch", name: "Market Watch",
     question: "What is actually selling in this search?",
-    what: "Reads up to a thousand live listings for a phrase and ranks them by favorites, "
-      + "views and favorites per day — orderings Etsy will not give anyone — then describes "
-      + "what the top fifty have in common: the price band, the age, how many take a "
-      + "personalisation, and the words that keep recurring in their titles.",
+    what: "Ranks a thousand live listings by favorites, views and favorites per day — "
+      + "sorts Etsy gives nobody — and shows what the top fifty share.",
     stat: summary && `${summary.keywords} keyword${summary.keywords === 1 ? "" : "s"} and `
       + `${summary.shops} shop${summary.shops === 1 ? "" : "s"} followed`,
     icon: icon(<><path d="M3 17l6-6 4 4 7-7" /><path d="M14 8h7v7" /></>),
@@ -46,20 +44,16 @@ const TOOLS = (summary: Summary | null) => [
   {
     href: "/design-scanner", name: "Design Scanner",
     question: "Is this listing ready to publish?",
-    what: "Measures a draft against the fifty most favorited live listings for its search: "
-      + "whether the price sits in their band, which of their recurring words it is missing, "
-      + "how many tag slots are empty, and whether a tag is too long for Etsy to save. "
-      + "Then compares the artwork itself against what buyers are responding to.",
+    what: "Measures your listing against the fifty winning its search: price band, "
+      + "missing words, empty tag slots, personalisation.",
     stat: "Answers in about four seconds",
     icon: icon(<><circle cx="12" cy="12" r="8" /><path d="M4 12h16" /></>),
   },
   {
     href: "/shop-map", name: "Shop Map",
     question: "Which of my designs actually make money?",
-    what: "Your own receipts joined to your own Printify costs and Etsy's own fees — "
-      + "revenue, production, refunds and adjustments to the cent, grouped by the themes "
-      + "you sell into. Etsy does not know what Printify charged you. Printify does not "
-      + "know what Etsy took. This is the only place both are.",
+    what: "Your receipts against your Printify costs and Etsy's fees, to the cent. "
+      + "Plus the designs that sold and sit on only one product.",
     stat: summary && summary.sold90 > 0
       ? `${summary.sold90} units sold in the last 90 days`
       : summary && `${summary.mapped} listings mapped`,
@@ -68,9 +62,8 @@ const TOOLS = (summary: Summary | null) => [
   {
     href: "/trademark", name: "Trademark Tracker",
     question: "Can I legally print this phrase?",
-    what: "Checks a phrase against the federal register before you put it on a garment, "
-      + "and keeps watching the ones you save, because an application filed after you "
-      + "checked is the one that costs you the listing.",
+    what: "Checks a phrase against the federal register, and keeps watching the "
+      + "ones you save.",
     stat: summary && summary.phrases > 0
       ? `${summary.phrases} phrase${summary.phrases === 1 ? "" : "s"} watched`
         + (summary.needReview ? ` · ${summary.needReview} to review` : "")
@@ -93,9 +86,7 @@ export default function CommandCenterClient() {
     <header className="cc-home-head">
       <p className="mini-label">COMMAND CENTER</p>
       <h1>Everything except making the listing.</h1>
-      <p className="cc-home-lede">Four tools that answer four questions, from Etsy&apos;s own
-        data and your own books. The Listing Factory builds the listing; this is how you
-        decide what to build, what to charge, and whether it earned anything.</p>
+
     </header>
 
     <div className="cc-home-grid">

@@ -13,7 +13,6 @@
   margin:0 0 12px;color:var(--suite-ink,#151214);
   font-size:clamp(30px,3.6vw,46px);font-weight:800;letter-spacing:-.035em;line-height:1.04;
 }
-.cc-home-lede{margin:0;color:var(--suite-muted,#756a72);font-size:16px;line-height:1.55}
 
 .cc-home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
 .cc-home-tile{

@@ -130,7 +130,7 @@ export default function MarketWatchClient(
   if(selectedShop)return <main className="mw"><button className="back p-button p-button-quiet" onClick={()=>setSelectedShop(null)}>← Tracked shops</button><ShopCard shop={selectedShop}/></main>;
   if(open)return <NicheDetail view={open} refreshing={Boolean(opening)} onRefresh={()=>void openNiche(open.key)} onBack={()=>{setOpen(null);void loadNiches(true)}}/>;
   return <main className="mw">
-    <header className="mw-intro"><h1>Market Watch</h1><p className="lede">Compare listing photos, prices, favorites, and reviews for the keywords and shops you follow.</p></header>
+    <header className="mw-intro"><h1>Market Watch</h1></header>
     <div className="tabs p-tabs" role="tablist">
       <button className="p-tab" role="tab" aria-selected={tab==="niches"} id="mw-tab-niches" aria-controls="mw-panel" onClick={()=>chooseTab("niches")}>Tracked keywords</button>
       <button className="p-tab" role="tab" aria-selected={tab==="shops"} id="mw-tab-shops" aria-controls="mw-panel" onClick={()=>chooseTab("shops")}>Tracked shops</button>
@@ -166,7 +166,7 @@ export default function MarketWatchClient(
           })()}
 
         </article>)}</div>
-      </WatchList>:<WatchList load={shops} onRetry={()=>void loadShops()} failure="Your tracked shops could not be loaded." empty="Add an Etsy shop to follow its listing activity."><p className="watch-explainer">Choose a shop to see its current listings, buyer feedback, and recent changes. Only shops you track appear here, including your own if you added it.</p><div className="tracked-shop-grid">{shops.data.map(shop=><article className="tracked-shop-card" key={shop.shopId}><p className="mini-label">TRACKED SHOP</p><h2>{shop.shopName}</h2><p>Active listings · Buyer feedback · Shop changes</p><div className="watch-card-actions"><button className="p-button p-button-primary" onClick={()=>setSelectedShop(shop)}>Explore shop</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${shop.shopName}`} disabled={removing===String(shop.shopId)} onClick={()=>void stopWatching("shop",shop.shopId,shop.shopName)}>{removing===String(shop.shopId)?"Removing…":"Stop tracking"}</button></div></article>)}</div></WatchList>}
+      </WatchList>:<WatchList load={shops} onRetry={()=>void loadShops()} failure="Your tracked shops could not be loaded." empty="Add an Etsy shop to follow its listing activity."><div className="tracked-shop-grid">{shops.data.map(shop=><article className="tracked-shop-card" key={shop.shopId}><p className="mini-label">TRACKED SHOP</p><h2>{shop.shopName}</h2><p>Active listings · Buyer feedback · Shop changes</p><div className="watch-card-actions"><button className="p-button p-button-primary" onClick={()=>setSelectedShop(shop)}>Explore shop</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${shop.shopName}`} disabled={removing===String(shop.shopId)} onClick={()=>void stopWatching("shop",shop.shopId,shop.shopName)}>{removing===String(shop.shopId)?"Removing…":"Stop tracking"}</button></div></article>)}</div></WatchList>}
     </div>
   </main>;
 }
@@ -261,7 +261,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const collectionCurrencies=[...new Set(entries.map(entry=>entry.listing.currency))].sort();
   const compared=browseListings(entries.map(entry=>entry.listing),collectionSort,"",collectionCurrency);
   const entryById=new Map(entries.map(entry=>[entry.listing.listingId,entry]));
-  return <main className="mw"><button className="back p-button p-button-quiet" onClick={onBack}>← Tracked keywords</button><header className="mw-detail-head"><p className="mini-label">MARKET WATCH</p><h1>{view.phrase}</h1><p>Sort matching listings by what buyers actually did.</p></header>
+  return <main className="mw"><button className="back p-button p-button-quiet" onClick={onBack}>← Tracked keywords</button><header className="mw-detail-head"><p className="mini-label">MARKET WATCH</p><h1>{view.phrase}</h1></header>
     <div className="tabs p-tabs" role="tablist" aria-label="Keyword research"><button className="p-tab" role="tab" id="keyword-search-tab" aria-controls="keyword-search-panel" aria-selected={section==="search"} onClick={()=>setSection("search")}>Search Etsy</button><button className="p-tab" role="tab" id="keyword-saved-tab" aria-controls="keyword-saved-panel" aria-selected={section==="saved"} onClick={()=>setSection("saved")}>Saved comparisons{collectionLoading?"":` (${entries.length})`}</button></div>
     {collectionError&&<p className="p-notice failed" role="alert">{collectionError} <button className="p-button p-button-quiet" disabled={collectionBusy||collectionLoading} onClick={()=>void loadCollection()}>Reload collection</button></p>}
     {section==="search"&&<section id="keyword-search-panel" role="tabpanel" aria-labelledby="keyword-search-tab">
@@ -342,65 +342,71 @@ function TakeHome({profile}:{profile:Profile}){
   const unit=Number(cost.replace(/[^0-9.]/g,""));
   const keep=(cents:number)=>cents/100-cents/100*percent-fixed-(Number.isFinite(unit)?unit:0);
   const money=(value:number)=>`${value<0?"-":""}$${Math.abs(value).toFixed(2)}`;
-  const points:Array<[string,number]>=[["Low of the band",profile.priceBand.low],
+  const points:Array<[string,number]>=[["Low",profile.priceBand.low],
     ["Middle",profile.priceMedian??Math.round((profile.priceBand.low+profile.priceBand.high)/2)],
-    ["High of the band",profile.priceBand.high]];
+    ["High",profile.priceBand.high]];
+  const ready=cost.trim()&&Number.isFinite(unit);
   return <div className="winner-takehome">
-    <h3>What you would keep at those prices</h3>
-    <label>Your cost for one, including shipping to the buyer
-      <input className="p-input" inputMode="decimal" value={cost} placeholder="12.40"
+    <label>You keep, at a unit cost of
+      <input className="p-input" inputMode="decimal" value={cost} placeholder="$12.40"
         onChange={event=>{setCost(event.target.value);
           try{window.localStorage.setItem("goldie-unit-cost",event.target.value)}catch{/* private mode */}}}/>
     </label>
-    {cost.trim()&&Number.isFinite(unit)?<>
-      <dl>{points.map(([label,cents])=><div key={label}>
-        <dt>{label} · ${(cents/100).toFixed(2)}</dt>
-        <dd data-negative={keep(cents)<0?"yes":undefined}>{money(keep(cents))}</dd></div>)}</dl>
-      <p>After Etsy at {(percent*100).toFixed(1)}% plus ${fixed.toFixed(2)} in fixed fees, which are your
-        own saved settings. Change them in the Listing Factory&apos;s pricing.</p>
-    </>:<p>Enter what one costs you and this becomes your take-home at the market&apos;s prices.</p>}
+    {ready?<dl>{points.map(([label,cents])=><div key={label}>
+      <dt>{label} · ${(cents/100).toFixed(2)}</dt>
+      <dd data-negative={keep(cents)<0?"yes":undefined}>{money(keep(cents))}</dd></div>)}</dl>
+      :<p>Your cost per unit, and this becomes take-home.</p>}
   </div>;
 }
 
 function WinnerProfile({profile,shelf}:{profile:Profile;shelf:string}){
+  /*
+    NUMBERS LEAD. THE EXPLANATION LIVES HERE, NOT ON THE PAGE.
+
+    This panel used to be five full sentences and a two-line disclaimer -
+    "Half of them sit between $14 and $27, against $24 across everything
+    scanned", "The middle one was first listed 24 months ago". Every word was
+    true and the result was a wall a seller had to read end to end before
+    knowing anything, with nothing for the eye to land on.
+
+    A figure and a two-word label says the same thing in a glance. Where a
+    caveat is genuinely load-bearing - a band taken across every product type
+    is a band across different businesses - it is a chip beside the number
+    rather than a clause appended to a sentence.
+  */
   const money=(cents:number)=>`$${(cents/100).toFixed(0)}`;
   const share=(value:number)=>`${Math.round(value*100)}%`;
-  const months=(days:number)=>days>=60?`${Math.round(days/30)} months`:`${days} days`;
-  const facts:Array<[string,string]>=[];
+  const months=(days:number)=>days>=60?`${Math.round(days/30)} mo`:`${days} d`;
+  type Stat={label:string;value:string;note?:string;warn?:boolean};
+  const stats:Stat[]=[];
   if(profile.currency==="USD"&&profile.priceBand)
-    facts.push(["Price","Half of them sit between "+money(profile.priceBand.low)+" and "+money(profile.priceBand.high)
-      +(profile.fieldPriceMedian!=null&&profile.priceMedian!=null
-        ?`, against ${money(profile.fieldPriceMedian)} across everything scanned`:"")
-      /*
-        A band taken across every product type is a band across different
-        businesses. Measured on "bachelorette": four dollars to twenty-five,
-        because the scan is full of temporary tattoos and confetti, and a
-        shirt priced into it is a shirt priced to lose money. The fix is one
-        control away, so the line points at it rather than apologising.
-      */
-      +(shelf?"":". That is across every product type — pick one above to compare like for like")]);
+    stats.push({label:"Price",value:`${money(profile.priceBand.low)}–${money(profile.priceBand.high)}`,
+      note:shelf?undefined:"every product type",warn:!shelf});
   if(profile.ageMedianDays!=null)
-    facts.push(["Age","The middle one was first listed "+months(profile.ageMedianDays)+" ago"]);
+    stats.push({label:"Median age",value:months(profile.ageMedianDays)});
   if(profile.personalisedShare!=null)
-    facts.push(["Personalised",share(profile.personalisedShare)+" of them take a personalisation from the buyer"]);
+    stats.push({label:"Personalised",value:share(profile.personalisedShare)});
   if(profile.provenShopShare!=null)
-    facts.push(["Behind them",share(profile.provenShopShare)+" come from shops with 1,000 or more lifetime sales"]);
+    stats.push({label:"From proven shops",value:share(profile.provenShopShare),note:"1,000+ lifetime sales"});
   if(profile.blanks.length)
-    facts.push(["Printed on",profile.blanks.map(blank=>`${blank.label} (${blank.winners})`).join(", ")
-      +` of the top ${profile.sampleSize}, named on the listing`]);
-  if(!facts.length&&!profile.subjects.length)return null;
+    stats.push({label:"Printed on",value:profile.blanks[0].label,
+      note:`${profile.blanks[0].winners} of ${profile.sampleSize}`
+        +(profile.blanks.length>1?`, then ${profile.blanks[1].label}`:"")});
+  if(!stats.length&&!profile.subjects.length)return null;
   return <section className="winner-profile">
     <h2>What the top {profile.sampleSize} have in common</h2>
-    {facts.length>0&&<dl className="winner-profile-facts">
-      {facts.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+    {stats.length>0&&<dl className="winner-stats">
+      {stats.map(stat=><div key={stat.label}>
+        <dt>{stat.label}</dt>
+        <dd>{stat.value}</dd>
+        {stat.note&&<span className={stat.warn?"winner-stat-note warn":"winner-stat-note"}>{stat.note}</span>}
+      </div>)}
     </dl>}
     <TakeHome profile={profile}/>
     {profile.subjects.length>0&&<div className="winner-profile-subjects">
-      <h3>Words that keep coming up in their titles</h3>
-      <p className="winner-profile-note">Subject matter to weigh, not tags to copy. Etsy ranks
-        search partly on titles, so a word can be telling you about Etsy rather than about buyers.</p>
+      <h3>Words in their titles</h3>
       <ul>{profile.subjects.map(entry=><li key={entry.word}>
-        <b>{entry.word}</b><span>{entry.winners} of the top {profile.sampleSize}</span></li>)}</ul>
+        <b>{entry.word}</b><span>{entry.winners}</span></li>)}</ul>
     </div>}
   </section>;
 }

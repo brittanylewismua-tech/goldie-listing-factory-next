@@ -66,7 +66,6 @@
 .app-shell.command-workspace .tracked-shop-grid {gap:20px}
 .app-shell.command-workspace .tracked-shop-card {padding:24px;border-color:var(--work-line);border-radius:10px}
 .app-shell.command-workspace .tracked-shop-card h2 {font-size:22px!important}
-.app-shell.command-workspace :is(.tracked-shop-card>p,.watch-explainer,.watch-limit,.keyword-stale) {font-size:14px!important;line-height:1.55}
 .app-shell.command-workspace .mw .back {margin:0 0 18px;min-height:36px;padding:6px 12px;font-size:13px!important}
 .app-shell.command-workspace .mw .shop-detail-tabs {margin:0 0 20px}
 .app-shell.command-workspace .mw .market-browser-controls {margin:0 0 12px;padding:16px;gap:16px;border-color:var(--work-line);border-radius:10px}

@@ -312,27 +312,35 @@
 .watch-remove:disabled{cursor:not-allowed;opacity:.55;text-decoration:none}
 .tracked-shop-card .watch-card-actions{margin-top:12px}
 
-/* D1777 · What the winners have in common, stated as description. */
+/* ============================================================================
+ * D1794 · NUMBERS LEAD. THE PROSE WENT INTO THE CODE.
+ *
+ * This panel was five full sentences and a two-line disclaimer. Every word was
+ * true and a seller had to read all of it before knowing anything, with
+ * nothing for the eye to land on. A figure at 28px over a two-word label says
+ * the same thing in a glance.
+ * ==========================================================================*/
 .winner-profile{
-  margin:0 0 18px;padding:20px 22px;border:2px solid #0a0a0a;border-radius:16px;
+  margin:0 0 18px;padding:22px;border:2px solid #0a0a0a;border-radius:16px;
   background:#fff;box-shadow:6px 6px 0 #0a0a0a;
 }
-.winner-profile>h2{margin:0 0 14px;font-size:18px;font-weight:800;letter-spacing:-.02em}
-.winner-profile-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:0 0 16px}
-.winner-profile-facts div{display:grid;gap:3px}
-.winner-profile-facts dt{color:var(--suite-pink-deep,#d90c89);font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
-.winner-profile-facts dd{margin:0;font-size:14px;line-height:1.45}
-.winner-profile-subjects{padding-top:14px;border-top:1px solid var(--suite-line,#e5d8e0)}
-.winner-profile-subjects h3{margin:0 0 6px;font-size:14px;font-weight:800}
-.winner-profile-note{margin:0 0 12px;color:var(--suite-muted,#756a72);font-size:12px;line-height:1.5;max-width:64ch}
+.winner-profile>h2{margin:0 0 16px;font-size:16px;font-weight:800;letter-spacing:-.01em}
+.winner-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:20px;margin:0}
+.winner-stats div{display:grid;gap:2px;align-content:start}
+.winner-stats dt{color:var(--suite-muted,#756a72);font-size:12px;font-weight:700}
+.winner-stats dd{margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.winner-stat-note{color:var(--suite-muted,#756a72);font-size:12px}
+.winner-stat-note.warn{color:var(--suite-pink-deep,#d90c89);font-weight:700}
+.winner-profile-subjects{margin-top:20px;padding-top:16px;border-top:1px solid var(--suite-line,#e5d8e0)}
+.winner-profile-subjects h3{margin:0 0 10px;font-size:13px;font-weight:800}
 .winner-profile-subjects ul{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
 .winner-profile-subjects li{
-  display:flex;align-items:baseline;gap:7px;padding:8px 12px;
+  display:flex;align-items:baseline;gap:6px;padding:7px 11px;
   border:1px solid var(--suite-line,#e5d8e0);border-radius:10px;background:var(--suite-pink-wash,#fff3fa);
 }
 .winner-profile-subjects li b{font-size:14px;font-weight:800}
 .winner-profile-subjects li span{color:var(--suite-muted,#756a72);font-size:12px}
-@media (max-width:860px){.winner-profile{padding:16px}}
+@media (max-width:860px){.winner-profile{padding:16px}.winner-stats dd{font-size:24px}}
 
 /* D1778 · A counted sale is the one number here nobody else has. It is
    allowed to look different from the estimates around it. */
@@ -357,6 +365,21 @@
   .listing-skeleton>span,.listing-skeleton i{animation:listing-skeleton-pulse 1.4s ease-in-out infinite}
   @keyframes listing-skeleton-pulse{0%,100%{opacity:1}50%{opacity:.55}}
 }
+
+/* D1789 · Product type sits with the search that it narrows. */
+.market-shelf{display:grid;gap:5px;font-size:12px;font-weight:700}
+.market-shelf select{min-height:42px;padding:0 10px;border:1px solid var(--suite-line,#e5d8e0);border-radius:8px;background:#fff;font:inherit}
+
+/* D1794 · Take-home, compact: a label, an input, three figures. */
+.winner-takehome{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap;margin:20px 0 0;padding-top:16px;border-top:1px solid var(--suite-line,#e5d8e0)}
+.winner-takehome label{display:grid;gap:5px;font-size:12px;font-weight:700;color:var(--suite-muted,#756a72)}
+.winner-takehome input{width:120px;min-height:40px;padding:0 10px;border:1px solid var(--suite-line,#e5d8e0);border-radius:8px;background:#fff;font:700 15px/1 inherit}
+.winner-takehome dl{display:flex;gap:22px;flex-wrap:wrap;margin:0}
+.winner-takehome dl div{display:grid;gap:2px}
+.winner-takehome dt{color:var(--suite-muted,#756a72);font-size:12px;font-weight:700}
+.winner-takehome dd{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.winner-takehome dd[data-negative="yes"]{color:#a4243d}
+.winner-takehome>p{margin:0 0 8px;color:var(--suite-muted,#756a72);font-size:12px}
 
 /* D1789 · Product type sits with the search that it narrows. */
 .market-shelf{display:grid;gap:5px;font-size:12px;font-weight:700}
