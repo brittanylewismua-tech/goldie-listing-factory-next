@@ -286,7 +286,10 @@
    band into what the member would actually keep at those prices. */
 /* D1791 says when a price band is taken across every product type, because
    that is a band across different businesses. */
-export const BUILD_MARKER = "D1791";
+/* D1792 stops the Design Scanner asking a member to retype their own
+   listing, and gives Shop Map something to do rather than only something
+   to report: designs that sold and sit on exactly one product. */
+export const BUILD_MARKER = "D1792";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

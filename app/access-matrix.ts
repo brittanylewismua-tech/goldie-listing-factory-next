@@ -112,6 +112,7 @@ export const ACCESS: Record<string, Rule> = {
   "/api/design-scanner/listing-check": { kind: "feature", feature: "designScanner" },
   "/api/command-center/summary": { kind: "feature", feature: "marketWatch" },
   "/api/market-watch/shelves": { kind: "feature", feature: "marketWatch" },
+  "/api/shop-map/my-listings": { kind: "feature", feature: "shopMap" },
   "/api/unlocks": { kind: "feature", feature: "listingFactory" },
   "/api/drop": { kind: "feature", feature: "listingFactory" },
 

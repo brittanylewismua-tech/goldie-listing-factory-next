@@ -119,6 +119,26 @@ function ListingCheck() {
   const [price, setPrice] = useState("");
   const [findings, setFindings] = useState<Finding[] | null>(null);
   /*
+    D1792 · TYPING YOUR OWN LISTING BACK INTO THE SOFTWARE THAT FETCHED IT.
+
+    This asked a member to key in their own title, tags and price to have them
+    checked - data this product already holds, about a listing it already
+    imported from their shop. That is homework, and it also meant the check
+    could only ever be run on drafts, never on the live listings that are
+    already underperforming, which is where it is worth the most.
+  */
+  const [mine_, setMine_] = useState<Array<{listingId:number;title:string;tags:string[];sold90:number;favorites:number|null}>>([]);
+  useEffect(() => {
+    void fetch("/api/shop-map/my-listings")
+      .then(response => response.ok ? response.json() as Promise<{listings?: Array<{listingId:number;title:string;tags:string[];state:string;sold90:number;favorites:number|null}>}> : null)
+      .then(body => setMine_((body?.listings ?? []).filter(row => row.state === "active")
+        /* The ones that have earned the least attention come first: favorites
+           with nothing sold is exactly the listing worth checking. */
+        .sort((a, b) => (a.sold90 - b.sold90) || ((b.favorites ?? 0) - (a.favorites ?? 0)))
+        .slice(0, 200)))
+      .catch(() => undefined);
+  }, []);
+  /*
     D1785 · The artwork scan below refuses when nobody has watched a keyword
     long enough to build a cohort from it. Pointing at this panel in prose and
     leaving the member to retype what they had already chosen is a dead end
@@ -182,6 +202,18 @@ function ListingCheck() {
       <label>What would a buyer type to find this?
         <input className="p-input" value={phrase} onChange={event => setPhrase(event.target.value)}
           placeholder="auntie shirt" /></label>
+      {mine_.length > 0 && <label>Or load one of your live listings
+        <select className="p-input" value="" onChange={event => {
+          const chosen = mine_.find(row => String(row.listingId) === event.target.value);
+          if (!chosen) return;
+          setTitle(chosen.title);
+          setTags(chosen.tags.join(", "));
+        }}>
+          <option value="">Choose a listing…</option>
+          {mine_.map(row => <option key={row.listingId} value={row.listingId}>
+            {row.sold90 === 0 ? "0 sold · " : `${row.sold90} sold · `}{row.title.slice(0, 70)}
+          </option>)}
+        </select></label>}
       <label>Your title
         <input className="p-input" value={title} onChange={event => setTitle(event.target.value)}
           placeholder="Cool Auntie Sweatshirt, Gift for Aunt" /></label>

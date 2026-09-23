@@ -1,6 +1,7 @@
 "use client";
 import {browseOwnListings} from "@/app/market-listing-browser";
 import ActionPlan from "@/app/command-center/action-plan";
+import {designsOnOneProduct,type Reach,type ReachListing} from "@/app/design-reach";
 import type {CatalogAction} from "@/app/shop-map-actions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { monthName } from "@/app/shop-map-month";
@@ -64,6 +65,40 @@ function monthBasis(month: { label?: string;
 
 const money = (minor: number | null | undefined,currency="USD") =>
   minor === null || minor === undefined ? "—" : new Intl.NumberFormat(undefined,{style:"currency",currency}).format(minor/100);
+
+
+/*
+  D1792 · SOLD, AND ON ONLY ONE PRODUCT.
+
+  Shop Map could say what sold and never what to do about it, which is the
+  difference between a report and a tool. A design that has already proven
+  itself on one blank is the clearest revenue action a print-on-demand seller
+  has: the artwork is drawn, the market has answered, and the second product
+  is an afternoon against a question that is already settled.
+*/
+function DesignReach(){
+  const [rows,setRows]=useState<Reach[]>([]);
+  const [read,setRead]=useState(false);
+  useEffect(()=>{void fetch("/api/shop-map/my-listings")
+    .then(response=>response.ok?response.json() as Promise<{listings?:ReachListing[]}>:null)
+    .then(body=>{setRows(designsOnOneProduct(body?.listings??[]).slice(0,8));setRead(true)})
+    .catch(()=>setRead(true))},[]);
+  if(!read||!rows.length)return null;
+  return <section className="cc-tool shop-map-reach">
+    <h2>Sold, and only on one product</h2>
+    <p className="cc-note">These have already proven themselves. The artwork exists and the
+      market has answered; a second product is an afternoon of work against a settled question.</p>
+    <ul>{rows.map(row=><li key={row.key}>
+      {row.imageUrl?<img src={row.imageUrl} alt="" width={56} height={56} loading="lazy"/>:<span aria-hidden="true"/>}
+      <span className="shop-map-reach-copy">
+        <b>{row.title}</b>
+        <small>{row.sold90} sold in 90 days · only on {row.families[0]}</small>
+      </span>
+      <a href={`https://www.etsy.com/listing/${row.listingId}`} target="_blank" rel="noopener noreferrer">
+        See it on Etsy ↗</a>
+    </li>)}</ul>
+  </section>;
+}
 
 export default function ShopMapClient({ signedInEmail }: { signedInEmail?: string }) {
   const [map, setMap] = useState<ShopMap | null>(null);
@@ -237,6 +272,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     </nav>
 
     {tab === "overview" && <div className="shop-map-tab-panel">
+      <DesignReach/>
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
           <h2>Top 3 listings in the last 90 days</h2></div>

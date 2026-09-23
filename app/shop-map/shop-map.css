@@ -169,3 +169,14 @@
 /* D1780 · The listing distinguishes the row; the rule does not. */
 .cc-saved-plan summary .cc-row-title{display:block;font-weight:800}
 .cc-saved-plan summary .cc-row-why{display:block;margin-top:2px;color:var(--suite-muted,#756a72);font-size:12px;font-weight:650}
+
+/* D1792 · Sold, and on only one product. */
+.shop-map-reach ul{display:grid;gap:10px;margin:14px 0 0;padding:0;list-style:none}
+.shop-map-reach li{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--suite-line,#e5d8e0);border-radius:12px}
+.shop-map-reach img{border-radius:8px;object-fit:cover}
+.shop-map-reach li>span[aria-hidden]{width:56px;height:56px;flex:0 0 56px;border-radius:8px;background:#f1e9ee}
+.shop-map-reach-copy{display:grid;gap:3px;flex:1 1 auto;min-width:0}
+.shop-map-reach-copy b{font-size:14px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shop-map-reach-copy small{color:var(--suite-muted,#756a72);font-size:12px}
+.shop-map-reach a{flex:0 0 auto;color:var(--suite-pink-deep,#d90c89);font-size:12px;font-weight:800;text-decoration:none}
+.shop-map-reach a:hover{text-decoration:underline;text-underline-offset:3px}
