@@ -314,7 +314,10 @@
    Shop Map against 34 everywhere else, and six paragraphs over 820px. */
 /* D1803 removes Arial from the product. The Trademark h1 was rendering it,
    from suite-redesign, and seven sheets carried the same fallback. */
-export const BUILD_MARKER = "D1803";
+/* D1804 · buttons are excluded from the inherit rule. Many sit on a dark
+   fill, and inheriting the page ink made the Trademark Review control a
+   black rectangle with nothing in it. */
+export const BUILD_MARKER = "D1804";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

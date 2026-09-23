@@ -64,7 +64,11 @@
   it.
 */
 .app-shell.command-workspace .factory-work{color:var(--cc-ink)}
-.app-shell.command-workspace .factory-work *:not(svg):not(path){color:inherit!important}
+/* Buttons are excluded: many sit on a dark fill and inheriting the page's ink
+   makes their label invisible. Measured on Trademark - the Review control
+   rendered as a black rectangle with nothing in it. Their colours are set by
+   the button rules below instead. */
+.app-shell.command-workspace .factory-work *:not(svg):not(path):not(button):not(.p-button){color:inherit!important}
 .app-shell.command-workspace .factory-work :is(p,small,dt,figcaption,.cc-note,.lede,.cc-row-why,.shop-map-check-against){
   color:var(--cc-muted)!important;
 }
@@ -136,10 +140,10 @@
   min-height:42px;padding:0 18px;border-radius:var(--cc-radius-sm)!important;
   font-size:14px!important;font-weight:800!important;letter-spacing:0!important;box-shadow:none!important;cursor:pointer;
 }
-.app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"]){
+.app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.tm-watch-list button:not(.quiet),.tm-watch-button){
   border:1px solid var(--cc-edge)!important;background:var(--cc-edge)!important;color:#fff!important;
 }
-.app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"]):hover:not(:disabled){
+.app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.tm-watch-list button:not(.quiet),.tm-watch-button):hover:not(:disabled){
   background:#2f2a2f!important;
 }
 .app-shell.command-workspace .factory-work .p-button-quiet{
