@@ -250,7 +250,10 @@
 /* D1776 adds an owner-only measurement: do listings buyers favorite wear
    different tags than the ones they ignore? The rebuilt Command Center
    would rest on that, so it is tested before it is designed on. */
-export const BUILD_MARKER = "D1776";
+/* D1777 describes the top fifty of a keyword scan - what they charge, how
+   old they are, how many take personalisation, what is behind them, and the
+   words that keep recurring in their titles - as description, never advice. */
+export const BUILD_MARKER = "D1777";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

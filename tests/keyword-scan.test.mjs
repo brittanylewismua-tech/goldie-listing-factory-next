@@ -25,6 +25,25 @@ test('a small keyword is covered completely, a huge one is capped', () => {
   assert.equal(pagesToScan(null), 1);
 });
 
+test('the winner profile describes, and never instructs', () => {
+  /* Etsy ranks its own search partly on titles, so a word common among the
+     winners can be a fact about Etsy rather than about buyers. The panel is
+     allowed to say what fifty listings look like and is not allowed to turn
+     that into advice. */
+  const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
+  const panel = client.slice(client.indexOf('function WinnerProfile'), client.indexOf('function ListingCard'));
+  assert.match(panel, /Subject matter to weigh, not tags to copy/);
+  assert.doesNotMatch(panel, /you should|make sure|we recommend|best practice|optimi[sz]e/i);
+  const profile = readFileSync(new URL('../app/keyword-profile.ts', import.meta.url), 'utf8');
+  /* Four of fifty is the floor for calling a word recurring; below it a
+     "pattern" is two listings from one shop. */
+  assert.match(profile, /entry\.winners >= 4/);
+  /* A band, not a min and a max: one listing at $4 must not widen it. */
+  assert.match(profile, /sorted\[Math\.floor\(sorted\.length \* 0\.25\)\]/);
+  /* Mixing a peso into a dollar band is wrong in a way nobody catches by eye. */
+  assert.match(profile, /currencies\.length === 1 \? currencies\[0\] : null/);
+});
+
 test('the results never say how much of the pool they hold', () => {
   /* The page printed "24 of 209 Etsy matches shown", and after the rebuild a
      politer version of the same thing. Both tell a seller only that they are
@@ -39,7 +58,7 @@ test('the results never say how much of the pool they hold', () => {
   assert.doesNotMatch(detail, /coverage/i);
   assert.doesNotMatch(route, /coverage:|complete:|scanned:/,
     'the endpoint does not hand the page a sentence about its own coverage');
-  assert.match(route, /listings,total:first\.total,photosUnavailable/);
+  assert.match(route, /listings,profile,total:first\.total,photosUnavailable/);
   for (const phrase of ['most relevant of', 'covered completely', 'Ranked every one'])
     assert.doesNotMatch(client, new RegExp(phrase));
 });

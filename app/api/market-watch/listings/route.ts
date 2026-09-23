@@ -7,6 +7,7 @@ import {etsyApiCredential,recordEtsyCall,waitForEtsyCapacity} from '@/app/api/et
 import {listingDisplay,listingPhoto,listingPrice,type EtsyDisplayListing} from '@/app/etsy-listing-display';
 import {decodeEntities} from '@/app/shop-map-worlds';
 import {scanParams,pagesToScan,rankScan,SCAN_PAGE,ORDERS,type KeywordOrder} from '@/app/keyword-scan';
+import {profileWinners} from '@/app/keyword-profile';
 
 /** One page of Etsy search. Throws with a sentence a member can act on. */
 async function searchPage(phrase:string,offset:number,query:string){
@@ -74,6 +75,13 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
       listedAt:row.creation_timestamp??row.created_timestamp??null,
       ageDays:row.original_creation_timestamp?Math.max(0,Math.floor((now-row.original_creation_timestamp)/86400)):null,
       imageUrl:listingPhoto(row),reviewsOnThisListing:null,displayFresh:true,intervals:0,
+      /* Tags ride along on the search response for every scanned listing, so
+         these cost nothing. They are not shown as a ranking - they describe
+         what the listings at the top of one are. */
+      tags:(row.tags??[]).map(tag=>String(tag)),
+      isPersonalizable:typeof row.is_personalizable==='boolean'?row.is_personalizable:null,
+      materials:(row.materials??[]).map(material=>String(material)),
+      shopSold:null as number|null,
     }));
     const ranked=rankScan(scanned,order);
     /*
@@ -88,8 +96,18 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
     const photos=await listingDisplay(ranked.slice(0,SCAN_PAGE).map(row=>row.listingId),'search').catch(()=>null);
     const listings=photos?ranked.map(row=>{
       const detail=photos.get(row.listingId);
-      return detail?{...row,imageUrl:listingPhoto(detail)||row.imageUrl,title:detail.title??row.title}:row;
+      if(!detail)return row;
+      return {...row,imageUrl:listingPhoto(detail)||row.imageUrl,title:detail.title??row.title,
+        tags:detail.tags?.map(tag=>String(tag))??row.tags,
+        isPersonalizable:typeof detail.is_personalizable==='boolean'?detail.is_personalizable:row.isPersonalizable,
+        materials:detail.materials?.map(material=>String(material))??row.materials,
+        /* Lifetime sales of the shop behind the listing. It arrives with the
+           photo call, on includes=Shop, and was being thrown away. It is the
+           difference between a listing that did well and a shop that does. */
+        shopSold:typeof detail.shop?.transaction_sold_count==='number'?detail.shop.transaction_sold_count:row.shopSold};
     }):ranked;
+    /* The head of the ranking, described against everything scanned. */
+    const profile=profileWinners(listings.slice(0,50),listings);
     /*
       THE SIZE OF THE POOL IS NOT THE MEMBER'S PROBLEM.
 
@@ -104,7 +122,7 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
       count derived from it reaches the keyword results.
     */
     return NextResponse.json({
-      listings,total:first.total,photosUnavailable:!photos,asOf:now,
+      listings,profile,total:first.total,photosUnavailable:!photos,asOf:now,
     },{headers:{'Cache-Control':'private, no-store'}});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:'Etsy search could not load. Please try again.'},{status:502});}
 });

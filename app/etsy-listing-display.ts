@@ -6,7 +6,8 @@ export type EtsyDisplayListing = {
   price?: { amount?: number; divisor?: number; currency_code?: string };
   num_favorers?: number; views?: number; original_creation_timestamp?: number; creation_timestamp?: number; created_timestamp?: number;
   images?: Array<{ rank?: number; url_570xN?: string; url_fullxfull?: string; url_300x300?: string }>;
-  shop?: { shop_name?: string; icon_url_fullxfull?: string };
+  shop?: { shop_name?: string; icon_url_fullxfull?: string; transaction_sold_count?: number; listing_active_count?: number; review_count?: number; review_average?: number };
+  is_personalizable?: boolean; materials?: string[];
 };
 
 /** Search responses do not embed images. Hydrate a bounded page through Etsy's

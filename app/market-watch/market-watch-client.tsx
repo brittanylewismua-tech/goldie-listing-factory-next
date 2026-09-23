@@ -16,6 +16,13 @@ type Listing = {
   sold7?: number; sold30?: number; priceCents: number | null; currency: string;
   favorites: number | null; views: number | null; ageDays: number | null;
   reviewsOnThisListing: number|null; displayFresh: boolean;
+  tags?: string[]; isPersonalizable?: boolean|null; materials?: string[]; shopSold?: number|null;
+};
+type Profile = {
+  sampleSize:number; currency:string|null;
+  priceBand:{low:number;high:number}|null; priceMedian:number|null; fieldPriceMedian:number|null;
+  ageMedianDays:number|null; personalisedShare:number|null; provenShopShare:number|null;
+  subjects:Array<{word:string;winners:number;field:number}>;
 };
 type NicheView = { key: string; phrase: string; stale?: boolean; gathering?: boolean;
   summary?: { moving: number; repeated: number; newSinceLastBrief: number; shops: number };
@@ -180,6 +187,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const [search,setSearch]=useState("");
   const [rows,setRows]=useState<Listing[]>([]);
   const [total,setTotal]=useState<number|null>(null);
+  const [profile,setProfile]=useState<Profile|null>(null);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const active=useRef<AbortController|null>(null);
@@ -195,14 +203,14 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const load=useCallback(async()=>{
     active.current?.abort();
     const controller=new AbortController();active.current=controller;
-    setLoading(true);setError("");setRows([]);setTotal(null);setShown(60);
+    setLoading(true);setError("");setRows([]);setTotal(null);setProfile(null);setShown(60);
     try{
       const params=new URLSearchParams({key:view.key,sort:"favorites",query:search});
       const response=await fetch(`/api/market-watch/listings?${params}`,{signal:controller.signal});
-      const body=await response.json() as {listings?:Listing[];total?:number|null;error?:string};
+      const body=await response.json() as {listings?:Listing[];profile?:Profile;total?:number|null;error?:string};
       if(!response.ok)throw new Error(body.error||"Etsy search could not load.");
       if(controller.signal.aborted)return;
-      setRows(body.listings??[]);setTotal(body.total??null);
+      setRows(body.listings??[]);setTotal(body.total??null);setProfile(body.profile??null);
     }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:"Etsy search could not load.");}
     finally{if(active.current===controller){active.current=null;setLoading(false);}}
   },[view.key,search]);
@@ -222,6 +230,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
       {(query||search)&&<button type="button" className="p-button p-button-quiet" onClick={()=>{setQuery("");setSearch("")}}>Clear search</button>}
     </form>
     <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Searching Etsy for “${view.phrase}”…`:""}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Refresh listings</button></div>
+    {profile&&<WinnerProfile profile={profile}/>}
     <div className="market-results-sort"><label>Sort by<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}><option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="momentum">Favorites per day listed</option><option value="newest">Recently listed / renewed</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label></div>
     {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Try again</button></p>}
     {!loading&&!error&&!listings.length&&<p className="empty">No Etsy listings match this search.</p>}
@@ -238,6 +247,47 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
       </>}
     </section>}
   </main>;
+}
+
+
+/*
+  WHAT THE TOP FIFTY LOOK LIKE.
+
+  Every sentence is a description of fifty listings. None of them says "do
+  this", because nothing in this data supports that: Etsy ranks its own search
+  partly on titles, so a word common among the winners may be a fact about
+  Etsy rather than about buyers. It is offered as subject matter to weigh, and
+  the heading says so rather than leaving the reader to assume otherwise.
+*/
+function WinnerProfile({profile}:{profile:Profile}){
+  const money=(cents:number)=>`$${(cents/100).toFixed(0)}`;
+  const share=(value:number)=>`${Math.round(value*100)}%`;
+  const months=(days:number)=>days>=60?`${Math.round(days/30)} months`:`${days} days`;
+  const facts:Array<[string,string]>=[];
+  if(profile.currency==="USD"&&profile.priceBand)
+    facts.push(["Price","Half of them sit between "+money(profile.priceBand.low)+" and "+money(profile.priceBand.high)
+      +(profile.fieldPriceMedian!=null&&profile.priceMedian!=null
+        ?`, against ${money(profile.fieldPriceMedian)} across everything scanned`:"")]);
+  if(profile.ageMedianDays!=null)
+    facts.push(["Age","The middle one was first listed "+months(profile.ageMedianDays)+" ago"]);
+  if(profile.personalisedShare!=null)
+    facts.push(["Personalised",share(profile.personalisedShare)+" of them take a personalisation from the buyer"]);
+  if(profile.provenShopShare!=null)
+    facts.push(["Behind them",share(profile.provenShopShare)+" come from shops with 1,000 or more lifetime sales"]);
+  if(!facts.length&&!profile.subjects.length)return null;
+  return <section className="winner-profile">
+    <h2>What the top {profile.sampleSize} have in common</h2>
+    {facts.length>0&&<dl className="winner-profile-facts">
+      {facts.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+    </dl>}
+    {profile.subjects.length>0&&<div className="winner-profile-subjects">
+      <h3>Words that keep coming up in their titles</h3>
+      <p className="winner-profile-note">Subject matter to weigh, not tags to copy. Etsy ranks
+        search partly on titles, so a word can be telling you about Etsy rather than about buyers.</p>
+      <ul>{profile.subjects.map(entry=><li key={entry.word}>
+        <b>{entry.word}</b><span>{entry.winners} of the top {profile.sampleSize}</span></li>)}</ul>
+    </div>}
+  </section>;
 }
 
 function ListingCard({listing,action,extra}:{listing:Listing;action?:ReactNode;extra?:ReactNode}){return <article className="card">
