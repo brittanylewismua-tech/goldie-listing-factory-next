@@ -3,7 +3,7 @@
 import ActionPlan from "@/app/command-center/action-plan";
 import OfferPlanner from "@/app/command-center/offer-planner";
 import {competitorChanges,type CollectionEntry} from "@/app/market-collection";
-import type {KeywordOrder} from "@/app/keyword-search";
+import {rankScan,type KeywordOrder} from "@/app/keyword-scan";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import {browseListings,type ListingOrder} from "@/app/market-listing-browser";
@@ -119,7 +119,10 @@ function WatchList({load,onRetry,failure,empty,children}:{load:{status:"loading"
 }
 
 function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=>void;refreshing:boolean}){
-  const [sort,setSort]=useState<KeywordOrder>("relevance");
+  /* Favorites first. It is the ordering Etsy will not give anyone, which is
+     the reason to be on this page instead of etsy.com. */
+  const [sort,setSort]=useState<KeywordOrder>("favorites");
+  const [shown,setShown]=useState(60);
   const [section,setSection]=useState<"search"|"saved">("search");
   const [entries,setEntries]=useState<CollectionEntry[]>([]);
   const [collectionLoading,setCollectionLoading]=useState(true);
@@ -146,34 +149,41 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const [search,setSearch]=useState("");
   const [rows,setRows]=useState<Listing[]>([]);
   const [total,setTotal]=useState<number|null>(null);
-  const [nextOffset,setNextOffset]=useState<number|null>(null);
+  const [cover,setCover]=useState("");
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
-  const [retryOffset,setRetryOffset]=useState(0);
   const active=useRef<AbortController|null>(null);
-  const load=useCallback(async(offset=0)=>{
+  /*
+    THE SCAN HAPPENS ONCE. SORTING IS FREE AFTER THAT.
+
+    `sort` is deliberately not a dependency here. The whole scanned set is
+    held in memory, so changing the ordering re-ranks what is already loaded
+    instead of spending another ten Etsy calls to ask the same question in a
+    different order - which is what made re-sorting expensive enough to be
+    handed back to Etsy, and Etsy cannot sort by the fields that matter.
+  */
+  const load=useCallback(async()=>{
     active.current?.abort();
     const controller=new AbortController();active.current=controller;
-    setLoading(true);setError("");setRetryOffset(offset);
-    if(offset===0){setRows([]);setTotal(null);setNextOffset(null);}
+    setLoading(true);setError("");setRows([]);setTotal(null);setCover("");setShown(60);
     try{
-      const params=new URLSearchParams({key:view.key,sort,query:search,offset:String(offset)});
+      const params=new URLSearchParams({key:view.key,sort:"favorites",query:search});
       const response=await fetch(`/api/market-watch/listings?${params}`,{signal:controller.signal});
-      const body=await response.json() as {listings?:Listing[];total?:number|null;nextOffset?:number|null;error?:string};
+      const body=await response.json() as {listings?:Listing[];total?:number|null;coverage?:string;error?:string};
       if(!response.ok)throw new Error(body.error||"Etsy search could not load.");
       if(controller.signal.aborted)return;
-      setRows(old=>offset===0?body.listings??[]:[...new Map([...old,...(body.listings??[])].map(row=>[row.listingId,row])).values()]);
-      setTotal(body.total??null);setNextOffset(body.nextOffset??null);
+      setRows(body.listings??[]);setTotal(body.total??null);setCover(body.coverage??"");
     }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:"Etsy search could not load.");}
     finally{if(active.current===controller){active.current=null;setLoading(false);}}
-  },[view.key,sort,search]);
+  },[view.key,search]);
   useEffect(()=>{void load();return()=>{active.current?.abort();active.current=null}},[load]);
-  const listings=rows;
+  const ranked=rankScan(rows,sort);
+  const listings=ranked.slice(0,shown);
   const savedIds=new Set(entries.map(entry=>entry.listing.listingId));
   const collectionCurrencies=[...new Set(entries.map(entry=>entry.listing.currency))].sort();
   const compared=browseListings(entries.map(entry=>entry.listing),collectionSort,"",collectionCurrency);
   const entryById=new Map(entries.map(entry=>[entry.listing.listingId,entry]));
-  return <main className="mw"><button className="back p-button p-button-quiet" onClick={onBack}>← Tracked keywords</button><header className="mw-detail-head"><p className="mini-label">MARKET WATCH</p><h1>{view.phrase}</h1><p>Explore matching listings on Etsy.</p></header>
+  return <main className="mw"><button className="back p-button p-button-quiet" onClick={onBack}>← Tracked keywords</button><header className="mw-detail-head"><p className="mini-label">MARKET WATCH</p><h1>{view.phrase}</h1><p>Scan this keyword on Etsy, then rank it by what buyers actually did.</p></header>
     <div className="tabs p-tabs" role="tablist" aria-label="Keyword research"><button className="p-tab" role="tab" id="keyword-search-tab" aria-controls="keyword-search-panel" aria-selected={section==="search"} onClick={()=>setSection("search")}>Search Etsy</button><button className="p-tab" role="tab" id="keyword-saved-tab" aria-controls="keyword-saved-panel" aria-selected={section==="saved"} onClick={()=>setSection("saved")}>Saved comparisons{collectionLoading?"":` (${entries.length})`}</button></div>
     {collectionError&&<p className="p-notice failed" role="alert">{collectionError} <button className="p-button p-button-quiet" disabled={collectionBusy||collectionLoading} onClick={()=>void loadCollection()}>Reload collection</button></p>}
     {section==="search"&&<section id="keyword-search-panel" role="tabpanel" aria-labelledby="keyword-search-tab">
@@ -181,12 +191,12 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
       <label className="market-search">Search within this keyword<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find a product or phrase"/></label><button className="p-button p-button-primary" disabled={loading}>Search Etsy</button>
       {(query||search)&&<button type="button" className="p-button p-button-quiet" onClick={()=>{setQuery("");setSearch("")}}>Clear search</button>}
     </form>
-    <div className="market-result-bar"><p role="status">{loading&&!rows.length?"Searching Etsy…":`${listings.length}${total===null?"":` of ${total.toLocaleString()}`} Etsy matches shown`}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Refresh listings</button></div>
-    <div className="market-results-sort"><label>Sort Etsy results<select value={sort} onChange={e=>setSort(e.target.value as KeywordOrder)}><option value="relevance">Most relevant</option><option value="newest">Recently listed / renewed</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label></div>
-    {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load(retryOffset)}>Try again</button></p>}
+    <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Scanning Etsy for “${view.phrase}”…`:cover||`${rows.length.toLocaleString()} listings scanned`}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Scan again</button></div>
+    <div className="market-results-sort"><label>Rank the scan by<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}><option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="momentum">Favorites per day listed</option><option value="newest">Recently listed / renewed</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label><p className="market-sort-note">Etsy cannot sort by favorites or views. This ranks the whole scan.</p></div>
+    {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Try again</button></p>}
     {!loading&&!error&&!listings.length&&<p className="empty">No Etsy listings match this search.</p>}
     <div className="cards" aria-busy={loading}>{listings.map(listing=><ListingCard key={listing.listingId} listing={listing} action={<button className="p-button p-button-quiet" disabled={collectionLoading||collectionBusy||Boolean(collectionError)||savedIds.has(listing.listingId)} onClick={()=>void updateCollection("save",listing.listingId)}>{savedIds.has(listing.listingId)?"Saved to comparisons":"Save to compare"}</button>}/>)}</div>
-    {nextOffset!==null&&<div className="market-pagination"><button className="p-button p-button-primary" disabled={loading} onClick={()=>void load(nextOffset)}>{loading?"Loading listings…":"Load more listings"}</button><span>{rows.length} loaded</span></div>}
+    {shown<ranked.length&&<div className="market-pagination"><button className="p-button p-button-primary" onClick={()=>setShown(count=>count+60)}>Show more</button><span>{listings.length.toLocaleString()} of {ranked.length.toLocaleString()} ranked</span></div>}
     </section>}
     {section==="saved"&&<section className="keyword-collection" id="keyword-saved-panel" role="tabpanel" aria-labelledby="keyword-saved-tab">
       <div className="market-result-bar"><div><h2>Saved comparisons</h2><p>{entries.length} of 100 listings · Chosen by you</p></div><button className="p-button p-button-primary" disabled={collectionLoading||collectionBusy||!entries.length||Boolean(collectionError)} onClick={()=>void updateCollection("refresh")}>{collectionBusy?"Updating…":"Check for changes"}</button></div>

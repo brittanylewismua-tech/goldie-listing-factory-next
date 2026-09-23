@@ -235,7 +235,11 @@
    pill at source rather than overriding it. */
 /* D1771 makes the current link legible again: its colour was near-black,
    written for the white pill D1770 replaced with a dark chip. */
-export const BUILD_MARKER = "D1771";
+/* D1772 scans the keyword and ranks it here. Etsy pages at 100, not the 24
+   this asked for, and every ranking field rides along on the search
+   response - so a 209-listing phrase is covered completely in three calls
+   and can be sorted by favorites, which etsy.com will not do for anyone. */
+export const BUILD_MARKER = "D1772";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
