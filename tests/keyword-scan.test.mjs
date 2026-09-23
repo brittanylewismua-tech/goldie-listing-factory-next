@@ -217,3 +217,13 @@ test('the take-home figure uses the seller\'s own fee settings', () => {
   /* And nothing is claimed until a cost is entered. */
   assert.match(client, /Enter what one costs you/);
 });
+
+test('an unfiltered price band says it spans every product type', () => {
+  /* Across every product type is across different businesses. Measured on
+     "bachelorette": $4 to $25, because the scan is full of temporary tattoos
+     and confetti, and a shirt priced into that band is priced to lose money.
+     The fix is one control away, so the line points at it. */
+  const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
+  assert.match(client, /shelf\?"":"\. That is across every product type/);
+  assert.match(client, /pick one above to compare like for like/);
+});

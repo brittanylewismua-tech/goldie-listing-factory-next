@@ -280,7 +280,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     failed. It says how long it will be, and the space below holds its
     shape while it waits. */}
     <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Reading Etsy for “${view.phrase}”. This takes a few seconds.`:""}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Refresh listings</button></div>
-    {profile&&<WinnerProfile profile={profile}/>}
+    {profile&&<WinnerProfile profile={profile} shelf={shelf}/>}
     {/* D1783 · A sort that returns nothing is worse than a sort that is not
     there. Units are counted from the difference between two readings of a
     listing's quantity, so a phrase scanned for the first time has none yet -
@@ -362,7 +362,7 @@ function TakeHome({profile}:{profile:Profile}){
   </div>;
 }
 
-function WinnerProfile({profile}:{profile:Profile}){
+function WinnerProfile({profile,shelf}:{profile:Profile;shelf:string}){
   const money=(cents:number)=>`$${(cents/100).toFixed(0)}`;
   const share=(value:number)=>`${Math.round(value*100)}%`;
   const months=(days:number)=>days>=60?`${Math.round(days/30)} months`:`${days} days`;
@@ -370,7 +370,15 @@ function WinnerProfile({profile}:{profile:Profile}){
   if(profile.currency==="USD"&&profile.priceBand)
     facts.push(["Price","Half of them sit between "+money(profile.priceBand.low)+" and "+money(profile.priceBand.high)
       +(profile.fieldPriceMedian!=null&&profile.priceMedian!=null
-        ?`, against ${money(profile.fieldPriceMedian)} across everything scanned`:"")]);
+        ?`, against ${money(profile.fieldPriceMedian)} across everything scanned`:"")
+      /*
+        A band taken across every product type is a band across different
+        businesses. Measured on "bachelorette": four dollars to twenty-five,
+        because the scan is full of temporary tattoos and confetti, and a
+        shirt priced into it is a shirt priced to lose money. The fix is one
+        control away, so the line points at it rather than apologising.
+      */
+      +(shelf?"":". That is across every product type — pick one above to compare like for like")]);
   if(profile.ageMedianDays!=null)
     facts.push(["Age","The middle one was first listed "+months(profile.ageMedianDays)+" ago"]);
   if(profile.personalisedShare!=null)

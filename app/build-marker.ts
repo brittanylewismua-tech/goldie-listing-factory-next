@@ -284,7 +284,9 @@
    four to twenty-five dollars - described a party-supplies business. */
 /* D1790 names the blank the winners print on, and turns the market price
    band into what the member would actually keep at those prices. */
-export const BUILD_MARKER = "D1790";
+/* D1791 says when a price band is taken across every product type, because
+   that is a band across different businesses. */
+export const BUILD_MARKER = "D1791";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
