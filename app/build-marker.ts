@@ -324,7 +324,10 @@
    the deleted Design Scanner off the home page. */
 /* D1807 · the home card said "See all four" of three tools, and left an
    empty cell in a grid that had been sized for the old count. */
-export const BUILD_MARKER = "D1807";
+/* D1808 ranks every design-system rule above the inherit rule explicitly.
+   That rule carries :not() specificity of its own, so three plain classes
+   written after it still lost - silently, one colour at a time. */
+export const BUILD_MARKER = "D1808";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

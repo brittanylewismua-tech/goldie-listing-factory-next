@@ -69,7 +69,19 @@
    rendered as a black rectangle with nothing in it. Their colours are set by
    the button rules below instead. */
 .app-shell.command-workspace .factory-work *:not(svg):not(path):not(button):not(.p-button){color:inherit!important}
-.app-shell.command-workspace .factory-work :is(p,small,dt,figcaption,.cc-note,.lede,.cc-row-why,.shop-map-check-against){
+/*
+  THE DOUBLED CLASS IS DELIBERATE, AND IT IS HERE FOR A REASON.
+
+  The inherit rule above carries :not(button) and :not(.p-button), which add
+  their own specificity - so it outranks any plain three-class rule written
+  after it. That caught the muted greys, the white-on-dark exceptions and the
+  Etsy attribution in turn, each time silently: the page simply came back with
+  one colour fewer than it should have.
+
+  Every rule that has to beat inheritance repeats .command-workspace. It is
+  ugly and it is legible, which beats being correct by accident of ordering.
+*/
+.app-shell.command-workspace.command-workspace .factory-work :is(p,small,dt,figcaption,.cc-note,.lede,.cc-row-why,.shop-map-check-against,.home-tile-copy small,.cc-home-tile p,.winner-stat-note,.hub-foot){
   color:var(--cc-muted)!important;
 }
 /*
@@ -80,15 +92,15 @@
   the heading and the description too. A link that contains a heading is a
   surface, not a link.
 */
-.app-shell.command-workspace .factory-work :is(p,li,dd,small,td) a{color:var(--cc-accent)!important}
-.app-shell.command-workspace .factory-work .winner-stat-note.warn{color:var(--cc-accent)!important}
+.app-shell.command-workspace.command-workspace .factory-work :is(p,li,dd,small,td) a{color:var(--cc-accent)!important}
+.app-shell.command-workspace.command-workspace .factory-work .winner-stat-note.warn{color:var(--cc-accent)!important}
 /* Anything on a dark fill keeps its own colour, or it disappears into it. */
 .app-shell.command-workspace.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.home-panel-cta,.cc-home-icon,.home-panel-mark,.home-shop-mark) *,
 .app-shell.command-workspace.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.home-panel-cta,.cc-home-icon,.home-panel-mark,.home-shop-mark){color:#fff!important}
 /* The Etsy attribution is required on the page and was the smallest type in
    the product at 11px. It is quiet, not unreadable. */
 .app-shell.command-workspace.command-workspace .factory-work .etsy-api-disclosure{font-size:12px!important;line-height:1.5}
-.app-shell.command-workspace .factory-work [data-negative="yes"]{color:#a4243d!important}
+.app-shell.command-workspace.command-workspace .factory-work [data-negative="yes"]{color:#a4243d!important}
 
 /* One ramp. 11, 13, 15 and 24 were all on one page beside 12, 14, 20 and 36. */
 .app-shell.command-workspace .factory-work :is(span,em,i,a,li,td,label,button,strong,b):not(h1 *):not(h2 *):not(h3 *){
@@ -105,7 +117,7 @@
 .app-shell.command-workspace .factory-work h1{font-size:34px!important;font-weight:800;letter-spacing:-.035em;line-height:1.08;margin:0 0 6px}
 .app-shell.command-workspace .factory-work h2{font-size:20px!important;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:0 0 10px}
 .app-shell.command-workspace .factory-work h3{font-size:14px!important;font-weight:800;letter-spacing:-.005em;margin:0 0 8px}
-.app-shell.command-workspace .factory-work :is(p,li,dd,td){font-size:14px;line-height:1.55}
+.app-shell.command-workspace.command-workspace .factory-work :is(p,li,dd,td){font-size:14px!important;line-height:1.55}
 .app-shell.command-workspace .factory-work :is(small,figcaption,dt){font-size:12px!important;line-height:1.5}
 /* Prose never runs the full width of a 1,300px workspace. Six paragraphs on
    Shop Map were over 820px wide because the cap did not shout. */
