@@ -291,3 +291,14 @@
 .mw .market-pagination span{font-size:13px;color:#66535f}
 .mw .market-pagination .p-button{min-height:46px;min-width:200px}
 @media(max-width:600px){.mw .market-browser-controls{padding:16px;gap:12px}.mw .market-browser-controls label,.mw .market-browser-controls .market-search{min-width:0;flex-basis:100%}.mw .market-browser-controls input,.mw .market-browser-controls select{font-size:16px}.mw .market-catalog-scope{align-items:stretch;flex-direction:column;gap:12px}.mw .market-pagination{align-items:stretch;flex-direction:column;text-align:center}.mw .market-pagination .p-button{width:100%}}
+
+/* D1774 · Stopping is as ordinary as starting. Both watch endpoints have
+   accepted a removal since they were written; neither had a control. */
+.watch-card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.watch-remove{
+  border:1px solid var(--suite-line,#e5d8e0);border-radius:8px;padding:8px 12px;
+  background:transparent;color:#7a6e76;font:inherit;font-size:12px;font-weight:700;cursor:pointer;
+}
+.watch-remove:hover:not(:disabled){border-color:#d0a3bc;background:#fff4f9;color:#9c2f6d}
+.watch-remove:disabled{cursor:not-allowed;opacity:.55}
+.tracked-shop-card .watch-card-actions{margin-top:12px}

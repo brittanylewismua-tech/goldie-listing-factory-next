@@ -4,6 +4,7 @@ import ActionPlan from "@/app/command-center/action-plan";
 import OfferPlanner from "@/app/command-center/offer-planner";
 import {competitorChanges,type CollectionEntry} from "@/app/market-collection";
 import {rankScan,type KeywordOrder} from "@/app/keyword-scan";
+import {confirmAction} from "@/app/confirm-dialog";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import {browseListings,type ListingOrder} from "@/app/market-listing-browser";
@@ -84,6 +85,36 @@ export default function MarketWatchClient(
     } catch { setError("That could not be saved."); }
     finally { setBusy(false); }
   };
+  /*
+    STOPPING IS AS ORDINARY AS STARTING.
+
+    Both endpoints have taken a removal since they were written - the keyword
+    one on `remove`, the shop one on the same - and neither had a button. A
+    watchlist you can only add to fills up with phrases you tried once, and
+    the shop list is capped at 25, so with no way to drop one the cap
+    eventually locks the feature rather than limiting it.
+
+    Confirmed because it is not undoable in one click; the wording says what
+    survives, since removing a shop leaves its recorded history in place for
+    anyone else watching it and for the member if they add it back.
+  */
+  const [removing,setRemoving]=useState("");
+  const stopWatching=async(kind:"niche"|"shop",id:string|number,name:string)=>{
+    const ok=await confirmAction({eyebrow:"MARKET WATCH",title:`Stop tracking ${name}?`,
+      body:kind==="niche"
+        ?"It comes off your tracked keywords. You can track it again at any time."
+        :"It comes off your tracked shops. Its recorded history is kept, so adding it back resumes where it left off.",
+      confirmLabel:"Stop tracking",destructive:true});
+    if(!ok)return;
+    setRemoving(String(id));setError("");
+    try{
+      const response=await fetch(kind==="niche"?"/api/market-watch/niches":"/api/market-watch/shops",
+        {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({remove:id})});
+      if(!response.ok)throw new Error();
+      if(kind==="niche")await loadNiches(true);else await loadShops(true);
+    }catch{setError(`${name} could not be removed. Nothing was changed. Try again.`);}
+    finally{setRemoving("");}
+  };
   const openNiche=async(key:string)=>{const saved=watches.data.find(row=>row.key===key);if(saved){setOpen({key:saved.key,phrase:saved.phrase});return;}setError("");setOpening(key);try{const response=await fetch(`/api/market-watch/niches?key=${encodeURIComponent(key)}`),body=await response.json() as NicheView&{error?:string};if(!response.ok)setError(body.error??"Those listings could not be opened.");else setOpen(body)}catch{setError("Those listings could not be opened.")}finally{setOpening("")}};
   useEffect(()=>{if(startKeyword)void openNiche(startKeyword)},[]);
 
@@ -102,12 +133,12 @@ export default function MarketWatchClient(
     <div id="mw-panel" role="tabpanel" aria-labelledby={tab==="niches"?"mw-tab-niches":"mw-tab-shops"}>
       {tab==="niches"?<WatchList load={watches} onRetry={()=>void loadNiches()} failure="Your tracked keywords could not be loaded." empty="Track a keyword to start comparing listings.">
         <div className="keyword-watch-grid">{watches.data.map(watch=><article className="keyword-watch" key={watch.key} data-stale={watch.stale?"yes":"no"}>
-          <div className="keyword-watch-head"><div><h2>{watch.phrase}</h2></div><button type="button" onClick={()=>void openNiche(watch.key)} disabled={Boolean(opening)}>{opening===watch.key?"Opening…":"View listings"}</button></div>
+          <div className="keyword-watch-head"><div><h2>{watch.phrase}</h2></div><div className="watch-card-actions"><button type="button" onClick={()=>void openNiche(watch.key)} disabled={Boolean(opening)}>{opening===watch.key?"Opening…":"View listings"}</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${watch.phrase}`} disabled={removing===watch.key} onClick={()=>void stopWatching("niche",watch.key,watch.phrase)}>{removing===watch.key?"Removing…":"Stop tracking"}</button></div></div>
           {watch.stale&&<p className="keyword-stale">Current data could not be refreshed. Showing saved details.</p>}
           <div className="keyword-thumbs">{(watch.listings??[]).slice(0,4).map(listing=>listing.imageUrl&&listing.displayFresh?<img key={listing.listingId} src={listing.imageUrl} alt="" width={180} height={180}/>:<span key={listing.listingId} aria-hidden="true"/>)}{(watch.listings??[]).length===0&&<p>Listings will appear after Etsy refreshes this keyword.</p>}</div>
 
         </article>)}</div>
-      </WatchList>:<WatchList load={shops} onRetry={()=>void loadShops()} failure="Your tracked shops could not be loaded." empty="Add an Etsy shop to follow its listing activity."><p className="watch-explainer">Choose a shop to see its current listings, buyer feedback, and recent changes. Only shops you track appear here, including your own if you added it.</p><div className="tracked-shop-grid">{shops.data.map(shop=><article className="tracked-shop-card" key={shop.shopId}><p className="mini-label">TRACKED SHOP</p><h2>{shop.shopName}</h2><p>Active listings · Buyer feedback · Shop changes</p><button className="p-button p-button-primary" onClick={()=>setSelectedShop(shop)}>Explore shop</button></article>)}</div></WatchList>}
+      </WatchList>:<WatchList load={shops} onRetry={()=>void loadShops()} failure="Your tracked shops could not be loaded." empty="Add an Etsy shop to follow its listing activity."><p className="watch-explainer">Choose a shop to see its current listings, buyer feedback, and recent changes. Only shops you track appear here, including your own if you added it.</p><div className="tracked-shop-grid">{shops.data.map(shop=><article className="tracked-shop-card" key={shop.shopId}><p className="mini-label">TRACKED SHOP</p><h2>{shop.shopName}</h2><p>Active listings · Buyer feedback · Shop changes</p><div className="watch-card-actions"><button className="p-button p-button-primary" onClick={()=>setSelectedShop(shop)}>Explore shop</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${shop.shopName}`} disabled={removing===String(shop.shopId)} onClick={()=>void stopWatching("shop",shop.shopId,shop.shopName)}>{removing===String(shop.shopId)?"Removing…":"Stop tracking"}</button></div></article>)}</div></WatchList>}
     </div>
   </main>;
 }
@@ -149,7 +180,6 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const [search,setSearch]=useState("");
   const [rows,setRows]=useState<Listing[]>([]);
   const [total,setTotal]=useState<number|null>(null);
-  const [cover,setCover]=useState("");
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const active=useRef<AbortController|null>(null);
@@ -165,14 +195,14 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const load=useCallback(async()=>{
     active.current?.abort();
     const controller=new AbortController();active.current=controller;
-    setLoading(true);setError("");setRows([]);setTotal(null);setCover("");setShown(60);
+    setLoading(true);setError("");setRows([]);setTotal(null);setShown(60);
     try{
       const params=new URLSearchParams({key:view.key,sort:"favorites",query:search});
       const response=await fetch(`/api/market-watch/listings?${params}`,{signal:controller.signal});
-      const body=await response.json() as {listings?:Listing[];total?:number|null;coverage?:string;error?:string};
+      const body=await response.json() as {listings?:Listing[];total?:number|null;error?:string};
       if(!response.ok)throw new Error(body.error||"Etsy search could not load.");
       if(controller.signal.aborted)return;
-      setRows(body.listings??[]);setTotal(body.total??null);setCover(body.coverage??"");
+      setRows(body.listings??[]);setTotal(body.total??null);
     }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:"Etsy search could not load.");}
     finally{if(active.current===controller){active.current=null;setLoading(false);}}
   },[view.key,search]);
@@ -183,7 +213,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const collectionCurrencies=[...new Set(entries.map(entry=>entry.listing.currency))].sort();
   const compared=browseListings(entries.map(entry=>entry.listing),collectionSort,"",collectionCurrency);
   const entryById=new Map(entries.map(entry=>[entry.listing.listingId,entry]));
-  return <main className="mw"><button className="back p-button p-button-quiet" onClick={onBack}>← Tracked keywords</button><header className="mw-detail-head"><p className="mini-label">MARKET WATCH</p><h1>{view.phrase}</h1><p>Scan this keyword on Etsy, then rank it by what buyers actually did.</p></header>
+  return <main className="mw"><button className="back p-button p-button-quiet" onClick={onBack}>← Tracked keywords</button><header className="mw-detail-head"><p className="mini-label">MARKET WATCH</p><h1>{view.phrase}</h1><p>Sort matching listings by what buyers actually did.</p></header>
     <div className="tabs p-tabs" role="tablist" aria-label="Keyword research"><button className="p-tab" role="tab" id="keyword-search-tab" aria-controls="keyword-search-panel" aria-selected={section==="search"} onClick={()=>setSection("search")}>Search Etsy</button><button className="p-tab" role="tab" id="keyword-saved-tab" aria-controls="keyword-saved-panel" aria-selected={section==="saved"} onClick={()=>setSection("saved")}>Saved comparisons{collectionLoading?"":` (${entries.length})`}</button></div>
     {collectionError&&<p className="p-notice failed" role="alert">{collectionError} <button className="p-button p-button-quiet" disabled={collectionBusy||collectionLoading} onClick={()=>void loadCollection()}>Reload collection</button></p>}
     {section==="search"&&<section id="keyword-search-panel" role="tabpanel" aria-labelledby="keyword-search-tab">
@@ -191,12 +221,12 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
       <label className="market-search">Search within this keyword<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find a product or phrase"/></label><button className="p-button p-button-primary" disabled={loading}>Search Etsy</button>
       {(query||search)&&<button type="button" className="p-button p-button-quiet" onClick={()=>{setQuery("");setSearch("")}}>Clear search</button>}
     </form>
-    <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Scanning Etsy for “${view.phrase}”…`:cover||`${rows.length.toLocaleString()} listings scanned`}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Scan again</button></div>
-    <div className="market-results-sort"><label>Rank the scan by<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}><option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="momentum">Favorites per day listed</option><option value="newest">Recently listed / renewed</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label><p className="market-sort-note">Etsy cannot sort by favorites or views. This ranks the whole scan.</p></div>
+    <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Searching Etsy for “${view.phrase}”…`:""}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Refresh listings</button></div>
+    <div className="market-results-sort"><label>Sort by<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}><option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="momentum">Favorites per day listed</option><option value="newest">Recently listed / renewed</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label></div>
     {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Try again</button></p>}
     {!loading&&!error&&!listings.length&&<p className="empty">No Etsy listings match this search.</p>}
     <div className="cards" aria-busy={loading}>{listings.map(listing=><ListingCard key={listing.listingId} listing={listing} action={<button className="p-button p-button-quiet" disabled={collectionLoading||collectionBusy||Boolean(collectionError)||savedIds.has(listing.listingId)} onClick={()=>void updateCollection("save",listing.listingId)}>{savedIds.has(listing.listingId)?"Saved to comparisons":"Save to compare"}</button>}/>)}</div>
-    {shown<ranked.length&&<div className="market-pagination"><button className="p-button p-button-primary" onClick={()=>setShown(count=>count+60)}>Show more</button><span>{listings.length.toLocaleString()} of {ranked.length.toLocaleString()} ranked</span></div>}
+    {shown<ranked.length&&<div className="market-pagination"><button className="p-button p-button-primary" onClick={()=>setShown(count=>count+60)}>Show more listings</button></div>}
     </section>}
     {section==="saved"&&<section className="keyword-collection" id="keyword-saved-panel" role="tabpanel" aria-labelledby="keyword-saved-tab">
       <div className="market-result-bar"><div><h2>Saved comparisons</h2><p>{entries.length} of 100 listings · Chosen by you</p></div><button className="p-button p-button-primary" disabled={collectionLoading||collectionBusy||!entries.length||Boolean(collectionError)} onClick={()=>void updateCollection("refresh")}>{collectionBusy?"Updating…":"Check for changes"}</button></div>
@@ -272,7 +302,7 @@ function ShopCard({shop}:{shop:ShopView}){
     {section==="listings"&&<div className="shop-listing-browser" id="shop-catalog-controls">
       <ListingControls sort={sort} setSort={setSort} query={query} setQuery={setQuery} currency={currency} setCurrency={setCurrency} currencies={currencies}/>
       <div className="market-result-bar"><p role="status">{listings.length}{total===null?"":` of ${total}`} listings loaded{query||currency?` · ${visibleListings.length} match your filters`:""}</p><button className="p-button p-button-quiet" onClick={()=>void loadListings()} disabled={loading}>{loading&&!loadingAll?"Loading listings…":"Refresh active listings"}</button></div>
-      <div className="market-catalog-scope"><p>{total===null?"Loading the shop’s catalog details…":nextOffset!==null?"Sorting and search cover the loaded listings. Load the full catalog to compare the whole shop.":total!==null&&listings.length<total?"Some Etsy listings are unavailable. Sorting and search cover the loaded listings only.":"Sorting and search cover all loaded active listings."}</p>{nextOffset!==null&&!loadingAll&&<button type="button" className="p-button p-button-quiet" disabled={loading} onClick={()=>void loadListings(nextOffset,true)}>Load full catalog</button>}{loadingAll&&<button type="button" className="p-button p-button-quiet" onClick={()=>activeRequest.current?.abort()}>Stop loading</button>}</div>
+      <div className="market-catalog-scope"><p>{total===null?"Loading the shop’s catalog…":""}</p>{nextOffset!==null&&!loadingAll&&<button type="button" className="p-button p-button-quiet" disabled={loading} onClick={()=>void loadListings(nextOffset,true)}>Load full catalog</button>}{loadingAll&&<button type="button" className="p-button p-button-quiet" onClick={()=>activeRequest.current?.abort()}>Stop loading</button>}</div>
       {listingError&&<p role="alert">{listingError} <button className="p-button p-button-quiet" onClick={()=>void loadListings(retryOffset)} disabled={loading}>Try again</button></p>}
       {loading&&!listings.length&&<p role="status">Loading this shop’s active listings…</p>}
       {!loading&&!listings.length&&!listingError&&<p className="empty">No active listings are available from Etsy.</p>}

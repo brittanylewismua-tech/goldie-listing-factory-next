@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {scanParams,pagesToScan,rankScan,momentum,coverage,SCAN_PAGE,SCAN_CAP} from '../app/keyword-scan.ts';
+import {scanParams,pagesToScan,rankScan,momentum,SCAN_PAGE,SCAN_CAP} from '../app/keyword-scan.ts';
 
 /* The page this replaces showed 24 listings out of 209 and offered four sort
    orders, none of which was favorites or views - because it asked Etsy to do
@@ -25,10 +25,23 @@ test('a small keyword is covered completely, a huge one is capped', () => {
   assert.equal(pagesToScan(null), 1);
 });
 
-test('the coverage sentence says which of those two happened', () => {
-  assert.match(coverage(209, 209), /every one of the 209/);
-  assert.match(coverage(1000, 245912), /1,000 most relevant of 245,912/);
-  assert.match(coverage(1000, 245912), /narrower keyword/);
+test('the results never say how much of the pool they hold', () => {
+  /* The page printed "24 of 209 Etsy matches shown", and after the rebuild a
+     politer version of the same thing. Both tell a seller only that they are
+     looking at a fraction, which is an argument for closing the tab and
+     opening Etsy. How complete a scan is on a given phrase is this software's
+     problem, not a caption. Asked for twice; guarded here so it stops coming
+     back. */
+  const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
+  const detail = client.slice(client.indexOf('function NicheDetail'), client.indexOf('function ListingCard'));
+  const route = readFileSync(new URL('../app/api/market-watch/listings/route.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(detail, /matches shown|listings scanned|of \{total|ranked\b.*toLocaleString|scanned\.toLocaleString/);
+  assert.doesNotMatch(detail, /coverage/i);
+  assert.doesNotMatch(route, /coverage:|complete:|scanned:/,
+    'the endpoint does not hand the page a sentence about its own coverage');
+  assert.match(route, /listings,total:first\.total,photosUnavailable/);
+  for (const phrase of ['most relevant of', 'covered completely', 'Ranked every one'])
+    assert.doesNotMatch(client, new RegExp(phrase));
 });
 
 const row = (listingId, favorites, views, ageDays, priceCents = 100) =>
@@ -101,4 +114,20 @@ test('photographs are fetched for the page shown, not for the whole scan', () =>
      batch endpoint. Hydrating all 1,000 would double the cost of the scan to
      fetch pictures of listings nobody has scrolled to. */
   assert.match(route, /listingDisplay\(ranked\.slice\(0,SCAN_PAGE\)/);
+});
+
+test('a tracked keyword and a tracked shop can both be untracked', () => {
+  /* Both endpoints have accepted `remove` since they were written. Neither
+     had a control, so a watchlist could only ever grow - and the shop list is
+     capped at 25, which with no way to drop one stops being a limit and
+     starts being a lock. */
+  const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
+  assert.match(client, /stopWatching\("niche",watch\.key,watch\.phrase\)/);
+  assert.match(client, /stopWatching\("shop",shop\.shopId,shop\.shopName\)/);
+  assert.match(client, /confirmAction\(\{eyebrow:"MARKET WATCH"/, 'removal is confirmed, not one click');
+  assert.match(client, /could not be removed\. Nothing was changed\./, 'a failed removal says nothing changed');
+  for (const route of ['niches', 'shops']) {
+    const source = readFileSync(new URL(`../app/api/market-watch/${route}/route.ts`, import.meta.url), 'utf8');
+    assert.match(source, /body\?\.remove/, `${route} still accepts a removal`);
+  }
 });

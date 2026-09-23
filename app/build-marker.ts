@@ -242,7 +242,9 @@
 /* D1773 sends the scan pages out together. Awaited one at a time they took
    39 seconds on the live build - the pacer wants a quarter second between
    requests, but each Etsy round trip is about four. */
-export const BUILD_MARKER = "D1773";
+/* D1774 stops the keyword results describing how much of the pool they hold,
+   and gives tracked keywords and tracked shops a way to be untracked. */
+export const BUILD_MARKER = "D1774";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

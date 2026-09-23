@@ -26,8 +26,10 @@
  * can get anywhere else.
  *
  * A keyword with 245,912 listings cannot be covered and never will be. That is
- * not a bug to fix, it is arithmetic, so the page says which case it is in
- * rather than quietly implying the first while doing the second.
+ * arithmetic, and it is this file's problem rather than the member's: the page
+ * says nothing about how much of the pool it holds. A caption reading "1,000
+ * of 245,912" tells a seller only that they are looking at a fraction, which
+ * is an argument for closing the tab and opening Etsy.
  * ==========================================================================*/
 
 /** Etsy's own maximum for this endpoint. The 24 it replaces was ours. */
@@ -58,9 +60,9 @@ export function pagesToScan(total: number | null, cap = SCAN_CAP) {
 }
 
 export type Rankable = {
-  listingId: number; favorites: number | null; views: number | null;
-  priceCents: number | null; createdAt: number | null; listedAt: number | null;
-  ageDays: number | null;
+  favorites: number | null; views: number | null;
+  priceCents: number | null; ageDays: number | null;
+  createdAt?: number | null; listedAt?: number | null;
 };
 
 /*
@@ -97,18 +99,6 @@ export function rankScan<T extends Rankable>(rows: T[], order: KeywordOrder): T[
   if (order === 'favorites') return ranked.sort(by(row => row.favorites));
   if (order === 'views') return ranked.sort(by(row => row.views));
   if (order === 'momentum') return ranked.sort(by(row => momentum(row)));
-  if (order === 'newest') return ranked.sort(by(row => row.listedAt ?? row.createdAt));
+  if (order === 'newest') return ranked.sort(by(row => row.listedAt ?? row.createdAt ?? null));
   return ranked.sort(by(row => row.priceCents, order === 'price' ? 1 : -1));
-}
-
-/**
- * What the member is told they are looking at. This sentence is the difference
- * between a tool and a trick, so it is computed rather than written by hand.
- */
-export function coverage(scanned: number, total: number | null) {
-  if (total === null) return `Ranked ${scanned.toLocaleString()} listings.`;
-  if (scanned >= total)
-    return `Ranked every one of the ${total.toLocaleString()} listings Etsy has for this keyword.`;
-  return `Ranked the ${scanned.toLocaleString()} most relevant of ${total.toLocaleString()}.`
-    + ` A narrower keyword can be covered completely.`;
 }

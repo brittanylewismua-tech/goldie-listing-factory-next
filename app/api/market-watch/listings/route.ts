@@ -6,7 +6,7 @@ import {crossSiteWrite,CROSS_SITE_REFUSAL} from '@/app/same-site-only';
 import {etsyApiCredential,recordEtsyCall,waitForEtsyCapacity} from '@/app/api/etsy/client';
 import {listingDisplay,listingPhoto,listingPrice,type EtsyDisplayListing} from '@/app/etsy-listing-display';
 import {decodeEntities} from '@/app/shop-map-worlds';
-import {scanParams,pagesToScan,rankScan,coverage,SCAN_PAGE,ORDERS,type KeywordOrder} from '@/app/keyword-scan';
+import {scanParams,pagesToScan,rankScan,SCAN_PAGE,ORDERS,type KeywordOrder} from '@/app/keyword-scan';
 
 /** One page of Etsy search. Throws with a sentence a member can act on. */
 async function searchPage(phrase:string,offset:number,query:string){
@@ -90,11 +90,21 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
       const detail=photos.get(row.listingId);
       return detail?{...row,imageUrl:listingPhoto(detail)||row.imageUrl,title:detail.title??row.title}:row;
     }):ranked;
+    /*
+      THE SIZE OF THE POOL IS NOT THE MEMBER'S PROBLEM.
+
+      This used to return a sentence describing its own coverage, and the page
+      printed it: first "24 of 209 Etsy matches shown", then a better-worded
+      version of the same confession. Both do one thing - tell a seller they
+      are looking at a fraction - which is an invitation to go and use Etsy
+      instead. The scan is as complete as it can be made; how complete that is
+      on a given phrase is this software's business, not a caption.
+
+      `total` stays because the shop catalog view still counts against it. No
+      count derived from it reaches the keyword results.
+    */
     return NextResponse.json({
-      listings,scanned:listings.length,total:first.total,
-      complete:first.total!==null&&listings.length>=first.total,
-      coverage:coverage(listings.length,first.total),
-      photosUnavailable:!photos,asOf:now,
+      listings,total:first.total,photosUnavailable:!photos,asOf:now,
     },{headers:{'Cache-Control':'private, no-store'}});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:'Etsy search could not load. Please try again.'},{status:502});}
 });
