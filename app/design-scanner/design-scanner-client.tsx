@@ -61,23 +61,7 @@ type Result = {
 type HistoryRow = { id: string; niche: string; artworkHash: string;
   createdAt: number; result: Result };
 
-/**
- * LABELS THIS PRODUCT NO LONGER STANDS BEHIND.
- *
- * Scans saved before the wording correction carry "Strong alignment" and
- * "Visually strong, weak niche alignment" — claims about niche fit that a
- * construction-only comparison cannot make. The stored record keeps what it
- * said, because rewriting history is worse; what a member SEES is mapped to
- * the current wording, so no retired claim can be reopened.
- */
-const RETIRED_LABELS: Record<string, string> = {
-  "Strong alignment": "Strong visual-pattern alignment",
-  "Promising, but unclear at thumbnail size": "Moderate visual-pattern alignment",
-  "Visually strong, weak niche alignment": "Weak visual-pattern alignment",
-  "Not enough verified niche evidence yet": "Not enough verified evidence",
-};
 
-const currentLabel = (overall: string) => RETIRED_LABELS[overall] ?? overall;
 
 const STAGES = [
   "Reading your design",
@@ -406,7 +390,7 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
 
       {original&&artworkHash&&<PrintCheck width={original.width} height={original.height} preview={original.url}/>}
       {selectedScan && <p className="p-notice" role="status">{`Saved scan for ${selectedScan.niche} · ${new Date(selectedScan.createdAt*1000).toLocaleString()}. ${!preview ? "The original artwork is not stored with this result. Upload it again to run a new scan." : ""}`}</p>}
-      {result && <div ref={resultAnchor} className="scanner-result-anchor"><ScanResult result={result} /><ActionPlan feature="designScanner" source={result.scanId||artworkHash||result.niche} heading={`Design revision: ${result.niche}`} notes={`Scan finding: ${currentLabel(result.overall)}
+      {result && <div ref={resultAnchor} className="scanner-result-anchor"><ScanResult result={result} /><ActionPlan feature="designScanner" source={result.scanId||artworkHash||result.niche} heading={`Design revision: ${result.niche}`} notes={`Scan finding: ${result.opportunity ?? result.refusal?.because ?? "no comparison"}
 ${result.opportunity||result.refusal?.because||''}
 ${result.imageQuality?.notes?.join('\n')||''}
 
@@ -435,8 +419,8 @@ Recheck at the same thumbnail size and intended print size. Upload the revised f
               <span className="when"> · {new Date(row.createdAt * 1000).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</span>
               {/* What it said, so a list of seven scans is not seven identical
                   rows the member has to open one by one to tell apart. */}
-              {row.result?.overall && (
-                <span className="verdict-line">{currentLabel(row.result.overall)}</span>
+              {row.result?.opportunity && (
+                <span className="verdict-line">{row.result.opportunity}</span>
               )}
             </button>
           ))}
@@ -480,7 +464,16 @@ function ImageQuality({ quality }: { quality?: Result["imageQuality"] }) {
 function ScanResult({ result }: { result: Result }) {
   return (
     <section className="result p-card">
-      <p className="overall">{currentLabel(result.overall)}</p>
+      {/*
+        D1783 · THE GRADE IS GONE.
+
+        This printed "Strong / Moderate / Weak visual-pattern alignment" above
+        everything else. It is computed from how many traits matched, so the
+        specific lines below - which name the trait and the match - already
+        contain all of it and none of the vagueness. A summary adjective over
+        a list of facts adds an opinion nobody can act on, and it is the first
+        thing a member reads.
+      */}
 
       {result.ok ? (
         <>

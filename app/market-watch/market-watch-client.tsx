@@ -216,7 +216,12 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     finally{if(active.current===controller){active.current=null;setLoading(false);}}
   },[view.key,search]);
   useEffect(()=>{void load();return()=>{active.current?.abort();active.current=null}},[load]);
-  const ranked=rankScan(rows,sort);
+  /* If the scan came back with no counted units the option is not offered, so
+     a sort left over from a previous keyword falls back rather than showing an
+     unordered list under a heading that claims an order. */
+  const countsExist=rows.some(row=>row.soldUnits!=null);
+  const effectiveSort=sort==="sold"&&!countsExist?"favorites":sort;
+  const ranked=rankScan(rows,effectiveSort);
   const listings=ranked.slice(0,shown);
   const savedIds=new Set(entries.map(entry=>entry.listing.listingId));
   const collectionCurrencies=[...new Set(entries.map(entry=>entry.listing.currency))].sort();
@@ -232,7 +237,12 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     </form>
     <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Searching Etsy for “${view.phrase}”…`:""}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Refresh listings</button></div>
     {profile&&<WinnerProfile profile={profile}/>}
-    <div className="market-results-sort"><label>Sort by<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}><option value="sold">Units counted sold</option><option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="momentum">Favorites per day listed</option><option value="newest">Recently listed / renewed</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label></div>
+    {/* D1783 · A sort that returns nothing is worse than a sort that is not
+    there. Units are counted from the difference between two readings of a
+    listing's quantity, so a phrase scanned for the first time has none yet -
+    and the option only appears once something in this scan actually has a
+    count behind it. */}
+    <div className="market-results-sort"><label>Sort by<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}>{rows.some(row=>row.soldUnits!=null)&&<option value="sold">Units counted sold</option>}<option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="momentum">Favorites per day listed</option><option value="newest">Recently listed / renewed</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label></div>
     {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Try again</button></p>}
     {!loading&&!error&&!listings.length&&<p className="empty">No Etsy listings match this search.</p>}
     <div className="cards" aria-busy={loading}>{listings.map(listing=><ListingCard key={listing.listingId} listing={listing} action={<button className="p-button p-button-quiet" disabled={collectionLoading||collectionBusy||Boolean(collectionError)||savedIds.has(listing.listingId)} onClick={()=>void updateCollection("save",listing.listingId)}>{savedIds.has(listing.listingId)?"Saved to comparisons":"Save to compare"}</button>}/>)}</div>

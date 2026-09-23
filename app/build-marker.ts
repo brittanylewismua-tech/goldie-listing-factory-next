@@ -267,7 +267,8 @@
 /* D1782 drops the search's own words from the recurring-words panel. On
    "bookish sweatshirt" it reported "bookish - 50 of the top 50", which is
    true, useless, and was the most prominent row on the page. */
-export const BUILD_MARKER = "D1782";
+/* D1783 removes a sort that returned nothing and a grade that meant nothing. */
+export const BUILD_MARKER = "D1783";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

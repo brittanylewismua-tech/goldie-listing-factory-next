@@ -699,32 +699,31 @@ test("the register-backed wording still reports what the register says", () => {
   assert.doesNotMatch(curated, /property owned by/);
 });
 
-test("a retired label is never shown to a member again", () => {
-  /* Scans saved before the wording correction carry "Strong alignment" — a
-     claim about niche fit a construction-only comparison cannot make. */
-  const client = readFileSync(new URL(
-    "../app/design-scanner/design-scanner-client.tsx", import.meta.url), "utf8");
-  assert.match(client, /LABELS THIS PRODUCT NO LONGER STANDS BEHIND/);
-  for (const retired of ["Strong alignment",
-    "Visually strong, weak niche alignment", "Not enough verified niche evidence yet"])
-    assert.ok(client.includes(`"${retired}":`), `${retired} is not mapped`);
-  /* Every render goes through the mapping. */
-  assert.match(client, /\{currentLabel\(result\.overall\)\}/);
-  assert.ok(!client.includes("{result.overall}"), "a raw stored label still renders");
-});
+test("no scan is summarised with a grade", () => {
+  /*
+    D1783 · This used to print "Strong / Moderate / Weak visual-pattern
+    alignment" above everything else, and a retirement map existed to keep old
+    stored grades wearing current wording. The grade is computed from how many
+    traits matched, so the specific lines underneath already contain all of it
+    and none of the vagueness - and a summary adjective over a list of facts is
+    an opinion nobody can act on, printed first.
 
-test("the stored record is not rewritten", () => {
+    Stored records still carry their old `overall`. Nothing rewrites them and
+    nothing renders them.
+  */
   const client = readFileSync(new URL(
     "../app/design-scanner/design-scanner-client.tsx", import.meta.url), "utf8");
-  assert.match(client, /rewriting history is worse/);
-  /* Mapping happens at display; nothing writes back. */
-  const block = client.slice(client.indexOf("RETIRED_LABELS"), client.indexOf("const STAGES"));
-  assert.ok(!/fetch\(|PUT|PATCH/.test(block));
+  const bare = client.replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const grade of ["visual-pattern alignment", "Strong alignment",
+    "Visually strong, weak niche alignment", "currentLabel", "RETIRED_LABELS"])
+    assert.ok(!bare.includes(grade), `the interface still shows ${grade}`);
+  assert.ok(!client.includes("{result.overall}"), "a raw stored grade still renders");
 });
 
 test("scan history says what each scan found", () => {
   const client = readFileSync(new URL(
     "../app/design-scanner/design-scanner-client.tsx", import.meta.url), "utf8");
   assert.match(client, /className="verdict-line"/);
-  assert.match(client, /row\.result\?\.overall/);
+  /* The finding, not a grade of it. */
+  assert.match(client, /row\.result\?\.opportunity/);
 });

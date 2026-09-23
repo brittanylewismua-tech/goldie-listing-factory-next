@@ -111,7 +111,12 @@ test('the scan is paid for once and re-ranked for free', () => {
      which is the cost that got the ranking handed back to Etsy in the first
      place. */
   assert.match(detail, /\},\[view\.key,search\]\);/, 'the scan depends on the keyword and the query, not the sort');
-  assert.match(detail, /rankScan\(rows,sort\)/, 'ordering is applied to what is already loaded');
+  assert.match(detail, /rankScan\(rows,effectiveSort\)/, 'ordering is applied to what is already loaded');
+  /* A sort that returns nothing is worse than a sort that is not offered:
+     units are counted from two readings, so a phrase scanned for the first
+     time has none, and the option appears only when something has a count. */
+  assert.match(detail, /rows\.some\(row=>row\.soldUnits!=null\)&&<option value="sold">/);
+  assert.match(detail, /sort==="sold"&&!countsExist\?"favorites":sort/);
   assert.match(detail, /useState<KeywordOrder>\("favorites"\)/, 'favorites is the default, being the one Etsy cannot do');
   assert.match(detail, /controller\.signal\.aborted/);
 });
