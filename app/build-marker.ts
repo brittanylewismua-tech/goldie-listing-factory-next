@@ -319,7 +319,10 @@
    black rectangle with nothing in it. */
 /* D1805 · the shop initials rendered ink-on-black at 1.01:1, and the Etsy
    attribution was the smallest type in the product. */
-export const BUILD_MARKER = "D1805";
+/* D1806 stops every Command Center tile rendering pink - those tiles ARE
+   links - restores the shop initials the inherit rule had hidden, and takes
+   the deleted Design Scanner off the home page. */
+export const BUILD_MARKER = "D1806";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
