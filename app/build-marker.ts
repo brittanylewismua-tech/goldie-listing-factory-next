@@ -317,7 +317,9 @@
 /* D1804 · buttons are excluded from the inherit rule. Many sit on a dark
    fill, and inheriting the page ink made the Trademark Review control a
    black rectangle with nothing in it. */
-export const BUILD_MARKER = "D1804";
+/* D1805 · the shop initials rendered ink-on-black at 1.01:1, and the Etsy
+   attribution was the smallest type in the product. */
+export const BUILD_MARKER = "D1805";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

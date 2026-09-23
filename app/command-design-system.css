@@ -75,7 +75,10 @@
 .app-shell.command-workspace .factory-work :is(a:not(.p-button),.winner-stat-note.warn){color:var(--cc-accent)!important}
 /* Anything on a dark fill keeps its own colour, or it disappears into it. */
 .app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.home-panel-cta,.cc-home-icon,.home-panel-mark,.home-shop-mark) *,
-.app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.home-panel-cta){color:#fff!important}
+.app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.home-panel-cta,.cc-home-icon,.home-panel-mark,.home-shop-mark){color:#fff!important}
+/* The Etsy attribution is required on the page and was the smallest type in
+   the product at 11px. It is quiet, not unreadable. */
+.app-shell.command-workspace .factory-work .etsy-api-disclosure{font-size:12px!important;line-height:1.5}
 .app-shell.command-workspace .factory-work [data-negative="yes"]{color:#a4243d!important}
 
 /* One ramp. 11, 13, 15 and 24 were all on one page beside 12, 14, 20 and 36. */
