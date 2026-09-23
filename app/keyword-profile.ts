@@ -81,7 +81,7 @@ export type Profile = {
  * @param top   the head of the ranking - the listings being described
  * @param field everything scanned, used only to say what is ordinary
  */
-export function profileWinners(top: ProfileRow[], field: ProfileRow[]): Profile {
+export function profileWinners(top: ProfileRow[], field: ProfileRow[], phrase = ""): Profile {
   /*
     EVERY PRICE IN USD, RATHER THAN NO PRICE AT ALL.
 
@@ -109,9 +109,21 @@ export function profileWinners(top: ProfileRow[], field: ProfileRow[]): Profile 
   const personalisedKnown = top.filter(row => row.isPersonalizable != null);
   const soldKnown = top.filter(row => row.shopSold != null);
 
+  /*
+    THE SEARCH'S OWN WORDS ARE NOT A FINDING.
+
+    Measured live on "bookish sweatshirt": the panel reported "bookish - 50 of
+    the top 50", which is true, useless, and the single most prominent row on
+    the page. Every listing returned for a phrase contains that phrase; saying
+    so tells a seller nothing about which of them did well. The generic STOP
+    list could never have caught it, because the offending word is different
+    for every search.
+  */
+  const asked = new Set(words(phrase));
   const count = (rows: ProfileRow[], word: string) =>
     rows.filter(row => words(row.title).includes(word)).length;
-  const universe = [...new Set(top.flatMap(row => words(row.title)))];
+  const universe = [...new Set(top.flatMap(row => words(row.title)))]
+    .filter(word => !asked.has(word));
   const subjects = universe
     .map(word => ({ word, winners: count(top, word), field: count(field, word) }))
     /* Four of fifty is the floor for calling something recurring. Below that a

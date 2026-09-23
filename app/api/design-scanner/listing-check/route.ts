@@ -76,7 +76,7 @@ export const POST = withErrorLog('listing-check', async (request: Request) => {
     if (!rows.length)
       return NextResponse.json({error: 'Etsy returned no listings for that search.'}, {status: 502});
     const ranked = rankScan(rows, 'favorites');
-    const profile = {...profileWinners(ranked.slice(0, 50), ranked), phrase};
+    const profile = {...profileWinners(ranked.slice(0, 50), ranked, phrase), phrase};
     return NextResponse.json({phrase, profile, findings: checkListing(draft, profile)},
       {headers: {'Cache-Control': 'private, no-store'}});
   } catch (error) {

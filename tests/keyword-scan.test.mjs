@@ -38,6 +38,12 @@ test('the winner profile describes, and never instructs', () => {
   /* Four of fifty is the floor for calling a word recurring; below it a
      "pattern" is two listings from one shop. */
   assert.match(profile, /entry\.winners >= 4/);
+  /* Every listing returned for a phrase contains that phrase. Reporting
+     "bookish - 50 of the top 50" is true, useless, and was the most prominent
+     row on the page. A generic stop list cannot catch it: the offending word
+     is different for every search. */
+  assert.match(profile, /const asked = new Set\(words\(phrase\)\)/);
+  assert.match(profile, /\.filter\(word => !asked\.has\(word\)\)/);
   /* A band, not a min and a max: one listing at $4 must not widen it. */
   assert.match(profile, /sorted\[Math\.floor\(sorted\.length \* 0\.25\)\]/);
   /* Every price is converted to USD before the band is taken. Refusing a band

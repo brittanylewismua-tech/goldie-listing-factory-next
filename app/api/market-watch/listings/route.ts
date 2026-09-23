@@ -133,7 +133,7 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
       return sale?{...row,soldUnits:sale.units,soldHours:sale.hours}:row;
     });
     /* The head of the ranking, described against everything scanned. */
-    const profile=profileWinners(withCounts.slice(0,50),withCounts);
+    const profile=profileWinners(withCounts.slice(0,50),withCounts,[watch.phrase,query].filter(Boolean).join(' '));
     /*
       THE SIZE OF THE POOL IS NOT THE MEMBER'S PROBLEM.
 
