@@ -41,7 +41,7 @@
   font-size: 17px; line-height: 1.5; color: var(--ink, #4b283e); word-break: break-word;
 }
 .tm-phrase mark {
-  background: #ffd9ef; color: #92222b; border-radius: 4px;
+  background: #ffd9ef; color: #92222b; border-radius: 6px;
   padding: 1px 3px; font-weight: 700;
 }
 
@@ -86,6 +86,6 @@
   padding: 24px 20px 72px;
 }
 .tm-standalone .drop-head { margin-bottom: 18px; }
-.tm-standalone > h1 { font-size: 1.4rem; margin: 0 0 16px; }
-.tm-standalone .drop-head h1 { font-size: 1.1rem; }
+.tm-standalone > h1 { font-size: 22px; margin: 0 0 16px; }
+.tm-standalone .drop-head h1 { font-size: 18px; }
 .tm-standalone input, .tm-standalone button { min-height: 48px; font-size: 16px; }

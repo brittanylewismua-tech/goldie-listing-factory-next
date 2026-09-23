@@ -46,7 +46,7 @@
 .shop-map-world-label{font-size:16px;font-weight:700}
 .shop-map-world-figure{font-size:15px;font-variant-numeric:tabular-nums}
 .shop-map-world-meta{font-size:12px;line-height:1.45}
-.shop-map-bar{display:block;height:6px;border-radius:3px;background:#efe7ec;overflow:hidden}
+.shop-map-bar{display:block;height:6px;border-radius:0px;background:#efe7ec;overflow:hidden}
 .shop-map-bar>span{display:block;height:100%;background:#a33a48}
 .shop-map-evidence{margin:0 12px 8px;font-size:12px;line-height:1.5}
 .shop-map-attention ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px;line-height:1.5}
@@ -91,7 +91,7 @@
   border-radius: 12px;
   border: 1px solid currentColor;
   text-decoration: none;
-  font-size: 0.92rem;
+  font-size: 15px;
 }
 
 /* D1643 · A refused correction is stated. It used to be swallowed, so a move

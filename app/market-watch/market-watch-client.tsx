@@ -143,7 +143,26 @@ export default function MarketWatchClient(
         <div className="keyword-watch-grid">{watches.data.map(watch=><article className="keyword-watch" key={watch.key} data-stale={watch.stale?"yes":"no"}>
           <div className="keyword-watch-head"><div><h2>{watch.phrase}</h2></div><div className="watch-card-actions"><button type="button" onClick={()=>void openNiche(watch.key)} disabled={Boolean(opening)}>{opening===watch.key?"Opening…":"View listings"}</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${watch.phrase}`} disabled={removing===watch.key} onClick={()=>void stopWatching("niche",watch.key,watch.phrase)}>{removing===watch.key?"Removing…":"Stop tracking"}</button></div></div>
           {watch.stale&&<p className="keyword-stale">Current data could not be refreshed. Showing saved details.</p>}
-          <div className="keyword-thumbs">{(watch.listings??[]).slice(0,4).map(listing=>listing.imageUrl&&listing.displayFresh?<img key={listing.listingId} src={listing.imageUrl} alt="" width={180} height={180}/>:<span key={listing.listingId} aria-hidden="true"/>)}{(watch.listings??[]).length===0&&<p>Listings will appear after Etsy refreshes this keyword.</p>}</div>
+          {/*
+    D1784 · FOUR EMPTY BOXES AND NO EXPLANATION.
+
+    Etsy requires displayed listing information to be no more than six hours
+    old, so a cached photo past that is not shown - correctly. What was wrong
+    is what took its place: an empty span per listing, so four of these eight
+    cards rendered as a row of grey rectangles with nothing saying why, and
+    the card is not marked stale either, because the listings themselves are
+    current. It reads as broken software.
+
+    A row with nothing to show does not pretend to be a row now.
+*/}
+          {(() => {
+            const shots=(watch.listings??[]).slice(0,4).filter(listing=>listing.imageUrl&&listing.displayFresh);
+            if(shots.length) return <div className="keyword-thumbs">{shots.map(listing=>
+              <img key={listing.listingId} src={listing.imageUrl} alt="" width={180} height={180}/>)}</div>;
+            return <p className="keyword-thumbs-empty">{(watch.listings??[]).length
+              ? "Photos for this keyword are older than Etsy allows us to display. Open it to see current listings."
+              : "Listings will appear after Etsy refreshes this keyword."}</p>;
+          })()}
 
         </article>)}</div>
       </WatchList>:<WatchList load={shops} onRetry={()=>void loadShops()} failure="Your tracked shops could not be loaded." empty="Add an Etsy shop to follow its listing activity."><p className="watch-explainer">Choose a shop to see its current listings, buyer feedback, and recent changes. Only shops you track appear here, including your own if you added it.</p><div className="tracked-shop-grid">{shops.data.map(shop=><article className="tracked-shop-card" key={shop.shopId}><p className="mini-label">TRACKED SHOP</p><h2>{shop.shopName}</h2><p>Active listings · Buyer feedback · Shop changes</p><div className="watch-card-actions"><button className="p-button p-button-primary" onClick={()=>setSelectedShop(shop)}>Explore shop</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${shop.shopName}`} disabled={removing===String(shop.shopId)} onClick={()=>void stopWatching("shop",shop.shopId,shop.shopName)}>{removing===String(shop.shopId)?"Removing…":"Stop tracking"}</button></div></article>)}</div></WatchList>}

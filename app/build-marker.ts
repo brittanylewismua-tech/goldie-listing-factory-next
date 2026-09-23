@@ -268,7 +268,10 @@
    "bookish sweatshirt" it reported "bookish - 50 of the top 50", which is
    true, useless, and was the most prominent row on the page. */
 /* D1783 removes a sort that returned nothing and a grade that meant nothing. */
-export const BUILD_MARKER = "D1783";
+/* D1784 replaces four empty grey boxes with a sentence, and closes a type
+   scale guard that had never looked inside a subdirectory - which is where
+   every feature page keeps its stylesheet. */
+export const BUILD_MARKER = "D1784";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

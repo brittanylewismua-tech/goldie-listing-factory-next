@@ -51,7 +51,7 @@
 .update {
   border: 1px solid var(--line);
   border-left: 3px solid var(--gold);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--p-card);
   padding: 16px 18px;
   margin-bottom: 24px;
@@ -89,7 +89,7 @@
   width: 100%;
   text-align: left;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--p-card);
   padding: 14px 16px;
   margin-bottom: 10px;
@@ -113,7 +113,7 @@
 
 .card {
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--p-card);
   overflow: hidden;
   display: flex;
@@ -136,12 +136,12 @@
   padding: 16px;
   background: var(--paper);
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 13px;
   line-height: 1.4;
 }
 .card .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; }
 .card .title {
-  font-size: 0.92rem;
+  font-size: 15px;
   line-height: 1.35;
   overflow-wrap: anywhere;
   display: -webkit-box;
@@ -151,7 +151,7 @@
 }
 .tag {
   align-self: flex-start;
-  font-size: 0.76rem;
+  font-size: 12px;
   letter-spacing: 0.03em;
   padding: 3px 9px;
   border-radius: 999px;
@@ -177,7 +177,7 @@
 /* ------------------------------------------------------------ patterns */
 .patterns {
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--paper);
   padding: 14px 16px;
   margin: 18px 0;
@@ -203,26 +203,26 @@
   margin-bottom: 8px;
 }
 .pattern p { margin: 0 0 4px; overflow-wrap: anywhere; }
-.pattern .support { color: var(--muted); font-size: 0.82rem; }
+.pattern .support { color: var(--muted); font-size: 13px; }
 /* D1625 · The evidence line and this link shared a line, and a 44px tap
    target laid over the text beside it. The finding, the reasoning, the
    evidence and the way out are four things in order, not a row. */
 .pattern a {
   display: block; width: fit-content; margin-top: 4px;
   min-height: 44px; line-height: 44px;
-  color: var(--ink); font-size: 0.88rem; font-weight: 600;
+  color: var(--ink); font-size: 14px; font-weight: 600;
 }
 
 .empty, .note {
   border: 1px dashed var(--line);
-  border-radius: 18px;
+  border-radius: 16px;
   padding: 18px;
   color: var(--muted);
   background: var(--p-card);
 }
 .summary { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
 .back { min-height: 44px; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0; font-size: 14px; }
-.error { color: #a33a3a; font-size: 0.92rem; }
+.error { color: #a33a3a; font-size: 15px; }
 
 /* D1586 · A card states the finding, then the evidence under it.
    "9 of the last 496 reviews in this shop are for this listing" shipped as the
@@ -265,7 +265,7 @@
    describing how many background records the watcher has processed. */
 .app-shell .mw{display:block!important;font-family:"Manrope Variable","Manrope",Arial,sans-serif!important}
 .mw-intro{margin-bottom:26px}.mw-intro .mini-label,.mw-detail-head .mini-label{margin:0 0 8px;color:var(--p-pink-deep);font-size:11px;font-weight:800;letter-spacing:.12em}
-.keyword-watch-grid{display:grid;gap:16px}.keyword-watch{border:1px solid var(--line);border-radius:20px;background:var(--p-card);padding:18px;box-shadow:0 12px 36px rgba(58,37,47,.06)}
+.keyword-watch-grid{display:grid;gap:16px}.keyword-watch{border:1px solid var(--line);border-radius:22px;background:var(--p-card);padding:18px;box-shadow:0 12px 36px rgba(58,37,47,.06)}
 .keyword-watch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}.keyword-watch-head span{display:block;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.1em}.keyword-watch-head h2{margin:3px 0 0;font:700 clamp(19px,2vw,24px)/1.2 var(--font-heading,inherit);letter-spacing:-.02em}.keyword-watch-head button{min-height:42px;padding:0 15px;border:0;border-radius:12px;background:var(--ink);color:#fff;font:700 13px/1 inherit;white-space:nowrap;cursor:pointer}.keyword-watch-head button:disabled{opacity:.55}
 .keyword-thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;min-height:90px}.keyword-thumbs img,.keyword-thumbs>span{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;background:var(--paper)}.keyword-thumbs p{grid-column:1/-1;margin:0;padding:24px;border-radius:12px;background:var(--paper);color:var(--muted)}.listing-stat-grid{display:grid;margin:14px 0 0}.listing-stat-grid dt{color:var(--muted);font-size:11px}.listing-stat-grid dd{margin:2px 0 0;font-size:18px;font-weight:800}
 .mw-detail-head{margin:8px 0 20px}.mw-detail-head p:last-child{margin:6px 0 0;color:var(--muted)}
@@ -330,3 +330,9 @@
 .listing-stat-counted dt{color:var(--suite-pink-deep,#d90c89)!important}
 .listing-stat-counted dd{font-weight:800}
 .listing-stat-counted dd small{display:block;color:var(--suite-muted,#756a72);font-size:11px;font-weight:600}
+
+/* D1784 · A row with nothing to show does not pretend to be a row. */
+.keyword-thumbs-empty{
+  margin:12px 0 0;padding:14px 16px;border:1px dashed var(--suite-line,#e5d8e0);border-radius:12px;
+  color:var(--suite-muted,#756a72);font-size:13px;line-height:1.5;
+}
