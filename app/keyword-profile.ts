@@ -22,6 +22,27 @@
 
 import { usdFromCents } from "./sold-overnight-math.ts";
 
+/*
+  THE BLANKS A PRINT-ON-DEMAND SELLER ACTUALLY CHOOSES BETWEEN.
+
+  Etsy's `materials` field would seem to be the place for this and is not: it
+  was present on twenty of fifty listings and the values were free text -
+  "gildan or bella canvas shirt", "heat press", "bulk order". The brand is far
+  more reliably in the title, where sellers put it deliberately because buyers
+  search for it. Title, tags and materials are all read, and a listing counts
+  once however many of the three it appears in.
+*/
+const BLANKS: Array<{ label: string; match: RegExp }> = [
+  { label: "Comfort Colors", match: /\bcomfort\s*colors?\b/ },
+  { label: "Bella + Canvas", match: /\bbella\s*(\+|and|&)?\s*canvas\b/ },
+  { label: "Gildan", match: /\bgildan\b/ },
+  { label: "Next Level", match: /\bnext\s*level\b/ },
+  { label: "District", match: /\bdistrict\b/ },
+  { label: "Independent Trading", match: /\bindependent\s*trading\b/ },
+  { label: "Champion", match: /\bchampion\b/ },
+  { label: "American Apparel", match: /\bamerican\s*apparel\b/ },
+];
+
 export type ProfileRow = {
   priceCents: number | null;
   currency: string;
@@ -74,6 +95,7 @@ export type Profile = {
   ageMedianDays: number | null;
   personalisedShare: number | null;
   provenShopShare: number | null;
+  blanks: Array<{ label: string; winners: number }>;
   subjects: Array<{ word: string; winners: number; field: number }>;
 };
 
@@ -134,6 +156,16 @@ export function profileWinners(top: ProfileRow[], field: ProfileRow[], phrase = 
       - ((a.winners / Math.max(1, top.length)) - (a.field / Math.max(1, field.length))))
     .slice(0, 12);
 
+  /* Named on the listing, not inferred from the photograph. */
+  const haystack = (row: ProfileRow) =>
+    [row.title, ...(row.tags ?? []), ...(row.materials ?? [])].join(" ").toLocaleLowerCase();
+  const blanks = BLANKS
+    .map(blank => ({ label: blank.label, winners: top.filter(row => blank.match.test(haystack(row))).length }))
+    /* Three of fifty before it counts: below that a "pattern" is one shop
+       listing the same shirt three times. */
+    .filter(entry => entry.winners >= 3)
+    .sort((a, b) => b.winners - a.winners);
+
   return {
     sampleSize: top.length,
     currency,
@@ -147,5 +179,6 @@ export function profileWinners(top: ProfileRow[], field: ProfileRow[], phrase = 
     provenShopShare: soldKnown.length >= 10
       ? soldKnown.filter(row => (row.shopSold ?? 0) >= 1000).length / soldKnown.length : null,
     subjects,
+    blanks,
   };
 }

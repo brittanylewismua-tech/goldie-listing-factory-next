@@ -24,6 +24,7 @@ type Profile = {
   priceBand:{low:number;high:number}|null; priceMedian:number|null; fieldPriceMedian:number|null;
   ageMedianDays:number|null; personalisedShare:number|null; provenShopShare:number|null;
   subjects:Array<{word:string;winners:number;field:number}>;
+  blanks:Array<{label:string;winners:number}>;
 };
 type NicheView = { key: string; phrase: string; stale?: boolean; gathering?: boolean;
   summary?: { moving: number; repeated: number; newSinceLastBrief: number; shops: number };
@@ -313,6 +314,54 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   Etsy rather than about buyers. It is offered as subject matter to weigh, and
   the heading says so rather than leaving the reader to assume otherwise.
 */
+/*
+  WHAT THE MEMBER WOULD KEEP AT THOSE PRICES.
+
+  The band is what the market charges. It is not what a seller earns, and the
+  gap between the two is where print-on-demand businesses quietly fail: a
+  shirt priced inside a healthy-looking band, on a blank that costs too much,
+  after Etsy's cut, can clear less than a dollar.
+
+  Nobody else can put this number on the page. Etsy knows its own fees and not
+  the production cost; Printify knows the production cost and not Etsy's fees;
+  a research tool knows neither. This product holds both, and the arithmetic
+  is exactly the arithmetic the Listing Factory already prices batches with -
+  the member's own saved fee settings, not an assumed rate.
+*/
+function TakeHome({profile}:{profile:Profile}){
+  const [cost,setCost]=useState("");
+  const [rules,setRules]=useState<{etsyFeePercent?:number;fixedFee?:number;listingFee?:number}|null>(null);
+  useEffect(()=>{
+    try{const saved=window.localStorage.getItem("goldie-unit-cost");if(saved)setCost(saved)}catch{/* private mode */}
+    void fetch("/api/seller-preferences").then(r=>r.ok?r.json() as Promise<{pricing?:{etsyFeePercent?:number;fixedFee?:number;listingFee?:number}}>:null)
+      .then(body=>setRules(body?.pricing??{})).catch(()=>setRules({}));
+  },[]);
+  if(!profile.priceBand||profile.currency!=="USD")return null;
+  const percent=Math.max(0,Math.min(40,Number(rules?.etsyFeePercent??9.5)))/100;
+  const fixed=Number(rules?.fixedFee??0.25)+Number(rules?.listingFee??0.2);
+  const unit=Number(cost.replace(/[^0-9.]/g,""));
+  const keep=(cents:number)=>cents/100-cents/100*percent-fixed-(Number.isFinite(unit)?unit:0);
+  const money=(value:number)=>`${value<0?"-":""}$${Math.abs(value).toFixed(2)}`;
+  const points:Array<[string,number]>=[["Low of the band",profile.priceBand.low],
+    ["Middle",profile.priceMedian??Math.round((profile.priceBand.low+profile.priceBand.high)/2)],
+    ["High of the band",profile.priceBand.high]];
+  return <div className="winner-takehome">
+    <h3>What you would keep at those prices</h3>
+    <label>Your cost for one, including shipping to the buyer
+      <input className="p-input" inputMode="decimal" value={cost} placeholder="12.40"
+        onChange={event=>{setCost(event.target.value);
+          try{window.localStorage.setItem("goldie-unit-cost",event.target.value)}catch{/* private mode */}}}/>
+    </label>
+    {cost.trim()&&Number.isFinite(unit)?<>
+      <dl>{points.map(([label,cents])=><div key={label}>
+        <dt>{label} · ${(cents/100).toFixed(2)}</dt>
+        <dd data-negative={keep(cents)<0?"yes":undefined}>{money(keep(cents))}</dd></div>)}</dl>
+      <p>After Etsy at {(percent*100).toFixed(1)}% plus ${fixed.toFixed(2)} in fixed fees, which are your
+        own saved settings. Change them in the Listing Factory&apos;s pricing.</p>
+    </>:<p>Enter what one costs you and this becomes your take-home at the market&apos;s prices.</p>}
+  </div>;
+}
+
 function WinnerProfile({profile}:{profile:Profile}){
   const money=(cents:number)=>`$${(cents/100).toFixed(0)}`;
   const share=(value:number)=>`${Math.round(value*100)}%`;
@@ -328,12 +377,16 @@ function WinnerProfile({profile}:{profile:Profile}){
     facts.push(["Personalised",share(profile.personalisedShare)+" of them take a personalisation from the buyer"]);
   if(profile.provenShopShare!=null)
     facts.push(["Behind them",share(profile.provenShopShare)+" come from shops with 1,000 or more lifetime sales"]);
+  if(profile.blanks.length)
+    facts.push(["Printed on",profile.blanks.map(blank=>`${blank.label} (${blank.winners})`).join(", ")
+      +` of the top ${profile.sampleSize}, named on the listing`]);
   if(!facts.length&&!profile.subjects.length)return null;
   return <section className="winner-profile">
     <h2>What the top {profile.sampleSize} have in common</h2>
     {facts.length>0&&<dl className="winner-profile-facts">
       {facts.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
     </dl>}
+    <TakeHome profile={profile}/>
     {profile.subjects.length>0&&<div className="winner-profile-subjects">
       <h3>Words that keep coming up in their titles</h3>
       <p className="winner-profile-note">Subject matter to weigh, not tags to copy. Etsy ranks

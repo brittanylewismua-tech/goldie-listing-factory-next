@@ -282,7 +282,9 @@
 /* D1789 lets the scan be narrowed to a product type. Without it a search
    for "bachelorette" is mostly confetti, and the price band it reported -
    four to twenty-five dollars - described a party-supplies business. */
-export const BUILD_MARKER = "D1789";
+/* D1790 names the blank the winners print on, and turns the market price
+   band into what the member would actually keep at those prices. */
+export const BUILD_MARKER = "D1790";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

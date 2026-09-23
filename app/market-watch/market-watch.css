@@ -361,3 +361,15 @@
 /* D1789 · Product type sits with the search that it narrows. */
 .market-shelf{display:grid;gap:5px;font-size:12px;font-weight:700}
 .market-shelf select{min-height:42px;padding:0 10px;border:1px solid var(--suite-line,#e5d8e0);border-radius:8px;background:#fff;font:inherit}
+
+/* D1790 · The band is what the market charges; this is what you keep. */
+.winner-takehome{margin:16px 0 0;padding:16px 18px;border:1px solid var(--suite-line,#e5d8e0);border-radius:12px;background:#fbf7f9}
+.winner-takehome h3{margin:0 0 10px;font-size:14px;font-weight:800}
+.winner-takehome label{display:grid;gap:5px;max-width:320px;font-size:12px;font-weight:700}
+.winner-takehome input{min-height:40px;padding:0 10px;border:1px solid var(--suite-line,#e5d8e0);border-radius:8px;background:#fff;font:inherit}
+.winner-takehome dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0 0}
+.winner-takehome dl div{display:grid;gap:2px}
+.winner-takehome dt{color:var(--suite-muted,#756a72);font-size:12px;font-weight:700}
+.winner-takehome dd{margin:0;font-size:20px;font-weight:800}
+.winner-takehome dd[data-negative="yes"]{color:#a4243d}
+.winner-takehome>p{margin:12px 0 0;color:var(--suite-muted,#756a72);font-size:12px;line-height:1.5;max-width:64ch}

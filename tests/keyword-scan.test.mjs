@@ -188,3 +188,32 @@ test('a product type narrows the scan at Etsy, not after it', () => {
     'the pages round-robin across every id of the shelf');
   assert.match(route, /filter\(row=>row\.label===shelf\)/);
 });
+
+test('the blank the winners print on is read from the listing, not guessed', () => {
+  /* Etsy's materials field looks like the place for this and is not: present
+     on twenty of fifty listings, with values like "gildan or bella canvas
+     shirt" and "bulk order". Sellers put the brand in the title deliberately,
+     because buyers search for it. */
+  const profile = readFileSync(new URL('../app/keyword-profile.ts', import.meta.url), 'utf8');
+  assert.ok(profile.includes('Comfort Colors'), 'the blanks a POD seller chooses between are named');
+  assert.ok(profile.includes('Bella + Canvas') && profile.includes('Gildan'));
+  assert.match(profile, /\[row\.title, \.\.\.\(row\.tags \?\? \[\]\), \.\.\.\(row\.materials \?\? \[\]\)\]/,
+    'title, tags and materials are all read, and a listing counts once');
+  assert.match(profile, /entry\.winners >= 3/, 'three of fifty before it is a pattern');
+});
+
+test('the take-home figure uses the seller\'s own fee settings', () => {
+  /*
+    The band is what the market charges. It is not what the seller earns, and
+    the gap is where print-on-demand businesses quietly fail. Etsy knows its
+    fees and not the production cost; Printify knows the cost and not the
+    fees; a research tool knows neither. This product holds both.
+  */
+  const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
+  assert.match(client, /fetch\("\/api\/seller-preferences"\)/, 'the real saved rate, not an assumed one');
+  assert.match(client, /cents\/100-cents\/100\*percent-fixed-/);
+  /* A loss is shown as a loss rather than floored at zero. */
+  assert.match(client, /data-negative=\{keep\(cents\)<0\?"yes":undefined\}/);
+  /* And nothing is claimed until a cost is entered. */
+  assert.match(client, /Enter what one costs you/);
+});
