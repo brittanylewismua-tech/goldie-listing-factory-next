@@ -40,8 +40,10 @@ test('the winner profile describes, and never instructs', () => {
   assert.match(profile, /entry\.winners >= 4/);
   /* A band, not a min and a max: one listing at $4 must not widen it. */
   assert.match(profile, /sorted\[Math\.floor\(sorted\.length \* 0\.25\)\]/);
-  /* Mixing a peso into a dollar band is wrong in a way nobody catches by eye. */
-  assert.match(profile, /currencies\.length === 1 \? currencies\[0\] : null/);
+  /* Every price is converted to USD before the band is taken. Refusing a band
+     unless the whole top fifty shared a currency was the careful-sounding
+     version that produced no band at all on a real search. */
+  assert.match(profile, /usdFromCents\(row\.priceCents, row\.currency\)/);
 });
 
 test('the results never say how much of the pool they hold', () => {

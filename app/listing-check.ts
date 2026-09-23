@@ -20,7 +20,8 @@
  * inside a ranked result set cannot be told apart from the ranking. Every
  * sentence is written so a seller can weigh it, and none is written as advice.
  * ==========================================================================*/
-import type { Profile } from "@/app/keyword-profile";
+import type { Profile } from "./keyword-profile.ts";
+import { usdFromCents } from "./sold-overnight-math.ts";
 
 export type Draft = {
   title: string;
@@ -91,25 +92,31 @@ export function checkListing(draft: Draft, profile: Profile): Finding[] {
   });
 
   /* ----------------------------------------------------------- the price */
-  if (draft.priceCents != null && profile.priceBand && profile.currency === draft.currency) {
+  /* The band is in USD, so the draft is converted to meet it rather than
+     being skipped for being priced in anything else. */
+  const draftUsd = (() => {
+    const dollars = usdFromCents(draft.priceCents, draft.currency);
+    return dollars == null ? null : Math.round(dollars * 100);
+  })();
+  if (draftUsd != null && profile.priceBand) {
     const { low, high } = profile.priceBand;
-    if (draft.priceCents < low)
+    if (draftUsd < low)
       findings.push({
         key: "price-low", kind: "gap", label: `Priced under the winners`,
         detail: `Half of the top ${profile.sampleSize} sit between ${money(low)} and ${money(high)}. `
-          + `This draft is ${money(draft.priceCents)}. Underpricing a print-on-demand listing is how `
+          + `This draft is ${money(draftUsd)}. Underpricing a print-on-demand listing is how `
           + `the production cost and the Etsy fee end up taking the whole margin.`,
       });
-    else if (draft.priceCents > high)
+    else if (draftUsd > high)
       findings.push({
         key: "price-high", kind: "gap", label: "Priced above the winners",
         detail: `Half of the top ${profile.sampleSize} sit between ${money(low)} and ${money(high)}. `
-          + `This draft is ${money(draft.priceCents)}, which is a position worth taking deliberately `
+          + `This draft is ${money(draftUsd)}, which is a position worth taking deliberately `
           + `rather than by accident.`,
       });
     else findings.push({
       key: "price-ok", kind: "ok", label: "Price sits with the winners",
-      detail: `${money(draft.priceCents)}, inside the ${money(low)}–${money(high)} band half of the top `
+      detail: `${money(draftUsd)}, inside the ${money(low)}–${money(high)} band half of the top `
         + `${profile.sampleSize} occupy.`,
     });
   }

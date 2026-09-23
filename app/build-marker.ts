@@ -256,7 +256,10 @@
 /* D1778 counts sales instead of estimating them, and gives the Design
    Scanner a check that answers on the first click instead of a gate that
    refuses anything nobody has been watching. */
-export const BUILD_MARKER = "D1778";
+/* D1779 converts every price to USD before taking the winners band. Refusing
+   a band unless the whole top fifty shared one currency sounded careful and
+   produced, on a real search for "auntie shirt", no price finding at all. */
+export const BUILD_MARKER = "D1779";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

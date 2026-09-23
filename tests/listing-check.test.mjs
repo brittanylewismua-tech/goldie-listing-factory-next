@@ -22,9 +22,15 @@ test('the price finding is measured against the winners, not against a rule', ()
   assert.ok(low.some(f => f.key === 'price-low'), 'under the band is reported');
   const inside = checkListing({ title: 'a'.repeat(50), tags: [], priceCents: 3850, currency: 'USD', personalizable: true }, profile);
   assert.ok(inside.some(f => f.key === 'price-ok'), 'inside the band is confirmed, not only failures');
-  /* A band from a different currency would be wrong in a way nobody catches. */
+  /* A euro draft is converted to meet the band rather than skipped. Refusing
+     to state a band unless the whole top fifty shared a currency produced, on
+     a real search for "auntie shirt", no price finding at all. */
   const euro = checkListing({ title: 'a'.repeat(50), tags: [], priceCents: 900, currency: 'EUR', personalizable: true }, profile);
-  assert.ok(!euro.some(f => f.key.startsWith('price')), 'no price finding across currencies');
+  assert.ok(euro.some(f => f.key === 'price-low'), 'a euro price is converted, not discarded');
+  /* A currency the rate table does not carry is left out rather than counted
+     at face value. */
+  const unknown = checkListing({ title: 'a'.repeat(50), tags: [], priceCents: 900, currency: 'XYZ', personalizable: true }, profile);
+  assert.ok(!unknown.some(f => f.key.startsWith('price')), 'an unconvertible price produces no finding');
 });
 
 test('empty tag slots are named, because they are the free fix', () => {

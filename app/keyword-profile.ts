@@ -20,6 +20,8 @@
  * buyer. That is the reason this page exists.
  * ==========================================================================*/
 
+import { usdFromCents } from "./sold-overnight-math.ts";
+
 export type ProfileRow = {
   priceCents: number | null;
   currency: string;
@@ -64,6 +66,7 @@ const words = (title: string) =>
 export type Profile = {
   phrase?: string;
   sampleSize: number;
+  /** Always "USD": every price is converted before the band is taken. */
   currency: string | null;
   priceBand: { low: number; high: number } | null;
   priceMedian: number | null;
@@ -79,14 +82,28 @@ export type Profile = {
  * @param field everything scanned, used only to say what is ordinary
  */
 export function profileWinners(top: ProfileRow[], field: ProfileRow[]): Profile {
-  /* One currency or none. Mixing a peso price into a dollar band produces a
-     number that is wrong in a way nobody would catch by eye. */
-  const currencies = [...new Set(top.map(row => row.currency).filter(Boolean))];
-  const currency = currencies.length === 1 ? currencies[0] : null;
-  const prices = currency
-    ? top.flatMap(row => row.priceCents != null && row.currency === currency ? [row.priceCents] : []) : [];
-  const fieldPrices = currency
-    ? field.flatMap(row => row.priceCents != null && row.currency === currency ? [row.priceCents] : []) : [];
+  /*
+    EVERY PRICE IN USD, RATHER THAN NO PRICE AT ALL.
+
+    This used to refuse to state a band unless the whole top fifty shared one
+    currency - which sounds careful and, measured on "auntie shirt", produced
+    a null band and no price finding at all, silently, on a real search. Etsy
+    sells worldwide; a top fifty in one currency is the rare case, so the
+    careful version was the broken one.
+
+    Etsy accepts a currency conversion parameter and ignores it - that was
+    found the hard way by an earlier feature on this codebase - so the
+    conversion happens here, through the rate table that already exists for
+    the same reason. A listing in a currency the table does not carry is left
+    out of the band rather than counted at face value.
+  */
+  const usd = (row: ProfileRow) => {
+    const dollars = usdFromCents(row.priceCents, row.currency);
+    return dollars == null ? null : Math.round(dollars * 100);
+  };
+  const currency = "USD";
+  const prices = top.flatMap(row => { const cents = usd(row); return cents == null ? [] : [cents]; });
+  const fieldPrices = field.flatMap(row => { const cents = usd(row); return cents == null ? [] : [cents]; });
 
   const ages = top.flatMap(row => row.ageDays != null ? [row.ageDays] : []);
   const personalisedKnown = top.filter(row => row.isPersonalizable != null);
