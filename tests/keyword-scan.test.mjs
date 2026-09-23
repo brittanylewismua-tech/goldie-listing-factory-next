@@ -58,7 +58,7 @@ test('the results never say how much of the pool they hold', () => {
   assert.doesNotMatch(detail, /coverage/i);
   assert.doesNotMatch(route, /coverage:|complete:|scanned:/,
     'the endpoint does not hand the page a sentence about its own coverage');
-  assert.match(route, /listings,profile,total:first\.total,photosUnavailable/);
+  assert.match(route, /listings:withCounts,profile,total:first\.total,photosUnavailable/);
   for (const phrase of ['most relevant of', 'covered completely', 'Ranked every one'])
     assert.doesNotMatch(client, new RegExp(phrase));
 });

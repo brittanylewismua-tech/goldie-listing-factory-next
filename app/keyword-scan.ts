@@ -39,9 +39,9 @@ export const SCAN_PAGE = 100;
  *  phrase, and the call budget is shared with every other member. */
 export const SCAN_CAP = 1000;
 
-export type KeywordOrder = 'favorites' | 'views' | 'momentum' | 'newest' | 'relevance' | 'price' | 'price-desc';
+export type KeywordOrder = 'sold' | 'favorites' | 'views' | 'momentum' | 'newest' | 'relevance' | 'price' | 'price-desc';
 
-export const ORDERS: KeywordOrder[] = ['favorites','views','momentum','newest','relevance','price','price-desc'];
+export const ORDERS: KeywordOrder[] = ['sold','favorites','views','momentum','newest','relevance','price','price-desc'];
 
 /** Etsy is always asked for relevance. The ordering the member chose is applied
  *  here, over everything scanned - which is the point of scanning. */
@@ -60,6 +60,9 @@ export function pagesToScan(total: number | null, cap = SCAN_CAP) {
 }
 
 export type Rankable = {
+  /* Counted, not estimated: the drop between two readings of Etsy's own
+     quantity field. Absent until a listing has been read twice. */
+  soldUnits?: number | null;
   favorites: number | null; views: number | null;
   priceCents: number | null; ageDays: number | null;
   createdAt?: number | null; listedAt?: number | null;
@@ -96,6 +99,9 @@ function by<T>(value: (row: T) => number | null, direction: 1 | -1 = -1) {
 export function rankScan<T extends Rankable>(rows: T[], order: KeywordOrder): T[] {
   const ranked = [...rows];
   if (order === 'relevance') return ranked;
+  /* Units first when asked for, and a listing with no second reading sorts
+     below one with zero counted rather than being treated as a zero. */
+  if (order === 'sold') return ranked.sort(by(row => row.soldUnits ?? null));
   if (order === 'favorites') return ranked.sort(by(row => row.favorites));
   if (order === 'views') return ranked.sort(by(row => row.views));
   if (order === 'momentum') return ranked.sort(by(row => momentum(row)));

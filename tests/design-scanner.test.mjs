@@ -442,7 +442,11 @@ test("a cohort that clears every gate is allowed", () => {
 test("each gate refuses with its own reason, in the member's language", () => {
   const small = meetsThreshold(shape({ listings: 6, shops: 6, repeatedMovement: 1, withUsableImage: 6 }));
   assert.equal(small.refusal.kind, "cohort-too-small");
-  assert.match(small.refusal.because, /Not enough buyer activity/);
+  /* D1778 · This read "Not enough buyer activity has been recorded for this
+     keyword", which a member reads as a verdict on their artwork when it is a
+     statement about our corpus being empty. */
+  assert.match(small.refusal.because, /Nobody has watched this keyword here long enough/);
+  assert.match(small.refusal.because, /says nothing about what you made/);
 
   const narrow = meetsThreshold(shape({ listings: 20, shops: 3, withUsableImage: 20 }));
   assert.equal(narrow.refusal.kind, "no-shop-diversity");
@@ -509,8 +513,12 @@ test("the result shows no score, metric or internal number", () => {
 });
 
 test("no reference listing, shop or image is ever rendered", () => {
+  /* Scoped to the scan result. The live listing check on the same page asks
+     the member for their OWN title, which is theirs to see; what this rule
+     exists to prevent is showing somebody else's listing as evidence. */
+  const view = bare.slice(bare.indexOf("function ScanResult"));
   for (const banned of ["listingId", "shopId", "imageUrl", "competitor", "title"])
-    assert.ok(!bare.includes(banned), `the interface renders ${banned}`);
+    assert.ok(!view.includes(banned), `the scan result renders ${banned}`);
 });
 
 test("trademark stays visually separate from the design read", () => {

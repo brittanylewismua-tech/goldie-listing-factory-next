@@ -113,6 +113,7 @@ export const ACCESS: Record<string, Rule> = {
      on listings buyers favorite differ from the tags on listings they ignore,
      which is the claim the rebuilt Command Center would rest on. */
   "/api/market-watch/tag-gap": { kind: "feature", feature: "marketWatch" },
+  "/api/design-scanner/listing-check": { kind: "feature", feature: "designScanner" },
   "/api/unlocks": { kind: "feature", feature: "listingFactory" },
   "/api/drop": { kind: "feature", feature: "listingFactory" },
 

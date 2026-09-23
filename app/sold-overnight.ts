@@ -1420,3 +1420,94 @@ export async function shopObservationHealth() {
     gateCanArm: (Number(moved?.n) || 0) > 0,
   };
 }
+
+/* ============================================================================
+ * THE SCAN IS THE INSTRUMENT.
+ *
+ * Every tool in this market estimates sales. EverBee, which sellers pay for
+ * precisely to see how much a listing moves, reverse-engineers the number from
+ * review counts, listing age and views; an accuracy audit found a seller with
+ * forty real sales displayed as zero. None of them read a sale.
+ *
+ * This can count one. Etsy publishes `quantity` on every listing; read it,
+ * read it again, and the difference is items that sold. That was tested before
+ * it was built - 396 live listings over five and a half minutes, three falling
+ * by exactly one, none rising - so the only thing standing between this and a
+ * counted number is having read the listing before.
+ *
+ * Which is what these two functions are for. A keyword scan already pulls a
+ * thousand listings and already knows their quantity; putting them in the
+ * watch costs no calls at all and points the corpus at what members are
+ * actually researching rather than at whatever generic discovery found. The
+ * count is then available for every listing the sweep has seen twice.
+ * ==========================================================================*/
+
+export type ScanSeed = {
+  listingId: number; shopId: number | null; title: string; url: string;
+  taxonomyId: number | null; favorites: number | null; views: number | null;
+  quantity: number | null; priceCents: number | null; currency: string | null;
+  personalizable: boolean | null;
+};
+
+/**
+ * Put scanned listings in the watch. Costs nothing: every field here arrived
+ * on a call that was already made.
+ *
+ * INSERT OR IGNORE, so a listing already being watched keeps its history and
+ * its read count rather than being reset to a fresh row - which would erase
+ * exactly the prior reading that makes a count possible.
+ */
+export async function seedFromScan(rows: ScanSeed[]) {
+  if (!rows.length) return 0;
+  await ensureTables();
+  const statements = rows.slice(0, 1000).map(row => db().prepare(
+    `INSERT OR IGNORE INTO sold_watch
+       (listing_id,shop_id,title,url,taxonomy_id,favorites,views,quantity,price_cents,currency,personalizable,state)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,'active')`)
+    .bind(row.listingId, row.shopId, row.title.slice(0, 300), row.url,
+      row.taxonomyId, row.favorites ?? 0, row.views ?? 0, row.quantity,
+      row.priceCents, row.currency, row.personalizable === null ? null : row.personalizable ? 1 : 0));
+  for (let start = 0; start < statements.length; start += 50)
+    await db().batch(statements.slice(start, start + 50)).catch(() => undefined);
+  return statements.length;
+}
+
+export type CountedSale = { units: number; hours: number; lastAt: string | null };
+
+/**
+ * Units counted for these listings, and over how long they have been watched.
+ *
+ * The hours matter as much as the units: three sold over four hours and three
+ * over three weeks are different findings, and a caller that shows the first
+ * number without the second is publishing a rate it did not measure.
+ */
+export async function countedSales(listingIds: number[], hoursBack = 168) {
+  const ids = [...new Set(listingIds.filter(id => Number.isSafeInteger(id) && id > 0))];
+  if (!ids.length) return new Map<number, CountedSale>();
+  await ensureTables();
+  const since = hourOf(new Date(Date.now() - hoursBack * 3_600_000));
+  const counted = new Map<number, CountedSale>();
+  /* D1 binds a fixed number of parameters, so the ids go in in blocks. */
+  for (let start = 0; start < ids.length; start += 200) {
+    const block = ids.slice(start, start + 200);
+    const marks = block.map(() => "?").join(",");
+    const rows = await db().prepare(
+      `SELECT m.listing_id AS listingId, SUM(m.sold) AS units, MAX(m.bucket) AS lastAt,
+              w.reads AS reads, w.first_seen AS firstSeen
+         FROM sold_moves m JOIN sold_watch w ON w.listing_id = m.listing_id
+        WHERE m.listing_id IN (${marks}) AND m.bucket >= ? AND m.sold > 0
+        GROUP BY m.listing_id`)
+      .bind(...block, since)
+      .all<{ listingId: number; units: number; lastAt: string; firstSeen: string }>()
+      .catch(() => null);
+    for (const row of rows?.results ?? []) {
+      const watchedMs = Date.now() - Date.parse(`${row.firstSeen}`.replace(" ", "T") + "Z");
+      counted.set(Number(row.listingId), {
+        units: Number(row.units) || 0,
+        hours: Math.max(1, Math.min(hoursBack, Math.round(watchedMs / 3_600_000) || hoursBack)),
+        lastAt: row.lastAt ?? null,
+      });
+    }
+  }
+  return counted;
+}

@@ -112,6 +112,87 @@ async function normalizeImage(file: File): Promise<string> {
   return canvas.toDataURL("image/png");
 }
 
+
+/* ============================================================================
+ * THE CHECK THAT ANSWERS ON THE FIRST CLICK.
+ *
+ * The scan below this one needs artwork, an AI reading of it, and a cohort. It
+ * is the slow, expensive half. This is the half that needs a title and a
+ * search box, costs four Etsy calls, and never refuses - because it measures a
+ * draft against three hundred live listings rather than against a database of
+ * recorded sales that, for any phrase nobody has been watching, is empty.
+ *
+ * That emptiness is what used to produce "not enough buyer activity has been
+ * recorded for this keyword", which reads as a judgement on the member's
+ * design and is actually a statement about our own corpus.
+ * ==========================================================================*/
+type Finding = { key: string; kind: "gap" | "ok"; label: string; detail: string };
+
+function ListingCheck() {
+  const [phrase, setPhrase] = useState("");
+  const [title, setTitle] = useState("");
+  const [tags, setTags] = useState("");
+  const [price, setPrice] = useState("");
+  const [findings, setFindings] = useState<Finding[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const run = async () => {
+    setBusy(true); setError(""); setFindings(null);
+    try {
+      const response = await fetch("/api/design-scanner/listing-check", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phrase, title,
+          tags: tags.split(",").map(tag => tag.trim()).filter(Boolean),
+          /* Blank means not being checked, which is different from free. */
+          priceCents: price.trim() ? Math.round(Number(price) * 100) : undefined,
+          currency: "USD",
+        }),
+      });
+      const body = await response.json() as { findings?: Finding[]; error?: string };
+      if (!response.ok) throw new Error(body.error || "This check could not be completed.");
+      setFindings(body.findings ?? []);
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : "This check could not be completed.");
+    } finally { setBusy(false); }
+  };
+
+  const gaps = (findings ?? []).filter(finding => finding.kind === "gap");
+  const matches = (findings ?? []).filter(finding => finding.kind === "ok");
+
+  return <section className="listing-check" aria-label="Check a listing">
+    <h2 className="utility-heading">Check a listing before you publish it</h2>
+    <p className="listing-check-lede">Measured against the fifty most favorited live listings for
+      your search. No waiting, and nothing recorded in advance.</p>
+    <div className="listing-check-form">
+      <label>Search this listing is entering
+        <input className="p-input" value={phrase} onChange={event => setPhrase(event.target.value)}
+          placeholder="auntie shirt" /></label>
+      <label>Your title
+        <input className="p-input" value={title} onChange={event => setTitle(event.target.value)}
+          placeholder="Cool Auntie Sweatshirt, Gift for Aunt" /></label>
+      <label>Your tags, comma separated
+        <input className="p-input" value={tags} onChange={event => setTags(event.target.value)}
+          placeholder="auntie shirt, aunt gift, cool aunt" /></label>
+      <label>Your price, USD
+        <input className="p-input" inputMode="decimal" value={price}
+          onChange={event => setPrice(event.target.value)} placeholder="38" /></label>
+      <button className="p-button p-button-primary" disabled={busy || !phrase.trim()}
+        onClick={() => void run()}>{busy ? "Checking…" : "Check this listing"}</button>
+    </div>
+    {error && <p className="p-notice failed" role="alert">{error}</p>}
+    {findings && !findings.length && <p className="empty">Nothing separates this draft from the winners on
+      the things that can be measured here.</p>}
+    {findings && findings.length > 0 && <div className="listing-check-findings">
+      {gaps.map(finding => <article key={finding.key} className="finding finding-gap">
+        <b>{finding.label}</b><p>{finding.detail}</p></article>)}
+      {matches.map(finding => <article key={finding.key} className="finding finding-ok">
+        <b>{finding.label}</b><p>{finding.detail}</p></article>)}
+    </div>}
+  </section>;
+}
+
 export default function DesignScannerClient({ signedInEmail }: { signedInEmail: string }) {
   void signedInEmail;
   const [original,setOriginal]=useState<{width:number;height:number;url:string}|null>(null);
@@ -247,8 +328,11 @@ export default function DesignScannerClient({ signedInEmail }: { signedInEmail: 
     <main className="scanner p-grid">
       <header className="command-page-heading"><h1>Design Scanner</h1>
       <p className="lede">
-        Compare your design with Etsy listings that have recorded buyer activity.
+        Check a listing against what is winning its search, and compare your artwork
+        with the listings buyers are responding to.
       </p></header>
+
+      <ListingCheck />
 
       <section className="scanner-compose" aria-label="New design scan"><div className="scanner-artwork"><div className="stage">
         {preview

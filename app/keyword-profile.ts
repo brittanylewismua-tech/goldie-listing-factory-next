@@ -62,6 +62,7 @@ const words = (title: string) =>
     .filter(word => word.length > 2 && !STOP.has(word));
 
 export type Profile = {
+  phrase?: string;
   sampleSize: number;
   currency: string | null;
   priceBand: { low: number; high: number } | null;

@@ -253,7 +253,10 @@
 /* D1777 describes the top fifty of a keyword scan - what they charge, how
    old they are, how many take personalisation, what is behind them, and the
    words that keep recurring in their titles - as description, never advice. */
-export const BUILD_MARKER = "D1777";
+/* D1778 counts sales instead of estimating them, and gives the Design
+   Scanner a check that answers on the first click instead of a gate that
+   refuses anything nobody has been watching. */
+export const BUILD_MARKER = "D1778";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

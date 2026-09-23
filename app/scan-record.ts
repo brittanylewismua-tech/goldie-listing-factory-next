@@ -78,11 +78,15 @@ export function meetsThreshold(
     ? cohort.withUsableImage / cohort.listings : 0;
   if (cohort.listings < threshold.listings)
     return { ok: false, refusal: { kind: "cohort-too-small",
-      because: "Not enough buyer activity has been recorded for this keyword to compare designs. Try another keyword or check back later." } };
+      because: "Nobody has watched this keyword here long enough to compare artwork "
+        + "against it yet. That is a gap in our own records and says nothing about what "
+        + "you made. Check a listing against the live search above instead - that needs "
+        + "nothing recorded in advance." } };
   if (cohort.shops < threshold.shops)
     return { ok: false, refusal: { kind: "no-shop-diversity",
       because: `The movement in this niche comes from only ${cohort.shops} shop`
-        + `${cohort.shops === 1 ? "" : "s"}. That describes those shops, not the niche.` } };
+        + `${cohort.shops === 1 ? "" : "s"}. That describes those shops, not the niche. `
+        + `The live check above compares against the whole search instead.` } };
   if (cohort.repeatedMovement < threshold.repeatedMovement)
     return { ok: false, refusal: { kind: "no-repeated-movement",
       because: `Only ${cohort.repeatedMovement} listing`

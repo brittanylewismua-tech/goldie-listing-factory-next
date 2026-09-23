@@ -8,6 +8,7 @@ import {listingDisplay,listingPhoto,listingPrice,type EtsyDisplayListing} from '
 import {decodeEntities} from '@/app/shop-map-worlds';
 import {scanParams,pagesToScan,rankScan,SCAN_PAGE,ORDERS,type KeywordOrder} from '@/app/keyword-scan';
 import {profileWinners} from '@/app/keyword-profile';
+import {seedFromScan,countedSales} from '@/app/sold-overnight';
 
 /** One page of Etsy search. Throws with a sentence a member can act on. */
 async function searchPage(phrase:string,offset:number,query:string){
@@ -106,8 +107,33 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
            difference between a listing that did well and a shop that does. */
         shopSold:typeof detail.shop?.transaction_sold_count==='number'?detail.shop.transaction_sold_count:row.shopSold};
     }):ranked;
+    /*
+      COUNTED SALES, WHERE THERE HAVE BEEN TWO READINGS.
+
+      Every competing tool estimates this number from review counts and
+      listing age. This one counts it: Etsy publishes `quantity`, and the
+      difference between two readings is items that sold. A listing seen for
+      the first time today therefore has no count, and gets none - a blank is
+      correct and an estimate would not be.
+
+      The scan also puts what it read into the watch, which costs no calls at
+      all because the quantity arrived on a request already made. It means the
+      corpus follows what members actually research instead of what generic
+      discovery happened to find, and that a phrase looked at once carries
+      counts the next time somebody opens it.
+    */
+    void seedFromScan(listings.map(row=>({
+      listingId:row.listingId,shopId:null,title:row.title,url:row.etsyUrl,
+      taxonomyId:null,favorites:row.favorites,views:row.views,quantity:null,
+      priceCents:row.priceCents,currency:row.currency,personalizable:row.isPersonalizable??null,
+    }))).catch(()=>undefined);
+    const counted=await countedSales(listings.map(row=>row.listingId)).catch(()=>new Map());
+    const withCounts=listings.map(row=>{
+      const sale=counted.get(row.listingId);
+      return sale?{...row,soldUnits:sale.units,soldHours:sale.hours}:row;
+    });
     /* The head of the ranking, described against everything scanned. */
-    const profile=profileWinners(listings.slice(0,50),listings);
+    const profile=profileWinners(withCounts.slice(0,50),withCounts);
     /*
       THE SIZE OF THE POOL IS NOT THE MEMBER'S PROBLEM.
 
@@ -122,7 +148,7 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
       count derived from it reaches the keyword results.
     */
     return NextResponse.json({
-      listings,profile,total:first.total,photosUnavailable:!photos,asOf:now,
+      listings:withCounts,profile,total:first.total,photosUnavailable:!photos,asOf:now,
     },{headers:{'Cache-Control':'private, no-store'}});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:'Etsy search could not load. Please try again.'},{status:502});}
 });
