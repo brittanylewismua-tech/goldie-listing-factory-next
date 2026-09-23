@@ -262,3 +262,6 @@
 .listing-check .finding-gap{border-left:4px solid var(--suite-pink,#ff2ca6);background:var(--suite-pink-wash,#fff3fa)}
 .listing-check .finding-ok{border-left:4px solid #3f9c6d;background:#f4fbf7}
 @media (max-width:860px){.listing-check{padding:16px}.listing-check-form{grid-template-columns:minmax(0,1fr)}}
+
+/* D1785 · A refusal that hands the keyword to the check that always answers. */
+.scanner .refusal button{margin-top:14px}

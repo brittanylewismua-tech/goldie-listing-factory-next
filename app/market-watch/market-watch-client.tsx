@@ -254,7 +254,12 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
       <label className="market-search">Search within this keyword<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find a product or phrase"/></label><button className="p-button p-button-primary" disabled={loading}>Search Etsy</button>
       {(query||search)&&<button type="button" className="p-button p-button-quiet" onClick={()=>{setQuery("");setSearch("")}}>Clear search</button>}
     </form>
-    <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Searching Etsy for “${view.phrase}”…`:""}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Refresh listings</button></div>
+    {/* D1785 · The scan reads ten pages of Etsy and takes several seconds. It
+    used to spend them behind one short line above an empty space, which at
+    eight to sixteen seconds is indistinguishable from a page that has
+    failed. It says how long it will be, and the space below holds its
+    shape while it waits. */}
+    <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Reading Etsy for “${view.phrase}”. This takes a few seconds.`:""}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Refresh listings</button></div>
     {profile&&<WinnerProfile profile={profile}/>}
     {/* D1783 · A sort that returns nothing is worse than a sort that is not
     there. Units are counted from the difference between two readings of a
@@ -264,7 +269,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     <div className="market-results-sort"><label>Sort by<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}>{rows.some(row=>row.soldUnits!=null)&&<option value="sold">Units counted sold</option>}<option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="momentum">Favorites per day listed</option><option value="newest">Recently listed / renewed</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label></div>
     {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Try again</button></p>}
     {!loading&&!error&&!listings.length&&<p className="empty">No Etsy listings match this search.</p>}
-    <div className="cards" aria-busy={loading}>{listings.map(listing=><ListingCard key={listing.listingId} listing={listing} action={<button className="p-button p-button-quiet" disabled={collectionLoading||collectionBusy||Boolean(collectionError)||savedIds.has(listing.listingId)} onClick={()=>void updateCollection("save",listing.listingId)}>{savedIds.has(listing.listingId)?"Saved to comparisons":"Save to compare"}</button>}/>)}</div>
+    <div className="cards" aria-busy={loading}>{loading&&!rows.length&&Array.from({length:6},(_unused,index)=><div className="listing-skeleton" key={index} aria-hidden="true"><span/><div><i/><i/></div></div>)}{listings.map(listing=><ListingCard key={listing.listingId} listing={listing} action={<button className="p-button p-button-quiet" disabled={collectionLoading||collectionBusy||Boolean(collectionError)||savedIds.has(listing.listingId)} onClick={()=>void updateCollection("save",listing.listingId)}>{savedIds.has(listing.listingId)?"Saved to comparisons":"Save to compare"}</button>}/>)}</div>
     {shown<ranked.length&&<div className="market-pagination"><button className="p-button p-button-primary" onClick={()=>setShown(count=>count+60)}>Show more listings</button></div>}
     </section>}
     {section==="saved"&&<section className="keyword-collection" id="keyword-saved-panel" role="tabpanel" aria-labelledby="keyword-saved-tab">

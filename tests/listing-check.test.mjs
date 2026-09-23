@@ -96,3 +96,29 @@ test('a withheld profit names what is withholding it', () => {
   /* And the listing, not the rule, is what tells two rows apart. */
   assert.match(client, /<b className="cc-row-title">\{action\.title\}<\/b>/);
 });
+
+test('a refusal hands its keyword to the check that always answers', () => {
+  /* Pointing at a panel in prose and leaving the member to retype what they
+     had already chosen is a dead end wearing a signpost. */
+  const client = readFileSync(new URL('../app/design-scanner/design-scanner-client.tsx', import.meta.url), 'utf8');
+  assert.match(client, /new CustomEvent\("goldie-check-this-search",\{detail:result\.niche\}\)/);
+  assert.match(client, /window\.addEventListener\("goldie-check-this-search", handOff\)/);
+  assert.match(client, /setPhrase\(chosen\)/, 'the keyword arrives filled in');
+});
+
+test('a scan that takes seconds holds the shape of its answer', () => {
+  /* Eight to sixteen seconds behind one short line above empty space is
+     indistinguishable from a page that has failed. */
+  const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
+  assert.match(client, /This takes a few seconds/);
+  assert.match(client, /listing-skeleton/);
+});
+
+test('a keyword card with no displayable photo says so', () => {
+  /* Etsy will not let a photo older than six hours be displayed. An empty
+     span per listing rendered four grey boxes and no reason. */
+  const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
+  assert.match(client, /keyword-thumbs-empty/);
+  assert.match(client, /older than Etsy allows us to display/);
+  assert.doesNotMatch(client, /<span key=\{listing\.listingId\} aria-hidden="true"\/>/);
+});

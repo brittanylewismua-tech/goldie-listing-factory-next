@@ -271,7 +271,9 @@
 /* D1784 replaces four empty grey boxes with a sentence, and closes a type
    scale guard that had never looked inside a subdirectory - which is where
    every feature page keeps its stylesheet. */
-export const BUILD_MARKER = "D1784";
+/* D1785 gives a long scan the shape of its answer while it waits, and turns
+   a refusal that pointed at a panel into one that hands over the keyword. */
+export const BUILD_MARKER = "D1785";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

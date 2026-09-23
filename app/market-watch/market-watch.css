@@ -336,3 +336,15 @@
   margin:12px 0 0;padding:14px 16px;border:1px dashed var(--suite-line,#e5d8e0);border-radius:12px;
   color:var(--suite-muted,#756a72);font-size:13px;line-height:1.5;
 }
+
+/* D1785 · The shape of the answer, while the answer is being fetched. */
+.listing-skeleton{display:flex;gap:16px;padding:20px 0;border-bottom:1px solid var(--suite-line,#e5d8e0)}
+.listing-skeleton>span{width:68px;height:68px;flex:0 0 68px;border-radius:10px;background:#f1e9ee}
+.listing-skeleton>div{display:grid;gap:8px;flex:1 1 auto;align-content:center}
+.listing-skeleton i{display:block;height:12px;border-radius:6px;background:#f1e9ee}
+.listing-skeleton i:first-child{width:62%}
+.listing-skeleton i:last-child{width:34%}
+@media (prefers-reduced-motion:no-preference){
+  .listing-skeleton>span,.listing-skeleton i{animation:listing-skeleton-pulse 1.4s ease-in-out infinite}
+  @keyframes listing-skeleton-pulse{0%,100%{opacity:1}50%{opacity:.55}}
+}

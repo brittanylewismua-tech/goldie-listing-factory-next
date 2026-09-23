@@ -118,6 +118,23 @@ function ListingCheck() {
   const [tags, setTags] = useState("");
   const [price, setPrice] = useState("");
   const [findings, setFindings] = useState<Finding[] | null>(null);
+  /*
+    D1785 · The artwork scan below refuses when nobody has watched a keyword
+    long enough to build a cohort from it. Pointing at this panel in prose and
+    leaving the member to retype what they had already chosen is a dead end
+    wearing a signpost. It hands the keyword over instead.
+  */
+  const mine = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const handOff = (event: Event) => {
+      const chosen = (event as CustomEvent<string>).detail;
+      if (!chosen) return;
+      setPhrase(chosen);
+      mine.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    window.addEventListener("goldie-check-this-search", handOff);
+    return () => window.removeEventListener("goldie-check-this-search", handOff);
+  }, []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -145,7 +162,7 @@ function ListingCheck() {
   const gaps = (findings ?? []).filter(finding => finding.kind === "gap");
   const matches = (findings ?? []).filter(finding => finding.kind === "ok");
 
-  return <section className="listing-check" aria-label="Check a listing">
+  return <section className="listing-check" aria-label="Check a listing" ref={mine}>
     <h2 className="utility-heading">Check a listing before you publish it</h2>
     <p className="listing-check-lede">Measured against the fifty most favorited live listings for
       your search. No waiting, and nothing recorded in advance.</p>
@@ -512,7 +529,8 @@ function ScanResult({ result }: { result: Result }) {
           {/* A refused comparison still measured the artwork, and that
               measurement is often the more useful half. */}
           <ImageQuality quality={result.imageQuality} />
-          <div className="refusal"><p>{result.refusal?.because}</p>{result.allowanceCharged===false&&<p>No scan was used from your allowance.</p>}</div>
+          <div className="refusal"><p>{result.refusal?.because}</p>{result.allowanceCharged===false&&<p>No scan was used from your allowance.</p>}<button type="button" className="p-button p-button-primary" onClick={()=>window.dispatchEvent(
+            new CustomEvent("goldie-check-this-search",{detail:result.niche}))}>Check a listing against &ldquo;{result.niche}&rdquo; instead</button></div>
         </div>
       )}
 
