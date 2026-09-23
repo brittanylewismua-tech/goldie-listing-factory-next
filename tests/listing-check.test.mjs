@@ -135,9 +135,10 @@ test('the Command Center is a page, not four links in a group', () => {
 
   const client = readFileSync(new URL('../app/command-center/command-center-client.tsx', import.meta.url), 'utf8');
   /* The question, not the file name: a member is buying the answer. */
+  /* D1798 · Three tools. The listing check moved onto the listing in Shop
+     Map, where the listings already were, and the artwork scan was deleted. */
   for (const question of ['What is actually selling in this search',
-    'Is this listing ready to publish', 'Which of my designs actually make money',
-    'Can I legally print this phrase'])
+    'Which of my designs actually make money', 'Can I legally print this phrase'])
     assert.ok(client.includes(question), `missing: ${question}`);
 
   const summary = readFileSync(new URL('../app/api/command-center/summary/route.ts', import.meta.url), 'utf8');

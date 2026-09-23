@@ -187,13 +187,17 @@ test("every top-level feature is reachable from the navigation", () => {
     Market Watch could reach the rest of Goldie only with the back button.
   */
   const shell = read("app/factory-shell.tsx");
-  for (const href of ["/market-watch", "/shop-map", "/design-scanner", "/trademark"])
+  /* D1798 · The Design Scanner is gone. Its listing check moved onto the
+     listing in Shop Map, where the member's listings already were; its
+     artwork scan was deleted, having needed a cohort that mostly did not
+     exist and returned nothing anybody could act on when it did. */
+  for (const href of ["/market-watch", "/shop-map", "/trademark"])
     assert.ok(shell.includes(`href: "${href}"`), `${href} is not in the navigation`);
 });
 
 test("every top-level feature wears the shell", () => {
   for (const page of ["app/market-watch/page.tsx", "app/shop-map/page.tsx",
-    "app/design-scanner/page.tsx", "app/trademark/page.tsx"]) {
+    "app/trademark/page.tsx"]) {
     const code = strip(read(page));
     assert.ok(code.includes("FactoryShell"), `${page} renders without the product shell`);
     /* Phone-first features must not inherit the Listing Factory's gate. */

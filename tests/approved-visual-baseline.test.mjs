@@ -1211,7 +1211,7 @@ test("D818: both shells render the shared, grouped suite navigation", async () =
      copy, so "on both surfaces" is structural instead of a list of labels
      somebody has to remember to extend. */
   for (const label of ["Home", "Listing Factory", "Batch History", "Keyword Banks", "Mockup Sets", "Usage",
-    "Market Watch", "Shop Map", "Design Scanner", "Trademark Tracker", "Connections"])
+    "Market Watch", "Shop Map", "Trademark Tracker", "Connections"])
     assert.ok(shell.includes(`label: "${label}"`), `${label} is on the interior rail`);
   assert.match(app, /import \{ NAV \} from "\.\/factory-shell"/,
     "the workflow rail must draw from the same list");

@@ -2,6 +2,7 @@
 import {browseOwnListings} from "@/app/market-listing-browser";
 import ActionPlan from "@/app/command-center/action-plan";
 import {designsOnOneProduct,familyLabel,type Reach,type ReachListing} from "@/app/design-reach";
+import ListingCheckPanel from "./listing-check-panel";
 import type {CatalogAction} from "@/app/shop-map-actions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { monthName } from "@/app/shop-map-month";
@@ -272,6 +273,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       <DesignReach/>
+      <ListingCheckPanel/>
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
           <h2>Top 3 listings in the last 90 days</h2></div>

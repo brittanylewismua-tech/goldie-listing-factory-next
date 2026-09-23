@@ -29,7 +29,7 @@ test("every desktop shell renders the Goldie Suite home link", () => {
 
 test("one nav exposes every member feature", () => {
   const shell = read("factory-shell.tsx");
-  for (const destination of ["Home", "Listing Factory", "Market Watch", "Design Scanner",
+  for (const destination of ["Home", "Listing Factory", "Market Watch",
     "Shop Map", "Trademark Tracker", "Batch History", "Keyword Banks"])
     assert.ok(shell.includes(`label: "${destination}"`), `${destination} is missing from the suite navigation`);
   const nav = read("suite-sidebar-nav.tsx");

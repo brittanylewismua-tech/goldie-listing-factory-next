@@ -175,8 +175,11 @@ test("every feature API enforces the gate, not the owner flag", () => {
 });
 
 test("every feature page enforces the same gate", () => {
+  /* D1798 · The Design Scanner is gone. Its listing check moved onto the
+     listing in Shop Map, where the member's listings already were; its
+     artwork scan was deleted, having needed a cohort that mostly did not
+     exist and returned nothing anybody could act on when it did. */
   for (const [file, feature] of Object.entries({
-    "app/design-scanner/page.tsx": "designScanner",
     "app/market-watch/page.tsx": "marketWatch",
     "app/shop-map/page.tsx": "shopMap",
   })) {

@@ -299,7 +299,9 @@
    panel as the table it always was. */
 /* D1797 collapses the last two near-blacks, which were four points apart
    and from different passes. */
-export const BUILD_MARKER = "D1797";
+/* D1798 deletes the Design Scanner. Its listing check moved onto the listing
+   in Shop Map, where the listings already were; its artwork scan is gone. */
+export const BUILD_MARKER = "D1798";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

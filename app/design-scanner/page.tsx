@@ -1,25 +1,23 @@
-import { requireFeaturePage } from "@/app/require-feature";
-import FactoryShell from "@/app/factory-shell";
-import DesignScannerClient from "./design-scanner-client";
-import "./design-scanner.css";
-
-/* The tab says what this page is. There is no product name to append, and
-   a placeholder in a tab title is how a stand-in becomes permanent. */
-export const metadata = { title: "Design Scanner" };
-
+import { redirect } from "next/navigation";
 
 /*
-  The member is holding a design and one question: is this going to land with
-  the people I made it for. Everything on this page serves that question, and
-  the design itself stays the biggest thing on screen the whole way through.
+  D1798 · THE DESIGN SCANNER IS GONE.
+
+  Two halves lived here. The listing check asked a member to pick one of their
+  own listings from a dropdown - the same listings Shop Map already holds,
+  already displays and already knows the sales of. A page whose job is to
+  reproduce a list that exists two clicks away is a second copy of the list,
+  not a second tool. It is on the listing now.
+
+  The artwork scan is deleted rather than moved. It needed a cohort assembled
+  from recorded buyer activity, which for any phrase nobody had been watching
+  did not exist, so it refused almost everything; and when it did answer it
+  returned soft statements about layout and contrast that nobody can act on.
+  Reported as useless twice, and it was.
+
+  The route stays and redirects, because bookmarks and the Hot List's own
+  links point at it.
 */
-export default async function DesignScannerPage() {
-  const user = await requireFeaturePage("designScanner", "/design-scanner");
-  return (
-    /* D1575 · the same rail, topbar, wordmark and footer as the Listing
-       Factory. This page rendered as a bare column on white before. */
-    <FactoryShell active="design-scanner" title="Design Scanner" desktopOnly={false}>
-      <DesignScannerClient signedInEmail={user.email} />
-    </FactoryShell>
-  );
+export default function DesignScannerPage() {
+  redirect("/shop-map");
 }

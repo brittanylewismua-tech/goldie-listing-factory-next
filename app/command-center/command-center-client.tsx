@@ -42,18 +42,11 @@ const TOOLS = (summary: Summary | null) => [
     icon: icon(<><path d="M3 17l6-6 4 4 7-7" /><path d="M14 8h7v7" /></>),
   },
   {
-    href: "/design-scanner", name: "Design Scanner",
-    question: "Is this listing ready to publish?",
-    what: "Measures your listing against the fifty winning its search: price band, "
-      + "missing words, empty tag slots, personalisation.",
-    stat: "Answers in about four seconds",
-    icon: icon(<><circle cx="12" cy="12" r="8" /><path d="M4 12h16" /></>),
-  },
-  {
     href: "/shop-map", name: "Shop Map",
     question: "Which of my designs actually make money?",
     what: "Your receipts against your Printify costs and Etsy's fees, to the cent. "
-      + "Plus the designs that sold and sit on only one product.",
+      + "The designs that sold and sit on only one product. And a check of any "
+      + "listing against the fifty winning its search.",
     stat: summary && summary.sold90 > 0
       ? `${summary.sold90} units sold in the last 90 days`
       : summary && `${summary.mapped} listings mapped`,

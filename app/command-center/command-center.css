@@ -14,7 +14,9 @@
   font-size:clamp(30px,3.6vw,46px);font-weight:800;letter-spacing:-.035em;line-height:1.04;
 }
 
-.cc-home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+/* D1798 · Three tools, not four. The listing check moved onto the listing
+   in Shop Map, where the listings already were. */
+.cc-home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
 .cc-home-tile{
   position:relative;display:grid;gap:10px;align-content:start;
   padding:26px;border:2px solid #0a0a0a;border-radius:16px;background:#fff;

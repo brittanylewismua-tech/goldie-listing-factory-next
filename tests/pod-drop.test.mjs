@@ -326,7 +326,7 @@ test("the two rails cannot disagree about what is on them", () => {
     "the workflow rail must mount the shared navigation component");
   /* Every top-level feature, in the one list both rails draw from. */
   for (const label of ["Home", "Listing Factory", "Batch History", "Keyword Banks",
-    "Market Watch", "Shop Map", "Design Scanner", "Trademark Tracker"])
+    "Market Watch", "Shop Map", "Trademark Tracker"])
     assert.ok(shell.includes(`label: "${label}"`), `${label} missing from the shared rail`);
   /* And neither may carry a way into the Hot List: it is not part of making a
      listing, and it is reached from Home with the other tools. */

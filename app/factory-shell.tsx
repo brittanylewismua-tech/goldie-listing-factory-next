@@ -65,7 +65,6 @@ export const NAV: SuiteNavItem[] = [
   { key: "mockups", label: "Mockup Sets", href: "/mockups", icon: "mockups", group: "factory" },
   { key: "usage", label: "Usage", href: "/usage", icon: "usage", group: "factory" },
   { key: "market-watch", label: "Market Watch", href: "/market-watch", icon: "marketWatch", group: "command" },
-  { key: "design-scanner", label: "Design Scanner", href: "/design-scanner", icon: "designScanner", group: "command" },
   { key: "shop-map", label: "Shop Map", href: "/shop-map", icon: "shopMap", group: "command" },
   { key: "trademark", label: "Trademark Tracker", href: "/trademark", icon: "trademark", group: "command" },
   { key: "connections", label: "Connections", href: "/connections", icon: "connections", group: "connections" },
