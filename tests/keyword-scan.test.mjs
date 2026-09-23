@@ -85,6 +85,16 @@ test('live search still requires the feature and a member-owned keyword', () => 
   assert.doesNotMatch(route, /readNiche|addCandidates|relates\(/, 'no saved pool substituted for a live search');
 });
 
+test('the pages of a scan go out together, not in single file', () => {
+  const route = readFileSync(new URL('../app/api/market-watch/listings/route.ts', import.meta.url), 'utf8');
+  /* Ten pages awaited one at a time took 39 seconds on the live build. Each
+     Etsy round trip is about four seconds; the pacer only needs a quarter of
+     one between requests, so the waiting is what overlaps. */
+  assert.match(route, /await Promise\.all\(Array\.from\(\{length:Math\.max\(0,pages-1\)\}/);
+  assert.match(route, /\.catch\(\(\)=>\[\] as EtsyDisplayListing\[\]\)/,
+    'a failed page leaves a gap in the ranking rather than failing the scan');
+});
+
 test('photographs are fetched for the page shown, not for the whole scan', () => {
   const route = readFileSync(new URL('../app/api/market-watch/listings/route.ts', import.meta.url), 'utf8');
   /* Ranking fields ride along on the search response; only images need the

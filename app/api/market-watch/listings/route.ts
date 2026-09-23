@@ -6,7 +6,7 @@ import {crossSiteWrite,CROSS_SITE_REFUSAL} from '@/app/same-site-only';
 import {etsyApiCredential,recordEtsyCall,waitForEtsyCapacity} from '@/app/api/etsy/client';
 import {listingDisplay,listingPhoto,listingPrice,type EtsyDisplayListing} from '@/app/etsy-listing-display';
 import {decodeEntities} from '@/app/shop-map-worlds';
-import {scanParams,pagesToScan,rankScan,coverage,SCAN_PAGE,SCAN_CAP,ORDERS,type KeywordOrder} from '@/app/keyword-scan';
+import {scanParams,pagesToScan,rankScan,coverage,SCAN_PAGE,ORDERS,type KeywordOrder} from '@/app/keyword-scan';
 
 /** One page of Etsy search. Throws with a sentence a member can act on. */
 async function searchPage(phrase:string,offset:number,query:string){
@@ -44,12 +44,24 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
     const first=await searchPage(watch.phrase,0,query);
     const rows=[...first.rows];
     const pages=pagesToScan(first.total);
-    for(let page=1;page<pages;page++){
-      const next=await searchPage(watch.phrase,page*SCAN_PAGE,query);
-      if(!next.rows.length)break;
-      rows.push(...next.rows);
-      if(rows.length>=SCAN_CAP)break;
-    }
+    /*
+      THE REMAINING PAGES GO OUT TOGETHER.
+
+      Awaiting each page before starting the next made a ten-page scan take
+      39 seconds on the live build - not because of the pacer, which spaces
+      requests by about a quarter second, but because each Etsy round trip is
+      roughly four. Ten of those in single file is nobody's idea of a search.
+
+      waitForEtsyCapacity still serialises the reservations inside each of
+      these, so firing them at once spaces the requests exactly as before and
+      only overlaps the waiting. A page that comes back empty or fails leaves
+      a gap in the scan rather than failing the whole thing: nine tenths of a
+      ranking is worth more than an error, and the count shown is what was
+      actually scanned.
+    */
+    const rest=await Promise.all(Array.from({length:Math.max(0,pages-1)},(_unused,index)=>
+      searchPage(watch.phrase,(index+1)*SCAN_PAGE,query).then(page=>page.rows).catch(()=>[] as EtsyDisplayListing[])));
+    for(const page of rest)rows.push(...page);
     const now=Math.floor(Date.now()/1000);
     const seen=new Map<number,EtsyDisplayListing>();
     for(const row of rows){const id=Number(row.listing_id);if(id&&!seen.has(id))seen.set(id,row);}

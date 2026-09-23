@@ -239,7 +239,10 @@
    this asked for, and every ranking field rides along on the search
    response - so a 209-listing phrase is covered completely in three calls
    and can be sorted by favorites, which etsy.com will not do for anyone. */
-export const BUILD_MARKER = "D1772";
+/* D1773 sends the scan pages out together. Awaited one at a time they took
+   39 seconds on the live build - the pacer wants a quarter second between
+   requests, but each Etsy round trip is about four. */
+export const BUILD_MARKER = "D1773";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
