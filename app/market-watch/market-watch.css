@@ -357,3 +357,7 @@
   .listing-skeleton>span,.listing-skeleton i{animation:listing-skeleton-pulse 1.4s ease-in-out infinite}
   @keyframes listing-skeleton-pulse{0%,100%{opacity:1}50%{opacity:.55}}
 }
+
+/* D1789 · Product type sits with the search that it narrows. */
+.market-shelf{display:grid;gap:5px;font-size:12px;font-weight:700}
+.market-shelf select{min-height:42px;padding:0 10px;border:1px solid var(--suite-line,#e5d8e0);border-radius:8px;background:#fff;font:inherit}

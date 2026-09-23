@@ -181,6 +181,20 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
      the reason to be on this page instead of etsy.com. */
   const [sort,setSort]=useState<KeywordOrder>("favorites");
   const [shown,setShown]=useState(60);
+  /*
+    D1789 · PRODUCT TYPE, BECAUSE "BACHELORETTE" IS MOSTLY CONFETTI.
+
+    Measured live: the top fifty for bachelorette priced at $4-$25, and the
+    recurring words were favors, decor, confetti, temporary and tattoos. All
+    true, all about a party-supplies business, and for a seller printing
+    shirts the price band was worse than useless because it looked like an
+    answer. Etsy's search takes a taxonomy filter; this is it.
+  */
+  const [shelf,setShelf]=useState("");
+  const [shelves,setShelves]=useState<Array<{label:string}>>([]);
+  useEffect(()=>{void fetch("/api/market-watch/shelves")
+    .then(response=>response.ok?response.json() as Promise<{shelves?:Array<{label:string}>}>:null)
+    .then(body=>setShelves(body?.shelves??[])).catch(()=>undefined)},[]);
   const [section,setSection]=useState<"search"|"saved">("search");
   const [entries,setEntries]=useState<CollectionEntry[]>([]);
   const [collectionLoading,setCollectionLoading]=useState(true);
@@ -225,7 +239,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     const controller=new AbortController();active.current=controller;
     setLoading(true);setError("");setRows([]);setTotal(null);setProfile(null);setShown(60);
     try{
-      const params=new URLSearchParams({key:view.key,sort:"favorites",query:search});
+      const params=new URLSearchParams({key:view.key,sort:"favorites",query:search,...(shelf?{shelf}:{})});
       const response=await fetch(`/api/market-watch/listings?${params}`,{signal:controller.signal});
       const body=await response.json() as {listings?:Listing[];profile?:Profile;total?:number|null;error?:string};
       if(!response.ok)throw new Error(body.error||"Etsy search could not load.");
@@ -233,7 +247,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
       setRows(body.listings??[]);setTotal(body.total??null);setProfile(body.profile??null);
     }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:"Etsy search could not load.");}
     finally{if(active.current===controller){active.current=null;setLoading(false);}}
-  },[view.key,search]);
+  },[view.key,search,shelf]);
   useEffect(()=>{void load();return()=>{active.current?.abort();active.current=null}},[load]);
   /* If the scan came back with no counted units the option is not offered, so
      a sort left over from a previous keyword falls back rather than showing an
@@ -251,7 +265,12 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     {collectionError&&<p className="p-notice failed" role="alert">{collectionError} <button className="p-button p-button-quiet" disabled={collectionBusy||collectionLoading} onClick={()=>void loadCollection()}>Reload collection</button></p>}
     {section==="search"&&<section id="keyword-search-panel" role="tabpanel" aria-labelledby="keyword-search-tab">
     <form className="market-browser-controls" onSubmit={event=>{event.preventDefault();if(search===query.trim())void load();else setSearch(query.trim())}}>
-      <label className="market-search">Search within this keyword<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find a product or phrase"/></label><button className="p-button p-button-primary" disabled={loading}>Search Etsy</button>
+      <label className="market-search">Search within this keyword<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find a product or phrase"/></label>
+      {shelves.length>0&&<label className="market-shelf">Product type<select value={shelf} onChange={e=>setShelf(e.target.value)}>
+        <option value="">Every product type</option>
+        {shelves.map(entry=><option key={entry.label} value={entry.label}>{entry.label}</option>)}
+      </select></label>}
+      <button className="p-button p-button-primary" disabled={loading}>Search Etsy</button>
       {(query||search)&&<button type="button" className="p-button p-button-quiet" onClick={()=>{setQuery("");setSearch("")}}>Clear search</button>}
     </form>
     {/* D1785 · The scan reads ten pages of Etsy and takes several seconds. It

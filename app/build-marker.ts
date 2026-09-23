@@ -279,7 +279,10 @@
    keeping a thinner copy of it with no way out. */
 /* D1788 stops a destructive control wearing a primary button, and asks for
    the search phrase in words a seller uses rather than in jargon. */
-export const BUILD_MARKER = "D1788";
+/* D1789 lets the scan be narrowed to a product type. Without it a search
+   for "bachelorette" is mostly confetti, and the price band it reported -
+   four to twenty-five dollars - described a party-supplies business. */
+export const BUILD_MARKER = "D1789";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

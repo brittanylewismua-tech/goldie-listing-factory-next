@@ -8,12 +8,12 @@ import {listingDisplay,listingPhoto,listingPrice,type EtsyDisplayListing} from '
 import {decodeEntities} from '@/app/shop-map-worlds';
 import {scanParams,pagesToScan,rankScan,SCAN_PAGE,ORDERS,type KeywordOrder} from '@/app/keyword-scan';
 import {profileWinners} from '@/app/keyword-profile';
-import {seedFromScan,countedSales} from '@/app/sold-overnight';
+import {seedFromScan,countedSales,shelfIds} from '@/app/sold-overnight';
 
 /** One page of Etsy search. Throws with a sentence a member can act on. */
-async function searchPage(phrase:string,offset:number,query:string){
+async function searchPage(phrase:string,offset:number,query:string,taxonomyId?:number|null){
   await waitForEtsyCapacity();
-  const response=await fetch(`https://openapi.etsy.com/v3/application/listings/active?${scanParams(phrase,offset,query)}`,{
+  const response=await fetch(`https://openapi.etsy.com/v3/application/listings/active?${scanParams(phrase,offset,query,taxonomyId)}`,{
     headers:{'x-api-key':etsyApiCredential()},signal:AbortSignal.timeout(25000)});
   await recordEtsyCall(response,'search');
   if(!response.ok)throw new Error('Etsy search could not load. Please try again.');
@@ -43,9 +43,26 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
       209-listing phrase) or only sampled (the cap, for a six-figure one).
       Pages run one at a time because the pacer serialises Etsy calls anyway.
     */
-    const first=await searchPage(watch.phrase,0,query);
+    /*
+      THE SHELF, IF ONE WAS CHOSEN.
+
+      Etsy files a shelf under several taxonomy ids - there is a T-shirts node
+      under men's, women's, unisex and kids - and its search takes exactly
+      one. So the scan divides its pages across the shelf's ids rather than
+      picking one and silently dropping the rest, which would hide three
+      quarters of the t-shirts on Etsy while looking like it had worked.
+    */
+    const shelf=(params.get('shelf')??'').trim().slice(0,60);
+    const taxonomies=shelf
+      ? (await shelfIds().catch(()=>[])).filter(row=>row.label===shelf).map(row=>row.id)
+      : [];
+    const first=await searchPage(watch.phrase,0,query,taxonomies[0]??null);
     const rows=[...first.rows];
-    const pages=pagesToScan(first.total);
+    /* With a shelf the total belongs to one of its ids, so the budget is
+       spread evenly across them all rather than being spent on the first. */
+    const pages=taxonomies.length>1
+      ? Math.max(taxonomies.length,Math.ceil(pagesToScan(first.total)/1))
+      : pagesToScan(first.total);
     /*
       THE REMAINING PAGES GO OUT TOGETHER.
 
@@ -61,8 +78,14 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
       ranking is worth more than an error, and the count shown is what was
       actually scanned.
     */
-    const rest=await Promise.all(Array.from({length:Math.max(0,pages-1)},(_unused,index)=>
-      searchPage(watch.phrase,(index+1)*SCAN_PAGE,query).then(page=>page.rows).catch(()=>[] as EtsyDisplayListing[])));
+    const rest=await Promise.all(Array.from({length:Math.max(0,pages-1)},(_unused,index)=>{
+      /* Round-robin: page 1 of the second shelf id before page 2 of the
+         first, so a narrow shelf is never starved by a broad one. */
+      const taxonomy=taxonomies.length?taxonomies[(index+1)%taxonomies.length]:null;
+      const step=taxonomies.length?Math.floor((index+1)/taxonomies.length):index+1;
+      return searchPage(watch.phrase,step*SCAN_PAGE,query,taxonomy)
+        .then(page=>page.rows).catch(()=>[] as EtsyDisplayListing[]);
+    }));
     for(const page of rest)rows.push(...page);
     const now=Math.floor(Date.now()/1000);
     const seen=new Map<number,EtsyDisplayListing>();
@@ -148,7 +171,7 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
       count derived from it reaches the keyword results.
     */
     return NextResponse.json({
-      listings:withCounts,profile,total:first.total,photosUnavailable:!photos,asOf:now,
+      listings:withCounts,profile,shelf:shelf||null,total:first.total,photosUnavailable:!photos,asOf:now,
     },{headers:{'Cache-Control':'private, no-store'}});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:'Etsy search could not load. Please try again.'},{status:502});}
 });

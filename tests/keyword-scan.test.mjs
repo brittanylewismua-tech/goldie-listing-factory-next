@@ -66,7 +66,7 @@ test('the results never say how much of the pool they hold', () => {
   assert.doesNotMatch(detail, /coverage/i);
   assert.doesNotMatch(route, /coverage:|complete:|scanned:/,
     'the endpoint does not hand the page a sentence about its own coverage');
-  assert.match(route, /listings:withCounts,profile,total:first\.total,photosUnavailable/);
+  assert.match(route, /listings:withCounts,profile,shelf:shelf\|\|null,total:first\.total,photosUnavailable/);
   for (const phrase of ['most relevant of', 'covered completely', 'Ranked every one'])
     assert.doesNotMatch(client, new RegExp(phrase));
 });
@@ -110,7 +110,10 @@ test('the scan is paid for once and re-ranked for free', () => {
      spend another ten Etsy calls asking the same question a different way -
      which is the cost that got the ranking handed back to Etsy in the first
      place. */
-  assert.match(detail, /\},\[view\.key,search\]\);/, 'the scan depends on the keyword and the query, not the sort');
+  /* The scan depends on the keyword, the search within it, and the product
+     type - never on the sort, which is applied to what is already loaded. */
+  assert.match(detail, /\},\[view\.key,search,shelf\]\);/);
+  assert.doesNotMatch(detail, /\},\[view\.key,search,shelf,sort\]/);
   assert.match(detail, /rankScan\(rows,effectiveSort\)/, 'ordering is applied to what is already loaded');
   /* A sort that returns nothing is worse than a sort that is not offered:
      units are counted from two readings, so a phrase scanned for the first
@@ -162,4 +165,26 @@ test('a tracked keyword and a tracked shop can both be untracked', () => {
     const source = readFileSync(new URL(`../app/api/market-watch/${route}/route.ts`, import.meta.url), 'utf8');
     assert.match(source, /body\?\.remove/, `${route} still accepts a removal`);
   }
+});
+
+test('a product type narrows the scan at Etsy, not after it', () => {
+  /*
+    Measured live on the deployed build: the top fifty for "bachelorette"
+    priced at $4-$25, with favors, decor, confetti, temporary and tattoos as
+    the recurring words. All true, all a party-supplies business. For a seller
+    printing shirts the whole panel described somebody else's market, and the
+    price band was worse than useless because it looked like an answer.
+  */
+  assert.match(scanParams('bachelorette', 0, '', 1234).toString(), /taxonomy_id=1234/);
+  assert.doesNotMatch(scanParams('bachelorette', 0).toString(), /taxonomy_id/,
+    'no shelf chosen means no filter, not a guessed one');
+
+  const route = readFileSync(new URL('../app/api/market-watch/listings/route.ts', import.meta.url), 'utf8');
+  /* Etsy files one shelf under several ids - T-shirts exists under men's,
+     women's, unisex and kids - and its search takes exactly one. Picking the
+     first would hide three quarters of the t-shirts on Etsy while looking
+     like it had worked. */
+  assert.match(route, /taxonomies\[\(index\+1\)%taxonomies\.length\]/,
+    'the pages round-robin across every id of the shelf');
+  assert.match(route, /filter\(row=>row\.label===shelf\)/);
 });

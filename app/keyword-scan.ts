@@ -45,12 +45,28 @@ export const ORDERS: KeywordOrder[] = ['sold','favorites','views','momentum','ne
 
 /** Etsy is always asked for relevance. The ordering the member chose is applied
  *  here, over everything scanned - which is the point of scanning. */
-export function scanParams(phrase: string, offset: number, query = '') {
-  return new URLSearchParams({
+export function scanParams(phrase: string, offset: number, query = '', taxonomyId?: number | null) {
+  const params = new URLSearchParams({
     keywords: [phrase.trim(), query.trim()].filter(Boolean).join(' '),
     limit: String(SCAN_PAGE), offset: String(offset),
     sort_on: 'score', sort_order: 'desc',
   });
+  /*
+    WITHOUT THIS, A BACHELORETTE SEARCH IS MOSTLY CONFETTI.
+
+    Measured on the live build: the top fifty for "bachelorette" priced at
+    four to twenty-five dollars, and the words recurring in their titles were
+    favors, decor, confetti, temporary, tattoos and decorations. All true, and
+    all about a party-supplies business. For a seller printing shirts the
+    entire panel was measuring somebody else's market, and the price band was
+    worse than useless because it looked like an answer.
+
+    Etsy's search takes a taxonomy filter. When a product type is chosen the
+    scan asks only for that shelf, so the band, the ages and the words all
+    describe the thing the member actually makes.
+  */
+  if (taxonomyId) params.set('taxonomy_id', String(taxonomyId));
+  return params;
 }
 
 /** How many more pages to ask for, given what the first page said the total is. */
