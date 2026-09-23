@@ -12,7 +12,7 @@
   --suite-shadow:0 18px 46px rgba(42,20,33,.08);
 }
 
-html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,sans-serif}
+html,body{background:#fff9fc;color:var(--suite-ink);font-family:'Manrope Variable',Manrope,Helvetica,sans-serif}
 
 /* Shared application frame */
 .app-shell{grid-template-columns:272px minmax(0,1fr);background:var(--suite-ink)}
@@ -66,14 +66,14 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell>.topbar .top-nav a>small+.suite-nav-lock{margin-left:0}
 .suite-access-backdrop{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(10,7,9,.72);backdrop-filter:blur(5px)}
 .suite-access-dialog{position:relative;width:min(440px,100%);padding:34px;border:1px solid #111;border-radius:10px;background:#fff;color:#151214;box-shadow:8px 8px 0 var(--suite-pink)}
-.suite-access-dialog h2{max-width:360px;margin:18px 0 10px;font:900 28px/1.05 Arial,Helvetica,sans-serif;letter-spacing:-.045em}
+.suite-access-dialog h2{max-width:360px;margin:18px 0 10px;font:900 28px/1.05 'Manrope Variable',Manrope,Helvetica,sans-serif;letter-spacing:-.045em}
 .suite-access-dialog p{margin:0;color:#756a72;font-size:14px;line-height:1.55}
-.suite-access-close{position:absolute;right:14px;top:12px;display:grid;place-items:center;width:34px;height:34px;padding:0;border:0;border-radius:7px;background:transparent;color:#71666d;font:400 27px/1 Arial,sans-serif;cursor:pointer}
+.suite-access-close{position:absolute;right:14px;top:12px;display:grid;place-items:center;width:34px;height:34px;padding:0;border:0;border-radius:7px;background:transparent;color:#71666d;font:400 27px/1 'Manrope Variable',Manrope,sans-serif;cursor:pointer}
 .suite-access-close:hover,.suite-access-close:focus-visible{background:#f6edf2;color:#111}
 .suite-access-lock{display:grid;place-items:center;width:42px;height:42px;border-radius:8px;background:#111;color:var(--suite-pink);box-shadow:3px 3px 0 var(--suite-pink)}
 .suite-access-lock .suite-nav-lock{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}
 .suite-access-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:25px}
-.suite-access-actions button,.suite-access-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid #111;border-radius:7px;font:900 11px/1 Arial,Helvetica,sans-serif;text-decoration:none;cursor:pointer}
+.suite-access-actions button,.suite-access-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid #111;border-radius:7px;font:900 11px/1 'Manrope Variable',Manrope,Helvetica,sans-serif;text-decoration:none;cursor:pointer}
 .suite-access-actions button{background:#fff;color:#111}
 .suite-access-actions a{background:#111;color:#fff;box-shadow:3px 3px 0 var(--suite-pink)}
 .suite-access-actions :is(button,a):focus-visible,.suite-access-close:focus-visible{outline:2px solid var(--suite-pink);outline-offset:2px}
@@ -93,7 +93,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell :is(.p-head,.drop-head)>h1,
 .app-shell :is(.mw,.scanner,.shop-map,.costs,.management-page,.usage-page)>h1,
 .app-shell :is(.management-page,.usage-page)>header h1{
-  color:var(--suite-ink);font-family:Arial,Helvetica,sans-serif;font-weight:900;letter-spacing:-.05em
+  color:var(--suite-ink);font-family:'Manrope Variable',Manrope,Helvetica,sans-serif;font-weight:900;letter-spacing:-.05em
 }
 /*
   ONE HEADING SCALE ACROSS THE PRODUCT.
@@ -160,7 +160,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .hub-foot p{max-width:680px;margin:0;color:#958991;font-size:9px;line-height:1.5}
 
 /* Feature page headers */
-.app-shell .mw,.app-shell .scanner,.app-shell .shop-map,.app-shell .costs,.app-shell .tm-standalone{width:100%;max-width:none;margin:0;padding:7px 0 64px;color:var(--suite-ink);font-family:Arial,Helvetica,sans-serif}
+.app-shell .mw,.app-shell .scanner,.app-shell .shop-map,.app-shell .costs,.app-shell .tm-standalone{width:100%;max-width:none;margin:0;padding:7px 0 64px;color:var(--suite-ink);font-family:'Manrope Variable',Manrope,Helvetica,sans-serif}
 .mw>h1,.scanner>h1,.costs>h1{margin:0 0 8px;font-size:clamp(26px,2.8vw,34px);font-weight:900;line-height:1;letter-spacing:-.055em}
 .mw>.lede,.scanner>.lede,.costs>.lede{max-width:720px;margin:0 0 26px;color:#70646b;font-size:14px;line-height:1.55}
 
@@ -283,7 +283,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 .app-shell .usage-grid{gap:14px}
 .app-shell .usage-track i{background:var(--suite-pink)!important}
 .app-shell .usage-plan-chooser{border:1px solid var(--suite-line);border-radius:10px;background:#fff;box-shadow:var(--suite-shadow);backdrop-filter:none}
-.app-shell .usage-plan-heading h2{font-family:Arial,Helvetica,sans-serif;font-weight:900;letter-spacing:-.04em}
+.app-shell .usage-plan-heading h2{font-family:'Manrope Variable',Manrope,Helvetica,sans-serif;font-weight:900;letter-spacing:-.04em}
 .app-shell .usage-plan-grid article{border-radius:9px;background:#fcf8fa}
 .app-shell .usage-plan-grid article.current{border:2px solid #111;box-shadow:3px 3px 0 var(--suite-pink)}
 .app-shell .usage-plan-grid button{border-radius:7px;background:#111;color:#fff;box-shadow:3px 3px 0 var(--suite-pink)}
@@ -305,7 +305,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:Arial,Helvetica,
 
 /* Member library and settings pages */
 .app-shell :is(.management-page,.usage-page,.account,.tools-settings,.conn){
-  width:100%;max-width:none;margin:0;padding:7px 0 64px;color:var(--suite-ink);font-family:Arial,Helvetica,sans-serif
+  width:100%;max-width:none;margin:0;padding:7px 0 64px;color:var(--suite-ink);font-family:'Manrope Variable',Manrope,Helvetica,sans-serif
 }
 .app-shell :is(.management-page,.usage-page,.account,.tools-settings,.conn)>header,
 .app-shell :is(.management-page,.usage-page,.account,.tools-settings,.conn)>.p-page>.p-head{

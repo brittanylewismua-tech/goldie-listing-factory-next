@@ -286,7 +286,7 @@ html, body { background: var(--pro-canvas) !important; }
 .app-shell .usage-grid .usage-card:only-child { grid-column:1/-1!important; }
 
 /* Final product-wide type and navigation pass. */
-html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",Arial,sans-serif}
+html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",'Manrope Variable',Manrope,sans-serif}
 .app-shell:not(.command-workspace) h2:not(.acc-heading):not(.ts-heading):not(.utility-heading):not(.title){font-family:"DM Serif Display",Georgia,serif;font-weight:400!important;letter-spacing:-.025em!important}
 
 .app-shell>.topbar .suite-brand{display:flex!important;align-items:center;gap:12px;width:100%;min-height:56px;margin:0 0 24px;padding:4px 8px;text-decoration:none}
@@ -335,7 +335,9 @@ html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",
 }
 .tm-watch-list button.quiet:hover:not(:disabled){color:#9c2f6d}
 .tm-watch-button{margin-top:18px;box-shadow:3px 3px 0 #ff2ca6}
-.tm-note{max-width:760px!important;padding:0!important;border:0!important;background:transparent!important;color:#776b72!important;font-size:11px!important;line-height:1.5!important}
+/* D1803 · 11px was the smallest text in the product and it was the legal
+   note, which is the line a member most needs to be able to read. */
+.tm-note{max-width:62ch!important;padding:0!important;border:0!important;background:transparent!important;font-size:12px!important;line-height:1.55!important}
 
 .listing-mode-needed>:not(.listing-mode-chooser){display:none!important}
 .listing-mode-chooser{width:min(820px,100%);margin:12px auto 28px;padding:34px;border:1px solid #171318;border-radius:16px;background:#fff;box-shadow:7px 7px 0 #ff2ca6;text-align:center}

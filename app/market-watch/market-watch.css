@@ -263,7 +263,7 @@
 
 /* Listing-first Market Watch. The product is the listings, not a sentence
    describing how many background records the watcher has processed. */
-.app-shell .mw{display:block!important;font-family:"Manrope Variable","Manrope",Arial,sans-serif!important}
+.app-shell .mw{display:block!important;font-family:"Manrope Variable","Manrope",'Manrope Variable',Manrope,sans-serif!important}
 .mw-intro{margin-bottom:26px}.mw-intro .mini-label,.mw-detail-head .mini-label{margin:0 0 8px;color:var(--p-pink-deep);font-size:11px;font-weight:800;letter-spacing:.12em}
 .keyword-watch-grid{display:grid;gap:16px}.keyword-watch{border:1px solid var(--line);border-radius:22px;background:var(--p-card);padding:18px;box-shadow:0 12px 36px rgba(58,37,47,.06)}
 .keyword-watch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}.keyword-watch-head span{display:block;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.1em}.keyword-watch-head h2{margin:3px 0 0;font:700 clamp(19px,2vw,24px)/1.2 var(--font-heading,inherit);letter-spacing:-.02em}.keyword-watch-head button{min-height:42px;padding:0 15px;border:0;border-radius:12px;background:var(--ink);color:#fff;font:700 13px/1 inherit;white-space:nowrap;cursor:pointer}.keyword-watch-head button:disabled{opacity:.55}

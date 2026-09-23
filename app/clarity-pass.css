@@ -2808,7 +2808,7 @@ body{min-width:0}
    `font:800 11px Manrope` with no fallback is what rendered these headings in a
    serif when Manrope did not resolve. */
 .app-shell .listing-rows{padding:0 18px 4px}
-.app-shell .listing-rows,.app-shell .listing-rows *{font-family:'Manrope',system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif}
+.app-shell .listing-rows,.app-shell .listing-rows *{font-family:'Manrope',system-ui,-apple-system,'Segoe UI',Helvetica,'Manrope Variable',Manrope,sans-serif}
 
 /* Summary bar: the batch's shape in one line, then the two controls. */
 .app-shell .listing-rows-bar{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;margin:0 0 18px;padding:14px 16px;border:1px solid #ded6dc;border-radius:14px;background:#fff}
