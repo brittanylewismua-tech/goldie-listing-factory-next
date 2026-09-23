@@ -145,3 +145,44 @@ test('the Command Center is a page, not four links in a group', () => {
   assert.doesNotMatch(summary, /openapi\.etsy\.com|etsyFetch|etsyGet/);
   assert.match(summary, /refunded = 0/, 'a refunded sale is not a sale');
 });
+
+test('the check asks for the phrase in a seller\'s words', () => {
+  /* "Search this listing is entering" was jargon, and wrong besides: a listing
+     does not enter one search, it ranks for its title and thirteen tags at
+     once. The check compares against the winners of ONE phrase, so it asks
+     for that phrase plainly and says it is one at a time. */
+  const client = readFileSync(new URL('../app/design-scanner/design-scanner-client.tsx', import.meta.url), 'utf8');
+  const bare = client.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(bare, /Search this listing is entering/);
+  assert.match(client, /What would a buyer type to find this\?/);
+  assert.match(client, /check them one at a time/);
+  /* And the result says which phrase it was measured against, held from the
+     run so editing the box cannot relabel a finished result. */
+  assert.match(client, /listing-check-against/);
+  assert.match(client, /setAgainst\(phrase\)/);
+});
+
+test('a destructive action never carries the weight of a primary one', () => {
+  /*
+    Stop tracking shipped the same size and colour as View listings, because a
+    shared rule filled EVERY button inside the card header and no styling on
+    the control itself could beat a three-class selector with !important. The
+    first thing on the page was two identical heavy buttons, one of which
+    undoes the reason the card exists.
+  */
+  const workspace = readFileSync(new URL('../app/command-workspace.css', import.meta.url), 'utf8');
+  assert.match(workspace, /\.keyword-watch-head button:not\(\.watch-remove\)/,
+    'the primary fill excludes the remove control');
+  assert.doesNotMatch(workspace, /:is\(\.p-button-primary,\.keyword-watch-head button\)/,
+    'the unqualified rule is gone');
+  assert.match(workspace, /\.watch-remove,\.tm-watch-list button\.quiet\)\s*\{[^}]*border:0!important/);
+
+  const approved = readFileSync(new URL('../app/approved-redesign-components.css', import.meta.url), 'utf8');
+  /* Remove used to be Review's box, inverted. A destructive action is quiet,
+     not a second primary in a different colour. */
+  assert.doesNotMatch(approved, /\.tm-watch-list button\.quiet\{background:#fff;color:#171318\}/);
+
+  const market = readFileSync(new URL('../app/market-watch/market-watch.css', import.meta.url), 'utf8');
+  assert.match(market, /\.watch-remove\{[^}]*border:0/);
+  assert.doesNotMatch(market, /\.watch-remove\{[^}]*border:1px solid/);
+});

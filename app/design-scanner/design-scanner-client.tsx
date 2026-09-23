@@ -154,20 +154,32 @@ function ListingCheck() {
       const body = await response.json() as { findings?: Finding[]; error?: string };
       if (!response.ok) throw new Error(body.error || "This check could not be completed.");
       setFindings(body.findings ?? []);
+      setAgainst(phrase);
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "This check could not be completed.");
     } finally { setBusy(false); }
   };
 
+  /* The phrase the findings were measured against, held from the run rather
+     than read live, so editing the box does not relabel a finished result. */
+  const [against, setAgainst] = useState("");
   const gaps = (findings ?? []).filter(finding => finding.kind === "gap");
   const matches = (findings ?? []).filter(finding => finding.kind === "ok");
 
   return <section className="listing-check" aria-label="Check a listing" ref={mine}>
     <h2 className="utility-heading">Check a listing before you publish it</h2>
-    <p className="listing-check-lede">Measured against the fifty most favorited live listings for
-      your search. No waiting, and nothing recorded in advance.</p>
+    {/*
+      D1788 · "Search this listing is entering" was jargon, and wrong. A
+      listing does not enter one search - it ranks for its title and all
+      thirteen tags at once. What this actually does is compare the draft
+      against the winners of ONE phrase, so it asks for that phrase in the
+      words a seller would use, and says plainly that it is one at a time.
+    */}
+    <p className="listing-check-lede">Pick one phrase a buyer would type. This finds the fifty
+      most favorited live listings for it and measures your draft against them. Your listing
+      will rank for lots of phrases; check them one at a time.</p>
     <div className="listing-check-form">
-      <label>Search this listing is entering
+      <label>What would a buyer type to find this?
         <input className="p-input" value={phrase} onChange={event => setPhrase(event.target.value)}
           placeholder="auntie shirt" /></label>
       <label>Your title
@@ -185,6 +197,9 @@ function ListingCheck() {
     {error && <p className="p-notice failed" role="alert">{error}</p>}
     {findings && !findings.length && <p className="empty">Nothing separates this draft from the winners on
       the things that can be measured here.</p>}
+    {findings && findings.length > 0 && <p className="listing-check-against">
+      Compared against the fifty most favorited live listings for
+      &ldquo;{against}&rdquo;.</p>}
     {findings && findings.length > 0 && <div className="listing-check-findings">
       {gaps.map(finding => <article key={finding.key} className="finding finding-gap">
         <b>{finding.label}</b><p>{finding.detail}</p></article>)}

@@ -294,13 +294,22 @@
 
 /* D1774 · Stopping is as ordinary as starting. Both watch endpoints have
    accepted a removal since they were written; neither had a control. */
-.watch-card-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/*
+  D1788 · STOP TRACKING IS NOT AS IMPORTANT AS VIEW LISTINGS.
+
+  It shipped as a bordered button the same size as the primary action sitting
+  beside it, so the first thing on the page was a pair of equal buttons, one of
+  which undoes the thing the card exists for. Destructive and secondary
+  actions are quiet: no border, no box, smaller, grey, and they earn colour
+  only on hover. The primary action keeps the weight.
+*/
+.watch-card-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .watch-remove{
-  border:1px solid var(--suite-line,#e5d8e0);border-radius:8px;padding:8px 12px;
-  background:transparent;color:#7a6e76;font:inherit;font-size:12px;font-weight:700;cursor:pointer;
+  border:0;padding:0;background:none;color:#948a91;font:inherit;font-size:12px;
+  font-weight:650;text-decoration:underline;text-underline-offset:3px;cursor:pointer;
 }
-.watch-remove:hover:not(:disabled){border-color:#d0a3bc;background:#fff4f9;color:#9c2f6d}
-.watch-remove:disabled{cursor:not-allowed;opacity:.55}
+.watch-remove:hover:not(:disabled){color:#9c2f6d}
+.watch-remove:disabled{cursor:not-allowed;opacity:.55;text-decoration:none}
 .tracked-shop-card .watch-card-actions{margin-top:12px}
 
 /* D1777 · What the winners have in common, stated as description. */

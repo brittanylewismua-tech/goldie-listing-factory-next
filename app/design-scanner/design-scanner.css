@@ -265,3 +265,6 @@
 
 /* D1785 · A refusal that hands the keyword to the check that always answers. */
 .scanner .refusal button{margin-top:14px}
+
+/* D1788 · Which phrase a result was measured against, on the result. */
+.listing-check-against{margin:18px 0 0;color:var(--suite-muted,#756a72);font-size:13px;font-weight:700}

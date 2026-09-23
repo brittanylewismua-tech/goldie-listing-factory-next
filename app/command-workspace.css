@@ -15,10 +15,30 @@
   font:750 20px/1.35 'Manrope Variable',Manrope,sans-serif!important;letter-spacing:-.02em!important;text-transform:none!important;
 }
 .app-shell.command-workspace :is(.mini-label,.p-eyebrow) {font-size:12px!important;line-height:1.5;letter-spacing:.075em!important;margin:0 0 6px;color:var(--work-accent)!important}
-.app-shell.command-workspace :is(.p-button,.tm-watch-button,.tm-watch-list button,.keyword-watch-head button) {
+/*
+  D1788 · EVERY BUTTON IN THE CARD HEADER WAS A PRIMARY BUTTON.
+
+  These two rules said "any button inside .keyword-watch-head", and then
+  filled it dark. So when a Stop tracking control was added beside View
+  listings, it inherited the full primary treatment and the first thing on the
+  page became two identical heavy buttons, one of which undoes the reason the
+  card exists. No amount of styling on the control itself could win against a
+  three-class selector carrying !important.
+
+  Destructive and secondary actions are excluded by name and styled quiet
+  below: no box, no border, smaller, grey, colour only on hover. The primary
+  action keeps every bit of its weight.
+*/
+.app-shell.command-workspace :is(.p-button,.tm-watch-button,.tm-watch-list button:not(.quiet),.keyword-watch-head button:not(.watch-remove)) {
   min-height:42px;border-radius:8px!important;font:750 14px/1.4 'Manrope Variable',sans-serif!important;box-shadow:none!important;letter-spacing:0!important;text-transform:none!important;
 }
-.app-shell.command-workspace :is(.p-button-primary,.keyword-watch-head button) {background:#171318!important;color:#fff!important;border:1px solid #171318!important}
+.app-shell.command-workspace :is(.p-button-primary,.keyword-watch-head button:not(.watch-remove)) {background:#171318!important;color:#fff!important;border:1px solid #171318!important}
+.app-shell.command-workspace :is(.watch-remove,.tm-watch-list button.quiet) {
+  min-height:auto!important;padding:0!important;border:0!important;background:none!important;
+  color:#8b8189!important;font:650 12px/1.4 'Manrope Variable',sans-serif!important;
+  text-decoration:underline;text-underline-offset:3px;box-shadow:none!important;
+}
+.app-shell.command-workspace :is(.watch-remove,.tm-watch-list button.quiet):hover:not(:disabled) {color:#9c2f6d!important}
 .app-shell.command-workspace .p-button-quiet {background:#fff!important;color:#29232a!important;border:1px solid #cbbfc8!important}
 .app-shell.command-workspace :is(button,a,input,select,textarea):focus-visible {outline:3px solid #ce258c;outline-offset:3px}
 .app-shell.command-workspace .factory-work button.p-button:disabled {cursor:not-allowed;opacity:1!important;background:#eee7ec!important;color:#74616d!important;border-color:#dfd4dc!important;box-shadow:none!important}

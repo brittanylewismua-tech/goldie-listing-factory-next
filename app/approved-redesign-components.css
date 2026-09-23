@@ -327,7 +327,13 @@ html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",
 .tm-watch-list article>div{display:grid;gap:3px}.tm-watch-list strong{font-size:13px}.tm-watch-list article>div span{color:#70646e;font-size:11px}
 .tm-watch-risk{padding:5px 8px;border-radius:8px;background:#f2edf0;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
 .tm-watch-list button,.tm-watch-button{min-height:34px;padding:0 12px;border:1px solid #171318;border-radius:7px;background:#171318;color:#fff;font-weight:750;cursor:pointer}
-.tm-watch-list button.quiet{background:#fff;color:#171318}
+/* D1788 · Remove was the same box as Review, inverted. A destructive action
+   is quiet, not a second primary in a different colour. */
+.tm-watch-list button.quiet{
+  min-height:auto;padding:0;border:0;background:none;color:#8b8189;
+  font-size:12px;font-weight:650;text-decoration:underline;text-underline-offset:3px;
+}
+.tm-watch-list button.quiet:hover:not(:disabled){color:#9c2f6d}
 .tm-watch-button{margin-top:18px;box-shadow:3px 3px 0 #ff2ca6}
 .tm-note{max-width:760px!important;padding:0!important;border:0!important;background:transparent!important;color:#776b72!important;font-size:11px!important;line-height:1.5!important}
 
