@@ -289,7 +289,9 @@
 /* D1792 stops the Design Scanner asking a member to retype their own
    listing, and gives Shop Map something to do rather than only something
    to report: designs that sold and sit on exactly one product. */
-export const BUILD_MARKER = "D1792";
+/* D1793 stops the database's word for a product reaching the page: it read
+   "only on tee" and "only on phoneCase". */
+export const BUILD_MARKER = "D1793";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

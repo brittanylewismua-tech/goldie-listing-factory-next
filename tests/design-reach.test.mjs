@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { designKey, designsOnOneProduct } from '../app/design-reach.ts';
+import { designKey, designsOnOneProduct, familyLabel } from '../app/design-reach.ts';
 
 const listing = (listingId, title, family, sold90, favorites = 0) =>
   ({ listingId, title, family, sold90, favorites });
@@ -57,4 +57,15 @@ test('the scanner loads a live listing instead of asking it to be retyped', () =
   /* Worst performers first: favorites with nothing sold is exactly the
      listing worth checking. */
   assert.match(client, /\(a\.sold90 - b\.sold90\) \|\| \(\(b\.favorites \?\? 0\) - \(a\.favorites \?\? 0\)\)/);
+});
+
+test("the database's word for a product is not the seller's", () => {
+  /* product_family is stored as an internal key and leaked onto the live page
+     as "only on tee". */
+  assert.equal(familyLabel('tee'), 'a T-shirt');
+  assert.equal(familyLabel('phoneCase'), 'a phone case');
+  /* An unmapped key reads as clumsy rather than vanishing, so a family added
+     later is visible instead of silently dropped. */
+  assert.equal(familyLabel('bucketHat'), 'a bucket hat');
+  assert.equal(familyLabel(''), 'one product');
 });

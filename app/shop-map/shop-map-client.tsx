@@ -1,7 +1,7 @@
 "use client";
 import {browseOwnListings} from "@/app/market-listing-browser";
 import ActionPlan from "@/app/command-center/action-plan";
-import {designsOnOneProduct,type Reach,type ReachListing} from "@/app/design-reach";
+import {designsOnOneProduct,familyLabel,type Reach,type ReachListing} from "@/app/design-reach";
 import type {CatalogAction} from "@/app/shop-map-actions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { monthName } from "@/app/shop-map-month";
@@ -92,7 +92,7 @@ function DesignReach(){
       {row.imageUrl?<img src={row.imageUrl} alt="" width={56} height={56} loading="lazy"/>:<span aria-hidden="true"/>}
       <span className="shop-map-reach-copy">
         <b>{row.title}</b>
-        <small>{row.sold90} sold in 90 days · only on {row.families[0]}</small>
+        <small>{row.sold90} sold in 90 days · only on {familyLabel(row.families[0])}</small>
       </span>
       <a href={`https://www.etsy.com/listing/${row.listingId}`} target="_blank" rel="noopener noreferrer">
         See it on Etsy ↗</a>

@@ -52,6 +52,27 @@ export function designKey(title: string) {
   return words(title).slice(0, 4).join(" ");
 }
 
+/*
+  THE DATABASE'S WORD FOR A PRODUCT IS NOT THE SELLER'S.
+
+  `product_family` is stored as an internal key - "tee", "phoneCase",
+  "longSleeve" - and it leaked straight onto the page as "only on tee". These
+  are the words a seller uses. An unmapped key is title-cased rather than
+  hidden, so a new family added later reads as clumsy instead of vanishing.
+*/
+const FAMILY_LABELS: Record<string, string> = {
+  tee: "a T-shirt", crewneck: "a crewneck", hoodie: "a hoodie", tank: "a tank",
+  longSleeve: "a long sleeve", sweatshirt: "a sweatshirt", mug: "a mug",
+  tote: "a tote bag", phoneCase: "a phone case", sticker: "stickers",
+  poster: "a poster", pillow: "a pillow", blanket: "a blanket", hat: "a hat",
+};
+
+export function familyLabel(family: string) {
+  if (FAMILY_LABELS[family]) return FAMILY_LABELS[family];
+  const spaced = family.replace(/([a-z])([A-Z])/g, "$1 $2").toLocaleLowerCase().trim();
+  return spaced ? `a ${spaced}` : "one product";
+}
+
 export type Reach = {
   key: string; title: string; listingId: number; imageUrl?: string;
   sold90: number; favorites: number | null;
