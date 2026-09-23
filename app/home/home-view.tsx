@@ -138,6 +138,12 @@ export default function HomeView() {
           <small>COMMAND CENTER</small>
           <h2 id="home-tools-title">Open a tool</h2>
         </span>
+        {/* D1787 · The Command Center has its own page now, where each tool is
+            presented by the question it answers. This card lists the same four
+            destinations; the heading is the way through to the fuller one
+            rather than a second, thinner copy of it with no link out. */}
+        <Link className="home-panel-cta" href="/command-center">
+          See all four <i aria-hidden="true">↗</i></Link>
       </div>
       <div className="home-panel-tiles home-panel-tiles-two">
         {TOOLS.map(tile => <Link key={tile.name} className="home-tile" href={tile.href}>

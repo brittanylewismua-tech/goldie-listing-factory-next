@@ -275,7 +275,9 @@
    a refusal that pointed at a panel into one that hands over the keyword. */
 /* D1786 gives the Command Center a page. Four links in a sidebar group is a
    menu, and a menu has done nothing by the time you look at it. */
-export const BUILD_MARKER = "D1786";
+/* D1787 links the home page through to the Command Center rather than
+   keeping a thinner copy of it with no way out. */
+export const BUILD_MARKER = "D1787";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
