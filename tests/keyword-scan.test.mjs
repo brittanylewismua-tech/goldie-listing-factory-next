@@ -219,7 +219,10 @@ test('the take-home figure uses the seller\'s own fee settings', () => {
   /* A loss is shown as a loss rather than floored at zero. */
   assert.match(client, /data-negative=\{keep\(cents\)<0\?"yes":undefined\}/);
   /* And nothing is claimed until a cost is entered. */
-  assert.match(client, /this becomes take-home/);
+  /* D1796 · It was a floating label, an input and three unlabelled pairs of
+     numbers. It is a table with a price column and an earnings column. */
+  assert.match(client, /<th>Sell at<\/th><th>You earn per sale<\/th>/);
+  assert.match(client, /Add your cost and this shows what you earn at each price/);
 });
 
 test('an unfiltered price band says it spans every product type', () => {

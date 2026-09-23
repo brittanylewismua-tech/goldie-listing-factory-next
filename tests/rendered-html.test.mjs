@@ -7500,7 +7500,7 @@ test("one language survives a sweep of every panel — D691", async () => {
      What this assertion is for - sans, everywhere, decided in one place - now
      holds in interface-v2, without an !important to beat next time. */
   assert.doesNotMatch(clarity, /\.managementOnly h3/);
-  assert.match(clarity, /font-family: "Inter"|font:700 14px\/1\.3 Inter/);
+  assert.match(clarity, /font-family: 'Manrope Variable'|font:700 14px\/1\.3 'Manrope Variable'/);
 });
 
 /* D692 · Closing the refactor out. Three implementations of "show me every

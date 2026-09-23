@@ -1,6 +1,6 @@
 /* Goldie management pages share the frozen Listing Factory visual system. */
 :is(.management-page,.usage-page,.keyword-page,.mockupFactory){
-  --ink:#4b283e;--muted:#80677a;--line:rgba(91,53,79,.16);--paper:rgba(255,247,252,.62);color:var(--ink);font-family:'Manrope','Hanken Grotesk',Inter,sans-serif;
+  --ink:#4b283e;--muted:#80677a;--line:rgba(91,53,79,.16);--paper:rgba(255,247,252,.62);color:var(--ink);font-family:'Manrope','Hanken Grotesk','Manrope Variable', Manrope,sans-serif;
   background:transparent!important;
 }
 :is(.management-page,.usage-page){max-width:none;margin:0;padding:0}

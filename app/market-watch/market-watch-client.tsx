@@ -346,16 +346,34 @@ function TakeHome({profile}:{profile:Profile}){
     ["Middle",profile.priceMedian??Math.round((profile.priceBand.low+profile.priceBand.high)/2)],
     ["High",profile.priceBand.high]];
   const ready=cost.trim()&&Number.isFinite(unit);
+  /*
+    D1796 · WHAT THIS PANEL WAS BEFORE.
+
+    A label reading "You keep, at a unit cost of" floating beside an input,
+    then three stacked pairs - "Low · $22.90" over "$7.87" - with nothing
+    saying which number was the price and which was the profit, and no
+    heading saying what any of it was for. Screenshotted and sent back with
+    "nothing tells me what this is for", correctly.
+
+    It is a table now, because it is a table: a price column, an earnings
+    column, three rows, a heading above it.
+  */
   return <div className="winner-takehome">
-    <label>You keep, at a unit cost of
-      <input className="p-input" inputMode="decimal" value={cost} placeholder="$12.40"
-        onChange={event=>{setCost(event.target.value);
-          try{window.localStorage.setItem("goldie-unit-cost",event.target.value)}catch{/* private mode */}}}/>
-    </label>
-    {ready?<dl>{points.map(([label,cents])=><div key={label}>
-      <dt>{label} · ${(cents/100).toFixed(2)}</dt>
-      <dd data-negative={keep(cents)<0?"yes":undefined}>{money(keep(cents))}</dd></div>)}</dl>
-      :<p>Your cost per unit, and this becomes take-home.</p>}
+    <div className="winner-takehome-head">
+      <h3>If you priced here</h3>
+      <label>Your cost per unit
+        <input className="p-input" inputMode="decimal" value={cost} placeholder="$12.40"
+          onChange={event=>{setCost(event.target.value);
+            try{window.localStorage.setItem("goldie-unit-cost",event.target.value)}catch{/* private mode */}}}/>
+      </label>
+    </div>
+    {ready?<table className="winner-takehome-table">
+      <thead><tr><th>Sell at</th><th>You earn per sale</th></tr></thead>
+      <tbody>{points.map(([label,cents])=><tr key={label}>
+        <td>${(cents/100).toFixed(2)} <span>{label.toLowerCase()}</span></td>
+        <td data-negative={keep(cents)<0?"yes":undefined}>{money(keep(cents))}</td>
+      </tr>)}</tbody>
+    </table>:<p>Add your cost and this shows what you earn at each price.</p>}
   </div>;
 }
 

@@ -1,0 +1,133 @@
+/* ============================================================================
+ * D1795 · ONE DESIGN SYSTEM FOR THE COMMAND CENTER, APPLIED AT ONCE.
+ *
+ * The complaint was that it looks thrown together, and it did, because it was
+ * assembled one fix at a time across twenty stylesheets written in different
+ * months. Measured on the Design Scanner before this file existed: two
+ * typefaces rendering simultaneously and NINE different colours for body text
+ * - #151214, #1b1b1f, #3f2338, #74616d, #5c5c68, #30242d, #171316, #29232a,
+ * #251d22 - which are not a palette, they are the residue of five people
+ * guessing at near-black.
+ *
+ * Fixing those one at a time is what produced the problem. This is the whole
+ * language in one place: colour, type, spacing, corners, cards, forms,
+ * buttons, chips, notices. It is scoped to the Command Center's pages, loads
+ * last, and is the ONE file allowed to use !important - not as a shortcut,
+ * but because consolidating twenty sheets that already shout is the only way
+ * to make them agree without deleting surfaces nobody has re-checked.
+ *
+ * The visual language is not invented here. It is the approved one: near
+ * black, a single pink, a 2px keyline with an offset block behind it.
+ * ==========================================================================*/
+
+.app-shell.command-workspace{
+  --cc-ink:#141114;
+  --cc-body:#2b242a;
+  --cc-muted:#6b6069;
+  --cc-line:#e6dde3;
+  --cc-edge:#0a0a0a;
+  --cc-accent:#d90c89;
+  --cc-accent-bright:#ff2ca6;
+  --cc-wash:#fff4fa;
+  --cc-surface:#fff;
+  --cc-radius:14px;
+  --cc-radius-sm:10px;
+}
+
+/* ------------------------------------------------------------------- type */
+/* The family is set at source now - every sheet that declared Inter was
+   changed - so this file does not need to shout it. */
+/* Two text colours, not nine. Anything wanting a third has to be an accent,
+   a link or a button, all of which are named below. */
+.app-shell.command-workspace .factory-work{color:var(--cc-body)}
+.app-shell.command-workspace .factory-work :is(h1,h2,h3,h4,b,strong,dd,summary){color:var(--cc-ink)!important}
+.app-shell.command-workspace .factory-work :is(p,small,dt,figcaption,.cc-note,.lede){color:var(--cc-muted)!important}
+
+.app-shell.command-workspace .factory-work h1{font-size:34px;font-weight:800;letter-spacing:-.035em;line-height:1.08;margin:0 0 6px}
+.app-shell.command-workspace .factory-work h2{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:0 0 10px}
+.app-shell.command-workspace .factory-work h3{font-size:14px;font-weight:800;letter-spacing:-.005em;margin:0 0 8px}
+.app-shell.command-workspace .factory-work :is(p,li,dd,td){font-size:14px;line-height:1.55}
+.app-shell.command-workspace .factory-work :is(small,figcaption,dt){font-size:12px;line-height:1.5}
+/* Prose never runs the full width of a 1,300px workspace. */
+.app-shell.command-workspace .factory-work :is(p,.lede,.cc-note){max-width:72ch}
+.app-shell.command-workspace .factory-work .mini-label{
+  margin:0 0 6px;color:var(--cc-accent)!important;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+}
+
+/* ------------------------------------------------------------------ cards */
+.app-shell.command-workspace .factory-work :is(.p-card,.cc-tool,.shop-map-card,.tm-watches,.winner-profile,.listing-check,.cc-home-tile){
+  border-radius:var(--cc-radius)!important;background:var(--cc-surface)!important;
+}
+/* The keyline and its offset block, which is the approved language, on the
+   panels that carry a whole answer rather than a row of one. */
+.app-shell.command-workspace .factory-work :is(.winner-profile,.listing-check,.cc-home-tile){
+  border:2px solid var(--cc-edge)!important;box-shadow:6px 6px 0 var(--cc-edge)!important;
+}
+.app-shell.command-workspace .factory-work :is(.p-card,.cc-tool,.shop-map-card,.tm-watches){
+  border:1px solid var(--cc-line)!important;box-shadow:none!important;
+}
+.app-shell.command-workspace .factory-work :is(.cc-tool,.shop-map-card,.tm-watches,.p-card){padding:22px!important}
+
+/* ------------------------------------------------------------------ forms */
+.app-shell.command-workspace .factory-work :is(input,select,textarea):not([type="file"]):not([type="checkbox"]):not([type="radio"]){
+  min-height:42px;padding:0 12px;border:1px solid var(--cc-line)!important;border-radius:var(--cc-radius-sm)!important;
+  background:var(--cc-surface)!important;color:var(--cc-ink)!important;font-size:14px!important;font-weight:650!important;
+  box-shadow:none!important;
+}
+.app-shell.command-workspace .factory-work textarea{min-height:96px;padding:12px;line-height:1.5}
+.app-shell.command-workspace .factory-work :is(input,select,textarea):focus-visible{
+  outline:3px solid var(--cc-accent);outline-offset:2px;border-color:var(--cc-accent)!important;
+}
+.app-shell.command-workspace .factory-work label{
+  display:grid;gap:6px;color:var(--cc-muted)!important;font-size:12px;font-weight:700;
+}
+.app-shell.command-workspace .factory-work label :is(input,select,textarea){font-weight:650}
+
+/* ---------------------------------------------------------------- buttons */
+.app-shell.command-workspace .factory-work :is(.p-button,button:not(.watch-remove):not(.p-tab):not(.suite-nav-toggle)){
+  min-height:42px;padding:0 18px;border-radius:var(--cc-radius-sm)!important;
+  font-size:14px!important;font-weight:800!important;letter-spacing:0!important;box-shadow:none!important;cursor:pointer;
+}
+.app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"]){
+  border:1px solid var(--cc-edge)!important;background:var(--cc-edge)!important;color:#fff!important;
+}
+.app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"]):hover:not(:disabled){
+  background:#2f2a2f!important;
+}
+.app-shell.command-workspace .factory-work .p-button-quiet{
+  border:1px solid var(--cc-line)!important;background:var(--cc-surface)!important;color:var(--cc-ink)!important;
+}
+.app-shell.command-workspace .factory-work .p-button-quiet:hover:not(:disabled){background:var(--cc-wash)!important}
+.app-shell.command-workspace .factory-work button:disabled{opacity:1;background:#f1eaee!important;color:#96868f!important;border-color:var(--cc-line)!important;cursor:not-allowed}
+
+/* ------------------------------------------------------------------- tabs */
+.app-shell.command-workspace .factory-work .p-tab{
+  min-height:40px;padding:0 16px;border:0!important;border-radius:var(--cc-radius-sm) var(--cc-radius-sm) 0 0!important;
+  background:transparent!important;color:var(--cc-muted)!important;font-size:14px!important;font-weight:800!important;
+}
+.app-shell.command-workspace .factory-work .p-tab[aria-selected="true"]{
+  color:var(--cc-ink)!important;box-shadow:inset 0 -3px 0 var(--cc-accent)!important;
+}
+
+/* ------------------------------------------------- chips, notices, empties */
+.app-shell.command-workspace .factory-work .p-notice{
+  padding:14px 16px;border:1px solid var(--cc-line)!important;border-left:4px solid var(--cc-accent)!important;
+  border-radius:var(--cc-radius-sm)!important;background:var(--cc-wash)!important;font-size:14px;
+}
+.app-shell.command-workspace .factory-work .p-notice.failed{border-left-color:#a4243d!important;background:#fdf3f5!important}
+.app-shell.command-workspace .factory-work .empty,
+.app-shell.command-workspace .factory-work .p-empty{
+  padding:26px;border:1px dashed var(--cc-line)!important;border-radius:var(--cc-radius)!important;
+  background:transparent!important;color:var(--cc-muted)!important;font-size:14px;text-align:left;
+}
+
+/* ---------------------------------------------------------------- rhythm */
+/* One vertical rhythm, so sections do not each choose their own gap. */
+.app-shell.command-workspace .factory-work>*+*{margin-top:22px}
+.app-shell.command-workspace .factory-work :is(section,article)+:is(section,article){margin-top:22px}
+
+@media (max-width:860px){
+  .app-shell.command-workspace .factory-work h1{font-size:27px}
+  .app-shell.command-workspace .factory-work h2{font-size:18px}
+  .app-shell.command-workspace .factory-work :is(.cc-tool,.shop-map-card,.tm-watches,.p-card,.winner-profile,.listing-check){padding:16px!important}
+}

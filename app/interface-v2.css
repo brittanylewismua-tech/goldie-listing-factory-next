@@ -75,7 +75,7 @@ html, body { background: var(--lf-paper); }
 .app-shell > .topbar .top-nav a {
   border: 0; background: transparent; color: var(--lf-rail-dim);
   text-align: left; padding: 12px 14px; border-radius: 14px;
-  font: 650 13px/1.2 Inter, system-ui, sans-serif; text-decoration: none; display: block;
+  font: 650 13px/1.2 'Manrope Variable', Manrope, system-ui, sans-serif; text-decoration: none; display: block;
 }
 .app-shell > .topbar .top-nav a.active {
   color: #1b0e17; background: var(--lf-pink); font-weight: 700;
@@ -185,9 +185,9 @@ html, body { background: var(--lf-paper); }
   backdrop-filter: blur(14px);
   border-bottom: 1px solid #dcc5d2;
 }
-.app-shell .factory-top-batch { font: 700 14px/1.2 Inter, system-ui, sans-serif; color: #3d2538; }
+.app-shell .factory-top-batch { font: 700 14px/1.2 'Manrope Variable', Manrope, system-ui, sans-serif; color: #3d2538; }
 .app-shell .factory-top-right { display: flex; align-items: center; gap: 16px; }
-.app-shell .factory-top-save { font: 400 12px/1 Inter, system-ui, sans-serif; color: #6d5d68; }
+.app-shell .factory-top-save { font: 400 12px/1 'Manrope Variable', Manrope, system-ui, sans-serif; color: #6d5d68; }
 .app-shell .factory-account-wrap { position: relative; }
 .app-shell .factory-account {
   border: 0; background: transparent; display: flex; align-items: center; gap: 9px;
@@ -198,7 +198,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-avatar {
   width: 34px; height: 34px; border-radius: 50%; background: #4b283e; color: #fff;
   display: grid; place-items: center; letter-spacing: .04em;
-  font: 800 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  font: 800 11px/1 'Manrope Variable', Manrope, ui-sans-serif, system-ui, sans-serif;
 }
 .app-shell .factory-account-label { display: grid; text-align: left; line-height: 1.2; }
 .app-shell .factory-account-label strong { font-size: 12px; font-weight: 700; }
@@ -229,18 +229,18 @@ html, body { background: var(--lf-paper); }
 .app-shell nav.workflow-progress > button {
   position: relative; display: flex; align-items: center; gap: 7px;
   border: 0; background: transparent; text-align: left; padding: 0 4px 15px; margin: 0;
-  color: #83737e; font: 750 11px/1 Inter, system-ui, sans-serif;
+  color: #83737e; font: 750 11px/1 'Manrope Variable', Manrope, system-ui, sans-serif;
   letter-spacing: .04em; text-transform: uppercase; cursor: pointer;
 }
 .app-shell nav.workflow-progress > button > span:first-of-type {
   order: 1; display: inline-grid; place-items: center;
   width: 22px; height: 22px; min-height: 22px; max-height: 22px; flex: 0 0 22px;
   align-self: center; box-sizing: border-box; border-radius: 50%;
-  background: #eee8ec; color: #654f60; font: 750 11px/1 Inter, system-ui, sans-serif;
+  background: #eee8ec; color: #654f60; font: 750 11px/1 'Manrope Variable', Manrope, system-ui, sans-serif;
 }
 .app-shell nav.workflow-progress > button > em.progress-bubble-label {
   order: 2; position: static; left: auto; top: auto; transform: none;
-  font: 750 11px/1 Inter, system-ui, sans-serif; font-style: normal;
+  font: 750 11px/1 'Manrope Variable', Manrope, system-ui, sans-serif; font-style: normal;
   letter-spacing: .04em; text-transform: uppercase;
 }
 .app-shell nav.workflow-progress > button > span:last-of-type { display: none; }
@@ -253,7 +253,7 @@ html, body { background: var(--lf-paper); }
 
 /* page head */
 .app-shell .hero { text-align: left; margin: 0 0 25px; padding: 0; width: 100%; max-width: none; height: auto; overflow: visible; }
-.app-shell .hero h1 { font: 700 29px/1.12 Inter, system-ui, sans-serif; letter-spacing: -.035em; color: #3d2538; margin: 0 0 7px; text-align: left; }
+.app-shell .hero h1 { font: 700 29px/1.12 'Manrope Variable', Manrope, system-ui, sans-serif; letter-spacing: -.035em; color: #3d2538; margin: 0 0 7px; text-align: left; }
 .app-shell .hero .eyebrow { display: none; }
 
 /* sticky action bar — prototype .goldie-footer */
@@ -265,7 +265,7 @@ html, body { background: var(--lf-paper); }
 }
 .app-shell .workflow-next {
   background: #0d0b0c; color: #fff; border: 0; border-radius: 10px;
-  padding: 13px 20px; min-width: 0; font: 750 16px/1.2 Inter, system-ui, sans-serif;
+  padding: 13px 20px; min-width: 0; font: 750 16px/1.2 'Manrope Variable', Manrope, system-ui, sans-serif;
   box-shadow: 4px 4px 0 var(--lf-pink); animation: none;
 }
 .app-shell .workflow-next:hover { background: #171117; }
@@ -319,11 +319,11 @@ html, body { background: var(--lf-paper); }
 }
 .app-shell .bundle-product-photo { width: 48px; height: 48px; border-radius: 9px; object-fit: cover; }
 .app-shell .bundle-product-id { display: block; min-width: 0; }
-.app-shell .bundle-product-id b { display: block; font: 700 14px/1.3 Inter, system-ui, sans-serif; color: #3d2538; margin-bottom: 3px; }
-.app-shell .bundle-product-id small { display: block; font: 400 12px/1.35 Inter, system-ui, sans-serif; color: #7d6d78; }
+.app-shell .bundle-product-id b { display: block; font: 700 14px/1.3 'Manrope Variable', Manrope, system-ui, sans-serif; color: #3d2538; margin-bottom: 3px; }
+.app-shell .bundle-product-id small { display: block; font: 400 12px/1.35 'Manrope Variable', Manrope, system-ui, sans-serif; color: #7d6d78; }
 .app-shell .batch-product-state {
   background: #edf7f0; border: 1px solid #cae5d2; border-radius: 7px;
-  padding: 7px 9px; color: #37704c; font: 750 11px/1 Inter, system-ui, sans-serif;
+  padding: 7px 9px; color: #37704c; font: 750 11px/1 'Manrope Variable', Manrope, system-ui, sans-serif;
 }
 
 /* rows as numbered sections */
@@ -336,18 +336,18 @@ html, body { background: var(--lf-paper); }
 }
 .app-shell .row-index {
   width: 34px; height: 34px; border-radius: 9px; background: #eee7ec; color: #643e5a;
-  display: grid; place-items: center; font: 800 12px/1 Inter, system-ui, sans-serif;
+  display: grid; place-items: center; font: 800 12px/1 'Manrope Variable', Manrope, system-ui, sans-serif;
 }
 .app-shell .row-index::before { content: "0" counter(goldie-step); }
 .app-shell .row-heading { display: block; min-width: 0; }
-.app-shell .row-label { display: block; font: 700 14px/1.3 Inter, system-ui, sans-serif; color: #3d2538; }
+.app-shell .row-label { display: block; font: 700 14px/1.3 'Manrope Variable', Manrope, system-ui, sans-serif; color: #3d2538; }
 .app-shell .row-detail,
-.app-shell .row-advice { display: block; font: 400 12px/1.35 Inter, system-ui, sans-serif; color: #7d6d78; margin-top: 3px; }
-.app-shell .row-value { font: 400 12px/1.35 Inter, system-ui, sans-serif; color: #7d6d78; white-space: nowrap; }
+.app-shell .row-advice { display: block; font: 400 12px/1.35 'Manrope Variable', Manrope, system-ui, sans-serif; color: #7d6d78; margin-top: 3px; }
+.app-shell .row-value { font: 400 12px/1.35 'Manrope Variable', Manrope, system-ui, sans-serif; color: #7d6d78; white-space: nowrap; }
 .app-shell .row-mark {
   display: grid; place-items: center; width: auto; height: auto;
   background: #edf7f0; border: 1px solid #cae5d2; border-radius: 7px; padding: 7px 9px;
-  color: #37704c; font: 750 11px/1 Inter, system-ui, sans-serif;
+  color: #37704c; font: 750 11px/1 'Manrope Variable', Manrope, system-ui, sans-serif;
 }
 .app-shell .batch-product-row.needed .row-mark,
 .app-shell .batch-product-row.pending .row-mark { background: #fdf1f3; border-color: #eccdd4; color: #a33a48; }
@@ -355,7 +355,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .row-open {
   border: 1px solid #ded5db; background: #fff; color: #3d2538; border-radius: 8px;
   padding: 0 14px; height: 34px; min-height: 0; min-width: 0;
-  font: 700 12px/1 Inter, system-ui, sans-serif;
+  font: 700 12px/1 'Manrope Variable', Manrope, system-ui, sans-serif;
 }
 .app-shell .task-panel.open-task-column { border-top: 1px solid #eee8ec; padding: 18px; background: #fffcfe; }
 
@@ -482,18 +482,18 @@ html, body { background: var(--lf-paper); }
 }
 .app-shell .factory-panel-index{
   width:34px;height:34px;border-radius:9px;background:#eee7ec;color:#643e5a;
-  display:grid;place-items:center;font:800 12px/1 Inter,system-ui,sans-serif;
+  display:grid;place-items:center;font:800 12px/1 'Manrope Variable', Manrope,system-ui,sans-serif;
 }
 .app-shell .factory-panel-title{min-width:0}
 .app-shell .factory-panel-title strong{
-  display:block;font:700 14px/1.3 Inter,system-ui,sans-serif;color:#3d2538;margin-bottom:3px;
+  display:block;font:700 14px/1.3 'Manrope Variable', Manrope,system-ui,sans-serif;color:#3d2538;margin-bottom:3px;
 }
 .app-shell .factory-panel-title small{
-  display:block;font:400 12px/1.35 Inter,system-ui,sans-serif;color:#7d6d78;
+  display:block;font:400 12px/1.35 'Manrope Variable', Manrope,system-ui,sans-serif;color:#7d6d78;
 }
 .app-shell .factory-panel-state{
   background:#edf7f0;border:1px solid #cae5d2;border-radius:7px;padding:7px 9px;
-  color:#37704c;font:750 11px/1 Inter,system-ui,sans-serif;white-space:nowrap;
+  color:#37704c;font:750 11px/1 'Manrope Variable', Manrope,system-ui,sans-serif;white-space:nowrap;
 }
 .app-shell .factory-panel.is-attention .factory-panel-state{background:#fdf1f3;border-color:#eccdd4;color:#a33a48}
 /* D707 · "Pending" was the same brown she has reported three times - a red
@@ -522,12 +522,12 @@ html, body { background: var(--lf-paper); }
   display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;
   padding:12px 13px;border-top:1px solid #eee8ec;
 }
-.app-shell .factory-art-meta strong{display:block;font:500 11px/1.3 Inter,system-ui,sans-serif;color:#7d6d78;
+.app-shell .factory-art-meta strong{display:block;font:500 11px/1.3 'Manrope Variable', Manrope,system-ui,sans-serif;color:#7d6d78;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.app-shell .factory-art-meta small{display:block;font:800 14px/1.35 Inter,system-ui,sans-serif;color:#3d2538;margin-top:4px}
+.app-shell .factory-art-meta small{display:block;font:800 14px/1.35 'Manrope Variable', Manrope,system-ui,sans-serif;color:#3d2538;margin-top:4px}
 .app-shell .factory-link{
   min-height:36px;border:1px solid #111;border-radius:8px;background:#111;padding:9px 12px;cursor:pointer;
-  color:#fff;font:750 12px/1 Inter,system-ui,sans-serif;
+  color:#fff;font:750 12px/1 'Manrope Variable', Manrope,system-ui,sans-serif;
 }
 .app-shell .factory-link:hover{background:#292329}
 
@@ -535,8 +535,8 @@ html, body { background: var(--lf-paper); }
    markup became <ArtworkGrid>. Same guarantees, new owner, no !important:
    the print-quality line and the live Printify action stay readable, and the
    design preview stays large enough to tell two listings apart (it was 46px). */
-.app-shell .factory-art-card .placement-dpi{font:800 14px/1.35 Inter,system-ui,sans-serif;color:#3d2538}
-.app-shell .factory-art-card .placement-printify-link{font:800 12px/1 Inter,system-ui,sans-serif;color:#fff}
+.app-shell .factory-art-card .placement-dpi{font:800 14px/1.35 'Manrope Variable', Manrope,system-ui,sans-serif;color:#3d2538}
+.app-shell .factory-art-card .placement-printify-link{font:800 12px/1 'Manrope Variable', Manrope,system-ui,sans-serif;color:#fff}
 
 /* D725 · .goldie-photo-layout, measured from the prototype's computed styles.
    The artwork sits beside the photos instead of above them, so the design a
@@ -549,8 +549,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-listing-identity{padding-right:18px}
 .app-shell .factory-design-large{display:grid;place-items:center;width:240px;height:210px;overflow:hidden;border-radius:9px;background:#f1edef}
 .app-shell .factory-design-large img{width:100%;height:100%;object-fit:contain}
-.app-shell .factory-listing-identity>strong{display:block;margin-top:9px;overflow-wrap:anywhere;color:#3d2538;font:700 13px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .factory-listing-identity>small{display:block;margin-top:5px;color:#796a74;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-listing-identity>strong{display:block;margin-top:9px;overflow-wrap:anywhere;color:#3d2538;font:700 13px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-listing-identity>small{display:block;margin-top:5px;color:#796a74;font:11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-photo-column{min-width:0}
 @media(max-width:760px){.app-shell .factory-photo-layout{grid-template-columns:minmax(0,1fr)}.app-shell .factory-listing-identity{padding-right:0}}
 
@@ -561,15 +561,15 @@ html, body { background: var(--lf-paper); }
 .app-shell .photo-order-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .app-shell .photo-order-strip>article{display:grid;align-content:start;gap:4px;padding:6px;border:1px solid #ddd5da;border-radius:8px;background:#fff}
 .app-shell .photo-order-strip>article>img{width:100%;height:91px;object-fit:contain;border-radius:6px;background:#fff}
-.app-shell .photo-order-strip>article>b{font:800 10px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#6b4560}
+.app-shell .photo-order-strip>article>b{font:800 10px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#6b4560}
 @media(max-width:900px){.app-shell .photo-order-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 /* D726 · .goldie-page-head, measured from the prototype's computed styles. */
 .app-shell .factory-page-head{display:flex;gap:20px;align-items:flex-end;justify-content:space-between;margin:0 0 25px}
-.app-shell .factory-page-head h1{margin:0 0 7px;color:#3d2538;font:700 29px/1.12 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-1.015px}
-.app-shell .factory-page-head p{margin:0;max-width:64ch;color:#6e606a;font:14px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-page-head h1{margin:0 0 7px;color:#3d2538;font:700 29px/1.12 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;letter-spacing:-1.015px}
+.app-shell .factory-page-head p{margin:0;max-width:64ch;color:#6e606a;font:14px/1.55 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-heading-with-help{display:flex;gap:9px;align-items:center}
-.app-shell .factory-summary{flex:none;padding:8px 11px;border:1px solid #dfcbd6;border-radius:8px;background:#fff7fa;color:#57384b;font:12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;white-space:nowrap}
+.app-shell .factory-summary{flex:none;padding:8px 11px;border:1px solid #dfcbd6;border-radius:8px;background:#fff7fa;color:#57384b;font:12px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;white-space:nowrap}
 @media(max-width:760px){.app-shell .factory-page-head{flex-direction:column;align-items:flex-start}}
 
 /* D727 · The head sits inside the legacy .hero section, which still carried
@@ -591,7 +591,7 @@ html, body { background: var(--lf-paper); }
    background, no rule, no shadow, no sticking. One bar at the bottom of the
    page, one row above it. */
 .app-shell .factory-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:18px 0 0;padding:0;background:none;border:0;box-shadow:none;backdrop-filter:none}
-.app-shell .factory-footer>small{color:#776873;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-footer>small{color:#776873;font:11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 /* D375 holds: the footer POSITIONS the button, it does not restyle it. The
    appearance below belongs to the button itself, wherever it is rendered, and
    is the prototype's .goldie-next. */
@@ -599,7 +599,7 @@ html, body { background: var(--lf-paper); }
 /* D875 · Flat saturated pink read cheap: a fully lit fill, a grey shadow and no
    edge. Black face with a pink offset borrows the rail's own language and
    demotes the pink to an accent. */
-.app-shell .workflow-next{border:0;border-radius:10px;background:#0d0b0c;color:#fff;padding:13px 20px;height:auto;min-height:0;font:750 15px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;box-shadow:4px 4px 0 var(--lf-pink);transition:transform .16s ease,box-shadow .16s ease}
+.app-shell .workflow-next{border:0;border-radius:10px;background:#0d0b0c;color:#fff;padding:13px 20px;height:auto;min-height:0;font:750 15px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;cursor:pointer;box-shadow:4px 4px 0 var(--lf-pink);transition:transform .16s ease,box-shadow .16s ease}
 .app-shell .workflow-next:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:6px 6px 0 var(--lf-pink)}
 .app-shell .workflow-next:active:not(:disabled){transform:translate(1px,1px);box-shadow:2px 2px 0 var(--lf-pink)}
 .app-shell .workflow-next:disabled{opacity:1;background:#efe7ec;color:#a2909c;box-shadow:4px 4px 0 #f3d9ea;transform:none;cursor:not-allowed}
@@ -638,12 +638,12 @@ html, body { background: var(--lf-paper); }
   box-shadow:0 0 0 3px rgba(255,79,195,.04),0 0 12px rgba(255,79,195,.07)}
 .app-shell .recipe-use{grid-column:1/-1;display:grid;width:100%;min-width:0;height:auto;padding:12px;border:0;background:none;text-align:left;cursor:pointer}
 .app-shell .recipe-tile.selected .recipe-use{padding:11px}
-.app-shell .recipe-icon{display:grid;place-items:center;height:116px;margin-bottom:11px;border-radius:8px;background:linear-gradient(145deg,#f5f2f4,#e8e1e6);color:#8d7c87;font:750 12px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-icon{display:grid;place-items:center;height:116px;margin-bottom:11px;border-radius:8px;background:linear-gradient(145deg,#f5f2f4,#e8e1e6);color:#8d7c87;font:750 12px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .recipe-copy{display:grid;gap:3px;min-width:0}
 /* D162 · A name too long for one line truncates. It must not reflow the card
    and push this tile out of line with the two beside it. */
-.app-shell .recipe-copy>b:first-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#3d2538;font:700 13px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .recipe-copy>small{color:#7d6d78;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-copy>b:first-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#3d2538;font:700 13px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-copy>small{color:#7d6d78;font:11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 /* The Choose / Ready control reads as one chip, aligned to the card's own edge.
    It was left-aligned inside a right-aligned box and looked, in her words,
    amateur; it is a chip on the left of the card, the way every state chip in
@@ -658,7 +658,7 @@ html, body { background: var(--lf-paper); }
    It stays as a word, because production's card also carries Edit and Delete
    and without a label the tile would be three controls and no statement of
    what the tile itself does. A word, not a bar. */
-.app-shell .recipe-copy>em{background:none;border:0;box-shadow:none;padding:0;color:#6b365a;font:750 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;justify-content:flex-start}
+.app-shell .recipe-copy>em{background:none;border:0;box-shadow:none;padding:0;color:#6b365a;font:750 11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;justify-content:flex-start}
 .app-shell .recipe-tile.selected .recipe-copy>em{background:none;border-color:transparent;color:#37704c}
 /* D939 · Choosing a saved product briefly disables its card while Printify
    details load. The global disabled treatment desaturated the selected card
@@ -692,14 +692,14 @@ html, body { background: var(--lf-paper); }
    equal columns. minmax(0,...) makes the ratio mean what it says. */
 .app-shell .factory-listing-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:14px;align-items:start}
 .app-shell .factory-form-card{padding:18px;border:1px solid #e4cedb;border-radius:12px;background:rgba(255,252,254,.92);box-shadow:0 5px 18px rgba(90,48,79,.07)}
-.app-shell .factory-form-card h3{margin:0 0 14px;color:#3d2538;font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-form-card h3{margin:0 0 14px;color:#3d2538;font:700 14px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-checklist{display:grid;gap:8px}
-.app-shell .factory-check{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #eee9ec;color:#55434f;font:12px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-check{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #eee9ec;color:#55434f;font:12px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-check:last-child{border-bottom:0}
 /* The value wraps rather than truncating. "Clothing > Unisex Adult Clothing >
    Tops & Tees > Sweatshirts" ellipsised to "Clothing > Unisex …", which hides
    the only part that says which category was chosen. */
-.app-shell .factory-check b{flex:0 1 auto;max-width:58%;min-width:0;overflow-wrap:anywhere;white-space:normal;text-align:right;font:750 11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-check b{flex:0 1 auto;max-width:58%;min-width:0;overflow-wrap:anywhere;white-space:normal;text-align:right;font:750 11px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-check b.is-set{color:#37704c}
 .app-shell .factory-check b.is-missing{color:#a33a48}
 @media(max-width:900px){.app-shell .factory-listing-grid{grid-template-columns:minmax(0,1fr)}}
@@ -723,10 +723,10 @@ html, body { background: var(--lf-paper); }
 /* D98 · The prototype's row ellipsises its title. This list is the last place
    the whole title can be read before it is published, and D98 settled that it
    shows in full. The capability wins; the row grows to fit it. */
-.app-shell .final-listing-card>div:not(.final-listing-links)>b{display:block;max-width:100%;overflow:visible;white-space:normal;text-overflow:clip;overflow-wrap:anywhere;color:#3d2538;font:700 12px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .final-listing-card>div:not(.final-listing-links)>small{display:block;margin-top:3px;color:#766772;font:10px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-listing-card>div:not(.final-listing-links)>b{display:block;max-width:100%;overflow:visible;white-space:normal;text-overflow:clip;overflow-wrap:anywhere;color:#3d2538;font:700 12px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-listing-card>div:not(.final-listing-links)>small{display:block;margin-top:3px;color:#766772;font:10px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 /* The press itself is the prototype's .goldie-primary. */
-.app-shell .publish-all-button{width:100%;border:0;border-radius:8px;background:var(--lf-pink);color:#3d0b2b;padding:12px;font:800 13px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+.app-shell .publish-all-button{width:100%;border:0;border-radius:8px;background:var(--lf-pink);color:#3d0b2b;padding:12px;font:800 13px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 .app-shell .publish-all-button:disabled{cursor:not-allowed}
 
 /* D731 · The prototype's .goldie-review two-column split and .goldie-publish-box,
@@ -749,8 +749,8 @@ html, body { background: var(--lf-paper); }
    whole fee explanation in this <small>, not a one-line label. The rule lives
    once, further down, rather than being declared twice and overridden. */
 .app-shell .factory-publish-box small{color:rgba(255,255,255,.68)}
-.app-shell .factory-publish-box h3{margin:7px 0 5px;color:#fff;font:700 20px/1.25 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .factory-publish-box p{margin:0 0 16px;color:rgba(255,255,255,.76);font:11px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-publish-box h3{margin:7px 0 5px;color:#fff;font:700 20px/1.25 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-publish-box p{margin:0 0 16px;color:rgba(255,255,255,.76);font:11px/1.55 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-publish-box b,.app-shell .factory-publish-box strong{color:#fff}
 /* On the dark box the press is the prototype's .goldie-primary: pale on dark. */
 .app-shell .factory-publish-box .publish-all-button{background:#f3dbe9;color:#3d2637}
@@ -765,9 +765,9 @@ html, body { background: var(--lf-paper); }
                           #3b2b36, line-height 1.4, min-height 38
      .goldie-tag          #f1ebef, #5a4152, radius 6, padding 5 7, 10px */
 .app-shell .etsy-details-editor-fields{display:grid;gap:13px}
-.app-shell .etsy-details-editor-fields>label{display:grid;gap:6px;color:#55434f;font:750 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .etsy-details-editor-fields>label>small{color:#7d6d78;font:400 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .etsy-details-editor-fields input,.app-shell .etsy-details-editor-fields select,.app-shell .etsy-details-editor-fields textarea{min-height:38px;padding:10px 11px;border:1px solid #d8cfd5;border-radius:8px;background:#fff;color:#3b2b36;font:12px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .etsy-details-editor-fields>label{display:grid;gap:6px;color:#55434f;font:750 11px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .etsy-details-editor-fields>label>small{color:#7d6d78;font:400 11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .etsy-details-editor-fields input,.app-shell .etsy-details-editor-fields select,.app-shell .etsy-details-editor-fields textarea{min-height:38px;padding:10px 11px;border:1px solid #d8cfd5;border-radius:8px;background:#fff;color:#3b2b36;font:12px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* D733 · The step's action bar spans the pane, the way the prototype's footer
    does. It was pinned to min(720px,100%) and centred by two !important blocks,
@@ -786,7 +786,7 @@ html, body { background: var(--lf-paper); }
  * D734 · SHELL CHROME — the differences left between the built page and the
  * prototype, measured side by side in the browser rather than guessed:
  *
- *   base typeface  Inter, ui-sans-serif, system-ui  (built page: Manrope,
+ *   base typeface  'Manrope Variable', Manrope, ui-sans-serif, system-ui  (built page: Manrope,
  *                  "Hanken Grotesk", Inter — so every element that did not
  *                  name a font, which is most of them, was in the wrong one)
  *   base tracking  normal                            (built page: -.012em)
@@ -801,7 +801,7 @@ html, body { background: var(--lf-paper); }
  * The rail, the rail's buttons and the sidebar nav were already right and are
  * left alone.
  * ========================================================================== */
-.app-shell{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;letter-spacing:normal}
+.app-shell{font-family:'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif;letter-spacing:normal}
 /* D821 · this line is deleted. D803 listed these three values in its header as
    the prototype's and they are not the prototype's - they are what production
    was already doing. Read live off .goldie-sidebar's own CSSOM:
@@ -826,7 +826,7 @@ html, body { background: var(--lf-paper); }
 /* D746 · The footer spans the pane, so its own 34px padding started its text
    at 322 while every other line on the page starts at the column's 392. Same
    max() the action bar uses, so the two bars and the column share one edge. */
-.app-shell .factory-work footer:not(.buyer-review-meta){box-sizing:border-box;width:calc(100vw - 288px);margin:32px 0 0 calc(50% - 50vw + 144px);padding:24px 88px 24px 34px;display:flex;align-items:flex-start;justify-content:space-between;gap:26px;border-top:1px solid #e4cedb;border-radius:0;background:rgba(255,248,251,.54);color:#76616f;font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;backdrop-filter:blur(12px)}
+.app-shell .factory-work footer:not(.buyer-review-meta){box-sizing:border-box;width:calc(100vw - 288px);margin:32px 0 0 calc(50% - 50vw + 144px);padding:24px 88px 24px 34px;display:flex;align-items:flex-start;justify-content:space-between;gap:26px;border-top:1px solid #e4cedb;border-radius:0;background:rgba(255,248,251,.54);color:#76616f;font:11px/1.5 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;backdrop-filter:blur(12px)}
 @media(max-width:1050px){.app-shell .factory-work footer:not(.buyer-review-meta){width:calc(100vw - 240px);margin-left:calc(50% - 50vw + 120px)}}
 @media(max-width:820px){.app-shell .factory-work footer:not(.buyer-review-meta){width:auto;margin-left:0;padding:24px 18px}}
 
@@ -842,8 +842,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .connect-step{width:100%;border:1px solid #dfc8d5;border-radius:12px;background:#fffafc;box-shadow:0 12px 32px rgba(75,40,62,.11)}
 .app-shell .connect-step > .step-content{padding:18px}
 .app-shell .connect-step .step-copy,.app-shell .connect-step .connect-timing{max-width:64ch;margin-left:0;margin-right:0;text-align:left}
-.app-shell .connect-step .step-copy{color:#6e606a;font:14px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .connect-step .connect-timing{color:#7d6d78;font:12px/1.5 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .connect-step .step-copy{color:#6e606a;font:14px/1.55 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .connect-step .connect-timing{color:#7d6d78;font:12px/1.5 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .connect-step .connection-stack{width:100%;max-width:none}
 
 /* D735 · The work column is 1020 wide with 38px of padding, so a step's content
@@ -877,8 +877,8 @@ html, body { background: var(--lf-paper); }
      card    rgba(255,255,255,.36), 1px rgba(255,255,255,.65), radius 16,
              padding 13 14 */
 .app-shell .approved-usage{display:block;padding:13px 14px;border:1px solid rgba(255,255,255,.65);border-radius:16px;background:rgba(255,255,255,.36);color:#4b283e;text-decoration:none}
-.app-shell .approved-usage b{display:block;color:rgba(74,42,62,.6);font:750 9px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase}
-.app-shell .approved-usage span{display:block;margin:4px 0 8px;color:#4b283e;font:700 15px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .approved-usage b{display:block;color:rgba(74,42,62,.6);font:750 9px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.app-shell .approved-usage span{display:block;margin:4px 0 8px;color:#4b283e;font:700 15px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .approved-usage-track{height:5px;border-radius:16px;background:rgba(74,42,62,.12)}
 
 /* D736 · Controls were falling back to their own stacks - "Start a new batch",
@@ -888,7 +888,7 @@ html, body { background: var(--lf-paper); }
    the ones whose resolved family was not Inter; this is that list, closed.
    The Goldie wordmark keeps DM Serif Display - it is the logo, and the
    prototype's lockup is the same one. */
-.app-shell button,.app-shell input,.app-shell select,.app-shell textarea,.app-shell a,.app-shell strong,.app-shell small,.app-shell b,.app-shell em{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+.app-shell button,.app-shell input,.app-shell select,.app-shell textarea,.app-shell a,.app-shell strong,.app-shell small,.app-shell b,.app-shell em{font-family:'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif}
 .app-shell .approved-wm,.app-shell [class*="wordmark"]{font-family:"DM Serif Display",Georgia,serif}
 
 /* D737 · Surfaces on the Connect screen that were still speaking the old
@@ -901,10 +901,10 @@ html, body { background: var(--lf-paper); }
      buttons          radius 8 - the prototype has no 99px pills
      panels           radius 12, one hairline, one soft shadow
      alerts           flat tint, no gradient */
-.app-shell .workflow-restart-button{margin:12px 2px 0;padding:10px 12px;border:1px solid #ded6dc;border-radius:12px;background:rgba(255,255,255,.38);color:#4b283e;font:750 11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;text-align:left}
+.app-shell .workflow-restart-button{margin:12px 2px 0;padding:10px 12px;border:1px solid #ded6dc;border-radius:12px;background:rgba(255,255,255,.38);color:#4b283e;font:750 11px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;text-align:left}
 .app-shell .connect-step .connection-row{border-radius:12px;background:#fff}
 .app-shell .connect-step .connection-icon{border-radius:9px;background:#f1edef}
-.app-shell .connect-step .connection-row button,.app-shell .connect-step .connection-row button.secondary-action{border:1px solid #ded5db;border-radius:8px;background:#fff;color:#3d2538;font:700 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;padding:9px 14px;box-shadow:none}
+.app-shell .connect-step .connection-row button,.app-shell .connect-step .connection-row button.secondary-action{border:1px solid #ded5db;border-radius:8px;background:#fff;color:#3d2538;font:700 12px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;padding:9px 14px;box-shadow:none}
 .app-shell .connect-step{box-shadow:0 12px 32px rgba(75,40,62,.11)}
 .app-shell .approved-token-instructions{border-radius:12px}
 /* D707 · The warning tint is the rose attention token, not a brown one. She
@@ -952,7 +952,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-publish-box .publish-live-warning small{color:rgba(255,255,255,.68)}
 .app-shell .factory-publish-box .publish-live-warning h3{color:#fff}
 .app-shell .factory-publish-box .publish-live-warning p{color:rgba(255,255,255,.76)}
-.app-shell .final-listing-links button,.app-shell .final-listing-links a{min-height:0;padding:7px 9px;border:1px solid #ded6dc;border-radius:8px;background:#fff;color:#5d3151;font:750 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-listing-links button,.app-shell .final-listing-links a{min-height:0;padding:7px 9px;border:1px solid #ded6dc;border-radius:8px;background:#fff;color:#5d3151;font:750 11px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* D739 · Step 4 at rest. The groups are collapsed disclosures on arrival
    (D562: "nothing opens itself"), so the screen is a short list of one row per
@@ -962,20 +962,20 @@ html, body { background: var(--lf-paper); }
    radius 10. Opening a group still shows the artwork at a size worth judging,
    which D562 settled and this does not touch. */
 .app-shell .final-design-group{border:1px solid #ded6dc;border-radius:10px;background:#fff}
-.app-shell .final-design-group summary{padding:13px;font:12px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .final-design-group summary>span{color:#3d2538;font:700 12px/1.35 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-design-group summary{padding:13px;font:12px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-design-group summary>span{color:#3d2538;font:700 12px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .final-design-groups{display:grid;gap:10px}
-.app-shell .final-select-all{border:1px solid #ded6dc;border-radius:8px;background:#fff;padding:8px 11px;color:#55434f;font:12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-select-all{border:1px solid #ded6dc;border-radius:8px;background:#fff;padding:8px 11px;color:#55434f;font:12px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .final-listing-select{min-width:32px;min-height:32px;cursor:pointer}
-.app-shell .final-listing-review-heading h3{margin:0;color:#3d2538;font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-listing-review-heading h3{margin:0;color:#3d2538;font:700 14px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* D741 · The group's state chip was 8px. The smallest type anywhere in the
    prototype is the 9px sidebar label, and every state chip in it is 11px 750.
    It also takes the rose alert tokens rather than a bare red, so "needs a
    look" matches every other attention state in the interface. */
-.app-shell .final-design-group summary em{padding:6px 9px;border:1px solid var(--alert-line);border-radius:7px;background:var(--alert-tint);color:var(--alert-ink);font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;font-style:normal;white-space:nowrap}
+.app-shell .final-design-group summary em{padding:6px 9px;border:1px solid var(--alert-line);border-radius:7px;background:var(--alert-tint);color:var(--alert-ink);font:750 11px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;font-style:normal;white-space:nowrap}
 .app-shell .final-design-group summary em.ready{border-color:#cae5d2;background:#edf7f0;color:#37704c}
-.app-shell .final-design-group summary>b{color:#766772;font:11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .final-design-group summary>b{color:#766772;font:11px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* D743 · The last of the top bar, measured against the prototype:
 
@@ -986,8 +986,8 @@ html, body { background: var(--lf-paper); }
 
    Small on their own; together they are why the top bar reads as nearly the
    preview rather than the preview. */
-.app-shell .context-help-trigger{width:36px;height:36px;display:grid;place-items:center;padding:0;border:1px solid #d9cbd3;border-radius:50%;background:rgba(255,255,255,.72);color:#5d3151;font:850 13px/1 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .factory-top-save{color:#6d5d68;font:12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .context-help-trigger{width:36px;height:36px;display:grid;place-items:center;padding:0;border:1px solid #d9cbd3;border-radius:50%;background:rgba(255,255,255,.72);color:#5d3151;font:850 13px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-top-save{color:#6d5d68;font:12px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* D744 · Two things on the Connect screen she named:
 
@@ -1064,7 +1064,7 @@ html, body { background: var(--lf-paper); }
    image band and only product tiles were checked. D197 settled that the count
    stays (unlike the meaningless "P" on a product), so it is presented as a
    figure the band is actually for. */
-.app-shell .recipe-tile.bundle-as-product .recipe-icon{align-content:center;gap:2px;color:#6c3a5c;font:800 30px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-tile.bundle-as-product .recipe-icon{align-content:center;gap:2px;color:#6c3a5c;font:800 30px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* D751 · Brown, on the migrated screens, for the fourth time.
 
@@ -1088,9 +1088,9 @@ html, body { background: var(--lf-paper); }
    the one moment the interface interrupts her it looked like a different
    application. Her note on headings was "a sans serif, really easy to read".
    The wordmark stays serif; nothing else does. */
-.app-shell .publish-confirm h2,.app-shell .upload-notice h2,.app-shell .context-help-dialog h2,.app-shell .batch-opening b{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;font-weight:700;letter-spacing:-.01em}
+.app-shell .publish-confirm h2,.app-shell .upload-notice h2,.app-shell .context-help-dialog h2,.app-shell .batch-opening b{font-family:'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif;font-weight:700;letter-spacing:-.01em}
 /* And the eyebrow above them: .mini-label was the last Manrope on the page. */
-.app-shell .mini-label{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+.app-shell .mini-label{font-family:'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif}
 
 /* D754 · Flat surfaces.
 
@@ -1118,7 +1118,7 @@ html, body { background: var(--lf-paper); }
    beside another dialog whose buttons were radius-8 and filled. Two dialogs, two
    button languages. The modal takes the same compact filled pair, and the
    alert disc keeps its red - that one is doing a job. */
-.app-shell .publish-confirm-actions button,.app-shell .upload-notice-actions button{border:0;border-radius:8px;background:#0d0b0c;color:#fff;padding:11px 18px;font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .publish-confirm-actions button,.app-shell .upload-notice-actions button{border:0;border-radius:8px;background:#0d0b0c;color:#fff;padding:11px 18px;font:750 13px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .publish-confirm-actions button:hover:not(:disabled),.app-shell .upload-notice-actions button:hover:not(:disabled){background:#211c1f}
 .app-shell .blocking-modal .publish-confirm-icon{background:var(--lf-pink);color:#171014}
 .app-shell .blocking-modal .publish-confirm-actions button{border-radius:8px;background:#0d0b0c;color:#fff;box-shadow:4px 4px 0 var(--lf-pink)}
@@ -1166,7 +1166,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .workflow-stage:has(.connect-step.active-panel) .workflow-footer-actions{position:static;width:auto;margin:18px 0 0;padding:0;border:0;background:none;box-shadow:none;backdrop-filter:none;display:flex;justify-content:center}
 .app-shell .workflow-stage:has(.connect-step.active-panel) .workflow-footer-actions .autosave-note{margin:0;text-align:center}
 .app-shell .connect-step{margin-left:auto;margin-right:auto}
-.app-shell .connect-status{justify-self:start;margin:0 0 12px;padding:8px 11px;border:1px solid #dfcbd6;border-radius:8px;background:#fff7fa;color:#57384b;font:12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;white-space:nowrap;display:inline-block}
+.app-shell .connect-status{justify-self:start;margin:0 0 12px;padding:8px 11px;border:1px solid #dfcbd6;border-radius:8px;background:#fff7fa;color:#57384b;font:12px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;white-space:nowrap;display:inline-block}
 
 /* And the forward button was stretching to the full width of the row - a
    1,140px dark slab across the page. It is a button. */
@@ -1236,7 +1236,7 @@ html, body { background: var(--lf-paper); }
    product names apart when a batch mixes shops. Tile height 312 to 292. */
 .app-shell .recipe-copy{display:block}
 .app-shell .recipe-copy>b:first-child{display:block}
-.app-shell .recipe-copy>small{display:inline;margin:0;color:#7d6d78;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-copy>small{display:inline;margin:0;color:#7d6d78;font:11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .recipe-copy>em{display:block;margin-top:8px}
 
 /* D772/D774 · One typeface, enforced by inheritance rather than by naming
@@ -1248,7 +1248,7 @@ html, body { background: var(--lf-paper); }
    list never ends. Everything inside the shell inherits the shell's family;
    the wordmark and its star are the only things that carry their own, because
    they are the logo. */
-.app-shell{font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+.app-shell{font-family:'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif}
 .app-shell [class*="wordmark"],.app-shell .approved-wm{font-family:"DM Serif Display",Georgia,serif}
 
 /* D773 · Full-sweep findings, run on every step with every panel open.
@@ -1291,7 +1291,7 @@ html, body { background: var(--lf-paper); }
   transform:translate(-1px,-1px);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),6px 6px 0 var(--lf-action-shadow)}
 .app-shell .factory-publish-box .publish-all-button:disabled{opacity:1!important;background:rgba(255,255,255,.12);color:rgba(255,244,250,.76);box-shadow:none;transform:none;filter:none!important}
 .app-shell .factory-publish-box .publish-all-button:disabled .publish-all-shop{opacity:1;color:rgba(255,244,250,.6)}
-.app-shell .factory-publish-box .keep-drafts-button{margin-top:10px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:transparent;color:#fff;padding:11px 14px;font:750 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .factory-publish-box .keep-drafts-button{margin-top:10px;border:1px solid rgba(255,255,255,.28);border-radius:8px;background:transparent;color:#fff;padding:11px 14px;font:750 12px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .final-design-group summary em.advice{background:#f2edf0;color:#675762;border-color:#ddd2d8}
 
 /* ==========================================================================
@@ -1349,7 +1349,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-footer.in-bar{display:contents}
 .app-shell .factory-footer.in-bar > small{
   flex:1 1 auto;min-width:0;margin:0;
-  color:#776873;font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif}
+  color:#776873;font:11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 /* D777 - ordering .workflow-next only was wrong: each step names its forward
    control differently (step 3's is .secondary-action.prepare-etsy), so on
    step 3 the button took order 0 and landed left of "Save as draft". Whatever
@@ -1399,7 +1399,7 @@ html, body { background: var(--lf-paper); }
   border:0;border-radius:10px;background:#0d0b0c;color:#fff;
   padding:13px 20px;height:auto;min-height:0;
   box-shadow:4px 4px 0 var(--lf-pink);
-  font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+  font:750 13px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 .app-shell .factory-footer.in-bar > *:not(small):disabled{opacity:.5;cursor:not-allowed}
 
 /* D779 · The site footer is chrome, not content, and it lines up with the top
@@ -1533,15 +1533,15 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-work .task-listing-edit{grid-template-columns:190px minmax(0,1fr);gap:18px}
 .app-shell .factory-work .listing-card{background:#fffafc;border-color:#dfc8d5}
 .app-shell .factory-work .design-fields label{
-  font:750 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#55434f}
+  font:750 11px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#55434f}
 .app-shell .factory-work .listing-title-field,
 .app-shell .factory-work .listing-tags-field{
-  font:400 12px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;color:#3b2b36;
+  font:400 12px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#3b2b36;
   border:1px solid #d8cfd5;border-radius:8px;padding:10px 11px}
 .app-shell .factory-work .individual-title-builder > summary,
 .app-shell .factory-work .listing-card-done{
   background:none;border:0;box-shadow:none;padding:0;width:auto;
-  color:#6b365a;font:750 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;
+  color:#6b365a;font:750 11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;
   text-align:left;text-transform:none;letter-spacing:normal}
 
 /* D784 · The support launcher, against the prototype's own: 58px on
@@ -1565,14 +1565,14 @@ html, body { background: var(--lf-paper); }
    fact that says whether you are about to publish to the right shop was the
    smallest thing on the screen where money is spent. */
 .app-shell .factory-publish-box .publish-box-eyebrow{
-  display:block;color:#c7b8c3;font:400 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  display:block;color:#c7b8c3;font:400 10px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;
   text-transform:uppercase;letter-spacing:.08em}
 .app-shell .factory-publish-box h3{margin:7px 0 5px;color:#fff;
-  font:700 20px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+  font:700 20px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-publish-box .publish-live-warning b{
-  font:700 13px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#fff}
+  font:700 13px/1.45 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#fff}
 .app-shell .factory-publish-box .publish-live-warning span{
-  color:#c8b9c4;font:400 11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif}
+  color:#c8b9c4;font:400 11px/1.5 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* ==========================================================================
    D787 · Step 3 is the preview's listing grid, not a panel stack
@@ -1594,7 +1594,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .review-listing-current{display:grid;grid-template-columns:54px minmax(0,1fr);align-items:center;gap:9px;min-width:0;padding:2px 2px 10px;border-bottom:1px solid rgba(23,20,23,.18)}.app-shell .review-listing-current>span:last-child{display:grid;gap:3px;min-width:0}.app-shell .review-listing-current small{color:#765f6d;font-size:9px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.app-shell .review-listing-current b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
 .app-shell .review-listing-current.is-all-listings{grid-template-columns:minmax(0,1fr);padding:4px 2px 12px}
 .app-shell .review-listing-picker{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr) 38px;align-items:end;gap:6px}.app-shell .review-listing-picker>button{display:grid;place-items:center;width:38px;height:44px;padding:0;border:1px solid rgba(23,20,23,.34);border-radius:8px;background:rgba(255,255,255,.58);color:#2d2229;font-size:17px;cursor:pointer}.app-shell .review-listing-picker>button:hover:not(:disabled){border-color:#765f6d;background:#fff}.app-shell .review-listing-picker>button:disabled{opacity:.3;cursor:not-allowed}.app-shell .review-listing-chooser{position:relative;min-width:0}.app-shell .review-listing-chooser>summary{display:grid;gap:3px;height:44px;padding:7px 24px 6px 9px;border:1px solid rgba(23,20,23,.34);border-radius:8px;background:rgba(255,255,255,.76);color:#171417;cursor:pointer;list-style:none}.app-shell .review-listing-chooser>summary::-webkit-details-marker{display:none}.app-shell .review-listing-chooser>summary::after{position:absolute;right:9px;bottom:14px;content:"⌄";font-size:14px;font-weight:900}.app-shell .review-listing-chooser[open]>summary::after{transform:rotate(180deg)}.app-shell .review-listing-chooser>summary span{font-size:8px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;color:#715666}.app-shell .review-listing-chooser>summary b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.app-shell .review-listing-choices{position:absolute;z-index:30;top:calc(100% + 6px);right:0;width:240px;max-height:290px;overflow:auto;overscroll-behavior:contain;padding:6px;border:2px solid #171417;border-radius:10px;background:#fff;box-shadow:3px 3px 0 #ff39ad}.app-shell .review-listing-choices button{display:grid;grid-template-columns:46px minmax(0,1fr);align-items:center;gap:9px;width:100%;min-height:56px;padding:5px;border:1px solid transparent;border-radius:7px;background:#fff;color:#171417;text-align:left;cursor:pointer}.app-shell .review-listing-choices button+button{margin-top:3px}.app-shell .review-listing-choices button[aria-current="true"]{border-color:#ff39ad;background:#fff4fa}.app-shell .review-listing-choices button:disabled{opacity:.45;cursor:not-allowed}.app-shell .review-listing-choice-thumb{display:grid;place-items:center;overflow:hidden;width:46px;height:46px;border:1px solid #ded4da;border-radius:6px;background:#f6f1f4;font-size:11px;font-weight:900}.app-shell .review-listing-choice-thumb img{width:100%;height:100%;object-fit:cover}.app-shell .review-listing-choices button>span:last-child{display:grid;gap:3px;min-width:0}.app-shell .review-listing-choices small{font-size:8px;font-weight:850;letter-spacing:.05em;text-transform:uppercase;color:#715666}.app-shell .review-listing-choices b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.app-shell .review-listing-picker :is(button,summary):focus-visible{outline:3px solid #ff39ad;outline-offset:2px}
-.app-shell .review-section-switcher{display:grid;gap:6px}.app-shell .review-section-switcher button{display:flex;align-items:center;min-height:38px;padding:7px 10px;border:1px solid rgba(23,20,23,.26);border-radius:8px;background:rgba(255,255,255,.56);color:#2d2229;font:750 10px/1.25 Inter,sans-serif;text-align:left;cursor:pointer}.app-shell .review-section-switcher button:hover{border-color:#765f6d;background:#fff}.app-shell .review-section-switcher button[aria-current="page"]{border-color:#ff39ad;background:#171417;color:#fff}.app-shell .review-listing-editor-nav button:focus-visible{outline:3px solid #ff39ad;outline-offset:2px}
+.app-shell .review-section-switcher{display:grid;gap:6px}.app-shell .review-section-switcher button{display:flex;align-items:center;min-height:38px;padding:7px 10px;border:1px solid rgba(23,20,23,.26);border-radius:8px;background:rgba(255,255,255,.56);color:#2d2229;font:750 10px/1.25 'Manrope Variable', Manrope,sans-serif;text-align:left;cursor:pointer}.app-shell .review-section-switcher button:hover{border-color:#765f6d;background:#fff}.app-shell .review-section-switcher button[aria-current="page"]{border-color:#ff39ad;background:#171417;color:#fff}.app-shell .review-listing-editor-nav button:focus-visible{outline:3px solid #ff39ad;outline-offset:2px}
 @media(max-width:1000px){.app-shell .step-product-card:has(>.review-listing-editor-nav){grid-template-columns:1fr}.app-shell .step-product-card:has(>.review-listing-editor-nav)>header,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.review-listing-editor-nav,.app-shell .step-product-card:has(>.review-listing-editor-nav)>.batch-product-rows{grid-column:1;grid-row:auto}.app-shell .review-listing-editor-nav{position:static}.app-shell .review-section-switcher{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:620px){.app-shell .review-listing-thumb{width:48px;height:48px}.app-shell .review-listing-current{grid-template-columns:48px minmax(0,1fr)}.app-shell .review-section-switcher{grid-template-columns:1fr 1fr}}
 
@@ -1628,7 +1628,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-panel-state{justify-self:end}
 .app-shell .factory-panel-chevron{
   grid-column:4;justify-self:end;align-self:center;
-  color:#8b7a85;font:400 13px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+  color:#8b7a85;font:400 13px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* D790 · The product identity is a heading above the panels, not a card around
    them. Image, name, blueprint, drafts - the same four facts, on the pane. For
@@ -1641,9 +1641,9 @@ html, body { background: var(--lf-paper); }
 .app-shell .batch-product-card > header .bundle-product-photo{
   width:44px;height:44px;border-radius:9px;object-fit:cover}
 .app-shell .batch-product-card > header .bundle-product-id b{
-  font:700 14px/1.25 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+  font:700 14px/1.25 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
 .app-shell .batch-product-card > header .bundle-product-id small{
-  font:400 12px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#7d6d78}
+  font:400 12px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#7d6d78}
 .app-shell .batch-product-card + .batch-product-card > header{margin-top:22px}
 
 /* D791 · One bar, one row, five things in a fixed order.
@@ -1687,11 +1687,11 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-listing-form .task-listing-preview img{
   width:120px;height:120px;object-fit:contain;border-radius:8px;background:#f0ecef}
 .app-shell .factory-listing-form .task-listing-preview span{
-  color:#6b365a;font:750 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;
+  color:#6b365a;font:750 11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;
   text-transform:none;letter-spacing:normal}
 .app-shell .factory-listing-form .design-fields{display:grid;gap:14px;min-width:0}
 .app-shell .factory-listing-form h3{
-  font:700 14px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;overflow-wrap:anywhere}
+  font:700 14px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;overflow-wrap:anywhere}
 
 /* The switcher lines up with the card below it, and its buttons are inset from
    the card edge the way the card's own contents are. */
@@ -1877,13 +1877,13 @@ html, body { background: var(--lf-paper); }
   border:1px solid #eccdd4;border-radius:12px;background:#fdf1f3;
   color:#3d2538;text-align:left}
 .app-shell .bundle-load-failed > b{
-  font:700 13px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;color:#a33a48}
+  font:700 13px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#a33a48}
 .app-shell .bundle-load-failed p{
-  margin:0;font:400 12px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;color:#5a4152}
+  margin:0;font:400 12px/1.5 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#5a4152}
 .app-shell .bundle-load-failed button{
   justify-self:start;margin-top:4px;border:0;border-radius:8px;
   background:var(--lf-pink);color:#3d0b2b;padding:9px 14px;
-  font:750 12px/1 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+  font:750 12px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 
 /* ==========================================================================
    D803 · The help dialog is outside .app-shell, so nothing in this file
@@ -1910,33 +1910,33 @@ html, body { background: var(--lf-paper); }
    prototype uses DM Serif. Everything under it is Inter. */
 .context-help-dialog,
 .context-help-dialog *:not(h2){
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+  font-family:'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif}
 .context-help-dialog{
   background:#fffafc;border-radius:22px;padding:29px}
 .context-help-dialog h2{
   font:400 26px/1.15 "DM Serif Display",Georgia,serif;color:#4b283e;margin:0 0 7px}
 .context-help-dialog .context-help-intro,
 .context-help-dialog .context-help-section p{
-  font:400 13px/1.55 Inter,ui-sans-serif,system-ui,sans-serif;color:#6f5d69}
+  font:400 13px/1.55 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#6f5d69}
 .context-help-dialog .mini-label{
-  font:750 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  font:750 10px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;
   letter-spacing:.16em;text-transform:uppercase;color:#8a6b80}
 .context-help-dialog .context-help-section h3{
-  font:700 13px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+  font:700 13px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
 .context-help-dialog .context-help-close{
-  font:400 20px/1 Inter,ui-sans-serif,system-ui,sans-serif;color:#5b304f}
+  font:400 20px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#5b304f}
 
 /* And the receipt headline, inside the shell, was the one element D774's
    exclusion list let through in Manrope. */
 .app-shell .outcome-receipt h2,
 .app-shell .factory-work h2{
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+  font-family:'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif}
 
 /* ==========================================================================
    D804 · The support panel is on a different palette entirely
    ==========================================================================
 
-   Opened it for the first time. It is inside .app-shell and in Inter, so the
+   Opened it for the first time. It is inside .app-shell and in 'Manrope Variable', Manrope, so the
    typeface hole D803 found does not reach it - but 30 of its colours are
    neutral greys and near-blacks: #1a1a1a text, #111 on the active tab, #f2f2f2
    message bubbles, rgba(0,0,0,.18) on the panel edge and rgba(0,0,0,.06) and
@@ -2034,7 +2034,7 @@ html, body { background: var(--lf-paper); }
 .publish-confirm *:not(h2),
 .context-help-dialog,
 .context-help-dialog *:not(h2){
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+  font-family:'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif}
 .publish-confirm h2,
 .context-help-dialog h2{
   font-family:"DM Serif Display",Georgia,serif}
@@ -2158,7 +2158,7 @@ html, body { background: var(--lf-paper); }
    win, both covered by the resolver test below. */
 .app-shell .factory-listing-form{background:#fffafc;border-color:#dfc8d5}
 .app-shell .factory-listing-form > h3{
-  font:700 14px/1.25 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+  font:700 14px/1.25 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
 .app-shell .factory-check{color:#3d2538}
 
 /* D816 · The last of Manrope, and the heading size that came with it.
@@ -2178,12 +2178,12 @@ html, body { background: var(--lf-paper); }
    dialog's h2 - the one other place the preview uses it. */
 .app-shell .factory-work h3,
 .app-shell .factory-work h4{
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif}
+  font-family:'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif}
 .app-shell .factory-work .factory-form-card > h3,
 .app-shell .factory-work .task-panel-lead h3,
 .app-shell .factory-work .task-panel-heading h3,
 .app-shell .factory-work .factory-checklist-card > h3{
-  font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+  font:700 14px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
 
 /* ==========================================================================
    D818 · The interior pages, inside the shell for the first time
@@ -2217,16 +2217,16 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-work > .interior-page > header{margin:0 0 25px}
 .app-shell .factory-work > .interior-page > header h1{
   margin:0 0 7px;color:#3d2538;
-  font:700 29px/1.12 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:-1.015px}
+  font:700 29px/1.12 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;letter-spacing:-1.015px}
 .app-shell .factory-work > .interior-page > header > p:last-child{
   margin:0;max-width:64ch;color:#6e606a;
-  font:14px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}
+  font:14px/1.55 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-work .interior-page h2{
-  margin:0;color:#3d2538;font:700 18px/1.25 Inter,ui-sans-serif,system-ui,sans-serif}
+  margin:0;color:#3d2538;font:700 18px/1.25 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-work .interior-page h3{
-  margin:0;color:#3d2538;font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
+  margin:0;color:#3d2538;font:700 14px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-work .interior-page .mini-label{
-  font:750 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  font:750 10px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;
   letter-spacing:.16em;text-transform:uppercase;color:#8a6b80}
 
 /* D818b · Batch History.
@@ -2236,27 +2236,27 @@ html, body { background: var(--lf-paper); }
    10px and its body is 12-13px, so every line in this list was between one and
    five pixels under the rest of the app. */
 .app-shell .factory-work .batch-history{display:grid;gap:12px}
-.app-shell .batch-history-search{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;padding:14px 16px;border:1px solid #d9cfd5;border-radius:12px;background:rgba(25,25,28,.05);color:#171717;font:800 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .batch-history-search span{grid-column:1/-1}.app-shell .batch-history-search input{min-width:0;min-height:44px;padding:0 13px;border:1px solid #cfc5cb;border-radius:9px;background:#fff;color:#171717;font:600 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}.app-shell .batch-history-search small{white-space:nowrap}.app-shell .batch-history-no-match{padding:34px 20px}
+.app-shell .batch-history-search{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;padding:14px 16px;border:1px solid #d9cfd5;border-radius:12px;background:rgba(25,25,28,.05);color:#171717;font:800 12px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .batch-history-search span{grid-column:1/-1}.app-shell .batch-history-search input{min-width:0;min-height:44px;padding:0 13px;border:1px solid #cfc5cb;border-radius:9px;background:#fff;color:#171717;font:600 14px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}.app-shell .batch-history-search small{white-space:nowrap}.app-shell .batch-history-no-match{padding:34px 20px}
 .app-shell .factory-work .batch-history article{
   border:1px solid #eadfe6;border-radius:14px;background:#fff;padding:16px;box-shadow:none}
 .app-shell .factory-work .batch-history article.selected{
   border-color:#c9a3bd;box-shadow:0 0 0 2px rgba(201,163,189,.22)}
 .app-shell .factory-work .batch-history h2{
-  font:700 15px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+  font:700 15px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
 .app-shell .factory-work .batch-history p{
-  margin:3px 0 0;font:12px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
+  margin:3px 0 0;font:12px/1.45 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
 .app-shell .factory-work .batch-history small{
-  font:11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#8b7a85}
+  font:11px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#8b7a85}
 .app-shell .factory-work .batch-history .remove-batch{
-  font:11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif;color:#9e2736}
+  font:11px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#9e2736}
 /* The chip. rgba(226,197,245,.48) is hue 276 - blue-violet, which the palette
    test forbids everywhere else in the app and which this list has been wearing
    since before the palette was one. */
 .app-shell .factory-work .batch-status{
   display:inline-block;padding:5px 9px;border-radius:6px;
   background:#f7edf3;color:#6b4560;
-  font:800 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  font:800 10px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;
   letter-spacing:.1em;text-transform:uppercase}
 .app-shell .factory-work .batch-status.complete{background:#eef6f1;color:#2f6b4f}
 .app-shell .factory-work .batch-status.processing{background:#fdf1f3;color:#a33a48}
@@ -2282,41 +2282,41 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-work .usage-card{
   border:1px solid #eadfe6;border-radius:14px;background:#fffafc;padding:20px}
 .app-shell .factory-work .usage-card h2{
-  font:800 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;
+  font:800 11px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;
   letter-spacing:.04em;color:#75576b}
 .app-shell .factory-work .usage-card b{
-  font:700 22px/1.1 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+  font:700 22px/1.1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
 .app-shell .factory-work .usage-card b span{
-  font:11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#8b7a85}
+  font:11px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#8b7a85}
 .app-shell .factory-work .usage-card p{
-  font:11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
+  font:11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
 .app-shell .factory-work .usage-track{
   height:6px;border-radius:16px;background:#f1e6ee;overflow:hidden}
 .app-shell .factory-work .usage-track i{background:#a3628f}
 .app-shell .factory-work .usage-note,
 .app-shell .factory-work .usage-plan-fineprint,
 .app-shell .factory-work .pricing-caveat{
-  font:11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
+  font:11px/1.5 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
 
 /* D818d · Keyword Banks. The bank cards carried 9px and 10px type and a warm
    #eee5d5 chip left over from the pre-lilac palette. */
 .app-shell .factory-work .bank-grid article{
   border:1px solid #eadfe6;border-radius:14px;background:#fffafc;padding:18px}
 .app-shell .factory-work .bank-grid h3{
-  font:700 14px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
+  font:700 14px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#3d2538}
 .app-shell .factory-work .bank-grid p,
 .app-shell .factory-work .bank-grid small{
-  font:11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
+  font:11px/1.45 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#6e606a}
 /* D846 · This styled EVERY span in a bank card as a keyword chip, including
    ".bank-tag-usable" - the "· 15 short enough for Etsy tags" caption, which sat
    in the phrase list's own colours and read as if it were one of her phrases.
    Chips are the phrases; the caption is a caption. */
 .app-shell .factory-work .bank-grid article > div:not(:first-child) > span{
   padding:5px 9px;border-radius:6px;background:#f7edf3;color:#6b4560;
-  font:11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+  font:11px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-work .bank-grid article .bank-tag-usable{
   padding:0;background:none;border-radius:0;color:#63555e;   /* was #8b7a85 — 3.85:1 */
-  font:11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif}
+  font:11px/1.45 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* D818e · The 404. It rendered outside the shell too, in Manrope with a 10px
    eyebrow, which is how a mistyped URL announced that it belonged to a
@@ -2329,7 +2329,7 @@ html, body { background: var(--lf-paper); }
 
    Checked step 3 on the live build with el.matches() against the real
    stylesheets, rather than by reading a selector out of a file. Five rules set
-   font-family on "What Etsy needs": four say Inter, one says Manrope with
+   font-family on "What Etsy needs": four say 'Manrope Variable', Manrope, one says Manrope with
    !important, and the important one wins. It computed to Manrope 800 18px on
    a preview that computes to Inter 700 14px.
 
@@ -2337,10 +2337,10 @@ html, body { background: var(--lf-paper); }
    titles resolve for real. h2 keeps the 18px the deleted rule gave it - the
    size was never the problem, the typeface and the !important were. */
 .app-shell .factory-work h2{
-  font:700 18px/1.25 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;
+  font:700 18px/1.25 'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif;
   letter-spacing:-.005em;color:#3f2338}
 .app-shell .factory-work h3:not(.cc-tool h3){
-  font:700 14px/1.3 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;
+  font:700 14px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif;
   letter-spacing:normal;color:#3d2538}
 /* The dark publish box opted out of the deleted rule by name; it keeps its own
    ink, which is the reason that exclusion existed. */
@@ -2351,7 +2351,7 @@ html, body { background: var(--lf-paper); }
    (tag), so a labelled group sits at 12 - under its card title, above the
    eyebrow. */
 .app-shell .factory-work h4{
-  font:800 12px/1.35 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;
+  font:800 12px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif;
   letter-spacing:-.01em;color:#4b283e;text-transform:none}
 
 /* ==========================================================================
@@ -2388,13 +2388,13 @@ html, body { background: var(--lf-paper); }
 
 /* The tag chip. .goldie-tag: 10px, 5px 7px, radius 6, no border. */
 .app-shell .tag-row span{
-  padding:5px 7px;border:0;font:400 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+  padding:5px 7px;border:0;font:400 10px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* The field label above each control. The prototype's is a readable 750 in
    #55434f; production's was a 500 at 55% opacity, which is the weight and the
    contrast of a hint, not of the name of the field. */
 .app-shell .factory-listing-form .design-fields > label > span:first-child{
-  font:750 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;color:#55434f}
+  font:750 11px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#55434f}
 
 /* The forward action. Same padding, same radius, same plum - three pixels
    smaller than the prototype's, on the one button every step ends with. */
@@ -2610,10 +2610,10 @@ html, body { background: var(--lf-paper); }
 .app-shell .topbar .listing-goal-side{
   background:linear-gradient(#141014,#0c0b0c);border:1.5px solid #3a2334;color:#fff}
 .app-shell .topbar .listing-goal-side .listing-goal-caption{
-  font:750 9px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;
+  font:750 9px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;
   letter-spacing:.14em;text-transform:uppercase;color:#8e8e8e}
 .app-shell .topbar .listing-goal-side > b{
-  font:700 15px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;color:#fff}
+  font:700 15px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#fff}
 .app-shell .topbar .listing-goal-track{background:#222}
 .app-shell .topbar .listing-goal-track > i{background:var(--lf-pink)}
 
@@ -2681,10 +2681,10 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-account-shops{display:grid;gap:2px;padding:4px 0 8px;margin:0 0 6px;border-bottom:1px solid #eadfe6}
 .app-shell .factory-account-shops > small{
   padding:0 12px 4px;color:#8a6b80;
-  font:750 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+  font:750 10px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase}
 .app-shell .factory-account-shops > button{
   width:100%;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:#3d2538;
-  font:600 13px/1.3 Inter,ui-sans-serif,system-ui,sans-serif;text-align:left;cursor:pointer}
+  font:600 13px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;text-align:left;cursor:pointer}
 .app-shell .factory-account-shops > button:hover:not(:disabled){background:#f7edf3}
 .app-shell .factory-account-shops > button.is-active{color:#7b3e69;background:rgba(123,62,105,.10);cursor:default}
 /* D836 · a bundle holding a product from another shop cannot be chosen here. */
@@ -2692,10 +2692,10 @@ html, body { background: var(--lf-paper); }
 .app-shell .recipe-tile.other-shop .recipe-use{cursor:not-allowed}
 .app-shell .bundle-other-shop{
   display:block;margin-top:6px;color:#8a3650;
-  font:11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif}
+  font:11px/1.45 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .factory-account-shop-error{
   display:block;padding:4px 12px 0;color:#9e2736;
-  font:11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif}
+  font:11px/1.45 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* D842 · The product's own Printify flatlay on the saved-product tile.
    The band was an empty 116px gradient with a placeholder garment behind it -
@@ -2765,7 +2765,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .connection-row > .add-shop-link{
   padding:9px 14px;border:1px solid #dfc8d5;border-radius:8px;
   background:#fffafc;color:#7b3e69;
-  font:750 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;white-space:nowrap}
+  font:750 12px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;white-space:nowrap}
 .app-shell .connection-row > .add-shop-link:hover:not(:disabled){background:#f7edf3}
 
 /* D930 · The shared desktop connection rule gives every action a 124px box.
@@ -2789,7 +2789,7 @@ html, body { background: var(--lf-paper); }
 /* D849 · the one line that explains the dashed chips */
 .app-shell .bank-library .bank-legend{
   margin:5px 0 0;max-width:52ch;color:#7a6672;
-  font:600 12px/1.45 Inter,ui-sans-serif,system-ui,sans-serif}
+  font:600 12px/1.45 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 
 /* ==========================================================================
    D850 · the tile actions were too small to read
@@ -2928,32 +2928,32 @@ html, body { background: var(--lf-paper); }
 
 /* D895 · Product and bundle libraries remain obvious landmarks as they grow. */
 .app-shell .recipe-card .recipe-library-head{display:flex;align-items:center;min-height:32px;margin:0 0 16px;padding:0 0 11px;border-bottom:1px solid #e5dde2}
-.app-shell .recipe-card .recipe-library-head>span{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:7px;background:#2b2027;color:#fff;font:800 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.app-shell .recipe-card .recipe-library-head>span{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:7px;background:#2b2027;color:#fff;font:800 11px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase}
 .app-shell .recipe-card .bundle-card-heading{margin-top:38px!important;margin-bottom:16px!important}
 
 /* D892 · Bundle creation is one linear task, not a disclosure beneath the
    products. Name it first, select unmistakable cards, then save. */
 .app-shell .recipe-card .bundle-builder{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:18px;margin:0 0 24px;padding:18px 20px;background:#f7fbf8;border:1px solid #cfe2d5;border-radius:10px}
-.app-shell .recipe-card .bundle-builder label{display:grid;gap:7px;color:#3d2538;font:750 12px/1.25 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .recipe-card .bundle-builder input{width:100%;height:44px;box-sizing:border-box;padding:0 13px;background:#fff;border:1px solid #cfc5cb;border-radius:8px;color:#2b2027;font:500 14px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-card .bundle-builder label{display:grid;gap:7px;color:#3d2538;font:750 12px/1.25 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-card .bundle-builder input{width:100%;height:44px;box-sizing:border-box;padding:0 13px;background:#fff;border:1px solid #cfc5cb;border-radius:8px;color:#2b2027;font:500 14px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .recipe-card .bundle-builder input:focus{outline:3px solid rgba(47,122,75,.16);border-color:#2f7a4b}
 .app-shell .recipe-card .bundle-builder-instruction{display:grid;gap:4px;min-width:190px;padding-bottom:4px;text-align:right}
-.app-shell .recipe-card .bundle-builder-instruction b{color:#2b2027;font:750 13px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .recipe-card .bundle-builder-instruction span{color:#746971;font:500 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-card .bundle-builder-instruction b{color:#2b2027;font:750 13px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-card .bundle-builder-instruction span{color:#746971;font:500 12px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .recipe-card .bundle-selection-grid .recipe-tile{position:relative;cursor:pointer;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease,transform .16s ease}
 .app-shell .recipe-card .bundle-selection-grid .recipe-tile:hover{border-color:#746971!important;background:#fff!important;box-shadow:0 7px 18px rgba(45,29,39,.1)!important;transform:translateY(-1px)}
 .app-shell .recipe-card .bundle-selection-grid .recipe-tile:hover .recipe-copy>em{background:transparent!important;color:#746971!important}
 .app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected,
 .app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected:hover{border:3px solid #2f7a4b!important;background:#f1f8f3!important;box-shadow:0 0 0 4px rgba(47,122,75,.14)!important;transform:none}
-.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected::after{content:"✓";position:absolute;z-index:3;top:10px;right:10px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#2f7a4b;color:#fff;font:900 15px/1 Inter,ui-sans-serif,system-ui,sans-serif;box-shadow:0 2px 8px rgba(47,122,75,.28)}
+.app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected::after{content:"✓";position:absolute;z-index:3;top:10px;right:10px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#2f7a4b;color:#fff;font:900 15px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;box-shadow:0 2px 8px rgba(47,122,75,.28)}
 .app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected .recipe-copy>em,
 .app-shell .recipe-card .bundle-selection-grid .recipe-tile.bundle-selected:hover .recipe-copy>em{background:transparent!important;color:#2f7a4b!important;font-weight:800!important}
-.app-shell .recipe-card .bundle-placement-cue{margin-top:5px;color:#5d5159;font:700 10px/1.2 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-card .bundle-placement-cue{margin-top:5px;color:#5d5159;font:700 10px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .recipe-card .bundle-duplicate-warning{display:flex;align-items:flex-start;gap:11px;margin-top:20px;padding:14px 16px;border:1px solid #e4a5b3;border-radius:9px;background:#fff4f6;color:#6f2438;cursor:pointer}
 .app-shell .recipe-card .bundle-duplicate-warning input{flex:0 0 auto;width:18px;height:18px;margin:1px 0 0;accent-color:#2f7a4b}
 .app-shell .recipe-card .bundle-duplicate-warning span{display:grid;gap:4px}
-.app-shell .recipe-card .bundle-duplicate-warning b{font:750 12px/1.3 Inter,ui-sans-serif,system-ui,sans-serif}
-.app-shell .recipe-card .bundle-duplicate-warning small{font:500 11px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;color:#7d4d5a}
+.app-shell .recipe-card .bundle-duplicate-warning b{font:750 12px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
+.app-shell .recipe-card .bundle-duplicate-warning small{font:500 11px/1.45 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#7d4d5a}
 .app-shell .recipe-card:has(.bundle-builder) .bundle-card-heading,
 .app-shell .recipe-card:has(.bundle-builder) .unified-bundle-grid{display:none!important}
 .app-shell .recipe-card .bundle-builder-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid #e2d9de}
@@ -2999,9 +2999,9 @@ html, body { background: var(--lf-paper); }
 /* D871 · The products inside a bundle run's history card. */
 .app-shell .batch-history-members{display:flex;flex-wrap:wrap;gap:7px 16px;margin:9px 0 0;padding:0;list-style:none}
 .app-shell .batch-history-members li{display:flex;align-items:center;gap:7px;min-width:0}
-.app-shell .batch-history-members b{font:700 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;color:#4b283e}
-.app-shell .batch-history-members small{font:600 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;color:rgba(74,42,62,.62)}
-.app-shell .batch-history-members .member-mark{display:inline-grid;place-items:center;flex:0 0 18px;width:18px;height:18px;border-radius:50%;background:#eee8ec;color:#654f60;font:750 10px/1 Inter,ui-sans-serif,system-ui,sans-serif}
+.app-shell .batch-history-members b{font:700 12px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:#4b283e}
+.app-shell .batch-history-members small{font:600 11px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;color:rgba(74,42,62,.62)}
+.app-shell .batch-history-members .member-mark{display:inline-grid;place-items:center;flex:0 0 18px;width:18px;height:18px;border-radius:50%;background:#eee8ec;color:#654f60;font:750 10px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif}
 .app-shell .batch-history-members li.done .member-mark{background:#e4f2e8;color:#2f7350}
 
 /* Artwork variants belong to one listing design. Keep the primary identity and
@@ -3017,11 +3017,11 @@ html, body { background: var(--lf-paper); }
 .app-shell .artwork-version-tools{display:grid;gap:6px;padding-top:12px;border-top:1px solid #eee8ec}
 .app-shell .artwork-version-tools>small{color:#765e70}
 .app-shell .artwork-version-tools>div{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:15px}
-.app-shell .artwork-version-tools label.secondary-action{display:inline-flex;align-items:center;justify-content:center;min-height:40px;margin:0;padding:8px 14px;border:1px solid #d8ccd4;border-radius:10px;background:#fff;color:#3d2538;text-decoration:none;font:700 12px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;box-shadow:0 2px 5px rgba(50,25,42,.05);cursor:pointer}
+.app-shell .artwork-version-tools label.secondary-action{display:inline-flex;align-items:center;justify-content:center;min-height:40px;margin:0;padding:8px 14px;border:1px solid #d8ccd4;border-radius:10px;background:#fff;color:#3d2538;text-decoration:none;font:700 12px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;box-shadow:0 2px 5px rgba(50,25,42,.05);cursor:pointer}
 .app-shell .artwork-version-tools label.secondary-action{border-color:#111;background:#111;color:#fff;box-shadow:none}
 .app-shell .artwork-version-tools label.secondary-action:hover{background:#272127}
 .app-shell .artwork-version-tools label.secondary-action:focus-visible{outline:3px solid rgba(245,47,178,.24);outline-offset:3px}
-.app-shell .design-artwork-primary>.artwork-remove-action{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border:1px solid #e3b9c5;border-radius:10px;background:#fff;color:#9b3d55;text-decoration:none;font:700 12px/1 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+.app-shell .design-artwork-primary>.artwork-remove-action{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border:1px solid #e3b9c5;border-radius:10px;background:#fff;color:#9b3d55;text-decoration:none;font:700 12px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;cursor:pointer}
 .app-shell .design-artwork-primary>.artwork-remove-action:hover{background:#fff4f6;border-color:#c96f86}
 .app-shell .artwork-version{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:12px;align-items:start;padding:12px;background:#fbf8fa;border:1px solid #e5dce2;border-radius:10px}
 .app-shell .artwork-version>img{width:72px;height:72px;object-fit:contain;border-radius:8px;background-color:#f3eff2;background-image:linear-gradient(45deg,#e4dde2 25%,transparent 25%),linear-gradient(-45deg,#e4dde2 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e4dde2 75%),linear-gradient(-45deg,transparent 75%,#e4dde2 75%);background-size:12px 12px;background-position:0 0,0 6px,6px -6px,-6px 0}
@@ -3067,8 +3067,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .selected-summary-block>.selected-product-header .template-info b{font-size:15px}
 /* D886 · Product management belongs in the selected product's panel head. */
 .app-shell .factory-panel-actions{display:flex;align-items:center;justify-content:flex-end;gap:14px;min-width:0}
-.app-shell .factory-panel-actions button{padding:0;border:0;background:transparent;box-shadow:none;color:#604655;font:750 11px/1.2 Inter,ui-sans-serif,system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;cursor:pointer}
-.app-shell .factory-panel-actions .panel-create-action{min-height:36px;padding:0 13px;border:1px solid #cfc5cb;background:#fff;box-shadow:0 1px 2px rgba(45,29,39,.05);border-radius:8px;color:#3d2538;font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif;text-decoration:none;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+.app-shell .factory-panel-actions button{padding:0;border:0;background:transparent;box-shadow:none;color:#604655;font:750 11px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;cursor:pointer}
+.app-shell .factory-panel-actions .panel-create-action{min-height:36px;padding:0 13px;border:1px solid #cfc5cb;background:#fff;box-shadow:0 1px 2px rgba(45,29,39,.05);border-radius:8px;color:#3d2538;font:750 11px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;text-decoration:none;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
 .app-shell .factory-panel-actions .panel-create-action:hover{border-color:#746971;background:#faf8f9;box-shadow:0 3px 9px rgba(45,29,39,.1)}
 .app-shell .factory-panel-actions .panel-create-action:focus-visible{outline:3px solid rgba(245,47,178,.2);outline-offset:2px}
 
@@ -3090,18 +3090,18 @@ html, body { background: var(--lf-paper); }
   box-shadow:0 1px 2px rgba(45,29,39,.09),0 8px 20px rgba(45,29,39,.09);
 }
 .app-shell .designs-step:not(.finish-mode)>.step-content{padding-top:24px}
-.app-shell .upload-primary-note{display:grid;gap:3px;width:min(100%,760px);margin:0 auto 14px;color:#55434f;font:500 13px/1.45 Inter,ui-sans-serif,system-ui,sans-serif;text-align:center}
+.app-shell .upload-primary-note{display:grid;gap:3px;width:min(100%,760px);margin:0 auto 14px;color:#55434f;font:500 13px/1.45 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;text-align:center}
 .app-shell .upload-primary-note b{color:#3d2538;font-weight:750}
 .app-shell .designs-step:not(.finish-mode) .upload-actions{gap:16px;margin:0 0 14px}
 .app-shell .designs-step:not(.finish-mode) .folder-drop{min-height:104px}
-.app-shell .file-reminder.upload-guidance{display:flex!important;align-items:center;justify-content:center;flex-wrap:wrap;gap:5px 8px;margin:0 auto 22px!important;padding:0!important;width:100%;border:0!important;background:transparent!important;box-shadow:none!important;color:#756771!important;font:500 11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif!important;text-align:center}
+.app-shell .file-reminder.upload-guidance{display:flex!important;align-items:center;justify-content:center;flex-wrap:wrap;gap:5px 8px;margin:0 auto 22px!important;padding:0!important;width:100%;border:0!important;background:transparent!important;box-shadow:none!important;color:#756771!important;font:500 11px/1.5 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif!important;text-align:center}
 .app-shell .upload-guidance .batch-limits-quota{display:inline!important;padding:0!important;border:0!important;background:transparent!important;color:inherit!important}
-.app-shell .upload-guidance .batch-limits-quota b{font:700 11px/1.5 Inter,ui-sans-serif,system-ui,sans-serif!important}
+.app-shell .upload-guidance .batch-limits-quota b{font:700 11px/1.5 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif!important}
 /* D949 · The upload task has one visual hierarchy: instruction, two obvious
    controls, compact progress, then the uploaded designs. */
 .app-shell .designs-step:not(.finish-mode){background:#fff!important;border:1px solid #c9b8c2!important;box-shadow:0 2px 4px rgba(45,29,39,.1),0 18px 42px rgba(45,29,39,.14)!important}
 .app-shell .designs-step:not(.finish-mode)>.step-content{padding:28px 34px 34px}
-.app-shell .upload-primary-note{display:block;width:auto;margin:0 0 18px;color:#3d2538;font:700 15px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;text-align:left}
+.app-shell .upload-primary-note{display:block;width:auto;margin:0 0 18px;color:#3d2538;font:700 15px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;text-align:left}
 .app-shell .designs-step:not(.finish-mode) .upload-actions{gap:14px;margin-bottom:10px}
 .app-shell .designs-step:not(.finish-mode) .folder-drop{min-height:92px;padding:16px 18px;border:1px solid #b9abb3!important;background:#fff!important;box-shadow:0 3px 10px rgba(45,29,39,.08)!important;border-radius:10px!important;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}
 .app-shell .designs-step:not(.finish-mode) .folder-drop:hover{border-color:#55434f!important;box-shadow:0 5px 15px rgba(45,29,39,.14)!important;transform:translateY(-1px)}
@@ -3114,14 +3114,14 @@ html, body { background: var(--lf-paper); }
    Printify's real generated product mockup instead of a disconnected swatch. */
 .app-shell .draft-color-selector{display:grid;gap:18px;padding:20px;scroll-margin-top:100px;background:#fff;border:1px solid #ded6dc;border-radius:12px;box-shadow:0 1px 2px rgba(40,24,36,.08),0 14px 32px rgba(40,24,36,.08)}
 .app-shell .draft-color-heading{display:block}
-.app-shell .draft-color-heading h3{margin:2px 0 4px;font:700 18px/1.25 Inter,sans-serif;color:#3d2538}
+.app-shell .draft-color-heading h3{margin:2px 0 4px;font:700 18px/1.25 'Manrope Variable', Manrope,sans-serif;color:#3d2538}
 .app-shell .draft-color-heading p{margin:0;max-width:650px;color:#756873;font-size:14px;line-height:1.45}
 .app-shell .draft-color-workspace{display:grid;grid-template-columns:minmax(260px,36%) minmax(0,1fr);gap:18px;align-items:start}
 .app-shell .draft-color-main{display:grid;gap:7px;align-content:start}
 .app-shell .draft-color-main img{width:100%;aspect-ratio:1/1;object-fit:contain;background-color:#f8f5f7;background-image:linear-gradient(45deg,#ece7ea 25%,transparent 25%),linear-gradient(-45deg,#ece7ea 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ece7ea 75%),linear-gradient(-45deg,transparent 75%,#ece7ea 75%);background-size:18px 18px;background-position:0 0,0 9px,9px -9px,-9px 0;border:1px solid #ded6dc;border-radius:10px}
 .app-shell .draft-color-bulk-actions>span{margin-left:auto;color:#5f7365;font-size:11px;font-weight:700}
 .app-shell .draft-color-main b{font-size:16px;color:#3d2538}.app-shell .draft-color-main span{font-size:12px;color:#6a7f70}
-.app-shell .draft-color-artwork-action{display:grid;gap:8px;margin-top:7px}.app-shell .draft-color-artwork-action label,.app-shell .draft-color-artwork-action button{display:flex;align-items:center;justify-content:center;min-height:40px;margin:0;padding:9px 12px;border:1px solid #111;border-radius:8px;background:#111;color:#fff;font:700 12px/1.2 Inter,sans-serif;box-shadow:none;cursor:pointer;text-align:center}.app-shell .draft-color-artwork-action button{background:#fff;color:#3d2538;border-color:#d8ccd4}.app-shell .draft-color-artwork-action label:hover{background:#272127}.app-shell .draft-color-artwork-action button:hover{border-color:#8f7b89;background:#faf8f9}.app-shell .draft-color-artwork-action :is(label,button):focus-visible{outline:3px solid rgba(245,47,178,.24);outline-offset:2px}.app-shell .draft-color-artwork-action :is(label,button):has(input:disabled),.app-shell .draft-color-artwork-action button:disabled{opacity:.55;cursor:wait}
+.app-shell .draft-color-artwork-action{display:grid;gap:8px;margin-top:7px}.app-shell .draft-color-artwork-action label,.app-shell .draft-color-artwork-action button{display:flex;align-items:center;justify-content:center;min-height:40px;margin:0;padding:9px 12px;border:1px solid #111;border-radius:8px;background:#111;color:#fff;font:700 12px/1.2 'Manrope Variable', Manrope,sans-serif;box-shadow:none;cursor:pointer;text-align:center}.app-shell .draft-color-artwork-action button{background:#fff;color:#3d2538;border-color:#d8ccd4}.app-shell .draft-color-artwork-action label:hover{background:#272127}.app-shell .draft-color-artwork-action button:hover{border-color:#8f7b89;background:#faf8f9}.app-shell .draft-color-artwork-action :is(label,button):focus-visible{outline:3px solid rgba(245,47,178,.24);outline-offset:2px}.app-shell .draft-color-artwork-action :is(label,button):has(input:disabled),.app-shell .draft-color-artwork-action button:disabled{opacity:.55;cursor:wait}
 .app-shell .draft-color-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .app-shell .draft-color-grid button{display:grid;grid-template-columns:54px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;gap:2px 10px;min-height:70px;padding:8px;border:1px solid #ded6dc;border-radius:9px;background:#fff;color:#3d2538;text-align:left;box-shadow:none}
 .app-shell .draft-color-grid button:hover{border-color:rgba(61,37,56,.48);background:#fcfafb}.app-shell .draft-color-grid button.selected{border-color:#2f7a50;background:#f1faf4;box-shadow:0 0 0 1px #2f7a50}
@@ -3149,8 +3149,8 @@ html, body { background: var(--lf-paper); }
 .app-shell .draft-color-preview{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 15px;border:1px solid #111;border-radius:8px;background:#fff;color:#211a1f;font:750 12px/1.2 inherit;cursor:pointer}
 .app-shell .draft-color-preview:hover{background:#f8f5f7}
 .app-shell .draft-color-preview:disabled{border-color:#ddd5da;color:#9b9198;background:#f7f5f6;cursor:not-allowed}
-.factory-art-card{position:relative}.factory-art-select{position:absolute;z-index:3;top:10px;right:10px;display:grid;width:34px;height:34px;place-items:center;cursor:pointer}.factory-art-select input{position:absolute;opacity:0}.factory-art-select>span:not(.sr-only){display:grid;width:30px;height:30px;place-items:center;border:2px solid #111;border-radius:8px;background:#fff;color:#111;font:800 16px/1 Inter,sans-serif;box-shadow:2px 2px 0 rgba(245,47,178,.8)}.factory-art-select:has(input:checked)>span:not(.sr-only){background:#111;color:#fff}
-.app-shell .placement-selection-actions{grid-column:1/-1;display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:0 0 8px;padding:0}.app-shell .placement-selection-actions button{min-height:40px;padding:9px 14px;border:1px solid #111;border-radius:8px;background:#fff;color:#111;font:750 12px/1.2 Inter,sans-serif}.app-shell .placement-selection-actions button:last-child{background:#111;color:#fff}
+.factory-art-card{position:relative}.factory-art-select{position:absolute;z-index:3;top:10px;right:10px;display:grid;width:34px;height:34px;place-items:center;cursor:pointer}.factory-art-select input{position:absolute;opacity:0}.factory-art-select>span:not(.sr-only){display:grid;width:30px;height:30px;place-items:center;border:2px solid #111;border-radius:8px;background:#fff;color:#111;font:800 16px/1 'Manrope Variable', Manrope,sans-serif;box-shadow:2px 2px 0 rgba(245,47,178,.8)}.factory-art-select:has(input:checked)>span:not(.sr-only){background:#111;color:#fff}
+.app-shell .placement-selection-actions{grid-column:1/-1;display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:0 0 8px;padding:0}.app-shell .placement-selection-actions button{min-height:40px;padding:9px 14px;border:1px solid #111;border-radius:8px;background:#fff;color:#111;font:750 12px/1.2 'Manrope Variable', Manrope,sans-serif}.app-shell .placement-selection-actions button:last-child{background:#111;color:#fff}
 
 /* One optically centered close mark across every enlarged-image surface. */
 .printify-photo-lightbox>button,.inline-lightbox>button,.lightboxClose{display:block!important;line-height:0!important;padding:0!important;color:transparent!important}
@@ -3168,7 +3168,7 @@ html, body { background: var(--lf-paper); }
   width:auto!important;min-width:0!important;min-height:0!important;
   margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
   background:transparent!important;color:#756873!important;box-shadow:none!important;
-  font:650 11px/1.4 Inter,ui-sans-serif,system-ui,sans-serif!important;
+  font:650 11px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif!important;
   text-decoration:underline!important;text-underline-offset:3px!important}
 .app-shell .step-product-cards>.post-draft-heading .open-all-button:hover{background:transparent!important;color:#3d2538!important;box-shadow:none!important}
 
@@ -3315,7 +3315,7 @@ html, body { background: var(--lf-paper); }
   border-radius:14px!important;background:#fff!important;color:#2d2028!important;
   box-shadow:0 28px 80px rgba(20,14,18,.28)!important}
 .publish-confirm h2,.upload-notice h2{
-  margin:7px 0 8px;font:750 25px/1.16 Inter,ui-sans-serif,system-ui,sans-serif!important;
+  margin:7px 0 8px;font:750 25px/1.16 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif!important;
   letter-spacing:-.025em;color:#2d2028!important}
 .publish-confirm>p:not(.mini-label),.upload-notice>p:not(.mini-label){color:#71656d;font-size:14px;line-height:1.5}
 .publish-confirm .publish-confirm-icon,.upload-notice .upload-notice-icon{
@@ -3349,11 +3349,11 @@ html, body { background: var(--lf-paper); }
 /* D952 · Help is part of the product, not a branded editorial interlude. It
    uses the same type hierarchy as the page beneath it. */
 .context-help-dialog h2{
-  font:750 26px/1.15 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif!important;
+  font:750 26px/1.15 'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif!important;
   letter-spacing:-.025em!important;
   color:#2d2028!important;
 }
-.context-help-dialog :is(.mini-label,h3,p,li){font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif!important}
+.context-help-dialog :is(.mini-label,h3,p,li){font-family:'Manrope Variable', Manrope,ui-sans-serif,system-ui,-apple-system,sans-serif!important}
 
 /* D953 · The artwork is the content; filenames are incidental metadata and
    are often long machine-generated strings. */
@@ -3364,11 +3364,11 @@ html, body { background: var(--lf-paper); }
 .app-shell .uploaded-design-preview{width:104px!important;height:104px!important}
 .app-shell .design-artwork-primary>div{gap:5px!important}
 .app-shell .design-artwork-primary em{
-  font:750 14px/1.2 Inter,ui-sans-serif,system-ui,sans-serif!important;color:#2d2028!important}
+  font:750 14px/1.2 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif!important;color:#2d2028!important}
 .app-shell .design-artwork-primary b{
-  font:500 11px/1.35 Inter,ui-sans-serif,system-ui,sans-serif!important;color:#7a6d75!important}
+  font:500 11px/1.35 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif!important;color:#7a6d75!important}
 .app-shell .design-artwork-primary small{
-  font:500 11px/1.3 Inter,ui-sans-serif,system-ui,sans-serif!important;color:#8b7f87!important}
+  font:500 11px/1.3 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif!important;color:#8b7f87!important}
 
 /* D955 · The footer marks its own forward control. Class names such as
    workflow-next and launch-button also exist inside content, so they cannot
@@ -3397,7 +3397,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .summary-list div button{
   min-height:36px;padding:7px 10px;border:1px solid #d4c8cf!important;
   border-radius:8px;background:#fff!important;color:#3d2538!important;
-  text-decoration:none!important;font:750 11px/1 Inter,ui-sans-serif,system-ui,sans-serif!important;
+  text-decoration:none!important;font:750 11px/1 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif!important;
 }
 .app-shell .summary-list div button:hover{border-color:#756871!important;background:#faf8f9!important}
 .app-shell .summary-list div button:focus-visible{outline:3px solid rgba(245,47,178,.2);outline-offset:2px}
@@ -3467,7 +3467,7 @@ html, body { background: var(--lf-paper); }
 }
 .app-shell .selected-product-loading{
   min-height:96px;display:flex;align-items:center;justify-content:center;gap:10px;
-  color:#675762;font:700 13px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;
+  color:#675762;font:700 13px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;
 }
 .app-shell .recipe-library-loading{min-height:180px;display:flex;align-items:center;justify-content:center;gap:10px;color:#786d74;font-size:14px}
 
@@ -3475,9 +3475,9 @@ html, body { background: var(--lf-paper); }
    the batch. These controls deliberately read as a compact checklist inside
    the artwork card, so the seller can audit every product before drafts exist. */
 .app-shell .bundle-print-products{grid-column:1/-1;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px!important;padding:12px!important;border:1px solid #ded6dc!important;border-radius:9px;background:#faf8f9}
-.app-shell .bundle-print-products legend{grid-column:1/-1;padding:0 4px;color:#3d2538;font:700 13px/1.3 Inter,sans-serif}
-.app-shell .bundle-print-products>small{grid-column:1/-1;margin:0 0 3px;color:#756873;font:500 11px/1.45 Inter,sans-serif}
-.app-shell .bundle-print-products button{display:flex;align-items:center;gap:8px;min-height:40px;padding:8px 10px;border:1px solid #d8cdd3;border-radius:8px;background:#fff!important;color:#3d2538!important;text-align:left;font:650 12px/1.3 Inter,sans-serif}
+.app-shell .bundle-print-products legend{grid-column:1/-1;padding:0 4px;color:#3d2538;font:700 13px/1.3 'Manrope Variable', Manrope,sans-serif}
+.app-shell .bundle-print-products>small{grid-column:1/-1;margin:0 0 3px;color:#756873;font:500 11px/1.45 'Manrope Variable', Manrope,sans-serif}
+.app-shell .bundle-print-products button{display:flex;align-items:center;gap:8px;min-height:40px;padding:8px 10px;border:1px solid #d8cdd3;border-radius:8px;background:#fff!important;color:#3d2538!important;text-align:left;font:650 12px/1.3 'Manrope Variable', Manrope,sans-serif}
 .app-shell .bundle-print-products button>span{display:grid;place-items:center;flex:0 0 20px;width:20px;height:20px;border:1px solid #cfc4ca;border-radius:50%;background:#fff;color:#fff;font-size:12px}
 .app-shell .bundle-print-products button.selected{border-color:#2f7a50;background:#f1faf4!important;box-shadow:0 0 0 1px #2f7a50}
 .app-shell .bundle-print-products button.selected>span{border-color:#2f7a50;background:#2f7a50}
@@ -3690,7 +3690,7 @@ html, body { background: var(--lf-paper); }
 
 .app-shell .placement-printify-note{
   grid-column:1/-1;margin:0 0 18px;padding:12px 14px;border-left:3px solid #ec5db5;
-  background:#fff7fc;color:#5f4f5a;font:600 12px/1.5 Inter,ui-sans-serif,system-ui,sans-serif
+  background:#fff7fc;color:#5f4f5a;font:600 12px/1.5 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif
 }
 
 /* Etsy shipping is already inside the open numbered task card. Remove the
@@ -3799,7 +3799,7 @@ html, body { background: var(--lf-paper); }
 
 .app-shell .factory-listing-next button{padding:10px 18px!important;white-space:nowrap!important}
 .app-shell .draft-color-next{margin-top:4px!important}
-.app-shell .draft-color-adjust{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0 4px;padding-top:16px;border-top:1px solid #e1d7dd}.app-shell .draft-color-adjust a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 14px;border:1px solid #111;border-radius:8px;background:#111;color:#fff;font:700 12px/1.2 Inter,sans-serif;text-decoration:none}.app-shell .draft-color-adjust a:hover{background:#272127}.app-shell .draft-color-adjust span{color:#756772;font:500 12px/1.4 Inter,sans-serif}
+.app-shell .draft-color-adjust{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0 4px;padding-top:16px;border-top:1px solid #e1d7dd}.app-shell .draft-color-adjust a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 14px;border:1px solid #111;border-radius:8px;background:#111;color:#fff;font:700 12px/1.2 'Manrope Variable', Manrope,sans-serif;text-decoration:none}.app-shell .draft-color-adjust a:hover{background:#272127}.app-shell .draft-color-adjust span{color:#756772;font:500 12px/1.4 'Manrope Variable', Manrope,sans-serif}
 @media(max-width:700px){.app-shell .draft-color-adjust{align-items:stretch;flex-direction:column;text-align:center}}
 
 /* D1064 · Automatic Etsy preparation is work in progress, not an error. */
@@ -3815,7 +3815,7 @@ html, body { background: var(--lf-paper); }
   display:flex;align-items:center;justify-content:center;max-width:100%;
   min-height:42px;margin:16px auto 0;padding:10px 18px;
   border:1px solid #bdb4bb;border-radius:10px;background:#fff;color:#171717;
-  font:600 14px/1.4 Inter,sans-serif;text-align:center;cursor:pointer;
+  font:600 14px/1.4 'Manrope Variable', Manrope,sans-serif;text-align:center;cursor:pointer;
 }
 .app-shell .title-builder-pane > .secondary-action:hover{background:#f7f4f6;color:#171717}
 .app-shell .title-builder-pane > .secondary-action:disabled{opacity:.55;cursor:wait}
@@ -3829,7 +3829,7 @@ html, body { background: var(--lf-paper); }
 .app-shell .factory-work .design-fields .individual-title-builder > summary{
   display:list-item;min-height:44px;box-sizing:border-box;padding:12px 16px;
   border:1px solid #d8cfd5;border-radius:9px;background:#fff;color:#171717;
-  font:600 14px/1.4 Inter,ui-sans-serif,system-ui,sans-serif;cursor:pointer;
+  font:600 14px/1.4 'Manrope Variable', Manrope,ui-sans-serif,system-ui,sans-serif;cursor:pointer;
 }
 .app-shell .factory-work .design-fields .individual-title-builder > summary:hover{background:#faf6f8;color:#171717}
 .app-shell .factory-work .design-fields .individual-title-builder > summary:focus-visible{outline:2px solid #8a4775;outline-offset:3px}

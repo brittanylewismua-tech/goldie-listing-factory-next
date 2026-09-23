@@ -104,7 +104,7 @@ const shell = [el("main", "app-shell"), el("div", "factory-main"), el("div", "fa
    from the prototype. A miss here is a real visual mismatch, named. */
 const CASES = [
   // page head - the one that was silently wrong
-  { name: "page title font", chain: [...shell, el("section","hero","workflow-hero"), el("div","factory-page-head"), el("div","factory-heading-with-help"), el("h1")], property: "font", expect: /^700 29px\/1\.12 Inter/ },
+  { name: "page title font", chain: [...shell, el("section","hero","workflow-hero"), el("div","factory-page-head"), el("div","factory-heading-with-help"), el("h1")], property: "font", expect: /^700 29px\/1\.12 'Manrope Variable'/ },
   /* D727 · The shorthand won this cascade while an !important longhand in
      clarity-pass still set the family and size. Shorthands are not enough:
      the longhands are checked too, or the title goes back to serif. */
@@ -147,7 +147,9 @@ const CASES = [
   { name: "dialog shadow depth", chain: [...shell, el("section","publish-confirm")], property: "box-shadow", expect: /^0 28px 80px/ },
   { name: "modal action shape", chain: [...shell, el("section","publish-confirm"), el("div","publish-confirm-actions"), el("button")], property: "border-radius", expect: /^8px$/ },
   // shell chrome — D734/D736/D737
-  { name: "shell typeface", chain: [el("main","app-shell")], property: "font-family", expect: /^Inter,/ },
+  /* D1795 · The shell renders Manrope. Inter was declared alongside it in
+     fourteen sheets, so two families were on screen at once. */
+  { name: "shell typeface", chain: [el("main","app-shell")], property: "font-family", expect: /^'Manrope Variable',/ },
   /* D821 · this expected D803's value, which D803 recorded as the prototype's
      and which the prototype does not use. Read off .goldie-sidebar live:
      1px rgba(113,65,91,.15). */

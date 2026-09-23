@@ -1,6 +1,6 @@
 /* Approved Goldie visual skin. Functionality stays in app/page.tsx. */
 :root{--ink:#4b283e;--black:#4b283e;--cream:#f7c8dc;--paper:rgba(255,247,252,.72);--white:#fff;--muted:#80677a;--line:rgba(91,53,79,.16);--gold:#b06b9d;--gold-soft:#f3b6d5;--green:#8d5ea2;--shadow:0 24px 70px rgba(74,42,62,.14)}
-html,body{min-height:100%;background:#f2bfd5 url('/goldie-background-FINAL.jpg') center/cover fixed no-repeat;color:var(--ink);font-family:'Manrope','Hanken Grotesk',Inter,sans-serif}
+html,body{min-height:100%;background:#f2bfd5 url('/goldie-background-FINAL.jpg') center/cover fixed no-repeat;color:var(--ink);font-family:'Manrope','Hanken Grotesk','Manrope Variable', Manrope,sans-serif}
 body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(120deg,rgba(255,221,232,.2),rgba(201,190,255,.12) 48%,rgba(255,176,195,.12));pointer-events:none}
 /* D371 · "Powered by Goldie AI" stopped appearing in the sidebar. The rail is a
    fixed 100vh flex column, but the nav block was flex:0 0 auto — it could not

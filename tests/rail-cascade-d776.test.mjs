@@ -371,7 +371,7 @@ test("D815: the listing form's parts resolve to the preview's values", () => {
   assert.deepStrictEqual(faults, []);
 });
 
-test("D816: every heading in the pane resolves to Inter", () => {
+test("D816: every heading in the pane resolves to one family", () => {
   /* Four h3 were still in Manrope on the live build - the batch title
      builder's, the Etsy details lead's, the listing card's and the
      checklist's. D774 claimed one typeface, D803 closed h2, and nothing had
@@ -383,7 +383,9 @@ test("D816: every heading in the pane resolves to Inter", () => {
       selectorTest: selector => new RegExp(`factory-work ${heading}$`).test(selector),
       property: "font-family",
     });
-    assert.ok(winner && /^Inter/.test(winner.value),
+    /* D1795 · Manrope, not Inter. Two families were rendering at once and the
+       app's own body type is Manrope; declaring Inter here was what split it. */
+    assert.ok(winner && /^'Manrope Variable'/.test(winner.value),
       `${heading} in the pane resolves to ${winner ? winner.value : "unset"}`);
   }
 });

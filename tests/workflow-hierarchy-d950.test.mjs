@@ -14,7 +14,8 @@ test("D952: help and management surfaces use the same visual language",()=>{
   const managementCss=readFileSync(new URL("../app/management-aesthetic.css",import.meta.url),"utf8");
   const helpLock=interfaceCss.slice(interfaceCss.indexOf("/* D952"));
   const managementLock=managementCss.slice(managementCss.indexOf("/* D951"));
-  assert.match(helpLock,/\.context-help-dialog h2\{[\s\S]*?font:750 26px\/1\.15 Inter/);
+  /* D1795 · one family, and it is Manrope. */
+  assert.match(helpLock,/\.context-help-dialog h2\{[\s\S]*?font:750 26px\/1\.15 'Manrope Variable'/);
   assert.match(managementLock,/\.usage-page \.plan-banner\{[\s\S]*?background:#0d0b0c!important/);
   assert.match(managementLock,/\.usage-page \.plan-banner :is\(h2,p,span\)\{color:#fff!important\}/);
 });

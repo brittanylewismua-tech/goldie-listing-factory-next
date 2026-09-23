@@ -14,7 +14,13 @@ import postcss from "postcss";
 
    So: no rule inside the Listing Factory may hand a different family to
    something with !important, because that is the only way to beat inheritance
-   and it is what kept happening. */
+   and it is what kept happening.
+
+   D1795 · The family is Manrope, not Inter. Measured on the live Design
+   Scanner: Manrope on 29 elements and Inter on 21, at the same time, which is
+   most of what "it looks thrown together" was made of. Every sheet that
+   declared Inter was changed at source rather than overridden, so the name
+   this rule allows loudly is now the one the app actually renders. */
 
 const EXEMPT = /wordmark|approved-wm|approved-i\b|approved-footer-i|keyword-hero|mockupHero|management-page|managementOnly|usage-page|batch-history|support-|mobile-/;
 
@@ -24,8 +30,8 @@ for (const name of readdirSync(new URL("../app", import.meta.url)).filter(file =
     if (decl.prop !== "font-family" || !decl.important) return;
     const selector = decl.parent.selector || "";
     if (EXEMPT.test(selector)) return;
-    if (/Inter/.test(decl.value)) return;
-    if (name === "production-repair.css" && /h1/.test(selector) && /DM Serif Display/.test(decl.value)) return;                 /* saying Inter loudly is fine */
+    if (/Manrope/.test(decl.value)) return;
+    if (name === "production-repair.css" && /h1/.test(selector) && /DM Serif Display/.test(decl.value)) return;                 /* saying Manrope loudly is fine */
     offenders.push(`${name}: ${selector.replace(/\s+/g, " ").slice(0, 52)} — ${decl.value.slice(0, 30)}`);
   });
 }
