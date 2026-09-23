@@ -73,6 +73,30 @@ export function familyLabel(family: string) {
   return spaced ? `a ${spaced}` : "one product";
 }
 
+/*
+  AN ETSY TITLE IS NOT A NAME.
+
+  "Feminist Shirt Girl Power Shirt Girl Boss Shirt Feminist Gifts Anti Trump
+  Feminist T Shirt Womens Clothing Feminism Shirt" is a search surface, and
+  four listings written that way are indistinguishable in a list - every one
+  of them opens with the same three words. Repeated words are dropped and the
+  first eight kept, which is enough to tell one design from another without
+  reading a paragraph. The photograph does the rest.
+*/
+export function shortLabel(title: string) {
+  const seen = new Set<string>();
+  const kept: string[] = [];
+  for (const word of title.split(/\s+/)) {
+    const key = word.toLocaleLowerCase().replace(/[^a-z0-9']/g, "");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    kept.push(word);
+    if (kept.length === 8) break;
+  }
+  const label = kept.join(" ");
+  return label.length > 54 ? `${label.slice(0, 54).trimEnd()}…` : label;
+}
+
 export type Reach = {
   key: string; title: string; listingId: number; imageUrl?: string;
   sold90: number; favorites: number | null;

@@ -192,3 +192,6 @@
 .shop-map-check .finding-gap{border-left:4px solid var(--suite-pink,#ff2ca6);background:var(--suite-pink-wash,#fff3fa)}
 .shop-map-check .finding-ok{border-left:4px solid #3f9c6d;background:#f4fbf7}
 @media (max-width:900px){.shop-map-check-form{grid-template-columns:minmax(0,1fr)}}
+
+/* D1799 · The photograph tells two listings apart faster than their titles. */
+.shop-map-reach li>span[aria-hidden]{width:72px;height:72px;flex:0 0 72px}

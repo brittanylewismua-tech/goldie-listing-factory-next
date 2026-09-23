@@ -301,7 +301,10 @@
    and from different passes. */
 /* D1798 deletes the Design Scanner. Its listing check moved onto the listing
    in Shop Map, where the listings already were; its artwork scan is gone. */
-export const BUILD_MARKER = "D1798";
+/* D1799 puts the shop's own numbers back at the top of Shop Map, and stops
+   four listings reading as the same row because their SEO titles all open
+   with the same three words. */
+export const BUILD_MARKER = "D1799";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

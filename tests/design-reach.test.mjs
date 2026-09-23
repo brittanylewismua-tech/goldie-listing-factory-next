@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { designKey, designsOnOneProduct, familyLabel } from '../app/design-reach.ts';
+import { designKey, designsOnOneProduct, familyLabel, shortLabel } from '../app/design-reach.ts';
 
 const listing = (listingId, title, family, sold90, favorites = 0) =>
   ({ listingId, title, family, sold90, favorites });
@@ -68,4 +68,16 @@ test("the database's word for a product is not the seller's", () => {
      later is visible instead of silently dropped. */
   assert.equal(familyLabel('bucketHat'), 'a bucket hat');
   assert.equal(familyLabel(''), 'one product');
+});
+
+test('an Etsy title is a search surface, not a name', () => {
+  /* Four listings written that way are indistinguishable in a list - every one
+     opens with the same three words. */
+  const long = "Feminist Shirt Girl Power Shirt Girl Boss Shirt Feminist Gifts Anti Trump Feminist T Shirt";
+  const short = shortLabel(long);
+  assert.ok(short.length <= 55, `still ${short.length} characters`);
+  assert.equal(short.split(/\s+/).filter(Boolean).length <= 8, true);
+  /* Repeats are what make them look alike, so repeats go first. */
+  assert.equal((short.toLowerCase().match(/shirt/g) ?? []).length, 1);
+  assert.match(short, /^Feminist Shirt Girl Power/);
 });

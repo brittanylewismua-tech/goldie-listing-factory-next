@@ -95,7 +95,9 @@ test('a withheld profit names what is withholding it', () => {
   assert.doesNotMatch(route, /headline: profit === null \? "Profit unavailable"/);
   const client = readFileSync(new URL('../app/shop-map/shop-map-client.tsx', import.meta.url), 'utf8');
   /* And the listing, not the rule, is what tells two rows apart. */
-  assert.match(client, /<b className="cc-row-title">\{action\.title\}<\/b>/);
+  /* D1799 · Shortened: an Etsy title is a search surface, and four written
+     that way open with the same three words. */
+  assert.match(client, /<b className="cc-row-title">\{shortLabel\(action\.title\)\}<\/b>/);
 });
 
 test('a refusal hands its keyword to the check that always answers', () => {

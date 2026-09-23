@@ -1,7 +1,7 @@
 "use client";
 import {browseOwnListings} from "@/app/market-listing-browser";
 import ActionPlan from "@/app/command-center/action-plan";
-import {designsOnOneProduct,familyLabel,type Reach,type ReachListing} from "@/app/design-reach";
+import {designsOnOneProduct,familyLabel,shortLabel,type Reach,type ReachListing} from "@/app/design-reach";
 import ListingCheckPanel from "./listing-check-panel";
 import type {CatalogAction} from "@/app/shop-map-actions";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -89,9 +89,9 @@ function DesignReach(){
     <h2>Sold, and only on one product</h2>
 
     <ul>{rows.map(row=><li key={row.key}>
-      {row.imageUrl?<img src={row.imageUrl} alt="" width={56} height={56} loading="lazy"/>:<span aria-hidden="true"/>}
+      {row.imageUrl?<img src={row.imageUrl} alt="" width={72} height={72} loading="lazy"/>:<span aria-hidden="true"/>}
       <span className="shop-map-reach-copy">
-        <b>{row.title}</b>
+        <b>{shortLabel(row.title)}</b>
         <small>{row.sold90} sold in 90 days · only on {familyLabel(row.families[0])}</small>
       </span>
       <a href={`https://www.etsy.com/listing/${row.listingId}`} target="_blank" rel="noopener noreferrer">
@@ -272,8 +272,6 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     </nav>
 
     {tab === "overview" && <div className="shop-map-tab-panel">
-      <DesignReach/>
-      <ListingCheckPanel/>
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
           <h2>Top 3 listings in the last 90 days</h2></div>
@@ -288,10 +286,16 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           </article>)}</div> : <div className="shop-map-empty"><b>No sales in the last 90 days.</b>
             <p>Your sold listings will appear here after the next Etsy sales import.</p></div>}
       </section>
+      {/* D1799 · Facts first, then what to do about them. These two action
+          panels opened the page, so Shop Map began with eight rows of
+          near-identical SEO titles and the shop's own sales were pushed
+          below the fold. */}
+      <DesignReach/>
+      <ListingCheckPanel/>
       <section className="cc-tool"><h2>Listings to review</h2>{shown.catalogActions?.length?shown.catalogActions.map(action=><details key={action.listingId} className="cc-saved-plan"><summary>{/* D1780 · The headline led, and the same rule fires for every listing that
     qualifies, so the panel read as one instruction repeated three times with
     different words after the colon. The listing is what distinguishes one row
-    from another, so it goes first. */}<b className="cc-row-title">{action.title}</b><span className="cc-row-why">{action.headline}</span></summary><p>{action.evidence}</p><p>{action.nextStep}</p><a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy ↗</a><ActionPlan feature="shopMap" source={`shop-${shown.shop?.shopId}-listing-${action.listingId}`} heading={action.headline} notes={`${action.title}
+    from another, so it goes first. */}<b className="cc-row-title">{shortLabel(action.title)}</b><span className="cc-row-why">{action.headline}</span></summary><p>{action.evidence}</p><p>{action.nextStep}</p><a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy ↗</a><ActionPlan feature="shopMap" source={`shop-${shown.shop?.shopId}-listing-${action.listingId}`} heading={action.headline} notes={`${action.title}
 ${action.evidence}
 
 ${action.nextStep}
