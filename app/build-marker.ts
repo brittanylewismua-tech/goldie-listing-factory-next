@@ -261,7 +261,10 @@
    produced, on a real search for "auntie shirt", no price finding at all. */
 /* D1780 stops Shop Map reporting a deliberately withheld profit as a broken
    feature, and stops the review panel printing one rule three times. */
-export const BUILD_MARKER = "D1780";
+/* D1781 removes the tag-lift probe. It answered its question - the lift is
+   real but measured against favorites, and Etsy ranks search on tags, so it
+   was partly measuring Etsy. The ranking rests on counted units instead. */
+export const BUILD_MARKER = "D1781";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
