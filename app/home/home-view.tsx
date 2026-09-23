@@ -142,7 +142,7 @@ export default function HomeView() {
             destinations; the heading is the way through to the fuller one
             rather than a second, thinner copy of it with no link out. */}
         <Link className="home-panel-cta" href="/command-center">
-          See all four <i aria-hidden="true">↗</i></Link>
+          Open the Command Center <i aria-hidden="true">↗</i></Link>
       </div>
       <div className="home-panel-tiles home-panel-tiles-two">
         {TOOLS.map(tile => <Link key={tile.name} className="home-tile" href={tile.href}>

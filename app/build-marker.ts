@@ -322,7 +322,9 @@
 /* D1806 stops every Command Center tile rendering pink - those tiles ARE
    links - restores the shop initials the inherit rule had hidden, and takes
    the deleted Design Scanner off the home page. */
-export const BUILD_MARKER = "D1806";
+/* D1807 · the home card said "See all four" of three tools, and left an
+   empty cell in a grid that had been sized for the old count. */
+export const BUILD_MARKER = "D1807";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

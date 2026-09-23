@@ -259,7 +259,9 @@
 
 .home-panel-tiles{display:grid}
 .home-panel-tiles-four{grid-template-columns:repeat(4,minmax(0,1fr))}
-.home-panel-tiles-two{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* D1807 · Three tools in a two-column grid left an empty cell. The count is
+   not fixed - it was four this morning - so the grid fits what it is given. */
+.home-panel-tiles-two{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 .home-tile{
   display:flex;align-items:flex-start;gap:14px;padding:20px 22px;
   border-right:1px solid var(--suite-line);border-bottom:1px solid var(--suite-line);
