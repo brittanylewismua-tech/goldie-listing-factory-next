@@ -242,7 +242,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
 
 function ListingCard({listing,action,extra}:{listing:Listing;action?:ReactNode;extra?:ReactNode}){return <article className="card">
   {listing.imageUrl && listing.displayFresh?<img src={listing.imageUrl} alt={listing.title} loading="lazy" width={570} height={570}/>:<p className="no-image">{listing.imageUrl ? "Photo needs refreshing" : "Photo unavailable from Etsy"}</p>}
-  <div className="body"><div className="listing-price-row"><strong>{money(listing)}</strong>{!listing.displayFresh&&<span>Saved details</span>}</div><h2 className="title">{listing.title}</h2><dl className="listing-stat-grid"><div><dt>Total favorites</dt><dd>{listing.favorites??"Unavailable"}</dd></div><div><dt>Total views</dt><dd>{listing.views??"Unavailable"}</dd></div>{listing.listedAt!==undefined?<div><dt>Listed / renewed</dt><dd>{listing.listedAt?new Date(listing.listedAt*1000).toLocaleDateString():"Unavailable"}</dd></div>:<div><dt>Recorded reviews</dt><dd>{listing.reviewsOnThisListing??"Unavailable"}</dd></div>}<div><dt>Original age</dt><dd>{listing.ageDays==null?"Unavailable":`${listing.ageDays} ${listing.ageDays===1?"day":"days"}`}</dd></div></dl>
+  <div className="body"><div className="listing-price-row"><strong>{money(listing)}</strong>{!listing.displayFresh&&<span>Saved details</span>}</div><h2 className="title">{listing.title}</h2><dl className="listing-stat-grid"><div><dt>Total favorites</dt><dd>{listing.favorites??"Unavailable"}</dd></div><div><dt>Total views</dt><dd>{listing.views??"Unavailable"}</dd></div>{listing.listedAt!==undefined&&<div><dt>Listed / renewed</dt><dd>{listing.listedAt?new Date(listing.listedAt*1000).toLocaleDateString():"Unavailable"}</dd></div>}<div><dt>Original age</dt><dd>{listing.ageDays==null?"Unavailable":`${listing.ageDays} ${listing.ageDays===1?"day":"days"}`}</dd></div></dl>
     {listing.intervals>0&&<p className="listing-evidence">Activity observed on {listing.intervals} occasion{listing.intervals===1?"":"s"} in the last 30 days{listing.confirmedAt?` · latest ${new Date(listing.confirmedAt*1000).toLocaleDateString()}`:""}.</p>}
     {extra}
   </div>{action?<div className="research-card-actions">{action}<a href={listing.etsyUrl} target="_blank" rel="noreferrer noopener">View on Etsy ↗</a></div>:<a href={listing.etsyUrl} target="_blank" rel="noreferrer noopener">View on Etsy ↗</a>}
@@ -263,7 +263,9 @@ function ShopCard({shop}:{shop:ShopView}){
   const [nextOffset,setNextOffset]=useState<number|null>(null);
   const [retryOffset,setRetryOffset]=useState(0);
   const [total,setTotal]=useState<number|null>(null);
-  const [sort,setSort]=useState<ListingOrder>("newest");
+  /* Favorites, because it is the ordering Etsy gives nobody and the reason to
+     look at a competitor's catalog here rather than on their shop page. */
+  const [sort,setSort]=useState<ListingOrder>("favorites");
   const [query,setQuery]=useState("");
   const [currency,setCurrency]=useState("");
   const activeRequest=useRef<AbortController|null>(null);
@@ -293,7 +295,7 @@ function ShopCard({shop}:{shop:ShopView}){
     finally{if(activeRequest.current===controller){activeRequest.current=null;setLoading(false);setLoadingAll(false);}}
   };
   useEffect(()=>{void loadListings();return()=>{activeRequest.current?.abort();activeRequest.current=null}},[shop.shopId]);
-  const sections:Array<[string,ShopPattern[]]>=[["Listings buyers reviewed",shop.gettingAttention??[]],["What buyers love",shop.whatBuyersLove??[]],["What buyers dislike",shop.whatBuyersDislike??[]],["Shop changes",shop.whatChanged??[]]];
+  const sections:Array<[string,ShopPattern[]]>=[["Listings buyers reviewed",shop.gettingAttention??[]],["What buyers tell you to make",shop.whatBuyersLove??[]],["Problems buyers keep raising",shop.whatBuyersDislike??[]],["Shop changes",shop.whatChanged??[]]];
   const visibleSections=sections.filter(([name])=>section==="changes"?name==="Shop changes":name!=="Shop changes");
   const anything=visibleSections.some(([,cards])=>cards.length);
   return <section className="shop"><header className="mw-detail-head"><p className="mini-label">TRACKED SHOP</p><div className="shop-watch-heading"><h1 className="shop-name">{shop.shopName}</h1><a href={shop.etsy} target="_blank" rel="noopener noreferrer">Open shop on Etsy ↗</a></div></header>
@@ -340,5 +342,5 @@ function ListingControls({sort,setSort,query,setQuery,currency,setCurrency,curre
 }
 
 function ListingSort({sort,setSort,mixed}:{sort:ListingOrder;setSort:(value:ListingOrder)=>void;mixed:boolean}){
- return <div className="market-results-sort"><label>Sort loaded listings<select value={sort} onChange={e=>setSort(e.target.value as ListingOrder)}><option value="newest">Newest first</option><option value="favorites">Highest favorites</option><option value="views">Highest views</option><option value="reviews">Most recorded reviews</option><option value="price" disabled={mixed}>Price: low to high</option><option value="price-desc" disabled={mixed}>Price: high to low</option></select></label></div>;
+ return <div className="market-results-sort"><label>Sort by<select value={sort} onChange={e=>setSort(e.target.value as ListingOrder)}><option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="newest">First listed most recently</option><option value="price" disabled={mixed}>Price: low to high</option><option value="price-desc" disabled={mixed}>Price: high to low</option></select></label></div>;
 }

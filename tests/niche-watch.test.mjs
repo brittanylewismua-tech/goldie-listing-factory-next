@@ -220,10 +220,14 @@ test("every listing card offers a direct Etsy link", () => {
 });
 
 test("the four Shop Watch sections are exactly the four", () => {
-  const names = [...MW.matchAll(/\["(Listings buyers reviewed|What buyers love|What buyers dislike|Shop changes)",/g)]
+  /* D1775 renamed two of them. "What buyers love" collected praise adjectives
+     and read "Buyers here keep saying the same thing: perfect", which is what
+     is left after every specific word has been discarded. The sections say
+     what the rows are for now. */
+  const names = [...MW.matchAll(/\["(Listings buyers reviewed|What buyers tell you to make|Problems buyers keep raising|Shop changes)",/g)]
     .map(match => match[1]);
   assert.deepEqual(names,
-    ["Listings buyers reviewed", "What buyers love", "What buyers dislike", "Shop changes"]);
+    ["Listings buyers reviewed", "What buyers tell you to make", "Problems buyers keep raising", "Shop changes"]);
 });
 
 test("the interface never shows a sale count, score or raw review feed", () => {

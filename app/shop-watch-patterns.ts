@@ -125,9 +125,24 @@ export function gettingAttention(reviews: Review[], now: number): Pattern[] {
 /* Phrases buyers actually repeat. Matched as whole words, because a
    substring match once turned the colour "Light Pink" into 1,066 enamel
    pins. */
-const PRAISE = [
-  "true to size", "soft", "great quality", "fast shipping", "exactly as pictured",
-  "well made", "gift", "loved it", "perfect", "vibrant", "comfortable", "thick",
+/*
+  A PRAISE WORD IS NOT A FINDING.
+
+  This list used to carry "perfect", "loved it", "great quality", "well made",
+  "gift" and "comfortable", and because praise is the most common thing in a
+  review it filled the panel - the whole tab read "Buyers here keep saying the
+  same thing: perfect." Nobody can do anything with that. It is what is left
+  after every specific word has been thrown away.
+
+  What survives names a property of the garment or the service, which is a
+  thing a seller can act on the same afternoon: put "true to size" in the
+  description, choose the heavier blank, stop using a print method that does
+  not come out vibrant. Everything else was deleted rather than ranked lower,
+  because a panel with six useless rows and two useful ones is a useless panel.
+*/
+const PRODUCT_SIGNALS = [
+  "true to size", "runs true", "soft", "thick", "heavy", "vibrant",
+  "exactly as pictured", "fast shipping",
 ];
 const COMPLAINT = [
   "too small", "too big", "runs small", "runs large", "thin", "faded",
@@ -185,15 +200,17 @@ function phrasePatterns(
     }));
 }
 
+/*
+  WHO IT IS FOR, AND WHAT DAY IT IS FOR, BEFORE ANYTHING ELSE.
+
+  Recipients and occasions lead now, because those two are the only rows here
+  that are a brief: "bought as a gift for a teacher" and "graduation keeps
+  coming up" tell a seller what to make and what to write. They were third in
+  a list capped at eight, behind twelve praise adjectives, so in a shop with
+  ordinary reviews they never appeared at all.
+*/
 export const whatBuyersLove = (reviews: Review[], now: number) =>
   [
-    ...phrasePatterns(reviews, PRAISE, now, "love",
-      phrase => `Buyers here keep saying the same thing: "${phrase}"`,
-      rating => rating === null || rating >= 4,
-      (phrase, count, sample, listings) =>
-        `${count} of ${sample} recent positive reviews use the words "${phrase}", across `
-        + `${listings} listing${listings === 1 ? "" : "s"}. A phrase that repeats across `
-        + `different buyers is what this shop is getting right in their words.`),
     ...phrasePatterns(reviews, RECIPIENTS, now, "love",
       phrase => `This shop is being bought as a gift for a ${phrase}`,
       rating => rating === null || rating >= 4,
@@ -208,6 +225,13 @@ export const whatBuyersLove = (reviews: Review[], now: number) =>
         `${count} of ${sample} recent positive reviews mention ${phrase}, across `
         + `${listings} listing${listings === 1 ? "" : "s"}. Reviews can be written long `
         + `after delivery, so this says the occasion mattered to buyers, not when they bought.`),
+    ...phrasePatterns(reviews, PRODUCT_SIGNALS, now, "love",
+      phrase => `Buyers keep confirming this one: "${phrase}"`,
+      rating => rating === null || rating >= 4,
+      (phrase, count, sample, listings) =>
+        `${count} of ${sample} recent positive reviews say "${phrase}", across `
+        + `${listings} listing${listings === 1 ? "" : "s"}. It is a property of the product `
+        + `rather than a compliment, so it belongs in the description of yours.`),
   ].slice(0, 8);
 
 export const whatBuyersDislike = (reviews: Review[], now: number) =>

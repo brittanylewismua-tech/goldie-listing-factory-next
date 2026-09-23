@@ -1,4 +1,4 @@
-export type ListingOrder = 'newest' | 'favorites' | 'views' | 'reviews' | 'price' | 'price-desc';
+export type ListingOrder = 'newest' | 'favorites' | 'views' | 'price' | 'price-desc';
 export type ResearchListing = {
   listingId:number; title:string; currency:string; priceCents:number|null;
   favorites:number|null; views:number|null; ageDays:number|null;
@@ -22,7 +22,6 @@ export function browseListings<T extends ResearchListing>(listings:T[],order:Lis
   if(order==='newest')result=a.createdAt&&b.createdAt?compare(a.createdAt,b.createdAt):compare(a.ageDays,b.ageDays,true);
   else if(order==='favorites')result=compare(a.favorites,b.favorites);
   else if(order==='views')result=compare(a.views,b.views);
-  else if(order==='reviews')result=compare(a.reviewsOnThisListing,b.reviewsOnThisListing);
   else if(!mixed)result=compare(a.priceCents,b.priceCents,order==='price');
   return result||a.listingId-b.listingId;
  });

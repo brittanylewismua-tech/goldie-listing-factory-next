@@ -682,7 +682,11 @@ test("keyword cards use labels instead of generated count sentences", () => {
   /* "feminist · 1 moving · 1 repeated · 1 shops" on the live page. */
   const client = read("market-watch/market-watch-client.tsx");
   assert.match(client, /Total favorites/);
-  assert.match(client, /Recorded reviews/);
+  /* "Recorded reviews" was removed in D1775: it read 0 on every listing in
+     every shop, because it counts reviews this product has itself recorded
+     rather than the reviews Etsy shows. A column that is always zero is not a
+     measurement, it is furniture. */
+  assert.doesNotMatch(client, /Recorded reviews/);
   assert.doesNotMatch(client, /across .*shops/);
 });
 

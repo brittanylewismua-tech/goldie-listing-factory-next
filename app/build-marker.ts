@@ -244,7 +244,10 @@
    requests, but each Etsy round trip is about four. */
 /* D1774 stops the keyword results describing how much of the pool they hold,
    and gives tracked keywords and tracked shops a way to be untracked. */
-export const BUILD_MARKER = "D1774";
+/* D1775 applies one rule to Shop Watch: a row that does not end in something
+   a seller can do today does not ship. Praise adjectives out, recipients and
+   occasions first, the always-zero review column deleted, favorites default. */
+export const BUILD_MARKER = "D1775";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
