@@ -79,16 +79,28 @@
   font-size:inherit;
 }
 
-.app-shell.command-workspace .factory-work h1{font-size:34px;font-weight:800;letter-spacing:-.035em;line-height:1.08;margin:0 0 6px}
-.app-shell.command-workspace .factory-work h2{font-size:20px;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:0 0 10px}
-.app-shell.command-workspace .factory-work h3{font-size:14px;font-weight:800;letter-spacing:-.005em;margin:0 0 8px}
+/*
+  ONE RAMP, ENFORCED. Audited across five pages afterwards and each had its
+  own escapees: 11px on Home and Trademark, 18px on Market Watch, an h1 at 36
+  on Shop Map against 34 everywhere else. Every one of those came from a
+  different sheet, so the ramp is declared loudly here rather than chased
+  through twenty files one page at a time.
+*/
+.app-shell.command-workspace .factory-work h1{font-size:34px!important;font-weight:800;letter-spacing:-.035em;line-height:1.08;margin:0 0 6px}
+.app-shell.command-workspace .factory-work h2{font-size:20px!important;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:0 0 10px}
+.app-shell.command-workspace .factory-work h3{font-size:14px!important;font-weight:800;letter-spacing:-.005em;margin:0 0 8px}
 .app-shell.command-workspace .factory-work :is(p,li,dd,td){font-size:14px;line-height:1.55}
-.app-shell.command-workspace .factory-work :is(small,figcaption,dt){font-size:12px;line-height:1.5}
-/* Prose never runs the full width of a 1,300px workspace. */
-.app-shell.command-workspace .factory-work :is(p,.lede,.cc-note){max-width:72ch}
+.app-shell.command-workspace .factory-work :is(small,figcaption,dt){font-size:12px!important;line-height:1.5}
+/* Prose never runs the full width of a 1,300px workspace. Six paragraphs on
+   Shop Map were over 820px wide because the cap did not shout. */
+.app-shell.command-workspace .factory-work :is(p,.lede,.cc-note){max-width:72ch!important}
 .app-shell.command-workspace .factory-work .mini-label{
-  margin:0 0 6px;color:var(--cc-accent)!important;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  margin:0 0 6px;color:var(--cc-accent)!important;font-size:12px!important;font-weight:800!important;
+  letter-spacing:.14em;text-transform:uppercase;
+  font-family:'Manrope Variable',Manrope,sans-serif!important;
 }
+/* One hero figure size, for the numbers a page is actually about. */
+.app-shell.command-workspace .factory-work .shop-map-figure{font-size:34px!important;font-weight:800;letter-spacing:-.03em}
 
 /* ------------------------------------------------------------------ cards */
 .app-shell.command-workspace .factory-work :is(.p-card,.cc-tool,.shop-map-card,.tm-watches,.winner-profile,.listing-check,.cc-home-tile){

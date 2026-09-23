@@ -309,7 +309,10 @@
    exceptions are named. */
 /* D1801 · the exclusions in :not() outranked the muted rule, so every grey
    flattened to ink and the page rendered in two colours. */
-export const BUILD_MARKER = "D1801";
+/* D1802 audits five pages and closes every escapee: Arial on Trademark from
+   the lilac mini-label, 11px on Home, 18px on Market Watch, an h1 at 36 on
+   Shop Map against 34 everywhere else, and six paragraphs over 820px. */
+export const BUILD_MARKER = "D1802";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
