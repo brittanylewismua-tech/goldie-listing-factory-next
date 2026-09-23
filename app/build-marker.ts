@@ -307,7 +307,9 @@
 /* D1800 stops every span, link and table cell falling through the design
    system into whatever the legacy sheets said. Everything inherits; the
    exceptions are named. */
-export const BUILD_MARKER = "D1800";
+/* D1801 · the exclusions in :not() outranked the muted rule, so every grey
+   flattened to ink and the page rendered in two colours. */
+export const BUILD_MARKER = "D1801";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

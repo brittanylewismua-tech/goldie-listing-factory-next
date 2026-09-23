@@ -53,10 +53,18 @@
   links, and anything that has to sit on a dark fill. Emphasis comes from
   weight and size, which is what they are for - not from a fourth grey.
 */
+/*
+  ORDER MATTERS MORE THAN THE :not() LIST HERE.
+
+  The first attempt excluded the exceptions inside :not(), which pushed this
+  rule to five classes and let it outrank the muted one - so every grey
+  flattened to ink and the page came back with exactly two colours on it,
+  which is a hierarchy with nothing in the middle. This selector is kept
+  deliberately low, and everything that needs to win is simply written after
+  it.
+*/
 .app-shell.command-workspace .factory-work{color:var(--cc-ink)}
-.app-shell.command-workspace .factory-work *:not(svg):not(path):not(.mini-label):not([data-negative="yes"]){
-  color:inherit!important;
-}
+.app-shell.command-workspace .factory-work *:not(svg):not(path){color:inherit!important}
 .app-shell.command-workspace .factory-work :is(p,small,dt,figcaption,.cc-note,.lede,.cc-row-why,.shop-map-check-against){
   color:var(--cc-muted)!important;
 }
