@@ -257,7 +257,7 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:'Manrope Variabl
 /* Management pages */
 .app-shell :is(.management-page,.usage-page,.keyword-page,.account,.tools-settings,.conn){width:100%;max-width:none;margin:0;padding:6px 0 64px;background:transparent}
 .app-shell :is(.management-page,.usage-page)>header,.keyword-hero{margin:0 0 26px;padding:0 0 22px;border-bottom:1px solid var(--suite-line)}
-.app-shell :is(.management-page,.usage-page)>header h1,.keyword-hero h1{font-family:"DM Serif Display",Georgia,serif!important;font-size:clamp(26px,2.8vw,34px)!important;line-height:1!important;font-weight:400!important;letter-spacing:-.025em!important}
+.app-shell :is(.management-page,.usage-page)>header h1,.keyword-hero h1{font-family:"Manrope Variable",Manrope,sans-serif!important;font-size:clamp(26px,2.8vw,34px)!important;line-height:1.12!important;font-weight:800!important;letter-spacing:-.025em!important}
 /*
   THE PLAN BANNER IS NOT A WHITE CARD, AND THIS LIST WAS OUTRANKING THE RULE
   THAT SAID SO.

@@ -40,47 +40,9 @@
 /* ------------------------------------------------------------------- type */
 /* The family is set at source now - every sheet that declared Inter was
    changed - so this file does not need to shout it. */
-/*
-  TWO TEXT COLOURS, NOT NINE.
-
-  The first pass named the elements it expected - headings, paragraphs, dt -
-  and left every span, em, li, td and a to whatever the legacy sheets said.
-  Measured on Shop Map afterwards: still eight colours, including three
-  near-blacks within twelve points of each other. Naming elements one at a
-  time is the same mistake at a smaller scale.
-
-  So everything inherits, and the exceptions are named instead: accents,
-  links, and anything that has to sit on a dark fill. Emphasis comes from
-  weight and size, which is what they are for - not from a fourth grey.
-*/
-/*
-  ORDER MATTERS MORE THAN THE :not() LIST HERE.
-
-  The first attempt excluded the exceptions inside :not(), which pushed this
-  rule to five classes and let it outrank the muted one - so every grey
-  flattened to ink and the page came back with exactly two colours on it,
-  which is a hierarchy with nothing in the middle. This selector is kept
-  deliberately low, and everything that needs to win is simply written after
-  it.
-*/
+/* Component text inherits naturally. A universal !important reset erased
+   white labels, icon strokes and dark-panel headings across the suite. */
 .app-shell.command-workspace .factory-work{color:var(--cc-ink)}
-/* Buttons are excluded: many sit on a dark fill and inheriting the page's ink
-   makes their label invisible. Measured on Trademark - the Review control
-   rendered as a black rectangle with nothing in it. Their colours are set by
-   the button rules below instead. */
-.app-shell.command-workspace .factory-work *:not(svg):not(path):not(button):not(.p-button){color:inherit!important}
-/*
-  THE DOUBLED CLASS IS DELIBERATE, AND IT IS HERE FOR A REASON.
-
-  The inherit rule above carries :not(button) and :not(.p-button), which add
-  their own specificity - so it outranks any plain three-class rule written
-  after it. That caught the muted greys, the white-on-dark exceptions and the
-  Etsy attribution in turn, each time silently: the page simply came back with
-  one colour fewer than it should have.
-
-  Every rule that has to beat inheritance repeats .command-workspace. It is
-  ugly and it is legible, which beats being correct by accident of ordering.
-*/
 .app-shell.command-workspace.command-workspace .factory-work :is(p,small,dt,figcaption,.cc-note,.lede,.shop-map-check-against,.home-tile-copy small,.cc-home-tile p,.winner-stat-note,.hub-foot){
   color:var(--cc-muted)!important;
 }
@@ -102,14 +64,6 @@
 .app-shell.command-workspace.command-workspace .factory-work .etsy-api-disclosure{font-size:12px!important;line-height:1.5}
 .app-shell.command-workspace.command-workspace .factory-work [data-negative="yes"]{color:#a4243d!important}
 
-/* One ramp. 11, 13, 15 and 24 were all on one page beside 12, 14, 20 and 36.
-   D1810 · The three figures that close Shop Map - orders, active listings,
-   top theme - are <strong>, and this rule handed them their parent's 16px
-   where their own sheet asks for 24. A number the panel exists to show is not
-   an inline span. */
-.app-shell.command-workspace .factory-work :is(span,em,i,a,li,td,label,button,strong,b):not(h1 *):not(h2 *):not(h3 *):not(.shop-map-summary-grid strong){
-  font-size:inherit;
-}
 .app-shell.command-workspace.command-workspace .factory-work .shop-map-summary-grid strong{
   font-size:26px!important;font-weight:800;letter-spacing:-.02em;line-height:1.15}
 
@@ -169,6 +123,13 @@
 }
 .app-shell.command-workspace .factory-work :is(.cc-tool,.shop-map-card,.tm-watches,.p-card){padding:22px!important}
 
+/* Dark summary cards own their foreground as well as their background.
+   Muted copy uses a light token; forms and buttons keep their own colors. */
+.app-shell.command-workspace .factory-work :is(.plan-banner,.listing-streak,.goals-current){
+  background:#151214!important;color:#fff!important;--cc-muted:#d4c7ce;--cc-accent:#ff8fd0;
+}
+.app-shell.command-workspace .factory-work :is(.plan-banner,.listing-streak,.goals-current) :is(h1,h2,h3,h4,span,b,strong):not(.star){color:inherit!important}
+
 /* ------------------------------------------------------------------ forms */
 .app-shell.command-workspace .factory-work :is(input,select,textarea):not([type="file"]):not([type="checkbox"]):not([type="radio"]){
   min-height:42px;padding:0 12px;border:1px solid var(--cc-line)!important;border-radius:var(--cc-radius-sm)!important;
@@ -195,31 +156,8 @@
 .app-shell.command-workspace .factory-work :is(.p-button-primary,button[type="submit"],.tm-watch-list button:not(.quiet),.tm-watch-button):hover:not(:disabled){
   background:#2f2a2f!important;
 }
-/*
-  BUTTONS WERE EXEMPTED FROM INHERITANCE SO THEIR LABELS WOULD SURVIVE A DARK
-  FILL, WHICH LEFT THE UNCLASSED ONES ON LEGACY COLOURS.
-
-  Shop Map's tabs and its month control are bare <button> elements with no
-  class, so they kept #171318 and #625862 from two different sheets - two more
-  near-blacks and two more greys, four points from the ones beside them. Any
-  button that is not on a dark fill takes the page's ink.
-*/
-.app-shell.command-workspace.command-workspace .factory-work button:not(.p-button-primary):not([type="submit"]):not(.tm-watch-list button):not(.tm-watch-button):not(.watch-remove):not(.nr-primary):not(.nr-load):not(.nr-tabs button[aria-current="page"]){
-  color:var(--cc-ink)!important;
-}
-/*
-  D1810 · COLOURING A BUTTON WITHOUT OWNING ITS FILL PAINTED INK ON INK.
-
-  The rule above took every unclassed button to the page's ink and left the
-  background to whichever legacy sheet reached it first. Market Watch's "View
-  listings" - the primary action on every keyword card - sat on #171318 and
-  was given #151214 to write in. A contrast ratio of 1.01: the button was
-  there, sized, clickable, and invisible.
-
-  An unclassed button now gets its fill and its ink from the same rule, so the
-  two can never disagree again. Buttons that are meant to be dark carry
-  .p-button-primary and are excluded above; tabs live inside a <nav>.
-*/
+/* Unclassified controls own both their fill and label color together.
+   Classified controls retain the paired colors from their component. */
 .app-shell.command-workspace.command-workspace .factory-work :not(nav)>button:not([class]){
   background:var(--cc-surface)!important;border:1px solid var(--cc-line)!important;color:var(--cc-ink)!important;
 }

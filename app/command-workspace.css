@@ -78,7 +78,7 @@
 .app-shell.command-workspace :is(.market-browser-controls,.shop-map-browse-controls) :is(input,select) {font-size:14px;border-color:#cbbfc8}
 /* D1810 · The sort select is part of the filter row now, not a right-aligned
    line of its own hanging below the empty-state text. */
-.app-shell.command-workspace .market-results-sort {display:flex;align-items:end;flex-wrap:wrap;gap:16px;margin:0}
+.app-shell.command-workspace .market-results-sort {display:flex;align-items:end;flex-wrap:wrap;gap:16px;margin:0 0 16px}
 .app-shell.command-workspace .market-results-sort label {display:grid;gap:6px;font-size:13px;font-weight:650}
 .app-shell.command-workspace .market-results-sort select {min-height:42px;max-width:100%;padding:8px 32px 8px 12px;border:1px solid #cbbfc8;border-radius:8px;background:white;color:#29232a;font:inherit}
 .app-shell.command-workspace .market-result-bar {display:flex;align-items:center;justify-content:space-between;

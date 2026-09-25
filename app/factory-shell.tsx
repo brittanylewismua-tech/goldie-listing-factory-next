@@ -22,6 +22,7 @@
  * rules and neither needs an override of the other.
  * ==========================================================================*/
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import {readBatchHistory,preparedDaysFromHistory} from "./batch-history-read";
 import SuiteBrand from "./suite-brand";
 import SuiteSidebarNav, { type SuiteNavItem } from "./suite-sidebar-nav";
@@ -153,7 +154,8 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
 
   useEffect(()=>{const loaded=(event:Event)=>{const days=(event as CustomEvent<PublishedDay[]>).detail;if(Array.isArray(days)){setGoalDays(days);setGoalDaysLoaded(true);setGoalDaysError(false)}};window.addEventListener("goldie-history-loaded",loaded);return()=>window.removeEventListener("goldie-history-loaded",loaded)},[]);
 
-  const isFactoryPage = ["factory", "batches", "keywords", "mockups", "usage"].includes(active);
+  // The selected navigation group is not the current workflow route.
+  const isFactoryPage = usePathname() === "/listing-factory";
   const goalDone = goal ? publishedDaysThisPeriod(goalDays, goal) : 0;
 
   /* D818 · the preview writes the allowance as "62 / 10,000 listings". Production
