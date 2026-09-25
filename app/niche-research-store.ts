@@ -3,6 +3,7 @@ import type {NicheProject,NicheListing,NicheReview} from './niche-research-model
 export const researchDb=()=> (env as unknown as {DB:D1Database}).DB;
 export async function ensureNicheResearch(db=researchDb()){
  await db.prepare(`CREATE TABLE IF NOT EXISTS niche_research_projects (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,payload TEXT NOT NULL,owner_identity TEXT NOT NULL DEFAULT '{}',updated_at INTEGER NOT NULL,next_run INTEGER NOT NULL DEFAULT 0,lease TEXT NOT NULL DEFAULT '',lease_until INTEGER NOT NULL DEFAULT 0)`).run();
+ await db.prepare(`CREATE TABLE IF NOT EXISTS niche_research_clock(id INTEGER PRIMARY KEY,started_at INTEGER NOT NULL DEFAULT 0,finished_at INTEGER NOT NULL DEFAULT 0,steps INTEGER NOT NULL DEFAULT 0,failed INTEGER NOT NULL DEFAULT 0)`).run();
  await db.prepare(`CREATE TABLE IF NOT EXISTS niche_research_public_cache (cache_key TEXT PRIMARY KEY,payload TEXT NOT NULL,expires_at INTEGER NOT NULL)`).run();
  await db.prepare('CREATE INDEX IF NOT EXISTS niche_research_owner ON niche_research_projects(user_id,updated_at)').run();
  await db.prepare(`CREATE TABLE IF NOT EXISTS niche_research_evidence(user_id TEXT NOT NULL,project_id TEXT NOT NULL,shop_id INTEGER NOT NULL,kind TEXT NOT NULL,entity_id INTEGER NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(user_id,project_id,shop_id,kind,entity_id))`).run();

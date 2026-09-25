@@ -8,6 +8,7 @@ import {advanceResearch} from '@/app/niche-research-engine';
 export const POST=withErrorLog('niche-research-tick',async(request:Request)=>{
  if(request.headers.get('cf-connecting-ip')){const user=await getChatGPTUser();if(!user||!isOwner(user))return NextResponse.json({error:'Not authorized.'},{status:403});}
  await ensureNicheResearch();const db=researchDb(),now=Math.floor(Date.now()/1000);
+ await db.prepare('INSERT INTO niche_research_clock(id,started_at) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET started_at=excluded.started_at').bind(now).run();
  const due=await db.prepare('SELECT id,user_id,owner_identity FROM niche_research_projects WHERE next_run>0 AND next_run<=? AND lease_until<=? ORDER BY updated_at ASC LIMIT 4').bind(now,now).all<{id:string;user_id:string;owner_identity:string}>();
  await db.prepare('DELETE FROM niche_research_public_cache WHERE expires_at<?').bind(now-86400).run();
  let steps=0,failed=0;const deadline=Date.now()+45000;
@@ -16,5 +17,6 @@ export const POST=withErrorLog('niche-research-tick',async(request:Request)=>{
  }catch(error){failed++;p.error=error instanceof Error?error.message:'Scheduled update failed. Retrying automatically.';p.nextRun=Math.max(p.nextRun,now+3600);}
  await writeResearch(row.user_id,p,lease);
  }
+ await db.prepare('UPDATE niche_research_clock SET finished_at=?,steps=?,failed=? WHERE id=1').bind(Math.floor(Date.now()/1000),steps,failed).run();
  return NextResponse.json({steps,failed,panelsDue:due.results?.length??0});
 });

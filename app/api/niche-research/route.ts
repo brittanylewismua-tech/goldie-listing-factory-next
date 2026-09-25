@@ -10,7 +10,7 @@ import type {NicheProject} from '@/app/niche-research-model';
 const response=(p:NicheProject,status=200)=>NextResponse.json({project:researchView(p),error:p.error},{status,headers:{'Cache-Control':'private, no-store'}});
 export const GET=withErrorLog('niche-research',async(request:Request)=>{
  const access=await requireFeatureApi('marketWatch');if(!access.ok)return access.response;await ensureNicheResearch();
- const id=new URL(request.url).searchParams.get('id');if(id){const p=await readResearch(access.user.userId,id);return p?response(p):NextResponse.json({error:'Niche not found.'},{status:404});}
+ const id=new URL(request.url).searchParams.get('id');if(id){const p=await readResearch(access.user.userId,id);if(!p)return NextResponse.json({error:'Niche not found.'},{status:404});const collection=await researchDb().prepare('SELECT next_run AS nextRun,lease_until AS busyUntil,unixepoch() AS databaseNow FROM niche_research_projects WHERE user_id=? AND id=?').bind(access.user.userId,id).first();const clock=await researchDb().prepare('SELECT started_at AS startedAt,finished_at AS finishedAt FROM niche_research_clock WHERE id=1').first();return NextResponse.json({project:researchView(p),collection,clock},{headers:{'Cache-Control':'private, no-store'}});}
  const result=await researchDb().prepare('SELECT payload FROM niche_research_projects WHERE user_id=? ORDER BY updated_at DESC LIMIT 10').bind(access.user.userId).all<{payload:string}>();
  return NextResponse.json({projects:(result.results??[]).map(row=>{const p=JSON.parse(row.payload) as NicheProject;return {id:p.id,name:p.name,phase:p.phase,monitoring:p.monitoring};})},{headers:{'Cache-Control':'private, no-store'}});
 });
