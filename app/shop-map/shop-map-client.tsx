@@ -124,7 +124,7 @@ function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}
         <summary><b>{shortLabel(action.title)}</b><span>{action.fact}</span></summary>
         <div className="shop-map-review-body">
           <p>{action.evidence}</p><p>{action.nextStep}</p>
-          <a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy \u2197</a>
+          <a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy ↗</a>
           <ActionPlan feature="shopMap" source={`shop-${shopId}-listing-${action.listingId}`} heading={action.headline} notes={`${action.title}
 ${action.evidence}
 
