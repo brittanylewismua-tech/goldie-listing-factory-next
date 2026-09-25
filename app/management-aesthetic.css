@@ -58,7 +58,7 @@
 .usage-page .usage-load-error{max-width:1080px;padding:30px;border:1px solid rgba(255,255,255,.68);border-radius:16px;background:linear-gradient(145deg,rgba(255,250,253,.76),rgba(246,229,248,.59));box-shadow:0 24px 70px rgba(74,42,62,.12);backdrop-filter:blur(24px)}
 .usage-page .usage-load-error h2{margin:0 0 8px}.usage-page .usage-load-error p{color:rgba(74,42,62,.68)}.usage-page .usage-load-error a{display:inline-flex;margin-top:12px;padding:12px 18px;border-radius:14px;background:#ff4fc3;color:#171014;font-weight:750}
 .keyword-page .keyword-hero h1{color:var(--ink)!important}
-.managementOnly .mockupHero h1{color:var(--ink)!important;font-family:'DM Serif Display',Georgia,serif!important;font-weight:400!important}
+.managementOnly .mockupHero h1{color:var(--ink)!important;font-family:'Manrope Variable',Manrope,sans-serif!important;font-weight:800!important}
 
 /* D951 · Pink identifies the Goldie frame and active state; it is not a
    button face. Management pages use the same calm action language as the

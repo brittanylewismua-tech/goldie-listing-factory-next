@@ -143,7 +143,7 @@
 .app-shell.command-workspace .shop-map-summary-grid :is(span,small) {font-size:13px;letter-spacing:0;text-transform:none;color:#625862}
 .app-shell.command-workspace .shop-map-money-redesign {box-shadow:none!important}
 .app-shell.command-workspace .shop-map-money-redesign :is(.shop-map-accuracy,.shop-map-freshness,.shop-map-headline-label) {color:#d8cbd4!important;font-size:14px}
-.app-shell.command-workspace .shop-map-money-redesign :is(.mini-label,h2) {color:#ffb0df!important}
+.app-shell.command-workspace .shop-map-money-redesign :is(.mini-label,h2) {color:#151214!important}
 .app-shell.command-workspace .shop-map-browse-controls {border:0;background:#f8f5f7;padding:16px;margin:16px 0}
 /* Scanner: artwork and controls are one task, results follow in reading order. */
 .app-shell.command-workspace .scanner {display:block}
@@ -253,7 +253,7 @@
 .app-shell.command-workspace :is(.management-create,.bank-library,.usage-card,.goals-history,.managementLibrary){border:1px solid var(--work-line)!important;border-radius:10px!important;box-shadow:none!important;background:#fff!important}
 .app-shell.command-workspace .keyword-workspace{padding:0!important}
 .app-shell.command-workspace .keyword-hero{align-items:center;gap:20px}
-.app-shell.command-workspace .keyword-hero>button{flex-shrink:0}
+.app-shell.command-workspace .keyword-hero>button{flex-shrink:0;margin-top:16px}
 .app-shell.command-workspace .batch-history-summary h2{font-size:17px!important}
 .app-shell.command-workspace .batch-history>article{padding:20px!important}
 .app-shell.command-workspace .batch-history>p[role=status]{margin:0;padding:12px 20px;font-size:14px;color:var(--work-muted)}
@@ -340,7 +340,7 @@
 .app-shell.command-workspace .shop-map-money-redesign .shop-map-rows>div{
   padding:12px 0;border-top:1px solid var(--work-line);border-bottom:0}
 .app-shell.command-workspace .shop-map-money-redesign .shop-map-rows dt{color:#625862}
-.app-shell.command-workspace .shop-map-money-redesign .shop-map-rows dd{font-weight:700}
+.app-shell.command-workspace .shop-map-money-redesign .shop-map-rows dd{font-weight:700;color:#151214!important}
 .app-shell.command-workspace .shop-map-fix{
   justify-self:start;display:inline-flex;align-items:center;margin-top:18px;
   min-height:42px;padding:0 18px;border-radius:8px;text-decoration:none}
