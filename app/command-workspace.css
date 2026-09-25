@@ -104,7 +104,11 @@
 .app-shell.command-workspace .mw .card>a {grid-column:3;grid-row:1;min-height:36px;margin:0;padding:8px 10px;border:1px solid #d7cbd3;border-radius:7px;background:white;font-size:12px;line-height:1.5;text-align:center;color:#3f303a;font-weight:700;white-space:nowrap}
 /* Keyword comparisons have explicit save/remove actions; shop rows keep their existing link. */
 .app-shell.command-workspace .research-card-actions {grid-column:3;grid-row:1;display:grid;gap:10px;min-width:0}
-.app-shell.command-workspace .research-card-actions :is(button,a) {height:auto;min-height:42px;padding:9px 10px;border:1px solid #d7cbd3;border-radius:7px;background:white;color:#3f303a;font:700 12px/1.4 'Manrope Variable',sans-serif;text-align:center;white-space:normal;text-decoration:none}
+/* D1810 · Both labels wrapped onto two lines in a column too narrow for
+   them, which made the actions the tallest thing in every row. They fit on
+   one line now, and the column is sized for the longer of the two. */
+.app-shell.command-workspace .research-card-actions {min-width:132px}
+.app-shell.command-workspace .research-card-actions :is(button,a) {height:auto;min-height:40px;padding:9px 14px;border:1px solid #d7cbd3;border-radius:7px;background:white;color:#3f303a;font:700 13px/1.4 'Manrope Variable',sans-serif;text-align:center;white-space:nowrap;text-decoration:none}
 .app-shell.command-workspace .research-card-actions button:disabled {opacity:.55;cursor:default}
 .app-shell.command-workspace .competitor-changes {grid-column:1/-1;grid-row:4;border-top:1px solid var(--work-line);padding-top:12px;margin-top:8px}
 .app-shell.command-workspace .competitor-changes p {font-size:12px;line-height:1.5;margin:0 0 8px;color:#625862}
