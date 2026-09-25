@@ -102,10 +102,16 @@
 .app-shell.command-workspace.command-workspace .factory-work .etsy-api-disclosure{font-size:12px!important;line-height:1.5}
 .app-shell.command-workspace.command-workspace .factory-work [data-negative="yes"]{color:#a4243d!important}
 
-/* One ramp. 11, 13, 15 and 24 were all on one page beside 12, 14, 20 and 36. */
-.app-shell.command-workspace .factory-work :is(span,em,i,a,li,td,label,button,strong,b):not(h1 *):not(h2 *):not(h3 *){
+/* One ramp. 11, 13, 15 and 24 were all on one page beside 12, 14, 20 and 36.
+   D1810 · The three figures that close Shop Map - orders, active listings,
+   top theme - are <strong>, and this rule handed them their parent's 16px
+   where their own sheet asks for 24. A number the panel exists to show is not
+   an inline span. */
+.app-shell.command-workspace .factory-work :is(span,em,i,a,li,td,label,button,strong,b):not(h1 *):not(h2 *):not(h3 *):not(.shop-map-summary-grid strong){
   font-size:inherit;
 }
+.app-shell.command-workspace.command-workspace .factory-work .shop-map-summary-grid strong{
+  font-size:26px!important;font-weight:800;letter-spacing:-.02em;line-height:1.15}
 
 /*
   ONE RAMP, ENFORCED. Audited across five pages afterwards and each had its

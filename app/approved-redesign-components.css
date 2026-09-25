@@ -268,7 +268,7 @@ html, body { background: var(--pro-canvas) !important; }
 .shop-map-sold-table strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.shop-map-sold-table article>span{font-size:13px}
 .app-shell .shop-map-redesign .shop-map-money-redesign { background:#171318!important; color:#fff!important; box-shadow:7px 7px 0 #ff2ca6!important; }
 .app-shell .shop-map-money-redesign h2,.app-shell .shop-map-money-redesign .shop-map-figure,
-.app-shell .shop-map-money-redesign .shop-map-rows{color:#fff!important}.shop-map-money-redesign .shop-map-figure{font-size:48px!important}
+.app-shell .shop-map-money-redesign .shop-map-rows{color:#fff!important}
 @media(max-width:900px){.shop-map-leader-grid{grid-template-columns:1fr 1fr;grid-template-rows:auto}
   .shop-map-leader-grid article.lead{grid-column:1/-1;grid-row:auto;border-right:0;border-bottom:2px solid #171318}
   .shop-map-leader-grid article:not(.lead){display:block}.shop-map-leader-grid article:nth-child(2){border-right:1px solid #d8ccd3;border-bottom:0}

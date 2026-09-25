@@ -18,7 +18,10 @@
    in Shop Map, where the listings already were. */
 .cc-home-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
 .cc-home-tile{
-  position:relative;display:grid;gap:10px;align-content:start;
+  /* D1810 · align-content:start left each tile's stat chip wherever its own
+     paragraph happened to end, so the three chips sat at three heights across
+     a row. The copy stays at the top, the chip sits on the floor. */
+  position:relative;display:grid;gap:10px;grid-template-rows:auto auto auto 1fr auto;
   padding:26px;border:2px solid #0a0a0a;border-radius:16px;background:#fff;
   color:var(--suite-ink,#151214);text-decoration:none;box-shadow:6px 6px 0 #0a0a0a;
 }
@@ -31,7 +34,7 @@
 .cc-home-tile h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.025em;line-height:1.15}
 .cc-home-tile p{margin:0;color:var(--suite-muted,#756a72);font-size:14px;line-height:1.55}
 .cc-home-stat{
-  justify-self:start;margin-top:4px;padding:7px 12px;border-radius:10px;
+  align-self:end;justify-self:start;margin-top:4px;padding:7px 12px;border-radius:10px;
   background:var(--suite-pink-wash,#fff3fa);color:var(--suite-pink-deep,#d90c89);
   font-size:13px;font-weight:800;
 }

@@ -35,7 +35,9 @@
 .app-shell.command-workspace :is(.p-button-primary,.keyword-watch-head button:not(.watch-remove)) {background:#171318!important;color:#fff!important;border:1px solid #171318!important}
 .app-shell.command-workspace :is(.watch-remove,.tm-watch-list button.quiet) {
   min-height:auto!important;padding:0!important;border:0!important;background:none!important;
-  color:#8b8189!important;font:650 12px/1.4 'Manrope Variable',sans-serif!important;
+  /* D1810 · #8b8189 on white is 3.75:1 at 12px, under the 4.5 this size
+     needs. The quiet action still has to be readable. */
+  color:#6b6069!important;font:650 13px/1.4 'Manrope Variable',sans-serif!important;
   text-decoration:underline;text-underline-offset:3px;box-shadow:none!important;
 }
 .app-shell.command-workspace :is(.watch-remove,.tm-watch-list button.quiet):hover:not(:disabled) {color:#9c2f6d!important}

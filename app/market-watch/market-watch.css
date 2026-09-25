@@ -302,7 +302,7 @@
 */
 .watch-card-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .watch-remove{
-  border:0;padding:0;background:none;color:#948a91;font:inherit;font-size:12px;
+  border:0;padding:0;background:none;color:#6b6069;font:inherit;font-size:13px;
   font-weight:650;text-decoration:underline;text-underline-offset:3px;cursor:pointer;
 }
 .watch-remove:hover:not(:disabled){color:#9c2f6d}
