@@ -402,7 +402,8 @@ test("Shop Watch cards read the shape the brief returns", () => {
     assert.ok(returned.includes(field), `the brief no longer returns ${field}`);
 
   assert.match(MW, /\{card\.pattern\}/);
-  assert.match(MW, /\{card\.evidence\}/);
+  assert.match(MW, /card\.evidence,card\.window\].filter\(Boolean\)/,
+    'evidence and window join only on the parts that exist, so an empty evidence does not leave a leading separator');
   assert.match(MW, /card\.listing\?\.url/);
   for (const stale of ["card.headline", "card.support", "card.listingId"])
     assert.ok(!MW.includes(stale), `the card still reads ${stale}`);

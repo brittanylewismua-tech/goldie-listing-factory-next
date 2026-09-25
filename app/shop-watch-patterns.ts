@@ -97,9 +97,19 @@ export function gettingAttention(reviews: Review[], now: number): Pattern[] {
     .slice(0, 5)
     .map(([listingId, group]) => ({
       section: "attention" as const,
-      /* Says reviews, because reviews is what was counted. */
-      headline: `This listing is drawing ${(group.length / evenShare).toFixed(1)}× `
-        + `its share of this shop's recent reviews`,
+      /*
+        D1812 · THE MULTIPLIER WAS THE SAME SENTENCE ON EVERY CARD.
+
+        Three listings each with three of twelve reviews all compute to 2.5×,
+        so the section read "This listing is drawing 2.5× its share of this
+        shop's recent reviews" three times in a row, with a "3 reviews · 30
+        days" line under each saying the same thing again. The multiplier is
+        what decides whether a listing appears here; it is not what tells one
+        of them from another. The count is.
+
+        Says reviews, because reviews is what was counted.
+      */
+      headline: `${group.length} of this shop's last ${recent.length} reviews`,
       /*
         D1674 · THE CARD KEEPS WHAT IS ITS OWN. THE CAVEAT IS SAID ONCE.
 

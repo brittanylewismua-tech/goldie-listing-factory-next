@@ -141,8 +141,12 @@ function present(card: {
       never meant to be shown. It contradicted the card above it and put a
       fabricated review count under a sales figure.
     */
+    /* D1812 · The attention headline now states the count itself, so
+       repeating it here made the card say "3 of this shop's last 12 reviews"
+       over "3 reviews · 30 days". */
     evidence: weight
-      || `${card.sampleSize} review${card.sampleSize === 1 ? "" : "s"}`,
+      || (card.section === "attention" ? ""
+          : `${card.sampleSize} review${card.sampleSize === 1 ? "" : "s"}`),
     window: (() => {
       const days = Math.round((card.windowTo - card.windowFrom) / 86_400);
       return `${days} day${days === 1 ? "" : "s"}`;

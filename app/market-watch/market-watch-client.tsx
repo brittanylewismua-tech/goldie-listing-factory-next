@@ -5,6 +5,7 @@ import OfferPlanner from "@/app/command-center/offer-planner";
 import {competitorChanges,type CollectionEntry} from "@/app/market-collection";
 import {rankScan,type KeywordOrder} from "@/app/keyword-scan";
 import {confirmAction} from "@/app/confirm-dialog";
+import {shortLabel} from "@/app/design-reach";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import {browseListings,type ListingOrder} from "@/app/market-listing-browser";
@@ -518,9 +519,11 @@ function ShopCard({shop}:{shop:ShopView}){
     {section==="reviews"&&shop.displayUnavailable&&<p className="p-notice">Etsy could not refresh some listing photos. Review history remains available.</p>}
     {visibleSections.map(([name,cards])=>cards.length?<div className="section" key={name}><h2 className="section-name">{name==="Listings buyers reviewed"?"Products mentioned in buyer reviews":name}</h2>{name==="Listings buyers reviewed"&&<p className="section-note">Review dates show when feedback was posted, not when an item sold.</p>}<div className="shop-pattern-grid">{cards.map((card,index)=><article className={`pattern${card.listing?.imageUrl?" has-listing-photo":""}`} key={`${name}-${index}`}>
       {card.listing?.imageUrl&&<img className="shop-listing-photo" src={card.listing.imageUrl} alt={card.listing.title||"Etsy listing"} loading="lazy" width={570} height={570}/>}
-      {card.listing?.title&&<h4>{card.listing.title}</h4>}
+      {/* D1812 · The rest of Market Watch shortens an Etsy title; this section
+          printed all twenty-odd words of it. */}
+      {card.listing?.title&&<h4>{shortLabel(card.listing.title)}</h4>}
       <p className="pattern-headline">{card.pattern}</p>
-      <span className="support">{card.evidence}{card.window?` · ${card.window}`:""}</span>
+      <span className="support">{[card.evidence,card.window].filter(Boolean).join(" · ")}</span>
       {Boolean(card.reviews?.length)&&<details><summary>Read buyer reviews</summary>{card.reviews!.map((review,i)=><blockquote key={i}><p>{review.review}</p><footer className="buyer-review-meta">{review.rating} / 5 · {new Date(review.createdAt*1000).toLocaleDateString()}</footer></blockquote>)}</details>}
       {card.action&&<details className="buyer-idea"><summary>How to use this feedback</summary><p>{card.action.change}</p><p className="cc-note">{card.action.check}</p></details>}
       {card.because&&<details><summary>About this comparison</summary><p className="pattern-because">{card.because}</p></details>}
