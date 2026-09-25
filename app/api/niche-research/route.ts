@@ -31,8 +31,8 @@ export const POST=withErrorLog('niche-research',async(request:Request)=>{
  else if(body.action==='monitor'){p.monitoring=body.enabled===true;p.nextRun=p.monitoring?Math.floor(Date.now()/1000):0;}
  else if(body.action==='refresh'){p.nextRun=Math.floor(Date.now()/1000);await advanceResearch(user,p);}
  else if(body.action==='photos'){
- const requested=Array.isArray(body.listingIds)?body.listingIds:[],ls=p.shops.flatMap(s=>s.listings).filter(l=>requested.includes(l.id)&&Date.now()/1000-l.displayAt>=3600||requested.includes(l.id)&&!l.image).slice(0,50);
- const display=await listingDisplay(ls.map(l=>l.id),'shop-watch');for(const l of ls){const r=display.get(l.id);if(r){l.image=listingPhoto(r);l.price=listingPrice(r);l.currency=r.price?.currency_code??'';l.title=String(r.title??l.title);l.displayAt=Math.floor(Date.now()/1000);}else{l.image='';l.active=false;}}
+ const requested=Array.isArray(body.listingIds)?body.listingIds:[],ls=p.shops.flatMap(s=>s.listings).filter(l=>requested.includes(l.id)&&Date.now()/1000-(l.imageAt??0)>=3600||requested.includes(l.id)&&!l.image).slice(0,50);
+ const display=await listingDisplay(ls.map(l=>l.id),'shop-watch');for(const l of ls){const r=display.get(l.id);if(r){l.image=listingPhoto(r);l.imageAt=Math.floor(Date.now()/1000);l.price=listingPrice(r);l.currency=r.price?.currency_code??'';l.title=String(r.title??l.title);l.displayAt=Math.floor(Date.now()/1000);}else{l.image='';l.active=false;}}
  for(const s of p.shops)await putEvidence(user,p.id,s.id,'listing',ls.filter(l=>l.shopId===s.id));
  }else if(p.phase!=='ready')await advanceResearch(user,p);
  if(body.action!=='photos')delete p.error;await writeResearch(user,p,lease);return response(p);

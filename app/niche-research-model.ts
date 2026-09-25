@@ -1,5 +1,5 @@
 /** Review dates measure review activity, never exact sale dates or search attribution. */
-export type NicheListing={id:number;shopId:number;title:string;tags:string[];image:string;displayAt:number;price:number|null;currency:string;product:string;createdAt:number|null;seenAt:number;active:boolean};
+export type NicheListing={id:number;shopId:number;title:string;tags:string[];image:string;displayAt:number;imageAt?:number;price:number|null;currency:string;product:string;createdAt:number|null;seenAt:number;active:boolean};
 export type NicheReview={transactionId:number;listingId:number;at:number;rating:number|null;text:string};
 export type NicheShop={id:number;name:string;url:string;catalogOffset:number;catalogTotal:number|null;catalogDone:boolean;reviewOffset:number;reviewsDone:boolean;listings:NicheListing[];reviews:NicheReview[];checkedAt:number;cycleAt:number;reviewSince:number;error?:string;};
 export type NicheSnapshot={at:number;shopIds:number[];listings:number;reviews30:number;phrases:Record<string,{listings:number;reviews:number;shops:number}>;products:Record<string,number>};
@@ -14,6 +14,13 @@ export function suggestedCluster(value:string){
  if(/\b(shirt|tee)\b/i.test(phrase))variants.push(phrase.replace(/\b(shirt|tee)\b/i,'sweatshirt'),phrase.replace(/\b(shirt|tee)\b/i,'hoodie'));
  if(/\b(sweatshirt|hoodie)\b/i.test(phrase))variants.push(phrase.replace(/\b(sweatshirt|hoodie)\b/i,'shirt'));
  return [...new Set(variants.filter(Boolean))].slice(0,8);
+}
+/** A digital file or mixed-garment offer is not evidence for one physical blank. */
+export function researchProduct(title:string,type:unknown,fallback:string){
+ if(type==='download')return 'digital';
+ const shirt=/\b(?:t[ -]?shirts?|tees?)\b/i.test(title);
+ const warm=/\b(?:sweatshirts?|sweaters?|crewnecks?|hoodies?)\b/i.test(title);
+ return shirt&&warm?'mixedApparel':fallback||'other';
 }
 export function nicheMetrics(shop:NicheShop,at:number){
  const ids=new Set(shop.listings.map(l=>l.id));const reviews=[...new Map(shop.reviews.filter(r=>ids.has(r.listingId)&&r.at<=at&&r.at>=at-365*86400).map(r=>[r.transactionId,r])).values()];
@@ -43,7 +50,15 @@ export function analyzeNiche(shops:NicheShop[],at:number){
  const repeated=listings.map(l=>({...l,reviews:recent.filter(r=>r.listingId===l.id).length,prior:prior.filter(r=>r.listingId===l.id).length})).filter(l=>l.reviews>0).sort((a,b)=>b.reviews-a.reviews);
  const young=repeated.filter(l=>l.createdAt!==null&&l.createdAt>=at-90*86400);
  const smallShopIds=new Set(shops.filter(s=>s.catalogTotal!==null&&s.catalogTotal<=100).map(s=>s.id));
- const opportunities=phrases.filter(p=>{if(p.shops<3||p.reviews<5||/^(gift for her|gift for him|gift|shirt|tshirt|sweatshirt|hoodie|custom shirt|personalized gift)$/.test(p.phrase))return false;const rr=recent.filter(r=>p.listingIds.includes(r.listingId));const counts=new Map<number,number>();for(const r of rr){const shop=byId.get(r.listingId)!.shopId;counts.set(shop,(counts.get(shop)??0)+1);}return Math.max(...counts.values())/Math.max(1,rr.length)<=.7;}).slice(0,6).map(p=>{const ls=listings.filter(l=>p.listingIds.includes(l.id));const productCounts=products.filter(x=>['tee','hoodie','crewneck','mug','tote'].includes(x.product)).map(x=>({product:x.product,count:ls.filter(l=>l.active&&l.product===x.product).length})).sort((a,b)=>a.count-b.count);const scarce=productCounts.find(x=>x.count>0&&x.count<=Math.max(1,ls.length*.15));return {...p,hypothesis:scarce?`${scarce.product} appears less often among listings using this phrase. Test whether the same buyer interest carries over.`:'Compare the recurring phrase and product treatments, then test an original interpretation.',caution:'Review activity supports interest in existing listings; it does not establish demand for a new design or product.'};});
+ const opportunities=phrases.filter(p=>{if(p.shops<3||p.reviews<5||/^(gift for her|gift for him|gift|shirt|tshirt|sweatshirt|hoodie|custom shirt|personalized gift)$/.test(p.phrase))return false;const rr=recent.filter(r=>p.listingIds.includes(r.listingId));const counts=new Map<number,number>();for(const r of rr){const shop=byId.get(r.listingId)!.shopId;counts.set(shop,(counts.get(shop)??0)+1);}return Math.max(...counts.values())/Math.max(1,rr.length)<=.7;}).slice(0,6).map(p=>{const ls=listings.filter(l=>p.listingIds.includes(l.id));const productCounts=products.filter(x=>['tee','hoodie','crewneck','mug','tote'].includes(x.product)).map(x=>({product:x.product,count:ls.filter(l=>l.active&&l.product===x.product).length})).sort((a,b)=>a.count-b.count);const scarce=productCounts.find(x=>x.count<=Math.max(1,ls.length*.15));
+ const rr=recent.filter(r=>p.listingIds.includes(r.listingId)),leading=products.map(product=>({name:product.product,count:rr.filter(r=>byId.get(r.listingId)!.product===product.product).length})).sort((a,b)=>b.count-a.count)[0];
+ const newer=ls.filter(l=>l.createdAt!==null&&l.createdAt>=at-90*86400&&rr.some(r=>r.listingId===l.id));
+ const growth=p.prior>0&&p.reviews>=p.prior+3&&p.reviews>=p.prior*1.5;
+ const hypothesis=scarce&&leading&&scarce.product!==leading.name?`A ${scarce.product} test: listings using this phrase received ${leading.count} recent reviews on ${leading.name}, while these shops offer ${scarce.count} matching ${scarce.product} listings. Check the examples for a concept that could carry across products.`
+ :newer.length>=2?`${newer.length} listings created within 90 days are already receiving reviews. Compare those newer entries with the established listings to identify which treatments buyers are responding to.`
+ :growth?`Review activity increased from ${p.prior} to ${p.reviews} between the previous and latest 30-day periods. ${leading?.name??'Products'} account for the most recent reviews; inspect those examples before choosing a test.`
+ :`${p.reviews} recent reviews are spread across ${p.shops} shops, with ${leading?.name??'products'} receiving the most. This is a recurring pattern to examine, rather than a finding based on one shop's success.`;
+ return {...p,hypothesis,caution:scarce?'Fewer offers inside this panel is a product hypothesis, not proof of unmet demand across Etsy. Review the product fit before testing.':growth?'Review dates lag purchases. A rise in review activity does not establish the same rise in sales.':'The listings have purchase evidence; the phrase itself is not proven to have brought the buyer. Compare the designs and reviews as well.'};});
  return {at,shops:shops.length,listings:listings.filter(l=>l.active).length,reviews30:recent.length,reviewsPrior30:prior.length,complete:shops.length>0&&shops.every(s=>s.catalogDone&&s.reviewsDone),phrases:phrases.slice(0,40),products,buyerThemes,repeated:repeated.slice(0,40),young:young.slice(0,12),smaller:repeated.filter(l=>smallShopIds.has(l.shopId)).slice(0,12),opportunities};
 }
 export function snapshot(shops:NicheShop[],at:number):NicheSnapshot {const a=analyzeNiche(shops,at);return {at,shopIds:shops.map(s=>s.id).sort((a,b)=>a-b),listings:a.listings,reviews30:a.reviews30,phrases:Object.fromEntries(a.phrases.map(p=>[p.phrase,{listings:p.listings,reviews:p.reviews,shops:p.shops}])),products:Object.fromEntries(a.products.map(p=>[p.product,p.reviews]))};}

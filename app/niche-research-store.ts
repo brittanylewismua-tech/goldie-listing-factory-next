@@ -3,6 +3,7 @@ import type {NicheProject,NicheListing,NicheReview} from './niche-research-model
 export const researchDb=()=> (env as unknown as {DB:D1Database}).DB;
 export async function ensureNicheResearch(db=researchDb()){
  await db.prepare(`CREATE TABLE IF NOT EXISTS niche_research_projects (id TEXT PRIMARY KEY,user_id TEXT NOT NULL,payload TEXT NOT NULL,owner_identity TEXT NOT NULL DEFAULT '{}',updated_at INTEGER NOT NULL,next_run INTEGER NOT NULL DEFAULT 0,lease TEXT NOT NULL DEFAULT '',lease_until INTEGER NOT NULL DEFAULT 0)`).run();
+ await db.prepare(`CREATE TABLE IF NOT EXISTS niche_research_public_cache (cache_key TEXT PRIMARY KEY,payload TEXT NOT NULL,expires_at INTEGER NOT NULL)`).run();
  await db.prepare('CREATE INDEX IF NOT EXISTS niche_research_owner ON niche_research_projects(user_id,updated_at)').run();
  await db.prepare(`CREATE TABLE IF NOT EXISTS niche_research_evidence(user_id TEXT NOT NULL,project_id TEXT NOT NULL,shop_id INTEGER NOT NULL,kind TEXT NOT NULL,entity_id INTEGER NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(user_id,project_id,shop_id,kind,entity_id))`).run();
 }
@@ -11,3 +12,7 @@ export async function readResearch(user:string,id:string){const db=researchDb(),
 export function packResearch(p:NicheProject){return JSON.stringify({...p,shops:p.shops.map(s=>({...s,listings:[],reviews:[]}))});}
 export async function writeResearch(user:string,p:NicheProject,lease:string){p.updatedAt=Math.floor(Date.now()/1000);await researchDb().prepare("UPDATE niche_research_projects SET payload=?,updated_at=?,next_run=?,lease='',lease_until=0 WHERE user_id=? AND id=? AND lease=?").bind(packResearch(p),p.updatedAt,p.nextRun,user,p.id,lease).run();}
 export async function claimResearch(user:string,id:string){const lease=crypto.randomUUID();const r=await researchDb().prepare('UPDATE niche_research_projects SET lease=?,lease_until=unixepoch()+120 WHERE user_id=? AND id=? AND lease_until<=unixepoch() RETURNING id').bind(lease,user,id).first();return r?lease:null;}
+
+/** Public Etsy pages only. Shared catalog checks do not copy any member identity. */
+export async function cachedResearchPage(key:string){const row=await researchDb().prepare('SELECT payload FROM niche_research_public_cache WHERE cache_key=? AND expires_at>unixepoch()').bind(key).first<{payload:string}>();return row?JSON.parse(row.payload):null;}
+export async function cacheResearchPage(key:string,payload:unknown){await researchDb().prepare('INSERT INTO niche_research_public_cache(cache_key,payload,expires_at) VALUES(?,?,unixepoch()+21600) ON CONFLICT(cache_key) DO UPDATE SET payload=excluded.payload,expires_at=excluded.expires_at').bind(key,JSON.stringify(payload)).run();}

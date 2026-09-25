@@ -204,7 +204,7 @@
   near-blacks and two more greys, four points from the ones beside them. Any
   button that is not on a dark fill takes the page's ink.
 */
-.app-shell.command-workspace.command-workspace .factory-work button:not(.p-button-primary):not([type="submit"]):not(.tm-watch-list button):not(.tm-watch-button):not(.watch-remove){
+.app-shell.command-workspace.command-workspace .factory-work button:not(.p-button-primary):not([type="submit"]):not(.tm-watch-list button):not(.tm-watch-button):not(.watch-remove):not(.nr-primary):not(.nr-load):not(.nr-tabs button[aria-current="page"]){
   color:var(--cc-ink)!important;
 }
 /*
