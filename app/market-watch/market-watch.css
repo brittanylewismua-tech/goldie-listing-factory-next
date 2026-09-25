@@ -383,9 +383,11 @@
 /* D1790 · The band is what the market charges; this is what you keep. */
 
 /* D1812 · What is moving in a tracked keyword, on the card that tracks it. */
-.keyword-watch-stats{display:flex;gap:26px;flex-wrap:wrap;margin:14px 0 0}
+/* The stats block and the sentence that replaces it occupy the same height,
+   so the photo strips line up across a row of cards. */
+.keyword-watch-stats{display:flex;align-items:flex-end;gap:26px;flex-wrap:wrap;margin:14px 0 0;min-height:52px}
 .keyword-watch-stats div{display:grid;gap:2px}
 .keyword-watch-stats dt{color:var(--suite-muted,#756a72);font-size:12px;font-weight:700}
 .keyword-watch-stats dd{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em;
   font-variant-numeric:tabular-nums}
-.keyword-watch-quiet{margin:14px 0 0;color:var(--suite-muted,#756a72);font-size:13px}
+.keyword-watch-quiet{display:flex;align-items:flex-end;margin:14px 0 0;min-height:52px;color:var(--suite-muted,#756a72);font-size:13px}
