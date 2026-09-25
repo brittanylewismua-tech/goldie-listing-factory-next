@@ -117,7 +117,20 @@
 .app-shell.command-workspace .factory-work h1{font-size:34px!important;font-weight:800;letter-spacing:-.035em;line-height:1.08;margin:0 0 6px}
 .app-shell.command-workspace .factory-work h2{font-size:20px!important;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:0 0 10px}
 .app-shell.command-workspace .factory-work h3{font-size:14px!important;font-weight:800;letter-spacing:-.005em;margin:0 0 8px}
-.app-shell.command-workspace.command-workspace .factory-work :is(p,li,dd,td){font-size:14px!important;line-height:1.55}
+/*
+  D1810 · THE BODY RULE WAS EATING EVERY FIGURE ON THE PAGE.
+
+  A <p> and a <dd> are body copy, and this rule is doubled to beat the legacy
+  sheets - which put it at five classes, above anything a component could
+  write. So the hero figure declared twelve lines below at 34px rendered at
+  14, and so did every statistic in a .cc-results block, which is meant to be
+  24. The pages were not flat because nobody sized their numbers. They were
+  flat because this rule outranked the sizes.
+
+  Display figures are named here and excluded, and their rule carries the same
+  doubled class, so the two cannot get into that argument again.
+*/
+.app-shell.command-workspace.command-workspace .factory-work :is(p,li,dd,td):not(.shop-map-figure):not(.cc-results dd){font-size:14px!important;line-height:1.55}
 .app-shell.command-workspace .factory-work :is(small,figcaption,dt){font-size:12px!important;line-height:1.5}
 /* Prose never runs the full width of a 1,300px workspace. Six paragraphs on
    Shop Map were over 820px wide because the cap did not shout. */
@@ -128,7 +141,10 @@
   font-family:'Manrope Variable',Manrope,sans-serif!important;
 }
 /* One hero figure size, for the numbers a page is actually about. */
-.app-shell.command-workspace .factory-work .shop-map-figure{font-size:34px!important;font-weight:800;letter-spacing:-.03em}
+.app-shell.command-workspace.command-workspace .factory-work .shop-map-figure{
+  font-size:38px!important;font-weight:800;letter-spacing:-.03em;line-height:1.05;margin:0 0 6px}
+.app-shell.command-workspace.command-workspace .factory-work .cc-results dd{
+  font-size:24px!important;font-weight:800;letter-spacing:-.02em;line-height:1.15}
 
 /* ------------------------------------------------------------------ cards */
 .app-shell.command-workspace .factory-work :is(.p-card,.cc-tool,.shop-map-card,.tm-watches,.winner-profile,.listing-check,.cc-home-tile){

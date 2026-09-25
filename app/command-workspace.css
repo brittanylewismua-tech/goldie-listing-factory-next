@@ -329,8 +329,6 @@
   background:#fff;font:inherit;font-size:14px}
 .app-shell.command-workspace .shop-map-headline-label{
   margin:0 0 2px;font-size:13px!important;font-weight:700;letter-spacing:.01em}
-.app-shell.command-workspace .shop-map-money-redesign .shop-map-figure{
-  margin:0 0 6px;font-size:44px!important;line-height:1.05;font-weight:800;letter-spacing:-.03em}
 .app-shell.command-workspace .shop-map-money-redesign .shop-map-rows>div{
   padding:12px 0;border-top:1px solid var(--work-line);border-bottom:0}
 .app-shell.command-workspace .shop-map-money-redesign .shop-map-rows dt{color:#625862}
