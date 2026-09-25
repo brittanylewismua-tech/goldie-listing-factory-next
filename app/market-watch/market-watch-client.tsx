@@ -135,6 +135,7 @@ export default function MarketWatchClient(
       <button className="p-tab" role="tab" aria-selected={tab==="niches"} id="mw-tab-niches" aria-controls="mw-panel" onClick={()=>chooseTab("niches")}>Tracked keywords</button>
       <button className="p-tab" role="tab" aria-selected={tab==="shops"} id="mw-tab-shops" aria-controls="mw-panel" onClick={()=>chooseTab("shops")}>Tracked shops</button>
     </div>
+    {tab==="shops"&&<section className="niche-finder-entry"><div><h2>Find shops in your niche</h2><p>Enter a keyword. Find 10 qualified shops and follow the products, phrases and buyer feedback in your niche.</p></div><a className="p-button p-button-primary" href="/market-watch/research">Find niche shops →</a></section>}
     <div className="add"><input className="p-input" value={input} onChange={event=>setInput(event.target.value)} onKeyDown={event=>{if(event.key==="Enter")void add()}} aria-label={tab==="niches"?"Keyword to track":"Shop to track"} placeholder={tab==="niches"?"Enter a keyword, like bookish sweatshirt":"Etsy shop link or name"}/><button className="p-button p-button-primary" onClick={()=>void add()} disabled={busy||!input.trim()} aria-busy={busy}>{busy?"Adding…":tab==="niches"?"Track keyword":"Track shop"}</button></div>
     {error&&<p className="error" role="alert">{error}</p>}
     {!error && notice && <p className="p-notice" role="status">{notice}</p>}

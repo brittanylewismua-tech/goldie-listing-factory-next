@@ -394,3 +394,5 @@
 .keyword-watch-stats dd{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em;
   font-variant-numeric:tabular-nums}
 .keyword-watch-quiet{display:flex;align-items:flex-end;margin:14px 0 0;min-height:52px;color:var(--suite-muted,#756a72);font-size:13px}
+
+.mw .niche-finder-entry{display:flex;align-items:center;justify-content:space-between;gap:24px;background:#fff;border:1px solid #d8bdca;border-radius:10px;padding:24px;margin:22px 0}.mw .niche-finder-entry h2{font-size:20px;margin:0 0 8px}.mw .niche-finder-entry p{font-size:13px;line-height:1.5;max-width:620px;margin:0}.mw .niche-finder-entry a{flex-shrink:0}@media(max-width:700px){.mw .niche-finder-entry{flex-direction:column;align-items:stretch}}

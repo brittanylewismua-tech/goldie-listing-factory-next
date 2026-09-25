@@ -32,6 +32,8 @@ export type PlanStep = {
 };
 
 export const DELETION_PLAN: PlanStep[] = [
+  {table:"niche_research_evidence",disposition:"delete",sql:"DELETE FROM niche_research_evidence WHERE user_id = ?",say:"Your niche research evidence."},
+  {table:"niche_research_projects",disposition:"delete",sql:"DELETE FROM niche_research_projects WHERE user_id = ?",say:"Your niche panels and monitoring history."},
   { table: "market_keyword_collections", disposition: "delete",
     sql: `DELETE FROM market_keyword_collections WHERE user_id = ?`,
     say: "Your saved competitor comparisons." },

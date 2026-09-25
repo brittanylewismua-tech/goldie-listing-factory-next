@@ -32,6 +32,7 @@ export type Action =
 
 export const EFFECTS: Record<Action, Effect[]> = {
   "account-deletion": [
+    { what:"niche_research_projects, niche_research_evidence", disposition:"removed", say:"Your niche panels, research evidence and monitoring history." },
     { what: "scan_uploads, scan_history", disposition: "removed",
       say: "Your design scans and their results." },
     { what: "artwork_provenance, ARTWORK objects", disposition: "removed",

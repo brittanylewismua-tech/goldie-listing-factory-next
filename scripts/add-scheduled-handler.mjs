@@ -259,6 +259,7 @@ export default {
       refreshed when nothing had been attempted. Costs no Etsy call.
     */
     run("/api/market/niche-brief-tick");
+    run("/api/market/niche-research-tick");
     /*
       AND THE TWO CLOCKS RECORD THEMSELVES.
 
