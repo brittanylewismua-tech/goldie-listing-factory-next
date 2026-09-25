@@ -71,7 +71,9 @@
 .app-shell.command-workspace .mw .back {margin:0 0 18px;min-height:36px;padding:6px 12px;font-size:13px!important}
 .app-shell.command-workspace .mw .shop-detail-tabs {margin:0 0 20px}
 .app-shell.command-workspace .mw .market-browser-controls {display:flex;align-items:end;flex-wrap:wrap;margin:0 0 16px;padding:16px;gap:16px;border-color:var(--work-line);border-radius:10px}
-.app-shell.command-workspace .mw .market-browser-controls .market-search {flex:1 1 280px}
+/* Only where there is room for a row. Below 600px market-watch.css gives every
+   control a full-width basis, and this would have outranked it. */
+@media (min-width:601px){.app-shell.command-workspace .mw .market-browser-controls .market-search {flex:1 1 280px}}
 .app-shell.command-workspace :is(.market-browser-controls,.shop-map-browse-controls) label {font-size:14px;font-weight:650;line-height:1.5}
 .app-shell.command-workspace :is(.market-browser-controls,.shop-map-browse-controls) :is(input,select) {font-size:14px;border-color:#cbbfc8}
 /* D1810 · The sort select is part of the filter row now, not a right-aligned
