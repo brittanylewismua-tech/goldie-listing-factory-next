@@ -48,7 +48,12 @@ test("The route labels profit verified only when the complete financial reader r
 test("Cached estimates and missing labels cannot display profit",()=>{
   const client=readFileSync(new URL("../app/shop-map/shop-map-client.tsx",import.meta.url),"utf8");
   assert.match(client,/return month\?\.label === "verified" \? "verified" : "unavailable"/);
-  assert.match(client,/monthBasis\(month\)==="unavailable"\|\|month\?\.profitMinor == null \? "Profit not worked out yet"/);
+  /* D1810 · A sentence in the slot a figure belongs in left the card without
+     a headline number at all. Revenue is exact either way, so it heads the
+     card and its own label says which figure this is. */
+  assert.match(client,/monthBasis\(month\)==="unavailable"\|\|month\?\.profitMinor == null/);
+  assert.match(client,/<p className="shop-map-headline-label">Revenue this month<\/p>/);
+  assert.match(client,/<p className="shop-map-headline-label">Profit this month<\/p>/);
 });
 
 test("the fixture matches what the server actually emits, and its arithmetic holds", () => {

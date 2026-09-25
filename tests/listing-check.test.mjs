@@ -97,7 +97,13 @@ test('a withheld profit names what is withholding it', () => {
   /* And the listing, not the rule, is what tells two rows apart. */
   /* D1799 · Shortened: an Etsy title is a search surface, and four written
      that way open with the same three words. */
-  assert.match(client, /<b className="cc-row-title">\{shortLabel\(action\.title\)\}<\/b>/);
+  /* D1810 · The rule fires for a whole group, so printing it on every row
+     said the same sentence six times. It heads the group; the row carries the
+     figure that is true of that listing alone. */
+  assert.match(client, /<summary><b>\{shortLabel\(action\.title\)\}<\/b><span>\{action\.fact\}<\/span><\/summary>/);
+  assert.match(client, /<h3>\{group\.headline\}<\/h3>/);
+  const rowBlock = client.slice(client.indexOf('{group.rows.map'), client.indexOf('shop-map-review-body'));
+  assert.ok(!rowBlock.includes('action.headline'), 'the rule is not reprinted on each row');
 });
 
 test('a refusal hands its keyword to the check that always answers', () => {

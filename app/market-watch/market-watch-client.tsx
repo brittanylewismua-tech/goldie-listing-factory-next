@@ -142,7 +142,7 @@ export default function MarketWatchClient(
     <div id="mw-panel" role="tabpanel" aria-labelledby={tab==="niches"?"mw-tab-niches":"mw-tab-shops"}>
       {tab==="niches"?<WatchList load={watches} onRetry={()=>void loadNiches()} failure="Your tracked keywords could not be loaded." empty="Track a keyword to start comparing listings.">
         <div className="keyword-watch-grid">{watches.data.map(watch=><article className="keyword-watch" key={watch.key} data-stale={watch.stale?"yes":"no"}>
-          <div className="keyword-watch-head"><div><h2>{watch.phrase}</h2></div><div className="watch-card-actions"><button type="button" onClick={()=>void openNiche(watch.key)} disabled={Boolean(opening)}>{opening===watch.key?"Opening…":"View listings"}</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${watch.phrase}`} disabled={removing===watch.key} onClick={()=>void stopWatching("niche",watch.key,watch.phrase)}>{removing===watch.key?"Removing…":"Stop tracking"}</button></div></div>
+          <div className="keyword-watch-head"><div><h2>{watch.phrase}</h2></div><div className="watch-card-actions"><button type="button" className="p-button p-button-primary" onClick={()=>void openNiche(watch.key)} disabled={Boolean(opening)}>{opening===watch.key?"Opening…":"View listings"}</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${watch.phrase}`} disabled={removing===watch.key} onClick={()=>void stopWatching("niche",watch.key,watch.phrase)}>{removing===watch.key?"Removing…":"Stop tracking"}</button></div></div>
           {watch.stale&&<p className="keyword-stale">Current data could not be refreshed. Showing saved details.</p>}
           {/*
     D1784 · FOUR EMPTY BOXES AND NO EXPLANATION.

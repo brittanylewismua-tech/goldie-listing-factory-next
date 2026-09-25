@@ -174,7 +174,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
       {error && <p className="p-notice p-notice-bad" role="alert">{error}</p>}
 
       <h2 className="utility-heading">Etsy</h2>
-      {failed && <p className="p-notice" role="alert">Etsy connection status could not be checked. <button type="button" onClick={()=>void load()}>Try again</button></p>}
+      {failed && <p className="p-notice" role="alert">Etsy connection status could not be checked. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
       {salesImport === "running" && (
         <p className="p-notice" role="status">
           Sales access is approved. Importing sold listings, revenue, Etsy fees, and Printify costs now…
@@ -266,7 +266,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
           <div className="p-skeleton p-skeleton-card" />
         </div>
       )}
-      {printifyFailed && <p className="p-notice" role="alert">Printify connection status could not be checked. <button type="button" onClick={()=>void load()}>Try again</button></p>}
+      {printifyFailed && <p className="p-notice" role="alert">Printify connection status could not be checked. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
       {loaded && !printifyFailed && <div className="shop">
         <span className="name">{printify?.connected ? (printify.shopName || "Connected") : "Not connected"}</span>
         <p className="fact">

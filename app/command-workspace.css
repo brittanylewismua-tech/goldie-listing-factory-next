@@ -297,3 +297,48 @@
 .scanner-result-anchor{scroll-margin-top:96px}
 
 .app-shell.command-workspace .bank-library>div:first-child>span{white-space:nowrap;flex-shrink:0;align-self:flex-start}
+
+/* ==========================================================================
+   D1810 · WHAT A LOOK AT THE LIVE PAGES FOUND.
+   ========================================================================== */
+
+/* The sold table took its thumbnail width from one sheet and its height from
+   another: 50 wide, 64 tall, and whichever row won the race came out 64x64.
+   The titles beside them started at four different left edges. One box. */
+.app-shell.command-workspace .shop-map-sold-table :is(img,i){
+  width:56px!important;height:56px!important;flex:0 0 56px!important;
+  object-fit:cover;border-radius:8px}
+
+/* The money card was designed dark and is painted light here. The muted text
+   inside it was still the light grey written for the dark fill - #d8cbd4 on
+   white is 1.4:1, which is not dim, it is gone. */
+.app-shell.command-workspace .shop-map-money-redesign{
+  background:var(--work-surface,#fff)!important;color:var(--work-ink,#151214)!important}
+.app-shell.command-workspace .shop-map-money-redesign :is(.shop-map-accuracy,.shop-map-freshness,.shop-map-headline-label){
+  color:#625862!important;font-size:14px}
+.app-shell.command-workspace .shop-map-money-head{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+.app-shell.command-workspace .shop-map-money-head h2{margin:0}
+.app-shell.command-workspace .shop-map-money-controls{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.app-shell.command-workspace .shop-map-period{
+  display:grid;gap:6px;margin:0;font-size:13px;font-weight:650}
+.app-shell.command-workspace .shop-map-period input{
+  width:auto;min-height:42px;padding:0 12px;border:1px solid #cbbfc8;border-radius:8px;
+  background:#fff;font:inherit;font-size:14px}
+.app-shell.command-workspace .shop-map-headline-label{
+  margin:0 0 2px;font-size:13px!important;font-weight:700;letter-spacing:.01em}
+.app-shell.command-workspace .shop-map-money-redesign .shop-map-figure{
+  margin:0 0 6px;font-size:44px!important;line-height:1.05;font-weight:800;letter-spacing:-.03em}
+.app-shell.command-workspace .shop-map-money-redesign .shop-map-rows>div{
+  padding:12px 0;border-top:1px solid var(--work-line);border-bottom:0}
+.app-shell.command-workspace .shop-map-money-redesign .shop-map-rows dt{color:#625862}
+.app-shell.command-workspace .shop-map-money-redesign .shop-map-rows dd{font-weight:700}
+.app-shell.command-workspace .shop-map-fix{
+  justify-self:start;display:inline-flex;align-items:center;margin-top:18px;
+  min-height:42px;padding:0 18px;border-radius:8px;text-decoration:none}
+
+/* Connections stated two facts in outlined pills the size and colour of the
+   real buttons sitting under them. Status is not an action. */
+.app-shell.command-workspace .conn .badge{
+  min-height:0;padding:5px 10px;border:1px solid var(--work-line);border-radius:999px;
+  background:#f7f3f6;color:#625862!important;font-size:12px;font-weight:700;letter-spacing:0}

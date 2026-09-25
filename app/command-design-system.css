@@ -81,7 +81,7 @@
   Every rule that has to beat inheritance repeats .command-workspace. It is
   ugly and it is legible, which beats being correct by accident of ordering.
 */
-.app-shell.command-workspace.command-workspace .factory-work :is(p,small,dt,figcaption,.cc-note,.lede,.cc-row-why,.shop-map-check-against,.home-tile-copy small,.cc-home-tile p,.winner-stat-note,.hub-foot){
+.app-shell.command-workspace.command-workspace .factory-work :is(p,small,dt,figcaption,.cc-note,.lede,.shop-map-check-against,.home-tile-copy small,.cc-home-tile p,.winner-stat-note,.hub-foot){
   color:var(--cc-muted)!important;
 }
 /*
@@ -182,6 +182,22 @@
 .app-shell.command-workspace.command-workspace .factory-work button:not(.p-button-primary):not([type="submit"]):not(.tm-watch-list button):not(.tm-watch-button):not(.watch-remove){
   color:var(--cc-ink)!important;
 }
+/*
+  D1810 · COLOURING A BUTTON WITHOUT OWNING ITS FILL PAINTED INK ON INK.
+
+  The rule above took every unclassed button to the page's ink and left the
+  background to whichever legacy sheet reached it first. Market Watch's "View
+  listings" - the primary action on every keyword card - sat on #171318 and
+  was given #151214 to write in. A contrast ratio of 1.01: the button was
+  there, sized, clickable, and invisible.
+
+  An unclassed button now gets its fill and its ink from the same rule, so the
+  two can never disagree again. Buttons that are meant to be dark carry
+  .p-button-primary and are excluded above; tabs live inside a <nav>.
+*/
+.app-shell.command-workspace.command-workspace .factory-work :not(nav)>button:not([class]){
+  background:var(--cc-surface)!important;border:1px solid var(--cc-line)!important;color:var(--cc-ink)!important;
+}
 .app-shell.command-workspace .factory-work .p-button-quiet{
   border:1px solid var(--cc-line)!important;background:var(--cc-surface)!important;color:var(--cc-ink)!important;
 }
@@ -211,11 +227,43 @@
 
 /* ---------------------------------------------------------------- rhythm */
 /* One vertical rhythm, so sections do not each choose their own gap. */
+/*
+  D1810 · THE RHYTHM RULE WAS STAGGERING EVERY GRID.
+
+  The second line matched any article beside any article at any depth, so the
+  cards inside `.tracked-shop-grid` - real grid items, laid out by the grid -
+  each picked up a 22px top margin and dropped 22px below their neighbour.
+  Market Watch's tracked shops rendered as a staircase. Rhythm belongs to the
+  page's own sections, which are direct children; a grid owns the space
+  between its cells.
+*/
 .app-shell.command-workspace .factory-work>*+*{margin-top:22px}
-.app-shell.command-workspace .factory-work :is(section,article)+:is(section,article){margin-top:22px}
+.app-shell.command-workspace .factory-work>:is(section,article)+:is(section,article){margin-top:22px}
 
 @media (max-width:860px){
   .app-shell.command-workspace .factory-work h1{font-size:27px}
   .app-shell.command-workspace .factory-work h2{font-size:18px}
   .app-shell.command-workspace .factory-work :is(.cc-tool,.shop-map-card,.tm-watches,.p-card,.winner-profile,.listing-check){padding:16px!important}
 }
+
+/* --------------------------------------------------------------- disclosure */
+/*
+  D1810 · THE DISCLOSURE TRIANGLE WAS PRINTING ON A LINE OF ITS OWN.
+
+  A <summary> is a list-item box. When its contents are block-level - and on
+  Shop Map's "Listings to review" the title and the rule both are - the marker
+  has nowhere to sit beside them, so the browser drops a bare ▶ on the line
+  above and every row opened with a loose triangle and a gap. One chevron,
+  drawn by this sheet, vertically aligned with the first line of the summary.
+*/
+.app-shell.command-workspace .factory-work summary{
+  display:block;position:relative;padding-left:26px;list-style:none;cursor:pointer;
+}
+.app-shell.command-workspace .factory-work summary::-webkit-details-marker{display:none}
+.app-shell.command-workspace .factory-work summary::before{
+  content:"";position:absolute;left:6px;top:.45em;width:7px;height:7px;
+  border-right:2px solid var(--cc-muted);border-bottom:2px solid var(--cc-muted);
+  transform:rotate(-45deg);transform-origin:60% 60%;transition:transform .18s ease;
+}
+.app-shell.command-workspace .factory-work details[open]>summary::before{transform:rotate(45deg)}
+.app-shell.command-workspace .factory-work summary:hover::before{border-color:var(--cc-ink)}

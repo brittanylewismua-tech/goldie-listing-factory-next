@@ -100,6 +100,45 @@ function DesignReach(){
   </section>;
 }
 
+/*
+  D1810 · THE RULE LABELS THE GROUP; THE ROW CARRIES ITS OWN FIGURE.
+
+  Every row repeated the rule that put it there, so the panel read as one
+  sentence printed six times. The rule is a heading now, and each row shows
+  the number that is true of that listing alone.
+*/
+function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}){
+  if(!actions.length)return <section className="cc-tool"><h2>Listings to review</h2>
+    <p className="cc-note">Nothing in your catalog is currently a past seller gone inactive,
+    a sharp slowdown, or an older listing with favorites and no orders.</p></section>;
+  const groups:Array<{headline:string;rows:CatalogAction[]}>=[];
+  for(const action of actions){
+    const last=groups[groups.length-1];
+    if(last&&last.headline===action.headline)last.rows.push(action);
+    else groups.push({headline:action.headline,rows:[action]});
+  }
+  return <section className="cc-tool shop-map-review"><h2>Listings to review</h2>
+    {groups.map(group=><div key={group.headline} className="shop-map-review-group">
+      <h3>{group.headline}</h3>
+      {group.rows.map(action=><details key={action.listingId} className="shop-map-review-row">
+        <summary><b>{shortLabel(action.title)}</b><span>{action.fact}</span></summary>
+        <div className="shop-map-review-body">
+          <p>{action.evidence}</p><p>{action.nextStep}</p>
+          <a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy \u2197</a>
+          <ActionPlan feature="shopMap" source={`shop-${shopId}-listing-${action.listingId}`} heading={action.headline} notes={`${action.title}
+${action.evidence}
+
+${action.nextStep}
+
+Change I will test:
+Start and end dates:
+What would make this worth repeating:`}/>
+        </div>
+      </details>)}
+    </div>)}
+  </section>;
+}
+
 export default function ShopMapClient({ signedInEmail }: { signedInEmail?: string }) {
   const [map, setMap] = useState<ShopMap | null>(null);
   const [open, setOpen] = useState("");
@@ -263,7 +302,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           <p>Shop Map · {monthName(shown.month)}</p></div>
       </div>
     </header>
-    {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button onClick={()=>void load()}>Try again</button></p>}
+    {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     <nav className="shop-map-tabs" aria-label="Shop Map sections">
       {([['overview','Overview'],['themes','Product themes'],['sold','Sold listings'],['money','Your numbers']] as const)
@@ -275,7 +314,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
           <h2>Top 3 listings in the last 90 days</h2></div>
-          <button type="button" onClick={() => setTab("sold")}>See every sold listing ↗</button></div>
+          <button type="button" className="p-button p-button-primary" onClick={() => setTab("sold")}>See every sold listing ↗</button></div>
         {leaders.length ? <div className="shop-map-leader-grid">{leaders.map((listing,index) =>
           <article key={listing.listingId} className={index === 0 ? "lead" : ""}>
             <div className="shop-map-listing-image">{listing.imageUrl
@@ -292,17 +331,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           below the fold. */}
       <DesignReach/>
       <ListingCheckPanel/>
-      <section className="cc-tool"><h2>Listings to review</h2>{shown.catalogActions?.length?shown.catalogActions.map(action=><details key={action.listingId} className="cc-saved-plan"><summary>{/* D1780 · The headline led, and the same rule fires for every listing that
-    qualifies, so the panel read as one instruction repeated three times with
-    different words after the colon. The listing is what distinguishes one row
-    from another, so it goes first. */}<b className="cc-row-title">{shortLabel(action.title)}</b><span className="cc-row-why">{action.headline}</span></summary><p>{action.evidence}</p><p>{action.nextStep}</p><a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy ↗</a><ActionPlan feature="shopMap" source={`shop-${shown.shop?.shopId}-listing-${action.listingId}`} heading={action.headline} notes={`${action.title}
-${action.evidence}
-
-${action.nextStep}
-
-Change I will test:
-Start and end dates:
-What would make this worth repeating:`}/></details>):<p>No listing meets the current checks for an inactive recent seller, a sharp sales slowdown, or an older unsold listing with favorites. Use your sold listings to choose a focused test.</p>}</section>
+      <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
       <section className="shop-map-summary-grid">
         <article><span>Orders this month</span><strong>{month?.orders ?? 0}</strong><small>{money(month?.revenueMinor,month?.currency)} revenue</small></article>
         <article><span>Active listings</span><strong>{shown.shopTotals?.activeListings ?? 0}</strong><small>in your current catalog</small></article>
@@ -341,21 +370,33 @@ What would make this worth repeating:`}/></details>):<p>No listing meets the cur
     </section>}
 
     {tab === "money" && <section className="shop-map-card shop-map-money shop-map-money-redesign">
-      <label className="shop-map-period">Month <input type="month" value={selectedMonth||shown.month||""} onInput={event=>{const value=event.currentTarget.value;if(/^\d{4}-(0[1-9]|1[0-2])$/.test(value))setSelectedMonth(value)}} onChange={event=>setSelectedMonth(event.target.value)}/></label><h2>Monthly profit</h2>
-      <button type="button" className="shop-map-confirm p-button p-button-quiet" disabled={syncingMoney} onClick={()=>void refreshMoney()}>{syncingMoney ? "Refreshing your numbers…" : "Refresh your numbers"}</button>
+      {/* D1810 · The heading came after the control it labelled, and the month
+          picker ran the full width of the card for a twelve-character value.
+          Heading, then the two controls on one line. */}
+      <div className="shop-map-money-head">
+        <h2>Monthly profit</h2>
+        <div className="shop-map-money-controls">
+          <label className="shop-map-period"><span>Month</span><input type="month" value={selectedMonth||shown.month||""} onInput={event=>{const value=event.currentTarget.value;if(/^\d{4}-(0[1-9]|1[0-2])$/.test(value))setSelectedMonth(value)}} onChange={event=>setSelectedMonth(event.target.value)}/></label>
+          <button type="button" className="shop-map-confirm p-button p-button-quiet" disabled={syncingMoney} onClick={()=>void refreshMoney()}>{syncingMoney ? "Refreshing your numbers…" : "Refresh your numbers"}</button>
+        </div>
+      </div>
       {syncingMoney&&<p role="status">Getting the latest sales, Etsy fees, and production costs. This may take a few minutes.</p>}
       {moneyRefreshError&&<p role="alert" className="shop-map-reason">{moneyRefreshError}</p>}
-      {refreshing?<p role="status">Loading this month’s totals…</p>:selectedMonth && shown.month!==selectedMonth ? <p role="alert">This month could not be loaded. <button type="button" onClick={()=>void load()}>Try again</button></p>:shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
+      {refreshing?<p role="status">Loading this month’s totals…</p>:selectedMonth && shown.month!==selectedMonth ? <p role="alert">This month could not be loaded. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>:shown.timezoneNeeded ? <><p className="shop-map-reason">Confirm your shop timezone so monthly totals match Etsy.</p>
         {detected ? <button className="shop-map-confirm" disabled={busy === "timezone"} onClick={() => void confirmTimezone()}>
           {busy === "timezone" ? "Saving…" : `My shop runs on ${detected}`}</button> : null}</>
-      : <><p className="shop-map-figure" data-basis={monthBasis(month)}>{monthBasis(month)==="unavailable"||month?.profitMinor == null ? "Profit not worked out yet" : money(month.profitMinor,month.currency)}</p>
+      : <>{monthBasis(month)==="unavailable"||month?.profitMinor == null
+          ? <><p className="shop-map-headline-label">Revenue this month</p>
+              <p className="shop-map-figure" data-basis="unavailable">{money(month?.revenueMinor,month?.currency)}</p></>
+          : <><p className="shop-map-headline-label">Profit this month</p>
+              <p className="shop-map-figure" data-basis={monthBasis(month)}>{money(month.profitMinor,month.currency)}</p></>}
         <p className="shop-map-accuracy">{month?.accuracy}</p>
         {month?.freshness ? <p className="shop-map-freshness" data-stale={month.salesStale ? "yes" : "no"}>{month.freshness}</p> : null}
         <dl className="shop-map-rows">
           <div><dt>Revenue</dt><dd>{money(month?.revenueMinor,month?.currency)}</dd></div><div><dt>Etsy fees</dt><dd>{money(month?.etsyFeesMinor,month?.currency)}</dd></div>
           <div><dt>Production</dt><dd>{month?.productionCostMinor == null || month?.coverage?.unavailable ? "Not available" : money(-month.productionCostMinor,month.currency)}</dd></div>
           <div><dt>Refunds recorded</dt><dd>{money(month?.refundsMinor,month?.currency)}</dd></div><div><dt>Adjustments</dt><dd>{money(month?.adjustmentsMinor,month?.currency)}</dd></div><div><dt>Orders</dt><dd>{month?.orders ?? 0}</dd></div></dl>
-        {month?.coverage?.unavailable ? <a className="shop-map-fix" href={`/shop-map/costs?month=${encodeURIComponent(shown.month ?? "")}`}>Add production costs</a> : null}</>}
+        {month?.coverage?.unavailable ? <a className="shop-map-fix p-button p-button-primary" href={`/shop-map/costs?month=${encodeURIComponent(shown.month ?? "")}`}>Add production costs</a> : null}</>}
     </section>}
     {signedInEmail ? null : null}
   </main>;

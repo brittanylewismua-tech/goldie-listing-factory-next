@@ -329,7 +329,12 @@
    written after it still lost - silently, one colour at a time. */
 /* D1809 · exempting buttons from inheritance left the unclassed ones on two
    legacy colours - Shop Map's tabs and month control. */
-export const BUILD_MARKER = "D1809";
+/* D1810 · what looking at the live pages found: an invisible primary button on
+   every Market Watch keyword card, a rhythm rule staggering every grid of
+   cards, disclosure triangles printing on their own line, one rule reprinted
+   on six rows, a money card with no headline figure, and thumbnails sized by
+   two sheets at once. */
+export const BUILD_MARKER = "D1810";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

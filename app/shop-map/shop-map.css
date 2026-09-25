@@ -166,10 +166,6 @@
   font-size:13px;font-weight:600;cursor:pointer;justify-self:start;margin-top:4px}
 .shop-map-move button.shop-map-clear-correction:disabled{opacity:.5;cursor:default}
 
-/* D1780 · The listing distinguishes the row; the rule does not. */
-.cc-saved-plan summary .cc-row-title{display:block;font-weight:800}
-.cc-saved-plan summary .cc-row-why{display:block;margin-top:2px;color:var(--suite-muted,#756a72);font-size:12px;font-weight:650}
-
 /* D1792 · Sold, and on only one product. */
 .shop-map-reach ul{display:grid;gap:10px;margin:14px 0 0;padding:0;list-style:none}
 .shop-map-reach li{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--suite-line,#e5d8e0);border-radius:12px}
@@ -195,3 +191,16 @@
 
 /* D1799 · The photograph tells two listings apart faster than their titles. */
 .shop-map-reach li>span[aria-hidden]{width:72px;height:72px;flex:0 0 72px}
+
+/* D1810 · Listings to review: the rule heads the group, the row shows its figure. */
+.shop-map-review-group+.shop-map-review-group{margin-top:22px}
+.shop-map-review-group h3{margin:16px 0 4px;font-size:14px;font-weight:800;letter-spacing:.01em}
+.shop-map-review-row{border-top:1px solid var(--suite-line,#e5d8e0)}
+.shop-map-review-row>summary{padding:12px 0 12px 26px;display:flex;align-items:baseline;
+  justify-content:space-between;gap:16px;flex-wrap:wrap}
+.shop-map-review-row>summary b{font-size:14px;font-weight:750;min-width:0;overflow-wrap:anywhere}
+.shop-map-review-row>summary span{color:var(--suite-muted,#756a72);font-size:13px;
+  font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
+.shop-map-review-body{padding:0 0 16px 26px;display:grid;gap:10px}
+.shop-map-review-body p{margin:0;max-width:72ch;font-size:13px;line-height:1.55}
+.shop-map-review-body>a{justify-self:start;font-size:13px;font-weight:750}
