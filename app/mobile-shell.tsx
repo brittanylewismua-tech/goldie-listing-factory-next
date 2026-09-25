@@ -130,7 +130,7 @@ export default function MobileShell() {
       <div>
         <b>Keep these tools on your home screen</b>
         <p>{installable === "ios"
-          ? "Tap the share button below, then Add to Home Screen. It opens like an app, without the browser bars."
+          ? "In Safari, open Share, choose Add to Home Screen, then tap Add. If shown, keep Open as Web App turned on."
           : "Install it and it opens like an app, without the browser bars."}</p>
       </div>
       <div className="goldie-install-actions">

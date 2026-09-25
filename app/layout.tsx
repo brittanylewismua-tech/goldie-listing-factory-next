@@ -50,18 +50,6 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(origin),
     title: { default: title, template: `%s | ${title}` },
     description,
-    /*
-      THE FAVICON WAS THE GOLDIE MARK.
-
-      A tab icon is branding in the place a member looks at most often, so the
-      custom icons are not referenced while the product has no identity. The
-      browser's own default is genuinely neutral in a way that any mark chosen
-      here would not be. The files are left in place, untouched, for whenever
-      there is a brand to point at them.
-    */
-    manifest: "/manifest.webmanifest",
-    icons: { icon: "/goldie-g.png", shortcut: "/goldie-g.png", apple: "/apple-touch-icon.png" },
-    appleWebApp: { capable: true, title, statusBarStyle: "black-translucent" },
     openGraph: { title, description },
     twitter: { card: "summary", title, description },
   };
@@ -81,5 +69,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const diagnostics = `(function(){function send(kind,message,source,line,column,stack){try{navigator.sendBeacon('/api/client-errors',new Blob([JSON.stringify({kind:kind,message:String(message||'Unknown browser startup error'),source:String(source||''),line:Number(line||0),column:Number(column||0),url:String(location.pathname+location.search),stack:String(stack||'')})],{type:'application/json'}))}catch(_){}}window.addEventListener('error',function(event){send('error',event.message,event.filename,event.lineno,event.colno,event.error&&event.error.stack)});window.addEventListener('unhandledrejection',function(event){var reason=event.reason;send('unhandledrejection',reason&&reason.message?reason.message:String(reason||'Unhandled promise rejection'),'','','',reason&&reason.stack)})})();`;
-  return <html lang="en"><head><script dangerouslySetInnerHTML={{__html:diagnostics}}/></head><body><ReliableNavigation/>{children}<MobileShell/><ConfirmHost/><NewBuildNotice/></body></html>;
+  return <html lang="en"><head>
+    {/* Keep install metadata in the actual head. The runtime streams generated
+        link metadata into a body div, where Chrome ignores the manifest. */}
+    <link rel="manifest" href="/manifest.webmanifest"/>
+    <link rel="icon" href="/goldie-g.png"/>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-title" content="Goldie Suite"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+    <script dangerouslySetInnerHTML={{__html:diagnostics}}/>
+  </head><body><ReliableNavigation/>{children}<MobileShell/><ConfirmHost/><NewBuildNotice/></body></html>;
 }
