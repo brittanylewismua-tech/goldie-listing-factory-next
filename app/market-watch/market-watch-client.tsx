@@ -1,7 +1,6 @@
 "use client";
 
 import ActionPlan from "@/app/command-center/action-plan";
-import OfferPlanner from "@/app/command-center/offer-planner";
 import {competitorChanges,type CollectionEntry} from "@/app/market-collection";
 import {rankScan,type KeywordOrder} from "@/app/keyword-scan";
 import {confirmAction} from "@/app/confirm-dialog";
@@ -315,12 +314,27 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     {shown<ranked.length&&<div className="market-pagination"><button className="p-button p-button-primary" onClick={()=>setShown(count=>count+60)}>Show more listings</button></div>}
     </section>}
     {section==="saved"&&<section className="keyword-collection" id="keyword-saved-panel" role="tabpanel" aria-labelledby="keyword-saved-tab">
-      <div className="market-result-bar"><div><h2>Saved comparisons</h2>{entries.length>0&&<p>{entries.length} of 100 listings · Chosen by you</p>}</div><button className="p-button p-button-primary" disabled={collectionLoading||collectionBusy||!entries.length||Boolean(collectionError)} onClick={()=>void updateCollection("refresh")}>{collectionBusy?"Updating…":"Check for changes"}</button></div>
+      <div className="market-result-bar"><div><h2>Saved comparisons</h2>{entries.length>0&&<p>{entries.length} of 100 saved</p>}</div><button className="p-button p-button-primary" disabled={collectionLoading||collectionBusy||!entries.length||Boolean(collectionError)} onClick={()=>void updateCollection("refresh")}>{collectionBusy?"Updating…":"Check for changes"}</button></div>
       {collectionLoading?<p role="status">Loading saved comparisons…</p>:!entries.length&&!collectionError?<p className="empty">Save listings from Search Etsy to compare them here and follow changes in their favorites, views, and prices.</p>:null}
       {entries.length>0&&<>
         <div className="market-results-sort">{collectionCurrencies.length>1&&<label>Currency<select value={collectionCurrency} onChange={e=>{setCollectionCurrency(e.target.value);if(!e.target.value&&(collectionSort==="price"||collectionSort==="price-desc"))setCollectionSort("favorites")}}><option value="">All currencies</option>{collectionCurrencies.map(c=><option key={c} value={c}>{c}</option>)}</select></label>}<label>Sort saved listings<select value={collectionSort} onChange={e=>setCollectionSort(e.target.value as ListingOrder)}><option value="favorites">Highest favorites</option><option value="views">Highest views</option><option value="newest">Newest original listing</option><option value="price" disabled={!collectionCurrency&&collectionCurrencies.length>1}>Price: low to high</option><option value="price-desc" disabled={!collectionCurrency&&collectionCurrencies.length>1}>Price: high to low</option></select></label></div>
         <div className="cards">{compared.map(listing=>{const entry=entryById.get(listing.listingId)!;return <ListingCard key={listing.listingId} listing={listing} action={<button className="p-button p-button-quiet" disabled={collectionBusy||collectionLoading} onClick={()=>void updateCollection("remove",listing.listingId)}>Remove from comparisons</button>} extra={<CompetitorChange entry={entry}/>}/>})}</div>
-        <OfferPlanner key={view.key} source={view.key} phrase={view.phrase} listings={entries.map(entry=>entry.listing)}/>
+        {/*
+          D1812 · THE MARGIN CALCULATOR IS OFF MARKET WATCH.
+
+          Nine cost fields to fill by hand, a Printify product link to paste,
+          a production-cost currency to confirm from a dropdown, a variant
+          table and eight paragraphs of caveats - behind an accordion, on the
+          saved-comparisons tab of a research tool. It asked the seller to
+          type in her Etsy fee rates, which /api/seller-preferences already
+          holds, and to paste a Printify link, when the Listing Factory is
+          already connected to that Printify account.
+
+          It is a pricing tool. Research is not where a price gets set, and
+          when it is rebuilt it should read what this product already knows
+          instead of asking for it again. The component and its arithmetic
+          stay in the tree; nothing on Market Watch mounts them.
+        */}
       </>}
     </section>}
   </main>;
