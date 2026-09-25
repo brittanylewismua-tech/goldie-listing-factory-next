@@ -206,23 +206,20 @@ test('the blank the winners print on is read from the listing, not guessed', () 
   assert.match(profile, /entry\.winners >= 3/, 'three of fifty before it is a pattern');
 });
 
-test('the take-home figure uses the seller\'s own fee settings', () => {
+test('research does not price the listing for the seller', () => {
   /*
-    The band is what the market charges. It is not what the seller earns, and
-    the gap is where print-on-demand businesses quietly fail. Etsy knows its
-    fees and not the production cost; Printify knows the cost and not the
-    fees; a research tool knows neither. This product holds both.
+    D1811 · The band is what the market charges, and that is a fact about the
+    search. What a seller would earn at that price is a pricing decision, and
+    it had been put in the middle of a research read: an input asking for
+    their unit cost and a table of earnings at three prices, unasked for.
+    Pricing belongs where a price is being set.
   */
   const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
-  assert.match(client, /fetch\("\/api\/seller-preferences"\)/, 'the real saved rate, not an assumed one');
-  assert.match(client, /cents\/100-cents\/100\*percent-fixed-/);
-  /* A loss is shown as a loss rather than floored at zero. */
-  assert.match(client, /data-negative=\{keep\(cents\)<0\?"yes":undefined\}/);
-  /* And nothing is claimed until a cost is entered. */
-  /* D1796 · It was a floating label, an input and three unlabelled pairs of
-     numbers. It is a table with a price column and an earnings column. */
-  assert.match(client, /<th>Sell at<\/th><th>You earn per sale<\/th>/);
-  assert.match(client, /Add your cost and this shows what you earn at each price/);
+  assert.doesNotMatch(client, /function TakeHome/);
+  assert.doesNotMatch(client, /You earn per sale/);
+  assert.doesNotMatch(client, /Your cost per unit/);
+  /* The band itself stays. */
+  assert.match(client, /label:"Price"/);
 });
 
 test('an unfiltered price band says it spans every product type', () => {

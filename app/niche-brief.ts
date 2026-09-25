@@ -6,6 +6,7 @@ import { EVIDENCE_FRESH_DAYS } from "@/app/momentum-cohort";
 import { describeWindow } from "@/app/evidence-window";
 import { decodeEntities } from "@/app/shop-map-worlds";
 import { DISPLAY_FRESHNESS_SECONDS } from "@/app/reference-images";
+import { listingDisplay, listingPhoto, listingPrice } from "@/app/etsy-listing-display";
 
 type Row = {
   nicheKey: string; listingId: number; shopId: number; title: string; imageUrl: string;
@@ -118,11 +119,61 @@ export async function summariesForWatches(
   return out;
 }
 
+/*
+  D1811 · THE CARD USED TO EXPLAIN ITS OWN PLUMBING INSTEAD OF SHOWING A PHOTO.
+
+  Etsy's API Terms are real and specific: "You will not display listing content
+  more than six (6) hours older than the corresponding information on the Etsy
+  Site." So a photo read yesterday genuinely may not be shown. What was wrong
+  was the response - a sentence telling the member about our refresh schedule,
+  on a card whose whole job is four pictures.
+
+  Refreshing them is one call. `listings/batch` takes a hundred ids, and the
+  previews are four per keyword, so every thumbnail on the page fits in a
+  single request: the stale ones are re-read here, written back, and shown.
+  The sentence is then something a member can only reach by being offline.
+*/
 export async function previewsForWatches(keys: string[], now: number) {
   const rows = await rowsFor(keys, now);
   const out = new Map<string, MarketListing[]>();
-  for (const key of keys)
-    out.set(key, rows.filter(row => row.nicheKey === key && row.title).slice(0, 4)
-      .map(row => listingFrom(row, now)));
+  const shown: Row[] = [];
+  for (const key of keys) {
+    const picks = rows.filter(row => row.nicheKey === key && row.title).slice(0, 4);
+    shown.push(...picks);
+    out.set(key, picks.map(row => listingFrom(row, now)));
+  }
+  const stale = shown.filter(row => now - Number(row.displayRefreshedAt) >= DISPLAY_FRESHNESS_SECONDS);
+  if (!stale.length) return out;
+  try {
+    const refreshed = await listingDisplay(
+      [...new Set(stale.map(row => Number(row.listingId)))].slice(0, 100), "market-watch");
+    if (!refreshed.size) return out;
+    const writes = [];
+    for (const row of stale) {
+      const live = refreshed.get(Number(row.listingId));
+      if (!live) continue;
+      const photo = listingPhoto(live);
+      if (!photo) continue;
+      writes.push(db().prepare(
+        `UPDATE niche_candidates SET image_url=?, title=?, price_cents=?, currency=?,
+                favorites=?, views=?, display_refreshed_at=?
+          WHERE listing_id=? AND niche_key=?`)
+        .bind(photo, String(live.title ?? row.title), listingPrice(live),
+              String(live.price?.currency_code ?? row.currency ?? "USD"),
+              live.num_favorers ?? row.favorites, live.views ?? row.views,
+              now, Number(row.listingId), row.nicheKey));
+      /* Patch what is already on its way out, so this page is current without
+         a second read. */
+      const list = out.get(row.nicheKey);
+      const entry = list?.find(item => item.listingId === Number(row.listingId));
+      if (entry) {
+        entry.imageUrl = photo;
+        entry.title = decodeEntities(String(live.title ?? entry.title));
+        entry.displayFresh = true;
+      }
+    }
+    if (writes.length) await db().batch(writes);
+  } catch { /* An unreachable Etsy leaves the stale rows stale, which is the
+                one case the card's sentence is actually for. */ }
   return out;
 }

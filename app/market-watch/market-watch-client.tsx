@@ -328,55 +328,20 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   is exactly the arithmetic the Listing Factory already prices batches with -
   the member's own saved fee settings, not an assumed rate.
 */
-function TakeHome({profile}:{profile:Profile}){
-  const [cost,setCost]=useState("");
-  const [rules,setRules]=useState<{etsyFeePercent?:number;fixedFee?:number;listingFee?:number}|null>(null);
-  useEffect(()=>{
-    try{const saved=window.localStorage.getItem("goldie-unit-cost");if(saved)setCost(saved)}catch{/* private mode */}
-    void fetch("/api/seller-preferences").then(r=>r.ok?r.json() as Promise<{pricing?:{etsyFeePercent?:number;fixedFee?:number;listingFee?:number}}>:null)
-      .then(body=>setRules(body?.pricing??{})).catch(()=>setRules({}));
-  },[]);
-  if(!profile.priceBand||profile.currency!=="USD")return null;
-  const percent=Math.max(0,Math.min(40,Number(rules?.etsyFeePercent??9.5)))/100;
-  const fixed=Number(rules?.fixedFee??0.25)+Number(rules?.listingFee??0.2);
-  const unit=Number(cost.replace(/[^0-9.]/g,""));
-  const keep=(cents:number)=>cents/100-cents/100*percent-fixed-(Number.isFinite(unit)?unit:0);
-  const money=(value:number)=>`${value<0?"-":""}$${Math.abs(value).toFixed(2)}`;
-  const points:Array<[string,number]>=[["Low",profile.priceBand.low],
-    ["Middle",profile.priceMedian??Math.round((profile.priceBand.low+profile.priceBand.high)/2)],
-    ["High",profile.priceBand.high]];
-  const ready=cost.trim()&&Number.isFinite(unit);
-  /*
-    D1796 · WHAT THIS PANEL WAS BEFORE.
+/*
+  D1811 · THE PRICING CALCULATOR IS GONE FROM RESEARCH.
 
-    A label reading "You keep, at a unit cost of" floating beside an input,
-    then three stacked pairs - "Low · $22.90" over "$7.87" - with nothing
-    saying which number was the price and which was the profit, and no
-    heading saying what any of it was for. Screenshotted and sent back with
-    "nothing tells me what this is for", correctly.
+  Market Watch answers what is selling in a search. Half way down that answer
+  sat an input asking for the member's unit cost and a table of what they
+  would earn at three prices - a pricing decision, unasked for, in the middle
+  of a research read. It was also three floating pieces with a dead column:
+  "If you priced here" at the bottom left, the cost input in the middle, the
+  table on the right, and a third of the panel empty.
 
-    It is a table now, because it is a table: a price column, an earnings
-    column, three rows, a heading above it.
-  */
-  return <div className="winner-takehome">
-    <div className="winner-takehome-head">
-      <h3>If you priced here</h3>
-      <label>Your cost per unit
-        <input className="p-input" inputMode="decimal" value={cost} placeholder="$12.40"
-          onChange={event=>{setCost(event.target.value);
-            try{window.localStorage.setItem("goldie-unit-cost",event.target.value)}catch{/* private mode */}}}/>
-      </label>
-    </div>
-    {ready?<table className="winner-takehome-table">
-      <thead><tr><th>Sell at</th><th>You earn per sale</th></tr></thead>
-      <tbody>{points.map(([label,cents])=><tr key={label}>
-        <td>${(cents/100).toFixed(2)} <span>{label.toLowerCase()}</span></td>
-        <td data-negative={keep(cents)<0?"yes":undefined}>{money(keep(cents))}</td>
-      </tr>)}</tbody>
-    </table>:<p>Add your cost and this shows what you earn at each price.</p>}
-  </div>;
-}
-
+  What a seller would take home belongs where they are setting a price, not
+  where they are looking at what other people sell. The price band stays; it
+  is a fact about the search.
+*/
 function WinnerProfile({profile,shelf}:{profile:Profile;shelf:string}){
   /*
     NUMBERS LEAD. THE EXPLANATION LIVES HERE, NOT ON THE PAGE.
@@ -420,7 +385,6 @@ function WinnerProfile({profile,shelf}:{profile:Profile;shelf:string}){
         {stat.note&&<span className={stat.warn?"winner-stat-note warn":"winner-stat-note"}>{stat.note}</span>}
       </div>)}
     </dl>}
-    <TakeHome profile={profile}/>
     {profile.subjects.length>0&&<div className="winner-profile-subjects">
       <h3>Words in their titles</h3>
       <ul>{profile.subjects.map(entry=><li key={entry.word}>
