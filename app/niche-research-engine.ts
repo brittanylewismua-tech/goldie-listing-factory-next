@@ -51,14 +51,14 @@ export async function advanceResearch(user:string,p:NicheProject){
  if(p.phase==='discovering'){
  let index=p.searchIndex%p.phrases.length;for(let i=0;i<p.phrases.length&&p.searchDone[index];i++)index=(index+1)%p.phrases.length;
  if(p.searchDone.every(Boolean)){finish(p,now);return;}
- const offset=p.searchOffsets[index]??0,b=await etsy(p,`listings/active?${new URLSearchParams({keywords:p.phrases[index],limit:'100',offset:String(offset),sort_on:'score'})}`),page=rows(b);
+ const offset=p.searchOffsets[index]??0,b=await etsy(p,`listings/active?${new URLSearchParams({keywords:p.phrases[index],limit:'100',offset:String(offset),sort_on:index%2===0?'score':'created',sort_order:'desc'})}`),page=rows(b);
  for(const row of page){const id=Number(row.shop_id);if(!Number.isSafeInteger(id)||id<=0)continue;const old=p.candidates.find(c=>c.id===id);if(old)old.hits++;else p.candidates.push({id,hits:1});}
  p.searchOffsets[index]=offset+page.length;p.searchDone[index]=page.length<100||typeof b.count==='number'&&p.searchOffsets[index]>=b.count;
  p.searchIndex=index+1;p.candidates.sort((a,b)=>b.hits-a.hits||a.id-b.id);p.phase=p.searchOffsets.some(n=>n===0)?'discovering':'checking';return;
  }
  const qualified=p.shops.filter(s=>qualifies(s,now));
- if(!p.history.length)p.selected=qualified.slice(0,10).map(s=>s.id);
- if(qualified.length>=p.targetShops){if(!p.selected.length){
+ if(!p.history.length&&!p.selectionEdited)p.selected=qualified.slice(0,10).map(s=>s.id);
+ if(qualified.length>=p.targetShops){if(!p.selected.length&&!p.selectionEdited){
  // Mix shop sizes without inventing a quality score or treating small as new.
  const ranked=[...qualified].sort((a,b)=>(a.catalogTotal??Infinity)-(b.catalogTotal??Infinity));p.selected=ranked.slice(0,5).concat(ranked.slice(5).sort((a,b)=>nicheMetrics(b,now).reviews90-nicheMetrics(a,now).reviews90).slice(0,5)).map(s=>s.id);}
  finish(p,now);return;}
@@ -69,6 +69,6 @@ export async function advanceResearch(user:string,p:NicheProject){
  const profiling=p.shops.length<Math.min(p.candidates.length,(Math.floor(checked/20)+1)*20);
  const pending=p.shops.filter(s=>s.checkedAt<s.cycleAt).sort((a,b)=>(a.catalogTotal??Infinity)-(b.catalogTotal??Infinity))[0];
  if(pending&&(!profiling||!candidate)){await checkShop(user,p,pending);return;}
- if(!candidate){if(p.searchDone.every(Boolean)){if(!p.selected.length)p.selected=qualified.map(s=>s.id);finish(p,now);}else p.phase='discovering';return;}
+ if(!candidate){if(p.searchDone.every(Boolean)){if(!p.selected.length&&!p.selectionEdited)p.selected=qualified.map(s=>s.id);finish(p,now);}else p.phase='discovering';return;}
  const b=await etsy(p,`shops/${candidate.id}`);p.shops.push({id:candidate.id,name:b.shop_name??`Shop ${candidate.id}`,url:b.url??`https://www.etsy.com/shop/${encodeURIComponent(b.shop_name??'')}`,catalogOffset:0,catalogTotal:typeof b.listing_active_count==='number'?b.listing_active_count:null,catalogDone:false,reviewOffset:0,reviewsDone:false,listings:[],reviews:[],checkedAt:0,cycleAt:now,reviewSince:now-365*86400});
 }

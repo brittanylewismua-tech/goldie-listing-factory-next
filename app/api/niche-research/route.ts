@@ -27,7 +27,7 @@ export const POST=withErrorLog('niche-research',async(request:Request)=>{
  const lease=await claimResearch(user,body.id);if(!lease)return NextResponse.json({error:'This niche is updating. Try again in a moment.'},{status:409});
  const p=await readResearch(user,body.id);if(!p)return NextResponse.json({error:'Niche not found.'},{status:404});
  try{
- if(body.action==='select'){const selected=Array.isArray(body.selected)?body.selected:[];p.selected=[...new Set(selected.filter((id):id is number=>typeof id==='number'&&p.shops.some(s=>s.id===id&&s.catalogDone&&s.reviewsDone)))].slice(0,15);}
+ if(body.action==='select'){p.selectionEdited=true;const selected=Array.isArray(body.selected)?body.selected:[];p.selected=[...new Set(selected.filter((id):id is number=>typeof id==='number'&&p.shops.some(s=>s.id===id&&s.catalogDone&&s.reviewsDone)))].slice(0,15);}
  else if(body.action==='monitor'){p.monitoring=body.enabled===true;p.nextRun=p.monitoring?Math.floor(Date.now()/1000):0;}
  else if(body.action==='refresh'){p.nextRun=Math.floor(Date.now()/1000);await advanceResearch(user,p);}
  else if(body.action==='photos'){
