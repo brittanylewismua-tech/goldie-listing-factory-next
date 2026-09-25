@@ -356,3 +356,9 @@
 .app-shell.command-workspace .keyword-watch-stats dt{font-size:12px;color:#625862}
 .app-shell.command-workspace.command-workspace .factory-work .keyword-watch-stats dd{
   font-size:20px!important;font-weight:800;letter-spacing:-.02em}
+
+/* D1812 · The word chips are links to the trademark check now; they keep the
+   chip's ink, not the accent the design system gives prose links. */
+.app-shell.command-workspace.command-workspace .factory-work .winner-profile-subjects li>a{
+  color:var(--work-ink,#151214)!important;text-decoration:none}
+.app-shell.command-workspace.command-workspace .factory-work .winner-profile-subjects li span{color:#625862!important}

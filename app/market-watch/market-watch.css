@@ -331,10 +331,13 @@
 .winner-profile-subjects{margin-top:20px;padding-top:16px;border-top:1px solid var(--suite-line,#e5d8e0)}
 .winner-profile-subjects h3{margin:0 0 10px;font-size:13px;font-weight:800}
 .winner-profile-subjects ul{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
-.winner-profile-subjects li{
+.winner-profile-subjects li{display:flex}
+.winner-profile-subjects li>a{
   display:flex;align-items:baseline;gap:6px;padding:7px 11px;
   border:1px solid var(--suite-line,#e5d8e0);border-radius:10px;background:var(--suite-pink-wash,#fff3fa);
+  color:inherit;text-decoration:none;
 }
+.winner-profile-subjects li>a:hover{border-color:var(--suite-pink-deep,#d90c89)}
 .winner-profile-subjects li b{font-size:14px;font-weight:800}
 .winner-profile-subjects li span{color:var(--suite-muted,#756a72);font-size:12px}
 @media (max-width:860px){.winner-profile{padding:16px}.winner-stats dd{font-size:24px}}

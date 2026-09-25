@@ -423,8 +423,19 @@ function WinnerProfile({profile,shelf}:{profile:Profile;shelf:string}){
     </dl>}
     {profile.subjects.length>0&&<div className="winner-profile-subjects">
       <h3>Words in their titles</h3>
+      {/*
+        D1812 · THE WORD LIST HANDED OVER "DISNEY" WITH NO WAY TO CHECK IT.
+
+        Measured live on "halloween": season, spooky, crochet, movie, skeleton
+        - and disney. These are observed words, not cleared ones, and this
+        product sells a trademark checker two links down the rail that had no
+        connection to them. Each word now opens that checker already filled
+        in, which costs the seller one click and costs this panel no words.
+      */}
       <ul>{profile.subjects.map(entry=><li key={entry.word}>
-        <b>{entry.word}</b><span>{entry.winners}</span></li>)}</ul>
+        <a href={`/trademark?phrase=${encodeURIComponent(entry.word)}`}
+           title={`Check "${entry.word}" for trademarks`}>
+          <b>{entry.word}</b><span>{entry.winners}</span></a></li>)}</ul>
     </div>}
   </section>;
 }
