@@ -87,7 +87,7 @@
 .app-shell.command-workspace .market-result-actions {display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
 .app-shell.command-workspace .mw .cards {display:grid;grid-template-columns:minmax(0,1fr);gap:0;border:1px solid var(--work-line);border-radius:10px;overflow:hidden;background:white}
 .app-shell.command-workspace .mw .cards:empty {display:none}
-.app-shell.command-workspace .mw .card {display:grid;grid-template-columns:84px minmax(0,1fr) 108px;align-items:center;gap:16px;padding:18px 20px;border:0!important;border-bottom:1px solid var(--work-line)!important;border-radius:0!important;box-shadow:none!important;background:#fff;min-height:124px}
+.app-shell.command-workspace .mw .card {display:grid;grid-template-columns:84px minmax(0,1fr) max-content;align-items:center;gap:16px;padding:18px 20px;border:0!important;border-bottom:1px solid var(--work-line)!important;border-radius:0!important;box-shadow:none!important;background:#fff;min-height:124px}
 .app-shell.command-workspace .mw .card:last-child {border-bottom:0!important}
 .app-shell.command-workspace .mw .card:hover {background:#fffafd}
 .app-shell.command-workspace .mw .card>img,.app-shell.command-workspace .mw .card>.no-image {width:84px;height:84px;border-radius:6px;object-fit:contain;background:#faf7f9;font-size:12px;line-height:1.4}
@@ -107,7 +107,7 @@
 /* D1810 · Both labels wrapped onto two lines in a column too narrow for
    them, which made the actions the tallest thing in every row. They fit on
    one line now, and the column is sized for the longer of the two. */
-.app-shell.command-workspace .research-card-actions {min-width:132px}
+.app-shell.command-workspace .research-card-actions {min-width:132px;justify-items:stretch}
 .app-shell.command-workspace .research-card-actions :is(button,a) {height:auto;min-height:40px;padding:9px 14px;border:1px solid #d7cbd3;border-radius:7px;background:white;color:#3f303a;font:700 13px/1.4 'Manrope Variable',sans-serif;text-align:center;white-space:nowrap;text-decoration:none}
 .app-shell.command-workspace .research-card-actions button:disabled {opacity:.55;cursor:default}
 .app-shell.command-workspace .competitor-changes {grid-column:1/-1;grid-row:4;border-top:1px solid var(--work-line);padding-top:12px;margin-top:8px}
