@@ -203,7 +203,10 @@ test('the blank the winners print on is read from the listing, not guessed', () 
   assert.ok(profile.includes('Bella + Canvas') && profile.includes('Gildan'));
   assert.match(profile, /\[row\.title, \.\.\.\(row\.tags \?\? \[\]\), \.\.\.\(row\.materials \?\? \[\]\)\]/,
     'title, tags and materials are all read, and a listing counts once');
-  assert.match(profile, /entry\.winners >= 3/, 'three of fifty before it is a pattern');
+  /* D1812 · Three of fifty is six per cent, and it was being printed as
+     "Printed on: Comfort Colors" on searches whose winners were crochet
+     patterns and PDFs. A fifth of the sample before it is a headline. */
+  assert.match(profile, /entry\.winners >= Math\.max\(5, Math\.ceil\(top\.length \* 0\.2\)\)/);
 });
 
 test('research does not price the listing for the seller', () => {
@@ -218,8 +221,10 @@ test('research does not price the listing for the seller', () => {
   assert.doesNotMatch(client, /function TakeHome/);
   assert.doesNotMatch(client, /You earn per sale/);
   assert.doesNotMatch(client, /Your cost per unit/);
-  /* The band itself stays. */
-  assert.match(client, /label:"Price"/);
+  /* The band itself stays - named as the middle half, because it is, and
+     because calling it "Price" made it look wrong beside a listing above it
+     priced outside the band. */
+  assert.match(client, /label:"Middle half"/);
 });
 
 test('an unfiltered price band says it spans every product type', () => {

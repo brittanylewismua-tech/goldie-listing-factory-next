@@ -381,3 +381,11 @@
 .market-shelf select{min-height:42px;padding:0 10px;border:1px solid var(--suite-line,#e5d8e0);border-radius:8px;background:#fff;font:inherit}
 
 /* D1790 · The band is what the market charges; this is what you keep. */
+
+/* D1812 · What is moving in a tracked keyword, on the card that tracks it. */
+.keyword-watch-stats{display:flex;gap:26px;flex-wrap:wrap;margin:14px 0 0}
+.keyword-watch-stats div{display:grid;gap:2px}
+.keyword-watch-stats dt{color:var(--suite-muted,#756a72);font-size:12px;font-weight:700}
+.keyword-watch-stats dd{margin:0;font-size:20px;font-weight:800;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.keyword-watch-quiet{margin:14px 0 0;color:var(--suite-muted,#756a72);font-size:13px}

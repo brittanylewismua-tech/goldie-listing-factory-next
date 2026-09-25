@@ -161,9 +161,17 @@ export function profileWinners(top: ProfileRow[], field: ProfileRow[], phrase = 
     [row.title, ...(row.tags ?? []), ...(row.materials ?? [])].join(" ").toLocaleLowerCase();
   const blanks = BLANKS
     .map(blank => ({ label: blank.label, winners: top.filter(row => blank.match.test(haystack(row))).length }))
-    /* Three of fifty before it counts: below that a "pattern" is one shop
-       listing the same shirt three times. */
-    .filter(entry => entry.winners >= 3)
+    /*
+      D1812 · ONE IN FIVE, NOT THREE IN FIFTY.
+
+      Three of fifty is six per cent, and the panel presented it as "Printed
+      on: Comfort Colors". On a search like "halloween" - where the winners
+      are crochet patterns, PDFs and costumes - six per cent of them
+      mentioning a blank is not what the winners are printed on. It is six
+      listings. A fifth of the sample is the floor for a headline claim about
+      what they are made of.
+    */
+    .filter(entry => entry.winners >= Math.max(5, Math.ceil(top.length * 0.2)))
     .sort((a, b) => b.winners - a.winners);
 
   return {

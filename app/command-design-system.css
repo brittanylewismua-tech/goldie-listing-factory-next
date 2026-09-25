@@ -136,7 +136,7 @@
   Display figures are named here and excluded, and their rule carries the same
   doubled class, so the two cannot get into that argument again.
 */
-.app-shell.command-workspace.command-workspace .factory-work :is(p,li,dd,td):not(.shop-map-figure):not(.cc-results dd){font-size:14px!important;line-height:1.55}
+.app-shell.command-workspace.command-workspace .factory-work :is(p,li,dd,td):not(.shop-map-figure):not(.cc-results dd):not(.keyword-watch-stats dd){font-size:14px!important;line-height:1.55}
 .app-shell.command-workspace .factory-work :is(small,figcaption,dt){font-size:12px!important;line-height:1.5}
 /* Prose never runs the full width of a 1,300px workspace. Six paragraphs on
    Shop Map were over 820px wide because the cap did not shout. */

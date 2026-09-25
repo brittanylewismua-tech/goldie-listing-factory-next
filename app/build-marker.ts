@@ -334,7 +334,7 @@
    cards, disclosure triangles printing on their own line, one rule reprinted
    on six rows, a money card with no headline figure, and thumbnails sized by
    two sheets at once. */
-export const BUILD_MARKER = "D1811";
+export const BUILD_MARKER = "D1812";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 

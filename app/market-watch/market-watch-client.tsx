@@ -145,6 +145,24 @@ export default function MarketWatchClient(
           <div className="keyword-watch-head"><div><h2>{watch.phrase}</h2></div><div className="watch-card-actions"><button type="button" className="p-button p-button-primary" onClick={()=>void openNiche(watch.key)} disabled={Boolean(opening)}>{opening===watch.key?"Opening…":"View listings"}</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${watch.phrase}`} disabled={removing===watch.key} onClick={()=>void stopWatching("niche",watch.key,watch.phrase)}>{removing===watch.key?"Removing…":"Stop tracking"}</button></div></div>
           {watch.stale&&<p className="keyword-stale">Current data could not be refreshed. Showing saved details.</p>}
           {/*
+    D1812 · THE CARD KNEW ALL OF THIS AND SHOWED NONE OF IT.
+
+    A tracked keyword is tracked so a seller can see what is moving in it
+    without opening it. The card was the phrase, two buttons and four
+    photographs; the response behind it already carried how many of the
+    listings under watch have been seen selling, how many sold more than
+    once, and how many shops they belong to. Measured live across seven
+    keywords those ranged from 7/5/7 to 0/0/0 - which is the whole point of
+    following one phrase and not another.
+  */}
+          {watch.moving>0
+            ? <dl className="keyword-watch-stats">
+                <div><dt>Seen selling</dt><dd>{watch.moving}</dd></div>
+                <div><dt>More than once</dt><dd>{watch.repeated}</dd></div>
+                <div><dt>Shops</dt><dd>{watch.shops}</dd></div>
+              </dl>
+            : <p className="keyword-watch-quiet">Nothing under watch here has been seen selling yet.</p>}
+          {/*
     D1784 · FOUR EMPTY BOXES AND NO EXPLANATION.
 
     Etsy requires displayed listing information to be no more than six hours
@@ -273,13 +291,16 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
       </select></label>}
       <button className="p-button p-button-primary" disabled={loading}>Search Etsy</button>
       {(query||search)&&<button type="button" className="p-button p-button-quiet" onClick={()=>{setQuery("");setSearch("")}}>Clear search</button>}
+      {/* D1812 · It was a lone right-aligned button on a line of its own under
+          the card it belongs to. */}
+      <button type="button" className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Refresh listings</button>
     </form>
     {/* D1785 · The scan reads ten pages of Etsy and takes several seconds. It
     used to spend them behind one short line above an empty space, which at
     eight to sixteen seconds is indistinguishable from a page that has
     failed. It says how long it will be, and the space below holds its
     shape while it waits. */}
-    <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Reading Etsy for “${view.phrase}”. This takes a few seconds.`:""}</p><button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Refresh listings</button></div>
+    <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Reading Etsy for “${view.phrase}”. This takes a few seconds.`:""}</p></div>
     {profile&&<WinnerProfile profile={profile} shelf={shelf}/>}
     {/* D1783 · A sort that returns nothing is worse than a sort that is not
     there. Units are counted from the difference between two readings of a
@@ -342,6 +363,21 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   where they are looking at what other people sell. The price band stays; it
   is a fact about the search.
 */
+/*
+  D1812 · ONE UNIT FOR AGE.
+
+  The profile said "25 mo" and the listing beneath it said "4936 days" for the
+  same idea. Thirteen and a half years, written as four digits of days, is a
+  number a reader has to do arithmetic on before it means anything.
+*/
+export function listedFor(days:number|null|undefined){
+  if(days==null)return "Unavailable";
+  if(days<60)return `${days} ${days===1?"day":"days"}`;
+  if(days<730)return `${Math.round(days/30)} mo`;
+  const years=days/365;
+  return `${years<10?years.toFixed(1):Math.round(years)} yr`;
+}
+
 function WinnerProfile({profile,shelf}:{profile:Profile;shelf:string}){
   /*
     NUMBERS LEAD. THE EXPLANATION LIVES HERE, NOT ON THE PAGE.
@@ -359,14 +395,13 @@ function WinnerProfile({profile,shelf}:{profile:Profile;shelf:string}){
   */
   const money=(cents:number)=>`$${(cents/100).toFixed(0)}`;
   const share=(value:number)=>`${Math.round(value*100)}%`;
-  const months=(days:number)=>days>=60?`${Math.round(days/30)} mo`:`${days} d`;
   type Stat={label:string;value:string;note?:string;warn?:boolean};
   const stats:Stat[]=[];
   if(profile.currency==="USD"&&profile.priceBand)
-    stats.push({label:"Price",value:`${money(profile.priceBand.low)}–${money(profile.priceBand.high)}`,
+    stats.push({label:"Middle half",value:`${money(profile.priceBand.low)}–${money(profile.priceBand.high)}`,
       note:shelf?undefined:"every product type",warn:!shelf});
   if(profile.ageMedianDays!=null)
-    stats.push({label:"Median age",value:months(profile.ageMedianDays)});
+    stats.push({label:"Median age",value:listedFor(profile.ageMedianDays)});
   if(profile.personalisedShare!=null)
     stats.push({label:"Personalised",value:share(profile.personalisedShare)});
   if(profile.provenShopShare!=null)
@@ -401,7 +436,7 @@ function ListingCard({listing,action,extra}:{listing:Listing;action?:ReactNode;e
     creation_timestamp moves on renewal, so on a live search it is usually
     today for everything and tells a seller nothing, beside an Original age
     that is genuinely different for every listing. The field still orders the
-    newest sort; it is not a column. */}<div><dt>Original age</dt><dd>{listing.ageDays==null?"Unavailable":`${listing.ageDays} ${listing.ageDays===1?"day":"days"}`}</dd></div></dl>
+    newest sort; it is not a column. */}<div><dt>Listed for</dt><dd>{listedFor(listing.ageDays)}</dd></div></dl>
     {listing.intervals>0&&<p className="listing-evidence">Activity observed on {listing.intervals} occasion{listing.intervals===1?"":"s"} in the last 30 days{listing.confirmedAt?` · latest ${new Date(listing.confirmedAt*1000).toLocaleDateString()}`:""}.</p>}
     {extra}
   </div>{action?<div className="research-card-actions">{action}<a href={listing.etsyUrl} target="_blank" rel="noreferrer noopener">View on Etsy ↗</a></div>:<a href={listing.etsyUrl} target="_blank" rel="noreferrer noopener">View on Etsy ↗</a>}
