@@ -26,7 +26,10 @@ export const GET=withErrorLog("shop-watch-listings",async(request:Request)=>{
   await db.prepare("CREATE TABLE IF NOT EXISTS shop_watch_listing_display (shop_id INTEGER PRIMARY KEY,payload TEXT NOT NULL,refreshed_at INTEGER NOT NULL)").run();
   const now=Math.floor(Date.now()/1000);
   const cached=await db.prepare("SELECT payload,refreshed_at FROM shop_watch_listing_display WHERE shop_id=?").bind(shopId).first<{payload:string;refreshed_at:number}>();
-  if(offset===0&&cached&&now-cached.refreshed_at<21600){const saved=JSON.parse(cached.payload);if(saved.version===2)return NextResponse.json(saved);}
+  /* D1810 · Version 3. Every cached payload was written when the page size was
+     24, so leaving the check at 2 would have gone on serving 24 listings out
+     of a 1,164-listing shop for another six hours. */
+  if(offset===0&&cached&&now-cached.refreshed_at<21600){const saved=JSON.parse(cached.payload);if(saved.version===3)return NextResponse.json(saved);}
   try{
     await waitForEtsyCapacity();
     const response=await fetch(`https://openapi.etsy.com/v3/application/shops/${shopId}/listings/active?limit=${limit}&offset=${offset}`,{headers:{"x-api-key":etsyApiCredential()},signal:AbortSignal.timeout(25000)});
@@ -41,7 +44,7 @@ export const GET=withErrorLog("shop-watch-listings",async(request:Request)=>{
     const returned=body.results?.length??0;
     const next=offset+returned;
     const total=typeof body.count==="number"?body.count:null;
-    const payload={version:2,listings,asOf:now,total,nextOffset:returned>0&&next<=12000&&(total===null?returned===limit:next<total)?next:null};
+    const payload={version:3,listings,asOf:now,total,nextOffset:returned>0&&next<=12000&&(total===null?returned===limit:next<total)?next:null};
     if(offset===0)await db.prepare("INSERT INTO shop_watch_listing_display(shop_id,payload,refreshed_at) VALUES(?,?,?) ON CONFLICT(shop_id) DO UPDATE SET payload=excluded.payload,refreshed_at=excluded.refreshed_at").bind(shopId,JSON.stringify(payload),now).run();
     return NextResponse.json(payload);
   }catch(error){
