@@ -141,6 +141,9 @@
 /* Prose never runs the full width of a 1,300px workspace. Six paragraphs on
    Shop Map were over 820px wide because the cap did not shout. */
 .app-shell.command-workspace .factory-work :is(p,.lede,.cc-note){max-width:72ch!important}
+/* An empty state is a box, not a paragraph: capping it at 72ch left a dashed
+   panel covering half the card with nothing beside it. */
+.app-shell.command-workspace.command-workspace .factory-work :is(p.empty,p.p-empty,p.p-notice){max-width:none!important}
 .app-shell.command-workspace .factory-work .mini-label{
   margin:0 0 6px;color:var(--cc-accent)!important;font-size:12px!important;font-weight:800!important;
   letter-spacing:.14em;text-transform:uppercase;
@@ -224,7 +227,17 @@
   border:1px solid var(--cc-line)!important;background:var(--cc-surface)!important;color:var(--cc-ink)!important;
 }
 .app-shell.command-workspace .factory-work .p-button-quiet:hover:not(:disabled){background:var(--cc-wash)!important}
-.app-shell.command-workspace .factory-work button:disabled{opacity:1;background:#f1eaee!important;color:#96868f!important;border-color:var(--cc-line)!important;cursor:not-allowed}
+/*
+  D1810 · A DISABLED BUTTON WAS RENDERING AS A LIVE PRIMARY.
+
+  Written at one class less than the fills it has to beat, so "Check for
+  changes" with nothing saved was solid black with white text - identical to
+  the button that works. Doubled, like the rules it argues with.
+*/
+.app-shell.command-workspace.command-workspace .factory-work button:disabled,
+.app-shell.command-workspace.command-workspace .factory-work .p-button:disabled{
+  opacity:1;background:#f1eaee!important;color:#96868f!important;
+  border:1px solid var(--cc-line)!important;box-shadow:none!important;cursor:not-allowed}
 
 /* ------------------------------------------------------------------- tabs */
 .app-shell.command-workspace .factory-work .p-tab{
