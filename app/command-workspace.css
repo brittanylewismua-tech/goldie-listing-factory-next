@@ -68,17 +68,19 @@
 .app-shell.command-workspace .tracked-shop-card h2 {font-size:22px!important}
 .app-shell.command-workspace .mw .back {margin:0 0 18px;min-height:36px;padding:6px 12px;font-size:13px!important}
 .app-shell.command-workspace .mw .shop-detail-tabs {margin:0 0 20px}
-.app-shell.command-workspace .mw .market-browser-controls {margin:0 0 12px;padding:16px;gap:16px;border-color:var(--work-line);border-radius:10px}
+.app-shell.command-workspace .mw .market-browser-controls {display:flex;align-items:end;flex-wrap:wrap;margin:0 0 16px;padding:16px;gap:16px;border-color:var(--work-line);border-radius:10px}
+.app-shell.command-workspace .mw .market-browser-controls .market-search {flex:1 1 280px}
 .app-shell.command-workspace :is(.market-browser-controls,.shop-map-browse-controls) label {font-size:14px;font-weight:650;line-height:1.5}
 .app-shell.command-workspace :is(.market-browser-controls,.shop-map-browse-controls) :is(input,select) {font-size:14px;border-color:#cbbfc8}
-.app-shell.command-workspace .market-results-sort {display:flex;justify-content:flex-end;align-items:end;flex-wrap:wrap;gap:16px;margin:16px 0 12px}
+/* D1810 · The sort select is part of the filter row now, not a right-aligned
+   line of its own hanging below the empty-state text. */
+.app-shell.command-workspace .market-results-sort {display:flex;align-items:end;flex-wrap:wrap;gap:16px;margin:0}
 .app-shell.command-workspace .market-results-sort label {display:grid;gap:6px;font-size:13px;font-weight:650}
 .app-shell.command-workspace .market-results-sort select {min-height:42px;max-width:100%;padding:8px 32px 8px 12px;border:1px solid #cbbfc8;border-radius:8px;background:white;color:#29232a;font:inherit}
-.app-shell.command-workspace .market-result-bar {margin:0 0 8px;font-size:14px}
-.app-shell.command-workspace .market-result-bar p {font-size:14px;margin:0}
-.app-shell.command-workspace .market-catalog-scope {margin:0 0 8px;padding:0;background:none;border:0}
-.app-shell.command-workspace .market-catalog-scope p {font-size:13px;line-height:1.5;margin:0}
-.app-shell.command-workspace .market-catalog-scope button {min-height:36px;font-size:13px!important;white-space:nowrap}
+.app-shell.command-workspace .market-result-bar {display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;margin:0 0 16px;font-size:14px}
+.app-shell.command-workspace .market-result-bar p {font-size:14px;margin:0;color:#625862}
+.app-shell.command-workspace .market-result-actions {display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
 .app-shell.command-workspace .mw .cards {display:grid;grid-template-columns:minmax(0,1fr);gap:0;border:1px solid var(--work-line);border-radius:10px;overflow:hidden;background:white}
 .app-shell.command-workspace .mw .cards:empty {display:none}
 .app-shell.command-workspace .mw .card {display:grid;grid-template-columns:84px minmax(0,1fr) 108px;align-items:center;gap:16px;padding:18px 20px;border:0!important;border-bottom:1px solid var(--work-line)!important;border-radius:0!important;box-shadow:none!important;background:#fff;min-height:124px}

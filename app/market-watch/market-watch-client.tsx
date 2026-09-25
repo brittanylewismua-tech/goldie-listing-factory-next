@@ -494,13 +494,20 @@ function ShopCard({shop}:{shop:ShopView}){
     <div id="shop-detail-panel" role="tabpanel" aria-labelledby={`shop-tab-${section}`}>
     {section==="listings"&&<div className="shop-listing-browser" id="shop-catalog-controls">
       <ListingControls sort={sort} setSort={setSort} query={query} setQuery={setQuery} currency={currency} setCurrency={setCurrency} currencies={currencies}/>
-      <div className="market-result-bar"><p role="status">{listings.length}{total===null?"":` of ${total}`} listings loaded{query||currency?` · ${visibleListings.length} match your filters`:""}</p><button className="p-button p-button-quiet" onClick={()=>void loadListings()} disabled={loading}>{loading&&!loadingAll?"Loading listings…":"Refresh active listings"}</button></div>
-      <div className="market-catalog-scope"><p>{total===null?"Loading the shop’s catalog…":""}</p>{nextOffset!==null&&!loadingAll&&<button type="button" className="p-button p-button-quiet" disabled={loading} onClick={()=>void loadListings(nextOffset,true)}>Load full catalog</button>}{loadingAll&&<button type="button" className="p-button p-button-quiet" onClick={()=>activeRequest.current?.abort()}>Stop loading</button>}</div>
+      {/* D1810 · One row. The count lived here and again under the cards, and
+          the two buttons were right-aligned on separate lines below it. */}
+      <div className="market-result-bar">
+        <p role="status">{total===null?"Loading the shop’s catalog…":query||currency?`${visibleListings.length} of ${listings.length} loaded listings match your filters`:""}</p>
+        <div className="market-result-actions">
+          <button className="p-button p-button-quiet" onClick={()=>void loadListings()} disabled={loading}>{loading&&!loadingAll?"Loading listings…":"Refresh active listings"}</button>
+          {nextOffset!==null&&!loadingAll&&<button type="button" className="p-button p-button-quiet" disabled={loading} onClick={()=>void loadListings(nextOffset,true)}>Load full catalog</button>}
+          {loadingAll&&<button type="button" className="p-button p-button-quiet" onClick={()=>activeRequest.current?.abort()}>Stop loading</button>}
+        </div>
+      </div>
       {listingError&&<p role="alert">{listingError} <button className="p-button p-button-quiet" onClick={()=>void loadListings(retryOffset)} disabled={loading}>Try again</button></p>}
       {loading&&!listings.length&&<p role="status">Loading this shop’s active listings…</p>}
       {!loading&&!listings.length&&!listingError&&<p className="empty">No active listings are available from Etsy.</p>}
       {listings.length>0&&!visibleListings.length&&<p className="empty">No loaded listings match these filters. Clear the search or change the currency{nextOffset!==null?", or load more of the shop’s catalog":""}.</p>}
-      <ListingSort sort={sort} setSort={setSort} mixed={!currency&&currencies.length>1}/>
       <div className="cards">{visibleListings.map(listing=><ListingCard key={listing.listingId} listing={listing}/>)}</div>
       {listings.length>0&&<div className="market-pagination">{nextOffset!==null&&<button type="button" className="p-button p-button-primary" disabled={loading} onClick={()=>void loadListings(nextOffset??0)}>{loading?"Loading more listings…":"Load more listings"}</button>}<span>{listings.length}{total===null?"":` of ${total}`} loaded{loadingAll?" · Loading full catalog…":""}</span><a className="p-button p-button-quiet" href="#shop-catalog-controls">Back to filters ↑</a></div>}
     </div>}
@@ -528,6 +535,7 @@ function ListingControls({sort,setSort,query,setQuery,currency,setCurrency,curre
    <label className="market-search">Search loaded listings<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Find a product or phrase"/></label>
    {currencies.length>1&&<label>Currency<select value={currency} onChange={e=>{setCurrency(e.target.value);if(!e.target.value&&(sort==="price"||sort==="price-desc"))setSort("newest")}}><option value="">All currencies</option>{currencies.map(c=><option key={c} value={c}>{c}</option>)}</select></label>}
    {(query||currency)&&<button type="button" className="p-button p-button-quiet" onClick={()=>{setQuery("");setCurrency("");if(sort==="price"||sort==="price-desc")setSort("newest")}}>Clear filters</button>}
+   <ListingSort sort={sort} setSort={setSort} mixed={mixed}/>
    {mixed&&<p className="market-sort-note">Choose a currency to compare prices.</p>}
  </div>;
 }

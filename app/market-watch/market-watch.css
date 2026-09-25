@@ -284,13 +284,10 @@
 .mw .market-browser-controls .market-sort-note{flex-basis:100%;font-size:12px;margin:0;color:#66535f}
 .mw .market-result-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:14px 0}
 .mw .market-result-bar p{margin:0;font-size:13px;font-weight:700}
-.mw .market-catalog-scope{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;margin-bottom:16px;background:#fff4fa;border:1px solid #e9d3e0;border-radius:10px}
-.mw .market-catalog-scope p{font-size:13px;line-height:1.5;margin:0;max-width:65ch}
-.mw .market-catalog-scope button{flex-shrink:0}
 .mw .market-pagination{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:16px;margin-top:28px;padding:24px 0 8px;border-top:1px solid #dacdd6}
 .mw .market-pagination span{font-size:13px;color:#66535f}
 .mw .market-pagination .p-button{min-height:46px;min-width:200px}
-@media(max-width:600px){.mw .market-browser-controls{padding:16px;gap:12px}.mw .market-browser-controls label,.mw .market-browser-controls .market-search{min-width:0;flex-basis:100%}.mw .market-browser-controls input,.mw .market-browser-controls select{font-size:16px}.mw .market-catalog-scope{align-items:stretch;flex-direction:column;gap:12px}.mw .market-pagination{align-items:stretch;flex-direction:column;text-align:center}.mw .market-pagination .p-button{width:100%}}
+@media(max-width:600px){.mw .market-browser-controls{padding:16px;gap:12px}.mw .market-browser-controls label,.mw .market-browser-controls .market-search{min-width:0;flex-basis:100%}.mw .market-browser-controls input,.mw .market-browser-controls select{font-size:16px}.mw .market-pagination{align-items:stretch;flex-direction:column;text-align:center}.mw .market-pagination .p-button{width:100%}}
 
 /* D1774 · Stopping is as ordinary as starting. Both watch endpoints have
    accepted a removal since they were written; neither had a control. */
