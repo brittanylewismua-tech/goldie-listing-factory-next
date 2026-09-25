@@ -236,7 +236,7 @@
 */
 .app-shell.command-workspace.command-workspace .factory-work button:disabled,
 .app-shell.command-workspace.command-workspace .factory-work .p-button:disabled{
-  opacity:1;background:#f1eaee!important;color:#96868f!important;
+  opacity:1;background:#f1eaee!important;color:#776b74!important;
   border:1px solid var(--cc-line)!important;box-shadow:none!important;cursor:not-allowed}
 
 /* ------------------------------------------------------------------- tabs */
