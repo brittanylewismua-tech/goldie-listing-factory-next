@@ -257,7 +257,7 @@
   drawn by this sheet, vertically aligned with the first line of the summary.
 */
 .app-shell.command-workspace .factory-work summary{
-  display:block;position:relative;padding-left:26px;list-style:none;cursor:pointer;
+  position:relative;padding-left:26px;list-style:none;cursor:pointer;
 }
 .app-shell.command-workspace .factory-work summary::-webkit-details-marker{display:none}
 .app-shell.command-workspace .factory-work summary::before{
@@ -267,3 +267,9 @@
 }
 .app-shell.command-workspace .factory-work details[open]>summary::before{transform:rotate(45deg)}
 .app-shell.command-workspace .factory-work summary:hover::before{border-color:var(--cc-ink)}
+/* The row's own layout, at the depth the rule above is written at, or it
+   would take the generic display and print the title and the figure as one
+   unbroken string. */
+.app-shell.command-workspace .factory-work .shop-map-review-row>summary{
+  display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;
+}
