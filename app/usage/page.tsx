@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import "../pricing-profile.css";
 import FactoryShell from "../factory-shell";
+import {scrollWorkspaceTo} from "../workspace-scroll";
 import { PLANS, type BillingInterval } from "../plan-limits";
 import { checkoutOpen, CLOSED_HEADLINE, CLOSED_BODY } from "@/app/checkout-gate";
 type PlanKey="trial"|"goldie"|"pro"|"scale"|"mastermind_beta"|"owner_test";
@@ -32,6 +33,7 @@ export default function UsagePage(){
   const[data,setData]=useState<Data|null>(null),[loadError,setLoadError]=useState(""),[fees,setFees]=useState<Fees>({etsyFeePercent:9.5,fixedFee:.25,listingFee:.20}),[goal,setGoal]=useState<Goal>({enabled:true,period:"week",target:20}),[goalMessage,setGoalMessage]=useState(""),[feeMessage,setFeeMessage]=useState(""),[billingMessage,setBillingMessage]=useState(""),[checkoutPlan,setCheckoutPlan]=useState<"goldie"|"pro"|"scale"|null>(null);
   const [preferencesLoaded,setPreferencesLoaded]=useState(false),[preferencesError,setPreferencesError]=useState("");
   useEffect(()=>{fetch("/api/usage").then(async response=>{const result=await responseJson<Partial<Data>&{error?:string}>(response);if(!response.ok||!result.plan||!result.usage||!result.resetAt)throw new Error(result.error||"Your usage could not be loaded.");setData(result as Data)}).catch(()=>setLoadError("Your plan and usage could not be loaded. Reload the page to try again."));fetch("/api/seller-preferences").then(r=>{if(!r.ok)throw Error();return responseJson<{pricing?:Partial<Fees>;listingGoal?:Goal}>(r)}).then(r=>{if(r.pricing)setFees(current=>({...current,...r.pricing}));if(r.listingGoal)setGoal(r.listingGoal);setPreferencesLoaded(true)}).catch(()=>setPreferencesError("Your saved goal and pricing settings could not be loaded."))},[]);
+  useEffect(()=>{if(!data||!preferencesLoaded||window.location.hash!=="#listing-goal")return;const frame=requestAnimationFrame(()=>scrollWorkspaceTo(document.getElementById("listing-goal")));return()=>cancelAnimationFrame(frame);},[Boolean(data),preferencesLoaded]);
   /* D341 · One switch. The sidebar bar and the receipt line are the same
      feature seen twice, so they cannot be turned on independently — half a
      progress display is more confusing than none. */
