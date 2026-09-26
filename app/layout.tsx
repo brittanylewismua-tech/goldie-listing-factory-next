@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import "@fontsource-variable/manrope";
+import "@fontsource-variable/bricolage-grotesque";
 import "@fontsource/dm-serif-display";
 /* D528 - ConfirmHost was mounted inside the Listing Factory only, so on Batch
    History, Keyword Banks and the Mockup Library confirmAction returned a promise

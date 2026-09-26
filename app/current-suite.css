@@ -658,3 +658,15 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .factory-work .management-create-foot>button{background:#252429!important;color:#fff!important;border:1px solid #252429!important}
 #suite-workspace .factory-work .management-create-foot>button:disabled{background:#e9e7eb!important;color:#66616b!important;border-color:#e9e7eb!important;opacity:1!important}
 #suite-workspace .factory-work .current-feature h2{font-size:32px!important;font-weight:700!important;line-height:1.15!important;letter-spacing:-1px!important}
+
+/* Page titles use a separate, more open display voice. Scope excludes the factory. */
+#suite-workspace .factory-work h1,
+#suite-workspace .factory-work .current-home-feature h2,
+#suite-workspace .factory-work .current-feature h2 {
+  font-family:'Bricolage Grotesque Variable',Arial,sans-serif!important;
+  font-weight:600!important;
+  letter-spacing:-.025em!important;
+  line-height:1.12!important;
+  font-synthesis:none;
+  text-wrap:balance;
+}
