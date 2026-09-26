@@ -258,6 +258,7 @@ export default {
       Six of seven saved niches were telling her their evidence could not be
       refreshed when nothing had been attempted. Costs no Etsy call.
     */
+    run("/api/platform-updates/tick");
     run("/api/market/niche-brief-tick");
     run("/api/market/niche-research-tick");
     /*

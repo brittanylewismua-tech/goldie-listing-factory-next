@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import PlatformUpdate from "../platform-updates/update-view";
 import { useEffect, useState } from "react";
 
 /**
@@ -107,6 +108,7 @@ export default function HomeView() {
       <h1>{heading}</h1>
     </header>
 
+    <PlatformUpdate compact/>
     <section className="home-panel" aria-labelledby="home-factory-title">
       <div className="home-panel-head">
         <span className="home-panel-mark" aria-hidden="true">

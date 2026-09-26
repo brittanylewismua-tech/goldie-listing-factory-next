@@ -29,6 +29,9 @@ export type Rule =
   | { kind: "owner" };
 
 export const ACCESS: Record<string, Rule> = {
+  "/platform-updates": {kind:"open"},
+  "/api/platform-updates": {kind:"open"},
+  "/api/platform-updates/tick": {kind:"owner"},
   "/market-watch/research": { kind: "feature", feature: "marketWatch" },
   "/api/niche-research": { kind: "feature", feature: "marketWatch" },
   // Plans check the requested feature entitlement for every read and write.
