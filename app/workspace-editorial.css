@@ -265,7 +265,7 @@
 /* Final live-library review: keep secondary actions and summaries compact. */
 #suite-workspace .bank-grid article{background:white!important}
 #suite-workspace .bank-grid article h3{font-size:18px!important}
-#suite-workspace .edit-bank{width:auto!important;display:inline-flex!important;padding:8px 14px!important;margin:12px 0 0!important}
+#suite-workspace .edit-bank{width:max-content!important;align-self:flex-start!important;display:inline-flex!important;padding:8px 14px!important;margin:12px 0 0!important}
 #suite-workspace .bank-keyword-toggle{width:auto!important;display:inline-flex!important;margin-right:16px!important}
 #suite-workspace .shop-map-worlds{display:block!important}
 #suite-workspace .shop-map-worlds>li{border:0!important;border-bottom:1px solid #e6dfe4!important;border-radius:0!important}
