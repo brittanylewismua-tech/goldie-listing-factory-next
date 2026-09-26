@@ -30,7 +30,6 @@
   display:grid;place-items:center;width:52px;height:52px;border-radius:14px;
   background:#141114;color:var(--suite-pink,#ff2ca6);box-shadow:4px 4px 0 var(--suite-pink,#ff2ca6);
 }
-.cc-home-name{margin-top:6px;color:var(--suite-pink-deep,#d90c89);font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
 .cc-home-tile h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.025em;line-height:1.15}
 .cc-home-tile p{margin:0;color:var(--suite-muted,#756a72);font-size:14px;line-height:1.55}
 .cc-home-stat{

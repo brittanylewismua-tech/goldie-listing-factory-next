@@ -81,8 +81,8 @@ export default function CommandCenterClient() {
 
   return <main className="cc-home p-grid">
     <header className="cc-home-head">
-      <p className="mini-label">COMMAND CENTER</p>
-      <h1>Research your next product.</h1>
+      <p className="mini-label">Research & insights</p>
+      <h1>Command Center</h1>
 
     </header>
 
@@ -90,9 +90,7 @@ export default function CommandCenterClient() {
       {TOOLS(summary).map(tool => (
         <Link key={tool.name} className="cc-home-tile" href={tool.href}>
           <span className="cc-home-icon" aria-hidden="true">{tool.icon}</span>
-          <span className="cc-home-name">{tool.name}</span>
-          <h2>{tool.question}</h2>
-          <p>{tool.what}</p>
+          <div className="cc-directory-copy"><h2>{tool.name}</h2><p>{tool.what}</p></div>
           {tool.stat && <span className="cc-home-stat">{tool.stat}</span>}
           <i className="cc-home-go" aria-hidden="true">→</i>
         </Link>
