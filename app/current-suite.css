@@ -740,3 +740,8 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .current-shop-changes>.nr-section-head>label{display:flex;align-items:center;gap:8px;font-size:12px}
 #suite-workspace .current-shop-changes header select{margin-left:0}
 @media(max-width:600px){#suite-workspace .current-shop-changes>.nr-section-head{align-items:flex-start;flex-direction:column;gap:18px}}
+
+#suite-workspace .current-clear-filter{margin-bottom:18px!important}
+#suite-workspace .current-buyer-more{margin-bottom:18px}
+#suite-workspace .current-buyer-more>summary{padding:8px 0!important;font-size:13px!important;color:#666570!important;cursor:pointer}
+#suite-workspace .current-buyer-more[open]>summary{margin-bottom:14px}
