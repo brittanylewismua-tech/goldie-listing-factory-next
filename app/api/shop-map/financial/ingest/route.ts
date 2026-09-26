@@ -9,6 +9,8 @@ import { classifyLedgerType } from "@/app/finance-classify";
 import { windowsFor, incrementalFrom, outstanding, WINDOW_SECONDS } from "@/app/finance-windows";
 import { classifyOrphan } from "@/app/finance-reconcile";
 import { ensureFinanceTables } from "@/app/finance-store";
+import { ensureListingTables, decodeEntities } from "@/app/shop-map-listings";
+import { etsySaleValues } from "@/app/etsy-sale-values";
 import { printifyCall } from "../../../../printify-call.ts";
 
 /**
@@ -49,6 +51,7 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
   const user = access.user;
 
   await ensureFinanceTables();
+  await ensureListingTables();
   const parameters = new URL(request.url).searchParams;
   const maxWindows = Math.min(25, Math.max(1, Number(parameters.get("windows")) || 3));
   const maxOrderPages = Math.min(10, Math.max(1, Number(parameters.get("orders")) || 3));
@@ -299,9 +302,34 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
           refunds.length ? 1 : 0, created,
           Number(receipt.updated_timestamp ?? receipt.update_timestamp ?? 0) || null, now));
       receiptsStored += 1;
-      transactionsStored += ((receipt.transactions ?? []) as unknown[]).length;
+      for (const line of (receipt.transactions ?? []) as Array<Record<string, unknown>>) {
+        const transactionId = Number(line.transaction_id), listingId = Number(line.listing_id);
+        if (!Number.isSafeInteger(transactionId) || transactionId <= 0 || !Number.isSafeInteger(listingId) || listingId <= 0) continue;
+        const values = etsySaleValues(receipt, line, now);
+        if (!values) {
+          // A previously paid transaction may subsequently be canceled.
+          if (receipt.is_canceled === true || /^(canceled|cancelled)$/i.test(status) || receipt.is_paid === false || receipt.was_paid === false)
+            receiptWrites.push(db.prepare(`UPDATE shop_map_listing_sales SET refunded=1 WHERE user_id=? AND shop_id=? AND transaction_id=?`)
+              .bind(user.userId, shopId, transactionId));
+          continue;
+        }
+        receiptWrites.push(db.prepare(`INSERT INTO shop_map_listing_sales
+          (user_id,shop_id,listing_id,transaction_id,receipt_id,quantity,price_minor,currency,sold_at,refunded)
+          VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,shop_id,transaction_id) DO UPDATE SET
+          listing_id=excluded.listing_id,receipt_id=excluded.receipt_id,quantity=excluded.quantity,
+          price_minor=excluded.price_minor,currency=excluded.currency,sold_at=excluded.sold_at,refunded=excluded.refunded`)
+          .bind(user.userId, shopId, listingId, transactionId, receiptId, values.quantity,
+            values.priceMinor, values.currency, values.soldAt, refunds.length ? 1 : 0));
+        // Keep a newly sold or retired listing visible before the next catalog sync.
+        receiptWrites.push(db.prepare(`INSERT INTO shop_map_listings
+          (user_id,shop_id,listing_id,title,tags,state,ingested_at) VALUES (?,?,?,?,?,'unknown',?)
+          ON CONFLICT(user_id,shop_id,listing_id) DO NOTHING`)
+          .bind(user.userId, shopId, listingId, decodeEntities(String(line.title ?? "Listing details unavailable")), "[]", now));
+        transactionsStored += 1;
+      }
     }
-    if (receiptWrites.length) await db.batch(receiptWrites);
+    for (let offset = 0; offset < receiptWrites.length; offset += 80)
+      await db.batch(receiptWrites.slice(offset, offset + 80));
     if (results.length < 100) {receiptsReadComplete=true;break;}
     /*
       Everything from here back is already held, plus the overlap - unless a
