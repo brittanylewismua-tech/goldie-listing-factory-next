@@ -745,3 +745,12 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .current-buyer-more{margin-bottom:18px}
 #suite-workspace .current-buyer-more>summary{padding:8px 0!important;font-size:13px!important;color:#666570!important;cursor:pointer}
 #suite-workspace .current-buyer-more[open]>summary{margin-bottom:14px}
+
+/* Large surfaces stay quiet; pink frames the feature rather than filling it. */
+#suite-workspace .factory-work :is(.current-feature,.current-home-feature,.current-money-total){background:#fff!important;border:1px solid #edcbdc!important;box-shadow:inset 0 3px 0 #ff2ca6!important}
+#suite-workspace .factory-work .current-pill{background:#fff0f6!important;border-color:#f1d5e3!important;color:#8d285b!important}
+#suite-workspace .factory-work .current-feature button,
+#suite-workspace .factory-work .current-home-feature .current-button,
+#suite-workspace .factory-work .current-home-feature .current-circle-arrow{background:#242329!important;color:#fff!important;border-color:#242329!important}
+#suite-workspace .factory-work .current-feature p{color:#53515b!important}
+#suite-workspace .factory-work .cc-home-tile:nth-child(2){background:#fff!important;border-color:#edcbdc!important;box-shadow:inset 0 3px 0 #ff2ca6!important}
