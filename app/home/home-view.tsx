@@ -60,6 +60,8 @@ const FACTORY = [
 const TOOLS = [
   { href: "/market-watch", name: "Market Watch", what: "Tracked niches and daily activity",
     icon: icon(<><path d="M3 17l6-6 4 4 7-7" /><path d="M14 8h7v7" /></>) },
+  { href: "/market-watch/research", name: "Niche Research", what: "Find ten niche shops and follow ongoing buyer insights",
+    icon: icon(<><circle cx="10" cy="10" r="6" /><path d="m15 15 6 6M10 7v6M7 10h6" /></>) },
   { href: "/shop-map", name: "Shop Map", what: "Listings, product themes and your shop numbers",
     icon: icon(<><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></>) },
   { href: "/trademark", name: "Trademark Tracker", what: "Phrase checks and saved watchlists",

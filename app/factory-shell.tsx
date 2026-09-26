@@ -31,7 +31,7 @@ import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
 
 export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "mockups" | "usage" | "command-center"
-  | "connections" | "market-watch" | "shop-map" | "design-scanner" | "more";
+  | "connections" | "niche-research" | "market-watch" | "shop-map" | "design-scanner" | "more";
 
 /* D834 · Usage + Plan and Connections moved into the account menu, where the
    account itself already lives. The rail is the three places work happens. */
@@ -66,6 +66,7 @@ export const NAV: SuiteNavItem[] = [
   { key: "mockups", label: "Mockup Sets", href: "/mockups", icon: "mockups", group: "factory" },
   { key: "usage", label: "Usage", href: "/usage", icon: "usage", group: "factory" },
   { key: "market-watch", label: "Market Watch", href: "/market-watch", icon: "marketWatch", group: "command" },
+  { key: "niche-research", label: "Niche Research", href: "/market-watch/research", icon: "marketWatch", group: "command" },
   { key: "shop-map", label: "Shop Map", href: "/shop-map", icon: "shopMap", group: "command" },
   { key: "trademark", label: "Trademark Tracker", href: "/trademark", icon: "trademark", group: "command" },
   { key: "connections", label: "Connections", href: "/connections", icon: "connections", group: "connections" },
@@ -169,7 +170,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
     : usageFailed ? "Couldn't load — reopen to retry"
     : "Loading usage…";
 
-  return <main className={`app-shell interior-shell${railOpen ? "" : " rail-collapsed"}${desktopOnly ? "" : " responsive-shell"}${["home","command-center","market-watch","shop-map","design-scanner","trademark","hotlist","more","connections","batches","keywords","mockups","usage","account"].includes(active) ? " command-workspace" : ""}`}>
+  return <main className={`app-shell interior-shell${railOpen ? "" : " rail-collapsed"}${desktopOnly ? "" : " responsive-shell"}${["home","command-center","niche-research","market-watch","shop-map","design-scanner","trademark","hotlist","more","connections","batches","keywords","mockups","usage","account"].includes(active) ? " command-workspace" : ""}`}>
     {/* D828 · the shell hides every child but this one on a phone. Without it
         these pages rendered as a blank screen. */}
     {desktopOnly && <MobileGate />}

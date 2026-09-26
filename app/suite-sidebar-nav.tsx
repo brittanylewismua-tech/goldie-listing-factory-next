@@ -4,7 +4,7 @@ import { useEffect, useState, type MouseEvent } from "react";
 import { NavIcon, type NavKey as NavIconKey } from "./nav-icons";
 
 export type SuiteNavKey = "home" | "factory" | "batches" | "keywords" | "mockups" | "usage" | "command-center"
-  | "market-watch" | "design-scanner" | "shop-map" | "trademark" | "connections";
+  | "niche-research" | "market-watch" | "design-scanner" | "shop-map" | "trademark" | "connections";
 
 export type SuiteNavItem = {
   key: SuiteNavKey;
@@ -22,7 +22,7 @@ type Props = {
 };
 
 const FACTORY_KEYS = new Set(["factory", "batches", "keywords", "mockups", "usage"]);
-const COMMAND_KEYS = new Set(["command-center", "market-watch", "design-scanner", "shop-map", "trademark"]);
+const COMMAND_KEYS = new Set(["command-center", "niche-research", "market-watch", "design-scanner", "shop-map", "trademark"]);
 
 function LockIcon() {
   return <svg className="suite-nav-lock" viewBox="0 0 24 24" aria-hidden="true">
