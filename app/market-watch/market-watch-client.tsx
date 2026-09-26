@@ -317,7 +317,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     failed. It says how long it will be, and the space below holds its
     shape while it waits. */}
     <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Reading Etsy for “${view.phrase}”. This takes a few seconds.`:rows.length?`${rows.length.toLocaleString()} search results${total!==null&&total>rows.length?` from ${total.toLocaleString()} Etsy matches`:""}`:""}</p></div>
-    {profile&&<WinnerProfile profile={profile} shelf={shelf}/>}
+    {profile&&<details className="market-summary"><summary>Price and wording patterns</summary><WinnerProfile profile={profile} shelf={shelf}/></details>}
     {/* D1783 · A sort that returns nothing is worse than a sort that is not
     there. Units are counted from the difference between two readings of a
     listing's quantity, so a phrase scanned for the first time has none yet -

@@ -374,7 +374,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           picker ran the full width of the card for a twelve-character value.
           Heading, then the two controls on one line. */}
       <div className="shop-map-money-head">
-        <h2>Monthly profit</h2>
+        <h2>Monthly numbers</h2>
         <div className="shop-map-money-controls">
           <label className="shop-map-period"><span>Month</span><input type="month" value={selectedMonth||shown.month||""} onInput={event=>{const value=event.currentTarget.value;if(/^\d{4}-(0[1-9]|1[0-2])$/.test(value))setSelectedMonth(value)}} onChange={event=>setSelectedMonth(event.target.value)}/></label>
           <button type="button" className="shop-map-confirm p-button p-button-quiet" disabled={syncingMoney} onClick={()=>void refreshMoney()}>{syncingMoney ? "Refreshing your numbers…" : "Refresh your numbers"}</button>
