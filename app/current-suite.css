@@ -594,7 +594,7 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .current-home-aside>section{margin:0!important}
 #suite-workspace .current-home-aside .platform-brief-card>a{background:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;text-decoration:none!important}
 #suite-workspace .nr .current-buyer-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
-#suite-workspace .nr .current-buyer-grid>article{display:block;padding:24px!important;min-width:0}
+#suite-workspace .nr .current-buyer-grid>article{display:flex;padding:24px!important;min-width:0}
 #suite-workspace .current-buyer-grid h3{font-size:23px!important;line-height:1.25!important;margin:12px 0 20px!important}
 #suite-workspace .current-buyer-grid blockquote{margin:18px 0 0;padding:18px 0 0;border:0;border-top:1px solid #e4e4e9}
 #suite-workspace .current-buyer-grid blockquote p{font-size:15px!important;line-height:1.65!important;margin:0 0 12px!important}
