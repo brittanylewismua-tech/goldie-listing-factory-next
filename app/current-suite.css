@@ -476,3 +476,6 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .nr-settings[open]>summary::after{content:'⌃'}
 .account-page :is(.account-primary,.account-provider){box-shadow:none!important;min-height:46px!important;font-size:14px!important;font-weight:700!important}
 .account-page .account-intro{font-size:16px!important;line-height:1.6!important;color:#666570!important}
+#suite-workspace .collectionChevron{font-size:0!important;color:#666570!important;border-color:#e4e4e9!important}
+#suite-workspace .collectionChevron::after{content:'';width:8px;height:8px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg)}
+#suite-workspace .market-browser-controls .market-results-sort{border:0!important;padding:0!important;margin:0!important}
