@@ -90,8 +90,8 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
     const now=Math.floor(Date.now()/1000);
     const seen=new Map<number,EtsyDisplayListing>();
     for(const row of rows){const id=Number(row.listing_id);if(id&&!seen.has(id))seen.set(id,row);}
-    const scanned=[...seen.values()].map(row=>({
-      listingId:Number(row.listing_id),title:decodeEntities(String(row.title??'')),
+    const scanned=[...seen.values()].map((row,relevanceIndex)=>({
+      relevanceIndex,listingId:Number(row.listing_id),title:decodeEntities(String(row.title??'')),
       etsyUrl:`https://www.etsy.com/listing/${row.listing_id}`,
       priceCents:listingPrice(row),currency:row.price?.currency_code??'USD',
       favorites:row.num_favorers??null,views:row.views??null,
@@ -145,8 +145,8 @@ export const GET=withErrorLog('keyword-search',async(request:Request)=>{
       discovery happened to find, and that a phrase looked at once carries
       counts the next time somebody opens it.
     */
-    void seedFromScan(listings.map(row=>({
-      listingId:row.listingId,shopId:null,title:row.title,url:row.etsyUrl,
+    void seedFromScan(listings.map((row,relevanceIndex)=>({
+      relevanceIndex,listingId:row.listingId,shopId:null,title:row.title,url:row.etsyUrl,
       taxonomyId:null,favorites:row.favorites,views:row.views,quantity:null,
       priceCents:row.priceCents,currency:row.currency,personalizable:row.isPersonalizable??null,
     }))).catch(()=>undefined);

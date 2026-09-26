@@ -79,6 +79,7 @@ export type Rankable = {
   /* Counted, not estimated: the drop between two readings of Etsy's own
      quantity field. Absent until a listing has been read twice. */
   soldUnits?: number | null;
+  relevanceIndex?: number; currency?: string;
   favorites: number | null; views: number | null;
   priceCents: number | null; ageDays: number | null;
   createdAt?: number | null; listedAt?: number | null;
@@ -114,13 +115,13 @@ function by<T>(value: (row: T) => number | null, direction: 1 | -1 = -1) {
 
 export function rankScan<T extends Rankable>(rows: T[], order: KeywordOrder): T[] {
   const ranked = [...rows];
-  if (order === 'relevance') return ranked;
+  if (order === 'relevance') return ranked.sort((a,b)=>(a.relevanceIndex??Infinity)-(b.relevanceIndex??Infinity));
   /* Units first when asked for, and a listing with no second reading sorts
      below one with zero counted rather than being treated as a zero. */
   if (order === 'sold') return ranked.sort(by(row => row.soldUnits ?? null));
   if (order === 'favorites') return ranked.sort(by(row => row.favorites));
   if (order === 'views') return ranked.sort(by(row => row.views));
   if (order === 'momentum') return ranked.sort(by(row => momentum(row)));
-  if (order === 'newest') return ranked.sort(by(row => row.listedAt ?? row.createdAt ?? null));
-  return ranked.sort(by(row => row.priceCents, order === 'price' ? 1 : -1));
+  if (order === 'newest') return ranked.sort(by(row => row.createdAt ?? null));
+  return ranked.sort((a,b)=>(a.currency??'').localeCompare(b.currency??'')||by<T>(row => row.priceCents, order === 'price' ? 1 : -1)(a,b));
 }

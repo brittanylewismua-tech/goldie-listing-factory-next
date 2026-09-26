@@ -237,3 +237,16 @@ test('an unfiltered price band says it spans every product type', () => {
      than a clause appended to a sentence. */
   assert.match(client, /note:shelf\?undefined:"every product type",warn:!shelf/);
 });
+
+test('newest original listing ignores renewal of an older item',()=>{
+ const rows=[{listingId:1,createdAt:100,listedAt:900},{listingId:2,createdAt:500,listedAt:500}];
+ assert.deepEqual(rankScan(rows,'newest').map(r=>r.listingId),[2,1]);
+});
+test('relevance restores Etsy ordering after a server favorites sort',()=>{
+ const rows=[{listingId:2,relevanceIndex:1},{listingId:1,relevanceIndex:0}];
+ assert.deepEqual(rankScan(rows,'relevance').map(r=>r.listingId),[1,2]);
+});
+test('price sorting never compares raw amounts across currencies',()=>{
+ const rows=[{listingId:1,currency:'USD',priceCents:100},{listingId:2,currency:'EUR',priceCents:500},{listingId:3,currency:'USD',priceCents:50}];
+ assert.deepEqual(rankScan(rows,'price').map(r=>r.listingId),[2,3,1]);
+});

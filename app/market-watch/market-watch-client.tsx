@@ -158,11 +158,11 @@ export default function MarketWatchClient(
   */}
           {watch.moving>0
             ? <dl className="keyword-watch-stats">
-                <div><dt>Seen selling</dt><dd>{watch.moving}</dd></div>
-                <div><dt>More than once</dt><dd>{watch.repeated}</dd></div>
+                <div><dt>With stock decreases</dt><dd>{watch.moving}</dd></div>
+                <div><dt>Repeated decreases</dt><dd>{watch.repeated}</dd></div>
                 <div><dt>Shops</dt><dd>{watch.shops}</dd></div>
               </dl>
-            : <p className="keyword-watch-quiet">Nothing under watch here has been seen selling yet.</p>}
+            : <p className="keyword-watch-quiet">No stock decreases observed in the listings watched so far.</p>}
           {/*
     D1784 · FOUR EMPTY BOXES AND NO EXPLANATION.
 
@@ -316,14 +316,14 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     eight to sixteen seconds is indistinguishable from a page that has
     failed. It says how long it will be, and the space below holds its
     shape while it waits. */}
-    <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Reading Etsy for “${view.phrase}”. This takes a few seconds.`:""}</p></div>
+    <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Reading Etsy for “${view.phrase}”. This takes a few seconds.`:rows.length?`${rows.length.toLocaleString()} search results${total!==null&&total>rows.length?` from ${total.toLocaleString()} Etsy matches`:""}`:""}</p></div>
     {profile&&<WinnerProfile profile={profile} shelf={shelf}/>}
     {/* D1783 · A sort that returns nothing is worse than a sort that is not
     there. Units are counted from the difference between two readings of a
     listing's quantity, so a phrase scanned for the first time has none yet -
     and the option only appears once something in this scan actually has a
     count behind it. */}
-    <div className="market-results-sort"><label>Sort by<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}>{rows.some(row=>row.soldUnits!=null)&&<option value="sold">Units counted sold</option>}<option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="momentum">Favorites per day listed</option><option value="newest">Recently listed / renewed</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label></div>
+    <div className="market-results-sort"><label>Sort these results<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}>{rows.some(row=>row.soldUnits!=null)&&<option value="sold">Observed stock decrease</option>}<option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="momentum">Favorites per day listed</option><option value="newest">Newest original listing</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label></div>
     {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Try again</button></p>}
     {photoError&&<p className="p-notice failed" role="alert">{photoError} <button className="p-button p-button-quiet" onClick={()=>setPhotoRetry(value=>value+1)}>Retry photos</button></p>}
     {!loading&&!error&&!listings.length&&<p className="empty">No Etsy listings match this search.</p>}
@@ -444,7 +444,7 @@ function WinnerProfile({profile,shelf}:{profile:Profile;shelf:string}){
         +(profile.blanks.length>1?`, then ${profile.blanks[1].label}`:"")});
   if(!stats.length&&!profile.subjects.length)return null;
   return <section className="winner-profile">
-    <h2>What the top {profile.sampleSize} have in common</h2>
+    <h2>{profile.sampleSize} most-favorited results</h2>
     {stats.length>0&&<dl className="winner-stats">
       {stats.map(stat=><div key={stat.label}>
         <dt>{stat.label}</dt>
@@ -475,7 +475,7 @@ function ListingCard({listing,action,extra}:{listing:Listing;action?:ReactNode;e
   {listing.imageUrl && listing.displayFresh?<img src={listing.imageUrl} alt={listing.title} loading="lazy" width={570} height={570}/>:<p className="no-image">{listing.photoPending ? "Loading photo…" : listing.imageUrl ? "Photo needs refreshing" : "Photo unavailable from Etsy"}</p>}
   <div className="body"><div className="listing-price-row"><strong>{money(listing)}</strong>{!listing.displayFresh&&<span>Saved details</span>}</div><h2 className="title">{listing.title}</h2><dl className="listing-stat-grid">{/* Counted, not estimated. Absent until a listing has been read twice, and
     shown with the window it was counted over, because three units over four
-    hours and three over three weeks are different findings. */}{listing.soldUnits!=null&&<div className="listing-stat-counted"><dt>Units counted sold</dt><dd>{listing.soldUnits}<small>{listing.soldHours!=null?` over ${listing.soldHours>=48?`${Math.round(listing.soldHours/24)} days`:`${listing.soldHours} hours`} watched`:""}</small></dd></div>}<div><dt>Total favorites</dt><dd>{listing.favorites??"Unavailable"}</dd></div><div><dt>Total views</dt><dd>{listing.views??"Unavailable"}</dd></div>{/* D1810 · "Listed / renewed" printed the same date on all fifty rows. Etsy's
+    hours and three over three weeks are different findings. */}{listing.soldUnits!=null&&<div className="listing-stat-counted"><dt>Observed stock decrease</dt><dd>{listing.soldUnits}<small>{listing.soldHours!=null?` over ${listing.soldHours>=48?`${Math.round(listing.soldHours/24)} days`:`${listing.soldHours} hours`} watched`:""}</small></dd></div>}<div><dt>Total favorites</dt><dd>{listing.favorites??"Unavailable"}</dd></div><div><dt>Total views</dt><dd>{listing.views??"Unavailable"}</dd></div>{/* D1810 · "Listed / renewed" printed the same date on all fifty rows. Etsy's
     creation_timestamp moves on renewal, so on a live search it is usually
     today for everything and tells a seller nothing, beside an Original age
     that is genuinely different for every listing. The field still orders the
