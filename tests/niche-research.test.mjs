@@ -59,3 +59,12 @@ test('the reported anti-Trump shirt query matches hyphenated and unhyphenated pr
  assert(matchesNiche({title:'Anti-Trump Sweatshirt',tags:[]},phrases));
  assert.equal(matchesNiche({title:'Trump Shirt',tags:['pro trump']},phrases),false);
 });
+
+
+test('onboarding checks another candidate before starting a huge general catalog',async()=>{
+ const p=project();p.shops=Array.from({length:20},(_,i)=>({...shop(i+1),reviews:[],checkedAt:now,cycleAt:now}));
+ Object.assign(p.shops[19],{checkedAt:0,catalogDone:false,reviewsDone:false,catalogOffset:0,catalogTotal:9000});
+ p.candidates=Array.from({length:21},(_,i)=>({id:i+1,hits:1}));
+ const e=engine(url=>{assert(url.endsWith('shops/21'));return {shop_name:'Focused candidate',listing_active_count:100};});
+ await e.advance('member',p);assert.equal(p.shops.length,21);assert.equal(p.shops[19].catalogOffset,0);
+});

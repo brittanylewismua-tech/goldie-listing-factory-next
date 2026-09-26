@@ -65,8 +65,11 @@ export async function advanceResearch(user:string,p:NicheProject){
  const checked=p.shops.filter(s=>s.checkedAt>=s.cycleAt).length;
  // Inspect shop sizes in small batches before committing to full catalogs.
  // Otherwise the search's largest general-purpose seller can monopolize onboarding.
- const profiling=p.shops.length<Math.min(p.candidates.length,(Math.floor(checked/20)+1)*20);
  const pending=p.shops.filter(s=>s.checkedAt<s.cycleAt).sort((a,b)=>(a.catalogTotal??Infinity)-(b.catalogTotal??Infinity))[0];
+ // Before starting a very large catalog, look for a smaller relevant candidate.
+ // A shop already being read keeps its progress and completes normally.
+ const widenBeforeLargeCatalog=!!pending&&pending.catalogOffset===0&&(pending.catalogTotal??0)>2000&&p.shops.length<80;
+ const profiling=p.shops.length<Math.min(p.candidates.length,(Math.floor(checked/20)+1)*20)||widenBeforeLargeCatalog;
  if(pending&&(!profiling||!candidate)){await checkShop(user,p,pending);return;}
  if(!candidate){if(p.searchDone.every(Boolean)){if(!p.selected.length&&!p.selectionEdited)p.selected=qualified.map(s=>s.id);finish(p,now);}else p.phase='discovering';return;}
  const b=await etsy(p,`shops/${candidate.id}`);p.shops.push({id:candidate.id,name:b.shop_name??`Shop ${candidate.id}`,url:b.url??`https://www.etsy.com/shop/${encodeURIComponent(b.shop_name??'')}`,catalogOffset:0,catalogTotal:typeof b.listing_active_count==='number'?b.listing_active_count:null,catalogDone:false,reviewOffset:0,reviewsDone:false,listings:[],reviews:[],checkedAt:0,cycleAt:now,reviewSince:now-365*86400});
