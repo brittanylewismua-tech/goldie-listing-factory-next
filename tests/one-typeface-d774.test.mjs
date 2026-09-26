@@ -31,6 +31,14 @@ for (const name of readdirSync(new URL("../app", import.meta.url)).filter(file =
     const selector = decl.parent.selector || "";
     if (EXEMPT.test(selector)) return;
     if (/Manrope/.test(decl.value)) return;
+    // Current's display headings are outside the Listing Factory shell.
+    const currentHeadings = new Set([
+      "#suite-workspace .factory-work h1",
+      "#suite-workspace .factory-work .current-home-feature h2",
+      "#suite-workspace .factory-work .current-feature h2",
+    ]);
+    if (name === "current-suite.css" && /^'Bricolage Grotesque Variable',Arial,sans-serif$/.test(decl.value)
+      && selector.split(",").every(part => currentHeadings.has(part.trim()))) return;
     if (name === "production-repair.css" && /h1/.test(selector) && /DM Serif Display/.test(decl.value)) return;                 /* saying Manrope loudly is fine */
     offenders.push(`${name}: ${selector.replace(/\s+/g, " ").slice(0, 52)} — ${decl.value.slice(0, 30)}`);
   });
