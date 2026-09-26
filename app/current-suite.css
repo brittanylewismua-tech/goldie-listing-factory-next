@@ -652,7 +652,7 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 @media(max-width:600px){#suite-workspace .factory-work h1{font-size:30px!important}#suite-workspace .factory-work :is(button,.p-button),#suite-workspace .current-button{min-height:44px!important}#suite-workspace .current-home-feature h2{font-size:32px!important}#suite-workspace .current-navigation a{min-height:44px!important}}
 @media(prefers-reduced-motion:reduce){#suite-workspace :is(a,button,summary){transition:none!important}}
 
-#suite-workspace .current-more summary::after{content:none}
+#suite-workspace .current-more summary::after,#suite-workspace .current-more[open] summary::after{content:none}
 #suite-workspace .current-more-chevron{flex:none;transition:transform 140ms ease}
 #suite-workspace .current-more[open] .current-more-chevron{transform:rotate(180deg)}
 #suite-workspace .factory-work .management-create-foot>button{background:#252429!important;color:#fff!important;border:1px solid #252429!important}
