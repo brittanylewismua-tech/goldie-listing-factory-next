@@ -52,3 +52,10 @@ test('automatic panels rank recent niche evidence above overall shop size and ex
  large.catalogTotal=10000;small.reviews.push(...small.reviews.map(r=>({...r,transactionId:r.transactionId+10000})));pending.catalogDone=false;
  assert.deepEqual(model.rankNicheShops([large,pending,small],at).map(s=>s.id),[1,2]);
 });
+
+test('the reported anti-Trump shirt query matches hyphenated and unhyphenated product wording',()=>{
+ const phrases=suggestedCluster('anti-Trump shirt');
+ assert(matchesNiche({title:'Subtle Anti Trump Tee',tags:[]},phrases));
+ assert(matchesNiche({title:'Anti-Trump Sweatshirt',tags:[]},phrases));
+ assert.equal(matchesNiche({title:'Trump Shirt',tags:['pro trump']},phrases),false);
+});

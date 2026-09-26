@@ -34,7 +34,10 @@ export const POST=withErrorLog('niche-research',async(request:Request)=>{
  const requested=Array.isArray(body.listingIds)?body.listingIds:[],ls=p.shops.flatMap(s=>s.listings).filter(l=>requested.includes(l.id)&&Date.now()/1000-(l.imageAt??0)>=3600||requested.includes(l.id)&&!l.image).slice(0,50);
  const display=await listingDisplay(ls.map(l=>l.id),'shop-watch');for(const l of ls){const r=display.get(l.id);if(r){l.image=listingPhoto(r);l.imageAt=Math.floor(Date.now()/1000);l.price=listingPrice(r);l.currency=r.price?.currency_code??'';l.title=String(r.title??l.title);l.displayAt=Math.floor(Date.now()/1000);}else{l.image='';l.active=false;}}
  for(const s of p.shops)await putEvidence(user,p.id,s.id,'listing',ls.filter(l=>l.shopId===s.id));
- }else if(p.phase!=='ready')await advanceResearch(user,p);
+ }else if(p.phase!=='ready'){
+ const deadline=Date.now()+10000;
+ for(let step=0;step<4&&Date.now()<deadline&&p.phase!=='ready';step++)await advanceResearch(user,p);
+ }
  if(body.action!=='photos')delete p.error;await writeResearch(user,p,lease);return response(p);
  }catch(error){p.error=error instanceof Error?error.message:'The update stopped. Progress is saved.';p.nextRun=Math.max(p.nextRun,Math.floor(Date.now()/1000)+3600);await writeResearch(user,p,lease);return response(p,502);}
 });
