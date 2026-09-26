@@ -14,20 +14,12 @@ import { usePathname } from "next/navigation";
  * workspace, which is a desktop tool, and off the marketing and sign-in
  * pages, where a five-tab bar would be noise around a single decision.
  */
-/*
-  SCAN SITS IN THE MIDDLE, AND THAT IS THE POINT.
-
-  Uploading a design straight from the camera roll is the thing this can do
-  on a phone that it cannot do better anywhere else, so it takes the centre
-  position — the easiest place on the bar to reach with a thumb. The Trademark
-  Checker moves into More with a shortcut on Home: it is a thing people do
-  occasionally and deliberately, not something they need one tap from every
-  screen.
-*/
+/* The center shortcut opens the live niche research tool. The retired
+   scanner route redirects to Shop Map and is not a distinct destination. */
 const TABS = [
   { href: "/home", label: "Home", glyph: "◆" },
   { href: "/market-watch", label: "Watch", glyph: "◈" },
-  { href: "/design-scanner", label: "Scan", glyph: "⊚" },
+  { href: "/market-watch/research", label: "Niches", glyph: "⊚" },
   { href: "/shop-map", label: "My Shop", glyph: "▦" },
   { href: "/more", label: "More", glyph: "≡" },
 ];
@@ -46,18 +38,10 @@ const BARE = [/^\/$/, /^\/account\/sign-in/, /^\/signup/, /^\/auth/];
 */
 const WORKSPACE = [/^\/listing-factory/, /^\/listingfactory/];
 
-/*
-  ONE EXCEPTION, AND IT IS DELIBERATE.
-
-  Design Scanner belongs to the Listing Factory product — it is the preflight
-  before a design becomes listings — but uploading a design from a phone's
-  camera roll is the natural way to start. So it gets its own route and is
-  explicitly NOT swept up by the desktop gate above.
-*/
-const SCANNER = /^\/design-scanner/;
-
 export default function MobileShell() {
   const pathname = usePathname() ?? "/";
+  const activeHref = TABS.filter(tab => pathname === tab.href || pathname.startsWith(`${tab.href}/`))
+    .sort((a,b) => b.href.length - a.href.length)[0]?.href;
   const [installable, setInstallable] = useState<null | "ios" | "prompt">(null);
   const [dismissed, setDismissed] = useState(true);
 
@@ -79,7 +63,8 @@ export default function MobileShell() {
     try { asked = localStorage.getItem("goldie-install-asked") ?? ""; } catch { /* private mode */ }
     if (asked) return;
 
-    const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const iOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     if (iOS) {
       /* Safari offers no install event; the member has to be shown where the
          button is, so the walkthrough is the only route. */
@@ -104,7 +89,7 @@ export default function MobileShell() {
 
   if (BARE.some(pattern => pattern.test(pathname))) return null;
 
-  if (WORKSPACE.some(pattern => pattern.test(pathname)) && !SCANNER.test(pathname))
+  if (WORKSPACE.some(pattern => pattern.test(pathname)))
     return <aside className="desktop-only-notice" role="note">
       <a className="mobile-notice-brand" href="/home">Goldie Suite</a>
       <b>Create listings on a computer.</b>
@@ -117,7 +102,7 @@ export default function MobileShell() {
   return <>
     <nav className="goldie-tabs" aria-label="Main">
       {TABS.map(tab => {
-        const current = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+        const current = tab.href === activeHref;
         return <a key={tab.href} href={tab.href} className={current ? "current" : ""}
           aria-current={current ? "page" : undefined}>
           <span aria-hidden="true">{tab.glyph}</span>

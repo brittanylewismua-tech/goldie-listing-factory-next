@@ -132,8 +132,8 @@
 
 /* ------------------------------------------------------------------ forms */
 .app-shell.command-workspace .factory-work :is(input,select,textarea):not([type="file"]):not([type="checkbox"]):not([type="radio"]){
-  min-height:42px;padding:0 12px;border:1px solid var(--cc-line)!important;border-radius:var(--cc-radius-sm)!important;
-  background:var(--cc-surface)!important;color:var(--cc-ink)!important;font-size:14px!important;font-weight:650!important;
+  min-height:var(--cc-control-height,42px);padding:0 12px;border:1px solid var(--cc-line)!important;border-radius:var(--cc-radius-sm)!important;
+  background:var(--cc-surface)!important;color:var(--cc-ink)!important;font-size:var(--cc-control-font-size,14px)!important;font-weight:650!important;
   box-shadow:none!important;
 }
 .app-shell.command-workspace .factory-work textarea{min-height:96px;padding:12px;line-height:1.5}
@@ -214,8 +214,9 @@
 .app-shell.command-workspace .factory-work>:is(section,article)+:is(section,article){margin-top:22px}
 
 @media (max-width:860px){
-  .app-shell.command-workspace .factory-work h1{font-size:27px}
-  .app-shell.command-workspace .factory-work h2{font-size:18px}
+  .app-shell.command-workspace .factory-work{--cc-control-font-size:16px;--cc-control-height:44px}
+  .app-shell.command-workspace .factory-work h1{font-size:27px!important}
+  .app-shell.command-workspace .factory-work h2{font-size:18px!important}
   .app-shell.command-workspace .factory-work :is(.cc-tool,.shop-map-card,.tm-watches,.p-card,.winner-profile,.listing-check){padding:16px!important}
 }
 

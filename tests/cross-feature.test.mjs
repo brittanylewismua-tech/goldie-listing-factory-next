@@ -119,9 +119,12 @@ test("the Watch tab goes to Market Watch", () => {
   assert.ok(!SHELL.includes('href: "/hot-list"'), "the Watch tab still points at Hot List");
 });
 
-test("the five tabs are the five", () => {
+test("the five mobile tabs lead to live distinct tools", () => {
+  // The retired Scan route redirects to My Shop; keep the center shortcut useful.
   const labels = [...SHELL.matchAll(/label: "([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(labels, ["Home", "Watch", "Scan", "My Shop", "More"]);
+  assert.deepEqual(labels, ["Home", "Watch", "Niches", "My Shop", "More"]);
+  assert.match(SHELL, /href: "\/market-watch\/research", label: "Niches"/);
+  assert.doesNotMatch(SHELL, /href: "\/design-scanner"/);
 });
 
 test("home shows nothing rather than an empty counter", () => {

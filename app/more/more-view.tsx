@@ -44,7 +44,7 @@ const GROUPS: Group[] = [
     rows: [
       {href:"/market-watch",name:"Market Watch",icon:"marketWatch",what:"Compare current Etsy listings and follow keywords and shops."},
       {href:"/shop-map",name:"Shop Map",icon:"shopMap",what:"Review your catalog, sold listings, and monthly numbers."},
-      {href:"/design-scanner",name:"Design Scanner",icon:"designScanner",what:"Check artwork readability and compare visual patterns."},
+      {href:"/market-watch/research",name:"Niche Research",icon:"marketWatch",what:"Find niche shops and follow their products, phrases, and buyer feedback."},
       {href:"/hot-list",name:"Hot List",icon:"marketWatch",what:"Browse recent activity by product type and keyword."},
       { href: "/trademark", name: "Trademark Tracker", icon: "trademark",
         /* D1693 · "the federal register" claims a complete search. The tool

@@ -81,14 +81,18 @@ test("capture is wired to more than one moment", () => {
   assert.match(provenance, /export async function captureBeforeRetiring/);
 });
 
-test("Scan holds the centre of the mobile bar", () => {
+test("the live niche tool holds the centre of the mobile bar", () => {
+  // Design Scanner was retired in D1798; its route redirects to My Shop.
+  // Preserve the useful phone-tool shortcut and its freedom from the desktop gate.
   const shell = read("mobile-shell.tsx");
   const tabs = shell.slice(shell.indexOf("const TABS = ["), shell.indexOf("];", shell.indexOf("const TABS = [")));
   const order = [...tabs.matchAll(/label: "([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(order, ["Home", "Watch", "Scan", "My Shop", "More"]);
-  /* And the scanner is not swept up by the desktop gate. */
-  assert.match(shell, /ONE EXCEPTION, AND IT IS DELIBERATE/);
-  assert.match(shell, /!SCANNER\.test\(pathname\)/);
+  assert.deepEqual(order, ["Home", "Watch", "Niches", "My Shop", "More"]);
+  assert.match(tabs, /href: "\/market-watch\/research", label: "Niches"/);
+  const gate = shell.match(/const WORKSPACE = (\[[^\n]+\]);/)[1];
+  const routes = Function(`return ${gate}`)();
+  assert.equal(routes.some(pattern=>pattern.test("/market-watch/research")),false);
+  assert.equal(routes.some(pattern=>pattern.test("/listing-factory")),true);
 });
 
 test("capture is a durable job, not an unawaited promise", () => {
