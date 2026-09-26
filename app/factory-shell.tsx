@@ -195,7 +195,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
             batch so the money action keeps its weight. */}
       </div>
       <div className="approved-sidebar-footer">
-        {!isFactoryPage&&<a className="current-factory-link" href="/listing-factory?step=setup">Listing Factory <span aria-hidden="true">↗</span></a>}
+        {!isFactoryPage&&<a className="current-factory-link" href="/listing-factory?step=setup">Listing Factory <span aria-hidden="true">→</span></a>}
         {isFactoryPage && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>}
         {/*
