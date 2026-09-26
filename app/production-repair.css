@@ -48,9 +48,7 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .listing-evidence,.watch-limit {font-size:12px;line-height:1.65;color:#6e5d68}
 .shop-watch-heading {display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .shop-watch-heading>a {font-size:12px;color:#920456;font-weight:800}
-.shop-pattern-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 .app-shell .mw .pattern {min-width:0;padding:16px;border:1px solid #e4d8e0;border-radius:12px;background:#fff}
-.shop-listing-photo {width:88px;height:88px;aspect-ratio:1;object-fit:contain;border-radius:8px;background:#faf6f8}
 .mw .pattern h4 {font-size:14px;line-height:1.5;margin:12px 0}
 .mw .pattern details {margin:12px 0;font-size:12px;line-height:1.6}
 .mw .pattern summary {cursor:pointer;font-weight:800}
@@ -66,7 +64,7 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .mobile-work-links a {padding:12px 18px;background:#ff2ca6;color:#111;border-radius:8px;font-weight:800;text-decoration:none}
 @media(max-width:1100px){
  .app-shell .factory-work {padding:26px 24px 72px}
- .app-shell .mw .cards,.shop-pattern-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+ .app-shell .mw .cards {grid-template-columns:repeat(2,minmax(0,1fr))}
  .app-shell .workflow-progress>div:not(.workflow-progress-head) {min-width:0}
 }
 @media(max-width:820px){
@@ -83,7 +81,7 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
  .app-shell .shop-map-tabs button {white-space:nowrap;padding:10px 12px}
 }
 @media(max-width:600px){
- .app-shell .mw .cards,.shop-pattern-grid,.app-shell .shop-map-leader-grid {grid-template-columns:minmax(0,1fr)}
+ .app-shell .mw .cards,.app-shell .shop-map-leader-grid {grid-template-columns:minmax(0,1fr)}
  .app-shell .shop-map-head h1 {font-size:29px!important}
  .app-shell .shop-map-leader-grid article.lead,.app-shell .shop-map-leader-grid article:not(.lead) {display:grid;grid-template-columns:88px minmax(0,1fr);gap:14px;padding-bottom:16px;border-bottom:1px solid #eee2e9}
  .app-shell .shop-map-leader-grid h3,.app-shell .shop-map-leader-grid .lead h3 {font-size:13px;-webkit-line-clamp:3;margin-bottom:8px}
@@ -138,13 +136,7 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .tracked-shop-card .p-button{margin-top:12px}
 .mw .shop-detail-tabs{margin:24px 0 20px}
 .mw .shop-detail-tabs .p-tab{flex:1;min-width:0;font-size:12px}
-.mw .pattern.has-listing-photo{display:grid;grid-template-columns:88px minmax(0,1fr);gap:8px 14px}
-.mw .pattern.has-listing-photo>img{grid-column:1;grid-row:1/3}
-.mw .pattern.has-listing-photo>h4{grid-column:2;grid-row:1;margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.mw .pattern.has-listing-photo>.pattern-headline{grid-column:2;font-size:13px}
-.mw .pattern.has-listing-photo>:not(img):not(h4):not(.pattern-headline){grid-column:1/-1}
 .mw .pattern .support{font-size:12px}
-.mw .buyer-idea{padding-top:12px;border-top:1px solid #eadfe5}
 .mw .shop-name{overflow-wrap:anywhere}
 @media(max-width:1100px){.app-shell .shop-map-leader-grid{grid-template-columns:1fr}.app-shell .mw .card{grid-template-columns:88px minmax(0,1fr);gap:12px}.app-shell .mw .card>img,.app-shell .mw .card>.no-image{width:88px;height:88px}}
 @media(max-width:700px){.tracked-shop-grid{grid-template-columns:1fr}.mw .shop-detail-tabs{display:grid;grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;overflow:visible}.mw .shop-detail-tabs .p-tab{white-space:normal;border-radius:8px}.mw .tabs .p-tab{padding:0 10px}.app-shell .mw .card .listing-stat-grid{gap:5px}}

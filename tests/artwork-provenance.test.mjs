@@ -87,8 +87,8 @@ test("the live niche tool holds the centre of the mobile bar", () => {
   const shell = read("mobile-shell.tsx");
   const tabs = shell.slice(shell.indexOf("const TABS = ["), shell.indexOf("];", shell.indexOf("const TABS = [")));
   const order = [...tabs.matchAll(/label: "([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(order, ["Home", "Watch", "Niches", "My Shop", "More"]);
-  assert.match(tabs, /href: "\/market-watch\/research", label: "Niches"/);
+  assert.deepEqual(order, ["Home", "Watchlist", "Research", "Your shop", "More"]);
+  assert.match(tabs, /href: "\/market-watch\/research", label: "Research"/);
   const gate = shell.match(/const WORKSPACE = (\[[^\n]+\]);/)[1];
   const routes = Function(`return ${gate}`)();
   assert.equal(routes.some(pattern=>pattern.test("/market-watch/research")),false);

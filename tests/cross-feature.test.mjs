@@ -115,15 +115,15 @@ test("watches are private even though collection is shared", () => {
 /* ------------------------------ navigation */
 
 test("the Watch tab goes to Market Watch", () => {
-  assert.match(SHELL, /href: "\/market-watch", label: "Watch"/);
+  assert.match(SHELL, /href: "\/market-watch", label: "Watchlist"/);
   assert.ok(!SHELL.includes('href: "/hot-list"'), "the Watch tab still points at Hot List");
 });
 
 test("the five mobile tabs lead to live distinct tools", () => {
   // The retired Scan route redirects to My Shop; keep the center shortcut useful.
   const labels = [...SHELL.matchAll(/label: "([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(labels, ["Home", "Watch", "Niches", "My Shop", "More"]);
-  assert.match(SHELL, /href: "\/market-watch\/research", label: "Niches"/);
+  assert.deepEqual(labels, ["Home", "Watchlist", "Research", "Your shop", "More"]);
+  assert.match(SHELL, /href: "\/market-watch\/research", label: "Research"/);
   assert.doesNotMatch(SHELL, /href: "\/design-scanner"/);
 });
 

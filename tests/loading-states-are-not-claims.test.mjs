@@ -199,7 +199,7 @@ test("a shop card's sections sit under the shop, not beside it", () => {
      must remain subordinate, and only the selected shop can render details. */
   const source = read("market-watch/market-watch-client.tsx");
   assert.match(source, /<h1 className="shop-name">\{shop\.shopName\}<\/h1>/);
-  assert.match(source, /<h2 className="section-name">\{name==="Listings buyers reviewed"\?"Products mentioned in buyer reviews":name\}<\/h2>/);
+  assert.match(read("market-watch/shop-changes.tsx"), /<h2>What changed<\/h2>/);
 });
 
 test("every state fixture answers the endpoints its surface actually calls", () => {
@@ -654,7 +654,7 @@ test("a product whose details could not be read says so, with a way to retry", (
   assert.match(block, /props\.loadingTemplate\?[\s\S]*?:props\.templateUrl&&!props\.templateVerified\?/);
 });
 
-test("the review caveat is said once per section, not on every card", () => {
+test("removed feedback sections do not return with redundant disclaimers", () => {
   /*
     Measured on the live Shop Watch: three cards in a row repeating the same
     forty words verbatim — the shop-wide baseline and the reviews-are-not-
@@ -673,9 +673,7 @@ test("the review caveat is said once per section, not on every card", () => {
   assert.match(attention, /against an average of \$\{evenShare\.toFixed\(1\)\} for a/);
 
   const client = read("market-watch/market-watch-client.tsx");
-  assert.match(client, /name==="Listings buyers reviewed"&&/);
-  assert.match(client, /Review dates show when feedback was posted, not when an item sold/);
-  assert.match(client, /section-note/);
+  assert.doesNotMatch(client, /Review dates show when feedback was posted|Buyer feedback|section-note/);
 });
 
 test("keyword cards use labels instead of generated count sentences", () => {

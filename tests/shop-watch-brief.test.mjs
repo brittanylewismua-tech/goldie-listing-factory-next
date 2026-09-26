@@ -164,7 +164,7 @@ test("a card carries a finding, not only a count", () => {
   assert.match(route.slice(route.indexOf("function present")), /because: card\.because/);
   const client = readFileSync(new URL(
     "../app/market-watch/market-watch-client.tsx", import.meta.url), "utf8");
-  assert.match(client, /card\.because/, "the card computes an explanation and never shows it");
+  assert.doesNotMatch(client, /card\.because/, "the retired generic feedback feed must not return");
 
   /* The rejected shapes stay rejected. */
   assert.doesNotMatch(patterns, /new reviews since yesterday/,

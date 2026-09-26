@@ -26,6 +26,7 @@
  * runs it — so each `ensure*` uses IF NOT EXISTS and tolerates a duplicate
  * column error and nothing else.
  */
+import { ensureShopInsightTables } from "@/app/shop-watch-insight-store";
 import { ensureUpdateTables } from "@/app/platform-update-store";
 import { ensureNicheResearch } from "@/app/niche-research-store";
 import { ensureMarketCollections } from "@/app/market-collection";
@@ -81,6 +82,7 @@ const database = () => (env as unknown as { DB: D1Database }).DB;
 export const MIGRATIONS: Step[] = [
   { name: "error_log", run: () => ensureErrorLog(database()) },
   { name: "etsy_listing_display_cache", run: ensureEtsyDisplayCache },
+  { name: "shop_listing_changes", run: () => ensureShopInsightTables(database()) },
   { name: "billing", run: ensureBillingTables },
   { name: "entitlements", run: ensureEntitlementTables },
   { name: "spend_guard", run: ensureSpendTables },

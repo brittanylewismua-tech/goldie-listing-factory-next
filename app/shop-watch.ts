@@ -21,6 +21,7 @@
  * blur them by accident.
  */
 import { env } from "cloudflare:workers";
+import { recordShopListings } from "./shop-watch-insight-store";
 import { etsyApiCredential, recordEtsyCall, waitForEtsyCapacity } from "@/app/api/etsy/client";
 import {
   FRESH_HOURS, listingIdFrom, REVIEW_BOOTSTRAP, REVIEW_PAGE, shopNameFrom, WATCH_LIMIT_DEFAULT,
@@ -506,6 +507,7 @@ export async function refreshShop(shopId: number): Promise<ShopRefresh> {
     const recent = await etsy(`shops/${shopId}/listings/active?limit=100`);
     result.calls += 1;
     result.recentListings = ((recent?.results ?? []) as unknown[]).length;
+    if(recent)await recordShopListings(db(),shopId,(recent.results??[]) as Record<string,any>[],Math.floor(Date.now()/1000));
 
     /*
       Reviews are fetched only when the shop's own review count has moved.

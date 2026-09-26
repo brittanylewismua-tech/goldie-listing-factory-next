@@ -215,19 +215,14 @@ test("every listing card offers a direct Etsy link", () => {
   /* Shop Watch cards carry a server-built URL rather than composing one, so
      a shop-level pattern links to the shop and a listing-level one to the
      listing. */
-  assert.match(MW, /href=\{card\.listing\.url\}/);
+  assert.match(readFileSync(new URL("../app/market-watch/shop-changes.tsx", import.meta.url), "utf8"), /https:\/\/www\.etsy\.com\/listing\//);
   assert.match(MW, /rel="noreferrer noopener"/);
 });
 
-test("the four Shop Watch sections are exactly the four", () => {
-  /* D1775 renamed two of them. "What buyers love" collected praise adjectives
-     and read "Buyers here keep saying the same thing: perfect", which is what
-     is left after every specific word has been discarded. The sections say
-     what the rows are for now. */
-  const names = [...MW.matchAll(/\["(Listings buyers reviewed|What buyers tell you to make|Problems buyers keep raising|Shop changes)",/g)]
-    .map(match => match[1]);
-  assert.deepEqual(names,
-    ["Listings buyers reviewed", "What buyers tell you to make", "Problems buyers keep raising", "Shop changes"]);
+test("tracked shops separate catalog, measured changes, and notes", () => {
+ assert.match(MW, /\["listings","Listings"\],\["changes","Changes"\],\["notes","My notes"\]/);
+ assert.doesNotMatch(MW, /Buyer feedback|Listings buyers reviewed|What buyers tell you to make/);
+ assert.match(MW, /<ShopChanges shopId=\{shop.shopId\} listings=\{listings\}/);
 });
 
 test("the interface never shows a sale count, score or raw review feed", () => {
@@ -248,8 +243,7 @@ test("empty and gathering states say what is happening", () => {
   assert.doesNotMatch(MW, /listing\.sold7|listing\.sold30/);
   assert.match(MW, /Etsy search could not load/);
   // Catalog, feedback, and changes now have separate empty states.
-  assert.match(MW, /No recent review summary is available for this shop/);
-  assert.match(MW, /No shop changes have been recorded yet/);
+  assert.match(readFileSync(new URL("../app/market-watch/shop-changes.tsx", import.meta.url), "utf8"), /No product updates recorded in this period/);
   assert.match(MW, /No active listings are available from Etsy/);
 });
 
@@ -391,20 +385,11 @@ test("the refresh spends its calls where a member would see a blank box", () => 
   assert.match(route, /inNiche\.has/);
 });
 
-test("Shop Watch cards read the shape the brief returns", () => {
-  /* Measured in the browser: every card rendered as "reviews · 30 days" with
-     no pattern and no link, because the client declared `headline`/`support`/
-     `listingId` and the route returns `pattern`/`evidence`/`window`/`listing`. */
-  const route = readFileSync(new URL(
-    "../app/api/shop-watch/brief/route.ts", import.meta.url), "utf8");
-  const returned = route.slice(route.indexOf("function present"));
-  for (const field of ["pattern:", "evidence:", "window:", "listing:"])
-    assert.ok(returned.includes(field), `the brief no longer returns ${field}`);
-
-  assert.match(MW, /\{card\.pattern\}/);
-  assert.match(MW, /card\.evidence,card\.window\].filter\(Boolean\)/,
-    'evidence and window join only on the parts that exist, so an empty evidence does not leave a leading separator');
-  assert.match(MW, /card\.listing\?\.url/);
-  for (const stale of ["card.headline", "card.support", "card.listingId"])
-    assert.ok(!MW.includes(stale), `the card still reads ${stale}`);
+test("shop changes render the stored before and after values", () => {
+ const ui=readFileSync(new URL("../app/market-watch/shop-changes.tsx",import.meta.url),"utf8");
+ assert.match(ui,/price\(c.before,c.currency\)/);
+ assert.match(ui,/price\(c.after,c.currency\)/);
+ assert.match(ui,/JSON.parse\(c.before\)/);
+ assert.match(ui,/JSON.parse\(c.after\)/);
+ assert.match(ui,/shopActivity\(data.observations,days,now\)/);
 });

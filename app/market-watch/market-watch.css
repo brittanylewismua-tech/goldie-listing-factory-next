@@ -229,8 +229,6 @@
    whole card: true, and impossible to act on without knowing what an average
    listing there draws. The headline carries the finding now and this carries
    the reasoning. */
-.pattern .pattern-headline{margin:0;font-size:14px;font-weight:700;line-height:1.35;color:var(--ink)}
-.pattern .pattern-because{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--muted)}
 /* D1743 · 3.87:1 measured. The .85 fade is what took it under; the colour
    carries the muting on its own. */
 .pattern .support{display:block;margin-top:8px;font-size:11px;color:var(--p-ink-soft)}
@@ -271,8 +269,7 @@
 .mw-detail-head{margin:8px 0 20px}.mw-detail-head p:last-child{margin:6px 0 0;color:var(--muted)}
 @media (min-width:760px){.keyword-watch-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.app-shell .mw .cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .listing-price-row{display:flex;justify-content:space-between;gap:8px;align-items:center}.listing-price-row strong{font-size:15px}.listing-price-row span{padding:3px 7px;border-radius:999px;background:var(--p-good-soft,#eef7f0);color:var(--p-good);font-size:10px;font-weight:700}.listing-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.listing-stat-grid div{padding:7px;border-radius:9px;background:var(--paper)}.listing-stat-grid dd{font-size:14px}
-@media (max-width:560px){.keyword-watch-head{display:block}.keyword-watch-head button{width:100%;margin-top:12px}.keyword-thumbs{grid-template-columns:repeat(4,minmax(0,1fr));min-height:0}.tabs{overflow-x:auto}.tabs button{min-width:145px}}
-.section-note{margin:0 0 10px;color:var(--muted);font-size:11px;line-height:1.5;max-width:60ch}.keyword-stale{margin:0 0 12px;color:var(--stale);font-size:12px}
+@media (max-width:560px){.keyword-watch-head{display:block}.keyword-watch-head button{width:100%;margin-top:12px}.keyword-thumbs{grid-template-columns:repeat(4,minmax(0,1fr));min-height:0}.tabs{overflow-x:auto}.tabs button{min-width:145px}}.keyword-stale{margin:0 0 12px;color:var(--stale);font-size:12px}
 
 .mw blockquote footer{display:block;margin-top:6px;font-size:12px;line-height:1.5;color:#645663;}
 

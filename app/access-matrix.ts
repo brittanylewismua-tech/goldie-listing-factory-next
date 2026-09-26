@@ -137,6 +137,7 @@ export const ACCESS: Record<string, Rule> = {
   "/api/market-watch/shops": { kind: "feature", feature: "marketWatch" },
   "/api/market-watch/update": { kind: "feature", feature: "marketWatch" },
   "/api/shop-watch/brief": { kind: "feature", feature: "marketWatch" },
+  "/api/shop-watch/insights": { kind: "feature", feature: "marketWatch" },
   "/api/shop-watch/listings": { kind: "feature", feature: "marketWatch" },
   "/hot-list": { kind: "feature", feature: "marketWatch" },
   "/sold-overnight": { kind: "feature", feature: "marketWatch" },

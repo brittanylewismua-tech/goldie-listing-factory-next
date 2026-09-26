@@ -95,7 +95,7 @@ export async function watchesFor(userId: string) {
   const rows = await db().prepare(
     `SELECT niche_key AS key, phrase, terms, added_at AS addedAt,
             last_opened AS lastOpened
-       FROM niche_watches WHERE user_id = ? AND paused = 0 ORDER BY added_at`)
+       FROM niche_watches WHERE user_id = ? AND paused = 0 ORDER BY added_at DESC, niche_key ASC`)
     .bind(userId)
     .all<{ key: string; phrase: string; terms: string; addedAt: number; lastOpened: number }>();
   return (rows.results ?? []).map(row => ({

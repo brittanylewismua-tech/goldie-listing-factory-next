@@ -18,9 +18,9 @@ import { usePathname } from "next/navigation";
    scanner route redirects to Shop Map and is not a distinct destination. */
 const TABS = [
   { href: "/home", label: "Home", glyph: "◆" },
-  { href: "/market-watch", label: "Watch", glyph: "◈" },
-  { href: "/market-watch/research", label: "Niches", glyph: "⊚" },
-  { href: "/shop-map", label: "My Shop", glyph: "▦" },
+  { href: "/market-watch", label: "Watchlist", glyph: "◈" },
+  { href: "/market-watch/research", label: "Research", glyph: "⊚" },
+  { href: "/shop-map", label: "Your shop", glyph: "▦" },
   { href: "/more", label: "More", glyph: "≡" },
 ];
 

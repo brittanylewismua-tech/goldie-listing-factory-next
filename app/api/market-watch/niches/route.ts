@@ -109,7 +109,7 @@ export const POST = withErrorLog("market-watch-save-niche", async (request: Requ
   if (!access.ok) return access.response;
   const user = access.user;
   const body = await request.json().catch(() => null) as
-    { phrase?: string; remove?: string } | null;
+    { phrase?: string; remove?: string; researchOnly?: boolean } | null;
   const now = Math.floor(Date.now() / 1000);
 
   if (body?.remove) {
@@ -122,6 +122,8 @@ export const POST = withErrorLog("market-watch-save-niche", async (request: Requ
   const { terms } = normalizeNiche(phrase);
   const saved = await saveWatch(user.userId, phrase, terms, now);
   if (!saved.ok) return NextResponse.json({ error: saved.because }, { status: 400 });
+
+  if(body?.researchOnly===true)return NextResponse.json({saved:true,key:saved.key,phrase});
 
   /* The first reading happens immediately, so a new watch is never an empty
      page waiting for a cron. */
