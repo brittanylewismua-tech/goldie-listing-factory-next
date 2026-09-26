@@ -151,7 +151,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   /* The last map that loaded. A failed refresh shows this rather than nothing. */
   const [lastGood, setLastGood] = useState<ShopMap | null>(null);
   const [failed, setFailed] = useState(false);
-  const [tab, setTab] = useState<"overview" | "themes" | "sold" | "money">("overview");
+  const [tab, setTab] = useState<"overview" | "themes" | "sold" | "money">("money");
 
   const [soldDays,setSoldDays]=useState(90);
   const [selectedMonth,setSelectedMonth]=useState("");
@@ -294,18 +294,11 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const sold = shown.soldListings?.listings ?? [];
   const leaders=shown.topListings??[];
   return <main className="shop-map shop-map-redesign">
-    <header className="shop-map-head">
-      <div className="shop-map-identity">
-        {shown.shop?.imageUrl ? <img src={shown.shop.imageUrl} alt="" width={64} height={64}/>
-          : <span className="shop-map-profile-fallback" aria-hidden="true">G</span>}
-        <div><h1>{shown.shop?.shopName ?? "Shop Map"}</h1>
-          <p>Shop Map · {monthName(shown.month)}</p></div>
-      </div>
-    </header>
+    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">{monthName(shown.month)}</p><h1>Your shop, in focus.</h1><p>{shown.shop?.shopName ?? "Shop Map"} · Sales, costs, and product performance.</p></div></header>
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     <nav className="shop-map-tabs" aria-label="Shop Map sections">
-      {([['overview','Overview'],['themes','Product themes'],['sold','Sold listings'],['money','Your numbers']] as const)
+      {([['money','Your numbers'],['overview','Overview'],['themes','Product themes'],['sold','Sold listings']] as const)
         .map(([key,label]) => <button key={key} type="button" aria-current={tab === key ? 'page' : undefined}
           onClick={() => setTab(key)}>{label}</button>)}
     </nav>

@@ -16,6 +16,7 @@ export type SuiteNavItem = {
 
 type Props = {
   active: string;
+  current?: boolean;
   items: SuiteNavItem[];
   onNavigate?: (event: MouseEvent<HTMLAnchorElement>, href: string) => void;
   keywordBankInNewTab?: boolean;
@@ -32,7 +33,7 @@ function LockIcon() {
 }
 
 export default function SuiteSidebarNav({ active, items, onNavigate,
-  keywordBankInNewTab = false }: Props) {
+  keywordBankInNewTab = false, current = false }: Props) {
   /*
     BOTH GROUPS OPEN ON ARRIVAL.
 
@@ -92,14 +93,14 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
       target={newTab ? "_blank" : undefined}
       rel={newTab ? "noopener noreferrer" : undefined}
       onClick={event => navigate(event, item)}>
-      <NavIcon name={item.icon}/><span>{item.label}</span>
+      {current&&item.key==='niche-research'?<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>:<NavIcon name={item.icon}/>}<span>{item.label}</span>
       {item.key === "market-watch" && <small>LIVE</small>}
       {locked && <LockIcon/>}
     </a>;
   };
 
   return <>
-    <nav className="top-nav suite-sidebar-nav" aria-label="Product navigation">
+    {current ? <nav className="current-navigation" aria-label="Product navigation">{["home","niche-research","market-watch","shop-map"].map(key=>{const item=items.find(i=>i.key===key);return item?link({...item,label:({home:"Home","niche-research":"Research","market-watch":"Watchlist","shop-map":"Your shop"} as Record<string,string>)[key]}):null;})}<details className="current-more"><summary>More tools</summary>{items.filter(i=>!["home","niche-research","market-watch","shop-map","factory"].includes(i.key)).map(i=>link(i))}<a href="/command-center">All tools</a><a href="/goals">Listing goals</a></details></nav> : <nav className="top-nav suite-sidebar-nav" aria-label="Product navigation">
       {home && link(home)}
       {factory && <div className={`suite-nav-section${FACTORY_KEYS.has(active) ? " current" : ""}`}>
         <div className="suite-nav-parent">
@@ -133,7 +134,7 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
         {commandOpen && <div className="suite-nav-children">{command.map(item => link(item, true))}</div>}
       </div>
       {connections && link(connections)}
-    </nav>
+    </nav>}
 
     {lockedTool && <div className="suite-access-backdrop" role="presentation"
       onMouseDown={event => { if (event.target === event.currentTarget) setLockedTool(""); }}>

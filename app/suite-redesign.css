@@ -156,8 +156,6 @@ html,body{background:#fff9fc;color:var(--suite-ink);font-family:'Manrope Variabl
   everywhere else, so the chip appears exactly where the tile is about to
   refuse: on a phone.
 */
-.hub-foot{margin:32px 0 0!important;padding:20px 0 0!important;min-height:0!important;border-top:1px solid var(--suite-line)!important;background:transparent!important;color:#958991!important}
-.hub-foot p{max-width:680px;margin:0;color:#958991;font-size:9px;line-height:1.5}
 
 /* Feature page headers */
 .app-shell .mw,.app-shell .scanner,.app-shell .shop-map,.app-shell .costs,.app-shell .tm-standalone{width:100%;max-width:none;margin:0;padding:7px 0 64px;color:var(--suite-ink);font-family:'Manrope Variable',Manrope,Helvetica,sans-serif}

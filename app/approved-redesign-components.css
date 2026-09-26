@@ -134,7 +134,6 @@ html, body { background: var(--pro-canvas) !important; }
 }
 
 /* Home command center */
-.app-shell .home-dashboard { padding-top:42px!important; }
 .home-shop-identity { display:flex; align-items:center; gap:12px; margin:0 0 18px; padding:13px 16px;
   border:1px solid #d9ccd4; border-radius:9px; background:rgba(255,255,255,.9); }
 .home-connected-dot { width:9px; height:9px; flex:0 0 9px; border-radius:50%; background:#ff2ca6;
@@ -194,8 +193,7 @@ html, body { background: var(--pro-canvas) !important; }
   .home-listing-card.lead{display:grid;grid-template-columns:1fr 1fr}.home-metrics{grid-template-columns:1fr 1fr}
   .home-metrics article:nth-child(2){border-right:0}.home-metrics article:nth-child(-n+2){border-bottom:1px solid #171318}
 }
-@media(max-width:560px){
-  .app-shell .home-dashboard{padding-top:24px!important}.home-signal{padding:18px}
+@media(max-width:560px){.home-signal{padding:18px}
   .home-signal-heading{display:grid}.home-listing-grid{grid-template-columns:1fr}.home-listing-card.lead{display:block;grid-column:auto}
   .home-metrics{grid-template-columns:1fr}.home-metrics article{border-right:0;border-bottom:1px solid #171318!important}
   .home-metrics article:last-child{border-bottom:0!important}
@@ -313,7 +311,7 @@ html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",
 .app-shell>.topbar .workflow-restart-button{width:calc(100% - 4px)!important;max-width:100%!important;box-sizing:border-box!important;white-space:normal!important}
 
 .shop-map-identity{display:flex;align-items:center;gap:17px}
-.shop-map-identity img,.shop-map-profile-fallback{display:grid;place-items:center;width:64px;height:64px;flex:0 0 64px;border:1px solid #171318;border-radius:50%;object-fit:cover;background:#171318;color:#ff2ca6;font-family:"DM Serif Display",Georgia,serif;font-size:30px;box-shadow:4px 4px 0 #ff2ca6}
+.shop-map-identity img{display:grid;place-items:center;width:64px;height:64px;flex:0 0 64px;border:1px solid #171318;border-radius:50%;object-fit:cover;background:#171318;color:#ff2ca6;font-family:"DM Serif Display",Georgia,serif;font-size:30px;box-shadow:4px 4px 0 #ff2ca6}
 .app-shell .shop-map-redesign .shop-map-identity h1{margin:0 0 5px!important}
 .shop-map-identity p{margin:0;color:#776b72;font-size:12px;font-weight:700}
 
@@ -354,5 +352,5 @@ html,body,button,input,select,textarea{font-family:"Manrope Variable","Manrope",
 @media(max-width:700px){
   .tm-watch-list article{grid-template-columns:1fr auto}.tm-watch-list article>div{grid-column:1/-1}
   .listing-mode-chooser{padding:23px 18px}.listing-mode-chooser>div{grid-template-columns:1fr}.listing-mode-chooser h2{font-size:32px}
-  .shop-map-identity img,.shop-map-profile-fallback{width:52px;height:52px;flex-basis:52px}
+  .shop-map-identity img{width:52px;height:52px;flex-basis:52px}
 }

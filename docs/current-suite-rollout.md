@@ -1,22 +1,30 @@
 # Current design rollout — 26 September 2026
 
-Approved direction: Current from the Sites collection, adapted to softer pink
-(#f58abb), white, neutral gray and charcoal. The user requested restoring the
-lowercase G logo during the rollout.
+Current from the Sites collection is the source of truth:
+https://goldie-design-directions.brittany-lewis.chatgpt.site/next/?design=current
 
-Applied to the existing production components and APIs. The shared shell, home,
-command center, research, watchlists, shop map, libraries, account, connections,
-platform updates and sign-in use the new styling. Research uses the existing
-verified opportunities and associated listing images; selecting a finding changes
-its evidence action. Shop Map keeps its revenue/profit completeness rules while
-separating the headline total from the itemized breakdown.
+This revision replaces the earlier approximation with Current’s composition.
+Home leads with saved niche research, a daily brief, and real monthly shop totals.
+The white 226px navigation rail uses Home, Research, Watchlist, and Your shop;
+existing secondary tools remain available through More tools, and Listing Factory
+stays beside the compact account control at the bottom. The G/goldie wordmark,
+Manrope hierarchy, card shapes, spacing, and navigation follow Current.
 
-Listing Factory's step machine, product setup, draft creation and publishing
-behavior are unchanged. The shared logo and search button accessible label are
-updated. The obsolete editorial stylesheet is removed. Temporary local fixture
-routes are not included in this release. No schema, account records, providers,
-API calculations or member entitlements are changed.
+The palette uses the original build’s #ff2ca6 pink with white and charcoal.
+Research puts the leading finding and listing photos before the statistics,
+then separates the findings list from the product-review comparison. Charts use
+actual review counts, never the prototype’s sample series. Home links directly
+to saved research. Watchlist uses image-led cards, and Your shop opens its monthly
+numbers with separate headline and breakdown panels. All existing sections and
+controls remain accessible. The other libraries, settings and tools share the
+same surfaces and typography. Obsolete Home selectors were removed.
 
-Validation: build and 3,675 regression checks passed, zero failures, 12 existing
-skips. Chrome visual checks used real components with a closed fixture network
-at desktop and 390px touch-device dimensions. Live walkthrough follows deployment.
+The Listing Factory workflow, four steps, product setup, draft creation and
+publishing logic are unchanged. Its existing navigation variant remains intact.
+No database schema, pricing calculations, member entitlements or records change.
+Temporary local visual fixtures are not shipped.
+
+Validation: Chrome desktop and 390px mobile walkthrough of the actual components,
+including research evidence, tabs, keyword-bank editor, library controls, account,
+connections, daily updates and navigation. Build and regression checks run before
+publication; live checks follow the release.

@@ -22,7 +22,8 @@ import postcss from "postcss";
    screens I had opened, and I had never opened the help dialog, so its corner
    was missing from the list rather than wrong in the app. A scale built from a
    partial walk of the product is a scale that will reject the product. */
-const RADIUS = new Set([0, 6, 7, 8, 9, 10, 12, 14, 16, 22]);
+// Current uses 11px navigation corners and 18px feature cards.
+const RADIUS = new Set([0, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 22]);
 
 /*
   D1784 · THE GUARD ONLY EVER LOOKED AT ONE DIRECTORY.

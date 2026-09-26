@@ -277,7 +277,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
         <div className="row">
           {printify?.connected
             ? <><a className="p-button p-button-primary" href="/listing-factory?step=setup">Open Listing Factory</a><a className="p-button p-button-quiet" href="/api/printify/connect">Reconnect</a></>
-            : <a href="/api/printify/connect">Connect Printify</a>}
+            : <a className="p-button p-button-primary" href="/api/printify/connect">Connect Printify</a>}
         </div>
       </div>}
 

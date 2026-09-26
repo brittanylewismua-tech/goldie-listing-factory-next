@@ -122,7 +122,6 @@
 .app-shell.command-workspace .shop-pattern-grid {gap:20px}
 /* Shop Map: consistent section scale, neutral tables and readable totals. */
 .app-shell.command-workspace .shop-map-redesign .shop-map-head {margin:0 0 24px!important;padding:0 0 20px;border-color:var(--work-line)}
-.app-shell.command-workspace .shop-map-identity :is(img,.shop-map-profile-fallback) {width:52px;height:52px;flex-basis:52px;box-shadow:none;border:1px solid var(--work-line)}
 .app-shell.command-workspace .shop-map-identity p {font-size:13px;letter-spacing:0;text-transform:none;margin:0}
 .app-shell.command-workspace .shop-map-redesign .shop-map-card,.app-shell.command-workspace .shop-map-leaders {padding:24px!important;border:1px solid var(--work-line)!important;border-radius:10px!important;box-shadow:none!important}
 .app-shell.command-workspace .shop-map-section-head {margin-bottom:20px;align-items:center}

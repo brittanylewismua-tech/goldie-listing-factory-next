@@ -184,9 +184,9 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
         temporary name becomes the real one. The topbar already names the page,
         so nothing is lost by the slot being empty.
       */}
-      <div className="brand-lockup"><SuiteBrand /></div>
+      <div className="brand-lockup">{isFactoryPage?<SuiteBrand />:<SuiteBrand current />}</div>
       <div className="top-actions">
-        <SuiteSidebarNav active={active} items={NAV}/>
+        <SuiteSidebarNav active={active} items={NAV} current={!isFactoryPage}/>
         {/* D818 · on the workflow this is a button because it has to clear live
             batch state first. There is no batch to clear here, so the same
             control is the link it actually is. */}
@@ -195,6 +195,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
             batch so the money action keeps its weight. */}
       </div>
       <div className="approved-sidebar-footer">
+        {!isFactoryPage&&<a className="current-factory-link" href="/listing-factory?step=setup">Listing Factory <span aria-hidden="true">↗</span></a>}
         {isFactoryPage && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>}
         {/*
@@ -275,14 +276,14 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
           real destination rather than a decoration, and it is the way back
           from every interior surface.
         */}
-        <div className="suite-mobile-brand"><SuiteBrand /></div>
+        <div className="suite-mobile-brand">{isFactoryPage?<SuiteBrand />:<SuiteBrand current />}</div>
         <button type="button" className="factory-rail-toggle" aria-expanded={railOpen}
           aria-label={railOpen ? "Hide navigation" : "Show navigation"}
           onClick={() => setRailOpen(open => !open)}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15"/></svg>
         </button>
         <div className="factory-breadcrumb">
-          <a className="factory-crumb-root" href="/home">Suite</a>
+          <a className="factory-crumb-root" href="/home">Workspace</a>
           <i aria-hidden="true">&#8250;</i>
           <b className="factory-top-batch">{title}</b>
         </div>

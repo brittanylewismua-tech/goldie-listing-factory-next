@@ -221,85 +221,24 @@
    ran 300px past the right edge and were clipped, with nothing to scroll to.
    The tiles themselves already use minmax(0,1fr); this is the same fix one
    level up, where the overflow was actually coming from. */
-.home-dashboard{display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
-.home-dashboard>*{min-width:0}
-.home-shop-head{display:flex;align-items:center;gap:20px;min-height:76px;margin:6px 0 4px}
-.home-shop-mark{
-  display:grid;place-items:center;width:66px;height:66px;flex:0 0 66px;border-radius:16px;
-  background:#141114;color:#fff;font-size:19px;font-weight:800;letter-spacing:.04em;
-  box-shadow:5px 5px 0 var(--suite-pink);
-}
-.home-shop-mark:empty{display:none}
-.home-shop-head h1{
-  margin:0;color:var(--suite-ink);font-size:clamp(34px,4.6vw,56px);font-weight:800;
-  letter-spacing:-.035em;line-height:1.02;
-}
 
 /* The panel: a black keyline with an offset block behind it. It is the one
    card shape in the approved design and every group on this page wears it. */
-.home-panel{
-  border:2px solid var(--suite-edge);border-radius:16px;background:#fff;overflow:hidden;
-  box-shadow:6px 6px 0 var(--suite-edge);
-}
-.home-panel-head{display:flex;align-items:center;gap:16px;padding:20px 22px;border-bottom:1px solid var(--suite-line)}
-.home-panel-mark{
-  display:grid;place-items:center;width:50px;height:50px;flex:0 0 50px;border-radius:14px;
-  background:#141114;color:var(--suite-pink);box-shadow:4px 4px 0 var(--suite-pink);
-}
-.home-panel-copy{display:grid;gap:3px;min-width:0}
-.home-panel-copy small{color:var(--suite-pink-deep);font-size:12px;font-weight:800;letter-spacing:.14em}
-.home-panel-copy h2{margin:0;color:var(--suite-ink);font-size:clamp(20px,2.2vw,26px);font-weight:800;letter-spacing:-.03em;line-height:1.1}
-.home-panel-cta{
-  margin-left:auto;display:inline-flex;align-items:center;gap:9px;padding:13px 19px;
-  border-radius:12px;background:#0a0a0a;color:#fff;font-size:14px;font-weight:800;text-decoration:none;
-  box-shadow:4px 4px 0 var(--suite-pink);
-}
-.home-panel-cta:hover{transform:translate(1px,1px);box-shadow:3px 3px 0 var(--suite-pink)}
-.home-panel-cta i{font-style:normal}
-
-.home-panel-tiles{display:grid}
-.home-panel-tiles-four{grid-template-columns:repeat(4,minmax(0,1fr))}
 /* D1807 · Three tools in a two-column grid left an empty cell. The count is
    not fixed - it was four this morning - so the grid fits what it is given. */
-.home-panel-tiles-two{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 .home-tile{
   display:flex;align-items:flex-start;gap:14px;padding:20px 22px;
   border-right:1px solid var(--suite-line);border-bottom:1px solid var(--suite-line);
   color:var(--suite-ink);text-decoration:none;
 }
-.home-panel-tiles-four .home-tile:nth-child(4n),
-.home-panel-tiles-two .home-tile:nth-child(2n){border-right:0}
-.home-panel-tiles-four .home-tile:nth-last-child(-n+4),
-.home-panel-tiles-two .home-tile:nth-last-child(-n+2){border-bottom:0}
 .home-tile:hover{background:var(--suite-pink-wash)}
-.home-tile-icon{display:grid;place-items:center;flex:0 0 26px;color:var(--suite-pink)}
-.home-tile-copy{display:grid;gap:4px;min-width:0}
-.home-tile-copy b{font-size:15px;font-weight:800;letter-spacing:-.01em}
-.home-tile-copy small{color:var(--suite-muted);font-size:13px;line-height:1.4}
-.home-tile-go{margin-left:auto;align-self:center;color:#b0a3ab;font-size:19px;font-style:normal}
-.home-tile:hover .home-tile-go{color:var(--suite-pink-deep)}
-.home-panel-single .home-tile{border:0;padding:22px}
-
-.home-dashboard .hub-foot{margin:6px 0 0;padding:0;border:0}
 
 /* ------------------------------------------------------------ narrow widths */
 @media (max-width:1180px){
-  .home-panel-tiles-four{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .home-panel-tiles-four .home-tile:nth-child(2n){border-right:0}
-  .home-panel-tiles-four .home-tile:nth-child(4n+1){border-right:1px solid var(--suite-line)}
-  .home-panel-tiles-four .home-tile:nth-last-child(-n+4){border-bottom:1px solid var(--suite-line)}
-  .home-panel-tiles-four .home-tile:nth-last-child(-n+2){border-bottom:0}
   .suite-search-trigger{min-width:0}
   .suite-search-trigger span{display:none}
 }
 @media (max-width:860px){
-  .home-panel-head{flex-wrap:wrap}
-  .home-panel-cta{margin-left:0;width:100%;justify-content:center}
-  .home-panel-tiles-four,.home-panel-tiles-two{grid-template-columns:minmax(0,1fr)}
-  .home-panel-tiles .home-tile{border-right:0;border-bottom:1px solid var(--suite-line)}
-  .home-panel-tiles .home-tile:last-child{border-bottom:0}
-  .home-shop-head{gap:14px}
-  .home-shop-mark{width:52px;height:52px;flex:0 0 52px;border-radius:14px;font-size:16px}
   .factory-rail-toggle{display:none}
   .app-shell .factory-breadcrumb .factory-crumb-root,
   .app-shell .factory-breadcrumb>i{display:none}

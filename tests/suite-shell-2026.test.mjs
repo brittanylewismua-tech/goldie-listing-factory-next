@@ -41,8 +41,7 @@ test("the home grid column cannot grow past the page", () => {
   /* An implicit grid column is sized auto and will not shrink below the
      min-content width of four tiles standing side by side; at 1440 the cards
      ran roughly 300px off the right edge, clipped and unreachable. */
-  assert.match(sheet, /\.home-dashboard\{[^}]*grid-template-columns:minmax\(0,1fr\)/);
-  assert.match(sheet, /\.home-panel-tiles-four\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)\}/);
+  assert.match(read("current-suite.css"), /\.current-home-layout\{[^}]*grid-template-columns:minmax\(0,1.5fr\) minmax\(0,1fr\)/);
 });
 
 test("the search overlay is not stretched by its own flex container", () => {
@@ -78,8 +77,7 @@ test("the phone keeps the page title and loses the desktop-only chrome", () => {
     "the rail toggle has no rail to toggle on a phone");
   assert.equal(declOf(narrow, ".factory-crumb-root", "display"), "none",
     "a two-level crumb does not fit beside a title on a phone");
-  assert.equal(declOf(narrow, ".home-panel-tiles-four", "grid-template-columns"), "minmax(0,1fr)",
-    "the tiles stack rather than shrinking to four unreadable columns");
+  assert.match(read("current-suite.css"), /\.current-home-layout\{grid-template-columns:1fr\}/);
 });
 
 test("the rail says there is more below before you scroll it", () => {
@@ -119,8 +117,10 @@ test("the rail keeps the gear mark", () => {
   assert.doesNotMatch(brand, /suite-wordmark/);
 });
 
-test("the home heading prefers a written name over the Etsy URL handle", () => {
+test("Current home opens saved research and uses real monthly totals", () => {
   const home = read("home/home-view.tsx");
-  /* /api/etsy returns shop_name, which is the handle: "shesawolfclothing". */
-  assert.match(home, /account\.name \|\| etsy\.shopName \|\| null/);
+  assert.match(home, /fetch\('\/api\/home'\)/);
+  assert.match(home, /fetch\('\/api\/niche-research'\)/);
+  assert.match(home, /\/market-watch\/research\?id=/);
+  assert.match(home, /month\.revenueMinor\/100/);
 });

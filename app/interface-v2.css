@@ -4584,9 +4584,6 @@ html, body { background: var(--lf-paper); }
    app a translucent plum, which put a band across the bottom of this page.
    Reset explicitly rather than renaming the element: the element is a footer
    and should stay one. */
-.hub-foot{max-width:1120px;margin:48px auto 0;background:none;border:0;padding:0;
-  min-height:0;display:block;color:inherit;font:inherit;letter-spacing:normal}
-.hub-foot .etsy-api-disclosure{font-size:11px;color:#6b6b6b;margin:0;letter-spacing:normal}
 .hub-auth{min-height:100vh;display:flex;align-items:center;justify-content:center;
   background:var(--lf-rail,#000)}
 .hub-auth a{color:#ff4fc3;font-weight:700}
@@ -4600,7 +4597,6 @@ html, body { background: var(--lf-paper); }
    Here it sits at the head of a left-aligned column. */
 /* The disclosure inherits a 210px width from the rail, where it sits in a
    narrow column. It has a whole page here. */
-.hub-foot .etsy-api-disclosure{width:auto;max-width:640px}
 
 /* The keyword lookup, as a plain tool rather than a reward. */
 .sold-page .hot-search{display:flex;gap:8px;margin:0 0 16px}
