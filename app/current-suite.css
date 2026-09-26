@@ -479,3 +479,7 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .collectionChevron{font-size:0!important;color:#666570!important;border-color:#e4e4e9!important}
 #suite-workspace .collectionChevron::after{content:'';width:8px;height:8px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg)}
 #suite-workspace .market-browser-controls .market-results-sort{border:0!important;padding:0!important;margin:0!important}
+#suite-workspace .factory-work .goals-current{background:#242329!important;color:#fff!important;border:0!important;border-radius:16px!important}
+#suite-workspace .factory-work .goals-current :is(h2,p,.mini-label){color:#fff!important}
+#suite-workspace .factory-work .goals-current h2{font-size:32px!important}
+#suite-workspace .listing-goal-history-link{display:inline-flex!important;align-items:center!important;background:#f58abb!important;color:#242329!important;border:0!important;box-shadow:none!important;border-radius:9px!important;padding:10px 16px!important;font-size:14px!important}
