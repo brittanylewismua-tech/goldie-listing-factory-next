@@ -348,7 +348,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           <span className="shop-map-world-label">{niche.label}</span><span className="shop-map-world-figure">{money(niche.revenueMinor)}</span>
           <span className="shop-map-world-meta">{niche.activeListings} active listings · {niche.units??"—"} units sold</span>
           <span className="shop-map-bar"><span style={{width:`${Math.max(2,Math.round(share*100))}%`}}/></span>
-          <span className="shop-map-lifetime">Recorded history: {money(niche.lifetimeRevenueMinor)} · {niche.lifetimeUnits??"—"} units sold</span>
+          <span className="shop-map-lifetime">All recorded years: {money(niche.lifetimeRevenueMinor)} · {niche.lifetimeUnits??"—"} units sold</span>
         </button>{open === niche.worldId ? <div className="shop-map-evidence"><p>{niche.evidence}</p>
           <p>{niche.listings} total listings: {niche.activeListings} active and {Math.max(0,niche.listings-niche.activeListings)} inactive. Sales below cover the last 90 days.</p>
           <div className="shop-map-browse-controls"><label>Search this theme<input type="search" value={themeQuery} onChange={e=>setThemeQuery(e.target.value)} placeholder="Find a listing"/></label><label>Listing status<select value={themeState} onChange={e=>setThemeState(e.target.value)}><option value="all">All statuses</option><option value="active">Active only</option><option value="inactive">Inactive only</option></select></label></div>

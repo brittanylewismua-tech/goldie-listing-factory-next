@@ -370,3 +370,6 @@
 
 /* The bank editor lives below the full-width library; do not shrink it to its contents. */
 .app-shell.command-workspace .keyword-page .management-create{width:100%;align-self:stretch;min-width:0}
+
+.app-shell.command-workspace .conn>h1{font-weight:800!important}
+.app-shell.command-workspace .management-create-foot button:disabled{opacity:.5;cursor:not-allowed}

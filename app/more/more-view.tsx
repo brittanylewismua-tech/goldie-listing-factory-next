@@ -37,11 +37,13 @@ const GROUPS: Group[] = [
   { heading: "Listing Factory", rows: [
     {href:"/listing-factory?step=setup",name:"Listing Factory",icon:"listingFactory",what:"Create an individual listing or a batch on your computer."},
     {href:"/batches",name:"Batch History",icon:"batches",what:"Open saved batches and check their progress."},
+    {href:"/keywords",name:"Keyword Banks",icon:"keywords",what:"Manage the phrases used in your listing titles and tags."},
     {href:"/mockups",name:"Mockup Sets",icon:"mockups",what:"Manage the photos used for your listings."},
   ]},
   {
     heading: "Command Center",
     rows: [
+      {href:"/platform-updates",name:"Etsy + Printify Updates",icon:"marketWatch",what:"Read today’s platform changes and required actions."},
       {href:"/market-watch",name:"Market Watch",icon:"marketWatch",what:"Compare current Etsy listings and follow keywords and shops."},
       {href:"/shop-map",name:"Shop Map",icon:"shopMap",what:"Review your catalog, sold listings, and monthly numbers."},
       {href:"/market-watch/research",name:"Niche Research",icon:"marketWatch",what:"Find niche shops and follow their products, phrases, and buyer feedback."},
@@ -52,8 +54,6 @@ const GROUPS: Group[] = [
            register is still ingesting. The menu should not promise more
            than the page it opens. */
         what: "Check a phrase and watch for trademark changes." },
-      { href: "/keywords", name: "Keyword Banks", icon: "keywords",
-        what: "The phrases your titles and tags are built from." },
     ],
   },
   {

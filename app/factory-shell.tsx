@@ -225,7 +225,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
           <button type="button" className="factory-account" aria-haspopup="menu"
             aria-expanded={menuOpen} onClick={() => setMenuOpen(open => !open)}>
             <span className="factory-avatar" aria-hidden="true">{account?.initials || "•"}</span>
-            <span className="factory-account-label"><strong>{account?.name || "Your account"}</strong><small>{account?.owner ? "Suite owner" : account?.signedIn ? "Member" : "Not signed in"}</small></span>
+            <span className="factory-account-label"><strong>{account?.name || "Your account"}</strong><small>{account?.owner ? "Suite owner" : account?.signedIn ? "Member" : account ? "Not signed in" : "Loading account…"}</small></span>
             <span className="factory-account-caret" aria-hidden="true">&#8964;</span>
           </button>
           {menuOpen && <div className="factory-account-menu open" role="menu">

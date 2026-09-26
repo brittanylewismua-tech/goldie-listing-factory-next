@@ -3,3 +3,5 @@
 .nr .nr-load{margin-top:16px;background:#21171d;color:#fff}
 
 .nr-progress-heading{display:flex;align-items:center;gap:12px}.nr-progress-dot{width:10px;height:10px;border-radius:50%;background:#9b2358;box-shadow:0 0 0 5px #ebd1dd;flex-shrink:0}.nr .nr-progress-detail{font-size:12px;color:#67525d;margin-bottom:0}.nr-progress strong{font-size:17px}
+
+.nr .nr-shop-grid{margin-top:20px}.nr .nr-section-head .nr-select{display:flex;flex-direction:row;align-items:center;gap:7px}
