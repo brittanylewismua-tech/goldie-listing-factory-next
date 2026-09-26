@@ -134,7 +134,7 @@ export default function SuiteSearch({ items }: { items: SuiteNavItem[] }) {
   </div> : null;
 
   return <div className="suite-search">
-    <button type="button" className="suite-search-trigger" onClick={show}>
+    <button type="button" className="suite-search-trigger" aria-label="Search pages, tools and batches" onClick={show}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <span>Search pages, tools and batches</span>
       <kbd aria-hidden="true">&#8984; K</kbd>

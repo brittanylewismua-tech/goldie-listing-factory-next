@@ -27,7 +27,7 @@ import "./command-workspace.css";
 import "./suite-shell-2026.css";
 import "./command-design-system.css";
 import "./platform-updates.css";
-import "./workspace-editorial.css";
+import "./current-suite.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();

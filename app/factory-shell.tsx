@@ -171,7 +171,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
     : usageFailed ? "Couldn't load — reopen to retry"
     : "Loading usage…";
 
-  return <main id={active!=="factory"?"suite-workspace":undefined} className={`app-shell interior-shell${railOpen ? "" : " rail-collapsed"}${desktopOnly ? "" : " responsive-shell"}${["home","command-center","platform-updates","niche-research","market-watch","shop-map","design-scanner","trademark","hotlist","more","connections","batches","keywords","mockups","usage","account"].includes(active) ? " command-workspace workspace-editorial" : ""}`}>
+  return <main id={active!=="factory"?"suite-workspace":undefined} data-current-suite={active!=="factory"?"true":undefined} className={`app-shell interior-shell${railOpen ? "" : " rail-collapsed"}${desktopOnly ? "" : " responsive-shell"}${["home","command-center","platform-updates","niche-research","market-watch","shop-map","design-scanner","trademark","hotlist","more","connections","batches","keywords","mockups","usage","account"].includes(active) ? " command-workspace workspace-editorial" : ""}`}>
     {/* D828 · the shell hides every child but this one on a phone. Without it
         these pages rendered as a blank screen. */}
     {desktopOnly && <MobileGate />}
@@ -211,7 +211,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
           <span className="listing-goal-note">{goalDaysError?"Try again shortly.":"You set this target in Goals."}</span>
           {goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span>}</a>}
         <small>&copy; 2026 Be A Wolf Biz</small>
-        <p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>
+        {isFactoryPage && <p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>}
         {/*
           THE ACCOUNT SITS WITH THE NAVIGATION, NOT OVER THE WORK.
 
@@ -275,7 +275,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
           real destination rather than a decoration, and it is the way back
           from every interior surface.
         */}
-        <a className="suite-mobile-brand" href="/home"><SuiteBrand /></a>
+        <div className="suite-mobile-brand"><SuiteBrand /></div>
         <button type="button" className="factory-rail-toggle" aria-expanded={railOpen}
           aria-label={railOpen ? "Hide navigation" : "Show navigation"}
           onClick={() => setRailOpen(open => !open)}>
@@ -290,7 +290,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
           <SuiteSearch items={NAV} />
         </div>
       </header>
-      <div className="factory-work">{children}</div>
+      <div className="factory-work">{children}{active!=="factory"&&active!=="home"&&<footer className="current-suite-footer">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</footer>}</div>
     </div>
   </main>;
 }
