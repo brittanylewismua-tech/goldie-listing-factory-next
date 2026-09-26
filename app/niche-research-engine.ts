@@ -4,7 +4,7 @@ import {productFamily} from '@/app/product-type-utils';
 import {decodeEntities} from '@/app/shop-map-worlds';
 import {shopWatchRoom} from '@/app/shop-watch';
 import {putEvidence,cachedResearchPage,cacheResearchPage} from '@/app/niche-research-store';
-import {matchesNiche,researchProduct,qualifies,nicheMetrics,snapshot,type NicheProject,type NicheShop,type NicheListing,type NicheReview} from '@/app/niche-research-model';
+import {matchesNiche,researchProduct,qualifies,rankNicheShops,snapshot,type NicheProject,type NicheShop,type NicheListing,type NicheReview} from '@/app/niche-research-model';
 type EtsyBody={readAt?:number;count?:number;results?:Array<Record<string,unknown>>;shop_name?:string;url?:string;listing_active_count?:number};
 async function etsy(p:NicheProject,path:string):Promise<EtsyBody>{
  const cached=await cachedResearchPage(path);if(cached)return cached as EtsyBody;
@@ -56,11 +56,10 @@ export async function advanceResearch(user:string,p:NicheProject){
  p.searchOffsets[index]=offset+page.length;p.searchDone[index]=page.length<100||typeof b.count==='number'&&p.searchOffsets[index]>=b.count;
  p.searchIndex=index+1;p.candidates.sort((a,b)=>b.hits-a.hits||a.id-b.id);p.phase=p.searchOffsets.some(n=>n===0)?'discovering':'checking';return;
  }
- const qualified=p.shops.filter(s=>qualifies(s,now));
+ const qualified=rankNicheShops(p.shops,now);
  if(!p.history.length&&!p.selectionEdited)p.selected=qualified.slice(0,10).map(s=>s.id);
  if(qualified.length>=p.targetShops){if(!p.selected.length&&!p.selectionEdited){
- // Mix shop sizes without inventing a quality score or treating small as new.
- const ranked=[...qualified].sort((a,b)=>(a.catalogTotal??Infinity)-(b.catalogTotal??Infinity));p.selected=ranked.slice(0,5).concat(ranked.slice(5).sort((a,b)=>nicheMetrics(b,now).reviews90-nicheMetrics(a,now).reviews90).slice(0,5)).map(s=>s.id);}
+ p.selected=qualified.slice(0,10).map(s=>s.id);}
  finish(p,now);return;}
  const candidate=p.candidates.find(c=>!p.shops.some(s=>s.id===c.id));
  const checked=p.shops.filter(s=>s.checkedAt>=s.cycleAt).length;

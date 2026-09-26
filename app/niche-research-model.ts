@@ -34,6 +34,8 @@ export function nicheMetrics(shop:NicheShop,at:number){
  emerging:complete&&active.length<20&&recent.length>0};
 }
 export function qualifies(s:NicheShop,at:number){const m=nicheMetrics(s,at);return m.qualified||m.focused;}
+/** Rank completed niche evidence, not overall shop size or claimed sales. */
+export function rankNicheShops(shops:NicheShop[],at:number){return shops.filter(s=>qualifies(s,at)).sort((a,b)=>{const am=nicheMetrics(a,at),bm=nicheMetrics(b,at);return bm.reviews90-am.reviews90||bm.reviewedListings-am.reviewedListings||bm.matching-am.matching||a.id-b.id;});}
 const buyerPatterns=[
  {name:'Book clubs',re:/\bbook club\b/i},{name:'Birthdays',re:/\bbirthday\b/i},{name:'Friends and shared interests',re:/\b(?:friend|bestie|best friend)\b/i},{name:'Family recipients',re:/\b(?:daughter|sister|mom|mother|wife|husband|son|dad|father)\b/i},{name:'Groups and matching items',re:/\b(?:matching|our group|everyone in|girls trip|bachelorette)\b/i},{name:'Comfort and softness',re:/\b(?:soft|comfortable|comfy)\b/i},{name:'Fit and sizing',re:/\b(?:too small|too big|runs small|runs large|sizing was off|size was wrong)\b/i},{name:'Print durability',re:/\b(?:faded|peeling|blurry|print.*(?:bad|poor|crooked))\b/i},{name:'Buyer requests and suggestions',re:/\b(?:wish|would love|please make|more colors|more colours)\b/i},
 ];

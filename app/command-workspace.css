@@ -367,3 +367,6 @@
 .app-shell.command-workspace.command-workspace .factory-work .winner-profile-subjects li>a{
   color:var(--work-ink,#151214)!important;text-decoration:none}
 .app-shell.command-workspace.command-workspace .factory-work .winner-profile-subjects li span{color:#625862!important}
+
+/* The bank editor lives below the full-width library; do not shrink it to its contents. */
+.app-shell.command-workspace .keyword-page .management-create{width:100%;align-self:stretch;min-width:0}
