@@ -234,7 +234,8 @@ test("uses individual shop-aware Printify editor buttons", async () => {
   assert.match(page, /Add at least one design/);
   assert.match(page, /title: design\.title \|\| undefined/);
   assert.doesNotMatch(page, /listingTitle/);
-  assert.match(route, /body\.title\?\.trim\(\)\.slice\(0, 255\) \|\| requestedArtworks\[0\]\.fileName/);
+  // Filename fallback is provider-safe; explicit seller titles remain preserved.
+  assert.match(route, /initialDraftTitle\(body.title, requestedArtworks\[0\].fileName\)/);
   assert.match(page, /Choose or add a saved product/);
   assert.match(page, /function startOver\(\)/);
   assert.match(page, /Clear batch \+ start over/);

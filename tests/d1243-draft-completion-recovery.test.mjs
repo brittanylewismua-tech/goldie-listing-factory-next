@@ -16,7 +16,8 @@ test('D1243: server normalizes stale completion and support repair is owner scop
   const support=readFileSync(new URL('../app/api/mastermind/member-diagnostic/route.ts',import.meta.url),'utf8');
   assert.match(batches,/if\(batchHasEveryCreatedDraft\(incoming\)\)\{incoming=\{\.\.\.incoming,complete:true,keptAsDrafts:false\};status="complete";\}/);
   const app=readFileSync(new URL('../app/listing-factory-app.tsx',import.meta.url),'utf8');
-  assert.match(app,/status:running\?"processing":complete\?drafts\.some\(draft=>draft\.status!=="Created"\)\?"needs_attention":"complete":keptAsDrafts\?"draft":"draft"/);
+  // Failed attempts must remain needs_attention even when none completed.
+  assert.match(app,/status:running\?"processing":drafts\.some\(draft=>draft\.status!=="Created"\)\?"needs_attention":complete\?"complete":keptAsDrafts\?"draft":"draft"/);
   assert.match(support,/if \(!owner \|\| !isOwner\(owner\)\)/);
   assert.match(support,/WHERE id=\? AND user_id=\?/);
   assert.match(support,/batchHasEveryCreatedDraft\(state\)/);

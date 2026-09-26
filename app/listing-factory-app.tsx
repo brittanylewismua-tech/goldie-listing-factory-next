@@ -2541,7 +2541,7 @@ export default function ListingFactoryApp() {
     if(isCurrent)window.localStorage.setItem("goldie-active-batch",id);
     /* The child names its run, and the run row is kept alongside it. */
     if(isCurrent)void persistRunNow().catch(()=>undefined);
-    const payload=JSON.stringify({id,parentBatchId:runIdRef.current&&runIdRef.current!==id?runIdRef.current:undefined,status:running?"processing":complete?drafts.some(draft=>draft.status!=="Created")?"needs_attention":"complete":keptAsDrafts?"draft":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot(stateOverrides)});
+    const payload=JSON.stringify({id,parentBatchId:runIdRef.current&&runIdRef.current!==id?runIdRef.current:undefined,status:running?"processing":drafts.some(draft=>draft.status!=="Created")?"needs_attention":complete?"complete":keptAsDrafts?"draft":"draft",step:workflowStep,setupName:batchDisplayName||activeBundle?.name||activeRecipe?.name||"",productTitle:templateDetails?.blueprintTitle||"",designCount:files.length,state:batchStateSnapshot(stateOverrides)});
     return writeBatch.current(id,async()=>{
       if(batchIdRef.current===id)setBatchSaveStatus("saving");
       try{
@@ -4925,7 +4925,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
     return promise;
   }
 
-  async function recoverDraft(batchId: string, clientId: string, onProgress?:(phase:DraftCreationPhase)=>void) {
+  async function recoverDraft(batchId: string, clientId: string, onProgress?:(phase:DraftCreationPhase)=>void, retryConfirmedFailure = false) {
     // The server owns the durable job. Poll quickly for normal completion,
     // then back off without turning a slow provider response into a new POST.
     for (let attempt=0;attempt<180;attempt++) {
@@ -4937,7 +4937,12 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
       const result = await response.json() as { status?: string; draft?: DraftResult;error?:string;phase?:DraftCreationPhase };
       if(result.phase)onProgress?.(result.phase);
       if (result.status === "succeeded" && result.draft) {onProgress?.("succeeded");return result.draft;}
-      if(result.status==="failed")throw new Error(result.error||"This draft could not be completed.");
+      if(result.status==="failed"){
+        // An explicit retry may resubmit only a confirmed failed job. The same
+        // stable key still protects succeeded, running, and uncertain jobs.
+        if(retryConfirmedFailure)return null;
+        throw new Error(result.error||"This draft could not be completed.");
+      }
       if(result.status==="connection_missing")throw new Error(result.error||"Reload the saved product connection before continuing.");
       if(result.status==="not_found")return null;
       /*
@@ -4977,7 +4982,7 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
         reportProgress("preparing");
         const queuedSession=queuedDesignSessions.current.get(design.id);
         if(!preparation&&queuedSession){
-          const recovered=await recoverDraft(queuedSession,design.id);
+          const recovered=await recoverDraft(queuedSession,design.id,reportProgress,true);
           if(recovered)return recovered;
           // Null is exclusively a confirmed absence of this owner's stable job
           // row, not a missing connection, failed request, timeout or uncertain
@@ -6457,6 +6462,11 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
             </div>
           )}
 
+          {!running && !complete && drafts.some(draft=>draft.status!=="Created") && <section className="notice error" role="alert">
+            <strong>These drafts need attention</strong>
+            <ul>{drafts.filter(draft=>draft.status!=="Created").map(draft=><li key={draft.clientId}><b>{draft.name}</b>: {draft.error || "Printify has not confirmed this draft. Retry to check its saved result."}</li>)}</ul>
+            <button type="button" className="secondary-action" onClick={retryFailed} disabled={!ready || Boolean(bundleQualityGroups.length) || Boolean(bundleRun)}>Retry failed drafts</button>
+          </section>}
           {!complete ? (
             <>
             {workflowStep==="designs"&&<FactoryFooter status={running||preparingEtsy||Boolean(bundleRun)?preparationMessage||"Creating private Printify drafts…":bundleQualityGroups.length?`Review ${bundleQualityGroups.length} resolution ${bundleQualityGroups.length===1?"warning":"warnings"} above`:!ready?missingRequirement:activeBundle?`${files.length} design${files.length===1?"":"s"} · ${bundleRecoveryOnly?files.length:requestedListingCount} drafts to create`:`${files.length} ${files.length===1?"listing":"listings"} will be created`}><button className="launch-button" aria-busy={running||preparingEtsy||Boolean(bundleRun)} disabled={!ready || bundleQualityGroups.length>0 || running||preparingEtsy||Boolean(bundleRun)} onClick={createDrafts}>

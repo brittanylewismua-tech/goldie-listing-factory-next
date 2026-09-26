@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import {browseListings,type ListingOrder} from "@/app/market-listing-browser";
 
 type Listing = {
-  createdAt?:number|null; listedAt?:number|null;
+  createdAt?:number|null; listedAt?:number|null; photoPending?:boolean;
   listingId: number; title: string; imageUrl: string; etsyUrl: string;
   state?: string; label?: string; confirmedAt?: number; intervals: number;
   sold7?: number; sold30?: number; priceCents: number | null; currency: string;
@@ -242,6 +242,9 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const [rows,setRows]=useState<Listing[]>([]);
   const [total,setTotal]=useState<number|null>(null);
   const [profile,setProfile]=useState<Profile|null>(null);
+  const [extraPhotos,setExtraPhotos]=useState<Record<string,string>>({});
+  const [photoError,setPhotoError]=useState("");
+  const [photoRetry,setPhotoRetry]=useState(0);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const active=useRef<AbortController|null>(null);
@@ -257,7 +260,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const load=useCallback(async()=>{
     active.current?.abort();
     const controller=new AbortController();active.current=controller;
-    setLoading(true);setError("");setRows([]);setTotal(null);setProfile(null);setShown(60);
+    setLoading(true);setError("");setRows([]);setTotal(null);setProfile(null);setShown(60);setExtraPhotos({});setPhotoError("");
     try{
       const params=new URLSearchParams({key:view.key,sort:"favorites",query:search,...(shelf?{shelf}:{})});
       const response=await fetch(`/api/market-watch/listings?${params}`,{signal:controller.signal});
@@ -275,7 +278,19 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const countsExist=rows.some(row=>row.soldUnits!=null);
   const effectiveSort=sort==="sold"&&!countsExist?"favorites":sort;
   const ranked=rankScan(rows,effectiveSort);
-  const listings=ranked.slice(0,shown);
+  const visibleRows=ranked.slice(0,shown);
+  const missingPhotoIds=visibleRows.filter(row=>!row.imageUrl&&!(String(row.listingId) in extraPhotos)).slice(0,100).map(row=>row.listingId).join(",");
+  useEffect(()=>{
+    if(!missingPhotoIds || section!=="search")return;
+    const controller=new AbortController();
+    setPhotoError("");
+    void fetch(`/api/market-watch/listing-photos?ids=${encodeURIComponent(missingPhotoIds)}`,{signal:controller.signal})
+      .then(async response=>{const body=await response.json() as {photos?:Record<string,string>;error?:string};if(!response.ok||!body.photos)throw Error(body.error||"These listing photos could not load.");return body.photos;})
+      .then(photos=>{if(!controller.signal.aborted)setExtraPhotos(current=>({...current,...photos}));})
+      .catch(error=>{if(!controller.signal.aborted)setPhotoError(error instanceof Error?error.message:"These listing photos could not load.");});
+    return()=>controller.abort();
+  },[missingPhotoIds,photoRetry,section]);
+  const listings=visibleRows.map(row=>({...row,imageUrl:row.imageUrl||extraPhotos[String(row.listingId)]||"",photoPending:!row.imageUrl&&!(String(row.listingId) in extraPhotos)}));
   const savedIds=new Set(entries.map(entry=>entry.listing.listingId));
   const collectionCurrencies=[...new Set(entries.map(entry=>entry.listing.currency))].sort();
   const compared=browseListings(entries.map(entry=>entry.listing),collectionSort,"",collectionCurrency);
@@ -310,6 +325,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     count behind it. */}
     <div className="market-results-sort"><label>Sort by<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}>{rows.some(row=>row.soldUnits!=null)&&<option value="sold">Units counted sold</option>}<option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="momentum">Favorites per day listed</option><option value="newest">Recently listed / renewed</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price: low to high</option><option value="price-desc">Price: high to low</option></select></label></div>
     {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Try again</button></p>}
+    {photoError&&<p className="p-notice failed" role="alert">{photoError} <button className="p-button p-button-quiet" onClick={()=>setPhotoRetry(value=>value+1)}>Retry photos</button></p>}
     {!loading&&!error&&!listings.length&&<p className="empty">No Etsy listings match this search.</p>}
     <div className="cards" aria-busy={loading}>{loading&&!rows.length&&Array.from({length:6},(_unused,index)=><div className="listing-skeleton" key={index} aria-hidden="true"><span/><div><i/><i/></div></div>)}{listings.map(listing=><ListingCard key={listing.listingId} listing={listing} action={<button className="p-button p-button-quiet" disabled={collectionLoading||collectionBusy||Boolean(collectionError)||savedIds.has(listing.listingId)} onClick={()=>void updateCollection("save",listing.listingId)}>{savedIds.has(listing.listingId)?"Saved":"Compare"}</button>}/>)}</div>
     {shown<ranked.length&&<div className="market-pagination"><button className="p-button p-button-primary" onClick={()=>setShown(count=>count+60)}>Show more listings</button></div>}
@@ -456,7 +472,7 @@ function WinnerProfile({profile,shelf}:{profile:Profile;shelf:string}){
 }
 
 function ListingCard({listing,action,extra}:{listing:Listing;action?:ReactNode;extra?:ReactNode}){return <article className="card">
-  {listing.imageUrl && listing.displayFresh?<img src={listing.imageUrl} alt={listing.title} loading="lazy" width={570} height={570}/>:<p className="no-image">{listing.imageUrl ? "Photo needs refreshing" : "Photo unavailable from Etsy"}</p>}
+  {listing.imageUrl && listing.displayFresh?<img src={listing.imageUrl} alt={listing.title} loading="lazy" width={570} height={570}/>:<p className="no-image">{listing.photoPending ? "Loading photo…" : listing.imageUrl ? "Photo needs refreshing" : "Photo unavailable from Etsy"}</p>}
   <div className="body"><div className="listing-price-row"><strong>{money(listing)}</strong>{!listing.displayFresh&&<span>Saved details</span>}</div><h2 className="title">{listing.title}</h2><dl className="listing-stat-grid">{/* Counted, not estimated. Absent until a listing has been read twice, and
     shown with the window it was counted over, because three units over four
     hours and three over three weeks are different findings. */}{listing.soldUnits!=null&&<div className="listing-stat-counted"><dt>Units counted sold</dt><dd>{listing.soldUnits}<small>{listing.soldHours!=null?` over ${listing.soldHours>=48?`${Math.round(listing.soldHours/24)} days`:`${listing.soldHours} hours`} watched`:""}</small></dd></div>}<div><dt>Total favorites</dt><dd>{listing.favorites??"Unavailable"}</dd></div><div><dt>Total views</dt><dd>{listing.views??"Unavailable"}</dd></div>{/* D1810 · "Listed / renewed" printed the same date on all fifty rows. Etsy's

@@ -1,3 +1,4 @@
+import { initialDraftTitle } from "@/app/initial-draft-title";
 import { publicSupportReference, recordDiagnostic } from "../diagnostics";
 import {retryAfterMilliseconds,waitForDraftRetry} from "../retry-after";
 import { createProductWithImageRetries, UncertainProductCreation, RejectedProductCreation } from "../product-creation";
@@ -165,7 +166,7 @@ export async function executeDraftJob(input:DraftJobInput,idempotencyKey:string,
     // that lookup even though the uploaded image ID is valid. Draft creation
     // below is the authoritative registration check and retries only when
     // Printify itself returns image-not-ready error 8253.
-    const title = body.title?.trim().slice(0, 255) || requestedArtworks[0].fileName.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim();
+    const title = initialDraftTitle(body.title, requestedArtworks[0].fileName);
     const selectedShippingTemplateId=Number(body.shippingTemplateId)>0?String(Math.trunc(Number(body.shippingTemplateId))):template.shippingTemplateId;
     if(!selectedShippingTemplateId)throw new Error("Choose the shipping profile for this batch before creating drafts.");
     const finalVariantIds=(body.selectedVariantIds||[]).filter(id=>template.variants.some(variant=>variant.id===id));

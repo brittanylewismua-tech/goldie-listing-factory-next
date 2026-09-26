@@ -143,10 +143,10 @@ test('the Command Center is a page, not four links in a group', () => {
 
   const client = readFileSync(new URL('../app/command-center/command-center-client.tsx', import.meta.url), 'utf8');
   /* The question, not the file name: a member is buying the answer. */
-  /* D1798 · Three tools. The listing check moved onto the listing in Shop
-     Map, where the listings already were, and the artwork scan was deleted. */
-  for (const question of ['What is actually selling in this search',
-    'Which of my designs actually make money', 'Can I legally print this phrase'])
+  /* Tools describe supported decisions without implying exact competitor
+     sales or legal clearance. The completed niche tool must be discoverable. */
+  for (const question of ['Which listings deserve a closer look',
+    'Which of my designs actually make money', 'Does this phrase have trademark matches', 'What are buyers choosing in my niche'])
     assert.ok(client.includes(question), `missing: ${question}`);
 
   const summary = readFileSync(new URL('../app/api/command-center/summary/route.ts', import.meta.url), 'utf8');

@@ -34,19 +34,23 @@ const icon = (children: React.ReactNode) =>
 const TOOLS = (summary: Summary | null) => [
   {
     href: "/market-watch", name: "Market Watch",
-    question: "What is actually selling in this search?",
-    what: "Ranks a thousand live listings by favorites, views and favorites per day — "
-      + "sorts Etsy gives nobody — and shows what the top fifty share.",
+    question: "Which listings deserve a closer look?",
+    what: "Compare Etsy listings, follow keywords and shops, and see new listings and buyer reviews over time.",
     stat: summary && `${summary.keywords} keyword${summary.keywords === 1 ? "" : "s"} and `
       + `${summary.shops} shop${summary.shops === 1 ? "" : "s"} followed`,
     icon: icon(<><path d="M3 17l6-6 4 4 7-7" /><path d="M14 8h7v7" /></>),
   },
   {
+    href: "/market-watch/research", name: "Niche Research",
+    question: "What are buyers choosing in my niche?",
+    what: "Find ten relevant shops and follow their reviewed products, common phrases, prices, and buyer feedback as your niche updates.",
+    stat: null,
+    icon: icon(<><circle cx="10" cy="10" r="6" /><path d="m15 15 6 6M7 10h6M10 7v6" /></>),
+  },
+  {
     href: "/shop-map", name: "Shop Map",
     question: "Which of my designs actually make money?",
-    what: "Your receipts against your Printify costs and Etsy's fees, to the cent. "
-      + "The designs that sold and sit on only one product. And a check of any "
-      + "listing against the fifty winning its search.",
+    what: "See which listings sold, compare product themes, and review revenue, Etsy fees, and production costs for your shop.",
     stat: summary && summary.sold90 > 0
       ? `${summary.sold90} units sold in the last 90 days`
       : summary && `${summary.mapped} listings mapped`,
@@ -54,13 +58,13 @@ const TOOLS = (summary: Summary | null) => [
   },
   {
     href: "/trademark", name: "Trademark Tracker",
-    question: "Can I legally print this phrase?",
+    question: "Does this phrase have trademark matches?",
     what: "Checks a phrase against the federal register, and keeps watching the "
       + "ones you save.",
     stat: summary && summary.phrases > 0
       ? `${summary.phrases} phrase${summary.phrases === 1 ? "" : "s"} watched`
         + (summary.needReview ? ` · ${summary.needReview} to review` : "")
-      : "Nothing watched yet",
+      : summary ? "Nothing watched yet" : null,
     icon: icon(<><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z" /><path d="m9 12 2 2 4-4" /></>),
   },
 ];
@@ -78,7 +82,7 @@ export default function CommandCenterClient() {
   return <main className="cc-home p-grid">
     <header className="cc-home-head">
       <p className="mini-label">COMMAND CENTER</p>
-      <h1>Everything except making the listing.</h1>
+      <h1>Research your next product.</h1>
 
     </header>
 
