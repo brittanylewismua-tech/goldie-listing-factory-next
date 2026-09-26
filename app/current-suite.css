@@ -191,14 +191,7 @@
 #suite-workspace .market-summary{margin:0 0 18px}
 #suite-workspace .market-summary>summary{font-size:14px;font-weight:550;color:#666570;cursor:pointer;padding:8px 0}
 #suite-workspace .market-summary .winner-profile{margin-top:12px!important;box-shadow:none!important;border:1px solid #e4e4e9!important}
-#suite-workspace .nr-two:has(blockquote){display:block;border:1px solid #e4e4e9;border-radius:8px;overflow:hidden;background:white}
-#suite-workspace .nr-two article:has(blockquote){display:grid;grid-template-columns:220px minmax(0,1fr);column-gap:32px;padding:24px;border:0;border-bottom:1px solid #e4e4e9;border-radius:0;background:white}
-#suite-workspace .nr-two article:has(blockquote)>.nr-kicker{grid-column:1;grid-row:1;font-size:12px!important}
-#suite-workspace .nr-two article:has(blockquote)>h3{grid-column:1;grid-row:2;font-size:20px!important}
-#suite-workspace .nr-two article>blockquote{grid-column:2;margin:0 0 20px;padding:0 0 0 16px}
-#suite-workspace .nr-two article>blockquote:first-of-type{grid-row:1/span 2}
-#suite-workspace .nr-two article>blockquote p{margin:0 0 8px;font-size:15px!important}
-@media(max-width:700px){#suite-workspace .nr-two article:has(blockquote){display:block;padding:20px}#suite-workspace .nr-two article>blockquote{margin:20px 0}}
+
 #suite-workspace .factory-work .shop-map-figure{color:#222126!important}
 /* Final live-library review: keep secondary actions and summaries compact. */
 #suite-workspace .bank-grid article{background:white!important}
@@ -600,3 +593,11 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .suite-brand-g{font-weight:700!important}
 #suite-workspace .current-home-aside>section{margin:0!important}
 #suite-workspace .current-home-aside .platform-brief-card>a{background:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;text-decoration:none!important}
+#suite-workspace .nr .current-buyer-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
+#suite-workspace .nr .current-buyer-grid>article{display:block;padding:24px!important;min-width:0}
+#suite-workspace .current-buyer-grid h3{font-size:23px!important;line-height:1.25!important;margin:12px 0 20px!important}
+#suite-workspace .current-buyer-grid blockquote{margin:18px 0 0;padding:18px 0 0;border:0;border-top:1px solid #e4e4e9}
+#suite-workspace .current-buyer-grid blockquote p{font-size:15px!important;line-height:1.65!important;margin:0 0 12px!important}
+#suite-workspace .current-buyer-grid .nr-review-meta{font-size:12px!important;line-height:1.6;color:#666570}
+@media(max-width:1200px){#suite-workspace .nr .current-buyer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){#suite-workspace .nr .current-buyer-grid{grid-template-columns:1fr}}
