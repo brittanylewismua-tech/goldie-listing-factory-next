@@ -1,5 +1,6 @@
 import {
   MASTERBOT_RESOURCE_METADATA, MASTERBOT_SECTIONS, masterbotPlaybook, masterbotProfile,
+  refreshMembership,
 } from "@/app/masterbot/masterbot-server";
 
 /*
@@ -161,6 +162,8 @@ export async function POST(request: Request) {
 
   /* An invalid or expired token must surface as 401 so ChatGPT refreshes it,
      not as a tool error the member cannot fix. */
+  const messages0 = Array.isArray(payload) ? payload : [payload];
+  if (messages0.some(m => m?.method === "tools/call")) await refreshMembership(token);
   const probe = await masterbotProfile(token);
   if (!probe.ok && probe.status === 401) return unauthorized();
 

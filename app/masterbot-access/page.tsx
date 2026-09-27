@@ -1,6 +1,6 @@
 import MasterbotFrame from "../masterbot/masterbot-frame";
 import { createSupabaseServerClient } from "@/app/supabase-auth";
-import { masterbotProfile } from "@/app/masterbot/masterbot-server";
+import { masterbotProfile, refreshMembership } from "@/app/masterbot/masterbot-server";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "MasterBot access" };
@@ -17,6 +17,7 @@ export default async function MasterbotAccess() {
     if (user?.email) {
       email = user.email;
       const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) await refreshMembership(session.access_token);
       const profile = session?.access_token ? await masterbotProfile(session.access_token) : null;
       status = !profile || !profile.ok ? "error" : profile.data.active ? "active" : "inactive";
     }
