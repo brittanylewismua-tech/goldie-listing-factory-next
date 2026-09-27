@@ -790,3 +790,5 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .current-overview :is(.co-feature,.co-price,.co-findings,.co-mix){margin:0!important}
 #suite-workspace .co-photos button{display:block!important;line-height:normal!important}
 #suite-workspace .co-feature{align-self:stretch!important}
+
+#suite-workspace .nr-refresh-status{margin:0 0 12px!important;padding:0!important;color:#776670!important;font-size:13px!important;line-height:1.5!important}
