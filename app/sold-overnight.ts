@@ -1284,8 +1284,8 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
       image: r.image,
       /* One column, one currency. Etsy accepts the conversion parameter and
          ignores it, so it is done here or not at all. */
-      price: usdFromCents(r.price_cents == null ? null : Number(r.price_cents), r.currency),
-      currency: "USD",
+      price: r.price_cents == null || !r.currency ? null : Number(r.price_cents)/100,
+      currency: r.currency || "USD",
       sold: Number(r.sold),
       attribution: allowed.get(Number(r.listing_id))?.attribution ?? null,
       soldOut: Boolean(r.sold_out),
@@ -1327,7 +1327,7 @@ export async function refreshNow() {
  * phrase has nothing behind it the answer is "nothing sold for that", which is
  * a real answer rather than a filler list.
  */
-export async function searchSold(keyword: string, hoursBack = 168, limit = 24, madeToOrder = false, rights = false) {
+export async function searchSold(keyword: string, hoursBack = 168, limit = 24, madeToOrder = false, rights = false, product = "all") {
   await ensureTables();
   const shelfOf = await shelfByTaxonomy();
   if (!shelfOf.size) return [];
@@ -1341,7 +1341,7 @@ export async function searchSold(keyword: string, hoursBack = 168, limit = 24, m
   const where = words.map(() => "LOWER(w.title) LIKE ?").join(" AND ");
 
   const rows = (await db().prepare(
-    `SELECT m.listing_id, SUM(m.sold) sold, w.title, w.url, w.image,
+    `SELECT m.listing_id, SUM(m.sold) sold, SUM(m.saves_gained) saves_gained, w.title, w.url, w.image,
             w.price_cents, w.currency, w.taxonomy_id, w.personalizable
        FROM sold_moves m
        JOIN sold_watch w ON w.listing_id=m.listing_id
@@ -1351,14 +1351,15 @@ export async function searchSold(keyword: string, hoursBack = 168, limit = 24, m
         /* Same six-hour rule: this shows listing content too. */
         AND w.last_read IS NOT NULL AND w.last_read >= ?
         AND ${where}
+        AND (? = 'all' OR w.taxonomy_id IN (SELECT value FROM json_each(?)))
       GROUP BY m.listing_id
-      ORDER BY sold DESC
+      ORDER BY saves_gained DESC, sold DESC
       LIMIT ?`)
     .bind(since, MAX_UNITS_PER_READ,
           new Date(Date.now() - DISPLAY_MAX_AGE_HOURS * 3_600_000).toISOString(),
-          ...words.map(word => `%${word}%`), limit * 4)
+          ...words.map(word => `%${word}%`), product, JSON.stringify([...shelfOf].filter(([,label])=>label===product).map(([id])=>id)), limit * 4)
     .all()).results as unknown as {
-      listing_id: number; sold: number; title: string; url: string; image: string | null;
+      listing_id: number; sold: number; saves_gained:number; title: string; url: string; image: string | null;
       price_cents: number | null; currency: string | null; taxonomy_id: number | null; personalizable: number | null;
     }[];
 
@@ -1375,9 +1376,10 @@ export async function searchSold(keyword: string, hoursBack = 168, limit = 24, m
       url: row.url,
       image: row.image,
       /* Same column, same currency, same reason as the board. */
-      price: usdFromCents(row.price_cents == null ? null : Number(row.price_cents), row.currency),
-      currency: "USD",
+      price: row.price_cents == null || !row.currency ? null : Number(row.price_cents)/100,
+      currency: row.currency || "USD",
       sold: Number(row.sold),
+      savesGained: Number(row.saves_gained)||0,
       product: shelfOf.get(Number(row.taxonomy_id))!,
     }));
 }

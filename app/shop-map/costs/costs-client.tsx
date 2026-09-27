@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {shortLabel} from "@/app/design-reach";
 
 /**
  * THE MEMBER'S WAY OUT OF "PROFIT UNAVAILABLE".
@@ -142,7 +143,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
             <span className="money">{money(order.revenueMinor, order.currency)}</span>
           </div>
           <p className="when">{day(order.orderDate)}</p>
-          {!!order.items?.length&&<ul className="order-products">{order.items.map(item=><li key={item.listingId}>{item.quantity} × {item.title||`Listing #${item.listingId}`}</li>)}</ul>}
+          {!!order.items?.length&&<ul className="order-products">{order.items.map(item=><li key={item.listingId} title={item.title}>{item.quantity} × {item.title?shortLabel(item.title):`Listing #${item.listingId}`}</li>)}</ul>}
           {!order.canceled&&order.productionCostMinor!==null&&order.productionCostMinor>order.revenueMinor&&<p className="error">Production and shipping exceed this order’s revenue by {money(order.productionCostMinor-order.revenueMinor,order.currency)}, before Etsy fees.</p>}
 
           <span className="basis" data-basis={order.costBasis}>

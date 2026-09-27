@@ -12,7 +12,7 @@ type Listing = {
   sold: number; savesGained: number; soldOut: boolean; product: string; attribution: string | null;
 };
 type Hit = { listingId: number; title: string; url: string; image: string | null;
-  price: number | null; currency: string; sold: number; product: string };
+  price: number | null; currency: string; sold: number; savesGained?:number; product: string };
 type Board = {
   night: string | null; totalSold: number; hoursBack: number; coveredHours: number;
   building: boolean; unlocked: boolean; held: number; toUnlock: number;
@@ -114,7 +114,7 @@ export default function HotListPage() {
     setLooking(true); setNote(""); setHits([]); setSearchedTerm(keyword);
     try {
       const response = await fetch(
-        `/api/sold-overnight/search?keyword=${encodeURIComponent(term.trim())}&hours=${view.hours}${madeToOrder ? "&madeToOrder=1" : ""}${rights ? "&rights=1" : ""}`, { cache: "no-store" });
+        `/api/sold-overnight/search?keyword=${encodeURIComponent(term.trim())}&hours=${view.hours}${madeToOrder ? "&madeToOrder=1" : ""}${rights ? "&rights=1" : ""}&product=${encodeURIComponent(product)}`, { cache: "no-store" });
       const result = await response.json() as { listings?: Hit[]; error?: string };
       if (!response.ok) throw new Error(result.error || "That could not be looked up.");
       if(request!==searchRequest.current)return;
@@ -168,7 +168,7 @@ export default function HotListPage() {
         {note && <p className="hot-note" role="status">{note}</p>}
 
         {hits && hits.length > 0 && <section className="hot-hits">
-          <p className="mini-label">ACTIVITY IN THIS PERIOD FOR &ldquo;{searchedTerm}&rdquo;</p>
+          <p className="mini-label">ACTIVITY IN THIS PERIOD FOR &ldquo;{searchedTerm}&rdquo;{product!=="all"?` · ${product}`:""}</p>
           <div className="drop-grid">
             {hits.map(hit => <figure key={hit.listingId} className="drop-card">
               <a href={hit.url} target="_blank" rel="noopener noreferrer" className="drop-shot">
@@ -180,7 +180,7 @@ export default function HotListPage() {
               <figcaption>
                 <p className="drop-figures">
 
-                  <span className="drop-unit">Stock decreased</span>
+                  <span className="drop-unit">{(hit.savesGained??0)>0?`+${hit.savesGained} favorites`:"Stock decreased"}</span>
                 </p>
                 {hit.price !== null && <p className="drop-sub">{money(hit.price, hit.currency)}</p>}
                 <a className="drop-title" href={hit.url} target="_blank" rel="noopener noreferrer">
@@ -287,15 +287,7 @@ export default function HotListPage() {
             </>}</>}
       </div>
 
-      <details className="drop-note">
-        <summary>How these listings are selected</summary>
-        <p>
-          These listings changed while their shops reported additional sales.
-          Etsy does not provide competitors’ order records, so this does not
-          confirm a sale or a unit count for any individual listing. Use the
-          photos and listing links to research products, not as a sales report.
-        </p>
-      </details>
+
     </>}
   </div></FactoryShell>;
 }

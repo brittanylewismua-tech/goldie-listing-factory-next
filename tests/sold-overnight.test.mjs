@@ -166,13 +166,15 @@ test("the page states what it counted and never claims more", () => {
         `Sold Overnight must state only what it counted: ${forbidden}`);
 });
 
-test("the page explains what the numbers mean without describing the plumbing", () => {
+test("the page labels observed activity without unnecessary explanations", () => {
   /* A number this strong has to say what it is, or the first person to doubt
      it has nowhere to look. What it must NOT do is narrate the mechanism —
      a seller does not need to know anything is being compared, and telling
      them makes a confident number sound like a workaround. */
   const page = read("hot-list/page.tsx");
-  assert.match(page, /How these listings are selected/);
+  assert.doesNotMatch(page, /How these listings are selected/);
+  assert.match(page, /favorites/);
+  assert.match(page, /Stock decreased/);
   assert.match(page, /Browse Etsy listing activity/i);
   for (const leak of [/compare/i, /reading before/i, /listings we watch/i])
     assert.doesNotMatch(strip(page), leak,
@@ -535,7 +537,8 @@ test("the period is stated once, not on every card", () => {
   /* Four hundred cards each repeating the window was noise even when it was
      accurate. The selected tab says it; the card carries the number. */
   const page = read("hot-list/page.tsx");
-  assert.match(page, /<span className="drop-unit">Stock decreased<\/span>/);
+  assert.match(page, /<span className="drop-unit">\{listing\.savesGained > 0/);
+  assert.match(page, /: "Stock decreased"\}<\/span>/);
   assert.doesNotMatch(strip(page), /sold this week<\/span>|sold overnight<\/span>/);
 });
 
@@ -601,29 +604,12 @@ test("made to order is recorded, hidden by default, and can be asked for", () =>
   assert.match(route, /params\.get\("madeToOrder"\) === "1"/);
 });
 
-test("one currency on the board, converted here because Etsy would not", () => {
-  /* The sweep asks Etsy for currency=USD, which the docs describe as price
-     conversion. After a full re-read of all 14,868 watched listings, 149 of
-     the top 400 still came back in GBP, EUR, CAD and nine others: the
-     parameter is accepted and ignored. So the conversion happens locally. */
-  const math = read("sold-overnight-math.ts");
-  assert.match(math, /export function usdFromCents/);
-  assert.match(math, /export const PER_USD/);
-
-  /* A currency we have no rate for returns null rather than a guess, so the
-     listing is left off the board instead of shown with a number that cannot
-     be read against the others. */
-  const fn = math.slice(math.indexOf("export function usdFromCents"));
-  assert.match(fn, /if \(!rate\) return null;/);
-
-  /* Both surfaces that print a price use it, and neither passes the listing's
-     own currency through to the page. */
-  const source = read("sold-overnight.ts");
-  assert.match(source, /import \{[^}]*usdFromCents[^}]*\} from "@\/app\/sold-overnight-math"/);
-  assert.equal((source.match(/usdFromCents\(/g) || []).length, 3,
-    "used for display and the keyword lookup price filter");
-  assert.doesNotMatch(source, /currency: r\.currency \|\| "USD"/);
-  assert.doesNotMatch(source, /currency: row\.currency \|\| "USD"/);
+test("display prices retain the listing currency rather than use a static exchange rate",()=>{
+ const source=read("sold-overnight.ts");
+ assert.match(source,/currency: r\.currency \|\| "USD"/);
+ assert.match(source,/currency: row\.currency \|\| "USD"/);
+ assert.match(source,/Number\(r\.price_cents\)\/100/);
+ assert.match(source,/Number\(row\.price_cents\)\/100/);
 });
 
 test("the board does not recommend somebody else's trademark", () => {
