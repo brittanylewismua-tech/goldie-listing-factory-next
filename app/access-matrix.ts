@@ -141,6 +141,9 @@ export const ACCESS: Record<string, Rule> = {
   "/api/shop-watch/insights": { kind: "feature", feature: "marketWatch" },
   "/api/shop-watch/listings": { kind: "feature", feature: "marketWatch" },
   "/hot-list": { kind: "feature", feature: "marketWatch" },
+  /* D1866 · Homepage directions, not in the navigation and linked from
+     nowhere: reachable only by typing the address. */
+  "/home-preview": { kind: "feature", feature: "marketWatch" },
   "/sold-overnight": { kind: "feature", feature: "marketWatch" },
   "/api/sold-overnight": { kind: "feature", feature: "marketWatch" },
   "/api/sold-overnight/search": { kind: "feature", feature: "marketWatch" },
