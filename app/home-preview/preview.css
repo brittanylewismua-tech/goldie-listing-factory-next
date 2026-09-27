@@ -101,6 +101,8 @@
 .meter{height:8px;border-radius:999px;background:#f2edf0;margin-top:16px;overflow:hidden}
 .meter i{display:block;height:8px;border-radius:999px;background:var(--ink)}
 #suite-workspace .hp .box p{font-size:13px!important;color:var(--muted)!important;margin:12px 0 0!important;line-height:1.5!important}
+#suite-workspace .hp .source{font-size:12px!important;color:var(--faint)!important;
+  margin:12px 2px 0!important;line-height:1.55!important;max-width:78ch}
 #suite-workspace .hp .why{font-size:12px!important;color:var(--muted)!important;margin:18px 0 0!important;
   padding-top:16px;border-top:1px solid var(--line);line-height:1.6!important}
 #suite-workspace .hp .why a{color:var(--deep)!important;text-decoration:underline;text-underline-offset:3px}

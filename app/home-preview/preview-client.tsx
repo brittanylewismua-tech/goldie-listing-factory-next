@@ -108,12 +108,14 @@ export default function PreviewClient(){
       <div><b>{num(m.thisMonth?.orders??0)}</b><small>ORDERS THIS MONTH</small></div>
     </div>
 
-    {/* D1872 · "Themes" is a word this product invented. A seller says
-        categories. */}
-    <div className="hp-rule"><h2>What sells in your shop</h2><i/>
+    {/* D1873 · The grouping is built from repeated phrases, tags and shop
+        sections in the seller's own listings - shop-map-worlds.ts, no model
+        call - so these are keyword clusters, and naming them that is more
+        accurate than "themes" or "categories" ever was. */}
+    <div className="hp-rule"><h2>Keywords driving sales in your shop</h2><i/>
       <small><em className="key life"/> all time &nbsp; <em className="key now"/> last 90 days</small></div>
     <div className="themes">
-      <div className="theme head"><span>Category</span><span/><span>All time</span><span>Last 90 days</span></div>
+      <div className="theme head"><span>Keyword</span><span/><span>All time</span><span>Last 90 days</span></div>
       {worlds.map(w=><div className="theme" key={w.label}>
         <div><div className="name">{w.label}</div><div className="meta">{w.activeListings} live</div></div>
         <div>
@@ -124,6 +126,9 @@ export default function PreviewClient(){
         <div><div className="now">{w.revenueMinor?usd(w.revenueMinor):"—"}</div><div className="nowu">{w.units?`${w.units} units`:"nothing"}</div></div>
       </div>)}
     </div>
+    <p className="source">Grouped from the words that repeat across your own titles, tags and
+      shop sections. Revenue is what listings carrying that keyword have taken — not what
+      buyers searched for.</p>
 
     {thin&&<>
       <div className="hp-rule"><h2>One thing worth a look</h2><i/></div>
@@ -132,7 +137,7 @@ export default function PreviewClient(){
           <p className="k">{thin.label}</p>
           <h3>You have sold {num(thin.lifetimeUnits)} of these, and only {thin.activeListings} are still live.</h3>
           <p>{thin.label} has made you {usd(thin.lifetimeRevenueMinor)} — that is {usd(Math.round(thin.lifetimeRevenueMinor/Math.max(1,thin.activeListings)))} for
-            each listing you still have up, more than any other category in your shop.
+            each listing you still have up, more than any other keyword in your shop.
             {biggest?` ${biggest.label} has ${biggest.activeListings} listings up and has made ${usd(biggest.lifetimeRevenueMinor)}.`:""}</p>
         </div>
         <div className="find-num"><b>{thin.activeListings}</b><small>still live in<br/>{thin.label.toLowerCase()}</small></div>
