@@ -57,33 +57,35 @@ export default function PreviewClient(){
 
   return <div className="hp">
     <section className="hero">
-      <div className="hero-grid">
-        <div>
-          {/* D1868b · The window a seller is working in leads. Lifetime is the
-              yardstick it is measured against, not the headline. */}
-          <p className="k">She’s A Wolf Clothing · last 90 days</p>
-          <div className="hero-big">{usd(t?.revenueLast90Minor??0)}</div>
-          <div className="hero-facts">
-            <div><b>{num(t?.ordersLast90??0)}</b><small>ORDERS</small></div>
-            <div><b>{num(units90)}</b><small>UNITS</small></div>
-            <div><b>{usd(perOrder)}</b><small>PER ORDER</small></div>
-            <div><b>{num(t?.activeListings??0)}</b><small>LISTINGS LIVE</small></div>
-          </div>
-          <p className="hero-life">All time this shop has taken <b>{usd(t?.revenueMinor??0)}</b> across{" "}
-            <b>{num(t?.orders??0)} orders</b> and <b>{num(t?.reviews??0)} reviews</b>, from{" "}
-            <b>{num(m.counts?.listingsWithSales??0)}</b> listings that have ever sold.</p>
+      <div className="hero-copy">
+        <p className="k">She’s A Wolf Clothing · last 90 days</p>
+        <div className="hero-big">{usd(t?.revenueLast90Minor??0)}</div>
+        <div className="hero-facts">
+          <div><b>{num(t?.ordersLast90??0)}</b><small>ORDERS</small></div>
+          <div><b>{num(units90)}</b><small>UNITS</small></div>
+          <div><b>{usd(perOrder)}</b><small>PER ORDER</small></div>
+          <div><b>{num(t?.activeListings??0)}</b><small>LIVE</small></div>
         </div>
-        <div className="hero-now">
-          <p className="k">September so far</p>
-          <b>{usd(m.thisMonth?.revenueMinor??0)}</b>
-          <small>{num(m.thisMonth?.orders??0)} orders · through 26 September</small>
-          <hr/>
-          <div className="pair"><span>Etsy fees</span><span>{usd(m.thisMonth?.etsyFeesMinor??0)}</span></div>
-          <div className="pair"><span>Production</span><span>{m.needsAttention?.missingProductionCosts?"not entered":"entered"}</span></div>
-          <div className="pair"><span>Profit</span><span>{m.thisMonth?.accuracy?"waiting":"—"}</span></div>
-        </div>
+        <p className="hero-life">All time: <b>{usd(t?.revenueMinor??0)}</b> across{" "}
+          <b>{num(t?.orders??0)} orders</b> and <b>{num(t?.reviews??0)} reviews</b>.</p>
+      </div>
+      <div className="hero-shots">
+        {gallery.slice(0,3).map(l=><div className="shot" key={l.listingId}>
+          <img src={l.imageUrl} alt="" width={570} height={712} loading="eager"/>
+          <span className="chip">
+            {typeof l.favorites==="number"&&<><b>{num(l.favorites)}</b><small>SAVED</small></>}
+            {l.sales>0&&<><b style={{marginLeft:typeof l.favorites==="number"?5:0}}>{l.sales}</b><small>SOLD</small></>}
+          </span>
+        </div>)}
       </div>
     </section>
+
+    <div className="strip">
+      <div><b>{usd(m.thisMonth?.revenueMinor??0)}</b><small>SEPTEMBER SO FAR</small></div>
+      <div><b>{usd(m.thisMonth?.etsyFeesMinor??0)}</b><small>ETSY FEES</small></div>
+      <div><b className="accent">{m.needsAttention?.missingProductionCosts??0}</b><small>ORDERS NEED A COST</small></div>
+      <div><b>{num(moved.reduce((n,x)=>n+x.newly,0))}</b><small>NEW IN YOUR PHRASES</small></div>
+    </div>
 
     <div className="hp-rule"><h2>Where the money came from</h2><i/><small>lifetime against the last 90 days · {num(m.counts?.niches??0)} themes</small></div>
     <div className="themes">
@@ -112,10 +114,10 @@ export default function PreviewClient(){
       </div>
     </>}
 
-    {gallery.length>0&&<>
+    {gallery.length>3&&<>
       <div className="hp-rule"><h2>Selling now</h2><i/><small>{m.worldsPeriod?.toLowerCase()??"last 90 days"}</small></div>
       <div className="shelf">
-        {gallery.map(l=><div className="shot" key={l.listingId}>
+        {gallery.slice(3).map(l=><div className="shot" key={l.listingId}>
           <img src={l.imageUrl} alt="" width={570} height={712} loading="lazy"/>
           <span className="chip">
             {typeof l.favorites==="number"&&<><b>{num(l.favorites)}</b><small>SAVED</small></>}
