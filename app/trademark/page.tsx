@@ -60,11 +60,11 @@ const classPhrase = (classes: string[]) => {
 export default function TrademarkPage({ initialPhrase }: { initialPhrase?: string } = {}) {
   const [productClass,setProductClass]=useState("");
   const [phrase, setPhrase] = useState(initialPhrase ?? "");
-  const [verdict, setVerdict] = useState<FullVerdict | null>(null);
+  const [verdict, setVerdict] = useState<(FullVerdict & {registerRead?:boolean}) | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
   const [watches, setWatches] = useState<Array<{ phrase: string; risk: string;
-    changed: boolean; pending: boolean; matches: number }>>([]);
+    changed: boolean; pending: boolean; matches: number|null; error?:string; incomplete?:boolean }>>([]);
   const [watchBusy, setWatchBusy] = useState("");
 
   const loadWatches = async () => {
@@ -251,12 +251,12 @@ This note records my review; it is not clearance to use the phrase.`}/>
         <div className="tm-watches-head"><div><h2 id="tm-watches-title">Watched phrases</h2></div></div>
         <div className="tm-watch-list">{watches.map(watch => <article key={watch.phrase}
           className={watch.changed ? "changed" : ""}>
-          <div><strong>{watch.phrase}</strong><span>{watch.changed
+          <div><strong>{watch.phrase}</strong><span>{watch.error|| (watch.changed
             ? `${watch.matches || "New"} ${watch.matches === 1 ? "result needs" : "results need"} review${watch.pending ? " · includes pending applications" : ""}`
             : watch.pending ? "Includes pending applications"
               : watch.matches ? `${watch.matches} matching record${watch.matches === 1 ? "" : "s"}`
-                : null}</span></div>
-          <span className={`tm-watch-risk ${watch.risk}`}>{watch.matches ? "Review matches" : "No match found"}</span>
+                : null)}</span></div>
+          <span className={`tm-watch-risk ${watch.risk}`}>{watch.error?"Check unavailable":watch.matches?"Review matches":watch.incomplete?"Search incomplete":"No match found"}</span>
           <button type="button" disabled={checking} onClick={() => { setPhrase(watch.phrase); void run(watch.phrase, true); }}>Review</button>
           <button type="button" className="quiet" disabled={watchBusy === watch.phrase}
             onClick={() => void removeWatch(watch.phrase)}>Remove</button>

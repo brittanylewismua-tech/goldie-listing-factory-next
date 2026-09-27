@@ -1,6 +1,6 @@
 export type ShopObservation={at:number;sales:number|null;favorites:number|null;active:number|null};
 export type ListingReading={id:number;title:string;price:number|null;currency:string;tags:string[]|null;createdAt:number|null;at:number};
-export type ListingChange={listingId:number;at:number;kind:'new'|'price'|'title'|'tags';before:string;after:string;currency:string};
+export type ListingChange={title?:string;listingId:number;at:number;kind:'new'|'price'|'title'|'tags';before:string;after:string;currency:string};
 const number=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)?v:null;
 export function listingReading(row:Record<string,any>,at:number):ListingReading|null{
  const id=number(row.listing_id);if(!id||!row.title)return null;

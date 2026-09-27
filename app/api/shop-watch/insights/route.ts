@@ -16,7 +16,7 @@ export const GET=withErrorLog('shop-watch-insights',async(request:Request)=>{
   db.prepare('SELECT last_refreshed AS checkedAt,next_refresh_at AS nextCheck,added_at AS trackingSince FROM watched_shops WHERE shop_id=?').bind(id).first(),
   db.prepare('SELECT observed_at,sold_count AS sales,favorers AS favorites,active_count AS active FROM shop_observations WHERE shop_id=? AND observed_at>=? ORDER BY observed_at').bind(id,new Date((now-91*86400)*1000).toISOString()).all<{observed_at:string;sales:number|null;favorites:number|null;active:number|null}>(),
 
-  db.prepare('SELECT listing_id AS listingId,observed_at AS at,kind,before_value AS before,after_value AS after,currency FROM shop_listing_changes WHERE shop_id=? AND observed_at>=? ORDER BY observed_at DESC LIMIT 200').bind(id,now-90*86400).all(),
+  db.prepare(`SELECT c.listing_id AS listingId,c.observed_at AS at,c.kind,c.before_value AS before,c.after_value AS after,c.currency,json_extract(r.payload,'$.title') AS title FROM shop_listing_changes c LEFT JOIN shop_listing_readings r ON r.shop_id=c.shop_id AND r.listing_id=c.listing_id WHERE c.shop_id=? AND c.observed_at>=? ORDER BY c.observed_at DESC LIMIT 200`).bind(id,now-90*86400).all(),
   db.prepare('SELECT COUNT(*) AS n FROM shop_listing_readings WHERE shop_id=?').bind(id).first<{n:number}>()
  ]);
  return NextResponse.json({...shop,observations:(history.results??[]).map(({observed_at,...r})=>({...r,at:Date.parse(observed_at)/1000})),changes:changes.results??[],catalogObserved:coverage?.n??0});

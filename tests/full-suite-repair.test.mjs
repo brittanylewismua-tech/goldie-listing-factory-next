@@ -28,7 +28,7 @@ test('manual cost confirmation requires a valid amount',()=>{
  const page=read('shop-map/costs/costs-client.tsx');
  const expression=page.match(/const validAmount = (.+);/)[1];
  const valid= new Function('amount',`return ${expression}`);
- for(const amount of ['abc','-1','Infinity','1e3','12.345','100000.01',''])assert.equal(valid(amount),false,amount);
- for(const amount of ['0','12','12.34',' 12.34 ','100000'])assert.equal(valid(amount),true,amount);
+ for(const amount of ['0','abc','-1','Infinity','1e3','12.345','100000.01',''])assert.equal(valid(amount),false,amount);
+ for(const amount of ['12','12.34',' 12.34 ','100000'])assert.equal(valid(amount),true,amount);
  assert.match(page,/disabled=\{!validAmount\}/);
 });

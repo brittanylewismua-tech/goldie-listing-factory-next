@@ -153,12 +153,8 @@ async function realLookup() {
   return mod.lookup;
 }
 
-const fakeDb = stored => ({ prepare: () => ({ bind: (normalized, prefix, squeezed, firstWord) => ({
-  all: async () => ({ results: stored.filter(row =>
-    row.normalized === normalized
-    || row.normalized.startsWith(String(prefix).replace(/%$/, ''))
-    || row.normalized === firstWord
-    || row.squeezed === squeezed) }),
+const fakeDb = stored => ({ prepare: () => ({ bind: (terms,squeezed) => ({
+ all:async()=>({results:stored.filter(row=>JSON.parse(terms).includes(row.normalized)||row.squeezed===squeezed)})
 }) }) });
 
 test('a joined phrase reaches a spaced mark through the real lookup', async () => {
@@ -202,7 +198,7 @@ test('no lookup pattern is ever built from a column', () => {
   assert.equal(/\?\d\s+LIKE\s+normalized/.test(sql), false,
     'the phrase is being matched against a column-derived pattern');
   // The remaining LIKE must take its pattern from a bound parameter.
-  assert.match(sql, /normalized LIKE \?2/);
+  assert.match(sql, /normalized IN \(SELECT value FROM json_each\(\?1\)\)/);
 });
 
 test('a single-word mark at the head of a phrase is still found', async () => {
@@ -248,4 +244,10 @@ test('an exact pending application is serious, and worded as filed', async () =>
     'the headline implies ownership of a record that is only filed');
   assert.match(verdict.summary, /filed by Ate My Heart Inc\./);
   assert.match(verdict.summary, /not registered yet/);
+});
+
+test('a mark in the middle or end of a phrase is not missed',async()=>{
+ const lookup=await realLookup();const db=fakeDb([{mark:'BLUEY',normalized:'BLUEY',squeezed:'BLUEY',owner:'BBC',serial:'3',registration:'R4',classes:'025',status_code:700}]);
+ for(const phrase of ['birthday bluey shirt','birthday bluey'])assert.equal((await lookup(db,phrase))[0]?.mark,'BLUEY');
+ assert.equal((await lookup(db,'blueyard shirt')).length,0);
 });

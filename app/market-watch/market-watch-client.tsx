@@ -8,6 +8,8 @@ import {confirmAction} from "@/app/confirm-dialog";
 import {shortLabel} from "@/app/design-reach";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
+import {productFamily} from '@/app/product-type-utils';
+import {researchProduct} from '@/app/niche-research-model';
 import {browseListings,type ListingOrder} from "@/app/market-listing-browser";
 
 export type Listing = {
@@ -461,9 +463,10 @@ function ListingCard({listing,action,extra}:{listing:Listing;action?:ReactNode;e
   </article>}
 
 function CompetitorChange({entry}:{entry:CollectionEntry}){
- const changes=competitorChanges(entry);
+ const changes=competitorChanges(entry),history=[...(entry.listing.history??[])].reverse();
  const signed=(n:number|null)=>n===null?"Unavailable":`${n>0?"+":""}${n.toLocaleString()}`;
- return <div className="competitor-changes"><p>Saved {new Date(entry.savedAt*1000).toLocaleDateString()} · Checked {new Date(entry.checkedAt*1000).toLocaleString()}</p>{entry.unavailable?<p role="status">Etsy could not return this listing. Showing its last saved details.</p>:entry.checkedAt<=entry.savedAt?<p>Changes will appear after your next check.</p>:<><strong>Change since saved</strong><dl className="listing-stat-grid"><div><dt>Favorites</dt><dd>{signed(changes.favorites)}</dd></div><div><dt>Views</dt><dd>{signed(changes.views)}</dd></div><div><dt>Price</dt><dd>{changes.priceCents===null?"Unavailable":changes.priceCents===0?"Unchanged":`${changes.priceCents>0?"+":"−"}${new Intl.NumberFormat(undefined,{style:"currency",currency:entry.listing.currency}).format(Math.abs(changes.priceCents)/100)}`}</dd></div></dl></>}</div>;
+ const price=(v:string,c:string)=>new Intl.NumberFormat(undefined,{style:'currency',currency:c}).format(Number(v)/100);
+ return <div className="competitor-changes"><p>Saved {new Date(entry.savedAt*1000).toLocaleDateString()} · Checked {new Date(entry.checkedAt*1000).toLocaleString()}</p>{entry.unavailable?<p role="status">Etsy could not return this listing. Showing its last saved details.</p>:entry.checkedAt<=entry.savedAt?<p>Checked automatically every six hours.</p>:<><strong>Since saved</strong><dl className="listing-stat-grid"><div><dt>Favorites</dt><dd>{signed(changes.favorites)}</dd></div><div><dt>Views</dt><dd>{signed(changes.views)}</dd></div><div><dt>Price</dt><dd>{changes.priceCents===null?"Unavailable":changes.priceCents===0?"Unchanged":`${changes.priceCents>0?"+":"−"}${price(String(Math.abs(changes.priceCents)),entry.listing.currency)}`}</dd></div></dl></>}{history.length>0&&<details className="saved-listing-history"><summary>Listing edits · {history.length}</summary>{history.map((h,i)=><div key={`${h.at}-${h.kind}-${i}`}><small>{new Date(h.at*1000).toLocaleDateString()} · {h.kind==='price'?'Price changed':h.kind==='title'?'Title edited':'Tags edited'}</small>{h.kind==='price'?<p><del>{price(h.before,h.currency)}</del> → <b>{price(h.after,h.currency)}</b></p>:h.kind==='title'?<><p><del>{h.before}</del></p><p>{h.after}</p></>:<div className="shop-tag-diff">{(JSON.parse(h.after) as string[]).filter(t=>!(JSON.parse(h.before) as string[]).includes(t)).map(t=><span key={t}>+ {t}</span>)}{(JSON.parse(h.before) as string[]).filter(t=>!(JSON.parse(h.after) as string[]).includes(t)).map(t=><del key={t}>{t}</del>)}</div>}</div>)}</details>}</div>;
 }
 
 function ShopCard({shop}:{shop:ShopView}){
@@ -480,10 +483,12 @@ function ShopCard({shop}:{shop:ShopView}){
   const [sort,setSort]=useState<ListingOrder>("favorites");
   const [query,setQuery]=useState("");
   const [currency,setCurrency]=useState("");
+  const [productFilter,setProductFilter]=useState("");
+  const productTypes=[...new Set(listings.map(l=>researchProduct(l.title,undefined,productFamily(l.title))))].sort();
   const activeRequest=useRef<AbortController|null>(null);
   const currencies=[...new Set(listings.map(l=>l.currency||"USD"))].sort();
   useEffect(()=>{if(!currency&&currencies.length>1&&(sort==="price"||sort==="price-desc"))setSort("newest")},[currency,currencies.length,sort]);
-  const visibleListings=browseListings(listings,sort,query,currency);
+  const visibleListings=browseListings(listings.filter(l=>!productFilter||researchProduct(l.title,undefined,productFamily(l.title))===productFilter),sort,query,currency);
   const loadListings=async(offset=0,all=false)=>{
     if(activeRequest.current)return;
     const controller=new AbortController();activeRequest.current=controller;
@@ -511,11 +516,11 @@ function ShopCard({shop}:{shop:ShopView}){
     <div className="tabs p-tabs shop-detail-tabs" role="tablist" aria-label={`${shop.shopName} sections`}>{([["listings","Listings"],["changes","Changes"],["notes","My notes"]] as const).map(([key,label])=><button key={key} id={`shop-tab-${key}`} className="p-tab" role="tab" aria-selected={section===key} aria-controls="shop-detail-panel" onClick={()=>setSection(key)}>{label}</button>)}</div>
     <div id="shop-detail-panel" role="tabpanel" aria-labelledby={`shop-tab-${section}`}>
     {section==="listings"&&<div className="shop-listing-browser" id="shop-catalog-controls">
-      <ListingControls sort={sort} setSort={setSort} query={query} setQuery={setQuery} currency={currency} setCurrency={setCurrency} currencies={currencies}/>
+      <label className="shop-product-filter">Product<select value={productFilter} onChange={e=>setProductFilter(e.target.value)}><option value="">All products</option>{productTypes.map(t=><option key={t} value={t}>{({tee:'Shirts',tank:'Tank tops',crewneck:'Sweatshirts',hoodie:'Hoodies',mug:'Mugs',tote:'Totes',longSleeve:'Long sleeves',phoneCase:'Phone cases',blanket:'Blankets',other:'Other products',digital:'Digital downloads',mixedApparel:'Mixed apparel'} as Record<string,string>)[t]??t}</option>)}</select></label><ListingControls sort={sort} setSort={setSort} query={query} setQuery={setQuery} currency={currency} setCurrency={setCurrency} currencies={currencies}/>
       {/* D1810 · One row. The count lived here and again under the cards, and
           the two buttons were right-aligned on separate lines below it. */}
       <div className="market-result-bar">
-        <p role="status">{total===null?"Loading the shop’s catalog…":query||currency?`${visibleListings.length} of ${listings.length} loaded listings match your filters`:""}</p>
+        <p role="status">{total===null?"Loading the shop’s catalog…":query||currency||productFilter?`${visibleListings.length} of ${listings.length} loaded listings match your filters`:""}</p>
         <div className="market-result-actions">
           <button className="p-button p-button-quiet" onClick={()=>void loadListings()} disabled={loading}>{loading&&!loadingAll?"Loading listings…":"Refresh active listings"}</button>
           {nextOffset!==null&&!loadingAll&&<button type="button" className="p-button p-button-quiet" disabled={loading} onClick={()=>void loadListings(nextOffset,true)}>Load full catalog</button>}
@@ -561,5 +566,5 @@ function SavedListings({watches,onRetry}:{watches:Load<WatchRow[]>;onRetry:()=>v
   const xv=sort==='favorite-change'?x?.favorites:x?.priceCents==null?null:Number(x.priceCents!==0),yv=sort==='favorite-change'?y?.favorites:y?.priceCents==null?null:Number(y.priceCents!==0);
   return (yv??-Infinity)-(xv??-Infinity)||b.checkedAt-a.checkedAt;
  }).map(e=>e.listing):browseListings([...unique.values()].map(e=>e.listing),sort,'','');
- return <main className="mw"><ResearchNavigation active="saved"/><header className="current-page-heading"><div><p className="current-kicker">Research</p><h1>Saved listings</h1><p>Listings you saved from keyword searches. Track their prices, favorites, and views here.</p></div><button className="p-button p-button-primary" disabled={loading||busy||!entries.length} onClick={()=>void load(true)}>{busy?'Checking…':'Check for changes'}</button></header>{error&&<p role="alert">{error} <button onClick={()=>watches.status==='failed'?onRetry():void load()}>Try again</button></p>}{loading?<p role="status">Loading saved listings…</p>:!entries.length&&!error?<p>No saved listings yet. Open a tracked keyword, then choose Save to track on a listing.</p>:null}{entries.length>0&&<><div className="market-results-sort"><label>Sort listings<select value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="favorite-change">Favorites gained since saved</option><option value="price-change">Price changes first</option><option value="favorites">Most total favorites</option><option value="views">Most views</option><option value="newest">Newest first</option></select></label></div><div className="cards">{listings.map(l=><ListingCard key={l.listingId} listing={l} extra={<><p>Saved from: {unique.get(l.listingId)!.keyword}</p><CompetitorChange entry={unique.get(l.listingId)!}/></>}/>)}</div></>}</main>;
+ return <main className="mw"><ResearchNavigation active="saved"/><header className="current-page-heading"><div><p className="current-kicker">Research</p><h1>Saved listings</h1><p>Listings you saved from keyword searches. See title, tag, and price edits alongside changes in favorites and views. Checked automatically every six hours.</p></div><button className="p-button p-button-primary" disabled={loading||busy||!entries.length} onClick={()=>void load(true)}>{busy?'Checking…':'Check for changes'}</button></header>{error&&<p role="alert">{error} <button onClick={()=>watches.status==='failed'?onRetry():void load()}>Try again</button></p>}{loading?<p role="status">Loading saved listings…</p>:!entries.length&&!error?<p>No saved listings yet. Open a tracked keyword, then choose Save to track on a listing.</p>:null}{entries.length>0&&<><div className="market-results-sort"><label>Sort listings<select value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="favorite-change">Favorites gained since saved</option><option value="price-change">Price changes first</option><option value="favorites">Most total favorites</option><option value="views">Most views</option><option value="newest">Newest first</option></select></label></div><div className="cards">{listings.map(l=><ListingCard key={l.listingId} listing={l} extra={<><p>Saved from: {unique.get(l.listingId)!.keyword}</p><CompetitorChange entry={unique.get(l.listingId)!}/></>}/>)}</div></>}</main>;
 }

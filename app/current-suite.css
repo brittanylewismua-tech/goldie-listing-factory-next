@@ -735,3 +735,14 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
  #suite-workspace .factory-work .shop-map-reach li>a{grid-column:2;justify-self:start;min-height:32px;display:flex;align-items:center}
  #suite-workspace .factory-work .shop-map-redesign .shop-map-tabs{display:grid!important;grid-template-columns:1fr 1fr;gap:0 18px!important;overflow:visible}
 }
+
+/* Seller evidence controls, scoped to Command Center. */
+#suite-workspace .shop-product-filter{display:flex;align-items:center;gap:12px;margin:20px 0 12px;font-size:14px;font-weight:650}
+#suite-workspace .shop-product-filter select{padding:9px 12px;border:1px solid #d7d3d7;border-radius:8px;background:white;color:#242124;max-width:100%}
+#suite-workspace .saved-listing-history{margin-top:14px;border-top:1px solid #e3dee2;padding-top:12px}
+#suite-workspace .saved-listing-history>div{padding:12px 0;border-bottom:1px solid #eee9ed}
+#suite-workspace .saved-listing-history p{overflow-wrap:anywhere}
+#suite-workspace .nr-secondary-section blockquote{margin:18px 0;padding:12px 18px;border-left:3px solid #d696b8;font-size:14px;line-height:1.6}
+#suite-workspace .nr-secondary-section cite{font-size:12px;font-style:normal}
+#suite-workspace .nr-secondary-section input[type=search]{display:block;width:100%;padding:12px;border:1px solid #d7d3d7;border-radius:8px;margin-top:8px;background:#fff;color:#242124}
+.platform-update-history{margin-top:36px;padding-top:24px;border-top:1px solid #ddd5dc}

@@ -702,7 +702,7 @@ test("the gate and the cap run before anything is ranked", () => {
   const board = source.slice(source.indexOf("export async function readBoard"));
   const gate = board.indexOf("const allowed = new Map");
   const trim = board.indexOf("const shown = onShelf.slice");
-  const rank = board.indexOf("ORDER BY sold DESC");
+  const rank = board.indexOf("ORDER BY saves_gained DESC");
   assert.ok(gate !== -1 && trim !== -1, "the gate has to exist");
   assert.ok(gate < trim, "attribution must happen before the board is trimmed");
   assert.ok(rank < gate, "the query ranks, then attribution overrides — never the reverse");

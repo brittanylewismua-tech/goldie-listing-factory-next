@@ -1,32 +1,7 @@
-/* ============================================================================
- * A DESIGN THAT SOLD, ON EXACTLY ONE PRODUCT.
- *
- * Shop Map could say what sold and never what to do about it, which is the
- * difference between a report and a tool. For a print-on-demand seller the
- * clearest revenue action there is is a design that has already proven itself
- * and exists on one blank: the artwork is drawn, the market has answered, and
- * putting it on a second product is an afternoon of work against a question
- * that has already been settled.
- *
- * The hard part is deciding that two listings carry the SAME design, because
- * Etsy has no field for it. Titles are what there is, and a print-on-demand
- * title is the design's words followed by the product's words and a tail of
- * search terms - "Mom I Am A Rich Man Feminist Shirt Girl Power Shirt Boss
- * Shirt Anti Trump Feminist T Shirt". Strip the product and the filler and
- * what is left is the design.
- *
- * WHERE THIS IS DELIBERATELY CONSERVATIVE. A wrong grouping tells a seller
- * they already sell something on a hoodie when they do not, which is worse
- * than staying quiet: they skip a product that would have earned. So the key
- * is the first few distinctive words only, a group needs a real sale before
- * it is mentioned at all, and anything that reduces to nothing is dropped
- * rather than lumped together with every other title that also reduced to
- * nothing.
- * ==========================================================================*/
-
+// Group only recorded artwork identities; title similarity is not artwork evidence.
 export type ReachListing = {
   listingId: number; title: string; family: string;
-  sold90: number; favorites: number | null; imageUrl?: string;
+  sold90: number; favorites: number | null; imageUrl?: string; artworkHash?: string;
 };
 
 /* Product words, because they are what distinguishes the listings we are
@@ -111,14 +86,14 @@ export type Reach = {
 export function designsOnOneProduct(listings: ReachListing[]): Reach[] {
   const groups = new Map<string, ReachListing[]>();
   for (const listing of listings) {
-    const key = designKey(listing.title);
+    const key = listing.artworkHash?.trim();
     if (!key) continue;
     groups.set(key, [...(groups.get(key) ?? []), listing]);
   }
   const out: Reach[] = [];
   for (const [key, members] of groups) {
     const families = [...new Set(members.map(row => row.family).filter(Boolean))];
-    if (families.length !== 1) continue;
+    if (families.length !== 1 || members.some(row=>!row.family)) continue;
     const sold90 = members.reduce((total, row) => total + (row.sold90 || 0), 0);
     if (sold90 < 1) continue;
     /* The best-performing listing represents the group: it is the one whose

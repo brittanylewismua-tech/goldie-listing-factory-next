@@ -1,4 +1,5 @@
 export type SavedCompetitor = {
+  tags?:string[]; history?:Array<{at:number;kind:'price'|'title'|'tags';before:string;after:string;currency:string}>;
   listingId:number; title:string; imageUrl:string; etsyUrl:string;
   priceCents:number|null; currency:string; favorites:number|null; views:number|null;
   ageDays:number|null; createdAt:number|null; listedAt:number|null;
@@ -22,3 +23,12 @@ export function competitorChanges(entry:CollectionEntry){
 }
 
 export async function ensureMarketCollections(db:D1Database){await db.prepare(COLLECTION_SCHEMA).run();}
+
+export function recordCompetitorChanges(before:SavedCompetitor,after:SavedCompetitor,at:number):SavedCompetitor{
+ const history=[...(before.history??[])];
+ const add=(kind:'price'|'title'|'tags',old:string,next:string)=>{if(old!==next)history.push({at,kind,before:old,after:next,currency:after.currency});};
+ if(before.currency===after.currency&&before.priceCents!==null&&after.priceCents!==null)add('price',String(before.priceCents),String(after.priceCents));
+ add('title',before.title,after.title);
+ if(before.tags&&after.tags)add('tags',JSON.stringify([...before.tags].sort()),JSON.stringify([...after.tags].sort()));
+ return {...after,history:history.filter(e=>e.at>=at-90*86400).slice(-60)};
+}

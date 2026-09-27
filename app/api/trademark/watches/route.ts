@@ -36,10 +36,11 @@ export const GET = withErrorLog("trademark-watches", async () => {
   const watches = [];
   for (const row of saved.results ?? []) {
     const base = check(row.phrase);
-    const hits = await lookup(db, row.phrase).catch(() => []);
+    const hits = await lookup(db, row.phrase).catch(() => null);
+    if(!hits||!size){watches.push({...row,risk:row.lastRisk||'review',changed:false,pending:false,matches:null,error:'Records could not be checked. Try again.'});continue;}
     const current = withRegister(base, toMatches(hits, row.phrase, normalize, squeeze), size);
     const currentSignature = signature(current);
-    watches.push({ ...row, risk: current.risk, changed: Boolean(row.lastSignature)
+    watches.push({ ...row, incomplete:!current.registerReady, risk: current.risk, changed: Boolean(row.lastSignature)
       && row.lastSignature !== currentSignature,
       pending: (current.register ?? []).some(match => !match.registered),
       matches: current.hits.length + (current.register ?? []).length });
@@ -57,7 +58,8 @@ export const POST = withErrorLog("trademark-watch-save", async (request: Request
   const db = (env as unknown as { DB: D1Database }).DB;
   await ensure(db);
   const size = await registerSize(db).catch(() => null);
-  const hits = await lookup(db, phrase).catch(() => []);
+  const hits = await lookup(db, phrase).catch(() => null);
+  if(!hits||!size)return NextResponse.json({error:'The trademark records could not be checked. Your saved check has not changed.'},{status:503});
   const current = withRegister(check(phrase), toMatches(hits, phrase, normalize, squeeze), size);
   const now = Math.floor(Date.now() / 1_000);
   await db.prepare(`INSERT INTO trademark_watches

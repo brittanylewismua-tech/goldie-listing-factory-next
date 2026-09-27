@@ -15,6 +15,8 @@ import { useCallback, useEffect, useState } from "react";
  */
 type Order = {
   receiptId: number;
+  canceled?:boolean;
+  items?:Array<{listingId:number;quantity:number;title:string}>;
   orderDate: number;
   revenueMinor: number;
   currency: string;
@@ -67,7 +69,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
   const [currency, setCurrency] = useState("USD");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
-  const validAmount = /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(amount.trim()) && Number.isFinite(Number(amount)) && Number(amount) <= 100000;
+  const validAmount = /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/.test(amount.trim()) && Number.isFinite(Number(amount)) && Number(amount) > 0 && Number(amount) <= 100000;
 
   const load = useCallback(async () => {
     try {
@@ -133,13 +135,15 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
         </p>
       )}
 
-      {data.orders.map(order => (
+      {[...data.orders].sort((a,b)=>Number(b.costBasis === "unavailable")-Number(a.costBasis === "unavailable") || b.orderDate-a.orderDate).map(order => (
         <article className="order" key={order.receiptId}>
           <div className="head">
             <span className="ref">Etsy order #{order.receiptId}</span>
             <span className="money">{money(order.revenueMinor, order.currency)}</span>
           </div>
           <p className="when">{day(order.orderDate)}</p>
+          {!!order.items?.length&&<ul className="order-products">{order.items.map(item=><li key={item.listingId}>{item.quantity} × {item.title||`Listing #${item.listingId}`}</li>)}</ul>}
+          {!order.canceled&&order.productionCostMinor!==null&&order.productionCostMinor>order.revenueMinor&&<p className="error">Production and shipping exceed this order’s revenue by {money(order.productionCostMinor-order.revenueMinor,order.currency)}, before Etsy fees.</p>}
 
           <span className="basis" data-basis={order.costBasis}>
             {BASIS_LABEL[order.costBasis]}
@@ -172,7 +176,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
               {editing === order.receiptId && (
                 <div className="entry">
                   <label htmlFor={`amount-${order.receiptId}`}>
-                    What did it cost you to make?
+                    Production + shipping paid to your supplier
                   </label>
                   <div className="row">
                     <input id={`amount-${order.receiptId}`} type="text" inputMode="decimal"
@@ -185,7 +189,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
                     </select>
                   </div>
 
-                  {amount.trim() && !validAmount && <p className="error" role="status">Enter a cost from 0 to 100,000, with up to two decimal places.</p>}
+                  {amount.trim() && !validAmount && <p className="error" role="status">Enter a cost greater than 0 and up to 100,000, with up to two decimal places.</p>}
                   {/* Confirmed before it is saved: a typo here changes a profit
                       figure the member will rely on. */}
                   {!confirming ? (
@@ -198,7 +202,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
                     <>
                       <p className="confirm">
                         Save <strong>{amount} {currency}</strong> as what order
-                        #{order.receiptId} cost you to make? Shop Map will label this
+                        #{order.receiptId} cost to produce and ship? Shop Map will label this
                         as a figure you entered, not one it verified, and you can
                         change it later.
                       </p>

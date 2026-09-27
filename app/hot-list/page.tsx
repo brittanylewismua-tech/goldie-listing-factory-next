@@ -127,7 +127,7 @@ export default function HotListPage() {
   }
 
   const shown = board
-    ? product === "all" ? board.listings : board.listings.filter(l => l.product === product)
+    ? [...(product === "all" ? board.listings : board.listings.filter(l => l.product === product))].sort((a,b)=>b.savesGained-a.savesGained)
     : [];
 
   /* Not "home": the Hot List is reached FROM home and is not it, and lighting

@@ -261,6 +261,7 @@ export default {
     run("/api/platform-updates/tick");
     run("/api/market/niche-brief-tick");
     run("/api/market/niche-research-tick");
+    run("/api/market/collection-tick");
     /*
       AND THE TWO CLOCKS RECORD THEMSELVES.
 

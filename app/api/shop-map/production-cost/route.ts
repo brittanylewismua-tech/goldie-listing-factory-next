@@ -57,14 +57,14 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
             r.currency AS currency,
             r.shop_id AS shopId, r.canceled AS receiptCanceled,
             p.printify_order_id AS printifyOrderId,
-            p.cost_minor AS costMinor, p.shipping_minor AS shippingMinor,
+            p.cost_minor AS costMinor, p.shipping_minor AS shippingMinor, p.currency AS productionCurrency, p.currency_count AS productionCurrencies,
             p.status AS printifyStatus, p.canceled AS canceled,
             a.amount_minor AS adjustmentMinor, a.kind AS adjustmentKind,
             a.currency AS adjustmentCurrency
        FROM finance_receipts r
        LEFT JOIN (
          SELECT user_id, shop_id, receipt_id, MIN(printify_order_id) AS printify_order_id,
-                SUM(cost_minor) AS cost_minor, SUM(shipping_minor) AS shipping_minor,
+                SUM(cost_minor) AS cost_minor, SUM(shipping_minor) AS shipping_minor, MIN(currency) AS currency, COUNT(DISTINCT currency) AS currency_count,
                 MIN(status) AS status, MAX(canceled) AS canceled
          FROM finance_production WHERE counts_as_etsy_cost = 1 AND canceled = 0
          GROUP BY user_id, shop_id, receipt_id
@@ -78,7 +78,7 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
     .bind(user.userId, shopId, monthStart, monthEnd)
     .all<{ receiptId: number; createdAt: number; revenueMinor: number; currency: string;
       shopId: number; receiptCanceled: number | null;
-      printifyOrderId: string | null; costMinor: number | null;
+      printifyOrderId: string | null; productionCurrency:string|null; productionCurrencies:number|null; costMinor: number | null;
       shippingMinor: number | null; printifyStatus: string | null; canceled: number | null;
       adjustmentMinor: number | null; adjustmentKind: string | null;
       adjustmentCurrency: string | null }>()
@@ -142,9 +142,14 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
     return "unknown";
   };
 
-  const orders = (rows.results ?? []).map(row => {
-    const adjusted = row.adjustmentMinor !== null && row.adjustmentMinor !== undefined;
-    const verified = row.costMinor !== null && Number(row.costMinor) > 0;
+  const items = await db.prepare(`SELECT s.receipt_id AS receiptId,s.listing_id AS listingId,SUM(s.quantity) AS quantity,MAX(l.title) AS title
+ FROM shop_map_listing_sales s JOIN finance_receipts r ON r.user_id=s.user_id AND r.shop_id=s.shop_id AND r.receipt_id=s.receipt_id
+ LEFT JOIN shop_map_listings l ON l.user_id=s.user_id AND l.shop_id=s.shop_id AND l.listing_id=s.listing_id
+ WHERE s.user_id=? AND s.shop_id=? AND r.source_created_at>=? AND r.source_created_at<? GROUP BY s.receipt_id,s.listing_id`)
+ .bind(user.userId,shopId,monthStart,monthEnd).all<{receiptId:number;listingId:number;quantity:number;title:string}>().catch(()=>({results:[]}));
+ const orders = (rows.results ?? []).map(row => {
+    const adjusted = row.adjustmentMinor !== null && row.adjustmentMinor !== undefined && row.adjustmentCurrency === row.currency;
+    const verified = row.costMinor !== null && Number(row.costMinor) > 0 && row.productionCurrencies === 1 && row.productionCurrency === row.currency;
     const basis: CostBasis = verified ? "printify-verified"
       : adjusted
         ? (row.adjustmentKind === "estimated-production-cost" ? "estimated" : "manually-confirmed")
@@ -171,6 +176,8 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
       /* Safe for the seller: their own Etsy order number, nothing about who
          bought it. */
       receiptId: row.receiptId,
+      items:items.results.filter(item=>item.receiptId===row.receiptId),
+      canceled:Boolean(row.receiptCanceled),
       orderDate: Number(row.createdAt) || 0,
       revenueMinor: Number(row.revenueMinor) || 0,
       currency: row.currency || "USD",
@@ -178,7 +185,7 @@ export const GET = withErrorLog("shop-map-production-cost", async (request: Requ
       productionCostMinor: verified
         ? Number(row.costMinor) + Number(row.shippingMinor ?? 0)
         : adjusted ? Number(row.adjustmentMinor) : null,
-      why: reason ? EXPLANATION[reason] : null,
+      why: basis === "unavailable" && ((row.costMinor !== null && (row.productionCurrencies !== 1 || row.productionCurrency !== row.currency)) || (row.adjustmentMinor !== null && row.adjustmentCurrency !== row.currency)) ? "The cost uses a different currency. Enter the amount you paid in your order’s currency." : reason ? EXPLANATION[reason] : null,
       reasonCode: reason,
       actions: reason
         ? actionsFor(reason, { exactCandidates: candidates.length, hasFamilyRule })

@@ -241,51 +241,14 @@ export async function ingestFile(
 export async function lookup(db: D1Database, phrase: string): Promise<RegisterHit[]> {
   const normalized = normalize(phrase);
   if (normalized.length < 2) return [];
-  const words = normalized.split(" ");
-  /*
-    The joined form, so "Hauslabs" reaches "HAUS LABS". Exact equality only —
-    see squeeze(). A LIKE on this column would match "ART" inside "HEART".
-  */
-  const squeezed = squeeze(phrase);
-  /* Candidates are every mark short enough to sit inside the phrase and
-     sharing its first word — the index makes that cheap, and the containment
-     test then runs over a handful of rows rather than the whole table. */
-  const candidates = await db
-    .prepare(
-      /*
-        NO LIKE PATTERN IS EVER BUILT FROM A COLUMN.
-
-        This carried `?1 LIKE normalized || ' %'` to find a mark that is a
-        prefix of the phrase. The pattern there is made from stored data, so
-        its complexity grows with the table — and once the register passed a
-        couple of hundred thousand marks D1 began answering
-
-          LIKE or GLOB pattern too complex: SQLITE_ERROR
-
-        for EVERY lookup. The caller wrapped this in a bare catch, so the
-        failure arrived at the member as "no match was found in the trademark
-        records". The register half of the checker was dead and reporting
-        clean results while it was.
-
-        That clause did one job the others do not: catch a single-word mark
-        equal to the phrase's first word, like BLUEY inside "bluey birthday
-        shirt". An equality test does the same job, uses the index, and has
-        no pattern to overrun. ?2 is still a LIKE, but its pattern comes from
-        a bound parameter of known length, not from the table.
-      */
-      `SELECT mark, owner, serial, registration, classes, status_code
-         FROM tm_marks
-        WHERE searchable = 1 AND (normalized = ?1
-           OR normalized LIKE ?2
-           OR normalized = ?4
-           OR squeezed = ?3)
-        LIMIT 200`,
-    )
-    .bind(normalized, `${words[0]} %`, squeezed, words[0])
-    .all<{
-      mark: string; owner: string; serial: string;
-      registration: string; classes: string; status_code: number;
-    }>();
+  const words=normalized.split(' '),terms=new Set<string>();
+  for(let start=0;start<words.length;start++)for(let end=start+1;end<=words.length;end++)terms.add(words.slice(start,end).join(' '));
+  const squeezed=squeeze(phrase);
+  const candidates=await db.prepare(`SELECT mark,owner,serial,registration,classes,status_code
+    FROM tm_marks WHERE searchable=1 AND (normalized IN (SELECT value FROM json_each(?1)) OR squeezed = ?2)
+    ORDER BY LENGTH(normalized) DESC,serial LIMIT 200`)
+    .bind(JSON.stringify([...terms]),squeezed)
+    .all<{mark:string;owner:string;serial:string;registration:string;classes:string;status_code:number}>();
 
   const padded = ` ${normalized} `;
   return (candidates.results ?? [])

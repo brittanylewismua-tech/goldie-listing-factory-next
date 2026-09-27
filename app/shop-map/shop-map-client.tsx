@@ -1,8 +1,6 @@
 "use client";
 import {browseOwnListings} from "@/app/market-listing-browser";
-import ActionPlan from "@/app/command-center/action-plan";
 import {designsOnOneProduct,familyLabel,shortLabel,type Reach,type ReachListing} from "@/app/design-reach";
-import ListingCheckPanel from "./listing-check-panel";
 import type {CatalogAction} from "@/app/shop-map-actions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { monthName } from "@/app/shop-map-month";
@@ -86,13 +84,13 @@ function DesignReach(){
     .catch(()=>setRead(true))},[]);
   if(!read||!rows.length)return null;
   return <section className="cc-tool shop-map-reach">
-    <h2>Selling designs available on just one product</h2><p>Review these before choosing a design to offer on another product.</p>
+    <h2>Artwork selling on one recorded product type</h2><p>Review these before choosing a design to offer on another product.</p>
 
     <ul>{rows.map(row=><li key={row.key}>
       {row.imageUrl?<img src={row.imageUrl} alt="" width={72} height={72} loading="lazy"/>:<span aria-hidden="true"/>}
       <span className="shop-map-reach-copy">
         <b>{shortLabel(row.title)}</b>
-        <small>{row.sold90} sold in 90 days · only on {familyLabel(row.families[0])}</small>
+        <small>{row.sold90} sold in 90 days · {familyLabel(row.families[0])}</small>
       </span>
       <a href={`https://www.etsy.com/listing/${row.listingId}`} target="_blank" rel="noopener noreferrer">
         See it on Etsy ↗</a>
@@ -123,14 +121,7 @@ function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}
         <div className="shop-map-review-body">
           <p>{action.evidence}</p><p>{action.nextStep}</p>
           <a href={`https://www.etsy.com/listing/${action.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy ↗</a>
-          <ActionPlan feature="shopMap" source={`shop-${shopId}-listing-${action.listingId}`} heading={action.headline} notes={`${action.title}
-${action.evidence}
 
-${action.nextStep}
-
-Change I will test:
-Start and end dates:
-What would make this worth repeating:`}/>
         </div>
       </details>)}
     </div>)}
@@ -320,7 +311,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           panels opened the page, so Shop Map began with eight rows of
           near-identical SEO titles and the shop's own sales were pushed
           below the fold. */}
-      <ListingCheckPanel/>
+
       <section className="shop-map-summary-grid">
         <article><span>Orders this month</span><strong>{month?.orders ?? "—"}</strong><small>{money(month?.revenueMinor,month?.currency)} revenue</small></article>
         <article><span>Active listings</span><strong>{shown.shopTotals?.activeListings ?? 0}</strong><small>in your current catalog</small></article>

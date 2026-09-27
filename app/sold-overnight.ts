@@ -1103,7 +1103,7 @@ export async function readBoard(limit = 400, hoursBack = 24, madeToOrder = false
         */
         AND w.last_read IS NOT NULL AND w.last_read >= ?
       GROUP BY m.listing_id
-      ORDER BY sold DESC, saves_gained DESC
+      ORDER BY saves_gained DESC, sold DESC
       LIMIT ?`)
     /*
       TRUNCATE LAST, NOT FIRST.

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { designKey, designsOnOneProduct, familyLabel, shortLabel } from '../app/design-reach.ts';
 
 const listing = (listingId, title, family, sold90, favorites = 0) =>
-  ({ listingId, title, family, sold90, favorites });
+  ({ listingId, title, family, sold90, favorites, artworkHash: "fixture-artwork" });
 
 test('the product words are what get stripped, because they are what differs', () => {
   /* A print-on-demand title is the design's words, then the product's words,
@@ -44,7 +44,7 @@ test('nothing is claimed without a sale or without a recorded product', () => {
   /* A title that reduces to nothing is dropped rather than lumped in with
      every other title that also reduced to nothing. */
   assert.equal(designKey('Gift For Her Shirt'), '');
-  assert.deepEqual(designsOnOneProduct([listing(1, 'Gift For Her Shirt', 'T-shirts', 9)]), []);
+  assert.deepEqual(designsOnOneProduct([{...listing(1, 'Gift For Her Shirt', 'T-shirts', 9), artworkHash:''}]), []);
 });
 
 test('the scanner loads a live listing instead of asking it to be retyped', () => {
@@ -80,4 +80,10 @@ test('an Etsy title is a search surface, not a name', () => {
   /* Repeats are what make them look alike, so repeats go first. */
   assert.equal((short.toLowerCase().match(/shirt/g) ?? []).length, 1);
   assert.match(short, /^Feminist Shirt Girl Power/);
+});
+
+test('similar titles cannot establish artwork identity',()=>{
+ assert.deepEqual(designsOnOneProduct([{...listing(1,'Girl Power Shirt','tee',3),artworkHash:undefined}]),[]);
+ const found=designsOnOneProduct([{...listing(1,'Girl Power Shirt','tee',3),artworkHash:'a'},{...listing(2,'Girl Power Hoodie','hoodie',2),artworkHash:'b'}]);
+ assert.equal(found.length,2);assert.equal(found[0].sold90,3);
 });
