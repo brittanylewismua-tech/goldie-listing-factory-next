@@ -192,8 +192,8 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         {/* The verdict wears the product's status treatment, so risk reads the
             same here as everywhere else in the suite. */}
         <span className={verdict.risk === "high" ? "p-badge p-badge-bad"
-          : verdict.risk === "caution" ? "p-badge p-badge-warn" : "p-badge p-badge-good"}>
-          {verdict.risk === "clear" ? "No match found" : "Matches to review"}
+          : verdict.risk === "caution" || verdict.registerReady === false || verdict.registerRead === false ? "p-badge p-badge-warn" : "p-badge p-badge-good"}>
+          {verdict.risk !== "clear" ? "Matches to review" : verdict.registerReady === false || verdict.registerRead === false ? "Search incomplete" : "No match found"}
         </span>
         <p className="tm-phrase">{marked()}</p>
         {verdict.registerReady === false && <p className="p-notice" role="status"><strong>Search incomplete.</strong> Review the current USPTO records before using this phrase.</p>}
