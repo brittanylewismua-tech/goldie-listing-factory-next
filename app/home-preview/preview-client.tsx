@@ -11,7 +11,13 @@ type Map={shopTotals?:{activeListings:number;listings:number;orders:number;order
     unclassifiedPerformance?:{activeListings:number;orders:number;revenueMinor:number}};
   thisMonth?:{revenueMinor:number;orders:number;etsyFeesMinor:number;currency:string;accuracy?:string};
   worldsPeriod?:string};
-type Home={topListings?:{listings:Array<Listing&{favorites:number}>};niches?:Array<{phrase:string;newly:number}>};
+type Home={topListings?:{listings:Array<Listing&{favorites:number}>;period?:string;rankedBy?:string};
+  niches?:Array<{phrase:string;newly:number}>};
+type Hot={listings?:Array<{listingId:number;title:string;image:string|null;price:number|null;
+  savesGained:number;sold:number;url:string}>};
+type Band={currency:string;low:number;high:number;count:number};
+type Product={product:string;listings:number;shops:number;reviews:number;prices:Band[]};
+type Niche={name:string;phase:string;analysis?:{reviews30:number;reviewsPrior30:number;products:Product[]}};
 
 const usd=(minor:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",
   maximumFractionDigits:0}).format(minor/100);
@@ -33,10 +39,27 @@ const num=(n:number)=>n.toLocaleString("en-US");
 export default function PreviewClient(){
   const [m,setM]=useState<Map|null>(null);
   const [h,setH]=useState<Home|null>(null);
+  const [hot,setHot]=useState<Hot|null>(null);
+  const [niches,setNiches]=useState<Niche[]>([]);
   useEffect(()=>{
     void fetch("/api/shop-map/map").then(r=>r.ok?r.json() as Promise<Map>:null).then(setM).catch(()=>undefined);
     void fetch("/api/home").then(r=>r.ok?r.json() as Promise<{blocks:Home}>:null)
       .then(x=>setH(x?.blocks??null)).catch(()=>undefined);
+    /* What is moving on Etsy in the last day, and what the shops in her own
+       researched searches are charging. Both are already computed; neither
+       was anywhere near the front page. */
+    void fetch("/api/sold-overnight?hours=24").then(r=>r.ok?r.json() as Promise<Hot>:null)
+      .then(x=>setHot(x)).catch(()=>undefined);
+    void fetch("/api/niche-research").then(r=>r.ok?r.json() as Promise<{projects?:Array<{id:string}>}>:null)
+      .then(async body=>{
+        const out:Niche[]=[];
+        for(const project of (body?.projects??[]).slice(0,2)){
+          const detail=await fetch(`/api/niche-research?id=${encodeURIComponent(project.id)}`)
+            .then(r=>r.ok?r.json() as Promise<{project:Niche}>:null).catch(()=>null);
+          if(detail?.project?.analysis)out.push(detail.project);
+        }
+        setNiches(out);
+      }).catch(()=>undefined);
   },[]);
 
   if(!m) return <div className="hp"><div className="hp-load"/></div>;
@@ -48,25 +71,28 @@ export default function PreviewClient(){
   const shots=(h?.topListings?.listings??[]).filter(l=>l.imageUrl).slice(0,4);
   const sellers=(m.topListings??[]).filter(l=>l.imageUrl).slice(0,4);
   const moved=(h?.niches??[]).filter(n=>n.newly>0).sort((a,b)=>b.newly-a.newly).slice(0,4);
-  /*
-    D1870 · THE FINDING THAT IS ACTUALLY IN THE DATA.
-
-    This panel used to point at the 58 listings the classifier could not place
-    and call three of them the shop's strongest, which was the arithmetic read
-    backwards: $170 a listing against a $1,096 average is the weakest corner
-    of the shop, not the strongest, and "nothing in the catalogue is named
-    after them" meant nothing at all.
-
-    What the same two columns do say is this: a theme that has sold hundreds
-    of items and has almost nothing live in it. Money per live listing, most
-    first, and only where it beats the shop's own average.
-  */
-  const shopAvg=t&&t.activeListings?Math.round(t.revenueMinor/t.activeListings):0;
-  const perLive=(w:World)=>Math.round(w.lifetimeRevenueMinor/Math.max(1,w.activeListings));
-  const thin=worlds.filter(w=>w.activeListings>0&&w.lifetimeUnits>=50&&perLive(w)>shopAvg)
-    .sort((a,b)=>perLive(b)-perLive(a))[0];
-  const biggest=worlds.slice().sort((a,b)=>b.activeListings-a.activeListings)[0];
   const gallery=shots.length?shots:sellers;
+  /* Most saves gained in the window, photographs only. */
+  const movers=(hot?.listings??[]).filter(l=>l.image).slice(0,4);
+  /* What she actually charges per item, from her own sold listings. */
+  const sold=(m.topListings??[]).filter(l=>l.sales>0);
+  const yourPrice=sold.length
+    ? Math.round(sold.reduce((n,l)=>n+l.revenueMinor,0)/sold.reduce((n,l)=>n+l.sales,0)) : null;
+  const NAMES:Record<string,string>={tee:"T-shirts",hoodie:"Hoodies",crewneck:"Sweatshirts",
+    tank:"Tanks",longSleeve:"Long sleeves",mixedApparel:"Mixed apparel",mug:"Mugs",tote:"Totes"};
+  const bands=niches.flatMap(n=>(n.analysis?.products??[])
+    .filter(pr=>pr.listings>=25&&pr.prices?.[0]&&pr.prices[0].currency==="USD"&&pr.prices[0].high>pr.prices[0].low)
+    .slice(0,1)
+    .map(pr=>{
+      const band=pr.prices[0];
+      /* One scale for every row so the bars are comparable: zero to the
+         highest figure on the page, with a little air. */
+      const ceiling=Math.max(band.high,yourPrice??0)*1.15;
+      return {name:n.name,product:NAMES[pr.product]??pr.product,listings:pr.listings,shops:pr.shops,
+        low:band.low,high:band.high,you:yourPrice,
+        lowPct:Math.round(band.low/ceiling*100),highPct:Math.round(band.high/ceiling*100),
+        youPct:yourPrice===null?null:Math.round(yourPrice/ceiling*100)};
+    })).slice(0,3);
   /* The label is built from the endpoint's own period and ranking so it
      cannot drift away from what is actually on the shelf. */
   const galleryLabel=shots.length
@@ -130,18 +156,50 @@ export default function PreviewClient(){
       shop sections. Revenue is what listings carrying that keyword have taken — not what
       buyers searched for.</p>
 
-    {thin&&<>
-      <div className="hp-rule"><h2>One thing worth a look</h2><i/></div>
-      <div className="find">
-        <div>
-          <p className="k">{thin.label}</p>
-          <h3>You have sold {num(thin.lifetimeUnits)} of these, and only {thin.activeListings} are still live.</h3>
-          <p>{thin.label} has made you {usd(thin.lifetimeRevenueMinor)} — that is {usd(Math.round(thin.lifetimeRevenueMinor/Math.max(1,thin.activeListings)))} for
-            each listing you still have up, more than any other keyword in your shop.
-            {biggest?` ${biggest.label} has ${biggest.activeListings} listings up and has made ${usd(biggest.lifetimeRevenueMinor)}.`:""}</p>
-        </div>
-        <div className="find-num"><b>{thin.activeListings}</b><small>still live in<br/>{thin.label.toLowerCase()}</small></div>
+    {/*
+      D1874 · THE REST OF THE PRODUCT, ON THE FRONT PAGE.
+
+      Everything above this is the seller's own shop. These two sections are
+      the tools she is paying for pointed outward: what moved on Etsy in the
+      last day, and what the shops in her own researched searches charge for
+      the same garment she sells.
+    */}
+    {movers.length>0&&<>
+      <div className="hp-rule"><h2>Moving on Etsy right now</h2><i/><small>last 24 hours · most saves gained</small></div>
+      <div className="shelf">
+        {movers.map(l=><a className="shot mover" key={l.listingId} href={l.url} target="_blank" rel="noopener noreferrer">
+          {l.image?<img src={l.image} alt="" width={570} height={712} loading="lazy"/>:<span/>}
+          <span className="chip">
+            <b>+{num(l.savesGained)}</b><small>SAVES</small>
+            {l.sold>0&&<><b style={{marginLeft:5}}>{l.sold}</b><small>SOLD</small></>}
+          </span>
+          {typeof l.price==="number"&&<span className="price">${l.price.toFixed(2)}</span>}
+        </a>)}
       </div>
+    </>}
+
+    {bands.length>0&&<>
+      <div className="hp-rule"><h2>What the shops you research charge</h2><i/>
+        <small>against what you sell for</small></div>
+      <div className="bands">
+        {bands.map(x=><div className="band" key={x.name+x.product}>
+          <div className="band-head">
+            <div><b>{x.product}</b> in <b className="ph">{x.name}</b></div>
+            <small>{num(x.listings)} listings · {num(x.shops)} shops</small>
+          </div>
+          <div className="band-track">
+            <i style={{left:`${x.lowPct}%`,width:`${Math.max(4,x.highPct-x.lowPct)}%`}}/>
+            {x.youPct!==null&&<u style={{left:`${x.youPct}%`}}/>}
+          </div>
+          <div className="band-foot">
+            <span>{usd(x.low)}</span>
+            {x.you!==null&&<em>you sell at {usd(x.you)}</em>}
+            <span>{usd(x.high)}</span>
+          </div>
+        </div>)}
+      </div>
+      <p className="source">The band is the middle of what those shops list at, from the research
+        you have already run. Yours is what your own sold listings averaged per item.</p>
     </>}
 
     {gallery.length>3&&<>
