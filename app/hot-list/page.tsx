@@ -152,8 +152,8 @@ export default function HotListPage() {
   return <FactoryShell active="hotlist" title="Hot List"><div className="drop-page sold-page interior-page">
     <header className="drop-head">
       <p className="mini-label">HOT LIST</p>
-      <h1>Explore recent listing activity</h1>
-      <p>Etsy listings with observed activity {view.hours >= 168 ? "this week" : "overnight"}. Activity does not establish an individual listing’s sales total.</p>
+      <h1>Recent listing activity</h1>
+      <p>Browse Etsy listing activity from {view.hours >= 168 ? "this week" : "the last 24 hours"}.</p>
     </header>
 
     {error && <section className="drop-error" role="alert">
@@ -242,7 +242,7 @@ export default function HotListPage() {
           : board.listings.length === 0
             ? <section className="drop-loading">
                 <p className="drop-loading-title">Nothing yet for this period</p>
-                <p className="drop-loading-sub">Try the other one.</p>
+                <p className="drop-loading-sub">Choose another period.</p>
               </section>
             : <>
               <div className="hot-made-to-order">
@@ -259,8 +259,8 @@ export default function HotListPage() {
                 <small>{rights
                   ? "Listings flagged with brand or tour names are included."
                   : madeToOrder
-                    ? "Personalized listings included. Brand-name filtering is not a trademark clearance check."
-                    : "Personalized listings and known brand-name matches are filtered. Other protected designs may still appear."}</small>
+                    ? "Personalized listings included."
+                    : "Personalized listings and flagged brand names are hidden."}</small>
               </div>
 
               <nav className="drop-tabs" aria-label="Product types">

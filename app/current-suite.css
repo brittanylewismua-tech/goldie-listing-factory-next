@@ -787,3 +787,6 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .factory-work .cc-home-tile[data-tool="Shop Map"] :is(h2,p,span){color:white!important}
 #suite-workspace .factory-work .cc-home-tile[data-tool="Trademark Tracker"]{background:#fff!important;color:#242329!important}
 #suite-workspace .factory-work .cc-home-tile[data-tool="Trademark Tracker"] :is(h2,p,span){color:#242329!important}
+
+/* Keep all supporting page headings in the approved Current typeface. */
+#suite-workspace .factory-work :is(h1,h2,h3,h4){font-family:'Manrope Variable',Manrope,Arial,sans-serif!important}

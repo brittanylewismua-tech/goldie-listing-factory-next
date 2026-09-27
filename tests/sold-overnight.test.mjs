@@ -173,7 +173,7 @@ test("the page explains what the numbers mean without describing the plumbing", 
      them makes a confident number sound like a workaround. */
   const page = read("hot-list/page.tsx");
   assert.match(page, /How these listings are selected/);
-  assert.match(page, /Etsy listings with observed activity/i);
+  assert.match(page, /Browse Etsy listing activity/i);
   for (const leak of [/stock/i, /compare/i, /reading before/i, /listings we watch/i])
     assert.doesNotMatch(strip(page), leak,
       `the page must not describe how the count is produced: ${leak}`);
@@ -669,7 +669,7 @@ test("the board does not recommend somebody else's trademark", () => {
 
   /* Off unless deliberately asked for, and labelled when on. */
   assert.match(read("api/sold-overnight/route.ts"), /params\.get\("rights"\) === "1"/);
-  assert.match(read("hot-list/page.tsx"), /not a trademark clearance check/);
+  assert.match(read("hot-list/page.tsx"), /flagged brand names are hidden/);
 });
 
 test("the board is trimmed last, after everything that can disqualify a row", () => {
