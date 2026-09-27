@@ -39,6 +39,11 @@ const GROUPS: Group[] = [
     {href:"/batches",name:"Batch History",icon:"batches",what:"Open saved batches and check their progress."},
     {href:"/keywords",name:"Keyword Banks",icon:"keywords",what:"Manage the phrases used in your listing titles and tags."},
     {href:"/mockups",name:"Mockup Sets",icon:"mockups",what:"Manage the photos used for your listings."},
+      { href: "/usage", name: "Usage and limits", icon: "usage",
+        what: "Your monthly listing allowance and remaining credits." },
+      { href: "/goals", name: "Listing goal", icon: "goals",
+        what: "Drafts created toward your weekly or monthly goal." },
+
   ]},
   {
     heading: "Command Center",
@@ -67,10 +72,6 @@ const GROUPS: Group[] = [
     rows: [
       { href: "/account/settings", name: "Account", icon: "account",
         what: "Manage your sign-in, subscription, and saved data." },
-      { href: "/usage", name: "Usage and limits", icon: "usage",
-        what: "Your monthly listing allowance and remaining credits." },
-      { href: "/goals", name: "Listing goal", icon: "goals",
-        what: "Drafts created toward your weekly or monthly goal." },
     ],
   },
 ];
@@ -102,7 +103,7 @@ export default function MoreView({ needsName = "" }: { needsName?: string }) {
   return <>
     <main className="tools-settings p-grid">
     <div className="p-page">
-      <header className="p-head">
+      <header className="p-head current-page-heading">
         <h1>Tools &amp; settings</h1>
         <p>Manage your tools, shop connections, and account.</p>
       </header>

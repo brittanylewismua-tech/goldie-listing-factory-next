@@ -58,7 +58,7 @@ export default function GoalsPage() {
             <span className="goals-track" aria-hidden="true">
               <i style={{ width: `${Math.min(100, Math.round((thisPeriod / Math.max(1, goal.target)) * 100))}%` }} />
             </span>
-            <a className="listing-goal-history-link" href="/usage#listing-goal">Adjust goal ↗</a>
+            <a className="listing-goal-history-link" href="/usage#listing-goal">Adjust goal →</a>
           </section>
 
           <section className="goals-history">

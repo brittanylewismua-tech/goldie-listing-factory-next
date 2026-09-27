@@ -23,7 +23,7 @@ export default function CurrentOverview({project,report,onProducts,onDetails,loa
     <div className="co-feature-copy">
      <span className="co-pill">{primary?productName(primary.product):'Products'}</span>
      <h2>Designs & prices</h2>
-     <p>Explore the products in this niche, with current prices and the buyer feedback behind them.</p>
+     <p>See designs, prices, and why buyers chose them.</p>
      <button className="co-primary" onClick={()=>onProducts(ids)}>{'Browse '+(primary?productName(primary.product).toLowerCase():'products')} <span aria-hidden="true">→</span></button>
     </div>
     <div className="co-photo-story">
@@ -33,12 +33,12 @@ export default function CurrentOverview({project,report,onProducts,onDetails,loa
    </section>
    <aside className="co-price">
     <span className="co-label">{primary?productName(primary.product):'Product'} prices</span>
-    {range?<><strong>{money(range.low,range.currency)}<span>– {money(range.high,range.currency)}</span></strong><p>Middle price range · {range.currency}</p><button onClick={()=>onProducts((primary?.listingIds??[]).filter(id=>active.some(l=>l.id===id&&l.currency===range.currency)))}>Browse this product type <span aria-hidden="true">→</span></button></>:<><strong>—</strong><p>Prices are being checked.</p></>}
+    {range?<><strong>{money(range.low,range.currency)}<span>– {money(range.high,range.currency)}</span></strong><p>Middle price range · {range.currency}</p><button onClick={()=>onProducts((primary?.listingIds??[]).filter(id=>active.some(l=>l.id===id&&l.currency===range.currency)))}>View {primary?productName(primary.product).toLowerCase():'products'} <span aria-hidden="true">→</span></button></>:<><strong>—</strong><p>Prices are being checked.</p></>}
    </aside>
   </div>
   <div className="co-stats"><div><strong>{a.listings.toLocaleString()}</strong><span>Matching active listings</span></div><div><strong>{project.selected.length}</strong><span>Shops followed</span></div><div><strong>{reviews30===undefined?'Checking':reviews30.toLocaleString()}</strong><span>Reviews · last 30 days</span></div></div>
   <div className="co-bottom">
-   <section className="co-findings"><header><h3>Worth a closer look</h3></header><div className="co-finding-rows">
+   <section className="co-findings"><header><h3>Products & buyer insights</h3></header><div className="co-finding-rows">
     <button onClick={()=>onProducts(ids)}><span className="co-index">01</span><span><strong>Designs & prices</strong><small>{primary?productName(primary.product):'Products'} across your tracked shops</small></span><span aria-hidden="true">→</span></button>
     {findings.slice(0,3).map((f,i)=><button key={f.title} onClick={()=>onDetails ? onDetails(f.title) : onProducts([...new Set(f.evidence.map(e=>e.listingId))])}><span className="co-index">{String(i+2).padStart(2,'0')}</span><span><strong>{f.title}</strong><small>{f.kind==='request'?'Buyer request':f.kind==='example'?'One buyer’s reason':'Buying reason'} · {new Set(f.evidence.map(e=>e.listingId)).size} {new Set(f.evidence.map(e=>e.listingId)).size===1?'product':'products'}</small></span><span aria-hidden="true">→</span></button>)}
    </div>{loading&&<p className="co-status" role="status">Reading buyer reviews…</p>}{error&&<p className="co-status" role="alert">{error} <button onClick={onRetry}>Try again</button></p>}{!loading&&!error&&!findings.length&&<p className="co-status">Buyer findings will appear when reviews include a specific reason or request.</p>}</section>

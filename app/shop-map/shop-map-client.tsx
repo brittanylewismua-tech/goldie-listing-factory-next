@@ -296,8 +296,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     {tab === "overview" && <div className="shop-map-tab-panel"><CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/><DesignReach/><ListingCheckPanel/>
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
-          <h2>Top 3 listings in the last 90 days</h2></div>
-          <button type="button" className="p-button p-button-primary" onClick={() => setTab("sold")}>See every sold listing ↗</button></div>
+          <h2>Top sellers</h2></div>
+          <button type="button" className="p-button p-button-primary" onClick={() => setTab("sold")}>View sold listings →</button></div>
         {leaders.length ? <div className="shop-map-leader-grid">{leaders.map((listing,index) =>
           <article key={listing.listingId} className={index === 0 ? "lead" : ""}>
             <div className="shop-map-listing-image">{listing.imageUrl

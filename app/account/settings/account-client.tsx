@@ -243,7 +243,7 @@ export default function AccountClient({ email }: { email: string }) {
 
   return <main className="account p-grid">
     <div className="p-page">
-      <header className="p-head">
+      <header className="p-head current-page-heading">
         <h1>Account</h1>
         <p>Your sign-in, subscription, and saved data.</p>
       </header>

@@ -13,7 +13,7 @@ test("the redesigned map has four clear sections", () => {
 });
 
 test("overview leads with sold listings and plain timing", () => {
-  assert.match(client, /Top 3 listings in the last 90 days/);
+  assert.match(client, /Top sellers/);
   assert.match(client, /LAST 90 DAYS/);
   assert.match(client, /shown.topListings\?\?\[\]/);
   assert.match(client, /listing\.sales\} sold/);

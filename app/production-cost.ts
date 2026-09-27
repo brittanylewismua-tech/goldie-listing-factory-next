@@ -31,8 +31,7 @@ export type UnmatchedReason =
 
 export const EXPLANATION: Record<UnmatchedReason, string> = {
   "absent-from-printify":
-    "No Printify order references this Etsy order. It may have been made "
-    + "somewhere else, or by hand.",
+    "No matching Printify order. Enter the production and shipping cost from your supplier.",
   "printify-order-delayed":
     "Printify has the order but has not reported its cost yet. This usually "
     + "resolves on its own within a day or two.",

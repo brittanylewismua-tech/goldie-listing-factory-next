@@ -119,7 +119,7 @@ test('a scan that takes seconds holds the shape of its answer', () => {
   /* Eight to sixteen seconds behind one short line above empty space is
      indistinguishable from a page that has failed. */
   const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
-  assert.match(client, /This takes a few seconds/);
+  assert.match(client, /Loading search results/);
   assert.match(client, /listing-skeleton/);
 });
 

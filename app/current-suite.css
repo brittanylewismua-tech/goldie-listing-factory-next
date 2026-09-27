@@ -878,3 +878,43 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 }
 #suite-workspace .current-logo-text .current-logo-name {color:inherit!important}
 #suite-workspace .suite-brand-mark.suite-brand-g {width:36px!important;min-width:36px!important;height:36px!important;flex-basis:36px!important;font-size:33px!important;border-radius:10px!important}
+
+/* Consistent page framing; overrides the older header bottom-padding reset. */
+#suite-workspace .factory-work :is(.current-page-heading,.drop-head,.cc-home-head) {
+ padding:28px 32px!important;max-width:none!important;width:100%;box-sizing:border-box;align-items:flex-start;
+}
+#suite-workspace :is(.account,.tools-settings) > .p-page {padding:0!important;margin:0!important;max-width:none!important}
+#suite-workspace .co-price > strong {font-size:32px!important;white-space:nowrap;letter-spacing:-1px}
+#suite-workspace .co-price > strong > span {display:inline;font-size:inherit!important;letter-spacing:inherit}
+@media(max-width:760px){
+ #suite-workspace .factory-work :is(.current-page-heading,.drop-head,.cc-home-head) {padding:22px!important}
+ #suite-workspace .shop-map-sold-table article {grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px 24px!important;align-items:start}
+ #suite-workspace .shop-map-sold-table article > div {grid-column:1/-1}
+ #suite-workspace .shop-map-sold-table article [data-label] {display:block;font-size:16px!important;line-height:1.5}
+ #suite-workspace .shop-map-sold-table article [data-label]::before {white-space:nowrap;font-size:12px!important;line-height:1.5;margin-bottom:4px}
+ #suite-workspace .co-price {grid-template-columns:minmax(0,1fr);gap:12px}
+ #suite-workspace .co-price > strong {grid-column:1;grid-row:auto;font-size:30px!important}
+}
+
+#suite-workspace :is(.account,.tools-settings) .current-page-heading {display:block}
+#suite-workspace .mw-detail-head.current-page-heading {display:block}
+#suite-workspace .shop-catalog-toolbar {display:flex;gap:16px;align-items:flex-end;margin:24px 0 16px;flex-wrap:wrap}
+#suite-workspace .shop-catalog-toolbar .shop-product-filter {display:grid;gap:8px;margin:0;min-width:160px;font-size:12px}
+#suite-workspace .shop-catalog-toolbar .market-browser-controls {flex:1;min-width:220px;margin:0!important}
+#suite-workspace .shop-catalog-toolbar select {min-height:44px}
+@media(max-width:760px){
+ #suite-workspace .shop-catalog-toolbar {display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+ #suite-workspace .shop-catalog-toolbar .market-browser-controls {min-width:0}
+ #suite-workspace .shop-catalog-toolbar .shop-product-filter select {width:100%}
+}
+
+#suite-workspace .confirmDialog {border:1px solid #ded7dc!important;border-radius:16px!important;box-shadow:0 20px 60px #24232926!important;max-height:calc(100dvh - 48px);overflow:auto;position:relative}
+#suite-workspace .confirmDialog .closeAddSet {width:40px!important;height:40px!important;min-height:40px!important;padding:0!important;font-size:24px!important;line-height:1!important;background:#f5f3f5!important;color:#242329!important;right:10px;top:10px}
+#suite-workspace .confirmDialog .setControls button {background:#242329!important;color:#fff!important;box-shadow:none!important}
+#suite-workspace .confirmDialog .setControls button span {color:#fff!important}
+
+#suite-workspace .factory-work :is(.management-page > header,.usage-page > header,.mockupHero,.keyword-hero,.cc-home-head,.drop-head) h1 {margin:0 0 10px!important}
+#suite-workspace .factory-work :is(.management-page > header,.usage-page > header,.mockupHero,.keyword-hero,.cc-home-head,.drop-head) > p:not(.mini-label):not(.mockupEyebrow) {margin:0!important;max-width:72ch;line-height:1.6!important}
+@media(max-width:600px){
+ #suite-workspace .current-page-heading > .p-button {margin-top:16px!important}
+}

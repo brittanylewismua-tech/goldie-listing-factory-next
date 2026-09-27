@@ -71,7 +71,7 @@ export default function ListingCheckPanel() {
         }}>
           <option value="">Choose one…</option>
           {mine.map(row => <option key={row.listingId} value={row.listingId}>
-            {row.sold90} sold · {row.title.slice(0, 64)}</option>)}
+            {row.sold90} sold in 90 days · {row.title.slice(0, 64)}</option>)}
         </select>
       </label>
       <label>What would a buyer type to find it?

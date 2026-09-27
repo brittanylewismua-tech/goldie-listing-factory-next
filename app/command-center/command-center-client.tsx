@@ -32,7 +32,7 @@ const icon = (children: React.ReactNode) =>
 /* The question first. The name of the tool is how we file it, not what it is
    for, and a member paying monthly is buying the answer rather than the file. */
 const TOOLS = (summary: Summary | null) => [
-  {href:"/hot-list",name:"Hot List",what:"Search recent buyer activity by keyword and product type.",stat:null,icon:icon(<path d="m3 17 6-6 4 4 8-10"/>)},
+  {href:"/hot-list",name:"Hot List",what:"Find listings gaining favorites or showing stock changes.",stat:null,icon:icon(<path d="m3 17 6-6 4 4 8-10"/>)},
   {href:"/platform-updates",name:"Etsy + Printify Updates",what:"Read platform changes and the actions that affect your shop.",stat:null,icon:icon(<><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></>)},
   {
     href: "/market-watch/research", name: "Research",
@@ -53,8 +53,7 @@ const TOOLS = (summary: Summary | null) => [
   {
     href: "/trademark", name: "Trademark Check",
     question: "Does this phrase have trademark matches?",
-    what: "Checks a phrase against the federal register, and keeps watching the "
-      + "ones you save.",
+    what: "Find trademark matches and monitor the phrases you save.",
     stat: summary && summary.phrases > 0
       ? `${summary.phrases} phrase${summary.phrases === 1 ? "" : "s"} watched`
         + (summary.needReview ? ` · ${summary.needReview} to review` : "")

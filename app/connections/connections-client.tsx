@@ -166,10 +166,10 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
   return (
     <FactoryShell active="connections" title="Connections" desktopOnly={false}>
     <main className="conn p-grid">
-      <h1>Connections</h1>
+      <header className="current-page-heading"><div><h1>Connections</h1>
       <p className="lede">
         Manage the Etsy and Printify shops used for your drafts and Shop Map.
-      </p>
+      </p></div></header>
 
       {error && <p className="p-notice p-notice-bad" role="alert">{error}</p>}
 

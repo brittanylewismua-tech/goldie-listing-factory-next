@@ -115,11 +115,8 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
       <button className="back" onClick={() => { window.location.href = `/shop-map?tab=money&month=${encodeURIComponent(data.month)}`; }}>
         ← Shop Map
       </button>
-      <h1>Production costs</h1>
-      <p className="lede">
-        Review what each order cost to produce. Missing costs must be resolved before
-        Shop Map can report a complete profit figure.
-      </p>
+      <header className="current-page-heading"><div><h1>Production costs</h1>
+      <p className="lede">Add production costs to calculate profit for each order.</p></div></header>
 
       <p className="cost-month">Orders for {new Date(`${data.month}-01T12:00:00`).toLocaleDateString(undefined,{month:"long",year:"numeric"})}</p>
       <section className="verdict">
