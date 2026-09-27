@@ -746,3 +746,7 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .nr-secondary-section cite{font-size:12px;font-style:normal}
 #suite-workspace .nr-secondary-section input[type=search]{display:block;width:100%;padding:12px;border:1px solid #d7d3d7;border-radius:8px;margin-top:8px;background:#fff;color:#242124}
 .platform-update-history{margin-top:36px;padding-top:24px;border-top:1px solid #ddd5dc}
+
+/* Hot List search uses the same readable primary action at every width. */
+#suite-workspace .hot-search button[type="submit"]{background:#242329!important;color:#fff!important;border-color:#242329!important}
+@media(max-width:600px){#suite-workspace .hot-hits .drop-title{font-size:14px!important;line-height:1.45!important;-webkit-line-clamp:3}}
