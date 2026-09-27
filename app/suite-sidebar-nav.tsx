@@ -106,11 +106,11 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
     {current ? <nav className="current-navigation" aria-label="Product navigation">
       {home&&link(home)}
       <section className="current-nav-group" aria-label="Command Center">
-        <a href="/command-center" aria-current={active==='command-center'?'page':undefined}><NavIcon name="more"/><span>Command Center</span></a>
+        <a href="/command-center" className={active==='command-center'?'active':undefined} aria-current={active==='command-center'?'page':undefined}><NavIcon name="more"/><span>Command Center</span></a>
         {items.filter(i=>i.group==='command').map(i=>link(i))}
         <a href="/market-watch?tab=shops" className={active==="market-watch"&&watchTab==="shops"?"active":undefined} aria-current={active==="market-watch"&&watchTab==="shops"?"page":undefined}><NavIcon name="marketWatch"/><span>Tracked shops</span></a>
         <a href="/market-watch?tab=saved" className={active==="market-watch"&&watchTab==="saved"?"active":undefined} aria-current={active==="market-watch"&&watchTab==="saved"?"page":undefined}><NavIcon name="marketWatch"/><span>Saved listings</span></a>
-        <a href="/hot-list"><NavIcon name="marketWatch"/><span>Hot List</span></a>
+        <a href="/hot-list" className={active==="hotlist"?"active":undefined} aria-current={active==="hotlist"?"page":undefined}><NavIcon name="marketWatch"/><span>Hot List</span></a>
       </section>
       <section className="current-factory-section" aria-label="Listing Factory">{factory&&link(factory)}<div className="current-factory-children">{factoryChildren.map(i=>link(i))}<a href="/goals" className={active === "goals" ? "active" : undefined} aria-current={active === "goals" ? "page" : undefined}><NavIcon name="goals"/><span>Listing goals</span></a></div></section>
       <details className="current-more"><summary>Settings<svg className="current-more-chevron" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg></summary><div className="current-nav-group" role="group" aria-label="Shop setup"><span className="current-nav-group-label">Shop setup</span>{connections&&link(connections)}</div></details>

@@ -154,8 +154,8 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
   const body = (<>
     <div className="tm-page interior-page p-grid">
       <header className="drop-head">
-        <p className="mini-label p-eyebrow">TRADEMARK TRACKER</p>
-        <h1>Trademark search</h1>
+        <p className="mini-label p-eyebrow">TRADEMARK CHECK</p>
+        <h1>Trademark Check</h1>
         <p>Find matching marks and review their status and product categories.</p>
       </header>
 
