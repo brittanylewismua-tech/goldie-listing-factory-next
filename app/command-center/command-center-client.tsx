@@ -32,16 +32,12 @@ const icon = (children: React.ReactNode) =>
 /* The question first. The name of the tool is how we file it, not what it is
    for, and a member paying monthly is buying the answer rather than the file. */
 const TOOLS = (summary: Summary | null) => [
-  {href:"/design-scanner",name:"Design Scanner",what:"Check artwork readability, compare designs, and review previous scans.",stat:null,icon:icon(<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M7 12h10"/>)},
-  {href:"/market-watch",name:"Tracked keywords",what:"Search Etsy, revisit your keywords, and follow listing changes.",stat:null,icon:icon(<><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></>)},
-  {href:"/market-watch?tab=shops",name:"Tracked shops",what:"Browse full shop catalogs, buyer insights, and listing changes.",stat:null,icon:icon(<><path d="m3 9 2-6h14l2 6M4 10v11h16V10M3 9c0 4 6 4 6 0 0 4 6 4 6 0 0 4 6 4 6 0M9 21v-7h6v7"/></>)},
-  {href:"/market-watch?tab=saved",name:"Saved listings",what:"Follow price, favorite, and view changes for the listings you save.",stat:null,icon:icon(<path d="M6 3h12v18l-6-4-6 4z"/>)},
   {href:"/hot-list",name:"Hot List",what:"Search recent buyer activity by keyword and product type.",stat:null,icon:icon(<path d="m3 17 6-6 4 4 8-10"/>)},
   {href:"/platform-updates",name:"Etsy + Printify Updates",what:"Read platform changes and the actions that affect your shop.",stat:null,icon:icon(<><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></>)},
   {
     href: "/market-watch/research", name: "Research",
     question: "What are buyers choosing in my niche?",
-    what: "Find shops for a niche and follow their products, pricing, and buyer insights over time.",
+    what: "Research niches, search Etsy, and follow shops and saved listings in one place.",
     stat: null,
     icon: icon(<><circle cx="10" cy="10" r="6" /><path d="m15 15 6 6M7 10h6M10 7v6" /></>),
   },
