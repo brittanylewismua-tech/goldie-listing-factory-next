@@ -54,7 +54,6 @@ export default function PreviewClient(){
   const [sum,setSum]=useState<Summary|null>(null);
   const [up,setUp]=useState<Updates|null>(null);
   const [niches,setNiches]=useState<Niche[]>([]);
-  const [view,setView]=useState<"a"|"b"|"c">("a");
 
   useEffect(()=>{
     void fetch("/api/shop-map/map").then(r=>r.ok?r.json() as Promise<Map>:null).then(setM).catch(()=>undefined);
@@ -92,8 +91,15 @@ export default function PreviewClient(){
   const moved=(h?.niches??[]).filter(n=>n.newly>0).sort((a,b)=>b.newly-a.newly).slice(0,3);
   const worlds=(m.worlds??[]).slice().sort((a,b)=>b.lifetimeRevenueMinor-a.lifetimeRevenueMinor);
   const topLife=Math.max(1,...worlds.map(w=>w.lifetimeRevenueMinor));
-  const shots=(h?.topListings?.listings??[]).filter(l=>l.imageUrl);
-  const gallery=shots.length?shots:(m.topListings??[]).filter(l=>l.imageUrl);
+  /*
+    D1886 · ONE WINDOW PER BLOCK, AND IT SAYS WHICH.
+
+    The hero carried four at once: revenue over ninety days, orders over
+    ninety, a lifetime saves count on each photograph, and units sold over
+    thirty, none of them labelled. The photographs come from the ninety-day
+    list now, and every figure on the page states its own window.
+  */
+  const gallery=(m.topListings??[]).filter(l=>l.imageUrl);
   const absent=shelves.filter(s=>s.yours===0&&s.sold>=70);
   /*
     D1883 · THE BIGGEST NUMBER HAS TO BE ABOUT HER.
@@ -118,17 +124,18 @@ export default function PreviewClient(){
     <div className="facts">
       <div><b>{num(t?.ordersLast90??0)}</b><small>ORDERS</small></div>
       <div><b>{usd(perOrder)}</b><small>AVERAGE ORDER</small></div>
-      <div><b>{num(t?.activeListings??0)}</b><small>LISTINGS LIVE</small></div>
+      <div><b>{num(t?.activeListings??0)}</b><small>LISTINGS LIVE NOW</small></div>
     </div>
-    {lead&&<p className="hero-note">{lead.label} sold {num(lead.sold)} times on Etsy yesterday.
-      You have {num(lead.yours)} live.</p>}
+    {/* D1886 · A 24-hour sales count across a sample of Etsy, set against a
+        static listing count, under her revenue. Two numbers in different
+        units that answer no question. The comparison belongs in the product
+        board below, where the columns say what each figure is. */}
   </div>;
 
   const Yourshots=({n=3}:{n?:number})=><div className="shots">
     {gallery.slice(0,n).map(l=><div className="shot" key={l.listingId}>
       <img src={l.imageUrl} alt="" width={570} height={712} loading="eager"/>
-      <span className="chip"><b>{num(l.favorites??0)}</b><small>SAVED</small>
-        {l.sales>0&&<><b style={{marginLeft:5}}>{l.sales}</b><small>SOLD</small></>}</span>
+      <span className="chip"><b>{num(l.sales)}</b><small>SOLD IN 90 DAYS</small></span>
     </div>)}
   </div>;
 
@@ -149,11 +156,11 @@ export default function PreviewClient(){
     {moved.map(x=><div className="w-item" key={x.phrase}>
       <b>{num(x.newly)}</b>
       <div><span>listings started selling in <em>{x.phrase}</em></span>
-        <small>keyword you track</small></div></div>)}
+        <small>keyword you track · since you last opened Research</small></div></div>)}
     {rising.map(r=><div className="w-item" key={r.niche+r.phrase}>
       <b>{num(r.reviews)}</b>
       <div><span><em>{r.phrase}</em> reviews, up from {num(r.prior)}</span>
-        <small>{r.shops} shops in your {r.niche} research</small></div></div>)}
+        <small>{r.shops} shops in your {r.niche} research · last 30 days</small></div></div>)}
     <div className="w-item quiet">
       <b>{changes||"0"}</b>
       <div><span>changes at Etsy or Printify</span>
@@ -161,7 +168,7 @@ export default function PreviewClient(){
     {sum&&sum.needReview>0&&<div className="w-item quiet">
       <b>{num(sum.needReview)}</b>
       <div><span>watched phrase to review</span>
-        <small>{num(sum.phrases)} on your trademark list</small></div></div>}
+        <small>{num(sum.phrases)} on your trademark list · checked today</small></div></div>}
   </div>;
 
   const Rule=({title,note}:{title:string;note?:string})=>
@@ -174,7 +181,7 @@ export default function PreviewClient(){
   </a>;
 
   const Shelves=({limit=8}:{limit?:number})=><div className="table">
-    <div className="row head"><span>Product</span><span/><span>Sold</span><span>You have</span></div>
+    <div className="row head"><span>Product</span><span/><span>Sold in 24h</span><span>Your live listings</span></div>
     {shelves.slice(0,limit).map(s=><div className="row" key={s.key}>
       <div><b className="name">{s.label}</b><small>{num(s.listings)} listings sold something</small></div>
       <div><div className="bar now"><i style={{width:`${Math.round(s.sold/peak*100)}%`}}/></div></div>
@@ -194,53 +201,29 @@ export default function PreviewClient(){
     </div>)}
   </div>;
 
-  const Searches=()=>moved.length?<div className="table">
-    <div className="row head"><span>Search you follow</span><span/><span>Started selling</span><span/></div>
-    {moved.map(x=><div className="row" key={x.phrase}>
-      <div><b className="name">{x.phrase}</b><small>since you last looked</small></div>
-      <div><div className="bar now"><i style={{width:`${Math.round(x.newly/moved[0].newly*100)}%`}}/></div></div>
-      <div className="figure accent">{num(x.newly)}<small>listings</small></div><div/>
-    </div>)}
-  </div>:null;
 
+  /*
+    D1887 · ONE PAGE, AND NOTHING ON IT TWICE.
+
+    Three toggles were never a design - they were three arrangements of the
+    same blocks, and two of them repeated the hero as "your own best sellers"
+    further down. Her shop, then what changed in the lists she keeps, then
+    what sold on Etsy yesterday, then what her own keywords have earned. Each
+    of those appears once, and each states its own window.
+  */
   return <div className="hp">
-    <div className="switch">
-      {([["a","Tape"],["b","Floor"],["c","Window"]] as const).map(([k,l])=>
-        <button key={k} type="button" aria-pressed={view===k} onClick={()=>setView(k)}>{l}</button>)}
-      <span>Counted from stock, last 24 hours · your own figures beside it</span>
-    </div>
+    <section className="hero"><Hers/><Yourshots/></section>
 
-    {view==="a"&&<>
-      <section className="hero"><Hers/><Yourshots/></section>
-      <Rule title="Since you last looked" note={sum?`${sum.keywords} keywords · ${sum.shops} shops · ${niches.length} niches you follow`:undefined}/>
-      <Watching/>
-      <Rule title="What sold most, listing by listing" note={`${num(hot.totalSold??0)} units across ${num(hot.watched??0)} watched listings`}/>
-      <div className="shots four">{sold.slice(3,11).map(l=><Tile l={l} key={l.listingId}/>)}</div>
-      <Rule title="Selling in the searches you follow"/><Searches/>
-      <Rule title="Selling in your shop" note={m.worldsPeriod?.toLowerCase()}/><Yours/>
-    </>}
+    <Rule title="Since you last looked"
+      note={sum?`${sum.keywords} keywords · ${sum.shops} shops · ${niches.length} niches you follow`:undefined}/>
+    <Watching/>
 
-    {view==="b"&&<>
-      <section className="hero"><Hers/><Yourshots/></section>
-      <Rule title="Every product type, against your shelf" note="units sold in 24 hours"/>
-      <Shelves limit={12}/>
-      <Rule title="Selling in the searches you follow"/><Searches/>
-      <Rule title="Selling in your shop"/><Yours/>
-    </>}
+    <Rule title="What sold on Etsy yesterday"
+      note={`${num(hot.totalSold??0)} units across ${num(hot.watched??0)} listings`}/>
+    <div className="shots six">{sold.slice(0,12).map(l=><Tile l={l} key={l.listingId}/>)}</div>
+    <Shelves limit={10}/>
 
-    {view==="c"&&<>
-      <section className="hero"><Hers/><Yourshots/></section>
-      <Rule title="What sold on Etsy yesterday" note={`${num(hot.totalSold??0)} units across ${num(hot.watched??0)} watched listings`}/>
-      <div className="shots six">{sold.slice(0,12).map(l=><Tile l={l} key={l.listingId}/>)}</div>
-      <Rule title="By product type" note="units sold in 24 hours · your live count beside it"/>
-      <Shelves limit={8}/>
-      <Rule title="Your own best sellers" note={m.worldsPeriod?.toLowerCase()}/>
-      <div className="shots four">{gallery.slice(0,4).map(l=><div className="shot" key={l.listingId}>
-        <img src={l.imageUrl} alt="" width={570} height={712} loading="lazy"/>
-        <span className="chip"><b>{num(l.favorites??0)}</b><small>SAVED</small>
-          {l.sales>0&&<><b style={{marginLeft:5}}>{l.sales}</b><small>SOLD</small></>}</span>
-      </div>)}</div>
-      <Rule title="Selling in your shop"/><Yours/>
-    </>}
+    <Rule title="What your keywords have earned" note="all time against the last 90 days"/>
+    <Yours/>
   </div>;
 }
