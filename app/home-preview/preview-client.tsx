@@ -15,9 +15,10 @@ type Home={topListings?:{listings:Array<Listing&{favorites:number}>;period?:stri
   niches?:Array<{phrase:string;newly:number}>};
 type Hot={listings?:Array<{listingId:number;title:string;image:string|null;price:number|null;
   savesGained:number;sold:number;url:string}>};
-type Band={currency:string;low:number;high:number;count:number};
-type Product={product:string;listings:number;shops:number;reviews:number;prices:Band[]};
-type Niche={name:string;phase:string;analysis?:{reviews30:number;reviewsPrior30:number;products:Product[]}};
+type Evidence={quote?:string;text?:string;rating?:number;shop?:string};
+type Finding={title:string;explanation?:string;kind:string;evidence?:Evidence[]};
+type Niche={name:string;phase:string;analysis?:{reviews30:number;reviewsPrior30:number};
+  buyerInsights?:{findings?:Finding[]}};
 
 const usd=(minor:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",
   maximumFractionDigits:0}).format(minor/100);
@@ -73,26 +74,21 @@ export default function PreviewClient(){
   const moved=(h?.niches??[]).filter(n=>n.newly>0).sort((a,b)=>b.newly-a.newly).slice(0,4);
   const gallery=shots.length?shots:sellers;
   /* Most saves gained in the window, photographs only. */
-  const movers=(hot?.listings??[]).filter(l=>l.image).slice(0,4);
-  /* What she actually charges per item, from her own sold listings. */
-  const sold=(m.topListings??[]).filter(l=>l.sales>0);
-  const yourPrice=sold.length
-    ? Math.round(sold.reduce((n,l)=>n+l.revenueMinor,0)/sold.reduce((n,l)=>n+l.sales,0)) : null;
-  const NAMES:Record<string,string>={tee:"T-shirts",hoodie:"Hoodies",crewneck:"Sweatshirts",
-    tank:"Tanks",longSleeve:"Long sleeves",mixedApparel:"Mixed apparel",mug:"Mugs",tote:"Totes"};
-  const bands=niches.flatMap(n=>(n.analysis?.products??[])
-    .filter(pr=>pr.listings>=25&&pr.prices?.[0]&&pr.prices[0].currency==="USD"&&pr.prices[0].high>pr.prices[0].low)
-    .slice(0,1)
-    .map(pr=>{
-      const band=pr.prices[0];
-      /* One scale for every row so the bars are comparable: zero to the
-         highest figure on the page, with a little air. */
-      const ceiling=Math.max(band.high,yourPrice??0)*1.15;
-      return {name:n.name,product:NAMES[pr.product]??pr.product,listings:pr.listings,shops:pr.shops,
-        low:band.low,high:band.high,you:yourPrice,
-        lowPct:Math.round(band.low/ceiling*100),highPct:Math.round(band.high/ceiling*100),
-        youPct:yourPrice===null?null:Math.round(yourPrice/ceiling*100)};
-    })).slice(0,3);
+  const movers=(hot?.listings??[]).filter(l=>l.image&&l.sold>0).slice(0,4);
+  /*
+    D1875 · The best thing this product knows, and it was three clicks down.
+    A finding is a reason a buyer gave, drawn from reviews on the shops in her
+    own research, with the review itself attached.
+  */
+  const reasons=niches.flatMap(n=>(n.buyerInsights?.findings??[])
+    .filter(f=>f.title&&(f.evidence??[]).length>0)
+    .slice(0,2)
+    .map(f=>{
+      const ev=(f.evidence??[])[0];
+      const quote=(ev?.quote||ev?.text||"").trim();
+      return {niche:n.name,title:f.title,shop:ev?.shop,rating:ev?.rating,
+        quote:quote.length>180?`${quote.slice(0,177)}…`:quote};
+    })).slice(0,4);
   /* The label is built from the endpoint's own period and ranking so it
      cannot drift away from what is actually on the shelf. */
   const galleryLabel=shots.length
@@ -165,41 +161,33 @@ export default function PreviewClient(){
       the same garment she sells.
     */}
     {movers.length>0&&<>
-      <div className="hp-rule"><h2>Moving on Etsy right now</h2><i/><small>last 24 hours · most saves gained</small></div>
+      {/* D1875 · "Moving" is a word nobody says. readBoard sums sold and
+          saves_gained over buckets newer than now minus the window, so both
+          figures are counted over the last 24 hours exactly. */}
+      <div className="hp-rule"><h2>What sold on Etsy overnight</h2><i/>
+        <small>counted from stock dropping, last 24 hours</small></div>
       <div className="shelf">
         {movers.map(l=><a className="shot mover" key={l.listingId} href={l.url} target="_blank" rel="noopener noreferrer">
           {l.image?<img src={l.image} alt="" width={570} height={712} loading="lazy"/>:<span/>}
           <span className="chip">
-            <b>+{num(l.savesGained)}</b><small>SAVES</small>
-            {l.sold>0&&<><b style={{marginLeft:5}}>{l.sold}</b><small>SOLD</small></>}
+            <b>{num(l.sold)}</b><small>SOLD IN 24H</small>
+            {l.savesGained>0&&<><b style={{marginLeft:5}}>+{num(l.savesGained)}</b><small>SAVES</small></>}
           </span>
           {typeof l.price==="number"&&<span className="price">${l.price.toFixed(2)}</span>}
         </a>)}
       </div>
     </>}
 
-    {bands.length>0&&<>
-      <div className="hp-rule"><h2>What the shops you research charge</h2><i/>
-        <small>against what you sell for</small></div>
-      <div className="bands">
-        {bands.map(x=><div className="band" key={x.name+x.product}>
-          <div className="band-head">
-            <div><b>{x.product}</b> in <b className="ph">{x.name}</b></div>
-            <small>{num(x.listings)} listings · {num(x.shops)} shops</small>
-          </div>
-          <div className="band-track">
-            <i style={{left:`${x.lowPct}%`,width:`${Math.max(4,x.highPct-x.lowPct)}%`}}/>
-            {x.youPct!==null&&<u style={{left:`${x.youPct}%`}}/>}
-          </div>
-          <div className="band-foot">
-            <span>{usd(x.low)}</span>
-            {x.you!==null&&<em>you sell at {usd(x.you)}</em>}
-            <span>{usd(x.high)}</span>
-          </div>
+    {reasons.length>0&&<>
+      <div className="hp-rule"><h2>Why people bought in your niches</h2><i/>
+        <small>from reviews on the shops you research</small></div>
+      <div className="reasons">
+        {reasons.map(r=><div className="reason" key={r.niche+r.title}>
+          <p className="k">{r.niche}</p>
+          <h3>{r.title}</h3>
+          {r.quote&&<blockquote>“{r.quote}”<cite>{r.shop?`${r.shop}`:""}{r.rating?` · ${r.rating}★`:""}</cite></blockquote>}
         </div>)}
       </div>
-      <p className="source">The band is the middle of what those shops list at, from the research
-        you have already run. Yours is what your own sold listings averaged per item.</p>
     </>}
 
     {gallery.length>3&&<>
