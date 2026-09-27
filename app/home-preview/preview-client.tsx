@@ -15,10 +15,9 @@ type Home={topListings?:{listings:Array<Listing&{favorites:number}>;period?:stri
   niches?:Array<{phrase:string;newly:number}>};
 type Hot={listings?:Array<{listingId:number;title:string;image:string|null;price:number|null;
   savesGained:number;sold:number;url:string}>};
-type Evidence={quote?:string;text?:string;rating?:number;shop?:string};
-type Finding={title:string;explanation?:string;kind:string;evidence?:Evidence[]};
-type Niche={name:string;phase:string;analysis?:{reviews30:number;reviewsPrior30:number};
-  buyerInsights?:{findings?:Finding[]}};
+type Opportunity={phrase:string;listings:number;reviews:number;prior:number;shops:number};
+type Niche={name:string;phase:string;
+  analysis?:{reviews30:number;reviewsPrior30:number;opportunities?:Opportunity[]}};
 
 const usd=(minor:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",
   maximumFractionDigits:0}).format(minor/100);
@@ -76,19 +75,19 @@ export default function PreviewClient(){
   /* Most saves gained in the window, photographs only. */
   const movers=(hot?.listings??[]).filter(l=>l.image&&l.sold>0).slice(0,4);
   /*
-    D1875 · The best thing this product knows, and it was three clicks down.
-    A finding is a reason a buyer gave, drawn from reviews on the shops in her
-    own research, with the review itself attached.
+    D1877 · DEMAND DIRECTION, BY PHRASE.
+
+    Every phrase the research touched carries how many buyer reviews it drew
+    in the last thirty days and how many in the thirty before. The difference
+    is the closest thing to demand direction this product can honestly
+    produce, and it was sitting unread inside analysis.opportunities.
   */
-  const reasons=niches.flatMap(n=>(n.buyerInsights?.findings??[])
-    .filter(f=>f.title&&(f.evidence??[]).length>0)
-    .slice(0,2)
-    .map(f=>{
-      const ev=(f.evidence??[])[0];
-      const quote=(ev?.quote||ev?.text||"").trim();
-      return {niche:n.name,title:f.title,shop:ev?.shop,rating:ev?.rating,
-        quote:quote.length>180?`${quote.slice(0,177)}…`:quote};
-    })).slice(0,4);
+  const rising=niches.flatMap(n=>(n.analysis?.opportunities??[])
+    .filter(o=>o.reviews>=5&&o.reviews>o.prior)
+    .map(o=>({...o,niche:n.name,gain:o.reviews-o.prior})))
+    .sort((x,y)=>y.gain-x.gain||y.reviews-x.reviews)
+    .slice(0,5);
+  const risingTop=Math.max(1,...rising.map(r=>r.reviews));
   /* The label is built from the endpoint's own period and ranking so it
      cannot drift away from what is actually on the shelf. */
   const galleryLabel=shots.length
@@ -148,9 +147,6 @@ export default function PreviewClient(){
         <div><div className="now">{w.revenueMinor?usd(w.revenueMinor):"—"}</div><div className="nowu">{w.units?`${w.units} units`:"nothing"}</div></div>
       </div>)}
     </div>
-    <p className="source">Grouped from the words that repeat across your own titles, tags and
-      shop sections. Revenue is what listings carrying that keyword have taken — not what
-      buyers searched for.</p>
 
     {/*
       D1874 · THE REST OF THE PRODUCT, ON THE FRONT PAGE.
@@ -165,7 +161,7 @@ export default function PreviewClient(){
           saves_gained over buckets newer than now minus the window, so both
           figures are counted over the last 24 hours exactly. */}
       <div className="hp-rule"><h2>What sold on Etsy overnight</h2><i/>
-        <small>counted from stock dropping, last 24 hours</small></div>
+        <small>last 24 hours</small></div>
       <div className="shelf">
         {movers.map(l=><a className="shot mover" key={l.listingId} href={l.url} target="_blank" rel="noopener noreferrer">
           {l.image?<img src={l.image} alt="" width={570} height={712} loading="lazy"/>:<span/>}
@@ -178,14 +174,19 @@ export default function PreviewClient(){
       </div>
     </>}
 
-    {reasons.length>0&&<>
-      <div className="hp-rule"><h2>Why people bought in your niches</h2><i/>
-        <small>from reviews on the shops you research</small></div>
-      <div className="reasons">
-        {reasons.map(r=><div className="reason" key={r.niche+r.title}>
-          <p className="k">{r.niche}</p>
-          <h3>{r.title}</h3>
-          {r.quote&&<blockquote>“{r.quote}”<cite>{r.shop?`${r.shop}`:""}{r.rating?` · ${r.rating}★`:""}</cite></blockquote>}
+    {rising.length>0&&<>
+      <div className="hp-rule"><h2>Phrases getting more buyers</h2><i/>
+        <small>reviews in the last 30 days against the 30 before</small></div>
+      <div className="themes">
+        <div className="theme head"><span>Phrase</span><span/><span>Last 30 days</span><span>Before that</span></div>
+        {rising.map(r=><div className="theme" key={r.niche+r.phrase}>
+          <div><div className="name">{r.phrase}</div><div className="meta">{num(r.shops)} shops · {num(r.listings)} listings</div></div>
+          <div>
+            <div className="theme-bar now"><i style={{width:`${Math.round(r.reviews/risingTop*100)}%`}}/></div>
+            <div className="theme-bar"><i style={{width:`${Math.round(r.prior/risingTop*100)}%`}}/></div>
+          </div>
+          <div><div className="life">{num(r.reviews)}</div><div className="lifeu">+{num(r.gain)}</div></div>
+          <div><div className="now" style={{color:"var(--faint)"}}>{num(r.prior)}</div><div className="nowu">in {r.niche}</div></div>
         </div>)}
       </div>
     </>}
@@ -214,19 +215,14 @@ export default function PreviewClient(){
             <b>{x.newly}</b><span>listings in <b className="ph">{x.phrase}</b></span></div>)
           :<p>Nothing in your saved searches has started selling since you last looked.</p>}
         </div>
-        {moved.length>0&&<p className="why">Goldie watches these searches and notices when a
-          listing’s stock drops, which means it sold. These are the ones that started selling
-          since you last opened Research.</p>}
       </div>
       <div className="box">
         <p className="k">Your listings</p>
         <div className="goal" style={{marginTop:14}}><b>{num(t?.activeListings??0)}</b><small>live on Etsy</small></div>
         <a className="cta" href="/listing-factory?step=setup">Make something new</a>
         {Boolean(m.needsAttention?.missingProductionCosts)&&<p className="why">
-          September’s revenue and Etsy fees are exact, but Goldie does not know what
-          {" "}{m.needsAttention?.missingProductionCosts} of the orders cost to make, so it is not showing a
-          profit figure rather than a wrong one. <a href="/shop-map/costs">Enter those two costs</a> and
-          the figure completes.</p>}
+          No profit figure for September yet: {m.needsAttention?.missingProductionCosts} orders are
+          missing what they cost to make. <a href="/shop-map/costs">Add those costs</a>.</p>}
       </div>
     </div>
   </div>;

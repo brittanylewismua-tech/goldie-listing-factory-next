@@ -94,8 +94,6 @@
 .meter{height:8px;border-radius:999px;background:#f2edf0;margin-top:16px;overflow:hidden}
 .meter i{display:block;height:8px;border-radius:999px;background:var(--ink)}
 #suite-workspace .hp .box p{font-size:13px!important;color:var(--muted)!important;margin:12px 0 0!important;line-height:1.5!important}
-#suite-workspace .hp .source{font-size:12px!important;color:var(--faint)!important;
-  margin:12px 2px 0!important;line-height:1.55!important;max-width:78ch}
 #suite-workspace .hp .why{font-size:12px!important;color:var(--muted)!important;margin:18px 0 0!important;
   padding-top:16px;border-top:1px solid var(--line);line-height:1.6!important}
 #suite-workspace .hp .why a{color:var(--deep)!important;text-decoration:underline;text-underline-offset:3px}
@@ -110,17 +108,6 @@
 .shot>span:not(.chip):not(.price){display:block;width:100%;height:100%;background-color:#f1ecef}
 
 
-/* D1875 · What buyers said, in their own words. */
-.reasons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;
-  background-color:#eae5e9;border:1px solid #eae5e9;border-radius:18px;overflow:hidden}
-#suite-workspace .hp .reason{background-color:#fff!important;padding:24px 26px}
-#suite-workspace .hp .reason .k{color:var(--deep)!important}
-#suite-workspace .hp .reason h3{font-size:19px!important;font-weight:500;letter-spacing:-.02em;
-  line-height:1.25!important;margin:10px 0 0!important}
-#suite-workspace .hp .reason blockquote{margin:16px 0 0;padding:14px 16px;background-color:#faf7f9;
-  border-radius:14px;font-size:14px!important;line-height:1.55!important;color:var(--muted)!important}
-#suite-workspace .hp .reason cite{display:block;margin-top:9px;font-style:normal;
-  font-size:11px!important;color:var(--faint)!important;letter-spacing:.04em}
 
 .hp-load{height:420px;border-radius:22px;background:var(--paper)}
 @media(max-width:1080px){
@@ -131,5 +118,4 @@
  #suite-workspace .hp .hero-big{font-size:64px!important}
  .theme{grid-template-columns:118px minmax(0,1fr) 92px;gap:14px}
  .theme>:nth-child(4){display:none}
- .shelf,.reasons{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
