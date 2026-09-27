@@ -27,7 +27,7 @@ test('joined spelling uses known exact aliases without adding single-word search
  assert.equal(readLiveTrademarkSearch(response([{...source,wordmark:'HAUS LABS'}]),'Hauslabs').records[0].exact,true);
 });
 test('rate limiting and malformed responses fail back to the local check; concurrent identical searches share one request',async t=>{
- let calls=0;t.mock.method(globalThis,'fetch',async()=>{calls++;return new Response(JSON.stringify(response()),{status:200});});
+ let calls=0;t.mock.method(globalThis,'fetch',async(url,options)=>{assert.equal(options.redirect,'manual','Workers support manual, not error; redirect responses are rejected by the HTTP guard');calls++;return new Response(JSON.stringify(response()),{status:200});});
  const results=await Promise.all([liveTrademarkSearch('born this way'),liveTrademarkSearch('born this way')]);assert.equal(calls,1);assert.equal(results[0].records.length,1);
  t.mock.method(globalThis,'fetch',async()=>new Response('too many requests',{status:429}));assert.equal(await liveTrademarkSearch('different phrase'),null);
  t.mock.method(globalThis,'fetch',async()=>new Response('<html>challenge</html>',{status:200}));assert.equal(await liveTrademarkSearch('different phrase'),null);

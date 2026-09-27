@@ -224,7 +224,7 @@ async function runTick(db: D1Database, request: Request) {
       A permanent failure is parked as skipped and stays visible; only
       transient failures go back in the queue.
     */
-    const permanent = /Not a zip|not deflate|Truncated zip/i.test(note);
+    const permanent = /Not a zip|not deflate|Truncated zip|annual download limit/i.test(note);
     /*
       AND A FAILURE NOBODY LISTED IS STILL A FAILURE.
 

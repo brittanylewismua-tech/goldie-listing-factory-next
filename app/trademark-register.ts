@@ -134,7 +134,11 @@ export async function trademarkArchiveStream(file:{name:string;url:string;produc
   const cacheKey=`trademark-archives/${file.product}/${file.name}`;
   if(bucket){const saved=await bucket.get(cacheKey);if(saved)return saved.body;}
   const response=await fetch(file.url,{headers:{"X-API-KEY":apiKey,"user-agent":"GoldieSuite/1.0 (+https://thegoldiesuite.com)"}});
-  if(!response.ok||!response.body)throw Error(`USPTO answered ${response.status} for ${file.name}`);
+  if(!response.ok||!response.body){
+    const reason=response.status===429?(await response.text()).slice(0,1000):'';
+    if(/31536000\s+sec|annual/i.test(reason))throw Error(`USPTO annual download limit reached for ${file.name}. A quota reset is required; automatic retries cannot recover this file.`);
+    throw Error(`USPTO answered ${response.status} for ${file.name}`);
+  }
   if(!bucket)return response.body;
   await bucket.put(cacheKey,response.body,{httpMetadata:{contentType:'application/zip'}});
   const saved=await bucket.get(cacheKey);

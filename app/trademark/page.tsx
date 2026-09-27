@@ -41,12 +41,23 @@ const EXAMPLES = [
   to a seller deciding whether to print a phrase. It now says what the class
   covers, with the number kept for anyone who wants to look it up.
 */
+// Plain-language labels based on USPTO TMEP 1401.02(b); the actual goods remain available per record.
 const CLASS_NAMES: Record<string, string> = {
-  "003": "cosmetics", "009": "electronics", "014": "jewellery",
+  "001": "chemicals", "002": "paints and inks", "004": "candles, fuels and oils",
+  "005": "medicines and supplements", "006": "metal products", "007": "machinery",
+  "008": "hand tools", "010": "medical equipment", "011": "lighting and heating equipment",
+  "012": "vehicles", "013": "firearms", "015": "musical instruments",
+  "017": "rubber and insulation", "019": "building materials", "022": "ropes and fibers",
+  "023": "yarn and thread", "027": "rugs and floor coverings", "029": "meat and prepared foods",
+  "031": "plants, produce and animal food", "034": "smoking products",
+  "037": "construction and repairs", "038": "telecommunications",
+  "039": "transport and storage", "040": "manufacturing and printing services",
+  "044": "health and beauty services",
+  "003": "cosmetics", "009": "electronics", "014": "jewelry",
   "016": "paper and stationery", "018": "bags and leather",
   "020": "furniture", "021": "housewares and mugs", "024": "textiles",
   "025": "clothing", "026": "trims and patches", "028": "toys and games",
-  "030": "food", "032": "non-alcoholic drinks", "033": "alcoholic drinks", "035": "retail and advertising",
+  "030": "food", "032": "beer and non-alcoholic drinks", "033": "alcoholic drinks", "035": "retail and advertising",
   "036": "financial and charitable fundraising services", "045": "legal and social services",
   "041": "entertainment and education",
   "042": "technology services", "043": "food and drink services",
@@ -209,7 +220,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
           {incomplete && <div className="tm-coverage" role="status"><strong>{verdict.registerRead === false ? "Records unavailable" : verdict.liveSource ? "More matches available at USPTO" : "Some trademark records are still missing"}</strong><span>{verdict.registerRead === false ? "Try again." : "Check the full USPTO database before using this phrase."}</span><a href="https://tmsearch.uspto.gov/search/" target="_blank" rel="noopener noreferrer">Search USPTO ↗</a></div>}
           {verdict.liveSource && <p className="tm-source">USPTO · checked {new Date((verdict.sourceCheckedAt??0)*1000).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</p>}
           {verdict.hits.length > 0 && <div className="tm-brand-alert"><h3>Brand or character names in this phrase</h3><ul>{verdict.hits.map((hit,index)=><li key={index}><strong>{hit.matched}</strong><span>{hit.category} · {hit.owner}</span></li>)}</ul></div>}
-          {all.length > 0 && <div className="tm-results-toolbar"><h3>{verdict.liveSource ? "Live USPTO matches" : "Phrase matches"} <span>{visible(phraseMatches).length}</span></h3><label>Product category<select value={productClass} onChange={e => setProductClass(e.target.value)}><option value="">All categories</option>{[...new Set(["025","021","016","018","024",...all.flatMap(record=>record.classes)])].map(code=><option key={code} value={code}>{CLASS_NAMES[code] ?? `Class ${code}`}</option>)}</select></label></div>}
+          {phraseMatches.length > 0 && <div className="tm-results-toolbar"><h3>{verdict.liveSource ? "Live USPTO matches" : "Phrase matches"} <span>{visible(phraseMatches).length}</span></h3><label>Product category<select value={productClass} onChange={e => setProductClass(e.target.value)}><option value="">All categories</option>{[...new Set(["025","021","016","018","024",...phraseMatches.flatMap(record=>record.classes)])].map(code=><option key={code} value={code}>{CLASS_NAMES[code] ?? `Class ${code}`}</option>)}</select></label></div>}
           {phraseMatches.length > 0 ? visible(phraseMatches).length ? records(visible(phraseMatches)) : <p className="tm-empty">No phrase matches in this product category.</p> : <p className="tm-empty">{verdict.liveSource ? "No live phrase match found in this USPTO search." : "No exact phrase match in the records loaded here."}</p>}
           {visible(wordMatches).length > 0 && <details className="tm-word-matches"><summary>Individual word matches · {visible(wordMatches).length}</summary><p>These records match a word in your phrase, not the whole phrase.</p>{records(visible(wordMatches))}</details>}
           <ActionPlan feature="trademarkStandalone" source={verdict.phrase.toLowerCase().slice(0,180)} heading={`Phrase review: ${verdict.phrase}`} notes={`Phrase: ${verdict.phrase}\n${all.map(m=>`${m.mark} · ${m.registered?'registered':'pending'} · ${classPhrase(m.classes)} · ${m.serial||''}`).join('\n')}`}/>

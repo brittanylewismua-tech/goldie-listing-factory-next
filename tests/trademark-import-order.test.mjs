@@ -120,3 +120,9 @@ test('resumed trademark files use the stored archive instead of exhausting the a
  await assert.rejects(mod.trademarkArchiveStream(file,'test',bucket),/storage unavailable/);
  assert.equal(stored,null,'a failed store must not create a partial cached archive');
 });
+
+
+test('an annual file quota is reported as permanent instead of another short cooldown',async t=>{
+ const mod=await implementation();t.mock.method(globalThis,'fetch',async()=>new Response('You have submitted 50 requests for the same URI in 31536000 sec.',{status:429}));
+ await assert.rejects(mod.trademarkArchiveStream({name:'archive.zip',url:'https://example.invalid/archive.zip',product:'TRTYRAP'},'test'),/annual download limit reached/);
+});

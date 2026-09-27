@@ -49,7 +49,7 @@ export async function liveTrademarkSearch(phrase:string,db?:D1Database|null,alia
    if(cached){const data=JSON.parse(cached.payload) as LiveTrademarkSearch;if(Array.isArray(data.records)&&Number.isFinite(data.total)&&typeof data.complete==='boolean'&&data.checkedAt===cached.checked_at)return data;}
   }catch{/* Cache failure never prevents an uncached source check. */}
   try{
-   const response=await fetch(USPTO_SEARCH_URL,{method:'POST',headers:{'Content-Type':'application/json',accept:'application/json','user-agent':'GoldieSuite/1.0 (+https://thegoldiesuite.com)'},body:JSON.stringify(liveTrademarkQuery(phrase,aliases)),redirect:'error',signal:AbortSignal.timeout(12000)});
+   const response=await fetch(USPTO_SEARCH_URL,{method:'POST',headers:{'Content-Type':'application/json',accept:'application/json','user-agent':'GoldieSuite/1.0 (+https://thegoldiesuite.com)'},body:JSON.stringify(liveTrademarkQuery(phrase,aliases)),redirect:'manual',signal:AbortSignal.timeout(12000)});
    if(!response.ok)return null;
    const data=readLiveTrademarkSearch(await response.json(),phrase,now);
    if(db)await db.prepare('INSERT INTO tm_live_search_cache(phrase,payload,checked_at) VALUES(?,?,?) ON CONFLICT(phrase) DO UPDATE SET payload=excluded.payload,checked_at=excluded.checked_at').bind(key,JSON.stringify(data),now).run().catch(()=>{});

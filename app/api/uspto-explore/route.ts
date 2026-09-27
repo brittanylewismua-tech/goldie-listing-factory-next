@@ -42,7 +42,7 @@ export const GET = withErrorLog("uspto-explore", async (request: Request) => {
     const liveSearch = parsed.toString() === USPTO_SEARCH_URL && Boolean(phrase);
     const response = await fetch(parsed.toString(), {
       method: liveSearch ? "POST" : "GET",
-      ...(liveSearch ? {body:JSON.stringify(liveTrademarkQuery(phrase!)),redirect:"error" as const} : {}),
+      ...(liveSearch ? {body:JSON.stringify(liveTrademarkQuery(phrase!)),redirect:"manual" as const} : {}),
       headers: {
         "user-agent": "GoldieSuite/1.0 (+https://thegoldiesuite.com)",
         ...(liveSearch ? {"Content-Type":"application/json"} : {}),
