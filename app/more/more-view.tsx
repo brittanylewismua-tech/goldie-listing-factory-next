@@ -43,6 +43,7 @@ const GROUPS: Group[] = [
   {
     heading: "Command Center",
     rows: [
+      {href:"/design-scanner",name:"Design Scanner",icon:"designScanner",what:"Check artwork and revisit previous scans."},
       {href:"/platform-updates",name:"Etsy + Printify Updates",icon:"marketWatch",what:"Read today’s platform changes and required actions."},
       {href:"/market-watch",name:"Tracked keywords",icon:"marketWatch",what:"Revisit saved searches and track listings from the results."},
       {href:"/market-watch?tab=shops",name:"Tracked shops",icon:"marketWatch",what:"Follow specific shops and see their listing changes."},
@@ -50,7 +51,7 @@ const GROUPS: Group[] = [
       {href:"/shop-map",name:"Your shop",icon:"shopMap",what:"Review your catalog, sold listings, and monthly numbers."},
       {href:"/market-watch/research",name:"Niche research",icon:"marketWatch",what:"Find niche shops and follow their products, phrases, and buyer feedback."},
       {href:"/hot-list",name:"Hot List",icon:"marketWatch",what:"Browse recent activity by product type and keyword."},
-      { href: "/trademark", name: "Trademark Tracker", icon: "trademark",
+      { href: "/trademark", name: "Trademark Check", icon: "trademark",
         /* D1693 · "the federal register" claims a complete search. The tool
            itself says "the trademark records currently loaded", and the
            register is still ingesting. The menu should not promise more
@@ -92,7 +93,7 @@ const FEATURE_NAMES: Record<string, string> = {
   designScanner: "Design Scanner",
   marketWatch: "Market Watch",
   shopMap: "Shop Map",
-  trademarkStandalone: "the Trademark Tracker",
+  trademarkStandalone: "the Trademark Check",
   trademarkAtPublish: "the trademark check at publish",
 };
 

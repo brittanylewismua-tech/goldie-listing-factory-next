@@ -296,7 +296,7 @@ This note records my review; it is not clearance to use the phrase.`}/>
      wrapper adds none: stacking a second heading above it read as three
      titles in a row. */
   return (
-    <FactoryShell active="trademark" title="Trademark Tracker" desktopOnly={false}>
+    <FactoryShell active="trademark" title="Trademark Check" desktopOnly={false}>
       <main className="tm-standalone">{body}</main>
     </FactoryShell>
   );

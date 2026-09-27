@@ -32,10 +32,16 @@ const icon = (children: React.ReactNode) =>
 /* The question first. The name of the tool is how we file it, not what it is
    for, and a member paying monthly is buying the answer rather than the file. */
 const TOOLS = (summary: Summary | null) => [
+  {href:"/design-scanner",name:"Design Scanner",what:"Check artwork readability, compare designs, and review previous scans.",stat:null,icon:icon(<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M7 12h10"/>)},
+  {href:"/market-watch",name:"Tracked keywords",what:"Search Etsy, revisit your keywords, and follow listing changes.",stat:null,icon:icon(<circle cx="12" cy="12" r="8"/>)},
+  {href:"/market-watch?tab=shops",name:"Tracked shops",what:"Browse full shop catalogs, buyer insights, and listing changes.",stat:null,icon:icon(<rect x="3" y="3" width="18" height="18" rx="2"/>)},
+  {href:"/market-watch?tab=saved",name:"Saved listings",what:"Follow price, favorite, and view changes for the listings you save.",stat:null,icon:icon(<path d="M6 3h12v18l-6-4-6 4z"/>)},
+  {href:"/hot-list",name:"Hot List",what:"Search recent buyer activity by keyword and product type.",stat:null,icon:icon(<path d="m3 17 6-6 4 4 8-10"/>)},
+  {href:"/platform-updates",name:"Etsy + Printify Updates",what:"Read platform changes and the actions that affect your shop.",stat:null,icon:icon(<rect x="3" y="3" width="18" height="18" rx="2"/>)},
   {
     href: "/market-watch/research", name: "Research",
     question: "What are buyers choosing in my niche?",
-    what: "Research niches, track keywords and shops, and follow changes to saved listings.",
+    what: "Find shops for a niche and follow their products, pricing, and buyer insights over time.",
     stat: null,
     icon: icon(<><circle cx="10" cy="10" r="6" /><path d="m15 15 6 6M7 10h6M10 7v6" /></>),
   },
@@ -49,7 +55,7 @@ const TOOLS = (summary: Summary | null) => [
     icon: icon(<><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></>),
   },
   {
-    href: "/trademark", name: "Trademark Tracker",
+    href: "/trademark", name: "Trademark Check",
     question: "Does this phrase have trademark matches?",
     what: "Checks a phrase against the federal register, and keeps watching the "
       + "ones you save.",
@@ -71,10 +77,10 @@ export default function CommandCenterClient() {
       .then(body => setSummary(body)).catch(() => undefined);
   }, []);
 
-  return <main className="cc-home p-grid">
+  return <section className="cc-home p-grid">
     <header className="cc-home-head">
       <p className="mini-label">Research & insights</p>
-      <h1>Command Center</h1>
+      <h2>Command Center</h2>
 
     </header>
 
@@ -88,5 +94,5 @@ export default function CommandCenterClient() {
         </Link>
       ))}
     </div>
-  </main>;
+  </section>;
 }

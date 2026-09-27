@@ -571,7 +571,7 @@ function ScanResult({ result }: { result: Result }) {
           <h2 className="utility-heading">Trademark</h2>
           <div className="tm" data-risk={result.trademark.risk}>
             <p>{result.trademark.summary}</p>
-            <a className="secondary-action" href={`/trademark?phrase=${encodeURIComponent(result.trademark.phrase)}`}>Review phrase in Trademark Tracker →</a>
+            <a className="secondary-action" href={`/trademark?phrase=${encodeURIComponent(result.trademark.phrase)}`}>Review phrase in Trademark Check →</a>
             {!result.trademark.registerReady && (
               <p className="loading">
                 The trademark search is incomplete. Review the matching records before deciding whether to use the phrase.

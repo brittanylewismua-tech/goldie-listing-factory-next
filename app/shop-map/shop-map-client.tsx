@@ -1,4 +1,5 @@
 "use client";
+import ListingCheckPanel from "./listing-check-panel";
 import {browseOwnListings} from "@/app/market-listing-browser";
 import {designsOnOneProduct,familyLabel,shortLabel,type Reach,type ReachListing} from "@/app/design-reach";
 import type {CatalogAction} from "@/app/shop-map-actions";
@@ -292,7 +293,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           onClick={() => setTab(key)}>{label}</button>)}
     </nav>
 
-    {tab === "overview" && <div className="shop-map-tab-panel"><CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/><DesignReach/>
+    {tab === "overview" && <div className="shop-map-tab-panel"><CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/><DesignReach/><ListingCheckPanel/>
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
           <h2>Top 3 listings in the last 90 days</h2></div>

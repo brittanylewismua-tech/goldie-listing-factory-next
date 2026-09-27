@@ -686,8 +686,8 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .factory-work .cc-home-tile[data-tool="Research"]{background:#ffd1e8!important;color:#242329!important;border-color:transparent!important;box-shadow:none!important}
 #suite-workspace .factory-work .cc-home-tile[data-tool="Shop Map"]{background:#242329!important;color:white!important;border-color:transparent!important;box-shadow:none!important}
 #suite-workspace .factory-work .cc-home-tile[data-tool="Shop Map"] :is(h2,p,span){color:white!important}
-#suite-workspace .factory-work .cc-home-tile[data-tool="Trademark Tracker"]{background:#fff!important;color:#242329!important}
-#suite-workspace .factory-work .cc-home-tile[data-tool="Trademark Tracker"] :is(h2,p,span){color:#242329!important}
+#suite-workspace .factory-work .cc-home-tile[data-tool="Trademark Check"]{background:#fff!important;color:#242329!important}
+#suite-workspace .factory-work .cc-home-tile[data-tool="Trademark Check"] :is(h2,p,span){color:#242329!important}
 
 /* Keep all supporting page headings in the approved Current typeface. */
 #suite-workspace .factory-work :is(h1,h2,h3,h4){font-family:'Manrope Variable',Manrope,Arial,sans-serif!important}
@@ -791,3 +791,13 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .co-feature{align-self:stretch!important}
 
 #suite-workspace .nr-refresh-status{margin:0 0 12px!important;padding:0!important;color:#776670!important;font-size:13px!important;line-height:1.5!important}
+
+/* Full tools remain visible in the approved Current shell. */
+#suite-workspace .current-home-factory{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px;padding:28px;background:#fff;border:1px solid #e4e4e9;border-radius:16px;margin:28px 0}
+#suite-workspace .current-home-factory h2{margin:0 0 8px;font-size:24px}
+#suite-workspace .current-home-factory p{margin:0;color:#65616b}
+#suite-workspace .current-home-factory nav{display:flex;flex-wrap:wrap;gap:20px;width:100%;padding-top:18px;border-top:1px solid #e4e4e9}
+#suite-workspace .current-home-factory nav a{color:#302530;font-weight:600;text-decoration:none}
+#suite-workspace .current-navigation>.current-nav-group{margin-top:0;padding-bottom:12px;border-bottom:1px solid #37333b}
+#suite-workspace .current-navigation>.current-nav-group>a{font-size:13px!important;min-height:36px!important;padding:8px 12px!important}
+#suite-workspace .current-navigation>.current-nav-group>a:first-child{font-weight:700!important;color:#fff!important}

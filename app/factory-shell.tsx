@@ -69,7 +69,8 @@ export const NAV: SuiteNavItem[] = [
   { key: "market-watch", label: "Tracked keywords", href: "/market-watch", icon: "marketWatch", group: "command" },
   { key: "niche-research", label: "Research", href: "/market-watch/research", icon: "marketWatch", group: "command" },
   { key: "shop-map", label: "Your shop", href: "/shop-map", icon: "shopMap", group: "command" },
-  { key: "trademark", label: "Trademark Tracker", href: "/trademark", icon: "trademark", group: "command" },
+  { key: "design-scanner", label: "Design Scanner", href: "/design-scanner", icon: "designScanner", group: "command" },
+  { key: "trademark", label: "Trademark Check", href: "/trademark", icon: "trademark", group: "command" },
   { key: "connections", label: "Connections", href: "/connections", icon: "connections", group: "connections" },
 ];
 

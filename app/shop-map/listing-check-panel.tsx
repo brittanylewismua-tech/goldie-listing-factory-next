@@ -18,6 +18,8 @@ type Mine = { listingId: number; title: string; tags: string[]; state: string;
 type Finding = { key: string; kind: "gap" | "ok"; label: string; detail: string };
 
 export default function ListingCheckPanel() {
+  const [loading,setLoading]=useState(true);
+  const [catalogError,setCatalogError]=useState("");
   const [mine, setMine] = useState<Mine[]>([]);
   const [chosen, setChosen] = useState<Mine | null>(null);
   const [phrase, setPhrase] = useState("");
@@ -28,12 +30,12 @@ export default function ListingCheckPanel() {
 
   useEffect(() => {
     void fetch("/api/shop-map/my-listings")
-      .then(response => response.ok ? response.json() as Promise<{ listings?: Mine[] }> : null)
+      .then(response => {if(!response.ok)throw Error("Your listings could not be loaded. Reload this page to try again.");return response.json() as Promise<{ listings?: Mine[] }>})
       /* Worst first: favorites with nothing sold is the listing worth
          checking, and it is the one a seller never thinks to open. */
       .then(body => setMine((body?.listings ?? []).filter(row => row.state === "active")
         .sort((a, b) => (a.sold90 - b.sold90) || ((b.favorites ?? 0) - (a.favorites ?? 0)))))
-      .catch(() => undefined);
+      .catch(()=>setCatalogError("Your listings could not be loaded. Reload this page to try again.")).finally(()=>setLoading(false));
   }, []);
 
   const run = async () => {
@@ -55,7 +57,7 @@ export default function ListingCheckPanel() {
     } finally { setBusy(false); }
   };
 
-  if (!mine.length) return null;
+  if (!mine.length) return <section className="cc-tool shop-map-check"><h2>Compare a listing with search results</h2><p role="status">{loading?"Loading your listings…":catalogError||"Connect your Etsy shop and sync its active listings to check a listing."}</p></section>;
   const gaps = (findings ?? []).filter(finding => finding.kind === "gap");
   const matches = (findings ?? []).filter(finding => finding.kind === "ok");
 

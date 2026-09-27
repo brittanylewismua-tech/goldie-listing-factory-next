@@ -45,7 +45,7 @@ const GROUPS: Group[] = [
   {
     heading: "Tools",
     rows: [
-      { href: "/trademark", name: "Trademark Tracker", icon: "trademark",
+      { href: "/trademark", name: "Trademark Check", icon: "trademark",
         /* D1693 · "the federal register" claims a complete search. The tool
            itself says "the trademark records currently loaded", and the
            register is still ingesting. The menu should not promise more
@@ -89,7 +89,7 @@ const FEATURE_NAMES: Record<string, string> = {
   designScanner: "Design Scanner",
   marketWatch: "Market Watch",
   shopMap: "Shop Map",
-  trademarkStandalone: "the Trademark Tracker",
+  trademarkStandalone: "the Trademark Check",
   trademarkAtPublish: "the trademark check at publish",
 };
 
