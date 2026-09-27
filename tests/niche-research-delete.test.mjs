@@ -25,4 +25,9 @@ test("deleting research asks first and says what goes", () => {
   /* It must be clear what is not affected, or nobody will use it. */
   assert.match(client, /Your keyword banks and tracked shops are not affected/);
   assert.match(client, /Delete this research/);
+  /* D1864b · The advance loop holds `busy` for the whole of a discovery pass
+     and never releases it if that pass stops making progress, so the research
+     a member most wants gone was the one they could not remove. */
+  assert.match(client, /disabled=\{deleting\}/);
+  assert.match(client, /runner\.current=false;\n  setDeleting\(true\)/);
 });
