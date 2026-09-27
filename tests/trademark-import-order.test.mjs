@@ -107,3 +107,16 @@ test('overlapping background ticks cannot claim different files concurrently',()
  assert.equal(claim.run('2026-09-21T00:01:00Z','b').changes,1);
  sqlite.close();
 });
+
+
+test('resumed trademark files use the stored archive instead of exhausting the annual download quota',async t=>{
+ const mod=await implementation();let downloads=0,stored=null;
+ t.mock.method(globalThis,'fetch',async()=>{downloads++;return new Response(new Uint8Array([1,2,3]));});
+ const bucket={get:async()=>stored?{body:new Blob([stored]).stream()}:null,put:async(key,body)=>{stored=new Uint8Array(await new Response(body).arrayBuffer());}};
+ const file={name:'archive.zip',product:'TRTYRAP',url:'https://example.invalid/archive.zip'};
+ assert.deepEqual(new Uint8Array(await new Response(await mod.trademarkArchiveStream(file,'test',bucket)).arrayBuffer()),new Uint8Array([1,2,3]));
+ await mod.trademarkArchiveStream(file,'test',bucket);assert.equal(downloads,1);
+ stored=null;bucket.put=async()=>{throw Error('storage unavailable')};
+ await assert.rejects(mod.trademarkArchiveStream(file,'test',bucket),/storage unavailable/);
+ assert.equal(stored,null,'a failed store must not create a partial cached archive');
+});

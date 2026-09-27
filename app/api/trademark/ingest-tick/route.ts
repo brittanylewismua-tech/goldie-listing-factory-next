@@ -193,6 +193,7 @@ async function runTick(db: D1Database, request: Request) {
   try {
     const result = await ingestFile(db, next, key(), {
       deadline: Date.now() + DEADLINE_MS,
+      archiveBucket: (env as unknown as {ARTWORK:R2Bucket}).ARTWORK,
       skip: Number(next.done_records ?? 0),
     });
     await db
