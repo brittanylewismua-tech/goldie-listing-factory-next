@@ -48,10 +48,30 @@ export default function PreviewClient(){
   const shots=(h?.topListings?.listings??[]).filter(l=>l.imageUrl).slice(0,4);
   const sellers=(m.topListings??[]).filter(l=>l.imageUrl).slice(0,4);
   const moved=(h?.niches??[]).filter(n=>n.newly>0).sort((a,b)=>b.newly-a.newly).slice(0,4);
-  const un=m.needsAttention?.unclassifiedPerformance;
-  const perListing=un&&un.activeListings?Math.round(un.revenueMinor/un.activeListings):0;
+  /*
+    D1870 · THE FINDING THAT IS ACTUALLY IN THE DATA.
+
+    This panel used to point at the 58 listings the classifier could not place
+    and call three of them the shop's strongest, which was the arithmetic read
+    backwards: $170 a listing against a $1,096 average is the weakest corner
+    of the shop, not the strongest, and "nothing in the catalogue is named
+    after them" meant nothing at all.
+
+    What the same two columns do say is this: a theme that has sold hundreds
+    of items and has almost nothing live in it. Money per live listing, most
+    first, and only where it beats the shop's own average.
+  */
   const shopAvg=t&&t.activeListings?Math.round(t.revenueMinor/t.activeListings):0;
+  const perLive=(w:World)=>Math.round(w.lifetimeRevenueMinor/Math.max(1,w.activeListings));
+  const thin=worlds.filter(w=>w.activeListings>0&&w.lifetimeUnits>=50&&perLive(w)>shopAvg)
+    .sort((a,b)=>perLive(b)-perLive(a))[0];
+  const biggest=worlds.slice().sort((a,b)=>b.activeListings-a.activeListings)[0];
   const gallery=shots.length?shots:sellers;
+  /* The label is built from the endpoint's own period and ranking so it
+     cannot drift away from what is actually on the shelf. */
+  const galleryLabel=shots.length
+    ? `Top three by ${h?.topListings?.rankedBy==="favorites"?"saves":"units sold"} · ${(h?.topListings?.period??"last 30 days").toLowerCase()}`
+    : `Top three by units sold · ${(m.worldsPeriod??"last 90 days").toLowerCase()}`;
   const units90=(m.worlds??[]).reduce((n,w)=>n+w.units,0);
   const perOrder=t&&t.ordersLast90?Math.round(t.revenueLast90Minor/t.ordersLast90):0;
 
@@ -70,6 +90,7 @@ export default function PreviewClient(){
           <b>{num(t?.orders??0)} orders</b> and <b>{num(t?.reviews??0)} reviews</b>.</p>
       </div>
       <div className="hero-shots">
+        <p className="shots-label">{galleryLabel}</p>
         {gallery.slice(0,3).map(l=><div className="shot" key={l.listingId}>
           <img src={l.imageUrl} alt="" width={570} height={712} loading="eager"/>
           <span className="chip">
@@ -83,7 +104,7 @@ export default function PreviewClient(){
     <div className="strip">
       <div><b>{usd(m.thisMonth?.revenueMinor??0)}</b><small>SEPTEMBER SO FAR</small></div>
       <div><b>{usd(m.thisMonth?.etsyFeesMinor??0)}</b><small>ETSY FEES</small></div>
-      <div><b className="accent">{m.needsAttention?.missingProductionCosts??0}</b><small>ORDERS NEED A COST</small></div>
+      <div><b>{num(m.thisMonth?.orders??0)}</b><small>ORDERS IN SEPTEMBER</small></div>
       <div><b>{num(moved.reduce((n,x)=>n+x.newly,0))}</b><small>NEW IN YOUR PHRASES</small></div>
     </div>
 
@@ -101,16 +122,17 @@ export default function PreviewClient(){
       </div>)}
     </div>
 
-    {un&&un.orders>0&&<>
+    {thin&&<>
       <div className="hp-rule"><h2>Worth a look</h2><i/></div>
       <div className="find">
         <div>
-          <p className="k">{num(m.needsAttention?.unclassifiedListings??0)} listings sit outside every theme</p>
-          <h3>Three of them have taken {usd(un.revenueMinor)} across {num(un.orders)} orders.</h3>
-          <p>That is {usd(perListing)} per live listing, against {usd(shopAvg)} across the shop.
-            Whatever those three are, nothing in the catalogue is named after them.</p>
+          <p className="k">{thin.label}</p>
+          <h3>{num(thin.lifetimeUnits)} of these have sold, and you have {thin.activeListings} listings live in it.</h3>
+          <p>This theme has taken {usd(thin.lifetimeRevenueMinor)} all time — {usd(Math.round(thin.lifetimeRevenueMinor/Math.max(1,thin.activeListings)))} for
+            every listing you currently have live, more than any other theme in your shop.
+            {biggest?` ${biggest.label} has ${biggest.activeListings} live and has taken ${usd(biggest.lifetimeRevenueMinor)}.`:""}</p>
         </div>
-        <div className="find-num"><b>{usd(perListing)}</b><small>per live listing,<br/>versus {usd(shopAvg)} shop-wide</small></div>
+        <div className="find-num"><b>{thin.activeListings}</b><small>listings live<br/>in {thin.label.toLowerCase()}</small></div>
       </div>
     </>}
 
@@ -141,10 +163,12 @@ export default function PreviewClient(){
         <p className="k">This week in the factory</p>
         <div className="goal" style={{marginTop:14}}><b>13</b><small>of 20 drafts ready</small></div>
         <div className="meter"><i style={{width:"65%"}}/></div>
-        <p>{m.needsAttention?.missingProductionCosts
-          ?`${m.needsAttention.missingProductionCosts} orders still need a production cost before September has a profit figure.`
-          :"Every order this month has a production cost."}</p>
         <a className="cta" href="/listing-factory?step=setup">Make something new</a>
+        {Boolean(m.needsAttention?.missingProductionCosts)&&<p className="why">
+          September’s revenue and Etsy fees are exact, but Goldie does not know what
+          {" "}{m.needsAttention?.missingProductionCosts} of the orders cost to make, so it is not showing a
+          profit figure rather than a wrong one. <a href="/shop-map/costs">Enter those two costs</a> and
+          the figure completes.</p>}
       </div>
     </div>
   </div>;
