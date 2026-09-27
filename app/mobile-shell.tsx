@@ -25,7 +25,7 @@ const TABS = [
 ];
 
 /* Sign-in and landing pages: a five-tab bar around one decision is noise. */
-const BARE = [/^\/$/, /^\/account\/sign-in/, /^\/signup/, /^\/auth/];
+const BARE = [/^\/$/, /^\/account\/sign-in/, /^\/signup/, /^\/auth/, /^\/masterbot/, /^\/listing-factory\/oauth\//];
 
 /*
   THE LISTING FACTORY IS A DESKTOP TOOL AND SAYS SO.

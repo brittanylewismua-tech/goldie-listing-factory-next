@@ -34,6 +34,11 @@ const UNAUTHENTICATED = {
     "Printify's servers fetch the artwork. An HMAC over (id, expires) signed "
     + "with a server secret is the credential, checked before storage is "
     + "touched.",
+  "/api/masterbot/mcp":
+    "ChatGPT's servers call the MasterBot MCP server. A Supabase-issued OAuth "
+    + "bearer token is the credential: no token answers 401 with the "
+    + "protected-resource metadata, and membership plus every playbook read is "
+    + "decided by Supabase database functions using that token, never here.",
 };
 
 test("every route has a gate, or a documented reason it cannot", () => {
@@ -170,4 +175,18 @@ test("every member-facing read of an owned table is scoped to its owner", () => 
   }
   assert.deepEqual(offences, [],
     `one member could read another's rows:\n${offences.join("\n")}`);
+});
+
+test("the MasterBot MCP server refuses callers without a bearer token", () => {
+  const s = read("../app/api/masterbot/mcp/route.ts");
+  /* No token, no work: the very first thing POST does is demand one. */
+  assert.match(s, /if \(!token\) return unauthorized\(\);/);
+  assert.match(s, /WWW-Authenticate/, "ChatGPT finds the sign-in server from this header");
+  /* An expired or forged token must be a 401, not a tool error. */
+  assert.match(s, /probe\.status === 401\) return unauthorized\(\)/);
+  /* Access is decided in the database, from the caller's own token. */
+  const server = read("../app/masterbot/masterbot-server.ts");
+  assert.match(server, /Authorization: `Bearer \$\{token\}`/);
+  assert.doesNotMatch(server, /service_role|SERVICE_ROLE/,
+    "a service key here would let the server read playbooks without a member");
 });
