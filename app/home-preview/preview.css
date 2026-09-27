@@ -16,7 +16,10 @@
 #suite-workspace .hp .hp-rule small{font-size:12px!important;color:var(--faint)!important}
 .hp-rule i{flex:1;height:1px;background:var(--line);font-style:normal}
 
-.hero{background:var(--night);border-radius:22px;padding:46px 46px 40px;color:#fff;position:relative;overflow:hidden}
+/* The shorthand with a var() was not painting inside the workspace; the
+   longhand at the workspace id does. */
+#suite-workspace .hp .hero{background-color:#100d11!important;background-image:none!important;
+  border-radius:22px;padding:46px 46px 40px;color:#fff;position:relative;overflow:hidden}
 .hero-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:56px;align-items:end}
 #suite-workspace .hp .hero .k{color:#6f6572!important}
 #suite-workspace .hp .hero-big{font-size:104px!important;line-height:.82!important;letter-spacing:-.06em;
@@ -24,7 +27,7 @@
 .hero-facts{display:flex;gap:34px;flex-wrap:wrap;margin-top:26px;padding-top:24px;border-top:1px solid #241f25}
 #suite-workspace .hp .hero-facts b{display:block;font-size:26px!important;font-weight:500;letter-spacing:-.03em;line-height:1;color:#fff}
 #suite-workspace .hp .hero-facts small{display:block;font-size:11px!important;color:#6f6572!important;margin-top:7px;letter-spacing:.03em}
-.hero-now{background:#1b161c;border-radius:16px;padding:24px 26px}
+#suite-workspace .hp .hero-now{background-color:#1b161c!important;border-radius:16px;padding:24px 26px}
 #suite-workspace .hp .hero-life{font-size:13px!important;color:var(--dim)!important;margin:22px 0 0!important;
   padding-top:18px;border-top:1px solid #241f25;line-height:1.6!important}
 #suite-workspace .hp .hero-life b{color:#fff!important;font-weight:500}
@@ -34,8 +37,8 @@
 #suite-workspace .hp .hero-now .pair{display:flex;justify-content:space-between;font-size:13px!important;color:#c9c2c8!important;padding:5px 0}
 #suite-workspace .hp .hero-now .pair span:last-child{color:#fff!important}
 
-.themes{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-.theme{background:#fff;display:grid;grid-template-columns:150px minmax(0,1fr) 128px 96px;gap:20px;
+#suite-workspace .hp .themes{display:grid;gap:1px;background-color:#eae5e9!important;border:1px solid var(--line);border-radius:18px;overflow:hidden}
+#suite-workspace .hp .theme{background-color:#fff!important;display:grid;grid-template-columns:150px minmax(0,1fr) 128px 96px;gap:20px;
   align-items:center;padding:17px 22px}
 #suite-workspace .hp .theme .name{font-size:15px!important;font-weight:500}
 #suite-workspace .hp .theme .meta{font-size:11px!important;color:var(--faint)!important;margin-top:3px}
@@ -47,12 +50,12 @@
 #suite-workspace .hp .theme .lifeu{font-size:11px!important;color:var(--faint)!important;text-align:right;margin-top:3px}
 #suite-workspace .hp .theme .now{font-size:15px!important;text-align:right;color:var(--deep)!important;font-weight:500}
 #suite-workspace .hp .theme .nowu{font-size:11px!important;color:var(--faint)!important;text-align:right;margin-top:3px}
-.theme.head{background:var(--paper);padding:11px 22px}
+#suite-workspace .hp .theme.head{background-color:#faf7f9!important;padding:11px 22px}
 #suite-workspace .hp .theme.head span{font-size:10px!important;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)!important}
 #suite-workspace .hp .theme.head span:nth-child(3),#suite-workspace .hp .theme.head span:nth-child(4){text-align:right}
 
-.find{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:32px;align-items:center;
-  background:var(--paper);border-radius:18px;padding:30px 32px}
+#suite-workspace .hp .find{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:32px;align-items:center;
+  background-color:#faf7f9!important;border-radius:18px;padding:30px 32px}
 #suite-workspace .hp .find h3{font-size:27px!important;font-weight:500;letter-spacing:-.03em;margin:10px 0 0!important;line-height:1.15!important}
 #suite-workspace .hp .find p{font-size:14px!important;color:var(--muted)!important;margin:12px 0 0!important;line-height:1.55!important;max-width:52ch}
 .find-num{text-align:right}
