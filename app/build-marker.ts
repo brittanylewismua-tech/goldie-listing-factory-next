@@ -335,7 +335,7 @@
    on six rows, a money card with no headline figure, and thumbnails sized by
    two sheets at once. */
 /* D1817 restores Current Research navigation and measured shop changes. */
-export const BUILD_MARKER = "D1880";
+export const BUILD_MARKER = "D1891";
 /* D1336's deployment artifacts are built only after the release commit exists,
    so every public version endpoint identifies the exact source it serves. */
 
