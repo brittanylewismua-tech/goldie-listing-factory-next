@@ -146,24 +146,6 @@ export default function MarketWatchClient(
           <div className="keyword-watch-head"><div><h2>{watch.phrase}</h2></div></div>
           {watch.stale&&<p className="keyword-stale">Current data could not be refreshed. Showing saved details.</p>}
           {/*
-    D1812 · THE CARD KNEW ALL OF THIS AND SHOWED NONE OF IT.
-
-    A tracked keyword is tracked so a seller can see what is moving in it
-    without opening it. The card was the phrase, two buttons and four
-    photographs; the response behind it already carried how many of the
-    listings under watch have been seen selling, how many sold more than
-    once, and how many shops they belong to. Measured live across seven
-    keywords those ranged from 7/5/7 to 0/0/0 - which is the whole point of
-    following one phrase and not another.
-  */}
-          {watch.moving>0
-            ? <dl className="keyword-watch-stats">
-                <div><dt>With stock decreases</dt><dd>{watch.moving}</dd></div>
-                <div><dt>Repeated decreases</dt><dd>{watch.repeated}</dd></div>
-                <div><dt>Shops</dt><dd>{watch.shops}</dd></div>
-              </dl>
-            : <p className="keyword-watch-quiet">No stock drops recorded yet.</p>}
-          {/*
     D1784 · FOUR EMPTY BOXES AND NO EXPLANATION.
 
     Etsy requires displayed listing information to be no more than six hours

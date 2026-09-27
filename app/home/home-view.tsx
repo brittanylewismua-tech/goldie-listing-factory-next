@@ -11,7 +11,7 @@ export default function HomeView(){
  void fetch('/api/niche-research').then(async r=>{if(!r.ok)throw Error();return r.json() as Promise<{projects?:Saved[]}>;}).then(async b=>{if(!alive)return;const projects:Saved[]=b.projects??[];setSaved(projects);setLoading(false);if(projects.length){const r=await fetch('/api/niche-research?id='+encodeURIComponent(projects[0].id));if(r.ok){const b=await r.json() as {project:ResearchView};if(alive)setResearch(b.project);}}}).catch(()=>{if(alive){setError('Your research could not be loaded.');setLoading(false);}});
  void fetch('/api/home').then(async r=>{if(!r.ok)throw Error();return r.json() as Promise<{blocks?:{thisMonth?:Month}}>;}).then(b=>{if(alive)setMonth(b.blocks?.thisMonth??null);}).catch(()=>{}).finally(()=>{if(alive)setMoneyLoading(false);});
  return()=>{alive=false;};},[]);
- const lead=saved[0],finding=research?.buyerInsights?.findings[0],photo=research?.listings.find(l=>finding?.evidence.some(e=>e.listingId===l.id)&&l.image&&Date.now()/1000-l.displayAt<21600),a=research?.analysis;
+ const lead=saved[0],finding=research?.buyerInsights?.findings[0],photo=research?.listings.find(l=>finding?.evidence.some(e=>e.listingId===l.id)&&l.image&&Date.now()/1000-l.displayAt<21600);
  const money=month?new Intl.NumberFormat(undefined,{style:'currency',currency:month.currency}).format(month.revenueMinor/100):null;
  return <main className="current-home">
  <header className="current-page-heading"><div><p className="current-kicker">{new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})}</p><h1>Your workspace</h1><p>Research niches, follow shops, and check your sales.</p></div><Link className="current-button" href="/market-watch/research?new=1">+ New research</Link></header>
