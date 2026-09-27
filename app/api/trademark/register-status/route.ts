@@ -102,6 +102,7 @@ export const GET = withErrorLog("trademark-register-status", async (request: Req
       .catch(error => ({ ok: false,
         error: error instanceof Error ? error.message : String(error) })),
     sample,
+    unfinished: (await db.prepare(`SELECT name, product, state, note, strikes, repeats, done_records, retry_after FROM tm_ingest_files WHERE state != 'done' AND name LIKE '%.zip' ORDER BY name`).all()).results ?? [],
     recent: recent.results ?? [],
     nextUp: waiting.results ?? [],
     blocked,
