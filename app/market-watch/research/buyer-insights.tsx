@@ -6,7 +6,7 @@ const date=(at:number)=>new Date(at*1000).toLocaleDateString(undefined,{month:'s
 export default function BuyerInsights({project,onProducts}:{project:ResearchView;onProducts:(ids:number[])=>void}){
  const [report,setReport]=useState<BuyerReport|null>(project.buyerInsights),[error,setError]=useState(''),[attempt,setAttempt]=useState(0),[loading,setLoading]=useState(!project.buyerInsights);
  useEffect(()=>{
-  if(project.buyerInsights){setReport(project.buyerInsights);setLoading(false);return;}
+  if(project.buyerInsights){setReport(project.buyerInsights);setError('');setLoading(false);return;}
   if(project.phase!=='ready'){setLoading(false);return;}
   const controller=new AbortController();setLoading(true);setError('');
   void (async()=>{try{let response:Response|undefined;
@@ -22,7 +22,7 @@ export default function BuyerInsights({project,onProducts}:{project:ResearchView
   }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:'Buyer analysis could not finish. Please try again.');}
   finally{if(!controller.signal.aborted)setLoading(false);}})();
   return()=>controller.abort();
- },[project.id,project.buyerSourceKey,project.phase,attempt]);
+ },[project.id,project.buyerSourceKey,project.buyerInsights?.sourceKey,project.phase,attempt]);
  return <section className="buyer-context"><header className="nr-section-head"><div><h2>Why buyers chose these products</h2><p>Motivations, occasions, and requests from their reviews.</p></div>{report&&<span>{report.analyzed.toLocaleString()} reviews read · {date(report.at)}</span>}</header>
  {loading&&<div className="nr-card" role="status"><h3>Reading buyer reviews…</h3><p>Looking for specific reasons people bought, how they use the products, and what they asked for. This may take a minute.</p></div>}
  {error&&<div className="nr-error" role="alert"><p>{error}</p><button onClick={()=>setAttempt(n=>n+1)}>Try again</button></div>}
