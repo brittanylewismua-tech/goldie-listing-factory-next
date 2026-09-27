@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { env } from "cloudflare:workers";
 import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
+import { liveTrademarkSearch } from "@/app/trademark-live";
 import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { check, toMatches, withRegister } from "@/app/trademark-check";
 import { lookup, normalize, registerSize, squeeze } from "@/app/trademark-register";
@@ -16,10 +17,10 @@ const ensure = (db: D1Database) => db.prepare(`CREATE TABLE IF NOT EXISTS tradem
   PRIMARY KEY (user_id, phrase))`).run();
 
 const signature = (value: { risk: string; hits?: Array<{ matched?: string }>;
-  register?: Array<{ mark?: string; registered?: boolean }> }) => JSON.stringify({
+  register?: Array<{ mark?: string; registered?: boolean; serial?:string; owner?:string; classes?:string[]; goods?:string[] }> }) => JSON.stringify({
     risk: value.risk,
     hits: (value.hits ?? []).map(row => String(row.matched ?? "").toLowerCase()).sort(),
-    register: (value.register ?? []).map(row => `${String(row.mark ?? "").toLowerCase()}:${row.registered ? "registered" : "pending"}`).sort(),
+    register: (value.register ?? []).map(row => JSON.stringify([row.serial,String(row.mark ?? "").toLowerCase(),row.registered,row.owner,[...(row.classes??[])].sort(),row.goods??[]])).sort(),
   });
 
 export const GET = withErrorLog("trademark-watches", async () => {
@@ -37,8 +38,11 @@ export const GET = withErrorLog("trademark-watches", async () => {
   for (const row of saved.results ?? []) {
     const base = check(row.phrase);
     const hits = await lookup(db, row.phrase).catch(() => null);
-    if(!hits||!size){watches.push({...row,risk:row.lastRisk||'review',changed:false,pending:false,matches:null,error:'Records could not be checked. Try again.'});continue;}
-    const current = withRegister(base, toMatches(hits, row.phrase, normalize, squeeze), size);
+    const local=toMatches(hits??[],row.phrase,normalize,squeeze);
+    const live=await liveTrademarkSearch(row.phrase,db,local.filter(m=>m.exact).map(m=>m.mark));
+    if((!hits||!size)&&!live){watches.push({...row,risk:row.lastRisk||'review',changed:false,pending:false,matches:null,error:'Records could not be checked. Try again.'});continue;}
+    const current = withRegister(base,live?.records??local,size);
+    if(live){current.register=live.records;current.registerReady=live.complete;current.registerComplete=live.complete;}
     const currentSignature = signature(current);
     watches.push({ ...row, incomplete:!current.registerReady || current.registerComplete === false, risk: current.risk, changed: Boolean(row.lastSignature)
       && row.lastSignature !== currentSignature,
@@ -59,8 +63,11 @@ export const POST = withErrorLog("trademark-watch-save", async (request: Request
   await ensure(db);
   const size = await registerSize(db).catch(() => null);
   const hits = await lookup(db, phrase).catch(() => null);
-  if(!hits||!size)return NextResponse.json({error:'The trademark records could not be checked. Your saved check has not changed.'},{status:503});
-  const current = withRegister(check(phrase), toMatches(hits, phrase, normalize, squeeze), size);
+  const local=toMatches(hits??[],phrase,normalize,squeeze);
+  const live=await liveTrademarkSearch(phrase,db,local.filter(m=>m.exact).map(m=>m.mark));
+  if((!hits||!size)&&!live)return NextResponse.json({error:'The trademark records could not be checked. Your saved check has not changed.'},{status:503});
+  const current = withRegister(check(phrase),live?.records??local,size);
+  if(live){current.register=live.records;current.registerReady=live.complete;current.registerComplete=live.complete;}
   const now = Math.floor(Date.now() / 1_000);
   await db.prepare(`INSERT INTO trademark_watches
     (user_id, phrase, last_risk, last_signature, created_at, checked_at)

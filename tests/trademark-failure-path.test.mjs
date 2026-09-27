@@ -29,6 +29,7 @@ async function route() {
     const { check, toMatches, withRegister } = await import(${JSON.stringify(check)});
     const { normalize, squeeze } = await import(${JSON.stringify(record)});
     const lookup=async()=>{ if(globalThis.__fail) throw new Error(globalThis.__fail); return globalThis.__hits ?? []; };
+    const liveTrademarkSearch=async()=>null;
     const registerSize=async()=>({ marks: 10, files: [{ state: 'done', count: 1 }] });
   `;
   return import('data:text/javascript;base64,'

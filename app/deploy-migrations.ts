@@ -67,6 +67,8 @@ import { ensurePrintifyMeter } from "@/app/printify-call";
 import { ensureEntitlementTables } from "@/app/entitlements";
 import { ensureScannerTables } from "@/app/scanner-store";
 
+import { ensureLiveTrademarkCache } from "@/app/trademark-live";
+
 export type Step = { name: string; run: () => Promise<unknown> };
 
 /* Two owners take the database explicitly rather than reaching for the
@@ -81,6 +83,7 @@ const database = () => (env as unknown as { DB: D1Database }).DB;
 */
 export const MIGRATIONS: Step[] = [
   { name: "error_log", run: () => ensureErrorLog(database()) },
+  { name: "trademark_live_cache", run: () => ensureLiveTrademarkCache(database()) },
   { name: "etsy_listing_display_cache", run: ensureEtsyDisplayCache },
   { name: "shop_listing_changes", run: () => ensureShopInsightTables(database()) },
   { name: "billing", run: ensureBillingTables },

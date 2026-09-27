@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalize, readRecord, worthKeeping, PRINTED_CLASSES, meaningfulMarkMatch } from "../app/trademark-record.ts";
+import { normalize, readRecord, worthKeeping, PRINTED_CLASSES, meaningfulMarkMatch, isLiveStatus, isRegisteredStatus } from "../app/trademark-record.ts";
 import { blocks, field, allFields, singleEntryDeflateStream } from "../app/uspto-bulk.ts";
 import { withRegister } from "../app/trademark-check.ts";
 import { readFileSync } from "node:fs";
@@ -48,7 +48,7 @@ test("normalize folds case, punctuation and spacing into one form", () => {
 
 test("a live clothing mark is kept, a dead one is not", () => {
   assert.equal(worthKeeping(readRecord(record({ status: 700, mark: "COZY SEASON", code: "025" }))), true);
-  assert.equal(worthKeeping(readRecord(record({ status: 800, mark: "COZY SEASON", code: "025" }))), false);
+  assert.equal(worthKeeping(readRecord(record({ status: 900, mark: "COZY SEASON", code: "025" }))), false);
 });
 
 test("a mark registered only for software is no hazard to a shirt", () => {
@@ -210,4 +210,17 @@ test("Born this way does not report a connecting word as a trademark phrase matc
  assert.equal(meaningfulMarkMatch("THIS.","this"),true);
  assert.equal(meaningfulMarkMatch("BORN THIS WAY","born this way"),true);
  assert.equal(meaningfulMarkMatch("BORN","born this way"),true);
+});
+
+test('renewed registrations remain live; abandoned and cancelled records never become pending applications',()=>{
+ for(const code of [700,701,702,800]) {assert.equal(isLiveStatus(code),true);assert.equal(isRegisteredStatus(code),true);}
+ for(const code of [602,606,710,714,900]) {assert.equal(isLiveStatus(code),false);assert.equal(isRegisteredStatus(code,'1234567'),false);}
+ assert.equal(isLiveStatus(718),true);assert.equal(isRegisteredStatus(718),false);
+ assert.equal(worthKeeping(readRecord(record({status:800,mark:'BORN THIS WAY',code:'025',cancellation:'00000000'}))),true);
+});
+
+test('cancelled product classes do not appear as active coverage for a live mark',()=>{
+ const xml=record({status:800,mark:'SAMPLE',code:'025'}).replace('<international-code>025</international-code>','<international-code>025</international-code><status-code>B</status-code>').replace('</classifications>','<classification><international-code>018</international-code><status-code>6</status-code></classification></classifications>');
+ const parsed=readRecord(xml);assert.equal(parsed.live,true);assert.deepEqual(parsed.classes,['018']);
+ assert.equal(readRecord(record({status:700,mark:'SAMPLE',code:'025'}).replace('<international-code>025</international-code>','<international-code>025</international-code><status-code>8</status-code>')).live,false);
 });

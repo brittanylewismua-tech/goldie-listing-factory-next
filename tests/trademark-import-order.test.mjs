@@ -11,7 +11,7 @@ async function implementation() {
     .replace(/^import .*;\n/gm, "")
     .replace(/^export \{[^}]*\} from ["'][^"']+["'];?$/gm, "");
   const imports = [
-    ['normalize, squeeze, readRecord, worthKeeping, meaningfulMarkMatch', 'trademark-record.ts'],
+    ['normalize, squeeze, readRecord, worthKeeping, meaningfulMarkMatch, isLiveStatus, isRegisteredStatus, INACTIVE_STATUS_CODES', 'trademark-record.ts'],
     ['blocks, singleEntryDeflateStream', 'uspto-bulk.ts'],
     ['TRADEMARK_ARCHIVE_DAY, trademarkFileDay', 'trademark-import-coverage.ts'],
   ].map(([names, file]) => `const {${names}} = await import(${JSON.stringify(new URL('../app/' + file, import.meta.url).href)});`).join('\n');
@@ -65,14 +65,14 @@ test('newer names, cancellations and reinstatements survive out-of-order imports
   await ingest('apc18840407-20251231-91.zip', 'OLD WORDING');
   assert.equal((await mod.lookup(db, 'NEW WORDING')).length, 1);
   assert.equal((await mod.lookup(db, 'OLD WORDING')).length, 0);
-  await ingest('apc260921.zip', 'NEW WORDING', 800);
+  await ingest('apc260921.zip', 'NEW WORDING', 900);
   await ingest('apc260920.zip', 'NEW WORDING');
   await ingest('apc18840407-20251231-91.zip', 'OLD WORDING');
   assert.equal((await mod.lookup(db, 'NEW WORDING')).length, 0);
   assert.equal((await mod.registerSize(db)).marks, 0);
   await ingest('apc260922.zip', 'REINSTATED');
-  await ingest('apc260921.zip', 'NEW WORDING', 800);
-  await ingest('apc18840407-20251231-91.zip', 'OLD WORDING', 800);
+  await ingest('apc260921.zip', 'NEW WORDING', 900);
+  await ingest('apc18840407-20251231-91.zip', 'OLD WORDING', 900);
   assert.equal((await mod.lookup(db, 'REINSTATED')).length, 1);
 });
 
@@ -90,7 +90,7 @@ test('documentation is not missing data, and daily repair replay happens only on
   assert.equal(db.sqlite.prepare("SELECT state FROM tm_ingest_files WHERE name='apc260920.zip'").get().state, 'waiting');
   db.sqlite.exec("UPDATE tm_ingest_files SET state='done' WHERE name='apc260920.zip'");
   await mod.ensureRegisterTables(db);
-  assert.deepEqual((await mod.registerSize(db)).files, [{state: 'done', count: 2}]);
+  assert.deepEqual((await mod.registerSize(db)).files, [{state: 'done', count: 1}, {state: 'waiting', count: 1}]);
   add.run('broken.zip', 'TRTYRAP', 'https://example.invalid/broken', 'skipped');
   assert.ok((await mod.registerSize(db)).files.some(x => x.state === 'skipped' && x.count === 1));
 });

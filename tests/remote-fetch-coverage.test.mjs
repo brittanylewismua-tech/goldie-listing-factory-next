@@ -34,6 +34,7 @@ walk("../app");
 
 /* file:line -> why it is safe. Every entry was read before being listed. */
 const CLASSIFIED = {
+  "trademark-live.ts": "own-url: fixed public USPTO search endpoint, redirects refused; phrase is JSON data, never a destination",
   "platform-update-collector.ts": "own-url: immutable official source manifest; redirects refused; no user-supplied destination",
   "command-center/action-plan.tsx": "client: same-origin plan reads and writes; no remote destination",
   "trademark/page.tsx": "own-url: ternary selects only the local watch endpoint",

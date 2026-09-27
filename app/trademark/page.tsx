@@ -47,6 +47,7 @@ const CLASS_NAMES: Record<string, string> = {
   "020": "furniture", "021": "housewares and mugs", "024": "textiles",
   "025": "clothing", "026": "trims and patches", "028": "toys and games",
   "030": "food", "032": "non-alcoholic drinks", "033": "alcoholic drinks", "035": "retail and advertising",
+  "036": "financial and charitable fundraising services", "045": "legal and social services",
   "041": "entertainment and education",
   "042": "technology services", "043": "food and drink services",
 };
@@ -61,7 +62,7 @@ const classPhrase = (classes: string[]) => {
 export default function TrademarkPage({ initialPhrase }: { initialPhrase?: string } = {}) {
   const [productClass,setProductClass]=useState("");
   const [phrase, setPhrase] = useState(initialPhrase ?? "");
-  const [verdict, setVerdict] = useState<(FullVerdict & {registerRead?:boolean}) | null>(null);
+  const [verdict, setVerdict] = useState<(FullVerdict & {registerRead?:boolean;liveSource?:boolean;sourceCheckedAt?:number;sourceTotal?:number}) | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
   const [watches, setWatches] = useState<Array<{ phrase: string; risk: string;
@@ -200,14 +201,17 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
           <p className="tm-record-owner">{m.owner || "Applicant not provided"}</p>
           <div className="tm-record-bottom"><span>{m.classes.length ? classPhrase(m.classes) : "Product category unavailable"}</span>
           {/^\d+$/.test(m.serial ?? "") && <a href={`https://tsdr.uspto.gov/#caseNumber=${encodeURIComponent(m.serial ?? "")}&caseSearchType=US_APPLICATION&caseType=DEFAULT&searchType=statusSearch`} target="_blank" rel="noopener noreferrer">Open USPTO record ↗</a>}</div>
+          {m.containsPhrase && <span className="tm-longer-mark">Longer mark containing your phrase</span>}
+          {!!m.goods?.length && <details className="tm-goods"><summary>Goods and services</summary>{m.goods.map((g,i)=><p key={i}>{g}</p>)}{m.registrationDate&&<p>Registered {new Date(m.registrationDate+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</p>}</details>}
         </li>)}</ul>;
         return <section className="tm-verdict" aria-live="polite">
           <div className="tm-result-heading"><div><p className="p-eyebrow">RESULTS FOR</p><h2 className="tm-phrase">{marked()}</h2></div><button className="tm-watch-button" type="button" disabled={watchBusy === verdict.phrase} onClick={() => void watchPhrase()}>{watches.some(w => w.phrase.toLowerCase() === verdict.phrase.toLowerCase()) ? "Update watch" : "Watch phrase"}</button></div>
-          {incomplete && <div className="tm-coverage" role="status"><strong>{verdict.registerRead === false ? "Records unavailable" : "Some trademark records are still missing"}</strong><span>{verdict.registerRead === false ? "Try again." : "Check the full USPTO database before using this phrase."}</span><a href="https://tmsearch.uspto.gov/search/" target="_blank" rel="noopener noreferrer">Search USPTO ↗</a></div>}
+          {incomplete && <div className="tm-coverage" role="status"><strong>{verdict.registerRead === false ? "Records unavailable" : verdict.liveSource ? "More matches available at USPTO" : "Some trademark records are still missing"}</strong><span>{verdict.registerRead === false ? "Try again." : "Check the full USPTO database before using this phrase."}</span><a href="https://tmsearch.uspto.gov/search/" target="_blank" rel="noopener noreferrer">Search USPTO ↗</a></div>}
+          {verdict.liveSource && <p className="tm-source">USPTO · checked {new Date((verdict.sourceCheckedAt??0)*1000).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</p>}
           {verdict.hits.length > 0 && <div className="tm-brand-alert"><h3>Brand or character names in this phrase</h3><ul>{verdict.hits.map((hit,index)=><li key={index}><strong>{hit.matched}</strong><span>{hit.category} · {hit.owner}</span></li>)}</ul></div>}
-          {all.length > 0 && <div className="tm-results-toolbar"><h3>Phrase matches <span>{visible(phraseMatches).length}</span></h3><label>Product category<select value={productClass} onChange={e => setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label></div>}
-          {phraseMatches.length > 0 ? visible(phraseMatches).length ? records(visible(phraseMatches)) : <p className="tm-empty">No phrase matches in this product category.</p> : <p className="tm-empty">No exact phrase match in the records loaded here.</p>}
-          {wordMatches.length > 0 && <details className="tm-word-matches"><summary>Individual word matches · {visible(wordMatches).length}</summary><p>These records match a word in your phrase, not the whole phrase.</p>{records(visible(wordMatches))}</details>}
+          {all.length > 0 && <div className="tm-results-toolbar"><h3>{verdict.liveSource ? "Live USPTO matches" : "Phrase matches"} <span>{visible(phraseMatches).length}</span></h3><label>Product category<select value={productClass} onChange={e => setProductClass(e.target.value)}><option value="">All categories</option>{[...new Set(["025","021","016","018","024",...all.flatMap(record=>record.classes)])].map(code=><option key={code} value={code}>{CLASS_NAMES[code] ?? `Class ${code}`}</option>)}</select></label></div>}
+          {phraseMatches.length > 0 ? visible(phraseMatches).length ? records(visible(phraseMatches)) : <p className="tm-empty">No phrase matches in this product category.</p> : <p className="tm-empty">{verdict.liveSource ? "No live phrase match found in this USPTO search." : "No exact phrase match in the records loaded here."}</p>}
+          {visible(wordMatches).length > 0 && <details className="tm-word-matches"><summary>Individual word matches · {visible(wordMatches).length}</summary><p>These records match a word in your phrase, not the whole phrase.</p>{records(visible(wordMatches))}</details>}
           <ActionPlan feature="trademarkStandalone" source={verdict.phrase.toLowerCase().slice(0,180)} heading={`Phrase review: ${verdict.phrase}`} notes={`Phrase: ${verdict.phrase}\n${all.map(m=>`${m.mark} · ${m.registered?'registered':'pending'} · ${classPhrase(m.classes)} · ${m.serial||''}`).join('\n')}`}/>
         </section>;
       })()}

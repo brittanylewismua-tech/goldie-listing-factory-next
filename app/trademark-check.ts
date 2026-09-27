@@ -428,6 +428,10 @@ export type RegisterMatch = {
   registered: boolean;
   /** True when the phrase is the mark, rather than merely containing it. */
   exact: boolean;
+  containsPhrase?: boolean;
+  goods?: string[];
+  filedDate?: string;
+  registrationDate?: string;
 };
 
 export type FullVerdict = Verdict & {

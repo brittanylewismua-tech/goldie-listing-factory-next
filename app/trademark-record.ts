@@ -60,6 +60,23 @@ export const normalize = (text: string): string =>
     .trim();
 
 
+/** USPTO daily XML status codes, not numeric lifecycle ranges.
+ * Source: https://www.uspto.gov/sites/default/files/products/TMDailyApp-Documentation-508.pdf
+ * 800 is renewed, 602 is abandoned, and 718 is an extension request.
+ */
+export const INACTIVE_STATUS_CODES = [401,402,404,405,414,415,416,417,
+  600,601,602,603,604,605,606,607,608,609,612,614,618,622,626,
+  710,711,712,713,714,716,900,969,970];
+const INACTIVE_STATUSES = new Set(INACTIVE_STATUS_CODES);
+export function isLiveStatus(code: number): boolean {
+  return code > 0 && (code < 900 || code === 973) && !INACTIVE_STATUSES.has(code);
+}
+export function isRegisteredStatus(code: number, registration = ""): boolean {
+  if (!isLiveStatus(code)) return false;
+  if ([624,700,701,702,703,704,705,800].includes(code)) return true;
+  return Boolean(registration && !/^0+$/.test(registration)) && ![400,715].includes(code);
+}
+
 /** One record, reduced to what a seller's question needs. */
 export function readRecord(xml: string): {
   serial: string;
@@ -73,8 +90,14 @@ export function readRecord(xml: string): {
 } {
   const header = xml.slice(xml.indexOf("<case-file-header>"), xml.indexOf("</case-file-header>") + 1);
   const statusCode = Number(field(header, "status-code") || 0);
-  const cancelled = Boolean(field(header, "cancellation-date"));
+  const cancelled = /^[0-9]{8}$/.test(field(header, "cancellation-date")) && Number(field(header, "cancellation-date")) > 0;
   const classifications = xml.slice(xml.indexOf("<classifications>"), xml.indexOf("</classifications>") + 1);
+  const classBlocks = allFields(classifications, "classification");
+  const activeBlocks = classBlocks.filter(block => {
+    const status = field(block, "status-code").replace(/^0+/, "");
+    return !["1","2","3","4","5","7","8","9","A","B","C","D","E"].includes(status);
+  });
+  const activeClasses = classBlocks.length ? activeBlocks.flatMap(block => allFields(block, "international-code")) : allFields(classifications, "international-code");
   const owners = xml.slice(xml.indexOf("<case-file-owners>"), xml.indexOf("</case-file-owners>") + 1);
   const registration = field(xml, "registration-number");
   return {
@@ -83,8 +106,8 @@ export function readRecord(xml: string): {
     owner: field(owners, "party-name"),
     registration: registration === "0000000" ? "" : registration,
     statusCode,
-    classes: [...new Set(allFields(classifications, "international-code"))].filter(Boolean),
-    live: statusCode > 0 && statusCode < 800 && !cancelled,
+    classes: [...new Set(activeClasses)].filter(Boolean),
+    live: isLiveStatus(statusCode) && !cancelled && (!classBlocks.length || activeBlocks.length > 0),
     drawingCode: field(header, "mark-drawing-code"),
   };
 }

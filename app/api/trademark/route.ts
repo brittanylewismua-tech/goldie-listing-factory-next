@@ -3,18 +3,11 @@ import { getChatGPTUser } from "@/app/chatgpt-auth";
 import { withErrorLog } from "@/app/error-log";
 import { env } from "cloudflare:workers";
 import { check, toMatches, withRegister, type RegisterMatch } from "@/app/trademark-check";
+import { liveTrademarkSearch } from "@/app/trademark-live";
 import { logError } from "@/app/error-log";
 import { lookup, normalize, squeeze, registerSize } from "@/app/trademark-register";
 
-/**
- * Check a phrase before it goes on a product.
- *
- * Two passes. The curated list of things that actually get shops closed is
- * compiled into the worker and answers instantly. The federal register lives
- * in our own database — USPTO publishes no trademark search API, only bulk
- * files — so it is one indexed query, no third-party call, no quota, and
- * nobody who can change their terms on us.
- */
+/** Current public USPTO phrase search, with the local register as a fallback. */
 export const GET = withErrorLog("trademark", async (request: Request) => {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to check a phrase." }, { status: 401 });
@@ -23,7 +16,7 @@ export const GET = withErrorLog("trademark", async (request: Request) => {
   const verdict = check(phrase);
 
   const db = (env as unknown as { DB?: D1Database }).DB;
-  if (!db) return NextResponse.json(withRegister(verdict, [], null));
+
 
   /* A register that is still loading must never be reported as a clean
      search, so its readiness travels with the answer. */
@@ -34,6 +27,7 @@ export const GET = withErrorLog("trademark", async (request: Request) => {
   let matches: RegisterMatch[] = [];
   let registerFailed = "";
   try {
+    if (!db) throw Error("Trademark database unavailable");
     const [held, hits] = await Promise.all([registerSize(db), lookup(db, phrase)]);
     size = held;
     /* toMatches rather than a second copy of it here: this route had its own
@@ -63,7 +57,11 @@ export const GET = withErrorLog("trademark", async (request: Request) => {
     }).catch(() => {});
   }
 
-  const answer = withRegister(verdict, matches, registerFailed ? null : size);
+  const live = await liveTrademarkSearch(phrase, db, matches.filter(m=>m.exact).map(m=>m.mark));
+  const answer = withRegister(verdict, live?.records ?? matches, registerFailed ? null : size);
+  if(live) return NextResponse.json({...answer, register:live.records,registerRead:true,
+    registerReady:live.complete,registerComplete:live.complete,liveSource:true,sourceCheckedAt:live.checkedAt,sourceTotal:live.total,
+    summary:live.records.length?`${live.records.length} live phrase matches from USPTO.`:"No live phrase match found in this USPTO search. This is screening information, not legal clearance."});
   return NextResponse.json(registerFailed
     ? { ...answer, registerRead: false,
         summary: verdict.risk === "clear"

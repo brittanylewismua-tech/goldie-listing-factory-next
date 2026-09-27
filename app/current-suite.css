@@ -989,3 +989,9 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .tm-brand-alert li{display:flex;flex-wrap:wrap;gap:5px 12px;font-size:14px}
 #suite-workspace .tm-brand-alert li span{color:#6d656b}
 @media(max-width:600px){#suite-workspace .tm-standalone .tm-verdict{padding:20px!important}#suite-workspace .tm-result-heading{align-items:flex-start;flex-direction:column;gap:12px}#suite-workspace .tm-results-toolbar{align-items:flex-start;flex-direction:column}#suite-workspace .tm-record-top{flex-direction:column;gap:4px}#suite-workspace .tm-record-bottom{align-items:flex-start;flex-direction:column}#suite-workspace .tm-record-bottom span{max-width:100%}#suite-workspace .factory-work .tm-standalone .tm-page .tm-form input.p-input{width:100%;flex-basis:100%}}
+
+#suite-workspace .tm-source{margin:0!important;color:#6d656b!important;font-size:12px!important;line-height:1.5}
+#suite-workspace .tm-longer-mark{display:block;margin:10px 0 0;font-size:12px;color:#6d656b}
+#suite-workspace .tm-goods{margin-top:12px;font-size:13px;color:#46433f}
+#suite-workspace .tm-goods summary{cursor:pointer;font-weight:700;color:#000}
+#suite-workspace .tm-goods p{font-size:13px!important;line-height:1.65!important;max-width:80ch;white-space:normal;overflow-wrap:anywhere;margin:12px 0!important}

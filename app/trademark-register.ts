@@ -18,7 +18,7 @@
  * in, because a dead mark is not a reason to change a design.
  */
 import { blocks, singleEntryDeflateStream } from "@/app/uspto-bulk";
-import { normalize, squeeze, readRecord, worthKeeping, meaningfulMarkMatch, type RegisterHit } from "@/app/trademark-record";
+import { normalize, squeeze, readRecord, worthKeeping, meaningfulMarkMatch, isLiveStatus, isRegisteredStatus, INACTIVE_STATUS_CODES, type RegisterHit } from "@/app/trademark-record";
 import { TRADEMARK_ARCHIVE_DAY, trademarkFileDay } from "@/app/trademark-import-coverage";
 
 export { normalize, squeeze, readRecord, worthKeeping, PRINTED_CLASSES } from "@/app/trademark-record";
@@ -116,6 +116,16 @@ export async function ensureRegisterTables(db: D1Database): Promise<void> {
       WHERE product = 'TRTDXFAP' AND state = 'done' AND name LIKE '%.zip'
         AND NOT EXISTS (SELECT 1 FROM tm_ingest_repairs WHERE id = 'source-day-v1')`),
     db.prepare(`INSERT OR IGNORE INTO tm_ingest_repairs (id) VALUES ('source-day-v1')`),
+  ]);
+
+  // Replay source files once: the former <800 filter discarded renewed marks.
+  // Keep newer source dates, existing records, and rate-limit cooldowns intact.
+  await db.batch([
+    db.prepare(`UPDATE tm_ingest_files SET state = 'waiting', done_records = 0,
+      records = 0, kept = 0, finished = NULL, started = NULL
+      WHERE state IN ('done','partial') AND name LIKE '%.zip'
+        AND NOT EXISTS (SELECT 1 FROM tm_ingest_repairs WHERE id = 'uspto-status-v2')`),
+    db.prepare(`INSERT OR IGNORE INTO tm_ingest_repairs (id) VALUES ('uspto-status-v2')`),
   ]);
 
   /*
@@ -245,15 +255,19 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
   for(let start=0;start<words.length;start++)for(let end=start+1;end<=words.length;end++)terms.add(words.slice(start,end).join(' '));
   const squeezed=squeeze(phrase);
   const candidates=await db.prepare(`SELECT mark,owner,serial,registration,classes,status_code
-    FROM tm_marks WHERE searchable=1 AND (normalized IN (SELECT value FROM json_each(?1)) OR squeezed = ?2)
+    FROM tm_marks WHERE searchable=1
+      AND status_code > 0 AND (status_code < 900 OR status_code = 973)
+      AND status_code NOT IN (SELECT value FROM json_each(?3))
+      AND (normalized IN (SELECT value FROM json_each(?1)) OR squeezed = ?2)
     ORDER BY LENGTH(normalized) DESC,serial LIMIT 200`)
-    .bind(JSON.stringify([...terms]),squeezed)
+    .bind(JSON.stringify([...terms]),squeezed,JSON.stringify(INACTIVE_STATUS_CODES))
     .all<{mark:string;owner:string;serial:string;registration:string;classes:string;status_code:number}>();
 
   const padded = ` ${normalized} `;
   return (candidates.results ?? [])
     /* Either the mark sits inside the phrase on word boundaries, or the two
        are the same mark once their spacing is disregarded. */
+    .filter(row => isLiveStatus(row.status_code))
     .filter(row => meaningfulMarkMatch(row.mark, phrase))
     .filter(row => padded.includes(` ${normalize(row.mark)} `)
       || squeeze(row.mark) === squeezed)
@@ -263,7 +277,7 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
       serial: row.serial,
       registration: row.registration,
       classes: row.classes ? row.classes.split(",") : [],
-      registered: row.status_code >= 700 && row.status_code < 800,
+      registered: isRegisteredStatus(row.status_code, row.registration),
     }))
     /* The closest thing to the phrase first, then registrations over pending. */
     .sort((a, b) =>
