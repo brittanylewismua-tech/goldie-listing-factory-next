@@ -75,6 +75,42 @@ export default function PreviewClient(){
   const shots=(h?.topListings?.listings??[]).filter(l=>l.imageUrl);
   const gallery=shots.length?shots:(m.topListings??[]).filter(l=>l.imageUrl);
   const absent=shelves.filter(s=>s.yours===0&&s.sold>=70);
+  /*
+    D1883 · THE BIGGEST NUMBER HAS TO BE ABOUT HER.
+
+    It was 2,190 - everything sold across every listing Goldie watches. That
+    is a fact about the dataset, not about this shop, and putting it in 92px
+    flattered the tool instead of serving the seller.
+
+    What belongs there is demand for what she actually sells: the category she
+    is already in that sold most yesterday, and how many listings she has
+    standing in it.
+  */
+  const mine0=shelves.filter(s=>s.yours>0).sort((a,b)=>b.sold-a.sold)[0];
+  const lead=mine0??shelves[0];
+  const perOrder=t&&t.ordersLast90?Math.round(t.revenueLast90Minor/t.ordersLast90):0;
+
+  /* D1884 · Her shop is the top of her own homepage. The market is context
+     underneath it, not the headline. */
+  const Hers=()=><div className="hero-copy">
+    <p className="k">She’s A Wolf Clothing · last 90 days</p>
+    <div className="big">{usd(t?.revenueLast90Minor??0)}</div>
+    <div className="facts">
+      <div><b>{num(t?.ordersLast90??0)}</b><small>ORDERS</small></div>
+      <div><b>{usd(perOrder)}</b><small>AVERAGE ORDER</small></div>
+      <div><b>{num(t?.activeListings??0)}</b><small>LISTINGS LIVE</small></div>
+    </div>
+    {lead&&<p className="hero-note">{lead.label} sold {num(lead.sold)} times on Etsy yesterday.
+      You have {num(lead.yours)} live.</p>}
+  </div>;
+
+  const Yourshots=({n=3}:{n?:number})=><div className="shots">
+    {gallery.slice(0,n).map(l=><div className="shot" key={l.listingId}>
+      <img src={l.imageUrl} alt="" width={570} height={712} loading="eager"/>
+      <span className="chip"><b>{num(l.favorites??0)}</b><small>SAVED</small>
+        {l.sales>0&&<><b style={{marginLeft:5}}>{l.sales}</b><small>SOLD</small></>}</span>
+    </div>)}
+  </div>;
 
   const Rule=({title,note}:{title:string;note?:string})=>
     <div className="rule"><h2>{title}</h2><i/>{note&&<small>{note}</small>}</div>;
@@ -123,40 +159,15 @@ export default function PreviewClient(){
     </div>
 
     {view==="a"&&<>
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="k">Sold on Etsy in the last 24 hours</p>
-          <div className="big">{num(hot.totalSold??0)}</div>
-          <div className="facts">
-            <div><b>{num(hot.watched??0)}</b><small>LISTINGS WATCHED</small></div>
-            <div><b>{num(sold.length)}</b><small>SOLD SOMETHING</small></div>
-            <div><b>{num(t?.activeListings??0)}</b><small>LISTINGS YOU HAVE LIVE</small></div>
-          </div>
-        </div>
-        <div className="shots">{sold.slice(0,3).map(l=><Tile l={l} key={l.listingId}/>)}</div>
-      </section>
-      <Rule title="What sold most, listing by listing" note="last 24 hours"/>
+      <section className="hero"><Hers/><Yourshots/></section>
+      <Rule title="What sold most, listing by listing" note={`${num(hot.totalSold??0)} units across ${num(hot.watched??0)} watched listings`}/>
       <div className="shots four">{sold.slice(3,11).map(l=><Tile l={l} key={l.listingId}/>)}</div>
       <Rule title="Selling in the searches you follow"/><Searches/>
       <Rule title="Selling in your shop" note={m.worldsPeriod?.toLowerCase()}/><Yours/>
     </>}
 
     {view==="b"&&<>
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="k">Sold on Etsy in the last 24 hours</p>
-          <div className="big">{num(hot.totalSold??0)}</div>
-          <div className="facts">
-            <div><b>{num(hot.watched??0)}</b><small>LISTINGS WATCHED</small></div>
-            <div><b>{num(shelves.length)}</b><small>PRODUCT TYPES</small></div>
-            <div><b>{num(t?.activeListings??0)}</b><small>YOU HAVE LIVE</small></div>
-          </div>
-          {absent.length>0&&<p className="hero-note">
-            {absent.slice(0,3).map(a=>a.label.toLowerCase()).join(", ")} sold{" "}
-            {num(absent.slice(0,3).reduce((n,a)=>n+a.sold,0))} units yesterday. You have none.</p>}
-        </div>
-        <div className="shots">{sold.slice(0,3).map(l=><Tile l={l} key={l.listingId}/>)}</div>
-      </section>
+      <section className="hero"><Hers/><Yourshots/></section>
       <Rule title="Every product type, against your shelf" note="units sold in 24 hours"/>
       <Shelves limit={12}/>
       <Rule title="Selling in the searches you follow"/><Searches/>
@@ -164,10 +175,8 @@ export default function PreviewClient(){
     </>}
 
     {view==="c"&&<>
-      <section className="window">
-        <p className="k">Sold on Etsy in the last 24 hours</p>
-        <h1>{num(hot.totalSold??0)} things sold across {num(hot.watched??0)} listings.</h1>
-      </section>
+      <section className="hero"><Hers/><Yourshots/></section>
+      <Rule title="What sold on Etsy yesterday" note={`${num(hot.totalSold??0)} units across ${num(hot.watched??0)} watched listings`}/>
       <div className="shots six">{sold.slice(0,12).map(l=><Tile l={l} key={l.listingId}/>)}</div>
       <Rule title="By product type" note="units sold in 24 hours · your live count beside it"/>
       <Shelves limit={8}/>
