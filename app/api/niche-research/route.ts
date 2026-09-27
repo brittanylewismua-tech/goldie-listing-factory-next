@@ -25,6 +25,27 @@ export const POST=withErrorLog('niche-research',async(request:Request)=>{
  const now=Math.floor(Date.now()/1000),p:NicheProject={id:crypto.randomUUID(),name,phrases,createdAt:now,updatedAt:now,searchIndex:0,searchOffsets:phrases.map(()=>0),searchDone:phrases.map(()=>false),candidates:[],shops:[],selected:[],phase:'discovering',monitoring:true,nextRun:now,cycleAt:now,history:[],lastDiscovery:now,callsToday:0,callDay:'',targetShops:10};
  const inserted=await db.prepare(`INSERT INTO niche_research_projects(id,user_id,payload,owner_identity,updated_at,next_run) SELECT ?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM niche_research_projects WHERE user_id=?)<10 AND NOT EXISTS (SELECT 1 FROM niche_research_projects WHERE user_id=? AND lower(json_extract(payload,'$.name'))=lower(?)) RETURNING id`).bind(p.id,user,packResearch(p),JSON.stringify(access.user),now,now,user,user,name).first();if(!inserted){const raced=await db.prepare("SELECT id FROM niche_research_projects WHERE user_id=? AND lower(json_extract(payload,'$.name'))=lower(?) LIMIT 1").bind(user,name).first<{id:string}>();if(raced){const loaded=await readResearch(user,raced.id);if(loaded)return response(loaded);}}if(!inserted)return NextResponse.json({error:'You already have 10 niche panels. Open an existing niche to continue.'},{status:409});return response(p);
  }
+ /*
+   D1864 · SAVED RESEARCH HAD NO WAY OUT.
+
+   A member may hold ten projects - the insert above refuses the eleventh -
+   and nothing in the product removed one. Ten is then permanent: the newest
+   niche a seller wants to look at cannot be created, and a project started by
+   mistake sits on Home for good. Delete takes the row and its evidence, and
+   refuses while an update holds the lease so a running pass cannot write the
+   project back after it is gone.
+ */
+ if(body?.action==='delete'){
+  const id=String(body.id??'');
+  if(!id)return NextResponse.json({error:'Choose a niche.'},{status:400});
+  const lease=await claimResearch(user,id);
+  if(!lease)return NextResponse.json({error:'This niche is updating. Try again in a moment.'},{status:409});
+  const gone=await db.prepare('DELETE FROM niche_research_projects WHERE user_id=? AND id=? AND lease=? RETURNING id')
+    .bind(user,id,lease).first();
+  if(!gone)return NextResponse.json({error:'Niche not found.'},{status:404});
+  await db.prepare('DELETE FROM niche_research_evidence WHERE user_id=? AND project_id=?').bind(user,id).run().catch(()=>undefined);
+  return NextResponse.json({deleted:id},{headers:{'Cache-Control':'private, no-store'}});
+ }
  if(!body?.id||!['advance','select','monitor','refresh','photos','buyers'].includes(body.action??''))return NextResponse.json({error:'Choose a niche.'},{status:400});
  const lease=await claimResearch(user,body.id);if(!lease)return NextResponse.json({error:'This niche is updating. Try again in a moment.'},{status:409});
  const p=await readResearch(user,body.id);if(!p)return NextResponse.json({error:'Niche not found.'},{status:404});
