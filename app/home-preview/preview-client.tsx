@@ -72,7 +72,6 @@ export default function PreviewClient(){
   const galleryLabel=shots.length
     ? `Top three by ${h?.topListings?.rankedBy==="favorites"?"saves":"units sold"} · ${(h?.topListings?.period??"last 30 days").toLowerCase()}`
     : `Top three by units sold · ${(m.worldsPeriod??"last 90 days").toLowerCase()}`;
-  const units90=(m.worlds??[]).reduce((n,w)=>n+w.units,0);
   const perOrder=t&&t.ordersLast90?Math.round(t.revenueLast90Minor/t.ordersLast90):0;
 
   return <div className="hp">
@@ -82,9 +81,8 @@ export default function PreviewClient(){
         <div className="hero-big">{usd(t?.revenueLast90Minor??0)}</div>
         <div className="hero-facts">
           <div><b>{num(t?.ordersLast90??0)}</b><small>ORDERS</small></div>
-          <div><b>{num(units90)}</b><small>UNITS</small></div>
-          <div><b>{usd(perOrder)}</b><small>PER ORDER</small></div>
-          <div><b>{num(t?.activeListings??0)}</b><small>LIVE</small></div>
+          <div><b>{usd(perOrder)}</b><small>AVERAGE ORDER</small></div>
+          <div><b>{num(t?.activeListings??0)}</b><small>LISTINGS LIVE</small></div>
         </div>
         <p className="hero-life">All time: <b>{usd(t?.revenueMinor??0)}</b> across{" "}
           <b>{num(t?.orders??0)} orders</b> and <b>{num(t?.reviews??0)} reviews</b>.</p>
@@ -101,16 +99,19 @@ export default function PreviewClient(){
       </div>
     </section>
 
-    <div className="strip">
+    {/* D1871 · September, and only September. The fourth tile used to read
+        "24 new in your phrases", which named nothing a seller could picture
+        and described the wrong thing besides. */}
+    <div className="strip three">
       <div><b>{usd(m.thisMonth?.revenueMinor??0)}</b><small>SEPTEMBER SO FAR</small></div>
-      <div><b>{usd(m.thisMonth?.etsyFeesMinor??0)}</b><small>ETSY FEES</small></div>
-      <div><b>{num(m.thisMonth?.orders??0)}</b><small>ORDERS IN SEPTEMBER</small></div>
-      <div><b>{num(moved.reduce((n,x)=>n+x.newly,0))}</b><small>NEW IN YOUR PHRASES</small></div>
+      <div><b>{usd(m.thisMonth?.etsyFeesMinor??0)}</b><small>ETSY FEES THIS MONTH</small></div>
+      <div><b>{num(m.thisMonth?.orders??0)}</b><small>ORDERS THIS MONTH</small></div>
     </div>
 
-    <div className="hp-rule"><h2>Where the money came from</h2><i/><small>lifetime against the last 90 days · {num(m.counts?.niches??0)} themes</small></div>
+    <div className="hp-rule"><h2>What your themes have earned</h2><i/>
+      <small><em className="key life"/> all time &nbsp; <em className="key now"/> last 90 days</small></div>
     <div className="themes">
-      <div className="theme head"><span>Theme</span><span>Lifetime vs now</span><span>All time</span><span>90 days</span></div>
+      <div className="theme head"><span>Theme</span><span/><span>All time</span><span>Last 90 days</span></div>
       {worlds.map(w=><div className="theme" key={w.label}>
         <div><div className="name">{w.label}</div><div className="meta">{w.activeListings} live</div></div>
         <div>
@@ -123,7 +124,7 @@ export default function PreviewClient(){
     </div>
 
     {thin&&<>
-      <div className="hp-rule"><h2>Worth a look</h2><i/></div>
+      <div className="hp-rule"><h2>One thing worth a look</h2><i/></div>
       <div className="find">
         <div>
           <p className="k">{thin.label}</p>
@@ -149,20 +150,24 @@ export default function PreviewClient(){
       </div>
     </>}
 
-    <div className="hp-rule"><h2>Out there, and in here</h2><i/></div>
     <div className="split">
       <div className="box">
-        <p className="k">New listings in the phrases you watch</p>
+        {/* newSinceLastBrief counts listings Goldie has watched sell for the
+            first time since the member last opened the brief - not listings
+            that merely appeared, which is what the old wording implied. */}
+        <p className="k">Started selling in the searches you follow</p>
         <div style={{marginTop:14}}>
           {moved.length?moved.map(x=><div className="moved" key={x.phrase}>
-            <b>+{x.newly}</b><span>{x.phrase}</span><small>since you last looked</small></div>)
-          :<p>Nothing new in your watched phrases today.</p>}
+            <b>{x.newly}</b><span>listings in <b className="ph">{x.phrase}</b></span></div>)
+          :<p>Nothing in your saved searches has started selling since you last looked.</p>}
         </div>
+        {moved.length>0&&<p className="why">Goldie watches these searches and notices when a
+          listing’s stock drops, which means it sold. These are the ones that started selling
+          since you last opened Research.</p>}
       </div>
       <div className="box">
-        <p className="k">This week in the factory</p>
-        <div className="goal" style={{marginTop:14}}><b>13</b><small>of 20 drafts ready</small></div>
-        <div className="meter"><i style={{width:"65%"}}/></div>
+        <p className="k">Your listings</p>
+        <div className="goal" style={{marginTop:14}}><b>{num(t?.activeListings??0)}</b><small>live on Etsy</small></div>
         <a className="cta" href="/listing-factory?step=setup">Make something new</a>
         {Boolean(m.needsAttention?.missingProductionCosts)&&<p className="why">
           September’s revenue and Etsy fees are exact, but Goldie does not know what
