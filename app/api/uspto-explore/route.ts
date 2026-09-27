@@ -15,6 +15,8 @@ import { env } from "cloudflare:workers";
  * It is deliberately narrow: owner only, uspto.gov only, GET only, truncated.
  * It comes out once the ingest is written.
  */
+import { liveTrademarkQuery, USPTO_SEARCH_URL } from "@/app/trademark-live";
+
 const key = () => (env as unknown as { USPTO_API_KEY?: string }).USPTO_API_KEY?.trim() || "";
 
 export const GET = withErrorLog("uspto-explore", async (request: Request) => {
@@ -36,11 +38,16 @@ export const GET = withErrorLog("uspto-explore", async (request: Request) => {
     return NextResponse.json({ error: "Only https uspto.gov URLs." }, { status: 400 });
 
   try {
+    const phrase = new URL(request.url).searchParams.get("phrase")?.slice(0,200);
+    const liveSearch = parsed.toString() === USPTO_SEARCH_URL && Boolean(phrase);
     const response = await fetch(parsed.toString(), {
+      method: liveSearch ? "POST" : "GET",
+      ...(liveSearch ? {body:JSON.stringify(liveTrademarkQuery(phrase!)),redirect:"error" as const} : {}),
       headers: {
-        "user-agent": "Goldie/1.0 (+https://thegoldiesuite.com)",
+        "user-agent": "GoldieSuite/1.0 (+https://thegoldiesuite.com)",
+        ...(liveSearch ? {"Content-Type":"application/json"} : {}),
         accept: "application/json",
-        ...(key() ? { "X-API-KEY": key() } : {}),
+        ...(!liveSearch && key() ? { "X-API-KEY": key() } : {}),
       },
       signal: AbortSignal.timeout(25_000),
     });
