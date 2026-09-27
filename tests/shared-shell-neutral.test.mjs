@@ -21,8 +21,8 @@ test("every desktop shell renders the Goldie Suite home link", () => {
      carries no wordmark at all — a placeholder is how a stand-in becomes
      permanent, and "seller command center" was printed here, in the rail's
      first group heading, and on the home page's eyebrow all at once. */
-  assert.match(brand, /aria-label="Goldie Suite home"/);
-  assert.match(strip(brand), />Goldie Suite</);
+  assert.match(brand, /aria-label="The Goldie Suite home"/);
+  assert.match(strip(brand), />The Goldie Suite</);
   assert.equal((shell.match(/<SuiteBrand\s*\/>/g) ?? []).length, 2);
   assert.equal((workflow.match(/<SuiteBrand\s*\/>/g) ?? []).length, 1);
 });

@@ -864,3 +864,6 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
  #suite-workspace .factory-work .management-page > header,
  #suite-workspace .factory-work .usage-page > header {padding:22px!important}
 }
+
+#suite-workspace .suite-brand-copy .current-logo-text,
+#suite-workspace .suite-mobile-brand .suite-brand-copy .current-logo-text {font-size:18px!important;letter-spacing:-.5px!important;line-height:1.2!important;white-space:normal!important;max-width:140px;display:block}
