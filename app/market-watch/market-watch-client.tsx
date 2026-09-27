@@ -184,6 +184,7 @@ function NicheDetail({view,onBack,startNew=false}:{view:NicheView;onBack:()=>voi
      selling shows those listings, not all of them. */
   const startedCount=(view.listings??[]).filter(l=>l.startedSince).length;
   const [onlyNew,setOnlyNew]=useState(startNew&&startedCount>0);
+  const askedForNew=startNew&&startedCount===0;
   /* Favorites first. It is the ordering Etsy will not give anyone, which is
      the reason to be on this page instead of etsy.com. */
   const [sort,setSort]=useState<KeywordOrder>("favorites");
@@ -314,6 +315,8 @@ function NicheDetail({view,onBack,startNew=false}:{view:NicheView;onBack:()=>voi
     listing's quantity, so a phrase scanned for the first time has none yet -
     and the option only appears once something in this scan actually has a
     count behind it. */}
+    {askedForNew&&<p className="market-only-new" role="status">Nothing in this keyword has
+      started selling since you last opened it. Showing everything instead.</p>}
     {onlyNew&&<p className="market-only-new" role="status">Showing the {startedCount} listing{startedCount===1?"":"s"} that started selling since you last opened this keyword.{" "}
       <button type="button" onClick={()=>setOnlyNew(false)}>Show all {ranked.length}</button></p>}
     <div className="market-results-sort"><label>Sort these results<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}>{rows.some(row=>row.soldUnits!=null)&&<option value="sold">Observed stock decrease</option>}<option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="newest">Newest first</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price by currency: low to high</option><option value="price-desc">Price by currency: high to low</option></select></label></div>

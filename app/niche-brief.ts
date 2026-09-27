@@ -109,7 +109,18 @@ export async function readNiche(userId: string, _terms: string[], key: string, n
   const evidence = evidenceFor(rows);
   const summary = summarize(evidence, now, { since: watch?.lastOpened ?? 0 });
   const since = watch?.lastOpened ?? 0;
-  const listings = rows.filter(row => row.title).map(row => listingFrom(row, now, since)).slice(0, 36);
+  /*
+    D1891 · THE COUNT AND THE LIST HAVE TO AGREE.
+
+    The summary counts every listing that started selling since the member
+    last looked; the list was cut to thirty-six first, so a keyword could
+    report two and be able to show one. The ones the figure counted are kept
+    at the front of the list, so opening the figure can always show all of
+    them.
+  */
+  const all = rows.filter(row => row.title).map(row => listingFrom(row, now, since));
+  const listings = [...all.filter(row => row.startedSince), ...all.filter(row => !row.startedSince)]
+    .slice(0, 36);
   return { key, summary, window: summary.windowSeconds ? describeWindow(summary.windowSeconds) : null,
     listings, gathering: summary.moving === 0 && listings.length > 0,
     staleForDisplay: listings.filter(row => !row.displayFresh).length };
