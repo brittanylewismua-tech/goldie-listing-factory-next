@@ -459,8 +459,8 @@ const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
 export type RegisterSize = { marks: number; files: { state: string; count: number }[] };
 
 export function registerIsReady(size: RegisterSize | null | undefined) {
-  if (!size || !(size.marks > 0)) return false;
-  return !size.files.some(file => file.state === "waiting" || file.state === "partial");
+  if (!size || !(size.marks > 0) || !size.files.length) return false;
+  return !size.files.some(file => file.state === "waiting" || file.state === "partial" || file.state === "running");
 }
 
 /*

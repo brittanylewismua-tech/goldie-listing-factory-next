@@ -72,6 +72,6 @@ test("the member-facing warning is not affected by parking", () => {
   const register = readFileSync(new URL("../app/trademark-check.ts",
     import.meta.url), "utf8");
   assert.match(register,
-    /return !size\.files\.some\(file => file\.state === "waiting" \|\| file\.state === "partial"\)/,
+    /return !size\.files\.some\(file => file\.state === "waiting" \|\| file\.state === "partial" \|\| file\.state === "running"\)/,
     "a skipped file must not make the register claim to be ready");
 });

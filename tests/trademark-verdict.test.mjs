@@ -96,3 +96,11 @@ test('an owner name that ends in a full stop does not produce two', async () => 
   /* An ellipsis is not two full stops. */
   assert.equal(endSentence('wait for it...'), 'wait for it...');
 });
+
+test('running imports and unseeded file indexes are never a complete search',()=>{
+ for(const files of [[],[{state:'running',count:1}]]) {
+  const v=withRegister(check('born this way'),[],{marks:2000,files});
+  assert.equal(v.registerReady,false);
+  assert.equal(v.registerComplete,false);
+ }
+});

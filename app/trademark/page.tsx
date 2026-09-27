@@ -163,7 +163,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
       <form className="tm-form" onSubmit={event => { event.preventDefault(); run(phrase); }}>
         <input
           className="p-input"
-          type="search"
+          type="search" maxLength={200}
           value={phrase}
           disabled={checking}
           onChange={event => setPhrase(event.target.value)}
@@ -205,7 +205,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
           <div className="tm-result-heading"><div><p className="p-eyebrow">RESULTS FOR</p><h2 className="tm-phrase">{marked()}</h2></div><button className="tm-watch-button" type="button" disabled={watchBusy === verdict.phrase} onClick={() => void watchPhrase()}>{watches.some(w => w.phrase.toLowerCase() === verdict.phrase.toLowerCase()) ? "Update watch" : "Watch phrase"}</button></div>
           {incomplete && <div className="tm-coverage" role="status"><strong>{verdict.registerRead === false ? "Records unavailable" : "Some trademark records are still missing"}</strong><span>{verdict.registerRead === false ? "Try again." : "Check the full USPTO database before using this phrase."}</span><a href="https://tmsearch.uspto.gov/search/" target="_blank" rel="noopener noreferrer">Search USPTO ↗</a></div>}
           {verdict.hits.length > 0 && <div className="tm-brand-alert"><h3>Brand or character names in this phrase</h3><ul>{verdict.hits.map((hit,index)=><li key={index}><strong>{hit.matched}</strong><span>{hit.category} · {hit.owner}</span></li>)}</ul></div>}
-          {all.length > 0 && <div className="tm-results-toolbar"><h3>Phrase matches <span>{phraseMatches.length}</span></h3><label>Product category<select value={productClass} onChange={e => setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label></div>}
+          {all.length > 0 && <div className="tm-results-toolbar"><h3>Phrase matches <span>{visible(phraseMatches).length}</span></h3><label>Product category<select value={productClass} onChange={e => setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label></div>}
           {phraseMatches.length > 0 ? visible(phraseMatches).length ? records(visible(phraseMatches)) : <p className="tm-empty">No phrase matches in this product category.</p> : <p className="tm-empty">No exact phrase match in the records loaded here.</p>}
           {wordMatches.length > 0 && <details className="tm-word-matches"><summary>Individual word matches · {visible(wordMatches).length}</summary><p>These records match a word in your phrase, not the whole phrase.</p>{records(visible(wordMatches))}</details>}
           <ActionPlan feature="trademarkStandalone" source={verdict.phrase.toLowerCase().slice(0,180)} heading={`Phrase review: ${verdict.phrase}`} notes={`Phrase: ${verdict.phrase}\n${all.map(m=>`${m.mark} · ${m.registered?'registered':'pending'} · ${classPhrase(m.classes)} · ${m.serial||''}`).join('\n')}`}/>

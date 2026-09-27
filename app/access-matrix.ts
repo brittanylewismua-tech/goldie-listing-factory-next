@@ -70,6 +70,7 @@ export const ACCESS: Record<string, Rule> = {
   "/api/usage": { kind: "open" },
   "/api/connections/printify": { kind: "open" },
   "/trademark": { kind: "open" },
+  "/trademark/maintenance": { kind: "owner" },
   "/api/trademark": { kind: "open" },
   "/api/trademark/watches": { kind: "open" },
   "/api/shop-map/connections": { kind: "open" },
