@@ -76,8 +76,9 @@ export default function PreviewClient(){
           <span className="hp-tag">{short(shots[1].title)}</span>
         </div>}
         <div className="hp-panel quiet"><small>Drafts this week</small><b>13/20</b><small>weekly goal</small></div>
-        {shots[2]&&<div className="hp-frame">
+        {shots[2]&&<div className="hp-frame wide">
           <img className="hp-shot" src={shots[2].imageUrl} alt=""/>
+          <span className="hp-tag">{short(shots[2].title)}</span>
         </div>}
       </div>
     </>}
@@ -88,7 +89,7 @@ export default function PreviewClient(){
           <p className="hp-eyebrow">Sunday, 27 September</p>
           <h1 className="hp-display">Two orders<br/>need a cost.</h1>
           <p className="hp-lede">Revenue and Etsy fees are exact. Profit for September can’t be worked out until you enter what those two cost to make.</p>
-          <a className="hp-cta light" style={{marginTop:"auto"}} href="/shop-map/costs">Add production costs →</a>
+          <a className="hp-cta light" href="/shop-map/costs">Add production costs →</a>
         </div>
         <div className="hpC-rail">
           {shots.slice(0,3).map(l=><div key={l.listingId}><img className="hp-shot" src={l.imageUrl} alt=""/></div>)}
