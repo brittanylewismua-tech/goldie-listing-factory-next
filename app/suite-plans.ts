@@ -37,7 +37,7 @@ export const SUITE_PLANS = {
     yearly: null as number | null,
     features: ["listingFactory", "trademarkAtPublish", "designScanner",
       "marketWatch", "shopMap", "trademarkStandalone"] as Feature[],
-    blurb: "Everything: the factory, Design Scanner, Market Watch, Shop Map and the Trademark Checker.",
+    blurb: "Everything: the factory, Design Scanner, Research, Your shop and Trademark Check.",
   },
 } as const;
 

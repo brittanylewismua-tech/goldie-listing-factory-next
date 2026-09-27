@@ -5,7 +5,7 @@ import "./shop-map.css";
 
 /* The tab says what this page is. There is no product name to append, and
    a placeholder in a tab title is how a stand-in becomes permanent. */
-export const metadata = { title: "Shop Map" };
+export const metadata = { title: "Your shop" };
 
 
 /*
@@ -19,7 +19,7 @@ export default async function ShopMapPage() {
   return (
     /* D1575 · the same rail, topbar, wordmark and footer as the Listing
        Factory. This page rendered as a bare column on white before. */
-    <FactoryShell active="shop-map" title="Shop Map" desktopOnly={false}>
+    <FactoryShell active="shop-map" title="Your shop" desktopOnly={false}>
       <ShopMapClient signedInEmail={user.email} />
     </FactoryShell>
   );

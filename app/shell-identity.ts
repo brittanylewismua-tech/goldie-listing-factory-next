@@ -43,7 +43,7 @@ export const TAB_TITLES: Record<ShellSection, string> = {
   batches: "Batch History",
   keywords: "Keyword Banks",
   "market-watch": "Market Watch",
-  "shop-map": "Shop Map",
+  "shop-map": "Your shop",
   "design-scanner": "Design Scanner",
   trademark: "Trademark Checker",
   hotlist: "Hot List",

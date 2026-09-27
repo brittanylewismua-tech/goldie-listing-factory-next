@@ -72,7 +72,8 @@ test("every interior page says what it is in the tab", () => {
     server component, so metadata is all it needed.
   */
   for (const [route, title] of [
-    ["shop-map", "Shop Map"],
+    /* D1864 · One name for /shop-map everywhere the member can read it. */
+    ["shop-map", "Your shop"],
     ["shop-map/costs", "Production costs"],
     ["market-watch", "Research"],
   ]) {

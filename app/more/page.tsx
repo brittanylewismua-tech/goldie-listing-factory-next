@@ -88,7 +88,7 @@ const FEATURE_NAMES: Record<string, string> = {
   listingFactory: "the Listing Factory",
   designScanner: "Design Scanner",
   marketWatch: "Market Watch",
-  shopMap: "Shop Map",
+  shopMap: "Your shop",
   trademarkStandalone: "the Trademark Check",
   trademarkAtPublish: "the trademark check at publish",
 };

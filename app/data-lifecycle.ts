@@ -42,7 +42,7 @@ export const EFFECTS: Record<Action, Effect[]> = {
     { what: "member_shop_watches", disposition: "removed",
       say: "The shops you follow." },
     { what: "shop_map_listings, finance_*", disposition: "removed",
-      say: "Your Shop Map, including your sales and profit figures." },
+      say: "Your shop, including your sales and profit figures." },
     { what: "etsy_connections, printify_connections", disposition: "retired",
       say: "Your Etsy and Printify connections are switched off and their access "
         + "keys destroyed. The record that they existed is kept, because it is "
@@ -62,7 +62,7 @@ export const EFFECTS: Record<Action, Effect[]> = {
   ],
   "printify-disconnect": [
     { what: "printify_connections.encrypted_token", disposition: "retired",
-      say: "The Listing Factory stops being able to build listings, and Shop Map "
+      say: "The Listing Factory stops being able to build listings, and Your shop "
         + "can no longer work out what new orders cost you to make." },
     { what: "artwork_provenance", disposition: "shared-kept",
       say: "Print files already captured stay yours." },

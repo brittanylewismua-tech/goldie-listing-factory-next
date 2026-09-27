@@ -200,7 +200,7 @@ test("a focus recommendation is gated on coverage", () => {
   const thin = standout(niches, guidance(niches),
     { activeListings: 0.55, recentRevenue: 0.6, recentOrders: 0.6 });
   assert.equal(thin.hasStandout, false);
-  assert.match(thin.headline, /still organizing enough of your shop/);
+  assert.match(thin.headline, /still organizing enough of your catalog/);
   assert.match(thin.nextStep, /% of active listings/);
 
   const covered = standout(niches, guidance(niches),

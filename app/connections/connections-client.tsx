@@ -168,7 +168,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
     <main className="conn p-grid">
       <header className="current-page-heading"><div><h1>Connections</h1>
       <p className="lede">
-        Manage the Etsy and Printify shops used for your drafts and Shop Map.
+        Manage the Etsy and Printify shops used for your drafts and your shop numbers.
       </p></div></header>
 
       {error && <p className="p-notice p-notice-bad" role="alert">{error}</p>}
@@ -182,7 +182,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
       )}
       {salesImport === "done" && (
         <p className="p-notice" role="status">
-          Your sales data is loaded. <a href="/shop-map">Open Shop Map</a>
+          Your sales data is loaded. <a href="/shop-map">Open your shop</a>
         </p>
       )}
       {salesImport === "failed" && (
@@ -219,7 +219,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
           <p className="fact">Last successful sync: {when(shop.lastSyncAt)}</p>
           {!shop.canReadSales && (
             <p className="fact">
-              Shop Map needs your permission to read this shop&apos;s sales before it
+              Goldie needs your permission to read this shop&apos;s sales before Your shop
               can show what it earned.
             </p>
           )}
@@ -229,7 +229,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
             </p>
           )}
           <div className="row">
-            {shop.activeForListingFactory&&shop.canReadSales&&!shop.needsReconnect&&<a className="p-button p-button-primary" href="/shop-map">Open Shop Map</a>}
+            {shop.activeForListingFactory&&shop.canReadSales&&!shop.needsReconnect&&<a className="p-button p-button-primary" href="/shop-map">Open Your shop</a>}
             {shop.needsReconnect && <a href="/api/etsy/connect">Reconnect</a>}
             {!shop.canReadSales && shop.authorizeSalesUrl && (
               <a href={shop.authorizeSalesUrl}>Connect sales data</a>

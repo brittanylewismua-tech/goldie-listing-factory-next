@@ -38,11 +38,16 @@ const TOOLS = (summary: Summary | null) => [
     href: "/market-watch/research", name: "Research",
     question: "What are buyers choosing in my niche?",
     what: "Research niches, search Etsy, and follow shops and saved listings in one place.",
-    stat: null,
+    /* D1864 · The summary already counted these and the tile threw them away. */
+    stat: summary && (summary.keywords || summary.shops)
+      ? [summary.keywords ? `${summary.keywords} keyword${summary.keywords === 1 ? "" : "s"}` : null,
+         summary.shops ? `${summary.shops} shop${summary.shops === 1 ? "" : "s"} followed` : null]
+        .filter(Boolean).join(" · ")
+      : null,
     icon: icon(<><circle cx="10" cy="10" r="6" /><path d="m15 15 6 6M7 10h6M10 7v6" /></>),
   },
   {
-    href: "/shop-map", name: "Shop Map",
+    href: "/shop-map", name: "Your shop",
     question: "Which of my designs actually make money?",
     what: "See which listings sold, compare product themes, and review revenue, Etsy fees, and production costs for your shop.",
     stat: summary && summary.sold90 > 0
@@ -72,6 +77,22 @@ export default function CommandCenterClient({embedded=false}:{embedded?:boolean}
       .then(body => setSummary(body)).catch(() => undefined);
   }, []);
 
+  /*
+    D1864 · HOME WAS SHOWING THE SIDEBAR TWICE.
+
+    This grid links to the same five destinations as the rail standing beside
+    it, and three of them already have their own section higher up the same
+    page: Research is the largest block on Home, the platform update has its
+    own card, and Your shop has the money card. So Home repeated itself, and
+    three of the five tiles carried no figure to justify the repeat.
+
+    Embedded on Home it now carries only the two tools Home does not already
+    show. Nothing is hidden: all five live permanently in the rail, and the
+    Command Center page itself still lists every one.
+  */
+  const onHomeAlready = new Set(["Research", "Your shop", "Etsy + Printify Updates"]);
+  const tools = TOOLS(summary).filter(tool => !embedded || !onHomeAlready.has(tool.name));
+
   return <section className="cc-home p-grid">
     <header className="cc-home-head">
       <p className="mini-label">Research & insights</p>
@@ -80,7 +101,7 @@ export default function CommandCenterClient({embedded=false}:{embedded?:boolean}
     </header>
 
     <div className="cc-home-grid">
-      {TOOLS(summary).map(tool => (
+      {tools.map(tool => (
         <Link key={tool.name} className="cc-home-tile" data-tool={tool.name} href={tool.href}>
           <span className="cc-home-icon" aria-hidden="true">{tool.icon}</span>
           <div className="cc-directory-copy"><h2>{tool.name}</h2><p>{tool.what}</p></div>

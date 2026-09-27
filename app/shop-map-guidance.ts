@@ -78,7 +78,7 @@ export function standout(
   if (coverage && !coverageMet(coverage))
     return {
       hasStandout: false,
-      headline: "Shop Map is still organizing enough of your shop to make a "
+      headline: "Your shop is still organizing enough of your catalog to make a "
         + "reliable focus recommendation.",
       nextStep: `Classified so far: ${Math.round(coverage.activeListings * 100)}% of `
         + `active listings, ${Math.round(coverage.recentRevenue * 100)}% of recent revenue, `

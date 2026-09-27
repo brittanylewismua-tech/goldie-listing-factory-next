@@ -113,7 +113,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
   return (
     <main className="costs">
       <button className="back" onClick={() => { window.location.href = `/shop-map?tab=money&month=${encodeURIComponent(data.month)}`; }}>
-        ← Shop Map
+        ← Your shop
       </button>
       <header className="current-page-heading"><div><h1>Production costs</h1>
       <p className="lede">Add production costs to calculate profit for each order.</p></div></header>
@@ -200,7 +200,7 @@ export default function CostsClient({ signedInEmail }: { signedInEmail: string }
                     <>
                       <p className="confirm">
                         Save <strong>{amount} {currency}</strong> as what order
-                        #{order.receiptId} cost to produce and ship? Shop Map will label this
+                        #{order.receiptId} cost to produce and ship? Your shop will label this
                         as a figure you entered, not one it verified, and you can
                         change it later.
                       </p>

@@ -6022,10 +6022,10 @@ setPricingApproved(recipeCarriesApprovedPricing({defaultProfitTarget:activeRecip
                   Etsy is connected but Printify is not, which is a valid and
                   common account state. */}
               {etsyConnected&&etsySalesVisible!==true&&<div className="sales-data-connect">
-                <div><b>Connect sales data</b><span>Required to show sold listings, revenue, Etsy fees, and profit in Shop Map.</span></div>
+                <div><b>Connect sales data</b><span>Required to show sold listings, revenue, Etsy fees, and profit under Your shop.</span></div>
                 <button type="button" aria-busy={etsyConnecting} disabled={etsyConnecting} onClick={()=>void connectEtsySales()}>{etsyConnecting?"Opening Etsy…":"Connect sales data"}</button>
               </div>}
-              {etsyConnected&&etsySalesVisible===true&&<div className="sales-data-connected"><span aria-hidden="true">✓</span><b>Sales data connected</b><small>Shop Map can read sales and calculate your numbers.</small></div>}
+              {etsyConnected&&etsySalesVisible===true&&<div className="sales-data-connected"><span aria-hidden="true">✓</span><b>Sales data connected</b><small>Your shop can read sales and calculate your numbers.</small></div>}
               {connected&&connectionError&&<p className="field-warning" role="status">{connectionError}</p>}
               {etsyError&&<p className="field-error" role="alert">{etsyError}</p>}
               {(connectionError||etsyError)&&<button type="button" className="secondary-action" disabled={checkingConnection||checkingEtsyConnection} onClick={()=>{void checkPrintifyConnection();void checkEtsyConnection()}}>{checkingConnection||checkingEtsyConnection?"Checking connections…":"Check connections again"}</button>}

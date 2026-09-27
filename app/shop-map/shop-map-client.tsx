@@ -268,7 +268,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     return <main className="shop-map p-grid">
       <div className="p-page">
         <div className="p-head">
-          <p className="p-eyebrow">Shop Map</p>
+          <p className="p-eyebrow">Your shop</p>
           <div className="p-skeleton p-skeleton-line" style={{ width: "40%", height: 26 }} />
           <div className="p-skeleton p-skeleton-line" style={{ width: "62%" }} />
         </div>
@@ -290,10 +290,10 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const sold = shown.soldListings?.listings ?? [];
   const leaders=shown.topListings??[];
   return <main className="shop-map shop-map-redesign">
-    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">{monthName(shown.month)}</p><h1>Your shop</h1><p>{shown.shop?.shopName ?? "Shop Map"} · Sales, costs, and product performance.</p></div></header>
+    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">{monthName(shown.month)}</p><h1>Your shop</h1><p>{shown.shop?.shopName ?? "Your shop"} · Sales, costs, and product performance.</p></div></header>
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
-    <nav className="shop-map-tabs" aria-label="Shop Map sections">
+    <nav className="shop-map-tabs" aria-label="Your shop sections">
       {([['money','Your numbers'],['overview','Overview'],['themes','Product themes'],['sold','Sold listings']] as const)
         .map(([key,label]) => <button key={key} type="button" aria-current={tab === key ? 'page' : undefined}
           onClick={() => selectTab(key)}>{label}</button>)}

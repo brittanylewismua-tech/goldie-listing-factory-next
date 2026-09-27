@@ -95,7 +95,7 @@ export default function HomeStatus() {
         <small>{blocks.thisMonth ? "This month" : "Sales import in progress"}</small></article>
       <article><span>Est. profit</span><strong>{blocks.thisMonth?.profitAvailable
         ? money(blocks.thisMonth.profitMinor ?? 0, blocks.thisMonth.currency) : "Needs costs"}</strong>
-        <small>{blocks.thisMonth?.profitAvailable ? "After known costs" : "Add production costs in Shop Map"}</small></article>
+        <small>{blocks.thisMonth?.profitAvailable ? "After known costs" : "Add production costs under Your shop"}</small></article>
       <article><span>Listing Factory</span><strong>{blocks.factory?.openDrafts ?? 0}</strong>
         <small>draft{blocks.factory?.openDrafts === 1 ? "" : "s"} in progress</small></article>
     </section>
