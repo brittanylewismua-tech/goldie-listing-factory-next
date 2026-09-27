@@ -43,6 +43,20 @@ export const ACCESS: Record<string, Rule> = {
   "/api/etsy/callback": { kind: "public" },
   "/auth/callback": { kind: "public" },
   "/auth/mirrorbot-callback": { kind: "public" },
+  /* MasterBot (ChatGPT app for The Wolf Method Mastermind). The MCP route
+     authenticates every request itself with a Supabase OAuth bearer token and
+     answers 401 without one; the consent screen handles its own sign-in; the
+     marketing, policy and access pages must be readable by OpenAI review. */
+  "/api/masterbot/mcp": { kind: "public" },
+  "/listing-factory/oauth/consent": { kind: "public" },
+  "/.well-known/oauth-protected-resource": { kind: "public" },
+  "/.well-known/oauth-protected-resource/api/masterbot/mcp": { kind: "public" },
+  "/.well-known/openai-apps-challenge": { kind: "public" },
+  "/masterbot": { kind: "public" },
+  "/masterbot/support": { kind: "public" },
+  "/masterbot/privacy": { kind: "public" },
+  "/masterbot/terms": { kind: "public" },
+  "/masterbot-access": { kind: "public" },
   "/api/csp-report": { kind: "public" },
   "/api/client-errors": { kind: "public" },
   "/api/version": { kind: "public" },
