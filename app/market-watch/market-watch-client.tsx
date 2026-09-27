@@ -183,8 +183,23 @@ function NicheDetail({view,onBack,startNew=false}:{view:NicheView;onBack:()=>voi
   /* D1889 · Arriving from a figure that counted the listings which started
      selling shows those listings, not all of them. */
   const startedCount=(view.listings??[]).filter(l=>l.startedSince).length;
-  const [onlyNew,setOnlyNew]=useState(startNew&&startedCount>0);
-  const askedForNew=startNew&&startedCount===0;
+  /*
+    D1894 · DERIVED, NOT INITIALISED.
+
+    This was useState(startNew && startedCount>0). The view arrives empty and
+    fills in a moment later, so that initial value was computed against no
+    listings, latched off, and never reconsidered: arriving from a figure that
+    counted thirteen listings showed all 994 of them. The banner had the same
+    fault in reverse - it read an empty view as "nothing started selling" and
+    said so out loud while the page was still loading.
+
+    The filter is now worked out from the view on every render, with a single
+    piece of state for the one thing the member can decide: show me all of them.
+  */
+  const loaded=(view.listings??[]).length>0;
+  const [showAll,setShowAll]=useState(false);
+  const onlyNew=startNew&&!showAll&&startedCount>0;
+  const askedForNew=startNew&&!showAll&&loaded&&startedCount===0;
   /* Favorites first. It is the ordering Etsy will not give anyone, which is
      the reason to be on this page instead of etsy.com. */
   const [sort,setSort]=useState<KeywordOrder>("favorites");
@@ -318,7 +333,7 @@ function NicheDetail({view,onBack,startNew=false}:{view:NicheView;onBack:()=>voi
     {askedForNew&&<p className="market-only-new" role="status">Nothing in this keyword has
       started selling since you last opened it. Showing everything instead.</p>}
     {onlyNew&&<p className="market-only-new" role="status">Showing the {startedCount} listing{startedCount===1?"":"s"} that started selling since you last opened this keyword.{" "}
-      <button type="button" onClick={()=>setOnlyNew(false)}>Show all {ranked.length}</button></p>}
+      <button type="button" onClick={()=>setShowAll(true)}>Show all {ranked.length}</button></p>}
     <div className="market-results-sort"><label>Sort these results<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}>{rows.some(row=>row.soldUnits!=null)&&<option value="sold">Observed stock decrease</option>}<option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="newest">Newest first</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price by currency: low to high</option><option value="price-desc">Price by currency: high to low</option></select></label></div>
     {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Try again</button></p>}
     {photoError&&<p className="p-notice failed" role="alert">{photoError} <button className="p-button p-button-quiet" onClick={()=>setPhotoRetry(value=>value+1)}>Retry photos</button></p>}

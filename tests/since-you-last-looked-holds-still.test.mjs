@@ -56,3 +56,21 @@ test('the listings the figure counted are the ones the page can show', () => {
   /* The list is cut to thirty-six, so the counted ones go first. */
   assert.match(brief, /all\.filter\(row => row\.startedSince\)[\s\S]{0,80}all\.filter\(row => !row\.startedSince\)/);
 });
+
+test('the filter is derived from the view, not latched at mount', () => {
+  const client = readFileSync(
+    new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
+  const body = strip(client);
+  /*
+    Measured live: the detail arrives empty and fills a moment later, so
+    useState(startNew && startedCount>0) was decided against no listings and
+    never reconsidered. Arriving from a figure that counted thirteen showed all
+    994, and the banner announced that nothing had started selling while the
+    page was still loading.
+  */
+  assert.doesNotMatch(body, /useState\(startNew/,
+    'the filter is latched at mount again, before the view has any listings');
+  assert.match(body, /const onlyNew=startNew&&!showAll&&startedCount>0;/);
+  assert.match(body, /const askedForNew=startNew&&!showAll&&loaded&&startedCount===0;/,
+    'the empty-state banner can claim nothing started selling while loading');
+});
