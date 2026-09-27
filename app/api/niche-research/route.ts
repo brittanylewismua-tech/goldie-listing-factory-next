@@ -1,3 +1,4 @@
+import {analyzeBuyers} from '@/app/niche-buyer-analysis';
 import {NextResponse} from 'next/server';
 import {requireFeatureApi} from '@/app/require-feature';
 import {crossSiteWrite,CROSS_SITE_REFUSAL} from '@/app/same-site-only';
@@ -24,11 +25,12 @@ export const POST=withErrorLog('niche-research',async(request:Request)=>{
  const now=Math.floor(Date.now()/1000),p:NicheProject={id:crypto.randomUUID(),name,phrases,createdAt:now,updatedAt:now,searchIndex:0,searchOffsets:phrases.map(()=>0),searchDone:phrases.map(()=>false),candidates:[],shops:[],selected:[],phase:'discovering',monitoring:true,nextRun:now,cycleAt:now,history:[],lastDiscovery:now,callsToday:0,callDay:'',targetShops:10};
  const inserted=await db.prepare(`INSERT INTO niche_research_projects(id,user_id,payload,owner_identity,updated_at,next_run) SELECT ?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM niche_research_projects WHERE user_id=?)<10 AND NOT EXISTS (SELECT 1 FROM niche_research_projects WHERE user_id=? AND lower(json_extract(payload,'$.name'))=lower(?)) RETURNING id`).bind(p.id,user,packResearch(p),JSON.stringify(access.user),now,now,user,user,name).first();if(!inserted){const raced=await db.prepare("SELECT id FROM niche_research_projects WHERE user_id=? AND lower(json_extract(payload,'$.name'))=lower(?) LIMIT 1").bind(user,name).first<{id:string}>();if(raced){const loaded=await readResearch(user,raced.id);if(loaded)return response(loaded);}}if(!inserted)return NextResponse.json({error:'You already have 10 niche panels. Open an existing niche to continue.'},{status:409});return response(p);
  }
- if(!body?.id||!['advance','select','monitor','refresh','photos'].includes(body.action??''))return NextResponse.json({error:'Choose a niche.'},{status:400});
+ if(!body?.id||!['advance','select','monitor','refresh','photos','buyers'].includes(body.action??''))return NextResponse.json({error:'Choose a niche.'},{status:400});
  const lease=await claimResearch(user,body.id);if(!lease)return NextResponse.json({error:'This niche is updating. Try again in a moment.'},{status:409});
  const p=await readResearch(user,body.id);if(!p)return NextResponse.json({error:'Niche not found.'},{status:404});
  try{
- if(body.action==='select'){p.selectionEdited=true;const selected=Array.isArray(body.selected)?body.selected:[];p.selected=[...new Set(selected.filter((id):id is number=>typeof id==='number'&&p.shops.some(s=>s.id===id&&s.catalogDone&&s.reviewsDone)))].slice(0,15);}
+ if(body.action==='buyers'){if(p.phase!=='ready'){await writeResearch(user,p,lease);return NextResponse.json({error:'The niche is still updating. Buyer analysis will start once the reviews are ready.'},{status:409});}p.buyerInsights=await analyzeBuyers(user,p);}
+ else if(body.action==='select'){p.selectionEdited=true;const selected=Array.isArray(body.selected)?body.selected:[];p.selected=[...new Set(selected.filter((id):id is number=>typeof id==='number'&&p.shops.some(s=>s.id===id&&s.catalogDone&&s.reviewsDone)))].slice(0,15);}
  else if(body.action==='monitor'){p.monitoring=body.enabled===true;p.nextRun=p.monitoring?Math.floor(Date.now()/1000):0;}
  else if(body.action==='refresh'){p.nextRun=Math.floor(Date.now()/1000);await advanceResearch(user,p);}
  else if(body.action==='photos'){
@@ -40,5 +42,5 @@ export const POST=withErrorLog('niche-research',async(request:Request)=>{
  for(let step=0;step<4&&Date.now()<deadline&&p.phase!=='ready';step++)await advanceResearch(user,p);
  }
  if(body.action!=='photos')delete p.error;await writeResearch(user,p,lease);return response(p);
- }catch(error){p.error=error instanceof Error?error.message:'The update stopped. Progress is saved.';p.nextRun=Math.max(p.nextRun,Math.floor(Date.now()/1000)+3600);await writeResearch(user,p,lease);return response(p,502);}
+ }catch(error){if(body.action==='buyers'){await writeResearch(user,p,lease);return NextResponse.json({error:error instanceof Error?error.message:'Buyer analysis could not finish. Please try again.'},{status:502});}p.error=error instanceof Error?error.message:'The update stopped. Progress is saved.';p.nextRun=Math.max(p.nextRun,Math.floor(Date.now()/1000)+3600);await writeResearch(user,p,lease);return response(p,502);}
 });

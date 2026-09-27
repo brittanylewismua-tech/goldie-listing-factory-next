@@ -166,7 +166,7 @@
 #suite-workspace .costs .order{border:1px solid #e4e4e9!important;box-shadow:none!important;border-radius:8px!important;padding:24px!important}
 #suite-workspace .costs .verdict{border:0!important;border-left:3px solid #bd287b!important;border-radius:0!important;background:#fff5fa!important}
 #suite-workspace .scanner :is(.scanner-compose,.result,.history){border:1px solid #e4e4e9!important;box-shadow:none!important;border-radius:8px!important}
-@media(max-width:650px){}
+
 /* Explicit track sizing prevents a collapsed parent label in the shared rail. */
 #suite-workspace .suite-nav-parent{display:grid!important;grid-template-columns:minmax(0,1fr) 28px!important;align-items:center!important;position:relative}
 #suite-workspace .suite-nav-parent>a{grid-column:1!important;grid-row:1!important;width:100%!important;min-width:0!important;display:flex!important;gap:12px!important;padding-right:8px!important}
@@ -593,14 +593,8 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .suite-brand-g{font-weight:700!important}
 #suite-workspace .current-home-aside>section{margin:0!important}
 #suite-workspace .current-home-aside .platform-brief-card>a{background:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;text-decoration:none!important}
-#suite-workspace .nr .current-buyer-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:start}
-#suite-workspace .nr .current-buyer-grid>article{display:flex;padding:24px!important;min-width:0}
-#suite-workspace .current-buyer-grid h3{font-size:23px!important;line-height:1.25!important;margin:12px 0 20px!important}
-#suite-workspace .current-buyer-grid blockquote{margin:18px 0 0;padding:18px 0 0;border:0;border-top:1px solid #e4e4e9}
-#suite-workspace .current-buyer-grid blockquote p{font-size:15px!important;line-height:1.65!important;margin:0 0 12px!important}
-#suite-workspace .current-buyer-grid .nr-review-meta{font-size:12px!important;line-height:1.6;color:#666570}
-@media(max-width:1200px){#suite-workspace .nr .current-buyer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:650px){#suite-workspace .nr .current-buyer-grid{grid-template-columns:1fr}}
+
+
 /* Current refinement: friendly content, quiet navigation, clear actions. */
 #suite-workspace>.topbar{padding:24px 14px 16px!important;background:#faf9fa!important}
 #suite-workspace>.topbar>.brand-lockup{padding:0 10px!important;margin-bottom:28px!important}
@@ -691,12 +685,6 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .current-shop-row summary small{display:block;margin-top:5px;font-size:12px;color:#75717b}
 #suite-workspace .current-shop-row summary>span:nth-child(3){font-size:13px;color:#65616b}
 #suite-workspace .current-shop-expanded{background:white;padding:24px;margin-bottom:14px;border:1px solid #e4e4e9;border-radius:14px}
-#suite-workspace .current-buyer-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:22px!important;align-items:stretch!important}
-#suite-workspace .current-buyer-grid article{display:flex;flex-direction:column;padding:25px!important}
-#suite-workspace .current-buyer-grid article h3{font-size:22px!important;letter-spacing:-.5px!important;margin:16px 0!important}
-#suite-workspace .current-buyer-grid blockquote{margin:0 0 20px!important;padding:0!important;border:0!important;background:transparent!important}
-#suite-workspace .current-buyer-grid blockquote p{font-size:15px;line-height:1.7}
-#suite-workspace .current-buyer-products{margin-top:auto!important;align-self:flex-start;background:white!important;border:0!important;padding-left:0!important;font-weight:650!important;color:#242329!important}
 .current-research-modal-backdrop{position:fixed;inset:0;z-index:900;background:#24232955;display:grid;place-items:center;padding:20px}
 #suite-workspace .current-research-modal{width:min(600px,100%);max-height:85dvh;overflow:auto;background:#fff;border:1px solid #dedce1;border-radius:16px;padding:28px;box-shadow:0 20px 70px #24232922}
 #suite-workspace .current-research-modal>header{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
@@ -726,8 +714,8 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .shop-sales-history{margin-top:24px}
 #suite-workspace .shop-sales-history table{width:100%;text-align:left;font-size:13px;border-collapse:collapse;margin-top:15px}
 #suite-workspace .shop-sales-history :is(td,th){padding:12px;border-bottom:1px solid #e4e4e9}
-@media(max-width:1000px){#suite-workspace .nr-listings.current-listing-grid,#suite-workspace .current-buyer-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
-@media(max-width:600px){#suite-workspace .nr-listings.current-listing-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}#suite-workspace .current-listing-grid .nr-listing>div:not(.nr-photo-empty){padding:12px!important}#suite-workspace .current-listing-grid .nr-listing h3{font-size:14px!important}#suite-workspace .current-buyer-grid{grid-template-columns:1fr!important}#suite-workspace .current-shop-row>summary{grid-template-columns:40px minmax(0,1fr) 16px;gap:12px}#suite-workspace .current-shop-row summary>span:nth-child(3){grid-column:2;font-size:12px}#suite-workspace .current-shop-row summary>span:last-child{grid-column:3;grid-row:1}#suite-workspace .current-shop-expanded{padding:18px}#suite-workspace .shop-activity-strip{padding:16px;gap:12px}#suite-workspace .shop-activity-strip strong{font-size:26px}#suite-workspace .shop-change-toolbar{flex-wrap:wrap}#suite-workspace .shop-change-toolbar h3{width:100%}#suite-workspace .shop-change-list article{grid-template-columns:55px 1fr;gap:12px}#suite-workspace .current-research-modal{padding:20px}}
+@media(max-width:1000px){#suite-workspace .nr-listings.current-listing-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:600px){#suite-workspace .nr-listings.current-listing-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}#suite-workspace .current-listing-grid .nr-listing>div:not(.nr-photo-empty){padding:12px!important}#suite-workspace .current-listing-grid .nr-listing h3{font-size:14px!important}#suite-workspace .current-shop-row>summary{grid-template-columns:40px minmax(0,1fr) 16px;gap:12px}#suite-workspace .current-shop-row summary>span:nth-child(3){grid-column:2;font-size:12px}#suite-workspace .current-shop-row summary>span:last-child{grid-column:3;grid-row:1}#suite-workspace .current-shop-expanded{padding:18px}#suite-workspace .shop-activity-strip{padding:16px;gap:12px}#suite-workspace .shop-activity-strip strong{font-size:26px}#suite-workspace .shop-change-toolbar{flex-wrap:wrap}#suite-workspace .shop-change-toolbar h3{width:100%}#suite-workspace .shop-change-list article{grid-template-columns:55px 1fr;gap:12px}#suite-workspace .current-research-modal{padding:20px}}
 
 #suite-workspace .current-listing-toolbar{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:22px}
 #suite-workspace .current-listing-toolbar .current-listing-search{margin:0;flex:1}
@@ -742,9 +730,6 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 @media(max-width:600px){#suite-workspace .current-shop-changes>.nr-section-head{align-items:flex-start;flex-direction:column;gap:18px}}
 
 #suite-workspace .current-clear-filter{margin-bottom:18px!important}
-#suite-workspace .current-buyer-more{margin-bottom:18px}
-#suite-workspace .current-buyer-more>summary{padding:8px 0!important;font-size:13px!important;color:#666570!important;cursor:pointer}
-#suite-workspace .current-buyer-more[open]>summary{margin-bottom:14px}
 
 /* A softened solid pink keeps Current’s feature-block hierarchy without neon glare. */
 #suite-workspace .factory-work :is(.current-feature,.current-home-feature,.current-money-total){background:#ffd1e8!important;border:1px solid transparent!important;box-shadow:none!important}
@@ -790,3 +775,18 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 
 /* Keep all supporting page headings in the approved Current typeface. */
 #suite-workspace .factory-work :is(h1,h2,h3,h4){font-family:'Manrope Variable',Manrope,Arial,sans-serif!important}
+
+/* Context first; the reviews proving it sit alongside, rather than in equal category cards. */
+#suite-workspace .buyer-context-list{display:grid;gap:24px}
+#suite-workspace .buyer-context-finding{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:36px;padding:30px;background:#fff;border:1px solid #e4e4e9;border-radius:16px}
+#suite-workspace .buyer-context-summary h3{font-size:24px!important;line-height:1.3!important;margin:12px 0!important;letter-spacing:-.6px!important}
+#suite-workspace .buyer-context-summary>p{font-size:15px!important;line-height:1.75!important;color:#53515b!important}
+#suite-workspace .buyer-context-summary>button{margin-top:18px;background:#242329!important;color:white!important;border-color:#242329!important}
+#suite-workspace .buyer-context-evidence{min-width:0;border-left:1px solid #eee9ed;padding-left:30px}
+#suite-workspace .buyer-context-evidence blockquote{margin:18px 0 0;padding:0;background:transparent;border:0}
+#suite-workspace .buyer-context-evidence blockquote p{font-size:15px!important;line-height:1.7!important;margin:0 0 10px!important}
+#suite-workspace .buyer-context-evidence footer{display:grid;gap:4px;font-size:12px!important;line-height:1.5;color:#77717b}
+#suite-workspace .buyer-context-evidence footer a{color:#8d285b!important;text-decoration:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#suite-workspace .buyer-context-evidence details{margin-top:18px;font-size:13px}
+#suite-workspace .buyer-context-evidence summary{cursor:pointer;padding:8px 0}
+@media(max-width:800px){#suite-workspace .buyer-context-finding{grid-template-columns:1fr;gap:24px;padding:22px}#suite-workspace .buyer-context-evidence{border-left:0;border-top:1px solid #eee9ed;padding:22px 0 0}#suite-workspace .buyer-context-summary h3{font-size:22px!important}}

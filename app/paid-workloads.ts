@@ -62,6 +62,7 @@ export type Workload = {
 };
 
 export const PAID_WORKLOADS: Workload[] = [
+  {key:"nicheBuyerInsights",what:"Read niche reviews in context and produce source-linked buyer findings.",provider:"fal / openrouter",model:"google/gemini-2.5-flash",unitCost:0.10,costBasis:"estimated",customerFacing:true,memberDailyLimit:null,memberDailyAttempts:20,globalDailyCeiling:3,globalDailyRequests:30,limitStatus:"temporary",retries:0,cachePolicy:"Per project and exact review input. Opening unchanged analysis makes no provider call. Project lease prevents concurrent calls.",priority:2,expectedBehaviour:"Only generated when Buyer insights is opened. Changed reviews invalidate cached findings. At most 1000 deduplicated reviews and 180000 input characters per analysis."},
   {key:"platformUpdateBrief",what:"Compare changed official platform sources and write a shared daily seller brief.",provider:"fal / openrouter",model:"google/gemini-2.5-flash",unitCost:0.03,costBasis:"estimated",customerFacing:true,memberDailyLimit:null,memberDailyAttempts:16,globalDailyCeiling:0.50,globalDailyRequests:16,limitStatus:"temporary",retries:0,cachePolicy:"Only changed source content is sent; one shared digest for all members. First reads establish a baseline.",priority:5,expectedBehaviour:"Bounded to four source comparisons per tick and sixteen per day. No calls for unchanged sources."},
   {
     key: "designScannerVision",
