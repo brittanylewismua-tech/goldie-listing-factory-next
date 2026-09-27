@@ -22,14 +22,14 @@ async function summarize(source:Source,previous:string,current:string,added:stri
  }
  throw error;}
 }
-export async function collectPlatformUpdates(){await ensureUpdateTables();const db=updateDb(),now=Math.floor(Date.now()/1000),id=crypto.randomUUID();
+export async function collectPlatformUpdates({retryFailed=false}:{retryFailed?:boolean}={}){await ensureUpdateTables();const db=updateDb(),now=Math.floor(Date.now()/1000),id=crypto.randomUUID();
  // One collector at a time; crashed leases expire. A public read never starts work.
  const active=await db.prepare(`SELECT id FROM platform_update_runs WHERE finished_at=0 AND started_at>? LIMIT 1`).bind(now-900).first();if(active)return{busy:true};
  const claim=await db.prepare(`INSERT INTO platform_update_runs(id,started_at) SELECT ?,? WHERE NOT EXISTS(SELECT 1 FROM platform_update_runs WHERE finished_at=0 AND started_at>?)`).bind(id,now,now-900).run();if(!claim.meta.changes)return{busy:true};
  let checked=0,failed=0,baseline=0,published=0,edited=0;const failures:Array<{source:string;error:string}>=[];
  try{const recent=await db.prepare(`SELECT content FROM platform_update_items WHERE published_at>? ORDER BY published_at DESC LIMIT 50`).bind(now-45*86400).all<{content:string}>();const seen=recent.results.map(r=>JSON.parse(r.content) as UpdateItem);
  for(const source of UPDATE_SOURCES){const stored=await db.prepare(`SELECT s.content,s.checked_at,s.last_error,a.attempted_at FROM platform_update_sources s LEFT JOIN platform_update_source_attempts a ON a.id=s.id WHERE s.id=?`).bind(source.id).first<{content:string;checked_at:number;last_error:string;attempted_at?:number}>();
- const cadence=source.id==='printify-network'||stored?.last_error?1200:6*3600;if(stored&&now-(stored.last_error?stored.attempted_at||stored.checked_at:stored.checked_at)<cadence)continue;
+ const cadence=source.id==='printify-network'||stored?.last_error?1200:6*3600;if(stored&&!(retryFailed&&stored.last_error)&&now-(stored.last_error?stored.attempted_at||stored.checked_at:stored.checked_at)<cadence)continue;
  await db.prepare(`INSERT INTO platform_update_source_attempts(id,attempted_at) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET attempted_at=excluded.attempted_at`).bind(source.id,now).run();
  try{const response=await fetch(source.fetchUrl,{headers:{'User-Agent':'GoldieSuite/1.0 (official platform update monitor)','Accept':source.kind==='html'?'text/html':'application/json'},signal:AbortSignal.timeout(20000),redirect:'manual'});if(!response.ok)throw new Error(`Official source returned ${response.status}`);const body=await response.text();if(body.length>3000000)throw new Error('Official source too large');const current=sourceText(source,body);if(current.length<150||/enable javascript and cookies|verify you are human|access denied/i.test(current.slice(0,500)))throw new Error('Official source could not be read');
  if(!stored?.content)baseline++;
