@@ -175,13 +175,13 @@ export default function PreviewClient(){
     </>}
 
     {rising.length>0&&<>
-      {/* D1878 · The heading has to answer where, and more than what. Not in
-          her shop - on Etsy, across the shops each research project follows -
-          and against the thirty days before. */}
-      <div className="hp-rule"><h2>Getting more buyer reviews on Etsy</h2><i/>
-        <small>across the shops in your research · last 30 days against the 30 before</small></div>
+      {/* D1879 · Every review is a purchase somebody made, so more reviews is
+          more sales. The heading says that; the line under it says where and
+          over what window. */}
+      <div className="hp-rule"><h2>Categories getting more reviews this month</h2><i/>
+        <small>more reviews means more sales · on Etsy, across the shops in your research</small></div>
       <div className="themes">
-        <div className="theme head"><span>Phrase</span><span/><span>Last 30 days</span><span>Previous 30</span></div>
+        <div className="theme head"><span>Category</span><span/><span>Last 30 days</span><span>Previous 30</span></div>
         {rising.map(r=><div className="theme" key={r.niche+r.phrase}>
           <div><div className="name">{r.phrase}</div><div className="meta">{num(r.shops)} shops · {num(r.listings)} listings</div></div>
           <div>
