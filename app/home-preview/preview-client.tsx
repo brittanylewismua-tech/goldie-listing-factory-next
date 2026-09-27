@@ -175,10 +175,13 @@ export default function PreviewClient(){
     </>}
 
     {rising.length>0&&<>
-      <div className="hp-rule"><h2>Phrases getting more buyers</h2><i/>
-        <small>reviews in the last 30 days against the 30 before</small></div>
+      {/* D1878 · The heading has to answer where, and more than what. Not in
+          her shop - on Etsy, across the shops each research project follows -
+          and against the thirty days before. */}
+      <div className="hp-rule"><h2>Getting more buyer reviews on Etsy</h2><i/>
+        <small>across the shops in your research · last 30 days against the 30 before</small></div>
       <div className="themes">
-        <div className="theme head"><span>Phrase</span><span/><span>Last 30 days</span><span>Before that</span></div>
+        <div className="theme head"><span>Phrase</span><span/><span>Last 30 days</span><span>Previous 30</span></div>
         {rising.map(r=><div className="theme" key={r.niche+r.phrase}>
           <div><div className="name">{r.phrase}</div><div className="meta">{num(r.shops)} shops · {num(r.listings)} listings</div></div>
           <div>
@@ -186,7 +189,7 @@ export default function PreviewClient(){
             <div className="theme-bar"><i style={{width:`${Math.round(r.prior/risingTop*100)}%`}}/></div>
           </div>
           <div><div className="life">{num(r.reviews)}</div><div className="lifeu">+{num(r.gain)}</div></div>
-          <div><div className="now" style={{color:"var(--faint)"}}>{num(r.prior)}</div><div className="nowu">in {r.niche}</div></div>
+          <div><div className="now" style={{color:"var(--faint)"}}>{num(r.prior)}</div><div className="nowu">from {r.niche}</div></div>
         </div>)}
       </div>
     </>}
