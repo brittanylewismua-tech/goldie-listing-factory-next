@@ -1,8 +1,8 @@
 import type {NicheProject} from './niche-research-model';
 export type BuyerSource={id:number;listingId:number;shopId:number;shop:string;title:string;text:string;at:number;rating:number|null};
-export type BuyerFinding={title:string;explanation:string;kind:'pattern'|'request';evidence:Array<BuyerSource&{quote:string}>};
+export type BuyerFinding={title:string;explanation:string;kind:'pattern'|'request'|'example';evidence:Array<BuyerSource&{quote:string}>};
 export type BuyerReport={version:string;sourceKey:string;analyzed:number;available:number;at:number;findings:BuyerFinding[]};
-export const BUYER_VERSION='buyer-context-6';
+export const BUYER_VERSION='buyer-context-7';
 /** Balanced across shops, deduplicated, and restricted to this niche's actual reviews. */
 export function buyerEvidence(p:NicheProject,at:number){
  const seenIds=new Set<number>(),seenText=new Set<string>();
@@ -38,9 +38,10 @@ export function validateBuyerFindings(raw:unknown,sources:BuyerSource[]):BuyerFi
    const normalized=source.text.toLowerCase().replace(/\s+/g,' ');if(ids.has(source.id)||texts.has(normalized))continue;
    ids.add(source.id);texts.add(normalized);evidence.push({...source,quote:e.quote});
   }
-  const kind=x.kind==='request'?'request':'pattern';
+  const kind=x.kind==='request'?'request':x.kind==='example'?'example':'pattern';
   // A product request can be useful once; the UI explicitly labels it as one review.
-  if(invalid||evidence.length<(kind==='request'?1:2))continue;
+  if(invalid||evidence.length<(kind==='pattern'?2:1))continue;
+  if(kind==='example'&&(evidence.length!==1||!/^One reviewer\b/.test(explanation)))continue;
   if(kind==='request'&&!evidence.some(e=>/\b(wish|please|would love|could you|hope|want|need|looking for)\b/i.test(e.quote)))continue;
   seen.add(title.toLowerCase());findings.push({title,explanation,kind,evidence});
  }

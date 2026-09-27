@@ -32,3 +32,11 @@ test('balanced selection does not let one large shop consume the whole input',()
  const p=project(Array.from({length:1100},(_,i)=>review(i+1,`${one} This review includes order ${i}.`)));
  p.selected=[1,2];const input=buyerEvidence(p,at);assert(input.sources.some(r=>r.shopId===2));assert(input.sources.length<=1000);
 });
+
+test('a useful individual reason is labeled as one reviewer, not upgraded to a pattern',()=>{
+ const text='I chose this because I like wearing quiet protest messages.',input=buyerEvidence(project([review(1,text)]),at);
+ const finding={title:'Choosing a quiet protest message',explanation:'One reviewer chose this design because they enjoy wearing quiet protest messages.',kind:'example',evidence:[{id:1,quote:text}]};
+ assert.equal(validateBuyerFindings({findings:[finding]},input.sources)[0].kind,'example');
+ assert.throws(()=>validateBuyerFindings({findings:[{...finding,kind:'pattern'}]},input.sources));
+ assert.throws(()=>validateBuyerFindings({findings:[{...finding,explanation:'Buyers prefer subtle messages instead of overt political shirts.'}]},input.sources));
+});
