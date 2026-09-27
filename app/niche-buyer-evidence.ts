@@ -2,7 +2,7 @@ import type {NicheProject} from './niche-research-model';
 export type BuyerSource={id:number;listingId:number;shopId:number;shop:string;title:string;text:string;at:number;rating:number|null};
 export type BuyerFinding={title:string;explanation:string;kind:'pattern'|'request';evidence:Array<BuyerSource&{quote:string}>};
 export type BuyerReport={version:string;sourceKey:string;analyzed:number;available:number;at:number;findings:BuyerFinding[]};
-export const BUYER_VERSION='buyer-context-3';
+export const BUYER_VERSION='buyer-context-4';
 /** Balanced across shops, deduplicated, and restricted to this niche's actual reviews. */
 export function buyerEvidence(p:NicheProject,at:number){
  const seenIds=new Set<number>(),seenText=new Set<string>();
