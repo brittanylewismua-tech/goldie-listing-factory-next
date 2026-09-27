@@ -46,7 +46,7 @@ test("money keeps unknown costs unknown and marks estimates", () => {
 });
 
 test("the page handles loading, failure, empty sales and timezone setup", () => {
-  assert.match(client, /Organizing your shop/);
+  assert.match(client, /Loading your shop/);
   assert.match(client, /Showing your last saved results/);
   assert.match(client, /No sales in the last 90 days/);
   assert.match(client, /My shop runs on \$\{detected\}/);

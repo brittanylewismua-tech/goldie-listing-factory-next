@@ -81,13 +81,13 @@ test("capture is wired to more than one moment", () => {
   assert.match(provenance, /export async function captureBeforeRetiring/);
 });
 
-test("the live niche tool holds the centre of the mobile bar", () => {
+test("Research stays mobile-accessible alongside direct Listing Factory access", () => {
   // Design Scanner was retired in D1798; its route redirects to My Shop.
   // Preserve the useful phone-tool shortcut and its freedom from the desktop gate.
   const shell = read("mobile-shell.tsx");
   const tabs = shell.slice(shell.indexOf("const TABS = ["), shell.indexOf("];", shell.indexOf("const TABS = [")));
   const order = [...tabs.matchAll(/label: "([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(order, ["Home", "Watchlist", "Research", "Your shop", "More"]);
+  assert.deepEqual(order, ["Home", "Research", "Your shop", "Listing Factory", "More"]);
   assert.match(tabs, /href: "\/market-watch\/research", label: "Research"/);
   const gate = shell.match(/const WORKSPACE = (\[[^\n]+\]);/)[1];
   const routes = Function(`return ${gate}`)();

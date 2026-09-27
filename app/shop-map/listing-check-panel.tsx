@@ -60,7 +60,7 @@ export default function ListingCheckPanel() {
   const matches = (findings ?? []).filter(finding => finding.kind === "ok");
 
   return <section className="cc-tool shop-map-check">
-    <h2>Check a listing against its search</h2>
+    <h2>Compare a listing with search results</h2>
     <div className="shop-map-check-form">
       <label>Listing
         <select value={chosen ? String(chosen.listingId) : ""} onChange={event => {
@@ -81,8 +81,7 @@ export default function ListingCheckPanel() {
     </div>
     {error && <p className="p-notice failed" role="alert">{error}</p>}
     {findings && <p className="shop-map-check-against">Top 50 for &ldquo;{against}&rdquo;</p>}
-    {findings && !findings.length && <p className="empty">Nothing separates this from the winners
-      on what can be measured here.</p>}
+    {findings && !findings.length && <p className="empty">No major differences found in the measured design features.</p>}
     {findings && findings.length > 0 && <div className="shop-map-check-findings">
       {[...gaps, ...matches].map(finding => <article key={finding.key}
         className={finding.kind === "gap" ? "finding finding-gap" : "finding finding-ok"}>

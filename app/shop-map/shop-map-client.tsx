@@ -86,7 +86,7 @@ function DesignReach(){
     .catch(()=>setRead(true))},[]);
   if(!read||!rows.length)return null;
   return <section className="cc-tool shop-map-reach">
-    <h2>Sold, and only on one product</h2>
+    <h2>Designs sold on one product type</h2>
 
     <ul>{rows.map(row=><li key={row.key}>
       {row.imageUrl?<img src={row.imageUrl} alt="" width={72} height={72} loading="lazy"/>:<span aria-hidden="true"/>}
@@ -109,8 +109,7 @@ function DesignReach(){
 */
 function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}){
   if(!actions.length)return <section className="cc-tool"><h2>Listings to review</h2>
-    <p className="cc-note">Nothing in your catalog is currently a past seller gone inactive,
-    a sharp slowdown, or an older listing with favorites and no orders.</p></section>;
+    <p className="cc-note">No inactive sellers, sharp sales drops, or older unsold listings with favorites found.</p></section>;
   const groups:Array<{headline:string;rows:CatalogAction[]}>=[];
   for(const action of actions){
     const last=groups[groups.length-1];
@@ -260,7 +259,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
   if (!shown && failed)
     return <main className="shop-map"><p className="shop-map-state">
-      Shop Map could not load just now. Nothing has changed — try again in a moment.
+      Your shop data could not load. Try again.
     </p></main>;
   if (!shown)
     /*
@@ -276,7 +275,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           <div className="p-skeleton p-skeleton-line" style={{ width: "40%", height: 26 }} />
           <div className="p-skeleton p-skeleton-line" style={{ width: "62%" }} />
         </div>
-        <p className="shop-map-state" role="status">Organizing your shop…</p>
+        <p className="shop-map-state" role="status">Loading your shop…</p>
         <div className="p-stack" aria-hidden="true">
           <div className="p-skeleton p-skeleton-card" />
           <div className="p-skeleton p-skeleton-card" />
@@ -294,7 +293,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const sold = shown.soldListings?.listings ?? [];
   const leaders=shown.topListings??[];
   return <main className="shop-map shop-map-redesign">
-    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">{monthName(shown.month)}</p><h1>Your shop, in focus.</h1><p>{shown.shop?.shopName ?? "Shop Map"} · Sales, costs, and product performance.</p></div></header>
+    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">{monthName(shown.month)}</p><h1>Your shop</h1><p>{shown.shop?.shopName ?? "Shop Map"} · Sales, costs, and product performance.</p></div></header>
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     <nav className="shop-map-tabs" aria-label="Shop Map sections">
@@ -326,15 +325,15 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       <ListingCheckPanel/>
       <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
       <section className="shop-map-summary-grid">
-        <article><span>Orders this month</span><strong>{month?.orders ?? 0}</strong><small>{money(month?.revenueMinor,month?.currency)} revenue</small></article>
+        <article><span>Orders this month</span><strong>{month?.orders ?? "—"}</strong><small>{money(month?.revenueMinor,month?.currency)} revenue</small></article>
         <article><span>Active listings</span><strong>{shown.shopTotals?.activeListings ?? 0}</strong><small>in your current catalog</small></article>
         <article><span>Top product theme</span><strong>{niches[0]?.label ?? "Not enough data"}</strong><small>{niches[0] ? `${niches[0].units??"—"} units sold in 90 days` : "Sales will reveal this"}</small></article>
       </section>
     </div>}
 
     {tab === "themes" && <section className="shop-map-card shop-map-themes">
-      <div className="shop-map-section-head"><div><p className="mini-label">PRODUCT THEMES</p><h2>Where your sales are coming from.</h2>
-        <p>{shown.worldsPeriod}. Open a theme to see what is included.</p></div></div>
+      <div className="shop-map-section-head"><div><p className="mini-label">PRODUCT THEMES</p><h2>Sales by product theme</h2>
+        <p>{shown.worldsPeriod?.replace(/^./,letter=>letter.toUpperCase())}. Open a theme to see what is included.</p></div></div>
       <ul className="shop-map-worlds">{niches.map(niche => { const share = recentTotal ? niche.revenueMinor / recentTotal : 0; const members=browseOwnListings(niche.memberListings??[],themeSort,themeQuery,themeState);
         return <li key={niche.worldId} className={open === niche.worldId ? "theme-expanded" : undefined}><button type="button" className="shop-map-world"
           aria-expanded={open === niche.worldId} onClick={() => {setOpen(open === niche.worldId ? "" : niche.worldId);setThemeQuery("");setThemeState("all")}}>
@@ -388,7 +387,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         </div><dl className="shop-map-rows">
           <div><dt>Revenue</dt><dd>{money(month?.revenueMinor,month?.currency)}</dd></div><div><dt>Etsy fees</dt><dd>{money(month?.etsyFeesMinor,month?.currency)}</dd></div>
           <div><dt>Production</dt><dd>{month?.productionCostMinor == null || month?.coverage?.unavailable ? "Not available" : money(-month.productionCostMinor,month.currency)}</dd></div>
-          <div><dt>Refunds recorded</dt><dd>{money(month?.refundsMinor,month?.currency)}</dd></div><div><dt>Adjustments</dt><dd>{money(month?.adjustmentsMinor,month?.currency)}</dd></div><div><dt>Orders</dt><dd>{month?.orders ?? 0}</dd></div></dl>
+          <div><dt>Refunds recorded</dt><dd>{money(month?.refundsMinor,month?.currency)}</dd></div><div><dt>Adjustments</dt><dd>{money(month?.adjustmentsMinor,month?.currency)}</dd></div><div><dt>Orders</dt><dd>{month?.orders ?? "—"}</dd></div></dl>
         {month?.coverage?.unavailable ? <a className="shop-map-fix p-button p-button-primary" href={`/shop-map/costs?month=${encodeURIComponent(shown.month ?? "")}`}>Add production costs</a> : null}</div>}
     </section>}
     {signedInEmail ? null : null}

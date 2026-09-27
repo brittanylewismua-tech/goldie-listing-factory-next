@@ -53,12 +53,12 @@ export function analyzeNiche(shops:NicheShop[],at:number){
  const young=repeated.filter(l=>l.createdAt!==null&&l.createdAt>=at-90*86400);
  const smallShopIds=new Set(shops.filter(s=>s.catalogTotal!==null&&s.catalogTotal<=100).map(s=>s.id));
  const opportunities=phrases.filter(p=>{if(p.shops<3||p.reviews<5||/^(gift for her|gift for him|gift|shirt|tshirt|sweatshirt|hoodie|custom shirt|personalized gift)$/.test(p.phrase))return false;const rr=recent.filter(r=>p.listingIds.includes(r.listingId));const counts=new Map<number,number>();for(const r of rr){const shop=byId.get(r.listingId)!.shopId;counts.set(shop,(counts.get(shop)??0)+1);}return Math.max(...counts.values())/Math.max(1,rr.length)<=.7;}).slice(0,6).map(p=>{const ls=listings.filter(l=>p.listingIds.includes(l.id));
- const rr=recent.filter(r=>p.listingIds.includes(r.listingId)),leading=products.map(product=>({name:product.product,count:rr.filter(r=>byId.get(r.listingId)!.product===product.product).length})).sort((a,b)=>b.count-a.count)[0];
+ const rr=recent.filter(r=>p.listingIds.includes(r.listingId));
  const newer=ls.filter(l=>l.createdAt!==null&&l.createdAt>=at-90*86400&&rr.some(r=>r.listingId===l.id));
  const growth=p.prior>0&&p.reviews>=p.prior+3&&p.reviews>=p.prior*1.5;
- const hypothesis=newer.length>=2?`${newer.length} listings created within 90 days are already receiving reviews. Compare those newer entries with the established listings to identify which treatments buyers are responding to.`
- :growth?`Review activity increased from ${p.prior} to ${p.reviews} between the previous and latest 30-day periods. ${leading?.name??'Products'} account for the most recent reviews; inspect those examples before choosing a test.`
- :`${p.reviews} reviews in the last 30 days across ${p.shops} shops make this a theme worth exploring for ${leading?.name??'products'}. Compare the examples for recurring wording, occasions and visual treatments, then develop an original concept.`;
+ const hypothesis=newer.length>=2?`${newer.length} listings with this phrase were added in the last 90 days and received reviews in the last 30 days.`
+ :growth?`Listings with this phrase received ${p.reviews} reviews in the last 30 days, up from ${p.prior} in the previous 30 days.`
+ :`Listings with this phrase received ${p.reviews} reviews across ${p.shops} shops in the last 30 days.`;
  return {...p,hypothesis,caution:growth?'Review dates lag purchases. A rise in review activity does not establish the same rise in sales.':'The listings have purchase evidence; the phrase itself is not proven to have brought the buyer. Compare the designs and reviews as well.'};});
  return {at,shops:shops.length,listings:listings.filter(l=>l.active).length,reviews30:recent.length,reviewsPrior30:prior.length,complete:shops.length>0&&shops.every(s=>s.catalogDone&&s.reviewsDone),phrases:phrases.slice(0,40),products,buyerThemes,repeated:repeated.slice(0,40),young:young.slice(0,12),smaller:repeated.filter(l=>smallShopIds.has(l.shopId)).slice(0,12),opportunities};
 }

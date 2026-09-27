@@ -30,7 +30,7 @@ test("the overview names the leading product theme", () => {
 
 test("product themes are kept together in their own tab", () => {
   assert.match(client, /tab === "themes"/);
-  assert.match(client, /Where your sales are coming from/);
+  assert.match(client, /Sales by product theme/);
   assert.match(client, /niches\.map\(niche/);
 });
 

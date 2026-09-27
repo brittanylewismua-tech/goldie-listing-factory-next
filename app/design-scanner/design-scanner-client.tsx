@@ -217,8 +217,7 @@ function ListingCheck() {
         onClick={() => void run()}>{busy ? "Checking…" : "Check this listing"}</button>
     </div>
     {error && <p className="p-notice failed" role="alert">{error}</p>}
-    {findings && !findings.length && <p className="empty">Nothing separates this draft from the winners on
-      the things that can be measured here.</p>}
+    {findings && !findings.length && <p className="empty">No major differences found in the measured design features.</p>}
     {findings && findings.length > 0 && <p className="listing-check-against">
       Top 50 for &ldquo;{against}&rdquo;</p>}
     {findings && findings.length > 0 && <div className="listing-check-findings">
@@ -552,7 +551,7 @@ function ScanResult({ result }: { result: Result }) {
           )}
           {result.opportunity && (
             <div className="block">
-              <h2 className="utility-heading">Biggest opportunity</h2>
+              <h2 className="utility-heading">Suggested improvement</h2>
               <p>{result.opportunity}</p>
             </div>
           )}

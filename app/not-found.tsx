@@ -13,10 +13,9 @@ export default function NotFound() {
       <div className="interior-page not-found-page">
         <header>
           <p className="mini-label">PAGE NOT FOUND</p>
-          <h1>That page has moved or never existed.</h1>
+          <h1>Page not found</h1>
           <p>
-            Nothing has happened to your batches. Your saved products, keyword banks and
-            Printify drafts are exactly where you left them.
+            Check the address or return to Listing Factory.
           </p>
         </header>
         <div className="not-found-actions">

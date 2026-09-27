@@ -19,7 +19,7 @@ const client = readFileSync(
 
 test('the server decides the tab, because the client cannot', () => {
   assert.match(page, /searchParams/, 'the page does not read the query string');
-  assert.match(page, /tab === "shops"/);
+  assert.match(page, /requestedTab === "shops"/);
   assert.match(page, /startTab=\{startTab\}/,
     'the client prop that exists for this is still not passed');
 });
@@ -28,12 +28,12 @@ test('the client still accepts the decision', () => {
   assert.match(client, /startTab\?\?\s*tabFromUrl|startTab \?\? tabFromUrl/,
     'the client no longer honours startTab');
   /* And must not overwrite the address it was given on first render. */
-  assert.match(client, /if \(typeof window === "undefined"\s*\) return;/);
+  assert.doesNotMatch(client, /window.history.replaceState/);
 });
 
-test('switching tabs still writes an address that now works', () => {
-  const choose = /const chooseTab = [\s\S]*?\n  \};/.exec(client);
-  assert.ok(choose, 'chooseTab not found');
-  assert.match(choose[0], /url\.searchParams\.set\("tab", "shops"\)/);
-  assert.match(choose[0], /url\.searchParams\.delete\("tab"\)/);
+test('Research links preserve bookmarkable shop and saved-list views', () => {
+ const navigation = readFileSync(new URL('../app/market-watch/research-navigation.tsx', import.meta.url),'utf8');
+ assert.ok(navigation.includes('/market-watch?tab=shops'));
+ assert.ok(navigation.includes('/market-watch?tab=saved'));
+ assert.match(page,/requestedTab === "saved"/);
 });

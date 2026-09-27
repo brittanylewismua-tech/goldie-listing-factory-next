@@ -33,17 +33,9 @@ const icon = (children: React.ReactNode) =>
    for, and a member paying monthly is buying the answer rather than the file. */
 const TOOLS = (summary: Summary | null) => [
   {
-    href: "/market-watch", name: "Market Watch",
-    question: "Which listings deserve a closer look?",
-    what: "Compare Etsy listings, follow keywords and shops, and see new listings and buyer reviews over time.",
-    stat: summary && `${summary.keywords} keyword${summary.keywords === 1 ? "" : "s"} and `
-      + `${summary.shops} shop${summary.shops === 1 ? "" : "s"} followed`,
-    icon: icon(<><path d="M3 17l6-6 4 4 7-7" /><path d="M14 8h7v7" /></>),
-  },
-  {
-    href: "/market-watch/research", name: "Niche Research",
+    href: "/market-watch/research", name: "Research",
     question: "What are buyers choosing in my niche?",
-    what: "Find ten relevant shops and follow their reviewed products, common phrases, prices, and buyer feedback as your niche updates.",
+    what: "Research niches, track keywords and shops, and follow changes to saved listings.",
     stat: null,
     icon: icon(<><circle cx="10" cy="10" r="6" /><path d="m15 15 6 6M7 10h6M10 7v6" /></>),
   },
@@ -88,7 +80,7 @@ export default function CommandCenterClient() {
 
     <div className="cc-home-grid">
       {TOOLS(summary).map(tool => (
-        <Link key={tool.name} className="cc-home-tile" href={tool.href}>
+        <Link key={tool.name} className="cc-home-tile" data-tool={tool.name} href={tool.href}>
           <span className="cc-home-icon" aria-hidden="true">{tool.icon}</span>
           <div className="cc-directory-copy"><h2>{tool.name}</h2><p>{tool.what}</p></div>
           {tool.stat && <span className="cc-home-stat">{tool.stat}</span>}

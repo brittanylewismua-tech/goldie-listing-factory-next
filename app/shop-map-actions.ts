@@ -3,7 +3,7 @@ export type CatalogAction={listingId:number;title:string;headline:string;fact:st
   D1810 · EVERY ROW SAID THE SAME THING.
 
   The headline is the rule that fired, and one rule fires for a whole group of
-  listings, so six rows read "Review favorites without recent orders" six
+  listings, so six rows read "Favorites, but no sales in 90 days" six
   times. The rule now labels the group once; each row carries the figure that
   is true of that listing and no other, which is what a seller is scanning
   for.
@@ -14,9 +14,9 @@ export function catalogActions(listings:Array<{listing_id:number;title:string;st
  return listings.flatMap(row=>{
   const n=counts.get(row.listing_id)??{recent:0,previous:0,ninety:0};
   const base={listingId:row.listing_id,title:row.title};
-  if(row.state!=='active'&&n.ninety>0)return [{...base,headline:'Check a past seller that is no longer active',fact:`${n.ninety} sold in 90 days · now ${row.state}`,evidence:`${n.ninety} non-refunded units recorded in the last 90 days; last recorded listing state: ${row.state}.`,nextStep:'Open the Etsy listing and check why it is unavailable. If you still want to sell it, confirm provider stock, pricing and costs before renewing. Do not renew discontinued or intentionally retired work.',priority:1}];
-  if(row.state==='active'&&n.previous>=5&&n.recent<n.previous/2)return [{...base,headline:'Investigate a sales slowdown',fact:`${n.recent} sold in 30 days, down from ${n.previous}`,evidence:`${n.recent} non-refunded units in the last 30 days versus ${n.previous} in the preceding 30 days.`,nextStep:'Compare stock, price, shipping, promotions and seasonality across those dates. Check Etsy Stats before editing the design. Test one change and record the dates so you can compare the result.',priority:2}];
-  if(row.state==='active'&&n.ninety===0&&row.created_at&&row.created_at<=now-90*86400&&(row.favorites??0)>=5)return [{...base,headline:'Review favorites without recent orders',fact:`${row.favorites} total favorites · nothing sold in 90 days`,evidence:`No non-refunded sale recorded in the last 90 days; ${row.favorites} lifetime favorites. Favorites may be older and are not a conversion rate.`,nextStep:'Check the full checkout price, readable first photo, size help and delivery promise. Choose one change to test on this listing and compare actual orders over equal periods. Do not add more versions until you understand the response.',priority:3}];
+  if(row.state!=='active'&&n.ninety>0)return [{...base,headline:'Previously sold, now inactive',fact:`${n.ninety} sold in 90 days · now ${row.state}`,evidence:`${n.ninety} non-refunded units recorded in the last 90 days; last recorded listing state: ${row.state}.`,nextStep:'Check why this listing is inactive. Before renewing, check stock and current production costs.',priority:1}];
+  if(row.state==='active'&&n.previous>=5&&n.recent<n.previous/2)return [{...base,headline:'Sales have dropped',fact:`${n.recent} sold in 30 days, down from ${n.previous}`,evidence:`${n.recent} non-refunded units in the last 30 days versus ${n.previous} in the preceding 30 days.`,nextStep:'Check Etsy Stats for changes in visits and orders. Review stock, prices, shipping, and any promotions during these dates.',priority:2}];
+  if(row.state==='active'&&n.ninety===0&&row.created_at&&row.created_at<=now-90*86400&&(row.favorites??0)>=5)return [{...base,headline:'Favorites, but no sales in 90 days',fact:`${row.favorites} total favorites · nothing sold in 90 days`,evidence:`No non-refunded sale recorded in the last 90 days; ${row.favorites} lifetime favorites. `,nextStep:'Check the total price with shipping, the first photo, the size guide, and the delivery estimate.',priority:3}];
   return [];
  }).sort((a,b)=>a.priority-b.priority||a.listingId-b.listingId).slice(0,6);
 }

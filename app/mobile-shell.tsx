@@ -18,9 +18,9 @@ import { usePathname } from "next/navigation";
    scanner route redirects to Shop Map and is not a distinct destination. */
 const TABS = [
   { href: "/home", label: "Home", glyph: "◆" },
-  { href: "/market-watch", label: "Watchlist", glyph: "◈" },
   { href: "/market-watch/research", label: "Research", glyph: "⊚" },
   { href: "/shop-map", label: "Your shop", glyph: "▦" },
+  { href: "/listing-factory?step=setup", label: "Listing Factory", glyph: "▤" },
   { href: "/more", label: "More", glyph: "≡" },
 ];
 
@@ -102,7 +102,7 @@ export default function MobileShell() {
   return <>
     <nav className="goldie-tabs" aria-label="Main">
       {TABS.map(tab => {
-        const current = tab.href === activeHref;
+        const current = tab.href === activeHref || tab.label === "Research" && pathname === "/market-watch";
         return <a key={tab.href} href={tab.href} className={current ? "current" : ""}
           aria-current={current ? "page" : undefined}>
           <span aria-hidden="true">{tab.glyph}</span>

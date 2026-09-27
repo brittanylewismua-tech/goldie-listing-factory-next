@@ -33,8 +33,8 @@ const when = (seconds?: number | null) => {
      thousand ingested receipts. */
   if (!seconds) return "not recorded yet";
   const gap = Math.max(0, Math.floor(Date.now() / 1000) - seconds);
-  if (gap < 3_600) return `${Math.max(1, Math.round(gap / 60))} minutes ago`;
-  if (gap < 172_800) return `${Math.round(gap / 3_600)} hours ago`;
+  if (gap < 3_600) { const n=Math.max(1,Math.round(gap/60)); return `${n} minute${n===1?"":"s"} ago`; }
+  if (gap < 172_800) { const n=Math.round(gap/3_600); return `${n} hour${n===1?"":"s"} ago`; }
   return `${Math.round(gap / 86_400)} days ago`;
 };
 
@@ -200,7 +200,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
           action is the point of this state, so it is an action.
         */
         <div className="empty">
-          <p>No Etsy shop connected yet. Connecting it is what everything else here uses.</p>
+          <p>Connect your Etsy shop to get started.</p>
           <a className="p-button p-button-primary" href="/api/etsy/connect">Connect your shop</a>
         </div>
       )}
@@ -210,9 +210,9 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
           <div className="badges">
             {shop.activeForListingFactory
               ? <span className="badge" data-on="yes">Publishing here</span>
-              : <span className="badge">Not the publishing shop</span>}
+              : <span className="badge">Not selected for publishing</span>}
             {shop.canReadSales
-              ? <span className="badge" data-on="yes">Sales visible</span>
+              ? <span className="badge" data-on="yes">Sales connected</span>
               : <span className="badge">Sales not shared</span>}
             {shop.needsReconnect && <span className="badge" data-on="warn">Needs reconnecting</span>}
           </div>
@@ -225,15 +225,14 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
           )}
           {shop.needsReconnect && (
             <p className="fact">
-              Access to this shop has lapsed. Reconnecting brings it
-              back with everything it already knows.
+              Reconnect this shop to resume updates. Your saved data will stay available.
             </p>
           )}
           <div className="row">
             {shop.activeForListingFactory&&shop.canReadSales&&!shop.needsReconnect&&<a className="p-button p-button-primary" href="/shop-map">Open Shop Map</a>}
             {shop.needsReconnect && <a href="/api/etsy/connect">Reconnect</a>}
             {!shop.canReadSales && shop.authorizeSalesUrl && (
-              <a href={shop.authorizeSalesUrl}>Let the platform see sales</a>
+              <a href={shop.authorizeSalesUrl}>Connect sales data</a>
             )}
             {!shop.activeForListingFactory && !shop.needsReconnect && (
               <a href={`/api/etsy/set-active?shop=${shop.shopId}`}>Publish to this shop</a>
@@ -272,7 +271,7 @@ export default function ConnectionsClient({ signedInEmail }: { signedInEmail: st
         <p className="fact">
           {printify?.connected
             ? `Connection updated: ${when(printify.lastSyncAt)}`
-            : "The Listing Factory needs Printify to build listings, and Shop Map needs it to work out what each order cost you to make."}
+            : "Connect Printify to create listings and import production costs."}
         </p>
         <div className="row">
           {printify?.connected

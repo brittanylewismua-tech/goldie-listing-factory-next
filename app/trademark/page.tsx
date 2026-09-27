@@ -155,7 +155,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
     <div className="tm-page interior-page p-grid">
       <header className="drop-head">
         <p className="mini-label p-eyebrow">TRADEMARK TRACKER</p>
-        <h1>Check it before you print it</h1>
+        <h1>Trademark search</h1>
         <p>Find matching marks and review their status and product categories.</p>
       </header>
 
@@ -264,7 +264,7 @@ This note records my review; it is not clearance to use the phrase.`}/>
       </section>}
 
       <p className="tm-note">
-        A clear result means nothing was found rather than nobody owns it.{" "}
+        No matches does not guarantee a phrase is available to use.{" "}
 
         {" "}This is screening information, not legal advice.
       </p>
@@ -292,7 +292,7 @@ This note records my review; it is not clearance to use the phrase.`}/>
     the checker wears the product's chrome and none of the factory's controls,
     and `desktopOnly={false}` keeps it working on a phone.
   */
-  /* The body carries its own header ("Check it before you print it"), so this
+  /* The body carries its own header ("Trademark search"), so this
      wrapper adds none: stacking a second heading above it read as three
      titles in a row. */
   return (

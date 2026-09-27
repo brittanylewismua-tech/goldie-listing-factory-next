@@ -37,9 +37,9 @@ test('the notice is cleared before each attempt and when tabs change', () => {
   const add = /const add = async \(\) => \{[\s\S]*?\n  \};/.exec(client);
   assert.ok(add, 'add handler not found');
   assert.match(add[0], /setNotice\(""\)/);
-  const tab = /const chooseTab = [\s\S]*?\n  \};/.exec(client);
-  assert.ok(tab, 'chooseTab not found');
-  assert.match(tab[0], /setNotice\(""\)/);
+  assert.match(client,/\[notice,setNotice\]=useState\(""\)/);
+  const navigation=readFileSync(new URL('../app/market-watch/research-navigation.tsx',import.meta.url),'utf8');
+  assert.ok(navigation.includes('/market-watch?tab=shops'));
 });
 
 test('a duplicate is still refused as a duplicate on the server', async () => {

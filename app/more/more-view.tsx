@@ -44,9 +44,11 @@ const GROUPS: Group[] = [
     heading: "Command Center",
     rows: [
       {href:"/platform-updates",name:"Etsy + Printify Updates",icon:"marketWatch",what:"Read today’s platform changes and required actions."},
-      {href:"/market-watch",name:"Market Watch",icon:"marketWatch",what:"Compare current Etsy listings and follow keywords and shops."},
-      {href:"/shop-map",name:"Shop Map",icon:"shopMap",what:"Review your catalog, sold listings, and monthly numbers."},
-      {href:"/market-watch/research",name:"Niche Research",icon:"marketWatch",what:"Find niche shops and follow their products, phrases, and buyer feedback."},
+      {href:"/market-watch",name:"Tracked keywords",icon:"marketWatch",what:"Revisit saved searches and track listings from the results."},
+      {href:"/market-watch?tab=shops",name:"Tracked shops",icon:"marketWatch",what:"Follow specific shops and see their listing changes."},
+      {href:"/market-watch?tab=saved",name:"Saved listings",icon:"marketWatch",what:"Check price, favorite, and view changes for listings you saved."},
+      {href:"/shop-map",name:"Your shop",icon:"shopMap",what:"Review your catalog, sold listings, and monthly numbers."},
+      {href:"/market-watch/research",name:"Niche research",icon:"marketWatch",what:"Find niche shops and follow their products, phrases, and buyer feedback."},
       {href:"/hot-list",name:"Hot List",icon:"marketWatch",what:"Browse recent activity by product type and keyword."},
       { href: "/trademark", name: "Trademark Tracker", icon: "trademark",
         /* D1693 · "the federal register" claims a complete search. The tool
@@ -60,14 +62,14 @@ const GROUPS: Group[] = [
     heading: "Shop setup",
     rows: [
       { href: "/connections", name: "Etsy and Printify", icon: "connections",
-        what: "Which shops are connected, and what each one can see." },
+        what: "Manage your connected shops and permissions." },
     ],
   },
   {
     heading: "Account",
     rows: [
       { href: "/account/settings", name: "Account", icon: "account",
-        what: "Who you are signed in as, your access, and the data held about you." },
+        what: "Manage your sign-in, subscription, and saved data." },
       { href: "/usage", name: "Usage and limits", icon: "usage",
         what: "Your monthly listing allowance and remaining credits." },
       { href: "/goals", name: "Listing goal", icon: "goals",
@@ -111,8 +113,7 @@ export default function MoreView({ needsName = "" }: { needsName?: string }) {
       {needsName && (
         <p className="p-notice p-notice-bad ts-needs" role="status">
           <b>{needsName.charAt(0).toUpperCase() + needsName.slice(1)} is not part of your plan.</b>
-          You were brought here because that is where plan and access live. Nothing
-          about your shops or saved work has changed.
+          Check Usage and limits below to review your plan.
         </p>
       )}
 

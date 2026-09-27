@@ -47,7 +47,7 @@ test("changing the surface re-reads the photographs", () => {
   /* The surface decides what the print area MEANS, so a preparation made under
      the old one no longer describes the scene. */
   assert.match(route, /preparationJson:null,preparationStatus:"queued"/);
-  assert.match(page, /Changing the surface reads every photograph in this set again/);
+  assert.match(page, /Changing the surface rechecks placement on every photo in this set/);
 });
 
 test("renaming alone does not discard the preparations", () => {

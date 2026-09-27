@@ -72,7 +72,7 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
   const home = items.find(item => item.group === "home");
   const factory = items.find(item => item.key === "factory");
   const factoryChildren = items.filter(item => item.group === "factory" && item.key !== "factory");
-  const command = items.filter(item => item.group === "command");
+  const command = items.filter(item => item.group === "command" && item.key !== "market-watch");
   const connections = items.find(item => item.group === "connections");
   const navigate = (event: MouseEvent<HTMLAnchorElement>, item: SuiteNavItem) => {
     if (item.group === "command" && commandCenterAccess === false) {
@@ -87,8 +87,8 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
     const newTab = keywordBankInNewTab && item.key === "keywords";
     const locked = item.group === "command" && commandCenterAccess === false;
     return <a key={item.key} href={item.href}
-      className={`${item.key === active ? "active" : ""}${child ? " suite-nav-child" : ""}${locked ? " locked" : ""}`.trim()}
-      aria-current={item.key === active ? "page" : undefined}
+      className={`${(item.key === active || current && item.key === "niche-research" && active === "market-watch") ? "active" : ""}${child ? " suite-nav-child" : ""}${locked ? " locked" : ""}`.trim()}
+      aria-current={(item.key === active || current && item.key === "niche-research" && active === "market-watch") ? "page" : undefined}
       aria-label={locked ? `${item.label}, Full Suite membership required` : undefined}
       target={newTab ? "_blank" : undefined}
       rel={newTab ? "noopener noreferrer" : undefined}
@@ -100,7 +100,7 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
   };
 
   return <>
-    {current ? <nav className="current-navigation" aria-label="Product navigation">{["home","niche-research","market-watch","shop-map"].map(key=>{const item=items.find(i=>i.key===key);return item?link({...item,label:({home:"Home","niche-research":"Research","market-watch":"Watchlist","shop-map":"Your shop"} as Record<string,string>)[key]}):null;})}<details className="current-more"><summary>More tools<svg className="current-more-chevron" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg></summary><div className="current-nav-group" role="group" aria-label="Listing tools"><span className="current-nav-group-label">Listing tools</span>{factoryChildren.map(i=>link(i))}<a href="/goals"><NavIcon name="goals"/><span>Listing goals</span></a></div><div className="current-nav-group" role="group" aria-label="Seller tools"><span className="current-nav-group-label">Seller tools</span>{items.filter(i=>i.group==="command"&&!["niche-research","market-watch","shop-map"].includes(i.key)).map(i=>link(i))}<a href="/command-center"><NavIcon name="more"/><span>All tools</span></a></div><div className="current-nav-group" role="group" aria-label="Shop setup">{connections&&link(connections)}</div></details></nav> : <nav className="top-nav suite-sidebar-nav" aria-label="Product navigation">
+    {current ? <nav className="current-navigation" aria-label="Product navigation">{["home","niche-research","shop-map"].map(key=>{const item=items.find(i=>i.key===key);return item?link({...item,label:({home:"Home","niche-research":"Research","market-watch":"Watchlist","shop-map":"Your shop"} as Record<string,string>)[key]}):null;})}<section className="current-factory-section" aria-label="Listing Factory">{factory&&link(factory)}<div className="current-factory-children">{factoryChildren.map(i=>link(i))}<a href="/goals"><NavIcon name="goals"/><span>Listing goals</span></a></div></section><details className="current-more"><summary>More tools<svg className="current-more-chevron" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg></summary><div className="current-nav-group" role="group" aria-label="Seller tools"><span className="current-nav-group-label">Seller tools</span>{items.filter(i=>i.group==="command"&&!["niche-research","market-watch","shop-map"].includes(i.key)).map(i=>link(i))}<a href="/command-center"><NavIcon name="more"/><span>All tools</span></a></div><div className="current-nav-group" role="group" aria-label="Shop setup">{connections&&link(connections)}</div></details></nav> : <nav className="top-nav suite-sidebar-nav" aria-label="Product navigation">
       {home && link(home)}
       {factory && <div className={`suite-nav-section${FACTORY_KEYS.has(active) ? " current" : ""}`}>
         <div className="suite-nav-parent">

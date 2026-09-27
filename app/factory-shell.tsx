@@ -66,9 +66,9 @@ export const NAV: SuiteNavItem[] = [
   { key: "mockups", label: "Mockup Sets", href: "/mockups", icon: "mockups", group: "factory" },
   { key: "usage", label: "Usage", href: "/usage", icon: "usage", group: "factory" },
   { key: "platform-updates", label: "Etsy + Printify Updates", href: "/platform-updates", icon: "marketWatch", group: "command" },
-  { key: "market-watch", label: "Market Watch", href: "/market-watch", icon: "marketWatch", group: "command" },
-  { key: "niche-research", label: "Niche Research", href: "/market-watch/research", icon: "marketWatch", group: "command" },
-  { key: "shop-map", label: "Shop Map", href: "/shop-map", icon: "shopMap", group: "command" },
+  { key: "market-watch", label: "Tracked keywords", href: "/market-watch", icon: "marketWatch", group: "command" },
+  { key: "niche-research", label: "Research", href: "/market-watch/research", icon: "marketWatch", group: "command" },
+  { key: "shop-map", label: "Your shop", href: "/shop-map", icon: "shopMap", group: "command" },
   { key: "trademark", label: "Trademark Tracker", href: "/trademark", icon: "trademark", group: "command" },
   { key: "connections", label: "Connections", href: "/connections", icon: "connections", group: "connections" },
 ];
@@ -195,7 +195,6 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
             batch so the money action keeps its weight. */}
       </div>
       <div className="approved-sidebar-footer">
-        {!isFactoryPage&&<a className="current-factory-link" href="/listing-factory?step=setup">Listing Factory <span aria-hidden="true">→</span></a>}
         {isFactoryPage && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
           <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>}
         {/*

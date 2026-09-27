@@ -5,7 +5,7 @@ import "./market-watch.css";
 
 /* The tab says what this page is. There is no product name to append, and
    a placeholder in a tab title is how a stand-in becomes permanent. */
-export const metadata = { title: "Market Watch" };
+export const metadata = { title: "Research" };
 
 
 /*
@@ -30,11 +30,12 @@ export default async function MarketWatchPage(
 
     The prop already existed for this. Nothing passed it.
   */
-  const startTab = (await searchParams)?.tab === "shops" ? "shops" as const : "niches" as const;
+  const requestedTab = (await searchParams)?.tab;
+  const startTab = requestedTab === "shops" ? "shops" as const : requestedTab === "saved" ? "saved" as const : "niches" as const;
   return (
     /* D1575 · the same rail, topbar, wordmark and footer as the Listing
        Factory. This page rendered as a bare column on white before. */
-    <FactoryShell active="market-watch" title="Market Watch" desktopOnly={false}>
+    <FactoryShell active="market-watch" title="Research" desktopOnly={false}>
       <MarketWatchClient signedInEmail={user.email} startTab={startTab} />
     </FactoryShell>
   );

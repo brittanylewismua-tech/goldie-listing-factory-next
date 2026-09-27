@@ -105,14 +105,13 @@ function DeleteAccount({ counts, onDone }: { counts: number; onDone: () => void 
           <b>This could not be removed</b>
           <ul>{done.incomplete!.map(step => <li key={step.say}>{step.say}</li>)}</ul>
           <p>
-            It has been recorded. Asking again resumes from here and attempts only
-            these — nothing already removed is touched a second time.
+            Try again to remove the remaining data.
           </p>
         </div>
       )}
       {(done.kept ?? []).length > 0 && (
         <div className="acc-kept">
-          <b>Kept, because it has to be</b>
+          <b>Records we must keep</b>
           <ul>{done.kept!.map(line => <li key={line}>{line}</li>)}</ul>
           <p>Billing records are kept for the period the law requires.</p>
         </div>
@@ -309,7 +308,7 @@ export default function AccountClient({ email }: { email: string }) {
             </ul>
           )}
           {loaded && data && rows.length === 0 && (
-            <p className="acc-none">Nothing is held about you yet beyond your sign-in.</p>
+            <p className="acc-none">Only your sign-in details are saved.</p>
           )}
           {loaded && data?.kept && data.kept.length > 0 && (
             <details className="acc-detail">

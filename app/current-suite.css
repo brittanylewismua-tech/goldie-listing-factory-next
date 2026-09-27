@@ -115,7 +115,7 @@
 #suite-workspace .tm-hit{border:0!important;border-bottom:1px solid #e4e4e9!important;border-radius:0!important;box-shadow:none!important}
 #suite-workspace .platform-brief-page{max-width:850px!important;padding:0!important}
 #suite-workspace .platform-brief-item{padding:26px 0!important;border:0!important;border-bottom:1px solid #e4e4e9!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
-#suite-workspace .platform-brief-empty{background:white!important;border:1px solid #e4e4e9!important;box-shadow:none!important;padding:24px!important;border-radius:8px!important}
+
 #suite-workspace .platform-brief-page>footer{padding:24px 0!important}
 @media(max-width:1000px){
 #suite-workspace .cc-home-tile{grid-template-columns:32px 1fr;gap:18px!important}
@@ -270,7 +270,7 @@
 #suite-workspace .factory-work :is(button,.p-button){background:#fff;color:#242329;border-color:#d5d5d8}
 #suite-workspace .factory-work :is(.p-button-primary,.nr-primary,.primary,.keyword-hero>button,.bank-editor button[type=submit]){background:#252429!important;color:#fff!important;border:1px solid #252429!important;font-weight:600!important}
 #suite-workspace .factory-work :is(button,a,input,select,summary):focus-visible{outline:3px solid #b80b5e!important;outline-offset:3px!important}
-#suite-workspace .factory-work :is(.p-card,.cc-tool,.shop-map-card,.tm-watches,.winner-profile,.listing-check,.usage-card,.acc-card,.managementLibrary,.management-create,.bank-library,.goals-history,.nr-card,.nr-search,.conn .shop,.platform-brief-empty){border-color:#e4e4e9!important;border-radius:16px!important;box-shadow:0 2px 5px #24232903!important;padding:24px!important;background:#fff!important}
+#suite-workspace .factory-work :is(.p-card,.cc-tool,.shop-map-card,.tm-watches,.winner-profile,.listing-check,.usage-card,.acc-card,.managementLibrary,.management-create,.bank-library,.goals-history,.nr-card,.nr-search,.conn .shop){border-color:#e4e4e9!important;border-radius:16px!important;box-shadow:0 2px 5px #24232903!important;padding:24px!important;background:#fff!important}
 #suite-workspace .factory-work :is(.nr-tabs,.shop-map-tabs,.tabs.p-tabs,.shop-detail-tabs){gap:26px!important;margin-bottom:28px!important;border-bottom-color:#dedee1!important}
 #suite-workspace .factory-work :is(.nr-tabs,.shop-map-tabs,.tabs.p-tabs,.shop-detail-tabs) button{background:transparent!important;border-radius:0!important;min-height:44px!important;padding:10px 0 14px!important;color:#666570!important}
 #suite-workspace .factory-work :is(.nr-tabs button[aria-current=page],.shop-map-tabs button[aria-current=page],.shop-map-tabs button.active,.p-tab.active,.p-tab[aria-selected=true]){color:#242329!important;border-bottom:3px solid #ff2ca6!important}
@@ -440,7 +440,7 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .current-more a{min-height:38px;padding:10px 16px!important;font-size:13px!important}
 #suite-workspace .approved-sidebar-footer{margin-top:auto!important;border:0!important;padding-top:28px!important}
 #suite-workspace .approved-sidebar-footer>small{display:none!important}
-#suite-workspace .current-factory-link{display:flex;justify-content:space-between;padding:16px 10px;border-bottom:1px solid #e4e4e9;font-size:14px;font-weight:650;color:#242329;text-decoration:none}
+
 #suite-workspace .factory-work{padding:33px 40px 50px!important}
 #suite-workspace .factory-work>:is(main,div){max-width:1480px!important}
 #suite-workspace .factory-work h1{font-size:42px!important;letter-spacing:-1.7px!important;line-height:1.15!important}
@@ -619,7 +619,7 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .current-nav-group-label{display:block;padding:0 12px 6px;color:#716d77;font-size:12px;font-weight:500}
 #suite-workspace .current-more a{font-size:13px!important;min-height:36px!important;padding:8px 12px!important}
 #suite-workspace .approved-sidebar-footer{padding-top:16px!important}
-#suite-workspace .current-factory-link{padding:12px;font-weight:600;border-bottom:0}
+
 #suite-workspace .factory-account-wrap{border-top:1px solid #e6e3e7!important;margin-top:8px!important;padding-top:8px!important}
 #suite-workspace .factory-account{background:transparent!important;gap:10px!important;min-height:52px!important;padding:8px 10px!important}
 #suite-workspace .factory-account:hover{background:#f0eef1!important}
@@ -659,13 +659,13 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .factory-work .management-create-foot>button:disabled{background:#e9e7eb!important;color:#66616b!important;border-color:#e9e7eb!important;opacity:1!important}
 #suite-workspace .factory-work .current-feature h2{font-size:32px!important;font-weight:700!important;line-height:1.15!important;letter-spacing:-1px!important}
 
-/* Page titles use a separate, more open display voice. Scope excludes the factory. */
+/* Match the approved Current prototype typography. Scope excludes the factory. */
 #suite-workspace .factory-work h1,
 #suite-workspace .factory-work .current-home-feature h2,
 #suite-workspace .factory-work .current-feature h2 {
-  font-family:'Bricolage Grotesque Variable',Arial,sans-serif!important;
-  font-weight:600!important;
-  letter-spacing:-.025em!important;
+  font-family:'Manrope Variable',Manrope,Arial,sans-serif!important;
+  font-weight:700!important;
+  letter-spacing:-.038em!important;
   line-height:1.12!important;
   font-synthesis:none;
   text-wrap:balance;
@@ -746,11 +746,44 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fff0f6!important;c
 #suite-workspace .current-buyer-more>summary{padding:8px 0!important;font-size:13px!important;color:#666570!important;cursor:pointer}
 #suite-workspace .current-buyer-more[open]>summary{margin-bottom:14px}
 
-/* Large surfaces stay quiet; pink frames the feature rather than filling it. */
-#suite-workspace .factory-work :is(.current-feature,.current-home-feature,.current-money-total){background:#fff!important;border:1px solid #edcbdc!important;box-shadow:inset 0 3px 0 #ff2ca6!important}
+/* A softened solid pink keeps Current’s feature-block hierarchy without neon glare. */
+#suite-workspace .factory-work :is(.current-feature,.current-home-feature,.current-money-total){background:#ffd1e8!important;border:1px solid transparent!important;box-shadow:none!important}
 #suite-workspace .factory-work .current-pill{background:#fff0f6!important;border-color:#f1d5e3!important;color:#8d285b!important}
 #suite-workspace .factory-work .current-feature button,
 #suite-workspace .factory-work .current-home-feature .current-button,
 #suite-workspace .factory-work .current-home-feature .current-circle-arrow{background:#242329!important;color:#fff!important;border-color:#242329!important}
 #suite-workspace .factory-work .current-feature p{color:#53515b!important}
-#suite-workspace .factory-work .cc-home-tile:nth-child(2){background:#fff!important;border-color:#edcbdc!important;box-shadow:inset 0 3px 0 #ff2ca6!important}
+#suite-workspace .factory-work .cc-home-tile:nth-child(2){background:#ffd1e8!important;border-color:transparent!important;box-shadow:none!important}
+
+#suite-workspace .factory-work h1{font-weight:750!important}
+
+#suite-workspace .current-factory-section{margin-top:18px;padding-top:18px;border-top:1px solid #e5e2e6}
+#suite-workspace .current-factory-section>a{font-weight:750!important;color:#242329!important}
+#suite-workspace .current-factory-children{padding-left:10px}
+#suite-workspace .current-factory-children>a{font-size:12px!important;min-height:34px!important;padding-top:7px!important;padding-bottom:7px!important}
+body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;text-align:center}
+
+/* A dark navigation rail separates tools from the light working area. */
+#suite-workspace>.topbar{background:#19181c!important;border-right:1px solid #19181c!important}
+#suite-workspace>.topbar .current-logo-text{color:#fff!important}
+#suite-workspace .current-navigation a,#suite-workspace .current-more summary{color:#d3cfd8!important}
+#suite-workspace .current-navigation a:hover,#suite-workspace .factory-account:hover{background:#302d35!important;color:#fff!important}
+#suite-workspace .current-navigation a.active{background:#3d2936!important;color:#ffb5da!important;box-shadow:none!important}
+#suite-workspace .current-factory-section{border-color:#3b3740}
+#suite-workspace .current-factory-section>a{color:#fff!important}
+#suite-workspace .current-nav-group-label{color:#a8a1af}
+#suite-workspace .factory-account-wrap{border-color:#3b3740!important}
+#suite-workspace .factory-account,#suite-workspace .factory-account-label strong{color:#fff!important}
+#suite-workspace .factory-avatar{background:#3d2936!important;color:#ffb5da!important}
+#suite-workspace .research-navigation{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:22px;margin-bottom:26px;border-bottom:1px solid #dfdce2}
+#suite-workspace .research-navigation a{padding:9px 13px;border-radius:9px;color:#58525f;text-decoration:none;font-size:13px;font-weight:650;background:#fff;border:1px solid #e5e1e7}
+#suite-workspace .research-navigation a[aria-current=page]{color:#fff;background:#242329;border-color:#242329}
+@media(max-width:600px){#suite-workspace .research-navigation{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:22px;padding-bottom:18px}#suite-workspace .research-navigation a{min-height:44px;display:flex;align-items:center;justify-content:center;font-size:12px;padding:8px}}
+#suite-workspace>.topbar .top-actions,#suite-workspace>.topbar .approved-sidebar-footer{background:transparent!important;color:#d3cfd8!important}
+#suite-workspace>.topbar .factory-account-label{color:#d3cfd8!important}
+
+#suite-workspace .factory-work .cc-home-tile[data-tool="Research"]{background:#ffd1e8!important;color:#242329!important;border-color:transparent!important;box-shadow:none!important}
+#suite-workspace .factory-work .cc-home-tile[data-tool="Shop Map"]{background:#242329!important;color:white!important;border-color:transparent!important;box-shadow:none!important}
+#suite-workspace .factory-work .cc-home-tile[data-tool="Shop Map"] :is(h2,p,span){color:white!important}
+#suite-workspace .factory-work .cc-home-tile[data-tool="Trademark Tracker"]{background:#fff!important;color:#242329!important}
+#suite-workspace .factory-work .cc-home-tile[data-tool="Trademark Tracker"] :is(h2,p,span){color:#242329!important}

@@ -74,7 +74,7 @@ test("every interior page says what it is in the tab", () => {
   for (const [route, title] of [
     ["shop-map", "Shop Map"],
     ["shop-map/costs", "Production costs"],
-    ["market-watch", "Market Watch"],
+    ["market-watch", "Research"],
   ]) {
     const page = read(`${route}/page.tsx`);
     assert.match(page, new RegExp(`title: "${title}"`),
@@ -280,7 +280,7 @@ test("a fixture that lives in a sub-view opens in that sub-view", async () => {
   /* And the tab is a real address, not only a preview hook. */
   const client = read("market-watch/market-watch-client.tsx");
   assert.match(client, /const tabFromUrl = /);
-  assert.match(client, /url\.searchParams\.set\("tab", "shops"\)/);
+  assert.ok(read("market-watch/research-navigation.tsx").includes("/market-watch?tab=shops"));
 });
 
 test("the scanner shows what it measured about the artwork", () => {

@@ -71,7 +71,7 @@ test("opening Shop Map cannot change the publishing shop", () => {
 test("the connections screen states which shop publishes, separately from sales", () => {
   const connections = read("app/connections/connections-client.tsx");
   assert.match(connections, /Publishing here/);
-  assert.match(connections, /Sales visible/);
+  assert.match(connections, /Sales connected/);
   /* And says plainly that the two are not the same decision. */
   assert.match(connections, /must not change which shop the Listing\s*\n?\s*\* Factory publishes to/);
 });
@@ -114,15 +114,15 @@ test("watches are private even though collection is shared", () => {
 
 /* ------------------------------ navigation */
 
-test("the Watch tab goes to Market Watch", () => {
-  assert.match(SHELL, /href: "\/market-watch", label: "Watchlist"/);
+test("Research replaces the duplicate Watchlist destination", () => {
+  assert.match(SHELL, /href: "\/market-watch\/research", label: "Research"/);
   assert.ok(!SHELL.includes('href: "/hot-list"'), "the Watch tab still points at Hot List");
 });
 
 test("the five mobile tabs lead to live distinct tools", () => {
   // The retired Scan route redirects to My Shop; keep the center shortcut useful.
   const labels = [...SHELL.matchAll(/label: "([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(labels, ["Home", "Watchlist", "Research", "Your shop", "More"]);
+  assert.deepEqual(labels, ["Home", "Research", "Your shop", "Listing Factory", "More"]);
   assert.match(SHELL, /href: "\/market-watch\/research", label: "Research"/);
   assert.doesNotMatch(SHELL, /href: "\/design-scanner"/);
 });

@@ -55,7 +55,7 @@ export default function SuiteSearch({ items }: { items: SuiteNavItem[] }) {
 
   const pages: Hit[] = items.map(item => ({
     key: `page:${item.key}`, label: item.label, note: "Page", href: item.href,
-  }));
+  })).concat([{key:"page:tracked-shops",label:"Tracked shops",note:"Research",href:"/market-watch?tab=shops"},{key:"page:saved-listings",label:"Saved listings",note:"Research",href:"/market-watch?tab=saved"}]);
 
   const show = useCallback(() => setOpen(true), []);
 
