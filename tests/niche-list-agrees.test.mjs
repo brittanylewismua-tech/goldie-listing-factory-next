@@ -34,9 +34,9 @@ test('the three figures the list shows do not depend on review counts', () => {
   assert.equal(withReviews.shops, withoutReviews.shops);
 });
 
-test('the per-member figure is not baked into a shared count', () => {
-  /* "New since you last looked" belongs to one member; the list is the same
-     for everyone, so it must not be computed there. */
+test('the per-member figure needs a clock and is zero without one', () => {
+  /* "New since you last looked" belongs to one member, so summarize refuses
+     to guess it: with no clock the answer is zero, never a stale count. */
   const now = 1_789_100_000;
   const rows = [evidence({ firstConfirmedAt: now - 100 })];
   assert.equal(summarize(rows, now).newSinceLastBrief, 0);
@@ -48,8 +48,21 @@ test('both paths count through the same function, not two copies of it', () => {
   const route = readFileSync(new URL('../app/api/market-watch/niches/route.ts', import.meta.url), 'utf8');
   /* One summarize import, used by readNiche and by the list builder. */
   assert.match(brief, /summariesForWatches/);
-  assert.match(brief, /summarize\(evidence, now\)/);
   assert.match(brief, /const summary = summarize\(evidence, now, \{ since: watch\?\.lastOpened \?\? 0 \}\)/);
+  /*
+    D1892 · The keyword list is built from one member's own watches, so it
+    carries their clock too. It used to call summarize with no "since" at all,
+    which left the homepage to read the figure out of a frozen history
+    snapshot — and a snapshot cannot be revised when opening the keyword
+    resets the clock, so the homepage advertised listings the page behind it
+    had none of. Both paths now pass the same clock.
+  */
+  assert.match(brief, /summarize\(evidence, now, \{ since: watch\.lastOpened \?\? 0 \}\)/,
+    'the keyword list is counting against no clock again');
+  /* And both count only rows that can actually be shown. */
+  assert.match(brief, /row\.nicheKey === watch\.key && row\.title/,
+    'an untitled row can be counted but never displayed');
+  assert.match(brief, /const showable = rows\.filter\(row => row\.title\)/);
   /* The route must not compute counts of its own. */
   const stripped = route.replace(/\/\*[\s\S]*?\*\//g, '');
   assert.equal(/moving:\s*\w+\.filter/.test(stripped), false,

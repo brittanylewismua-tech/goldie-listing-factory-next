@@ -6,6 +6,7 @@ import { env } from "cloudflare:workers";
 import { memberUsage } from "@/app/spend-guard";
 import { registerSize } from "@/app/trademark-register";
 import { watchesFor } from "@/app/niche-watch-store";
+import { summariesForWatches } from "@/app/niche-brief";
 import { dayInShopTimezone, isStale } from "@/app/finance-freshness";
 import { RULE_VERSION } from "@/app/finance-rollup";
 import { monthOf } from "@/app/finance-month";
@@ -156,19 +157,24 @@ export const GET = withErrorLog("home-status", async () => {
 
   /* Watched niches carrying something new since the last brief. */
   try {
+    /*
+      D1892 · THE FIGURE AND THE PAGE IT OPENS COUNT THE SAME THING.
+
+      This block used to read newSinceLastBrief out of the last saved
+      niche_watch_history row. That number was frozen at the moment the scan
+      wrote it. Opening the keyword updates last_opened, so the page the
+      figure links to correctly had nothing new to show, while the homepage
+      went on advertising two listings from a snapshot that could not be
+      revised. The count is now taken from the same live computation the
+      keyword page uses, so opening a figure always lands on exactly the
+      listings it counted.
+    */
     const saved = await watchesFor(user.userId);
+    const summaries = await summariesForWatches(saved, now);
     const moved: Array<{ phrase: string; newly: number }> = [];
     for (const watch of saved) {
-      const rows = await db.prepare(
-        `SELECT payload_json AS payload FROM niche_watch_history
-          WHERE niche_key = ? ORDER BY observed_at DESC LIMIT 1`)
-        .bind(watch.key).first<{ payload: string }>();
-      if (!rows) continue;
-      try {
-        const parsed = JSON.parse(rows.payload) as { newSinceLastBrief?: number };
-        const newly = Number(parsed.newSinceLastBrief ?? 0);
-        if (newly > 0) moved.push({ phrase: watch.phrase, newly });
-      } catch { /* skip */ }
+      const newly = summaries.get(watch.key)?.newSinceLastBrief ?? 0;
+      if (newly > 0) moved.push({ phrase: watch.phrase, newly });
     }
     if (moved.length) blocks.niches = moved;
   } catch { /* skip */ }

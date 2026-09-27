@@ -106,7 +106,8 @@ function listingFrom(row: Row, now: number, since = 0): MarketListing {
 export async function readNiche(userId: string, _terms: string[], key: string, now: number) {
   const rows = await rowsFor([key], now);
   const watch = (await watchesFor(userId)).find(row => row.key === key);
-  const evidence = evidenceFor(rows);
+  const showable = rows.filter(row => row.title);
+  const evidence = evidenceFor(showable);
   const summary = summarize(evidence, now, { since: watch?.lastOpened ?? 0 });
   const since = watch?.lastOpened ?? 0;
   /*
@@ -118,7 +119,7 @@ export async function readNiche(userId: string, _terms: string[], key: string, n
     at the front of the list, so opening the figure can always show all of
     them.
   */
-  const all = rows.filter(row => row.title).map(row => listingFrom(row, now, since));
+  const all = showable.map(row => listingFrom(row, now, since));
   const listings = [...all.filter(row => row.startedSince), ...all.filter(row => !row.startedSince)]
     .slice(0, 36);
   return { key, summary, window: summary.windowSeconds ? describeWindow(summary.windowSeconds) : null,
@@ -127,13 +128,25 @@ export async function readNiche(userId: string, _terms: string[], key: string, n
 }
 
 export async function summariesForWatches(
-  watches: Array<{ key: string; terms: string[] }>, now: number,
+  watches: Array<{ key: string; terms: string[]; lastOpened?: number }>, now: number,
 ) {
   const rows = await rowsFor(watches.map(watch => watch.key), now);
   const out = new Map<string, ReturnType<typeof summarize>>();
   for (const watch of watches) {
-    const evidence = evidenceFor(rows.filter(row => row.nicheKey === watch.key));
-    out.set(watch.key, summarize(evidence, now));
+    /*
+      D1892 · ONE COMPUTATION, NOT THREE.
+
+      "Started selling since you last looked" was being counted in three
+      places: here with no clock at all, inside readNiche against the watch's
+      last_opened, and on the homepage out of a saved niche_watch_history
+      snapshot. Opening a keyword resets last_opened but cannot reach back and
+      change a snapshot already written, so the homepage went on offering two
+      listings to a page that had none left to show. Every caller now counts
+      against the same clock, from the same rows the page can display.
+    */
+    const evidence = evidenceFor(
+      rows.filter(row => row.nicheKey === watch.key && row.title));
+    out.set(watch.key, summarize(evidence, now, { since: watch.lastOpened ?? 0 }));
   }
   return out;
 }
