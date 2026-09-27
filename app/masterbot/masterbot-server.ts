@@ -62,6 +62,22 @@ export type MasterbotPlaybook = {
   allowed: boolean; section: string; found?: boolean; playbook?: string;
 };
 
+/* Asks Kajabi, live, whether this member's Mastermind purchase is still
+   active, and records the answer before the database gate reads it. Someone
+   who quits the Mastermind has a deactivated purchase and is locked out on
+   their next request (answers are reused for at most 10 minutes). */
+export async function refreshMembership(token: string): Promise<void> {
+  try {
+    await fetch(`${SUPABASE_URL}/functions/v1/masterbot-membership`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+  } catch {
+    /* The gate below still decides from the last recorded answer. */
+  }
+}
+
 export const masterbotProfile = (token: string) =>
   rpc<MasterbotProfile>("masterbot_profile", token);
 
