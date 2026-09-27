@@ -5,7 +5,7 @@ import type {ResearchView} from '@/app/niche-research-view';
 import type {BuyerReport} from '@/app/niche-buyer-evidence';
 const productName=(s:string)=>({tee:'Shirts',tank:'Tank tops',crewneck:'Sweatshirts',hoodie:'Hoodies',mug:'Mugs',tote:'Totes',longSleeve:'Long sleeves',phoneCase:'Phone cases',poster:'Posters',sticker:'Stickers',pillow:'Pillows',hat:'Hats',blanket:'Blankets',other:'Other products',digital:'Digital downloads',mixedApparel:'Mixed apparel'}[s]??s);
 const money=(n:number,currency:string)=>new Intl.NumberFormat(undefined,{style:'currency',currency,maximumFractionDigits:n%100?2:0}).format(n/100);
-export default function CurrentOverview({project,report,onProducts,onDetails,loading,error,onRetry}:{project:ResearchView;report:BuyerReport|null;onProducts:(ids:number[])=>void;onDetails?:()=>void;loading:boolean;error:string;onRetry:()=>void}){
+export default function CurrentOverview({project,report,onProducts,onDetails,loading,error,onRetry}:{project:ResearchView;report:BuyerReport|null;onProducts:(ids:number[])=>void;onDetails?:(title:string)=>void;loading:boolean;error:string;onRetry:()=>void}){
  const [selected,setSelected]=useState('products');
  const overview=useRef<HTMLElement>(null);
  function select(id:string){setSelected(id);scrollWorkspaceTo(overview.current);}
@@ -28,7 +28,7 @@ export default function CurrentOverview({project,report,onProducts,onDetails,loa
      <h2>{finding?finding.title:'Designs & prices'}</h2>
      {!finding&&<p>Explore the products in this niche, with current prices and the buyer feedback behind them.</p>}
      <button className="co-primary" onClick={()=>onProducts(ids)}>{finding?'See the products':'Browse '+(primary?productName(primary.product).toLowerCase():'products')} <span aria-hidden="true">→</span></button>
-     {finding&&<button className="co-text" onClick={onDetails}>Read the supporting reviews →</button>}
+     {finding&&<button className="co-text" onClick={()=>onDetails?.(finding.title)}>Read the supporting reviews →</button>}
     </div>
     <div className="co-photo-story">
      <div className="co-photos">{photos.map(l=><button key={l.id} onClick={()=>onProducts([l.id])} aria-label={`Open ${l.title}`}><img src={l.image} alt={l.title}/><span>{l.price!==null&&l.currency?money(l.price,l.currency):'View product'}</span></button>)}</div>
