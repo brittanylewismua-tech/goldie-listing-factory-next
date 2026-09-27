@@ -940,7 +940,7 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .nr.nr-library .nr-search,
 #suite-workspace .cc-home-tile[data-tool="Research"] {
  background-color:#fff!important;
- background-image:linear-gradient(#ee6fc055 1px,transparent 1px),linear-gradient(90deg,#ee6fc055 1px,transparent 1px)!important;
+ background-image:linear-gradient(#ee6fc018 1px,transparent 1px),linear-gradient(90deg,#ee6fc018 1px,transparent 1px)!important;
  background-size:32px 32px!important;
  border:1px solid #000000!important;
  border-top:8px solid #ee6fc0!important;

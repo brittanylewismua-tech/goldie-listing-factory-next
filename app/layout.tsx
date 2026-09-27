@@ -76,7 +76,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     {/* Keep install metadata in the actual head. The runtime streams generated
         link metadata into a body div, where Chrome ignores the manifest. */}
     <link rel="manifest" href="/manifest.webmanifest"/>
-    <link rel="icon" href="/goldie-g.png"/>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=g-1853"/>
     <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
     <meta name="mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-capable" content="yes"/>
