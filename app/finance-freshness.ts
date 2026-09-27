@@ -64,7 +64,7 @@ export function freshnessNote(
   if (!asOf) return "";
   const day = dayInShopTimezone(asOf, timezone);
   if (!isStale(asOf, nowSeconds))
-    return `Worked out from your sales up to ${day}.`;
-  return `Worked out from your sales up to ${day}. Anything sold since then `
-    + `is not in this figure yet.`;
+    return `Sales synced through ${day}.`;
+  return `Sales synced through ${day}. Newer sales `
+    + `are not included yet.`;
 }

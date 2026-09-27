@@ -91,7 +91,7 @@ test('a withheld profit names what is withholding it', () => {
      back is usually one order nobody knows the production cost of. */
   const route = readFileSync(new URL('../app/api/shop-map/map/route.ts', import.meta.url), 'utf8');
   assert.match(route, /missingCosts === 1 \? "One order's cost is missing"/);
-  assert.match(route, /Revenue and Etsy fees are exact/);
+  assert.match(route, /Add production costs for/);
   assert.doesNotMatch(route, /headline: profit === null \? "Profit unavailable"/);
   const client = readFileSync(new URL('../app/shop-map/shop-map-client.tsx', import.meta.url), 'utf8');
   /* And the listing, not the rule, is what tells two rows apart. */
@@ -128,7 +128,7 @@ test('a keyword card with no displayable photo says so', () => {
      span per listing rendered four grey boxes and no reason. */
   const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
   assert.match(client, /keyword-thumbs-empty/);
-  assert.match(client, /Open research to refresh these listings/);
+  assert.match(client, /Choose Search Etsy to refresh listings/);
   assert.doesNotMatch(client, /<span key=\{listing\.listingId\} aria-hidden="true"\/>/);
 });
 

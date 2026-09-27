@@ -416,7 +416,7 @@ async function buildMap(request: Request) {
          knows. Naming the count turns a dead end into a task. */
       headline: profit === null
         ? (missingCosts === 1 ? "One order's cost is missing" : missingCosts > 1
-            ? `${missingCosts} order costs are missing` : "Profit not worked out yet")
+            ? `${missingCosts} order costs are missing` : "Profit not available yet")
         : financial?.manualCostCount ? "Profit with your entered costs" : "Verified profit",
       label: profit === null ? "unavailable" : "verified",
       salesAsOf: asOf, salesStale: isStale(asOf, nowSeconds),
@@ -424,8 +424,8 @@ async function buildMap(request: Request) {
         : "The financial refresh is incomplete. Refresh your numbers to try again.",
       profitMinor: profit,
       accuracy: profit===null ? (missingCosts > 0
-        ? `Revenue and Etsy fees are exact. The profit is held back until every order's production cost is known - ${missingCosts} ${missingCosts === 1 ? "is" : "are"} missing, usually an order that was not placed through Printify. Enter what ${missingCosts === 1 ? "it" : "they"} cost and the figure completes.`
-        : "Profit is held back until orders, Etsy charges, refunds, adjustments and production costs for this period are all accounted for.") : `Includes sales, Etsy fees, refunds, adjustments, and production costs.${financial?.manualCostCount ? ` ${financial.manualCostCount} order costs were entered by you.` : ""}`,
+        ? `Add production costs for ${missingCosts} ${missingCosts === 1 ? "order" : "orders"} to calculate profit.`
+        : "Profit is unavailable while sales, fees, refunds, or production costs are missing.") : `Includes sales, Etsy fees, refunds, adjustments, and production costs.${financial?.manualCostCount ? ` ${financial.manualCostCount} order costs were entered by you.` : ""}`,
       coverage: {verified:productionCoverage,estimated:0,unavailable:1-productionCoverage},
       orders: financial?.coverage.receipts ?? 0,
     },

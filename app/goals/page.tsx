@@ -31,7 +31,7 @@ export default function GoalsPage() {
   const best = rows.reduce((most, row) => Math.max(most, row.published), 0);
 
   return (
-    <FactoryShell active="usage" title="Listing goal"><div className="management-page goals-page interior-page">
+    <FactoryShell active="goals" title="Listing goal"><div className="management-page goals-page interior-page">
       
       <header>
         <p className="mini-label">LISTING GOAL</p>

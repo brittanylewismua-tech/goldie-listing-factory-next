@@ -3,7 +3,7 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { NavIcon, type NavKey as NavIconKey } from "./nav-icons";
 
-export type SuiteNavKey = "home" | "factory" | "batches" | "keywords" | "mockups" | "usage" | "command-center"
+export type SuiteNavKey = "home" | "factory" | "batches" | "keywords" | "mockups" | "usage" | "goals" | "command-center"
   | "platform-updates" | "niche-research" | "market-watch" | "design-scanner" | "shop-map" | "trademark" | "connections";
 
 export type SuiteNavItem = {
@@ -22,7 +22,7 @@ type Props = {
   keywordBankInNewTab?: boolean;
 };
 
-const FACTORY_KEYS = new Set(["factory", "batches", "keywords", "mockups", "usage"]);
+const FACTORY_KEYS = new Set(["factory", "batches", "keywords", "mockups", "usage", "goals"]);
 const COMMAND_KEYS = new Set(["command-center", "platform-updates", "niche-research", "market-watch", "design-scanner", "shop-map", "trademark"]);
 
 function LockIcon() {
@@ -100,7 +100,7 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
   };
 
   return <>
-    {current ? <nav className="current-navigation" aria-label="Product navigation">{["home","niche-research","shop-map"].map(key=>{const item=items.find(i=>i.key===key);return item?link({...item,label:({home:"Home","niche-research":"Research","market-watch":"Watchlist","shop-map":"Your shop"} as Record<string,string>)[key]}):null;})}<section className="current-factory-section" aria-label="Listing Factory">{factory&&link(factory)}<div className="current-factory-children">{factoryChildren.map(i=>link(i))}<a href="/goals"><NavIcon name="goals"/><span>Listing goals</span></a></div></section><details className="current-more"><summary>More tools<svg className="current-more-chevron" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg></summary><div className="current-nav-group" role="group" aria-label="Seller tools"><span className="current-nav-group-label">Seller tools</span>{items.filter(i=>i.group==="command"&&!["niche-research","market-watch","shop-map"].includes(i.key)).map(i=>link(i))}<a href="/command-center"><NavIcon name="more"/><span>All tools</span></a></div><div className="current-nav-group" role="group" aria-label="Shop setup">{connections&&link(connections)}</div></details></nav> : <nav className="top-nav suite-sidebar-nav" aria-label="Product navigation">
+    {current ? <nav className="current-navigation" aria-label="Product navigation">{["home","niche-research","shop-map"].map(key=>{const item=items.find(i=>i.key===key);return item?link({...item,label:({home:"Home","niche-research":"Research","market-watch":"Watchlist","shop-map":"Your shop"} as Record<string,string>)[key]}):null;})}<section className="current-factory-section" aria-label="Listing Factory">{factory&&link(factory)}<div className="current-factory-children">{factoryChildren.map(i=>link(i))}<a href="/goals" className={active === "goals" ? "active" : undefined} aria-current={active === "goals" ? "page" : undefined}><NavIcon name="goals"/><span>Listing goals</span></a></div></section><details className="current-more"><summary>More tools<svg className="current-more-chevron" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg></summary><div className="current-nav-group" role="group" aria-label="Seller tools"><span className="current-nav-group-label">Seller tools</span>{items.filter(i=>i.group==="command"&&!["niche-research","market-watch","shop-map"].includes(i.key)).map(i=>link(i))}<a href="/command-center"><NavIcon name="more"/><span>All tools</span></a></div><div className="current-nav-group" role="group" aria-label="Shop setup">{connections&&link(connections)}</div></details></nav> : <nav className="top-nav suite-sidebar-nav" aria-label="Product navigation">
       {home && link(home)}
       {factory && <div className={`suite-nav-section${FACTORY_KEYS.has(active) ? " current" : ""}`}>
         <div className="suite-nav-parent">

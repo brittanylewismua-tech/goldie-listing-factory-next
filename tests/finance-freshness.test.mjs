@@ -47,15 +47,15 @@ test("stale is the same day used to call a source stale elsewhere", () => {
 test("a stale figure says what is missing from it", () => {
   const note = freshnessNote({ asOf: now - 3 * DAY, nowSeconds: now,
     timezone: "America/Los_Angeles" });
-  assert.match(note, /Worked out from your sales up to /);
-  assert.match(note, /Anything sold since then is not in this figure yet\./);
+  assert.match(note, /Sales synced through /);
+  assert.match(note, /Newer sales are not included yet\./);
 });
 
 test("a current figure states its date without a warning", () => {
   const note = freshnessNote({ asOf: now - 600, nowSeconds: now,
     timezone: "America/Los_Angeles" });
-  assert.match(note, /^Worked out from your sales up to /);
-  assert.ok(!/not in this figure/.test(note));
+  assert.match(note, /^Sales synced through /);
+  assert.ok(!/not included yet/.test(note));
 });
 
 test("no imported sales says nothing rather than guessing a date", () => {
@@ -65,7 +65,7 @@ test("no imported sales says nothing rather than guessing a date", () => {
 test("an unusable timezone does not cost the member the sentence", () => {
   const note = freshnessNote({ asOf: now - 3 * DAY, nowSeconds: now,
     timezone: "Not/AZone" });
-  assert.match(note, /Worked out from your sales up to /);
+  assert.match(note, /Sales synced through /);
 });
 
 test("no source name reaches the member", () => {

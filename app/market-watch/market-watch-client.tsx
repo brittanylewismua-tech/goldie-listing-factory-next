@@ -140,8 +140,8 @@ export default function MarketWatchClient(
             if(shots.length) return <div className="keyword-thumbs">{shots.map(listing=>
               <img key={listing.listingId} src={listing.imageUrl} alt="" width={180} height={180}/>)}</div>;
             return <p className="keyword-thumbs-empty">{(watch.listings??[]).length
-              ? "Open research to refresh these listings."
-              : "Listings will appear after Etsy refreshes this keyword."}</p>;
+              ? "Choose Search Etsy to refresh listings."
+              : "Choose Search Etsy to load listings."}</p>;
           })()}
           <div className="keyword-watch-head"><div><h2>{watch.phrase}</h2></div></div>
           {watch.stale&&<p className="keyword-stale">Current data could not be refreshed. Showing saved details.</p>}
@@ -162,7 +162,7 @@ export default function MarketWatchClient(
                 <div><dt>Repeated decreases</dt><dd>{watch.repeated}</dd></div>
                 <div><dt>Shops</dt><dd>{watch.shops}</dd></div>
               </dl>
-            : <p className="keyword-watch-quiet">No stock decreases observed in the listings watched so far.</p>}
+            : <p className="keyword-watch-quiet">No stock drops recorded yet.</p>}
           {/*
     D1784 · FOUR EMPTY BOXES AND NO EXPLANATION.
 
