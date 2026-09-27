@@ -849,3 +849,18 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 }
 
 #suite-workspace .cc-home-tile :is(h2,.cc-home-icon,.cc-home-go) {color:inherit!important}
+#suite-workspace .factory-work .keyword-hero,
+#suite-workspace .factory-work .mockupHero,
+#suite-workspace .factory-work .management-page > header,
+#suite-workspace .factory-work .usage-page > header {
+ background:#f1d8e7!important;
+ padding:28px 32px!important;
+ border-radius:16px;
+ margin-bottom:24px!important;
+}
+@media(max-width:760px){
+ #suite-workspace .factory-work .keyword-hero,
+ #suite-workspace .factory-work .mockupHero,
+ #suite-workspace .factory-work .management-page > header,
+ #suite-workspace .factory-work .usage-page > header {padding:22px!important}
+}
