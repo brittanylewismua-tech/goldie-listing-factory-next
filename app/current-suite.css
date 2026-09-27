@@ -785,8 +785,8 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .buyer-context-evidence{min-width:0;border-left:1px solid #eee9ed;padding-left:30px}
 #suite-workspace .buyer-context-evidence blockquote{margin:18px 0 0;padding:0;background:transparent;border:0}
 #suite-workspace .buyer-context-evidence blockquote p{font-size:15px!important;line-height:1.7!important;margin:0 0 10px!important}
-#suite-workspace .buyer-context-evidence footer{display:grid;gap:4px;font-size:12px!important;line-height:1.5;color:#77717b}
-#suite-workspace .buyer-context-evidence footer a{color:#8d285b!important;text-decoration:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#suite-workspace .buyer-context-evidence .nr-review-meta{display:grid;gap:4px;font-size:12px!important;line-height:1.5;color:#77717b}
+#suite-workspace .buyer-context-evidence .nr-review-meta a{color:#8d285b!important;text-decoration:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 #suite-workspace .buyer-context-evidence details{margin-top:18px;font-size:13px}
 #suite-workspace .buyer-context-evidence summary{cursor:pointer;padding:8px 0}
 @media(max-width:800px){#suite-workspace .buyer-context-finding{grid-template-columns:1fr;gap:24px;padding:22px}#suite-workspace .buyer-context-evidence{border-left:0;border-top:1px solid #eee9ed;padding:22px 0 0}#suite-workspace .buyer-context-summary h3{font-size:22px!important}}
