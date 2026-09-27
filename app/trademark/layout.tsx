@@ -6,7 +6,7 @@
   fallback. A route layout is a server component, which is where metadata
   belongs.
 */
-export const metadata = { title: "Trademark Checker" };
+export const metadata = { title: "Trademark Check" };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return children;

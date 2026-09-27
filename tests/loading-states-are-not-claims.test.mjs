@@ -89,12 +89,16 @@ test("client-component pages carry a route layout so the tab has a name", () => 
   for (const [route, title] of [
     ["usage", "Usage and limits"],
     ["connections", "Connections"],
-    ["trademark", "Trademark Checker"],
+    /* D1865 · The rail, the heading and the breadcrumb all say Trademark
+       Check; only the tab said Checker. */
+    ["trademark", "Trademark Check"],
     ["batches", "Batch History"],
     ["keywords", "Keyword Banks"],
-    /* Goals was the last one without a layout: its tab read only the
-       fallback while every other page named itself. */
     ["goals", "Listing goal"],
+    /* D1865 · These two were still reading the fallback: Hot List had no
+       layout at all, and Mockup Sets had one that said nothing. */
+    ["hot-list", "Hot List"],
+    ["mockups", "Mockup Sets"],
   ]) {
     const layout = read(`${route}/layout.tsx`);
     assert.match(layout, new RegExp(`title: "${title}"`),

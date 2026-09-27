@@ -349,7 +349,10 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         <p>Units sold and revenue for the selected period.</p></div></div>
 
       <div className="shop-map-browse-controls"><label>Sales period <select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label><label>Search sold listings<input type="search" value={soldQuery} onChange={e=>setSoldQuery(e.target.value)} placeholder="Find a listing"/></label></div>
-      {!refreshing&&<p role="status">{browseOwnListings(sold,soldSort,soldQuery).length} of {sold.length} sold listings shown</p>}
+      {/* D1865 · "10 of 10 sold listings shown" is not information. It is only
+          worth a line once a search has actually hidden something. */}
+      {!refreshing&&browseOwnListings(sold,soldSort,soldQuery).length!==sold.length
+        &&<p role="status">{browseOwnListings(sold,soldSort,soldQuery).length} of {sold.length} sold listings match your search</p>}
 <div className="market-results-sort"><label>Sort sold listings<select value={soldSort} onChange={e=>setSoldSort(e.target.value as "sales"|"revenue")}><option value="sales">Most units sold</option><option value="revenue">Highest revenue</option></select></label></div>
       {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-table"><div className="head"><span>Listing</span><span>Units sold</span><span>Revenue</span></div>
         {browseOwnListings(sold,soldSort,soldQuery).map(listing => <article key={listing.listingId}><div>{listing.imageUrl ? <img src={listing.imageUrl} alt=""/> : <i>G</i>}
