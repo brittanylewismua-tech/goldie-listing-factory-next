@@ -733,5 +733,5 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
  #suite-workspace .factory-work .shop-map-reach li>img,#suite-workspace .factory-work .shop-map-reach li>span[aria-hidden]{width:64px!important;height:64px!important;grid-row:1 / 3;align-self:start}
  #suite-workspace .factory-work .shop-map-reach-copy b{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.5!important}
  #suite-workspace .factory-work .shop-map-reach li>a{grid-column:2;justify-self:start;min-height:32px;display:flex;align-items:center}
- #suite-workspace .factory-work .shop-map-tabs{display:grid!important;grid-template-columns:1fr 1fr;gap:0 18px!important;overflow:visible}
+ #suite-workspace .factory-work .shop-map-redesign .shop-map-tabs{display:grid!important;grid-template-columns:1fr 1fr;gap:0 18px!important;overflow:visible}
 }
