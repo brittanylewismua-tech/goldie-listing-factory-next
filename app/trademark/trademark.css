@@ -43,21 +43,7 @@
 .tm-phrase mark {
   background: #ffd9ef; color: #92222b; border-radius: 6px;
   padding: 1px 3px; font-weight: 700;
-}
-
-.tm-hits { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.tm-hit {
-  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-  padding: 12px 14px; border-radius: 10px;
-  background: #fff; border: 1px solid var(--line, #5b354f29);
-}
-.tm-hit b { font-size: 15px; color: var(--ink, #4b283e); }
-.tm-hit .tm-owner { font-size: 14px; color: #6f6675; }  /* was #8b8390 — 3.65:1 */
-.tm-hit .tm-cat {
-  margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: .06em;
-  text-transform: uppercase; color: #92222b;
-  background: #ffe4ef; border-radius: 999px; padding: 3px 10px; white-space: nowrap;
-}
+}  /* was #8b8390 — 3.65:1 */
 
 .tm-note { font-size: 13px; color: #8b8390; max-width: 62ch; line-height: 1.6; }
 .tm-note strong { color: var(--ink, #4b283e); }
@@ -70,8 +56,6 @@
 .tm-examples button:hover { border-color: #ff4fc3; }
 
 /* The register's findings sit under the curated ones, quieter by design. */
-.tm-register { margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(75, 40, 62, 0.2); }
-.tm-register .tm-cat { text-transform: none; letter-spacing: 0; }
 
 /*
   THE CHECKER ON A PHONE.

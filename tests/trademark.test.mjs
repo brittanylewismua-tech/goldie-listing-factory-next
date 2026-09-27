@@ -52,8 +52,8 @@ test("a clear result never promises safety", () => {
   assert.doesNotMatch(verdict.summary, /\bsafe\b|\bclear to use\b|\byou can use\b/i);
   const page = strip(read("trademark/page.tsx"));
   assert.doesNotMatch(page, /\bis safe\b|\bsafe to (use|print)\b/i);
-  assert.match(page, /not legal advice/i);
-  assert.match(page, /No matches does not guarantee a phrase is available to use/i);
+  assert.match(page, /not legal clearance/i);
+  assert.match(page, /Check the full USPTO database before using this phrase/i);
   /* And while the register is still loading, the page has to say so rather
      than let an incomplete search read as a clean one. */
   assert.match(page, /registerReady === false/);

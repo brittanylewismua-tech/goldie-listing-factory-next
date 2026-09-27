@@ -598,7 +598,7 @@ body { min-width: 320px; }
 .tm-examples { margin: 16px 0 30px !important; }
 .tm-examples button { min-height: 38px !important; border: 1px solid var(--pro-line) !important; border-radius: 50% !important; color: var(--pro-accent-strong) !important; font-size: 11px !important; }
 .tm-verdict { padding: 28px !important; border-radius: 16px !important; box-shadow: var(--pro-shadow) !important; }
-.tm-phrase, .tm-hit { border-radius: 10px !important; }
+.tm-phrase { border-radius: 10px !important; }
 .tm-note { padding: 18px 20px !important; border-left-color: var(--pro-accent) !important; border-radius: 0 12px 12px 0 !important; background: var(--pro-accent-faint) !important; }
 
 /* Management, library and settings */

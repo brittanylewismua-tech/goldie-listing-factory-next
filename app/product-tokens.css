@@ -134,9 +134,6 @@
 .p-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:16px;
   background:var(--p-lavender);color:var(--p-plum);font-size:11px;font-weight:800;
   letter-spacing:.02em}
-.p-badge-good{background:var(--p-good-soft);color:var(--p-good)}
-.p-badge-warn{background:var(--p-warn-soft);color:var(--p-warn)}
-.p-badge-bad{background:var(--p-bad-soft);color:var(--p-bad)}
 
 .p-notice{display:grid;gap:var(--p-1);padding:var(--p-4);border-radius:var(--p-radius);
   border:1px solid var(--p-line);background:var(--p-card-quiet);color:var(--p-ink-soft);

@@ -57,8 +57,6 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
 .app-shell .tm-watch-list article {display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:18px}
 .app-shell .tm-watch-list article>div {flex:1 1 240px;min-width:0;overflow-wrap:anywhere}
 .app-shell .tm-watch-risk {max-width:100%;white-space:normal}
-.app-shell .tm-hit {display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;overflow-wrap:anywhere}
-.app-shell .tm-hit a {color:#9d0761;text-decoration:underline;font-size:13px;font-weight:800}
 .app-shell .tm-phrase {overflow-wrap:anywhere}
 .mobile-work-links {display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:24px 0}
 .mobile-work-links a {padding:12px 18px;background:#ff2ca6;color:#111;border-radius:8px;font-weight:800;text-decoration:none}
@@ -118,7 +116,6 @@ html,body,.app-shell,button,input,select,textarea {font-family:'Manrope Variable
  .app-shell .shop-map-sold-table article>span:last-child{display:block}
  .app-shell .shop-map-sold-table article strong{white-space:normal;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
 }
-.app-shell .tm-hit .tm-cat{max-width:100%;white-space:normal;line-height:1.5;overflow-wrap:anywhere}
 
 @media(max-width:860px){
  .desktop-only-notice{background-color:#fff8fc;background-image:linear-gradient(#ebcfdf55 1px,transparent 1px),linear-gradient(90deg,#ebcfdf55 1px,transparent 1px);background-size:40px 40px;padding:32px;gap:20px}

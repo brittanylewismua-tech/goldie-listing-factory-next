@@ -176,8 +176,6 @@
 .app-shell.command-workspace .tm-watch-list :is(strong,button) {font-size:14px}
 .app-shell.command-workspace .tm-watch-list article>div span,.app-shell.command-workspace .tm-watch-risk {font-size:12px}
 .app-shell.command-workspace .tm-verdict {border-radius:10px!important;box-shadow:none!important;padding:20px!important;background:#fff!important;gap:12px!important}
-.app-shell.command-workspace .tm-hit {border-color:var(--work-line);padding:18px}
-.app-shell.command-workspace .tm-hit .tm-cat {font-size:12px}
 .app-shell.command-workspace .tm-note {color:#625862;font-size:13px}
 .app-shell.command-workspace .costs {border:0!important;border-radius:0!important;box-shadow:none!important}
 .app-shell.command-workspace .costs .back {padding:8px 14px;margin:0 0 20px;min-height:38px;background:#fff;border:1px solid #cbbfc8;border-radius:8px;font-size:14px;color:#29232a}
@@ -259,7 +257,7 @@
 .library-controls{display:flex;align-items:end;gap:16px;margin:18px 0;flex-wrap:wrap}
 .library-controls>label:first-child{flex:1;min-width:200px}
 .library-controls label,.library-search{display:block;font-size:13px;font-weight:700;color:#29232a}
-.library-controls :is(input,select),.library-search input,.tm-category-sort select{display:block;width:100%;min-height:44px;padding:10px 12px;margin:6px 0 0;border:1px solid #cbbfc8;border-radius:8px;background:#fff;color:#171318;font:500 16px/1.4 'Manrope Variable',sans-serif}
+.library-controls :is(input,select),.library-search input{display:block;width:100%;min-height:44px;padding:10px 12px;margin:6px 0 0;border:1px solid #cbbfc8;border-radius:8px;background:#fff;color:#171318;font:500 16px/1.4 'Manrope Variable',sans-serif}
 .library-search{margin:16px 0}
 .app-shell.command-workspace .batch-history>.library-controls{margin:0;padding:18px 20px;border-bottom:1px solid var(--work-line)}
 .history-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px;border-top:1px solid var(--work-line);font-size:14px}
@@ -278,9 +276,6 @@
 .app-shell.command-workspace .scanner .history>button{margin:8px 0;min-height:48px;padding:12px 14px;background:#fff;border:1px solid var(--work-line);border-radius:8px;box-shadow:none;text-align:left}
 .app-shell.command-workspace .scanner .history>button[aria-pressed=true]{border-color:var(--work-accent);box-shadow:inset 3px 0 #ef43ab}
 .app-shell.command-workspace .tm-phrase{margin:0;padding:0;border:0;background:transparent;font-size:20px}
-.tm-category-sort{display:flex;align-items:end;gap:16px;flex-wrap:wrap;padding:12px 0;margin:0;border-block:1px solid #e3dce1}
-.tm-category-sort label{font-size:13px;font-weight:700;min-width:230px}
-.tm-category-sort .cc-note{flex:1;font-size:13px;margin:0;min-width:200px}
 @media(max-width:760px){
  .app-shell.command-workspace .keyword-watch-grid{grid-template-columns:minmax(0,1fr)}
  .app-shell.command-workspace .keyword-watch-head{align-items:stretch;flex-direction:column;gap:10px}
@@ -294,7 +289,6 @@
  .app-shell.command-workspace .keyword-hero>button{width:100%}
  .app-shell.command-workspace .managementLibraryHead{align-items:stretch;flex-direction:column}
  .app-shell.command-workspace .managementSetList .collectionToggle{padding:14px!important}
- .tm-category-sort{display:block}.tm-category-sort :is(label,.cc-note,a){display:block;margin:10px 0}
 }
 
 .signup-member-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:20px;padding:10px 18px;border:1px solid #171318;border-radius:8px;background:#171318;color:#fff;font:750 14px/1.4 'Manrope Variable',sans-serif;text-decoration:none}

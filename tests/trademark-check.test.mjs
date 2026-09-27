@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 
 test("D1691: a clear result does not say the same words twice", () => {
   const page = readFileSync(new URL("../app/trademark/page.tsx", import.meta.url), "utf8");
-  const verdict = page.slice(page.indexOf('className={`tm-verdict'));
+  const verdict = page.slice(page.indexOf('className="tm-verdict"'));
   /*
     The badge carries the verdict and the headline carries what to do about it
     — "High risk" → "Matches need review". A clear result has no instruction to
@@ -13,8 +13,8 @@ test("D1691: a clear result does not say the same words twice", () => {
     ahead, which a screening tool cannot give.
   */
   assert.doesNotMatch(verdict, /className="tm-headline"/, "do not repeat the verdict badge as another headline");
-  assert.match(verdict, /No matching mark was found/);
-  assert.match(verdict, /does not establish that the phrase is available/);
+  assert.match(verdict, /No exact phrase match in the records loaded here/);
+  assert.match(verdict, /not legal clearance/);
   assert.doesNotMatch(verdict, /Somebody owns part of this|Do not print this/);
 });
 
