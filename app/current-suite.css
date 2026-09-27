@@ -744,7 +744,6 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .current-overview .co-feature p{font-size:16px!important;line-height:1.6!important;max-width:370px;margin:0 0 24px!important;color:#55434e!important}
 #suite-workspace .current-overview .co-primary{display:inline-flex;align-items:center;justify-content:space-between;gap:16px;background:#242329!important;border:1px solid #242329!important;color:#fff!important;font-weight:650!important;margin:8px 0 0!important}
 #suite-workspace .current-overview .co-primary span{color:#fff!important}
-#suite-workspace .current-overview .co-text{display:block;background:transparent!important;border:0!important;color:#4e2941!important;padding:10px 0!important;font-size:13px!important}
 #suite-workspace .co-photo-story{display:flex;flex-direction:column;justify-content:center;gap:18px;min-width:0}
 #suite-workspace .co-photos{display:flex;align-items:center;justify-content:center;isolation:isolate;min-height:215px}
 #suite-workspace .co-photos button{width:130px!important;height:175px;min-height:0!important;flex-shrink:0;padding:6px 6px 0!important;border-radius:8px!important;border:0!important;background:#fff!important;box-shadow:0 10px 25px #50334526;transform:rotate(-10deg);margin-right:-75px;position:relative;overflow:hidden}
@@ -773,7 +772,7 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .co-bottom header>span{font-size:12px!important;color:#737079!important;white-space:nowrap}
 #suite-workspace .co-finding-rows{display:grid;gap:8px}
 #suite-workspace .co-finding-rows button{display:grid;grid-template-columns:24px minmax(0,1fr) 20px;align-items:center;gap:14px;width:100%;padding:16px 18px!important;background:#fff!important;border:1px solid #e3e1e6!important;border-radius:11px!important;text-align:left}
-#suite-workspace .co-finding-rows button[aria-pressed=true]{background:#f5e3ed!important;border-color:#d9b1c8!important}
+#suite-workspace .co-finding-rows button:is(:hover,:focus-visible){background:#f5e3ed!important;border-color:#d9b1c8!important}
 #suite-workspace .co-finding-rows strong{display:block;font-size:14px!important;font-weight:700;line-height:1.5;color:#242329!important}
 #suite-workspace .co-finding-rows small{display:block;font-size:12px!important;line-height:1.5;color:#71636c!important;margin-top:4px}
 #suite-workspace .co-index{font-size:12px!important;color:#88717e!important}
