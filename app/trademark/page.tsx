@@ -93,7 +93,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
 
   const started = useRef(false);
   useEffect(() => {
-    const requested=initialPhrase || new URLSearchParams(window.location.search).get("phrase")?.trim().slice(0,300);
+    const requested=initialPhrase || new URLSearchParams(window.location.search).get("phrase")?.trim().slice(0,200);
     if (!requested || started.current) return;
     started.current = true;
     setPhrase(requested);void run(requested);
@@ -103,7 +103,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
   async function run(value: string, acknowledgeWatch = false) {
     const term = value.trim();
     if (!term || checking) return;
-    setChecking(true); setError(""); setVerdict(null);
+    setChecking(true); setError(""); setVerdict(null); setProductClass("");
     try {
       const response = await fetch(
         `/api/trademark?phrase=${encodeURIComponent(term)}`, { cache: "no-store" });

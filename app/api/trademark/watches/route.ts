@@ -57,10 +57,14 @@ export const POST = withErrorLog("trademark-watch-save", async (request: Request
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to watch a phrase." }, { status: 401 });
   const body = await request.json().catch(() => ({})) as { phrase?: string };
-  const phrase = String(body.phrase ?? "").trim().slice(0, 200);
+  let phrase = String(body.phrase ?? "").trim().slice(0, 200);
   if (!phrase) return NextResponse.json({ error: "Enter a phrase first." }, { status: 400 });
   const db = (env as unknown as { DB: D1Database }).DB;
   await ensure(db);
+  // Match the update label in the UI: a change of letter case updates the
+  // existing watch rather than silently creating a second saved phrase.
+  const existing=await db.prepare('SELECT phrase FROM trademark_watches WHERE user_id=? AND lower(phrase)=lower(?) LIMIT 1').bind(user.userId,phrase).first<{phrase:string}>();
+  if(existing?.phrase)phrase=existing.phrase;
   const size = await registerSize(db).catch(() => null);
   const hits = await lookup(db, phrase).catch(() => null);
   const local=toMatches(hits??[],phrase,normalize,squeeze);

@@ -995,3 +995,8 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .tm-goods{margin-top:12px;font-size:13px;color:#46433f}
 #suite-workspace .tm-goods summary{cursor:pointer;font-weight:700;color:#000}
 #suite-workspace .tm-goods p{font-size:13px!important;line-height:1.65!important;max-width:80ch;white-space:normal;overflow-wrap:anywhere;margin:12px 0!important}
+
+/* Keep record metadata below the phrase and mark headings in the shared theme. */
+#suite-workspace .factory-work .tm-standalone .tm-page .tm-verdict p.tm-source{font-size:12px!important}
+#suite-workspace .factory-work .tm-standalone .tm-page .tm-verdict p.tm-record-owner{font-size:14px!important}
+#suite-workspace .factory-work .tm-standalone .tm-page .tm-verdict .tm-goods p{font-size:14px!important;line-height:1.65!important}
