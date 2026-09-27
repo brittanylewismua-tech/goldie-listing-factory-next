@@ -108,10 +108,12 @@ export default function PreviewClient(){
       <div><b>{num(m.thisMonth?.orders??0)}</b><small>ORDERS THIS MONTH</small></div>
     </div>
 
-    <div className="hp-rule"><h2>What your themes have earned</h2><i/>
+    {/* D1872 · "Themes" is a word this product invented. A seller says
+        categories. */}
+    <div className="hp-rule"><h2>What sells in your shop</h2><i/>
       <small><em className="key life"/> all time &nbsp; <em className="key now"/> last 90 days</small></div>
     <div className="themes">
-      <div className="theme head"><span>Theme</span><span/><span>All time</span><span>Last 90 days</span></div>
+      <div className="theme head"><span>Category</span><span/><span>All time</span><span>Last 90 days</span></div>
       {worlds.map(w=><div className="theme" key={w.label}>
         <div><div className="name">{w.label}</div><div className="meta">{w.activeListings} live</div></div>
         <div>
@@ -128,12 +130,12 @@ export default function PreviewClient(){
       <div className="find">
         <div>
           <p className="k">{thin.label}</p>
-          <h3>{num(thin.lifetimeUnits)} of these have sold, and you have {thin.activeListings} listings live in it.</h3>
-          <p>This theme has taken {usd(thin.lifetimeRevenueMinor)} all time — {usd(Math.round(thin.lifetimeRevenueMinor/Math.max(1,thin.activeListings)))} for
-            every listing you currently have live, more than any other theme in your shop.
-            {biggest?` ${biggest.label} has ${biggest.activeListings} live and has taken ${usd(biggest.lifetimeRevenueMinor)}.`:""}</p>
+          <h3>You have sold {num(thin.lifetimeUnits)} of these, and only {thin.activeListings} are still live.</h3>
+          <p>{thin.label} has made you {usd(thin.lifetimeRevenueMinor)} — that is {usd(Math.round(thin.lifetimeRevenueMinor/Math.max(1,thin.activeListings)))} for
+            each listing you still have up, more than any other category in your shop.
+            {biggest?` ${biggest.label} has ${biggest.activeListings} listings up and has made ${usd(biggest.lifetimeRevenueMinor)}.`:""}</p>
         </div>
-        <div className="find-num"><b>{thin.activeListings}</b><small>listings live<br/>in {thin.label.toLowerCase()}</small></div>
+        <div className="find-num"><b>{thin.activeListings}</b><small>still live in<br/>{thin.label.toLowerCase()}</small></div>
       </div>
     </>}
 
