@@ -28,6 +28,9 @@ type Sold={listingId:number;title:string;image:string|null;price:number|null;
 type Hot={listings?:Sold[];watched?:number;totalSold?:number;
   products?:Array<{key:string;label:string;listings:number;sold:number}>};
 type Mine={title:string;state:string};
+type Summary={keywords:number;shops:number;phrases:number;needReview:number};
+type Updates={items?:Array<unknown>;sources?:Array<unknown>};
+type Niche={name:string;analysis?:{opportunities?:Array<{phrase:string;reviews:number;prior:number;shops:number;listings:number}>}};
 
 const usd=(minor:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",
   maximumFractionDigits:0}).format(minor/100);
@@ -48,6 +51,9 @@ export default function PreviewClient(){
   const [h,setH]=useState<Home|null>(null);
   const [hot,setHot]=useState<Hot|null>(null);
   const [mine,setMine]=useState<Mine[]>([]);
+  const [sum,setSum]=useState<Summary|null>(null);
+  const [up,setUp]=useState<Updates|null>(null);
+  const [niches,setNiches]=useState<Niche[]>([]);
   const [view,setView]=useState<"a"|"b"|"c">("a");
 
   useEffect(()=>{
@@ -58,6 +64,20 @@ export default function PreviewClient(){
       .then(setHot).catch(()=>undefined);
     void fetch("/api/shop-map/my-listings").then(r=>r.ok?r.json() as Promise<{listings?:Mine[]}>:null)
       .then(x=>setMine(x?.listings??[])).catch(()=>undefined);
+    void fetch("/api/command-center/summary").then(r=>r.ok?r.json() as Promise<Summary>:null)
+      .then(setSum).catch(()=>undefined);
+    void fetch("/api/platform-updates").then(r=>r.ok?r.json() as Promise<Updates>:null)
+      .then(setUp).catch(()=>undefined);
+    void fetch("/api/niche-research").then(r=>r.ok?r.json() as Promise<{projects?:Array<{id:string}>}>:null)
+      .then(async body=>{
+        const out:Niche[]=[];
+        for(const p of (body?.projects??[]).slice(0,2)){
+          const d=await fetch(`/api/niche-research?id=${encodeURIComponent(p.id)}`)
+            .then(r=>r.ok?r.json() as Promise<{project:Niche}>:null).catch(()=>null);
+          if(d?.project?.analysis)out.push(d.project);
+        }
+        setNiches(out);
+      }).catch(()=>undefined);
   },[]);
 
   if(!m||!hot) return <div className="hp"><div className="hp-load"/></div>;
@@ -112,6 +132,38 @@ export default function PreviewClient(){
     </div>)}
   </div>;
 
+  /*
+    D1885 · HER WATCHLISTS, WHICH THE HOMEPAGE HAD NEVER ONCE OPENED.
+
+    She told this product what she cares about - seven keywords, three shops,
+    two research niches, a watched phrase, twelve Etsy and Printify sources -
+    and the front page read none of them. Everything below is something she
+    asked to be watched, reported as what changed since she last looked.
+  */
+  const rising=niches.flatMap(n=>(n.analysis?.opportunities??[])
+    .filter(o=>o.reviews>=5&&o.reviews>o.prior)
+    .map(o=>({...o,niche:n.name,gain:o.reviews-o.prior})))
+    .sort((a,b)=>b.gain-a.gain).slice(0,3);
+  const changes=(up?.items??[]).length;
+  const Watching=()=><div className="watch">
+    {moved.map(x=><div className="w-item" key={x.phrase}>
+      <b>{num(x.newly)}</b>
+      <div><span>listings started selling in <em>{x.phrase}</em></span>
+        <small>keyword you track</small></div></div>)}
+    {rising.map(r=><div className="w-item" key={r.niche+r.phrase}>
+      <b>{num(r.reviews)}</b>
+      <div><span><em>{r.phrase}</em> reviews, up from {num(r.prior)}</span>
+        <small>{r.shops} shops in your {r.niche} research</small></div></div>)}
+    <div className="w-item quiet">
+      <b>{changes||"0"}</b>
+      <div><span>changes at Etsy or Printify</span>
+        <small>{num((up?.sources??[]).length)} sources checked today</small></div></div>
+    {sum&&sum.needReview>0&&<div className="w-item quiet">
+      <b>{num(sum.needReview)}</b>
+      <div><span>watched phrase to review</span>
+        <small>{num(sum.phrases)} on your trademark list</small></div></div>}
+  </div>;
+
   const Rule=({title,note}:{title:string;note?:string})=>
     <div className="rule"><h2>{title}</h2><i/>{note&&<small>{note}</small>}</div>;
 
@@ -160,6 +212,8 @@ export default function PreviewClient(){
 
     {view==="a"&&<>
       <section className="hero"><Hers/><Yourshots/></section>
+      <Rule title="Since you last looked" note={sum?`${sum.keywords} keywords · ${sum.shops} shops · ${niches.length} niches you follow`:undefined}/>
+      <Watching/>
       <Rule title="What sold most, listing by listing" note={`${num(hot.totalSold??0)} units across ${num(hot.watched??0)} watched listings`}/>
       <div className="shots four">{sold.slice(3,11).map(l=><Tile l={l} key={l.listingId}/>)}</div>
       <Rule title="Selling in the searches you follow"/><Searches/>

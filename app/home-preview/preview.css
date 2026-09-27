@@ -79,3 +79,17 @@
  .shot{min-height:190px}
  #suite-workspace .hp .row{grid-template-columns:130px minmax(0,1fr) 86px;gap:12px}
  #suite-workspace .hp .row>:nth-child(4){display:none}}
+
+/* D1885 · Her watchlists, reported as what changed. */
+.watch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;
+  background-color:#eae5e9;border:1px solid #eae5e9;border-radius:16px;overflow:hidden}
+#suite-workspace .hp .w-item{background-color:#fff!important;display:flex;gap:16px;
+  align-items:baseline;padding:18px 22px}
+#suite-workspace .hp .w-item b{font-size:32px!important;font-weight:500;letter-spacing:-.04em;
+  line-height:1;color:#c2277b;min-width:56px}
+#suite-workspace .hp .w-item.quiet b{color:#a49ba2!important}
+#suite-workspace .hp .w-item span{display:block;font-size:15px!important;line-height:1.4!important}
+#suite-workspace .hp .w-item em{font-style:normal;font-weight:500}
+#suite-workspace .hp .w-item small{display:block;font-size:11px!important;color:#a49ba2!important;
+  margin-top:4px;letter-spacing:.03em}
+@media(max-width:1080px){.watch{grid-template-columns:minmax(0,1fr)}}
