@@ -18,14 +18,19 @@ export async function analyzeBuyers(userId:string,p:NicheProject):Promise<BuyerR
  const key=process.env.FAL_KEY;if(!key)throw Error('Buyer analysis is temporarily unavailable. Please try again.');
  const reservation=await reserveSpend({workloadKey:'nicheBuyerInsights',userId,consumesAllowance:false,fingerprint:input.sourceKey});
  if(!reservation.allowed)throw Error('Buyer analysis is at its daily limit. Your reviews are saved; please try again tomorrow.');
- let cost=0;
+ let cost=0,inputTokens=0,outputTokens=0;
  try{
-  const response=await fetch('https://fal.run/openrouter/router/vision',{method:'POST',headers:{Authorization:`Key ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:MODEL,temperature:0,max_tokens:6500,system_prompt:BUYER_INSTRUCTIONS,prompt:JSON.stringify({niche:p.name,reviews:input.sources})}),signal:AbortSignal.timeout(90000)});
-  const result=await response.json() as {output?:string;usage?:{cost?:number;prompt_tokens?:number;completion_tokens?:number}};cost=Number(result.usage?.cost||0);
+  const response=await fetch('https://fal.run/openrouter/router/vision',{method:'POST',headers:{Authorization:`Key ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:MODEL,temperature:0,max_tokens:6500,system_prompt:BUYER_INSTRUCTIONS,prompt:JSON.stringify({niche:p.name,reviews:input.sources})}),signal:AbortSignal.timeout(50000)});
+  const result=await response.json() as {output?:string;usage?:{cost?:number;prompt_tokens?:number;completion_tokens?:number}};cost=Number(result.usage?.cost||0);inputTokens=Number(result.usage?.prompt_tokens||0);outputTokens=Number(result.usage?.completion_tokens||0);
   if(!response.ok)throw Error('Buyer analysis could not finish. Please try again.');
   const raw=JSON.parse(String(result.output??'').replace(/^```(?:json)?\s*|\s*```$/g,'').trim());
-  const findings=validateBuyerFindings(raw,input.sources);
-  await recordFalUsage({model:MODEL,cost,inputTokens:Number(result.usage?.prompt_tokens||0),outputTokens:Number(result.usage?.completion_tokens||0),workload:'nicheBuyerInsights'});
+  const citedIds=new Set<number>((Array.isArray(raw?.findings)?raw.findings:[]).flatMap((f:{evidence?:Array<{id:number}>})=>(Array.isArray(f.evidence)?f.evidence:[]).map(e=>e.id)));
+  const audit=await fetch('https://fal.run/openrouter/router/vision',{method:'POST',headers:{Authorization:`Key ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:MODEL,temperature:0,max_tokens:6500,system_prompt:BUYER_INSTRUCTIONS,prompt:JSON.stringify({task:'Audit and rewrite this draft against the full cited source reviews. Return the same JSON schema. Remove generic compliment/positive-reaction findings. Remove every unsupported detail and inference. Narrow a claim when its evidence supports only part of it. Preserve useful distinct findings and explicit requests. Repair quotes by selecting exact substrings from the real source, never by rewriting review text. Do not discard an otherwise useful finding merely for a draft quotation typo. Every quote must directly support the same specific claim. A request for a T-shirt and tank top must name those formats, not say additional product formats. A single request explanation starts One reviewer. Use short everyday-English headlines and at most two concise sentences. Do not infer like-mindedness, validation, purchases after delivery, or motives beyond what reviewers explicitly say.',draft:raw,reviews:input.sources.filter(r=>citedIds.has(r.id))})}),signal:AbortSignal.timeout(50000)});
+  const checked=await audit.json() as {output?:string;usage?:{cost?:number;prompt_tokens?:number;completion_tokens?:number}};
+  cost+=Number(checked.usage?.cost||0);inputTokens+=Number(checked.usage?.prompt_tokens||0);outputTokens+=Number(checked.usage?.completion_tokens||0);
+  if(!audit.ok)throw Error('Buyer analysis could not finish checking its sources. Please try again.');
+  const findings=validateBuyerFindings(JSON.parse(String(checked.output??'').replace(/^```(?:json)?\s*|\s*```$/g,'').trim()),input.sources);
+  await recordFalUsage({model:MODEL,cost,inputTokens,outputTokens,workload:'nicheBuyerInsights'});
   await settleSpend(reservation.id,cost);
   return {version:BUYER_VERSION,sourceKey:input.sourceKey,analyzed:input.sources.length,available:input.available,at,findings};
  }catch(error){await failSpend(reservation.id,{billed:cost});throw error;}
