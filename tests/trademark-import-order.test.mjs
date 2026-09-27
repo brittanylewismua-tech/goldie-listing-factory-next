@@ -11,7 +11,7 @@ async function implementation() {
     .replace(/^import .*;\n/gm, "")
     .replace(/^export \{[^}]*\} from ["'][^"']+["'];?$/gm, "");
   const imports = [
-    ['normalize, squeeze, readRecord, worthKeeping', 'trademark-record.ts'],
+    ['normalize, squeeze, readRecord, worthKeeping, meaningfulMarkMatch', 'trademark-record.ts'],
     ['blocks, singleEntryDeflateStream', 'uspto-bulk.ts'],
     ['TRADEMARK_ARCHIVE_DAY, trademarkFileDay', 'trademark-import-coverage.ts'],
   ].map(([names, file]) => `const {${names}} = await import(${JSON.stringify(new URL('../app/' + file, import.meta.url).href)});`).join('\n');

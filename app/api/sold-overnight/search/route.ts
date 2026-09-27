@@ -19,5 +19,5 @@ export const GET = withErrorLog("sold-overnight-search", async (request: Request
 
   const requestedHours=Number(new URL(request.url).searchParams.get("hours")||168);
   const hours=[24,168].includes(requestedHours)?requestedHours:168;
-  return NextResponse.json({ keyword, hours, listings: await searchSold(keyword,hours) });
+  return NextResponse.json({ keyword, hours, listings: await searchSold(keyword,hours,24,new URL(request.url).searchParams.get("madeToOrder")==="1",new URL(request.url).searchParams.get("rights")==="1") });
 });

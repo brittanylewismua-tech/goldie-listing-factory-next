@@ -61,6 +61,9 @@ const NOT_PRINTED = [
   "genuine leather", "real leather", "leather", "suede", "merino", "cashmere",
   "alpaca", "mohair", "sterling silver", "solid gold", "14k", "18k",
   "hand knitted", "hand knit", "crocheted", "hand woven", "handwoven",
+  "pillow insert", "pillow inserts", "cushion insert", "cushion inserts",
+  "reshipping", "re-shipping", "shipping upgrade", "cotton cord", "cotton string",
+  "blank shirts", "blank t-shirts", "blank tshirts", "blank sweatshirts",
   "quilted by hand", "upcycled", "antique", "vintage 19", "deadstock",
 ];
 

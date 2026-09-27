@@ -224,7 +224,8 @@ test('research does not price the listing for the seller', () => {
   /* The band itself stays - named as the middle half, because it is, and
      because calling it "Price" made it look wrong beside a listing above it
      priced outside the band. */
-  assert.match(client, /label:"Middle half"/);
+  assert.match(client, /label:"Typical listed price"/);
+  assert.match(client, /if\(shelf&&profile.currency==="USD"&&profile.priceBand\)/);
 });
 
 test('an unfiltered price band says it spans every product type', () => {

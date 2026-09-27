@@ -311,7 +311,7 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     failed. It says how long it will be, and the space below holds its
     shape while it waits. */}
     <div className="market-result-bar"><p role="status">{loading&&!rows.length?`Reading Etsy for “${view.phrase}”. This takes a few seconds.`:rows.length?`${rows.length.toLocaleString()} search results${total!==null&&total>rows.length?` from ${total.toLocaleString()} Etsy matches`:""}`:""}</p></div>
-    {profile&&<details className="market-summary"><summary>Price and wording patterns</summary><WinnerProfile profile={profile} shelf={shelf}/></details>}
+    {profile&&<details className="market-summary"><summary>Compare pricing, personalization, and product choices</summary><WinnerProfile profile={profile} shelf={shelf}/></details>}
     {/* D1783 · A sort that returns nothing is worse than a sort that is not
     there. Units are counted from the difference between two readings of a
     listing's quantity, so a phrase scanned for the first time has none yet -
@@ -423,15 +423,14 @@ function WinnerProfile({profile,shelf}:{profile:Profile;shelf:string}){
   const share=(value:number)=>`${Math.round(value*100)}%`;
   type Stat={label:string;value:string;note?:string;warn?:boolean};
   const stats:Stat[]=[];
-  if(profile.currency==="USD"&&profile.priceBand)
-    stats.push({label:"Middle half",value:`${money(profile.priceBand.low)}–${money(profile.priceBand.high)}`,
+  if(shelf&&profile.currency==="USD"&&profile.priceBand)
+    stats.push({label:"Typical listed price",value:`${money(profile.priceBand.low)}–${money(profile.priceBand.high)}`,
       note:shelf?undefined:"every product type",warn:!shelf});
-  if(profile.ageMedianDays!=null)
-    stats.push({label:"Median age",value:listedFor(profile.ageMedianDays)});
+
   if(profile.personalisedShare!=null)
     stats.push({label:"Personalised",value:share(profile.personalisedShare)});
   if(profile.provenShopShare!=null)
-    stats.push({label:"From proven shops",value:share(profile.provenShopShare),note:"1,000+ lifetime sales"});
+    stats.push({label:"Shops with 1,000+ sales",value:share(profile.provenShopShare),note:"1,000+ lifetime sales"});
   if(profile.blanks.length)
     stats.push({label:"Printed on",value:profile.blanks[0].label,
       note:`${profile.blanks[0].winners} of ${profile.sampleSize}`
@@ -569,11 +568,16 @@ function ListingSort({sort,setSort,mixed}:{sort:ListingOrder;setSort:(value:List
 
 function SavedListings({watches,onRetry}:{watches:Load<WatchRow[]>;onRetry:()=>void}){
  const [entries,setEntries]=useState<Array<CollectionEntry&{keyword:string;key:string}>>([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
- const [sort,setSort]=useState<ListingOrder>('favorites');
+ const [sort,setSort]=useState<ListingOrder|'favorite-change'|'price-change'>('favorite-change');
  const keys=watches.data.map(w=>w.key).join(',');
  async function load(refresh=false){setError('');refresh?setBusy(true):setLoading(true);try{const groups=await Promise.all(watches.data.map(async w=>{const response=await fetch(`/api/market-watch/collection?key=${encodeURIComponent(w.key)}`,refresh?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'refresh'})}:undefined);if(!response.ok)throw Error('Saved listings could not load. Try again.');const body=await response.json() as {entries:CollectionEntry[]};return body.entries.map(e=>({...e,keyword:w.phrase,key:w.key}));}));setEntries(groups.flat());}catch(e){setError((e as Error).message);}finally{setLoading(false);setBusy(false);}}
  useEffect(()=>{if(watches.status==='ready')void load();else if(watches.status==='failed'){setLoading(false);setError('Tracked keywords could not load.');}},[keys,watches.status]);
  const unique=new Map<number,CollectionEntry&{keyword:string;key:string}>();for(const e of entries)if(!unique.has(e.listing.listingId))unique.set(e.listing.listingId,e);
- const listings=browseListings([...unique.values()].map(e=>e.listing),sort,'','');
- return <main className="mw"><ResearchNavigation active="saved"/><header className="current-page-heading"><div><p className="current-kicker">Research</p><h1>Saved listings</h1><p>Listings you saved from keyword searches. Track their prices, favorites, and views here.</p></div><button className="p-button p-button-primary" disabled={loading||busy||!entries.length} onClick={()=>void load(true)}>{busy?'Checking…':'Check for changes'}</button></header>{error&&<p role="alert">{error} <button onClick={()=>watches.status==='failed'?onRetry():void load()}>Try again</button></p>}{loading?<p role="status">Loading saved listings…</p>:!entries.length&&!error?<p>No saved listings yet. Open a tracked keyword, then choose Save to track on a listing.</p>:null}{entries.length>0&&<><div className="market-results-sort"><label>Sort listings<select value={sort} onChange={e=>setSort(e.target.value as ListingOrder)}><option value="favorites">Most favorites</option><option value="views">Most views</option><option value="newest">Newest first</option></select></label></div><div className="cards">{listings.map(l=><ListingCard key={l.listingId} listing={l} extra={<><p>Saved from: {unique.get(l.listingId)!.keyword}</p><CompetitorChange entry={unique.get(l.listingId)!}/></>}/>)}</div></>}</main>;
+ const delta=(id:number)=>competitorChanges(unique.get(id)!);
+ const listings=sort==='favorite-change'||sort==='price-change'?[...unique.values()].sort((a,b)=>{
+  const x=a.unavailable||a.checkedAt<=a.savedAt?null:delta(a.listing.listingId),y=b.unavailable||b.checkedAt<=b.savedAt?null:delta(b.listing.listingId);
+  const xv=sort==='favorite-change'?x?.favorites:x?.priceCents==null?null:Number(x.priceCents!==0),yv=sort==='favorite-change'?y?.favorites:y?.priceCents==null?null:Number(y.priceCents!==0);
+  return (yv??-Infinity)-(xv??-Infinity)||b.checkedAt-a.checkedAt;
+ }).map(e=>e.listing):browseListings([...unique.values()].map(e=>e.listing),sort,'','');
+ return <main className="mw"><ResearchNavigation active="saved"/><header className="current-page-heading"><div><p className="current-kicker">Research</p><h1>Saved listings</h1><p>Listings you saved from keyword searches. Track their prices, favorites, and views here.</p></div><button className="p-button p-button-primary" disabled={loading||busy||!entries.length} onClick={()=>void load(true)}>{busy?'Checking…':'Check for changes'}</button></header>{error&&<p role="alert">{error} <button onClick={()=>watches.status==='failed'?onRetry():void load()}>Try again</button></p>}{loading?<p role="status">Loading saved listings…</p>:!entries.length&&!error?<p>No saved listings yet. Open a tracked keyword, then choose Save to track on a listing.</p>:null}{entries.length>0&&<><div className="market-results-sort"><label>Sort listings<select value={sort} onChange={e=>setSort(e.target.value as typeof sort)}><option value="favorite-change">Favorites gained since saved</option><option value="price-change">Price changes first</option><option value="favorites">Most total favorites</option><option value="views">Most views</option><option value="newest">Newest first</option></select></label></div><div className="cards">{listings.map(l=><ListingCard key={l.listingId} listing={l} extra={<><p>Saved from: {unique.get(l.listingId)!.keyword}</p><CompetitorChange entry={unique.get(l.listingId)!}/></>}/>)}</div></>}</main>;
 }

@@ -174,7 +174,7 @@ test("the page explains what the numbers mean without describing the plumbing", 
   const page = read("hot-list/page.tsx");
   assert.match(page, /How these listings are selected/);
   assert.match(page, /Browse Etsy listing activity/i);
-  for (const leak of [/stock/i, /compare/i, /reading before/i, /listings we watch/i])
+  for (const leak of [/compare/i, /reading before/i, /listings we watch/i])
     assert.doesNotMatch(strip(page), leak,
       `the page must not describe how the count is produced: ${leak}`);
 });
@@ -535,7 +535,7 @@ test("the period is stated once, not on every card", () => {
   /* Four hundred cards each repeating the window was noise even when it was
      accurate. The selected tab says it; the card carries the number. */
   const page = read("hot-list/page.tsx");
-  assert.match(page, /<span className="drop-unit">Recent activity<\/span>/);
+  assert.match(page, /<span className="drop-unit">Stock decreased<\/span>/);
   assert.doesNotMatch(strip(page), /sold this week<\/span>|sold overnight<\/span>/);
 });
 
@@ -620,8 +620,8 @@ test("one currency on the board, converted here because Etsy would not", () => {
      own currency through to the page. */
   const source = read("sold-overnight.ts");
   assert.match(source, /import \{[^}]*usdFromCents[^}]*\} from "@\/app\/sold-overnight-math"/);
-  assert.equal((source.match(/usdFromCents\(/g) || []).length, 2,
-    "used on both the board and the keyword lookup");
+  assert.equal((source.match(/usdFromCents\(/g) || []).length, 3,
+    "used for display and the keyword lookup price filter");
   assert.doesNotMatch(source, /currency: r\.currency \|\| "USD"/);
   assert.doesNotMatch(source, /currency: row\.currency \|\| "USD"/);
 });
@@ -798,5 +798,5 @@ test("an exact figure is distinguished from a corroborated one", () => {
      rather than smoothed over. */
   const page = read("hot-list/page.tsx");
   assert.doesNotMatch(page, /card.sold/);
-  assert.match(page, /Recent activity/);
+  assert.match(page, /Stock decreased/);
 });

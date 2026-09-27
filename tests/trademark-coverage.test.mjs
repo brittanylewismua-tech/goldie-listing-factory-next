@@ -147,7 +147,7 @@ async function realLookup() {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022 },
   }).outputText;
   const record = new URL('../app/trademark-record.ts', import.meta.url).href;
-  const preamble = `const { normalize, squeeze, readRecord, worthKeeping } = await import(${JSON.stringify(record)});\n`;
+  const preamble = `const { normalize, squeeze, readRecord, worthKeeping, meaningfulMarkMatch } = await import(${JSON.stringify(record)});\n`;
   const mod = await import('data:text/javascript;base64,'
     + Buffer.from(preamble + compiled).toString('base64'));
   return mod.lookup;

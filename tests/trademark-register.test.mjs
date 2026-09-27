@@ -7,7 +7,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalize, readRecord, worthKeeping, PRINTED_CLASSES } from "../app/trademark-record.ts";
+import { normalize, readRecord, worthKeeping, PRINTED_CLASSES, meaningfulMarkMatch } from "../app/trademark-record.ts";
 import { blocks, field, allFields, singleEntryDeflateStream } from "../app/uspto-bulk.ts";
 import { withRegister } from "../app/trademark-check.ts";
 import { readFileSync } from "node:fs";
@@ -196,4 +196,11 @@ test("the internal validation title is one Printify will accept", async () => {
   /* And it still carries the only thing removal matches on. */
   assert.ok(title.includes(INTERNAL_VALIDATION_MARKER));
   assert.ok(title.length <= 255);
+});
+
+test("connecting words do not crowd phrase searches but exact marks stay searchable",()=>{
+  assert.equal(meaningfulMarkMatch("IN","in my mama era"),false);
+  assert.equal(meaningfulMarkMatch("IN","in"),true);
+  assert.equal(meaningfulMarkMatch("BLUEY","bluey birthday shirt"),true);
+  assert.equal(meaningfulMarkMatch("HAUS LABS","hauslabs"),true);
 });

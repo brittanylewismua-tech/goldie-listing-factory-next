@@ -55,3 +55,10 @@ test("the rule is applied on the way in, not only on the way out", () => {
   const source = read("sold-overnight.ts");
   assert.match(source, /printable\(/, "discovery has to use it");
 });
+
+ test("supplies and shipping charges are excluded without removing finished pillows", () => {
+  for (const title of ["Pillow inserts 18x18", "Cotton cord for crafts", "Reshipping charge", "Blank shirts wholesale"]) {
+    assert.equal(printable({title}), false, title);
+  }
+  assert.equal(printable({title:"Floral throw pillow with insert",product:"Throw Pillows",price:30}),true);
+});

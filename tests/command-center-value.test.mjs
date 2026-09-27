@@ -23,7 +23,8 @@ test('catalog actions distinguish unavailable sellers from low-volume noise',()=
  const listing=(id,state='active')=>({listing_id:id,title:`Item ${id}`,state,created_at:now-100*day,favorites:10});
  const sale=(id,q,days)=>({listing_id:id,quantity:q,sold_at:now-days*day,refunded:0});
  const result=catalogActions([listing(1,'inactive'),listing(2),listing(3),listing(4)], [sale(1,2,20),sale(2,6,40),sale(2,1,10),sale(3,1,40),{...sale(4,1,10),refunded:1}],now);
- assert.deepEqual(result.map(r=>r.listingId),[1,2,4]);assert.match(result[2].evidence,/lifetime favorites/);
+ assert.deepEqual(result.map(r=>r.listingId),[1,2]);
+ assert.equal(catalogActions([{...listing(6),favorites:10000}],[],now).length,0,'lifetime favorites do not prove current interest or a sales problem');
  assert.equal(catalogActions([{...listing(5),created_at:now-5*day}],[],now).length,0);
 });
 test('buyer suggestions require recognized evidence and avoid claims of certainty',()=>{

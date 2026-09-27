@@ -1327,7 +1327,7 @@ export async function refreshNow() {
  * phrase has nothing behind it the answer is "nothing sold for that", which is
  * a real answer rather than a filler list.
  */
-export async function searchSold(keyword: string, hoursBack = 168, limit = 24) {
+export async function searchSold(keyword: string, hoursBack = 168, limit = 24, madeToOrder = false, rights = false) {
   await ensureTables();
   const shelfOf = await shelfByTaxonomy();
   if (!shelfOf.size) return [];
@@ -1342,7 +1342,7 @@ export async function searchSold(keyword: string, hoursBack = 168, limit = 24) {
 
   const rows = (await db().prepare(
     `SELECT m.listing_id, SUM(m.sold) sold, w.title, w.url, w.image,
-            w.price_cents, w.currency, w.taxonomy_id
+            w.price_cents, w.currency, w.taxonomy_id, w.personalizable
        FROM sold_moves m
        JOIN sold_watch w ON w.listing_id=m.listing_id
       WHERE m.bucket>=? AND m.sold>0 AND m.sold<=?
@@ -1359,11 +1359,15 @@ export async function searchSold(keyword: string, hoursBack = 168, limit = 24) {
           ...words.map(word => `%${word}%`), limit * 4)
     .all()).results as unknown as {
       listing_id: number; sold: number; title: string; url: string; image: string | null;
-      price_cents: number | null; currency: string | null; taxonomy_id: number | null;
+      price_cents: number | null; currency: string | null; taxonomy_id: number | null; personalizable: number | null;
     }[];
 
   return rows
     .filter(row => shelfOf.has(Number(row.taxonomy_id)))
+    .filter(row => madeToOrder || !row.personalizable)
+    .filter(row => rights || (!tradesOnRights(row.title) && !mentionsAMark(row.title)))
+    .filter(row => printable({ title: row.title, product: shelfOf.get(Number(row.taxonomy_id)),
+      price: usdFromCents(row.price_cents == null ? null : Number(row.price_cents), row.currency) }))
     .slice(0, limit)
     .map(row => ({
       listingId: Number(row.listing_id),

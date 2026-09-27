@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import type {ResearchView} from '@/app/niche-research-view';
 import type {BuyerReport} from '@/app/niche-buyer-evidence';
 const date=(at:number)=>new Date(at*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
-export default function BuyerInsights({project,onProducts}:{project:ResearchView;onProducts:(ids:number[])=>void}){
+export default function BuyerInsights({project,onProducts,overview=false,onDetails}:{project:ResearchView;onProducts:(ids:number[])=>void;overview?:boolean;onDetails?:()=>void}){
  const [report,setReport]=useState<BuyerReport|null>(project.buyerInsights),[error,setError]=useState(''),[attempt,setAttempt]=useState(0),[loading,setLoading]=useState(!project.buyerInsights);
  useEffect(()=>{
   if(project.buyerInsights){setReport(project.buyerInsights);setError('');setLoading(false);return;}
@@ -23,6 +23,9 @@ export default function BuyerInsights({project,onProducts}:{project:ResearchView
   finally{if(!controller.signal.aborted)setLoading(false);}})();
   return()=>controller.abort();
  },[project.id,project.buyerSourceKey,project.buyerInsights?.sourceKey,project.phase,attempt]);
+ if(overview)return <section className="research-decision-overview"><header className="nr-section-head"><div><span className="nr-kicker">BUYER RESEARCH</span><h2>What matters to buyers here</h2></div>{report&&<button onClick={onDetails}>Read supporting reviews →</button>}</header>
+ {loading?<p role="status">Reading reviews for buying reasons, occasions, and product requests…</p>:error?<p role="alert">{error} <button onClick={()=>setAttempt(n=>n+1)}>Try again</button></p>:report?.findings.length?<div className="research-decision-grid">{report.findings.map(f=><article key={f.title}><span className="nr-kicker">{f.kind==='request'?'A BUYER’S REQUEST':'FROM BUYER REVIEWS'}</span><h3>{f.title}</h3><p>{f.explanation}</p><blockquote>“{f.evidence[0].quote}”<cite>{f.evidence[0].shop}</cite></blockquote><div className="research-decision-actions"><button onClick={()=>onProducts([...new Set(f.evidence.map(e=>e.listingId))])}>See the products →</button><span>{f.evidence.length} supporting {f.evidence.length===1?'review':'reviews'}</span></div></article>)}</div>:<div className="nr-card"><h3>No clear buying reasons in the reviews yet</h3><p>Browse the products and shops below while new reviews are collected.</p></div>}
+ </section>;
  return <section className="buyer-context"><header className="nr-section-head"><div><h2>Why buyers chose these products</h2><p>Motivations, occasions, and requests from their reviews.</p></div>{report&&<span>{report.analyzed.toLocaleString()} reviews read · {date(report.at)}</span>}</header>
  {loading&&<div className="nr-card" role="status"><h3>Reading buyer reviews…</h3><p>Looking for specific reasons people bought, how they use the products, and what they asked for. This may take a minute.</p></div>}
  {error&&<div className="nr-error" role="alert"><p>{error}</p><button onClick={()=>setAttempt(n=>n+1)}>Try again</button></div>}

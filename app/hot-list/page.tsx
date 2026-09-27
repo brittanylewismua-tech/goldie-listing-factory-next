@@ -4,28 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import FactoryShell from "../factory-shell";
 import { decodeEntities } from "../shop-map-worlds";
 
-/**
- * THE HOT LIST.
- *
- * One question — what is actually selling on Etsy — asked over two lengths of
- * time. The week is what you plan against, because seven days is long enough
- * that one good afternoon cannot fake it. Overnight is what you open the tab
- * for, because it is the only view that catches something the moment it starts
- * moving.
- *
- * These were two separate pages sitting next to each other in the sidebar with
- * the same cards and the same rail. One of them ranked by saves over age and
- * could not see a sale at all. Now there is one board and a switch, and every
- * number on it is a count of things that left a shelf.
- *
- * Nothing here narrates how it is produced, and nothing claims a rank it
- * cannot support. It says what sold, and over what period.
- */
+/** Observed listing changes for product research; never a competitor sales report. */
 
 type Listing = {
   listingId: number; title: string; url: string; image: string | null;
   price: number | null; currency: string;
-  sold: number; soldOut: boolean; product: string; attribution: string | null;
+  sold: number; savesGained: number; soldOut: boolean; product: string; attribution: string | null;
 };
 type Hit = { listingId: number; title: string; url: string; image: string | null;
   price: number | null; currency: string; sold: number; product: string };
@@ -130,7 +114,7 @@ export default function HotListPage() {
     setLooking(true); setNote(""); setHits([]); setSearchedTerm(keyword);
     try {
       const response = await fetch(
-        `/api/sold-overnight/search?keyword=${encodeURIComponent(term.trim())}&hours=${view.hours}`, { cache: "no-store" });
+        `/api/sold-overnight/search?keyword=${encodeURIComponent(term.trim())}&hours=${view.hours}${madeToOrder ? "&madeToOrder=1" : ""}${rights ? "&rights=1" : ""}`, { cache: "no-store" });
       const result = await response.json() as { listings?: Hit[]; error?: string };
       if (!response.ok) throw new Error(result.error || "That could not be looked up.");
       if(request!==searchRequest.current)return;
@@ -196,7 +180,7 @@ export default function HotListPage() {
               <figcaption>
                 <p className="drop-figures">
 
-                  <span className="drop-unit">Recent activity</span>
+                  <span className="drop-unit">Stock decreased</span>
                 </p>
                 {hit.price !== null && <p className="drop-sub">{money(hit.price, hit.currency)}</p>}
                 <a className="drop-title" href={hit.url} target="_blank" rel="noopener noreferrer">
@@ -288,7 +272,7 @@ export default function HotListPage() {
                   </a>
                   <figcaption>
                     <p className="drop-figures">
-                      <span className="drop-unit">Recent activity</span>
+                      <span className="drop-unit">{listing.savesGained > 0 ? `+${listing.savesGained.toLocaleString()} favorites` : "Stock decreased"}</span>
                     </p>
                     {listing.price !== null &&
                       <p className="drop-sub">{money(listing.price, listing.currency)}</p>}

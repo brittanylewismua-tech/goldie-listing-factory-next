@@ -86,7 +86,7 @@ function DesignReach(){
     .catch(()=>setRead(true))},[]);
   if(!read||!rows.length)return null;
   return <section className="cc-tool shop-map-reach">
-    <h2>Designs sold on one product type</h2>
+    <h2>Selling designs available on just one product</h2><p>Review these before choosing a design to offer on another product.</p>
 
     <ul>{rows.map(row=><li key={row.key}>
       {row.imageUrl?<img src={row.imageUrl} alt="" width={72} height={72} loading="lazy"/>:<span aria-hidden="true"/>}
@@ -108,8 +108,7 @@ function DesignReach(){
   the number that is true of that listing alone.
 */
 function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}){
-  if(!actions.length)return <section className="cc-tool"><h2>Listings to review</h2>
-    <p className="cc-note">No inactive sellers, sharp sales drops, or older unsold listings with favorites found.</p></section>;
+  if(!actions.length)return null;
   const groups:Array<{headline:string;rows:CatalogAction[]}>=[];
   for(const action of actions){
     const last=groups[groups.length-1];
@@ -302,7 +301,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           onClick={() => setTab(key)}>{label}</button>)}
     </nav>
 
-    {tab === "overview" && <div className="shop-map-tab-panel">
+    {tab === "overview" && <div className="shop-map-tab-panel"><CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/><DesignReach/>
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
           <h2>Top 3 listings in the last 90 days</h2></div>
@@ -321,9 +320,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           panels opened the page, so Shop Map began with eight rows of
           near-identical SEO titles and the shop's own sales were pushed
           below the fold. */}
-      <DesignReach/>
       <ListingCheckPanel/>
-      <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
       <section className="shop-map-summary-grid">
         <article><span>Orders this month</span><strong>{month?.orders ?? "—"}</strong><small>{money(month?.revenueMinor,month?.currency)} revenue</small></article>
         <article><span>Active listings</span><strong>{shown.shopTotals?.activeListings ?? 0}</strong><small>in your current catalog</small></article>

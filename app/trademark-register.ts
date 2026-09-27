@@ -18,7 +18,7 @@
  * in, because a dead mark is not a reason to change a design.
  */
 import { blocks, singleEntryDeflateStream } from "@/app/uspto-bulk";
-import { normalize, squeeze, readRecord, worthKeeping, type RegisterHit } from "@/app/trademark-record";
+import { normalize, squeeze, readRecord, worthKeeping, meaningfulMarkMatch, type RegisterHit } from "@/app/trademark-record";
 import { TRADEMARK_ARCHIVE_DAY, trademarkFileDay } from "@/app/trademark-import-coverage";
 
 export { normalize, squeeze, readRecord, worthKeeping, PRINTED_CLASSES } from "@/app/trademark-record";
@@ -291,6 +291,7 @@ export async function lookup(db: D1Database, phrase: string): Promise<RegisterHi
   return (candidates.results ?? [])
     /* Either the mark sits inside the phrase on word boundaries, or the two
        are the same mark once their spacing is disregarded. */
+    .filter(row => meaningfulMarkMatch(row.mark, phrase))
     .filter(row => padded.includes(` ${normalize(row.mark)} `)
       || squeeze(row.mark) === squeezed)
     .map(row => ({

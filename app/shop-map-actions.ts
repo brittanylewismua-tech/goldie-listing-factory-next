@@ -16,7 +16,6 @@ export function catalogActions(listings:Array<{listing_id:number;title:string;st
   const base={listingId:row.listing_id,title:row.title};
   if(row.state!=='active'&&n.ninety>0)return [{...base,headline:'Previously sold, now inactive',fact:`${n.ninety} sold in 90 days · now ${row.state}`,evidence:`${n.ninety} non-refunded units recorded in the last 90 days; last recorded listing state: ${row.state}.`,nextStep:'Check why this listing is inactive. Before renewing, check stock and current production costs.',priority:1}];
   if(row.state==='active'&&n.previous>=5&&n.recent<n.previous/2)return [{...base,headline:'Sales have dropped',fact:`${n.recent} sold in 30 days, down from ${n.previous}`,evidence:`${n.recent} non-refunded units in the last 30 days versus ${n.previous} in the preceding 30 days.`,nextStep:'Check Etsy Stats for changes in visits and orders. Review stock, prices, shipping, and any promotions during these dates.',priority:2}];
-  if(row.state==='active'&&n.ninety===0&&row.created_at&&row.created_at<=now-90*86400&&(row.favorites??0)>=5)return [{...base,headline:'Favorites, but no sales in 90 days',fact:`${row.favorites} total favorites · nothing sold in 90 days`,evidence:`No non-refunded sale recorded in the last 90 days; ${row.favorites} lifetime favorites. `,nextStep:'Check the total price with shipping, the first photo, the size guide, and the delivery estimate.',priority:3}];
   return [];
  }).sort((a,b)=>a.priority-b.priority||a.listingId-b.listingId).slice(0,6);
 }
