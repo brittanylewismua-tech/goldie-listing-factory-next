@@ -204,3 +204,10 @@ test("connecting words do not crowd phrase searches but exact marks stay searcha
   assert.equal(meaningfulMarkMatch("BLUEY","bluey birthday shirt"),true);
   assert.equal(meaningfulMarkMatch("HAUS LABS","hauslabs"),true);
 });
+
+test("Born this way does not report a connecting word as a trademark phrase match",()=>{
+ assert.equal(meaningfulMarkMatch("THIS.","born this way"),false);
+ assert.equal(meaningfulMarkMatch("THIS.","this"),true);
+ assert.equal(meaningfulMarkMatch("BORN THIS WAY","born this way"),true);
+ assert.equal(meaningfulMarkMatch("BORN","born this way"),true);
+});

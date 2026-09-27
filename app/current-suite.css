@@ -956,3 +956,38 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .current-money-total .shop-map-headline-label {color:#ee6fc0!important}
 #suite-workspace .factory-work :is(.current-home-feature,.co-feature) {box-shadow:4px 4px 0 #000!important}
 #suite-workspace .factory-work .cc-home-tile:not([data-tool="Shop Map"]) {border-color:#000!important}
+
+/* Trademark results: phrase matches first, incidental words disclosed separately. */
+#suite-workspace .tm-standalone .tm-form input.p-input{padding:14px 18px!important;min-width:0;width:auto;min-height:50px!important;line-height:1.5!important;border-radius:10px!important}
+#suite-workspace .tm-standalone .tm-form{gap:12px!important;padding:20px!important}
+#suite-workspace .tm-standalone .tm-verdict{background:#fff!important;padding:28px!important;gap:22px!important}
+#suite-workspace .tm-result-heading{display:flex;align-items:center;justify-content:space-between;gap:20px}
+#suite-workspace .tm-result-heading .p-eyebrow{margin:0 0 8px;color:#6b6369;font-size:11px}
+#suite-workspace .tm-result-heading .tm-phrase{margin:0;padding:0;border:0;background:transparent;font:700 26px/1.25 inherit;overflow-wrap:anywhere}
+#suite-workspace .tm-result-heading .tm-watch-button{width:auto;margin:0;padding:10px 16px!important;white-space:nowrap}
+#suite-workspace .tm-coverage{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;background:#faf8f9;border-left:3px solid #ee6fc0;padding:14px 16px;font-size:13px}
+#suite-workspace .tm-coverage strong{width:100%;font-weight:700}
+#suite-workspace .tm-coverage a{color:#000;font-weight:700;text-decoration:underline}
+#suite-workspace .tm-results-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px}
+#suite-workspace .tm-results-toolbar h3{font-size:17px;margin:0}
+#suite-workspace .tm-results-toolbar h3 span{margin-left:8px;color:#777;font-weight:500}
+#suite-workspace .tm-results-toolbar label{display:flex;align-items:center;gap:10px;font-size:12px;color:#686168}
+#suite-workspace .tm-results-toolbar select{max-width:220px;font-size:14px!important;padding:9px 12px!important}
+#suite-workspace .tm-results{list-style:none;display:grid;padding:0;margin:0;gap:0}
+#suite-workspace .tm-record{padding:18px 0;border-bottom:1px solid #e4e1de;min-width:0}
+#suite-workspace .tm-record-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#suite-workspace .tm-record h3{margin:0;font-size:18px;line-height:1.4;overflow-wrap:anywhere}
+#suite-workspace .tm-record-status{font-size:12px;line-height:1.5;color:#5a5157;flex-shrink:0}
+#suite-workspace .tm-record-owner{margin:5px 0 12px;font-size:13px;color:#6d656b}
+#suite-workspace .tm-record-bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;font-size:13px;line-height:1.6}
+#suite-workspace .tm-record-bottom span{max-width:65%;color:#6d656b}
+#suite-workspace .tm-record-bottom a{color:#000;font-weight:700;flex-shrink:0;text-decoration:underline}
+#suite-workspace .tm-word-matches{border-top:1px solid #e4e1de;padding-top:18px}
+#suite-workspace .tm-word-matches summary{cursor:pointer;font-size:14px;font-weight:700}
+#suite-workspace .tm-word-matches>p,.tm-empty{font-size:14px;color:#6d656b;line-height:1.6;margin:8px 0}
+#suite-workspace .tm-brand-alert{border-left:3px solid #000;padding-left:16px}
+#suite-workspace .tm-brand-alert h3{font-size:16px;margin:0 0 10px}
+#suite-workspace .tm-brand-alert ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+#suite-workspace .tm-brand-alert li{display:flex;flex-wrap:wrap;gap:5px 12px;font-size:14px}
+#suite-workspace .tm-brand-alert li span{color:#6d656b}
+@media(max-width:600px){#suite-workspace .tm-standalone .tm-verdict{padding:20px!important}#suite-workspace .tm-result-heading{align-items:flex-start;flex-direction:column;gap:12px}#suite-workspace .tm-results-toolbar{align-items:flex-start;flex-direction:column}#suite-workspace .tm-record-top{flex-direction:column;gap:4px}#suite-workspace .tm-record-bottom{align-items:flex-start;flex-direction:column}#suite-workspace .tm-record-bottom span{max-width:100%}#suite-workspace .tm-standalone .tm-form input.p-input{width:100%;flex-basis:100%}}

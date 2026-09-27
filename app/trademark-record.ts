@@ -116,6 +116,6 @@ export function worthKeeping(record: ReturnType<typeof readRecord>): boolean {
 export function meaningfulMarkMatch(mark: string, phrase: string): boolean {
   const m=normalize(mark), p=normalize(phrase);
   if (squeeze(mark)===squeeze(phrase)) return true;
-  if (new Set(["a","an","and","as","at","be","by","for","from","in","is","it","my","of","on","or","our","the","to","with","your"]).has(m.toLowerCase())) return false;
+  if (new Set(["a","an","and","as","at","be","by","for","from","in","is","it","my","of","on","or","our","the","this","that","these","those","to","with","your"]).has(m.toLowerCase())) return false;
   return (` ${p} `).includes(` ${m} `);
 }

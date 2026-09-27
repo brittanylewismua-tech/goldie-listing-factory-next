@@ -2,7 +2,7 @@
 
 import ActionPlan from "@/app/command-center/action-plan";
 import { useEffect, useRef, useState } from "react";
-import type { FullVerdict } from "../trademark-check";
+import type { FullVerdict, RegisterMatch } from "../trademark-check";
 import "./trademark.css";
 import FactoryShell from "@/app/factory-shell";
 
@@ -47,7 +47,8 @@ const CLASS_NAMES: Record<string, string> = {
   "020": "furniture", "021": "housewares and mugs", "024": "textiles",
   "025": "clothing", "026": "trims and patches", "028": "toys and games",
   "030": "food", "032": "non-alcoholic drinks", "033": "alcoholic drinks", "035": "retail and advertising",
-  "041": "entertainment and classes", "043": "food and drink services",
+  "041": "entertainment and education",
+  "042": "technology services", "043": "food and drink services",
 };
 const classPhrase = (classes: string[]) => {
   const named = classes.map(code => {
@@ -188,64 +189,28 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         <p>{error}</p>
       </section>}
 
-      {verdict && <section className={`tm-verdict ${verdict.risk}`} aria-live="polite">
-        {/* The verdict wears the product's status treatment, so risk reads the
-            same here as everywhere else in the suite. */}
-        <span className={verdict.risk === "high" ? "p-badge p-badge-bad"
-          : verdict.risk === "caution" || verdict.registerReady === false || verdict.registerRead === false ? "p-badge p-badge-warn" : "p-badge p-badge-good"}>
-          {verdict.risk !== "clear" ? "Matches to review" : verdict.registerReady === false || verdict.registerRead === false ? "Search incomplete" : "No match found"}
-        </span>
-        <p className="tm-phrase">{marked()}</p>
-        {verdict.registerReady === false && <p className="p-notice" role="status"><strong>Search incomplete.</strong> Review the current USPTO records before using this phrase.</p>}
-        <p>{(verdict.register ?? []).length > 0
-          ? `${verdict.register!.length} matching record${verdict.register!.length === 1 ? "" : "s"}.`
-          : verdict.risk === "clear" ? "No matching mark was found for this phrase. This does not establish that the phrase is available to use."
-            : "This phrase contains a brand or name that needs review before use."}</p>
-
-        {verdict.hits.length > 0 && <ul className="tm-hits">
-          {verdict.hits.map((hit, index) =>
-            <li key={`${hit.at}-${index}`} className="tm-hit">
-              <b>{hit.matched}</b>
-              <span className="tm-owner">owned by {hit.owner}</span>
-              <span className="tm-cat">{hit.category}</span>
-            </li>)}
-        </ul>}
-
-        {/* The register's own findings, kept visually separate from the
-            curated list: they are a different kind of fact and a seller
-            should be able to tell which one is talking. */}
-        {(verdict.register ?? []).length > 0 && <div className="tm-category-sort"><label>Prioritize product category<select value={productClass} onChange={e=>setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label><p className="cc-note">All matches stay visible. Compare the goods and services in each record.</p></div>}
-        {(verdict.register ?? []).length > 0 && <ul className="tm-hits tm-register p-card-quiet">
-          {[...(verdict.register ?? [])].sort((a,b)=>Number(b.classes.some(c=>c.padStart(3,"0")===productClass))-Number(a.classes.some(c=>c.padStart(3,"0")===productClass))).map((match, index) =>
-            /* Two records for one brand share a mark and carry no
-               registration number until they register, so the previous key
-               collided and React kept only one of them. */
-            <li key={`${match.mark}-${match.classes.join("-")}-${index}`} className="tm-hit">
-              <b>{match.mark}</b>
-              {match.owner && <span className="tm-owner">
-                {match.registered ? "registered to" : "filed by"} {match.owner}</span>}
-              <span className="tm-cat">
-                {match.registered ? "live registration" : "pending application"}
-                {match.classes.length ? ` · ${classPhrase(match.classes)}` : ""}
-              </span>
-              {/^\d+$/.test(match.serial ?? "") && <a href={`https://tsdr.uspto.gov/#caseNumber=${encodeURIComponent(match.serial ?? "")}&caseSearchType=US_APPLICATION&caseType=DEFAULT&searchType=statusSearch`} target="_blank" rel="noopener noreferrer">View trademark record ↗</a>}
-            </li>)}
-        </ul>}
-        <button className="tm-watch-button" type="button" disabled={watchBusy === verdict.phrase}
-          onClick={() => void watchPhrase()}>{watches.some(watch => watch.phrase.toLowerCase() === verdict.phrase.toLowerCase())
-            ? "Update watched phrase" : "Watch this phrase"}</button>
-        <ActionPlan feature="trademarkStandalone" source={verdict.phrase.toLowerCase().slice(0,180)} heading={`Phrase review: ${verdict.phrase}`} notes={`Phrase: ${verdict.phrase}
-Intended product: ${CLASS_NAMES[productClass]||'Add the exact product'}
-Register search ${verdict.registerReady?'available':'incomplete'} when reviewed.
-${(verdict.register??[]).map(m=>`${m.mark} · ${m.registered?'registration':'pending application'} · ${classPhrase(m.classes)} · serial ${m.serial||'unavailable'}`).join('\n')}
-
-Records reviewed and current status:
-Actual goods/services and similarities to my product:
-Wording alternatives to check:
-Next step / professional advice needed:
-
-This note records my review; it is not clearance to use the phrase.`}/>
-      </section>}
+      {verdict && (() => {
+        const all = verdict.register ?? [];
+        const phraseMatches = all.filter(m => m.exact || m.mark.trim().split(/\s+/).length > 1);
+        const wordMatches = all.filter(m => !phraseMatches.includes(m));
+        const incomplete = verdict.registerReady === false || verdict.registerComplete === false || verdict.registerRead === false;
+        const visible = (matches: RegisterMatch[]) => matches.filter(m => !productClass || m.classes.some(c => c.padStart(3,"0") === productClass));
+        const records = (matches: RegisterMatch[]) => <ul className="tm-results">{matches.map((m,index) => <li className="tm-record" key={m.serial || `${m.mark}-${index}`}>
+          <div className="tm-record-top"><h3>{m.mark}</h3><span className="tm-record-status">{m.registered ? "Registered" : "Pending application"}</span></div>
+          <p className="tm-record-owner">{m.owner || "Applicant not provided"}</p>
+          <div className="tm-record-bottom"><span>{m.classes.length ? classPhrase(m.classes) : "Product category unavailable"}</span>
+          {/^\d+$/.test(m.serial ?? "") && <a href={`https://tsdr.uspto.gov/#caseNumber=${encodeURIComponent(m.serial ?? "")}&caseSearchType=US_APPLICATION&caseType=DEFAULT&searchType=statusSearch`} target="_blank" rel="noopener noreferrer">Open USPTO record ↗</a>}</div>
+        </li>)}</ul>;
+        return <section className="tm-verdict" aria-live="polite">
+          <div className="tm-result-heading"><div><p className="p-eyebrow">RESULTS FOR</p><h2 className="tm-phrase">{marked()}</h2></div><button className="tm-watch-button" type="button" disabled={watchBusy === verdict.phrase} onClick={() => void watchPhrase()}>{watches.some(w => w.phrase.toLowerCase() === verdict.phrase.toLowerCase()) ? "Update watch" : "Watch phrase"}</button></div>
+          {incomplete && <div className="tm-coverage" role="status"><strong>{verdict.registerRead === false ? "Records unavailable" : "Some trademark records are still missing"}</strong><span>{verdict.registerRead === false ? "Try again." : "Check the full USPTO database before using this phrase."}</span><a href="https://tmsearch.uspto.gov/search/" target="_blank" rel="noopener noreferrer">Search USPTO ↗</a></div>}
+          {verdict.hits.length > 0 && <div className="tm-brand-alert"><h3>Brand or character names in this phrase</h3><ul>{verdict.hits.map((hit,index)=><li key={index}><strong>{hit.matched}</strong><span>{hit.category} · {hit.owner}</span></li>)}</ul></div>}
+          {all.length > 0 && <div className="tm-results-toolbar"><h3>Phrase matches <span>{phraseMatches.length}</span></h3><label>Product category<select value={productClass} onChange={e => setProductClass(e.target.value)}><option value="">All categories</option>{["025","021","016","018","024"].map(code=><option key={code} value={code}>{CLASS_NAMES[code]}</option>)}</select></label></div>}
+          {phraseMatches.length > 0 ? visible(phraseMatches).length ? records(visible(phraseMatches)) : <p className="tm-empty">No phrase matches in this product category.</p> : <p className="tm-empty">No exact phrase match in the records loaded here.</p>}
+          {wordMatches.length > 0 && <details className="tm-word-matches"><summary>Individual word matches · {visible(wordMatches).length}</summary><p>These records match a word in your phrase, not the whole phrase.</p>{records(visible(wordMatches))}</details>}
+          <ActionPlan feature="trademarkStandalone" source={verdict.phrase.toLowerCase().slice(0,180)} heading={`Phrase review: ${verdict.phrase}`} notes={`Phrase: ${verdict.phrase}\n${all.map(m=>`${m.mark} · ${m.registered?'registered':'pending'} · ${classPhrase(m.classes)} · ${m.serial||''}`).join('\n')}`}/>
+        </section>;
+      })()}
 
       {watches.length > 0 && <section className="tm-watches" aria-labelledby="tm-watches-title">
         <div className="tm-watches-head"><div><h2 id="tm-watches-title">Watched phrases</h2></div></div>
@@ -264,9 +229,7 @@ This note records my review; it is not clearance to use the phrase.`}/>
       </section>}
 
       <p className="tm-note">
-        No matches does not guarantee a phrase is available to use.{" "}
-
-        {" "}This is screening information, not legal advice.
+        Trademark screening, not legal clearance.
       </p>
     </div>
 </>);

@@ -434,6 +434,7 @@ export type FullVerdict = Verdict & {
   register: RegisterMatch[];
   /** False while the register is still filling, so the page can say so. */
   registerReady: boolean;
+  registerComplete?: boolean;
 };
 
 const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
@@ -623,7 +624,7 @@ export function withRegister(
     So the summary itself carries the state — the warning beneath it is a
     reinforcement, never the only place the limitation appears.
   */
-  if (verdict.risk === "high") return { ...verdict, register: matches, registerReady };
+  if (verdict.risk === "high") return { ...verdict, register: matches, registerReady, registerComplete };
 
   /* Nothing RELEVANT, which is not the same as nothing found: an out-of-class
      mark that the phrase does not reproduce is not a finding to report. */
@@ -631,7 +632,7 @@ export function withRegister(
     return {
       ...verdict,
       register: relevant,
-      registerReady,
+      registerReady, registerComplete,
       summary: verdict.risk === "clear"
         ? (registerReady
           ? (registerComplete
@@ -671,7 +672,7 @@ export function withRegister(
       ...verdict,
       risk: "high",
       register: relevant,
-      registerReady,
+      registerReady, registerComplete,
       /*
         The headline may not imply ownership for a record that is only filed.
         "registered trademark ... owned by" becomes "pending trademark
@@ -698,7 +699,7 @@ export function withRegister(
     ...verdict,
     risk: "caution",
     register: relevant,
-    registerReady,
+    registerReady, registerComplete,
     /*
       SAY WHICH IT IS. IT USED TO SAY "registered" FOR BOTH.
 

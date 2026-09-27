@@ -40,7 +40,7 @@ export const GET = withErrorLog("trademark-watches", async () => {
     if(!hits||!size){watches.push({...row,risk:row.lastRisk||'review',changed:false,pending:false,matches:null,error:'Records could not be checked. Try again.'});continue;}
     const current = withRegister(base, toMatches(hits, row.phrase, normalize, squeeze), size);
     const currentSignature = signature(current);
-    watches.push({ ...row, incomplete:!current.registerReady, risk: current.risk, changed: Boolean(row.lastSignature)
+    watches.push({ ...row, incomplete:!current.registerReady || current.registerComplete === false, risk: current.risk, changed: Boolean(row.lastSignature)
       && row.lastSignature !== currentSignature,
       pending: (current.register ?? []).some(match => !match.registered),
       matches: current.hits.length + (current.register ?? []).length });
