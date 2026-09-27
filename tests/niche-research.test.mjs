@@ -19,8 +19,8 @@ test('collection continues beyond initial candidates and pages; scheduled work u
 import ts from 'typescript';
 import vm from 'node:vm';
 import * as model from '../app/niche-research-model.ts';
-function engine(pages){const calls=[];const writes=[];const code=ts.transpileModule(readFileSync(new URL('../app/niche-research-engine.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
- const exports={};const sandbox={exports,require(name){if(name.endsWith('niche-research-model'))return model;if(name.endsWith('niche-research-store'))return {putEvidence:async(...args)=>writes.push(args),cachedResearchPage:async()=>null,cacheResearchPage:async()=>{}};if(name.endsWith('product-type-utils'))return {productFamily:()=> 'tee'};if(name.endsWith('shop-map-worlds'))return {decodeEntities:s=>s};if(name.endsWith('shop-watch'))return {shopWatchRoom:async()=>2000};if(name.endsWith('etsy-listing-display'))return {listingPhoto:()=>'',listingPrice:r=>r.price?.amount??null};if(name.endsWith('/client'))return {etsyApiCredential:()=> 'test',recordEtsyCall:async()=>{},waitForEtsyCapacity:async()=>{},etsyBudget:async()=>({remaining:10000})};throw Error(name);},fetch:async url=>{calls.push(url);return {ok:true,json:async()=>pages(url)};},AbortSignal,Date,URLSearchParams,Map,Set,Math,Number,Error,Promise};vm.runInNewContext(code,sandbox);return {advance:exports.advanceResearch,reset:exports.resetShop,calls,writes};}
+function engine(pages,budget={remaining:10000,byFeature:[]}){const calls=[];const writes=[];const features=[];const code=ts.transpileModule(readFileSync(new URL('../app/niche-research-engine.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+ const exports={};const sandbox={exports,require(name){if(name.endsWith('niche-research-model'))return model;if(name.endsWith('niche-research-store'))return {putEvidence:async(...args)=>writes.push(args),cachedResearchPage:async()=>null,cacheResearchPage:async()=>{}};if(name.endsWith('product-type-utils'))return {productFamily:()=> 'tee'};if(name.endsWith('shop-map-worlds'))return {decodeEntities:s=>s};if(name.endsWith('shop-watch'))return {shopWatchRoom:async()=>2000};if(name.endsWith('etsy-listing-display'))return {listingPhoto:()=>'',listingPrice:r=>r.price?.amount??null};if(name.endsWith('/client'))return {etsyApiCredential:()=> 'test',recordEtsyCall:async(_response,feature)=>features.push(feature),waitForEtsyCapacity:async()=>{},etsyBudget:async()=>budget};throw Error(name);},fetch:async url=>{calls.push(url);return {ok:true,json:async()=>pages(url)};},AbortSignal,Date,URLSearchParams,Map,Set,Math,Number,Error,Promise};vm.runInNewContext(code,sandbox);return {advance:exports.advanceResearch,reset:exports.resetShop,calls,writes,features};}
 function project(){return {id:'test',name:'romance',phrases:['romance reader shirt'],createdAt:now,updatedAt:now,searchIndex:0,searchOffsets:[100],searchDone:[false],candidates:[],shops:[],selected:[],phase:'checking',monitoring:true,nextRun:now,cycleAt:now,history:[],lastDiscovery:now,callsToday:0,callDay:'',targetShops:10};}
 test('catalog collection really advances past 500, then deactivates removed listings only at completion',async()=>{const p=project(),s=shop();s.catalogOffset=500;s.catalogDone=false;s.reviewsDone=false;s.checkedAt=0;s.cycleAt=Math.floor(Date.now()/1000);s.listings=[listing(999,1,{seenAt:1})];p.shops=[s];const e=engine(url=>{assert(url.includes('offset=500'));return {count:501,results:[{listing_id:123,title:'Romance reader shirt',tags:[],price:{amount:2500}}]};});await e.advance('member',p);assert.equal(s.catalogOffset,501);assert(s.catalogDone);assert.equal(s.listings.find(l=>l.id===999).active,false);assert.equal(s.listings.find(l=>l.id===123).active,true);assert(e.writes.length>0);});
 test('ten unsuccessful candidates trigger further discovery rather than reporting ten qualified shops',async()=>{const p=project();p.shops=Array.from({length:10},(_,i)=>({...shop(i+1),reviews:[],checkedAt:now,cycleAt:now}));p.candidates=p.shops.map(s=>({id:s.id,hits:1}));const e=engine(()=>{throw Error('Should not call Etsy until next step');});await e.advance('member',p);assert.equal(p.phase,'discovering');assert.equal(p.selected.length,0);});
@@ -56,4 +56,16 @@ test('onboarding checks another candidate before starting a huge general catalog
  p.candidates=Array.from({length:21},(_,i)=>({id:i+1,hits:1}));
  const e=engine(url=>{assert(url.endsWith('shops/21'));return {shop_name:'Focused candidate',listing_active_count:100};});
  await e.advance('member',p);assert.equal(p.shops.length,21);assert.equal(p.shops[19].catalogOffset,0);
+});
+
+test('shop monitoring spend does not block niche discovery',async()=>{
+ const p=project();p.phase='discovering';p.searchOffsets=[0];
+ const e=engine(()=>({results:[{shop_id:123}],count:1}),{remaining:10000,byFeature:[{feature:'shop-watch',calls:2000}]});
+ await e.advance('member',p);assert.equal(p.candidates[0].id,123);assert.deepEqual(e.features,['niche-research']);
+});
+test('research still protects shared Etsy capacity and its own allowance',async()=>{
+ for(const budget of [{remaining:499,byFeature:[]},{remaining:10000,byFeature:[{feature:'niche-research',calls:5000}]}]){
+  const p=project();p.phase='discovering';p.searchOffsets=[0];const e=engine(()=>{throw Error('must not fetch');},budget);
+  await assert.rejects(e.advance('member',p),/allowance/);assert.equal(e.calls.length,0);
+ }
 });

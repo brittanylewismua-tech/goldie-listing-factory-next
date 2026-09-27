@@ -2,7 +2,6 @@ import {etsyApiCredential,recordEtsyCall,waitForEtsyCapacity,etsyBudget} from '@
 import {listingPhoto,listingPrice,listingDisplay,type EtsyDisplayListing} from '@/app/etsy-listing-display';
 import {productFamily} from '@/app/product-type-utils';
 import {decodeEntities} from '@/app/shop-map-worlds';
-import {shopWatchRoom} from '@/app/shop-watch';
 import {putEvidence,cachedResearchPage,cacheResearchPage} from '@/app/niche-research-store';
 import {matchesNiche,researchProduct,qualifies,rankNicheShops,snapshot,type NicheProject,type NicheShop,type NicheListing,type NicheReview} from '@/app/niche-research-model';
 type EtsyBody={readAt?:number;count?:number;results?:Array<Record<string,unknown>>;shop_name?:string;url?:string;listing_active_count?:number};
@@ -10,8 +9,10 @@ async function etsy(p:NicheProject,path:string):Promise<EtsyBody>{
  const cached=await cachedResearchPage(path);if(cached)return cached as EtsyBody;
  const day=new Date().toISOString().slice(0,10);if(p.callDay!==day){p.callDay=day;p.callsToday=0;}
  if(p.callsToday>=1000){p.nextRun=Math.floor(Date.now()/1000)+86400;throw Error('This niche reached its daily research allowance. Collection will resume automatically tomorrow.');}
- const [budget,room]=await Promise.all([etsyBudget(),shopWatchRoom()]);if(budget.remaining<500||room<=500)throw Error('Research is waiting for Etsy capacity. Existing publishing and shop monitoring retain their reserved capacity.');
- await waitForEtsyCapacity();p.callsToday++;const r=await fetch(`https://openapi.etsy.com/v3/application/${path}`,{headers:{'x-api-key':etsyApiCredential()},signal:AbortSignal.timeout(25000)});await recordEtsyCall(r,'shop-watch');if(!r.ok)throw Error(r.status===429?'Etsy is limiting requests. Progress is saved and collection will retry automatically.':`Etsy could not complete this check (${r.status}). Progress is saved for the next attempt.`);const raw=await r.json() as EtsyBody;
+ const budget=await etsyBudget();const researchUsed=budget.byFeature?.find(row=>row.feature==='niche-research')?.calls??0;
+ if(budget.remaining<500)throw Error('Etsy’s daily request allowance is nearly used. Your research is saved and will continue automatically.');
+ if(researchUsed>=5000)throw Error('Today’s shop research allowance is used. Your research is saved and will continue automatically.');
+ await waitForEtsyCapacity();p.callsToday++;const r=await fetch(`https://openapi.etsy.com/v3/application/${path}`,{headers:{'x-api-key':etsyApiCredential()},signal:AbortSignal.timeout(25000)});await recordEtsyCall(r,'niche-research');if(!r.ok)throw Error(r.status===429?'Etsy is limiting requests. Progress is saved and collection will retry automatically.':`Etsy could not complete this check (${r.status}). Progress is saved for the next attempt.`);const raw=await r.json() as EtsyBody;
  const keep=['listing_id','shop_id','title','tags','price','original_creation_timestamp','state','type','transaction_id','create_timestamp','created_timestamp','rating','review'];
  const body:EtsyBody={...raw,readAt:Math.floor(Date.now()/1000),results:raw.results?.map(row=>Object.fromEntries(keep.filter(k=>k in row).map(k=>[k,row[k]])))};
  await cacheResearchPage(path,body);return body;
@@ -32,7 +33,7 @@ async function checkShop(user:string,p:NicheProject,s:NicheShop){
  await putEvidence(user,p.id,s.id,'review',changed);s.reviewOffset+=page.length;s.reviewsDone=page.length<100||typeof b.count==='number'&&s.reviewOffset>=b.count;return;
  }
  const sample=[...s.listings].sort((a,b)=>s.reviews.filter(r=>r.listingId===b.id).length-s.reviews.filter(r=>r.listingId===a.id).length).slice(0,12);
- if(sample.length){const details=await listingDisplay(sample.map(l=>l.id),'shop-watch');for(const l of sample){const r=details.get(l.id);if(r){l.image=listingPhoto(r);l.imageAt=Math.floor(Date.now()/1000);}}await putEvidence(user,p.id,s.id,'listing',sample);}
+ if(sample.length){const details=await listingDisplay(sample.map(l=>l.id),'niche-research');for(const l of sample){const r=details.get(l.id);if(r){l.image=listingPhoto(r);l.imageAt=Math.floor(Date.now()/1000);}}await putEvidence(user,p.id,s.id,'listing',sample);}
  s.checkedAt=s.cycleAt;
 }
 function finish(p:NicheProject,now:number){p.phase='ready';p.nextRun=now+6*3600;const selected=p.shops.filter(s=>p.selected.includes(s.id));if(selected.length&&selected.every(s=>s.catalogDone&&s.reviewsDone))p.history=[...p.history,snapshot(selected,now)].slice(-365);}

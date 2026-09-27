@@ -12,7 +12,7 @@ test('simultaneous requests cannot create duplicate research for the same keywor
  }finally{db.close()}
 });
 test('tracked keywords distinguish Etsy search from niche research',()=>{
- const ui=read('market-watch/market-watch-client.tsx');assert.match(ui,/openResearch\(watch.phrase\)/);assert.match(ui,/Search Etsy →/);assert.match(ui,/Research this niche/);assert.match(ui,/researchOnly:true/);
+ const ui=read('market-watch/market-watch-client.tsx');assert.match(ui,/openResearch\(watch.phrase\)/);assert.match(ui,/View listings →/);assert.match(ui,/Find niche shops/);assert.match(ui,/researchOnly:true/);
  assert.doesNotMatch(ui,/Favorites per day listed|First listed most recently|Saved comparisons|Review dates show when feedback was posted/);
  const research=read('market-watch/research/research-client.tsx');assert.match(research,/brief:'Overview',shops:'Shops',listings:'Listings',buyers:'Buyer insights'/);assert.match(research,/role="dialog"/);assert.match(research,/<BuyerInsights/);assert.match(read('market-watch/research/buyer-insights.tsx'),/onProducts\(/);
 });

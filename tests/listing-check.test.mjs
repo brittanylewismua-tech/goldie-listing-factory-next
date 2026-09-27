@@ -128,7 +128,7 @@ test('a keyword card with no displayable photo says so', () => {
      span per listing rendered four grey boxes and no reason. */
   const client = readFileSync(new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
   assert.match(client, /keyword-thumbs-empty/);
-  assert.match(client, /Choose Search Etsy to refresh listings/);
+  assert.match(client, /Choose View listings to refresh listings/);
   assert.doesNotMatch(client, /<span key=\{listing\.listingId\} aria-hidden="true"\/>/);
 });
 

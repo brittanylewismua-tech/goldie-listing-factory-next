@@ -47,7 +47,7 @@ export async function waitForEtsyCapacity(){
    and its own allowance could never deplete. */
 /* `listings` and `partners` exist because those reads previously had nowhere
    honest to go and fell into the "publish" default. */
-export type EtsyFeature="publish"|"photos"|"search"|"taxonomy"|"shipping"|"connect"|"qa"|"finance"|"shop-watch"|"listings"|"partners"|"unlabelled";
+export type EtsyFeature="publish"|"photos"|"search"|"taxonomy"|"shipping"|"connect"|"qa"|"finance"|"shop-watch"|"niche-research"|"listings"|"partners"|"unlabelled";
 
 export async function recordEtsyCall(response:Response,feature:EtsyFeature="unlabelled"){
   const bucket=hourBucket(),observedLimit=Math.max(0,Number(response.headers.get("x-limit-per-day"))||0);
@@ -62,7 +62,8 @@ export async function recordEtsyCall(response:Response,feature:EtsyFeature="unla
 
     Etsy states the truth on every response. It costs nothing to believe it.
   */
-  const remaining=Number(response.headers.get("x-remaining-today"));
+  const remainingHeader=response.headers.get("x-remaining-today");
+  const remaining=remainingHeader===null?NaN:Number(remainingHeader);
   if(Number.isSafeInteger(remaining)&&remaining>=0)
     statements.push(runtime().DB.prepare("INSERT INTO etsy_queue_state (id,remaining_today,remaining_at,updated_at) VALUES (1,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP) ON CONFLICT(id) DO UPDATE SET remaining_today=excluded.remaining_today,remaining_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP").bind(remaining));
   const qps=Number(response.headers.get("x-limit-per-second"));
@@ -83,7 +84,7 @@ export async function etsyBudget(){
     now.
   */
   const live=await runtime().DB.prepare("SELECT remaining_today FROM etsy_queue_state WHERE id=1 AND remaining_at>datetime('now','-1 hour')").first<{remaining_today:number}>();
-  const reported=Number(live?.remaining_today);
+  const reported=live?Number(live.remaining_today):NaN;
   const reportedUsed=Number.isSafeInteger(reported)?Math.max(0,limit-reported):0;
   const used=Math.max(Number(row?.calls||0),reportedUsed);
   return {limit,usable,used,remaining:Math.max(0,usable-used),reserved:limit-usable,rateLimited:Number(row?.rate_limited||0),

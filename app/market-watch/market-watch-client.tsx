@@ -142,8 +142,8 @@ export default function MarketWatchClient(
             if(shots.length) return <div className="keyword-thumbs">{shots.map(listing=>
               <img key={listing.listingId} src={listing.imageUrl} alt="" width={180} height={180}/>)}</div>;
             return <p className="keyword-thumbs-empty">{(watch.listings??[]).length
-              ? "Choose Search Etsy to refresh listings."
-              : "Choose Search Etsy to load listings."}</p>;
+              ? "Choose View listings to refresh listings."
+              : "Choose View listings to load listings."}</p>;
           })()}
           <div className="keyword-watch-head"><div><h2>{watch.phrase}</h2></div></div>
           {watch.stale&&<p className="keyword-stale">Current data could not be refreshed. Showing saved details.</p>}
@@ -160,7 +160,7 @@ export default function MarketWatchClient(
     A row with nothing to show does not pretend to be a row now.
 */}
 
-<div className="watch-card-actions"><button type="button" className="p-button p-button-primary" onClick={()=>void openNiche(watch.key)} disabled={Boolean(opening)}>Search Etsy →</button><button type="button" className="p-button p-button-quiet" onClick={()=>openResearch(watch.phrase)}>Research this niche</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${watch.phrase}`} disabled={removing===watch.key} onClick={()=>void stopWatching("niche",watch.key,watch.phrase)}>{removing===watch.key?"Removing…":"Stop tracking"}</button></div>
+<div className="watch-card-actions"><button type="button" className="p-button p-button-primary" onClick={()=>void openNiche(watch.key)} disabled={Boolean(opening)}>View listings →</button><button type="button" className="p-button p-button-quiet" onClick={()=>openResearch(watch.phrase)}>Find niche shops</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${watch.phrase}`} disabled={removing===watch.key} onClick={()=>void stopWatching("niche",watch.key,watch.phrase)}>{removing===watch.key?"Removing…":"Stop tracking"}</button></div>
 
         </article>)}</div>
       </WatchList>:<WatchList load={shops} onRetry={()=>void loadShops()} failure="Your tracked shops could not be loaded." empty="Add an Etsy shop to follow its listing activity."><div className="tracked-shop-grid">{shops.data.map(shop=><article className="tracked-shop-card" key={shop.shopId}><div className="current-watch-art">{shop.gettingAttention.filter(p=>p.listing?.imageUrl).slice(0,3).map((p,i)=><img key={i} src={p.listing!.imageUrl} alt="" width={105} height={125} loading="lazy"/>)}{!shop.gettingAttention.some(p=>p.listing?.imageUrl)&&<span>{shop.shopName.slice(0,2).toUpperCase()}</span>}</div><p className="mini-label">TRACKED SHOP</p><h2>{shop.shopName}</h2><p>Products, pricing, and changes over time</p><div className="watch-card-actions"><button className="p-button p-button-primary" onClick={()=>setSelectedShop(shop)}>View shop</button><button type="button" className="watch-remove" aria-label={`Stop tracking ${shop.shopName}`} disabled={removing===String(shop.shopId)} onClick={()=>void stopWatching("shop",shop.shopId,shop.shopName)}>{removing===String(shop.shopId)?"Removing…":"Stop tracking"}</button></div></article>)}</div></WatchList>}
