@@ -249,8 +249,8 @@ test("the installed app names no product that does not exist", () => {
     new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
   assert.equal(manifest.display, "standalone");
   assert.match(manifest.start_url, /^\/home/);
-  assert.equal(manifest.name, "Goldie Suite");
-  assert.equal(manifest.short_name, "Goldie Suite");
+  assert.equal(manifest.name, "The Goldie Suite");
+  assert.equal(manifest.short_name, "The Goldie Suite");
   /* The description says what the software does. It may not say Goldie, and
      may not imply that Etsy endorses it. */
   assert.doesNotMatch(manifest.description, /goldie/i);

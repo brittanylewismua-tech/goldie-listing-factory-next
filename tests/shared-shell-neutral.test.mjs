@@ -45,13 +45,13 @@ test("one nav exposes every member feature", () => {
 
 test("browser and installed-app identity use the approved Goldie Suite name", () => {
   const identity = read("shell-identity.ts");
-  /* The file's own instruction was a plain description rather than a name;
-     the value was "Goldie Suite" anyway. */
-  assert.match(identity, /NEUTRAL_FALLBACK_TITLE = "Goldie Suite"/);
+  /* D1864 · The brand is The Goldie Suite. The tab, the installed app and the
+     neutral fallback all said "Goldie Suite" while the wordmark said THE. */
+  assert.match(identity, /NEUTRAL_FALLBACK_TITLE = "The Goldie Suite"/);
   const manifest = JSON.parse(readFileSync(
     new URL("../public/manifest.webmanifest", import.meta.url), "utf8"));
-  assert.equal(manifest.name, "Goldie Suite");
-  assert.equal(manifest.short_name, "Goldie Suite");
+  assert.equal(manifest.name, "The Goldie Suite");
+  assert.equal(manifest.short_name, "The Goldie Suite");
   /* Etsy's API terms: the app may not present itself as Etsy's. */
   assert.match(String(manifest.description), /Not endorsed or certified by Etsy/);
 });

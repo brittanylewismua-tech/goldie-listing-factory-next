@@ -95,7 +95,9 @@ export default function CommandCenterClient({embedded=false}:{embedded?:boolean}
 
   return <section className="cc-home p-grid">
     <header className="cc-home-head">
-      <p className="mini-label">Research & insights</p>
+      {/* On Home the two tiles left are Hot List and Trademark Check, and
+          neither is research. The kicker belongs to the full page. */}
+      {embedded?null:<p className="mini-label">Research & insights</p>}
       {embedded?<h2>Command Center</h2>:<h1>Command Center</h1>}
 
     </header>

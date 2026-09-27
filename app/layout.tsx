@@ -46,7 +46,7 @@ export async function generateMetadata(): Promise<Metadata> {
     is what a member actually sees almost all of the time; this is only the
     fallback. Replace it, and NEUTRAL_FALLBACK_TITLE, when the name exists.
   */
-  const title = "Goldie Suite";
+  const title = "The Goldie Suite";
   const description = "Etsy seller tools: bulk listing creation, market evidence, "
     + "your own shop's numbers, and a trademark check before you print.";
   return {
@@ -80,7 +80,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
     <meta name="mobile-web-app-capable" content="yes"/>
     <meta name="apple-mobile-web-app-capable" content="yes"/>
-    <meta name="apple-mobile-web-app-title" content="Goldie Suite"/>
+    <meta name="apple-mobile-web-app-title" content="The Goldie Suite"/>
     <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
     <script dangerouslySetInnerHTML={{__html:diagnostics}}/>
   </head><body><ReliableNavigation/>{children}<MobileShell/><ConfirmHost/><NewBuildNotice/></body></html>;

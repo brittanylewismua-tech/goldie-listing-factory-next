@@ -1002,5 +1002,7 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .factory-work .tm-standalone .tm-page .tm-verdict .tm-goods p{font-size:14px!important;line-height:1.65!important}
 
 /* D1864 · Delete sits with the other settings, marked as the destructive one. */
-#suite-workspace .nr-settings-delete{color:#a4243d}
-#suite-workspace .nr-settings-delete:hover:not(:disabled){color:#7d1a2e;text-decoration:underline;text-underline-offset:3px}
+/* Written at the depth of the rule that paints every workspace button black,
+   or the destructive one reads exactly like Pause updates beside it. */
+#suite-workspace .factory-work .nr-settings-delete{color:#a4243d;border-color:#e6c9d1}
+#suite-workspace .factory-work .nr-settings-delete:hover:not(:disabled){color:#7d1a2e;border-color:#a4243d}
