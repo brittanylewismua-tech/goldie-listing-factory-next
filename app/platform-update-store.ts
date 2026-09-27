@@ -3,6 +3,7 @@ import {briefDay,editionDay,UPDATE_SOURCES,type UpdateItem} from './platform-upd
 export const updateDb=()=> (env as unknown as {DB:D1Database}).DB;
 export async function ensureUpdateTables(){const db=updateDb();await db.batch([
  db.prepare(`CREATE TABLE IF NOT EXISTS platform_update_sources(id TEXT PRIMARY KEY,content TEXT NOT NULL DEFAULT '',checked_at INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT '')`),
+ db.prepare(`CREATE TABLE IF NOT EXISTS platform_update_source_attempts(id TEXT PRIMARY KEY,attempted_at INTEGER NOT NULL)`),
  db.prepare(`CREATE TABLE IF NOT EXISTS platform_update_items(id TEXT PRIMARY KEY,day TEXT NOT NULL,topic TEXT NOT NULL,content TEXT NOT NULL,published_at INTEGER NOT NULL)`),
  db.prepare(`CREATE INDEX IF NOT EXISTS platform_updates_by_day ON platform_update_items(day)`),
  db.prepare(`CREATE TABLE IF NOT EXISTS platform_update_runs(id TEXT PRIMARY KEY,started_at INTEGER NOT NULL,finished_at INTEGER NOT NULL DEFAULT 0,checked INTEGER NOT NULL DEFAULT 0,failed INTEGER NOT NULL DEFAULT 0,error TEXT NOT NULL DEFAULT '')`)
