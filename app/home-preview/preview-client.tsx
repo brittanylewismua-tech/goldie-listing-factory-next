@@ -1,113 +1,149 @@
 "use client";
 import { useEffect, useState } from "react";
 
-type Listing={listingId:number;title:string;imageUrl:string;favorites:number;sales:number;revenueMinor:number;currency:string};
-type Blocks={thisMonth?:{revenueMinor:number;currency:string;orders:number;asOfDay?:string;profitAvailable:boolean};
-  topListings?:{period:string;rankedBy:string;listings:Listing[]};
-  niches?:Array<{phrase:string;newly:number}>};
+type Listing={listingId:number;title:string;imageUrl:string;favorites?:number;sales:number;revenueMinor:number};
+type World={label:string;activeListings:number;units:number;revenueMinor:number;
+  lifetimeUnits:number;lifetimeRevenueMinor:number};
+type Map={shopTotals?:{activeListings:number;listings:number;orders:number;ordersLast90:number;
+  revenueLast90Minor:number;revenueMinor:number;reviews:number};
+  worlds?:World[];topListings?:Listing[];counts?:{listings:number;listingsWithSales:number;niches:number};
+  needsAttention?:{missingProductionCosts:number;unclassifiedListings:number;
+    unclassifiedPerformance?:{activeListings:number;orders:number;revenueMinor:number}};
+  thisMonth?:{revenueMinor:number;orders:number;etsyFeesMinor:number;currency:string;accuracy?:string};
+  worldsPeriod?:string};
+type Home={topListings?:{listings:Array<Listing&{favorites:number}>};niches?:Array<{phrase:string;newly:number}>};
 
-const money=(minor:number,currency="USD")=>new Intl.NumberFormat("en-US",
-  {style:"currency",currency,maximumFractionDigits:0}).format(minor/100);
+const usd=(minor:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",
+  maximumFractionDigits:0}).format(minor/100);
+const num=(n:number)=>n.toLocaleString("en-US");
 
 /*
-  D1867 · WHAT BELONGS ON A HOMEPAGE.
+  D1868 · A HOMEPAGE FOR A SHOP WITH A HISTORY.
 
-  The trademark warning came off: a phrase on a watchlist having matches is
-  not something a seller has to do anything about this morning, and putting it
-  under "needs you" asked for an action nobody could name. What is left is the
-  three things that are true every day - what the shop earned, what is earning
-  it, and what moved in the phrases being watched - and one way to start work.
+  The page was showing $94 for a shop that has taken $91,007 across 3,688
+  orders and 607 reviews. The month is the smallest true number in the
+  product and it was the only one on the front page.
 
-  Titles are off the photographs. A photograph of a shirt already says which
-  shirt it is; the numbers are what the picture cannot say.
+  What is here now is the shape of the business: what it has earned against
+  what it is earning, every theme ranked by lifetime revenue beside its
+  active listings, and the finding that falls out of putting those two
+  columns next to each other - Self-Love has taken $9,748 across 413 units
+  and has four listings live. The catalogue has drifted away from what sold.
 */
 export default function PreviewClient(){
-  const [b,setB]=useState<Blocks|null>(null);
-  const [view,setView]=useState<"a"|"b"|"c">("a");
-  useEffect(()=>{void fetch("/api/home").then(r=>r.ok?r.json() as Promise<{blocks:Blocks}>:null)
-    .then(x=>setB(x?.blocks??null)).catch(()=>undefined);},[]);
+  const [m,setM]=useState<Map|null>(null);
+  const [h,setH]=useState<Home|null>(null);
+  useEffect(()=>{
+    void fetch("/api/shop-map/map").then(r=>r.ok?r.json() as Promise<Map>:null).then(setM).catch(()=>undefined);
+    void fetch("/api/home").then(r=>r.ok?r.json() as Promise<{blocks:Home}>:null)
+      .then(x=>setH(x?.blocks??null)).catch(()=>undefined);
+  },[]);
 
-  const shots=(b?.topListings?.listings??[]).filter(l=>l.imageUrl);
-  const hero=shots[0];
-  const month=b?.thisMonth;
-  const moved=(b?.niches??[]).filter(n=>n.newly>0).sort((x,y)=>y.newly-x.newly).slice(0,3);
-  const units=(b?.topListings?.listings??[]).reduce((n,l)=>n+l.sales,0);
-  const period=(b?.topListings?.period??"Last 30 days").toLowerCase();
+  if(!m) return <div className="hp"><div className="hp-load"/></div>;
 
-  const Chip=({l}:{l:Listing})=><span className="hp-chip">
-    <b>{l.favorites.toLocaleString()}</b><small>saved</small>
-    {l.sales>0&&<><b style={{marginLeft:4}}>{l.sales}</b><small>sold</small></>}
-  </span>;
+  const t=m.shopTotals;
+  const worlds=(m.worlds??[]).slice().sort((a,b)=>b.lifetimeRevenueMinor-a.lifetimeRevenueMinor);
+  const topLife=Math.max(1,...worlds.map(w=>w.lifetimeRevenueMinor));
+  const topNow=Math.max(1,...worlds.map(w=>w.revenueMinor));
+  const shots=(h?.topListings?.listings??[]).filter(l=>l.imageUrl).slice(0,4);
+  const sellers=(m.topListings??[]).filter(l=>l.imageUrl).slice(0,4);
+  const moved=(h?.niches??[]).filter(n=>n.newly>0).sort((a,b)=>b.newly-a.newly).slice(0,4);
+  const un=m.needsAttention?.unclassifiedPerformance;
+  const perListing=un&&un.activeListings?Math.round(un.revenueMinor/un.activeListings):0;
+  const shopAvg=t&&t.activeListings?Math.round(t.revenueMinor/t.activeListings):0;
+  const gallery=shots.length?shots:sellers;
+  const units90=(m.worlds??[]).reduce((n,w)=>n+w.units,0);
+  const perOrder=t&&t.ordersLast90?Math.round(t.revenueLast90Minor/t.ordersLast90):0;
 
   return <div className="hp">
-    <div className="hp-switch">
-      {([["a","Editorial"],["b","Gallery"],["c","Ledger"]] as const).map(([k,label])=>
-        <button key={k} type="button" aria-pressed={view===k} onClick={()=>setView(k)}>{label}</button>)}
-      <span>Your real figures and your own photographs</span>
+    <section className="hero">
+      <div className="hero-grid">
+        <div>
+          {/* D1868b · The window a seller is working in leads. Lifetime is the
+              yardstick it is measured against, not the headline. */}
+          <p className="k">She’s A Wolf Clothing · last 90 days</p>
+          <div className="hero-big">{usd(t?.revenueLast90Minor??0)}</div>
+          <div className="hero-facts">
+            <div><b>{num(t?.ordersLast90??0)}</b><small>ORDERS</small></div>
+            <div><b>{num(units90)}</b><small>UNITS</small></div>
+            <div><b>{usd(perOrder)}</b><small>PER ORDER</small></div>
+            <div><b>{num(t?.activeListings??0)}</b><small>LISTINGS LIVE</small></div>
+          </div>
+          <p className="hero-life">All time this shop has taken <b>{usd(t?.revenueMinor??0)}</b> across{" "}
+            <b>{num(t?.orders??0)} orders</b> and <b>{num(t?.reviews??0)} reviews</b>, from{" "}
+            <b>{num(m.counts?.listingsWithSales??0)}</b> listings that have ever sold.</p>
+        </div>
+        <div className="hero-now">
+          <p className="k">September so far</p>
+          <b>{usd(m.thisMonth?.revenueMinor??0)}</b>
+          <small>{num(m.thisMonth?.orders??0)} orders · through 26 September</small>
+          <hr/>
+          <div className="pair"><span>Etsy fees</span><span>{usd(m.thisMonth?.etsyFeesMinor??0)}</span></div>
+          <div className="pair"><span>Production</span><span>{m.needsAttention?.missingProductionCosts?"not entered":"entered"}</span></div>
+          <div className="pair"><span>Profit</span><span>{m.thisMonth?.accuracy?"waiting":"—"}</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div className="hp-rule"><h2>Where the money came from</h2><i/><small>lifetime against the last 90 days · {num(m.counts?.niches??0)} themes</small></div>
+    <div className="themes">
+      <div className="theme head"><span>Theme</span><span>Lifetime vs now</span><span>All time</span><span>90 days</span></div>
+      {worlds.map(w=><div className="theme" key={w.label}>
+        <div><div className="name">{w.label}</div><div className="meta">{w.activeListings} live</div></div>
+        <div>
+          <div className="theme-bar"><i style={{width:`${Math.round(w.lifetimeRevenueMinor/topLife*100)}%`}}/></div>
+          <div className="theme-bar now"><i style={{width:`${Math.max(w.revenueMinor?3:0,Math.round(w.revenueMinor/topNow*100))}%`}}/></div>
+        </div>
+        <div><div className="life">{usd(w.lifetimeRevenueMinor)}</div><div className="lifeu">{num(w.lifetimeUnits)} units</div></div>
+        <div><div className="now">{w.revenueMinor?usd(w.revenueMinor):"—"}</div><div className="nowu">{w.units?`${w.units} units`:"nothing"}</div></div>
+      </div>)}
     </div>
 
-    {!b&&<div className="hp-load"/>}
-
-    {b&&view==="a"&&<>
-      <div className="hpA">
+    {un&&un.orders>0&&<>
+      <div className="hp-rule"><h2>Worth a look</h2><i/></div>
+      <div className="find">
         <div>
-          <p className="hp-kick">September · through {month?.asOfDay??"today"}</p>
-          <h1 className="hp-display">{money(month?.revenueMinor??0,month?.currency)}
-            <em>from {month?.orders??0} orders</em></h1>
-          <p className="hp-lede">Revenue and Etsy fees are exact.
-            {month?.profitAvailable?" Profit is worked out.":" Profit needs the cost of two orders."}</p>
-          <a className="hp-cta" href="/listing-factory?step=setup">Make something new</a>
+          <p className="k">{num(m.needsAttention?.unclassifiedListings??0)} listings sit outside every theme</p>
+          <h3>Three of them have taken {usd(un.revenueMinor)} across {num(un.orders)} orders.</h3>
+          <p>That is {usd(perListing)} per live listing, against {usd(shopAvg)} across the shop.
+            Whatever those three are, nothing in the catalogue is named after them.</p>
         </div>
-        {hero&&<div className="hp-frame hpA-art"><img className="hp-shot" src={hero.imageUrl} alt=""/><Chip l={hero}/></div>}
-      </div>
-      <div className="hp-band">
-        <div><b>{units}</b><small>units sold, {period}</small></div>
-        <div><b>{shots.reduce((n,l)=>n+(l.favorites||0),0).toLocaleString()}</b><small>people saved your top three</small></div>
-        <div><b className="accent">{moved.reduce((n,m)=>n+m.newly,0)}</b><small>new listings in the phrases you watch</small></div>
-      </div>
-      {moved.length>0&&<div className="hp-moved">
-        <p className="hp-kick" style={{margin:"0 0 10px"}}>Moved since you last looked</p>
-        {moved.map(m=><div className="hp-moved-row" key={m.phrase}>
-          <b>+{m.newly}</b><span>{m.phrase}</span><small>new listings</small></div>)}
-      </div>}
-    </>}
-
-    {b&&view==="b"&&<>
-      <div className="hpB-head">
-        <div><p className="hp-kick">September</p>
-          <h1 className="hp-display">{money(month?.revenueMinor??0,month?.currency)}</h1></div>
-        <p className="hp-lede" style={{margin:0}}>{month?.orders??0} orders. {units} units sold {period}.</p>
-      </div>
-      <div className="hpB">
-        {hero&&<div className="hp-frame big"><img className="hp-shot" src={hero.imageUrl} alt=""/><Chip l={hero}/></div>}
-        <div className="hp-panel pink"><small>New in “{moved[0]?.phrase??"your phrases"}”</small>
-          <b>+{moved[0]?.newly??0}</b><small>listings since you last looked</small></div>
-        <div className="hp-panel dark"><small>Units sold</small><b>{units}</b><small>{period}</small></div>
-        {shots[1]&&<div className="hp-frame wide"><img className="hp-shot" src={shots[1].imageUrl} alt=""/><Chip l={shots[1]}/></div>}
-        <div className="hp-panel quiet"><small>Drafts this week</small><b>13</b><small>of 20 on your goal</small></div>
-        {shots[2]&&<div className="hp-frame"><img className="hp-shot" src={shots[2].imageUrl} alt=""/><Chip l={shots[2]}/></div>}
+        <div className="find-num"><b>{usd(perListing)}</b><small>per live listing,<br/>versus {usd(shopAvg)} shop-wide</small></div>
       </div>
     </>}
 
-    {b&&view==="c"&&<>
-      <div className="hpC-hero">
-        <div>
-          <p className="hp-kick">September · through {month?.asOfDay??"today"}</p>
-          <h1 className="hp-display">{money(month?.revenueMinor??0,month?.currency)}
-            <em>from {month?.orders??0} orders · {units} units {period}</em></h1>
-          <p className="hp-lede">Revenue and Etsy fees are exact. Profit needs the cost of two orders.</p>
-          <a className="hp-cta pale" href="/listing-factory?step=setup">Make something new</a>
-        </div>
-        <div className="hpC-strip">
-          {shots.slice(0,3).map(l=><div className="hp-frame" key={l.listingId}>
-            <img className="hp-shot" src={l.imageUrl} alt=""/><Chip l={l}/></div>)}
+    {gallery.length>0&&<>
+      <div className="hp-rule"><h2>Selling now</h2><i/><small>{m.worldsPeriod?.toLowerCase()??"last 90 days"}</small></div>
+      <div className="shelf">
+        {gallery.map(l=><div className="shot" key={l.listingId}>
+          <img src={l.imageUrl} alt="" width={570} height={712} loading="lazy"/>
+          <span className="chip">
+            {typeof l.favorites==="number"&&<><b>{num(l.favorites)}</b><small>SAVED</small></>}
+            {l.sales>0&&<><b style={{marginLeft:typeof l.favorites==="number"?5:0}}>{l.sales}</b><small>SOLD</small></>}
+          </span>
+        </div>)}
+      </div>
+    </>}
+
+    <div className="hp-rule"><h2>Out there, and in here</h2><i/></div>
+    <div className="split">
+      <div className="box">
+        <p className="k">New listings in the phrases you watch</p>
+        <div style={{marginTop:14}}>
+          {moved.length?moved.map(x=><div className="moved" key={x.phrase}>
+            <b>+{x.newly}</b><span>{x.phrase}</span><small>since you last looked</small></div>)
+          :<p>Nothing new in your watched phrases today.</p>}
         </div>
       </div>
-      {moved.length>0&&<div className="hp-moved" style={{marginTop:22}}>
-        <p className="hp-kick" style={{margin:"0 0 10px"}}>Moved since you last looked</p>
-        {moved.map(m=><div className="hp-moved-row" key={m.phrase}>
-          <b>+{m.newly}</b><span>{m.phrase}</span><small>new listings</small></div>)}
-      </div>}
-    </>}
+      <div className="box">
+        <p className="k">This week in the factory</p>
+        <div className="goal" style={{marginTop:14}}><b>13</b><small>of 20 drafts ready</small></div>
+        <div className="meter"><i style={{width:"65%"}}/></div>
+        <p>{m.needsAttention?.missingProductionCosts
+          ?`${m.needsAttention.missingProductionCosts} orders still need a production cost before September has a profit figure.`
+          :"Every order this month has a production cost."}</p>
+        <a className="cta" href="/listing-factory?step=setup">Make something new</a>
+      </div>
+    </div>
   </div>;
 }
