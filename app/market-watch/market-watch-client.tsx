@@ -121,8 +121,12 @@ export default function MarketWatchClient(
     }catch{setError(`${name} could not be removed. Nothing was changed. Try again.`);}
     finally{setRemoving("");}
   };
-  const openNiche=async(key:string)=>{const saved=watches.data.find(row=>row.key===key);if(saved){setOpen({key:saved.key,phrase:saved.phrase});return;}setError("");setOpening(key);try{const response=await fetch(`/api/market-watch/niches?key=${encodeURIComponent(key)}`),body=await response.json() as NicheView&{error?:string};if(!response.ok)setError(body.error??"Those listings could not be opened.");else setOpen(body)}catch{setError("Those listings could not be opened.")}finally{setOpening("")}};
-  useEffect(()=>{if(startKeyword)void openNiche(startKeyword)},[]);
+  const openNiche=async(key:string)=>{const saved=watches.data.find(row=>row.key===key
+    /* An address may carry the phrase a member reads rather than the key. */
+    ||row.phrase.toLowerCase()===key.toLowerCase());if(saved){setOpen({key:saved.key,phrase:saved.phrase});return;}setError("");setOpening(key);try{const response=await fetch(`/api/market-watch/niches?key=${encodeURIComponent(key)}`),body=await response.json() as NicheView&{error?:string};if(!response.ok)setError(body.error??"Those listings could not be opened.");else setOpen(body)}catch{setError("Those listings could not be opened.")}finally{setOpening("")}};
+  /* Wait for the watch list, so a phrase in the address can be matched. */
+  useEffect(()=>{if(startKeyword&&watches.status!=="loading")void openNiche(startKeyword)},
+    [startKeyword,watches.status]);
 
   if(tab==="saved")return <SavedListings watches={watches} onRetry={()=>void loadNiches()}/>;
   if(selectedShop)return <main className="mw"><ResearchNavigation active="shops"/><button className="back p-button p-button-quiet" onClick={()=>setSelectedShop(null)}>← Tracked shops</button><ShopCard shop={selectedShop}/></main>;

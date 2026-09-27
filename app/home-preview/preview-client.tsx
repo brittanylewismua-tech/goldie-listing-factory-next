@@ -30,7 +30,7 @@ type Hot={listings?:Sold[];watched?:number;totalSold?:number;
 type Mine={title:string;state:string};
 type Summary={keywords:number;shops:number;phrases:number;needReview:number};
 type Updates={items?:Array<unknown>;sources?:Array<unknown>};
-type Niche={name:string;analysis?:{opportunities?:Array<{phrase:string;reviews:number;prior:number;shops:number;listings:number}>}};
+type Niche={id?:string;name:string;analysis?:{opportunities?:Array<{phrase:string;reviews:number;prior:number;shops:number;listings:number}>}};
 
 const usd=(minor:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",
   maximumFractionDigits:0}).format(minor/100);
@@ -73,7 +73,7 @@ export default function PreviewClient(){
         for(const p of (body?.projects??[]).slice(0,2)){
           const d=await fetch(`/api/niche-research?id=${encodeURIComponent(p.id)}`)
             .then(r=>r.ok?r.json() as Promise<{project:Niche}>:null).catch(()=>null);
-          if(d?.project?.analysis)out.push(d.project);
+          if(d?.project?.analysis)out.push({...d.project,id:p.id});
         }
         setNiches(out);
       }).catch(()=>undefined);
@@ -133,10 +133,11 @@ export default function PreviewClient(){
   </div>;
 
   const Yourshots=({n=3}:{n?:number})=><div className="shots">
-    {gallery.slice(0,n).map(l=><div className="shot" key={l.listingId}>
+    {gallery.slice(0,n).map(l=><a className="shot" key={l.listingId}
+      href={`https://www.etsy.com/listing/${l.listingId}`} target="_blank" rel="noopener noreferrer">
       <img src={l.imageUrl} alt="" width={570} height={712} loading="eager"/>
       <span className="chip"><b>{num(l.sales)}</b><small>SOLD IN 90 DAYS</small></span>
-    </div>)}
+    </a>)}
   </div>;
 
   /*
@@ -149,30 +150,34 @@ export default function PreviewClient(){
   */
   const rising=niches.flatMap(n=>(n.analysis?.opportunities??[])
     .filter(o=>o.reviews>=5&&o.reviews>o.prior)
-    .map(o=>({...o,niche:n.name,gain:o.reviews-o.prior})))
+    .map(o=>({...o,niche:n.name,id:n.id,gain:o.reviews-o.prior})))
     .sort((a,b)=>b.gain-a.gain).slice(0,3);
   const changes=(up?.items??[]).length;
+  /* D1888 · Every figure opens the place it came from. */
   const Watching=()=><div className="watch">
-    {moved.map(x=><div className="w-item" key={x.phrase}>
+    {moved.map(x=><a className="w-item" key={x.phrase}
+      href={`/market-watch?keyword=${encodeURIComponent(x.phrase)}`}>
       <b>{num(x.newly)}</b>
       <div><span>listings started selling in <em>{x.phrase}</em></span>
-        <small>keyword you track · since you last opened Research</small></div></div>)}
-    {rising.map(r=><div className="w-item" key={r.niche+r.phrase}>
+        <small>keyword you track · since you last opened Research</small></div></a>)}
+    {rising.map(r=><a className="w-item" key={r.niche+r.phrase}
+      href={r.id?`/market-watch/research?id=${encodeURIComponent(r.id)}`:"/market-watch/research"}>
       <b>{num(r.reviews)}</b>
       <div><span><em>{r.phrase}</em> reviews, up from {num(r.prior)}</span>
-        <small>{r.shops} shops in your {r.niche} research · last 30 days</small></div></div>)}
-    <div className="w-item quiet">
+        <small>{r.shops} shops in your {r.niche} research · last 30 days</small></div></a>)}
+    <a className="w-item quiet" href="/platform-updates">
       <b>{changes||"0"}</b>
       <div><span>changes at Etsy or Printify</span>
-        <small>{num((up?.sources??[]).length)} sources checked today</small></div></div>
-    {sum&&sum.needReview>0&&<div className="w-item quiet">
+        <small>{num((up?.sources??[]).length)} sources checked today</small></div></a>
+    {sum&&sum.needReview>0&&<a className="w-item quiet" href="/trademark">
       <b>{num(sum.needReview)}</b>
       <div><span>watched phrase to review</span>
-        <small>{num(sum.phrases)} on your trademark list · checked today</small></div></div>}
+        <small>{num(sum.phrases)} on your trademark list · checked today</small></div></a>}
   </div>;
 
-  const Rule=({title,note}:{title:string;note?:string})=>
-    <div className="rule"><h2>{title}</h2><i/>{note&&<small>{note}</small>}</div>;
+  const Rule=({title,note,href}:{title:string;note?:string;href?:string})=>
+    <div className="rule">{href?<a href={href}><h2>{title}</h2></a>:<h2>{title}</h2>}<i/>
+      {note&&<small>{note}</small>}{href&&<a className="go" href={href}>Open →</a>}</div>;
 
   const Tile=({l}:{l:Sold})=><a className="shot" href={l.url} target="_blank" rel="noopener noreferrer">
     {l.image&&<img src={l.image} alt="" width={570} height={712} loading="lazy"/>}
@@ -182,23 +187,23 @@ export default function PreviewClient(){
 
   const Shelves=({limit=8}:{limit?:number})=><div className="table">
     <div className="row head"><span>Product</span><span/><span>Sold in 24h</span><span>Your live listings</span></div>
-    {shelves.slice(0,limit).map(s=><div className="row" key={s.key}>
+    {shelves.slice(0,limit).map(s=><a className="row" key={s.key} href="/hot-list">
       <div><b className="name">{s.label}</b><small>{num(s.listings)} listings sold something</small></div>
       <div><div className="bar now"><i style={{width:`${Math.round(s.sold/peak*100)}%`}}/></div></div>
       <div className="figure">{num(s.sold)}<small>units</small></div>
       <div className={s.yours?"figure":"figure none"}>{s.yours?num(s.yours):"none"}<small>{s.yours?"live":"in your shop"}</small></div>
-    </div>)}
+    </a>)}
   </div>;
 
   const Yours=()=><div className="table">
     <div className="row head"><span>Keyword</span><span/><span>All time</span><span>Last 90</span></div>
-    {worlds.map(w=><div className="row" key={w.label}>
+    {worlds.map(w=><a className="row" key={w.label} href="/shop-map?tab=themes">
       <div><b className="name">{w.label}</b><small>{w.activeListings} live</small></div>
       <div><div className="bar"><i style={{width:`${Math.round(w.lifetimeRevenueMinor/topLife*100)}%`}}/></div>
         <div className="bar now"><i style={{width:`${w.revenueMinor?Math.max(3,Math.round(w.revenueMinor/topLife*100)):0}%`}}/></div></div>
       <div className="figure">{usd(w.lifetimeRevenueMinor)}<small>{num(w.lifetimeUnits)} units</small></div>
       <div className="figure accent">{w.revenueMinor?usd(w.revenueMinor):"—"}<small>{w.units?`${w.units} units`:"nothing"}</small></div>
-    </div>)}
+    </a>)}
   </div>;
 
 
@@ -214,16 +219,16 @@ export default function PreviewClient(){
   return <div className="hp">
     <section className="hero"><Hers/><Yourshots/></section>
 
-    <Rule title="Since you last looked"
+    <Rule href="/market-watch" title="Since you last looked"
       note={sum?`${sum.keywords} keywords · ${sum.shops} shops · ${niches.length} niches you follow`:undefined}/>
     <Watching/>
 
-    <Rule title="What sold on Etsy yesterday"
+    <Rule href="/hot-list" title="What sold on Etsy yesterday"
       note={`${num(hot.totalSold??0)} units across ${num(hot.watched??0)} listings`}/>
     <div className="shots six">{sold.slice(0,12).map(l=><Tile l={l} key={l.listingId}/>)}</div>
-    <Shelves limit={10}/>
+    <div className="board"><Shelves limit={10}/></div>
 
-    <Rule title="What your keywords have earned" note="all time against the last 90 days"/>
+    <Rule href="/shop-map?tab=themes" title="What your keywords have earned" note="all time against the last 90 days"/>
     <Yours/>
   </div>;
 }

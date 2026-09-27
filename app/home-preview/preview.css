@@ -77,3 +77,13 @@
 #suite-workspace .hp .w-item small{display:block;font-size:11px!important;color:#a49ba2!important;
   margin-top:4px;letter-spacing:.03em}
 @media(max-width:1080px){.watch{grid-template-columns:minmax(0,1fr)}}
+
+/* D1888 · Every figure opens where it came from. */
+#suite-workspace .hp a.w-item,#suite-workspace .hp a.row,#suite-workspace .hp a.shot{
+  color:inherit!important;text-decoration:none}
+#suite-workspace .hp a.w-item:hover,#suite-workspace .hp a.row:hover{background-color:#fdfbfc!important}
+#suite-workspace .hp .rule a{color:inherit!important;text-decoration:none}
+#suite-workspace .hp .rule .go{font-size:12px!important;color:#c2277b!important;flex:none}
+#suite-workspace .hp .rule .go:hover{text-decoration:underline;text-underline-offset:3px}
+/* The board sat straight under the photographs with nothing between them. */
+.board{margin-top:34px}

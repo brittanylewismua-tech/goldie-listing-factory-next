@@ -14,7 +14,7 @@ export const metadata = { title: "Research" };
   of the way. It does not tell the seller what to do next.
 */
 export default async function MarketWatchPage(
-  { searchParams }: { searchParams: Promise<{ tab?: string }> },
+  { searchParams }: { searchParams: Promise<{ tab?: string; keyword?: string }> },
 ) {
   const user = await requireFeaturePage("marketWatch", "/market-watch");
   /*
@@ -30,13 +30,19 @@ export default async function MarketWatchPage(
 
     The prop already existed for this. Nothing passed it.
   */
-  const requestedTab = (await searchParams)?.tab;
+  const query = await searchParams;
+  const requestedTab = query?.tab;
+  /* D1888 · A tracked keyword had no address. The prop to open one existed
+     and, like the tab before it, nothing passed it - so nothing could link to
+     a keyword from anywhere else in the product. */
+  const startKeyword = typeof query?.keyword === "string" && query.keyword.trim()
+    ? query.keyword.trim().slice(0, 120) : undefined;
   const startTab = requestedTab === "shops" ? "shops" as const : requestedTab === "saved" ? "saved" as const : "niches" as const;
   return (
     /* D1575 · the same rail, topbar, wordmark and footer as the Listing
        Factory. This page rendered as a bare column on white before. */
     <FactoryShell active="market-watch" title="Research" desktopOnly={false}>
-      <MarketWatchClient signedInEmail={user.email} startTab={startTab} />
+      <MarketWatchClient signedInEmail={user.email} startTab={startTab} startKeyword={startKeyword} />
     </FactoryShell>
   );
 }
