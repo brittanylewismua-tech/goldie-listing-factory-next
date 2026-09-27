@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import ts from 'typescript';
+const source=readFileSync(new URL('../app/suite-search.tsx',import.meta.url),'utf8');
+const body=source.slice(source.indexOf('function batchHits'),source.indexOf('/* Ranked'));
+const hits=new Function(`${ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText};return batchHits;`)();
+test('global search reads the production history schema and opens the exact saved batch',()=>{const rows=hits([{id:'one / two',display_name:'Summer launch',product_title:'Heavy Cotton Tee',status:'saved'}]);assert.equal(rows[0].label,'Summer launch');assert.match(rows[0].searchText,/Heavy Cotton Tee/);assert.equal(rows[0].href,'/listing-factory?batch=one%20%2F%20two');});
+test('finished batches open their saved results instead of restarting their workflow',()=>{assert.equal(hits([{id:'finished',product_title:'Hoodie',status:'complete'}])[0].href,'/listing-factory?batch=finished&open=results');});
+test('missing batch IDs never become broken navigation links',()=>{assert.deepEqual(hits([{display_name:'Missing ID'}]),[]);});

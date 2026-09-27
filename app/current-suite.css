@@ -918,3 +918,14 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 @media(max-width:600px){
  #suite-workspace .current-page-heading > .p-button {margin-top:16px!important}
 }
+
+/* The phone notice keeps the Factory desktop requirement without legacy styling. */
+@media(max-width:860px){
+ .desktop-only-notice {background:#f7f6f7!important;color:#242329!important;font-family:'Manrope Variable',sans-serif!important}
+ .desktop-only-notice b {font-family:'Manrope Variable',sans-serif!important;font-size:30px!important;font-weight:750;letter-spacing:-1px}
+ .desktop-only-notice .mobile-notice-brand {font-family:'Manrope Variable',sans-serif!important;font-size:20px!important;font-weight:750}
+ .desktop-only-notice .mobile-work-links {display:flex;flex-wrap:wrap;gap:12px}
+ .desktop-only-notice .mobile-work-links a {background:#242329!important;color:#fff!important;border:1px solid #242329!important;border-radius:8px}
+}
+
+.suite-search-panel .suite-search-close {flex:0 0 40px;width:40px;height:40px;min-height:40px;display:grid;place-items:center;padding:0;border:0;border-radius:8px;background:#f5f3f5;color:#242329;font:24px/1 'Manrope Variable',sans-serif;cursor:pointer}

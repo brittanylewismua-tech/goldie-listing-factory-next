@@ -107,7 +107,7 @@ export default function HomeStatus() {
           <p>{hasSales
             ? "Ranked by the number sold."
             : "No recent sales yet, so these are ranked by customer favorites."}</p></div>
-        <a href="/shop-map">View sold listings <span aria-hidden="true">→</span></a>
+        <a href="/shop-map?tab=sold">View sold listings <span aria-hidden="true">→</span></a>
       </div>
       {ranked?.listings.length ? <div className="home-listing-grid">
         {ranked.listings.map((listing, index) => <article key={listing.listingId}

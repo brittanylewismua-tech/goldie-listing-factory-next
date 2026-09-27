@@ -1,4 +1,5 @@
 "use client";
+import {shopMapSection,type ShopMapSection} from "./shop-map-navigation";
 import ListingCheckPanel from "./listing-check-panel";
 import {browseOwnListings} from "@/app/market-listing-browser";
 import {designsOnOneProduct,familyLabel,shortLabel,type Reach,type ReachListing} from "@/app/design-reach";
@@ -145,7 +146,12 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
   const [soldDays,setSoldDays]=useState(90);
   const [selectedMonth,setSelectedMonth]=useState("");
-  useEffect(()=>{const params=new URLSearchParams(window.location.search);if(params.get("tab")==="money")setTab("money");const month=params.get("month")??"";if(/^\d{4}-(0[1-9]|1[0-2])$/.test(month))setSelectedMonth(month)},[]);
+  const selectTab=(next:ShopMapSection)=>{
+    setTab(next);
+    const url=new URL(window.location.href);url.searchParams.set("tab",next);
+    window.history.replaceState(window.history.state,"",url);
+  };
+  useEffect(()=>{const params=new URLSearchParams(window.location.search);setTab(shopMapSection(params.get("tab")));const month=params.get("month")??"";if(/^\d{4}-(0[1-9]|1[0-2])$/.test(month))setSelectedMonth(month)},[]);
   const [refreshing,setRefreshing]=useState(false);
   const [syncingMoney,setSyncingMoney]=useState(false);
   const [moneyRefreshError,setMoneyRefreshError]=useState("");
@@ -290,14 +296,14 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     <nav className="shop-map-tabs" aria-label="Shop Map sections">
       {([['money','Your numbers'],['overview','Overview'],['themes','Product themes'],['sold','Sold listings']] as const)
         .map(([key,label]) => <button key={key} type="button" aria-current={tab === key ? 'page' : undefined}
-          onClick={() => setTab(key)}>{label}</button>)}
+          onClick={() => selectTab(key)}>{label}</button>)}
     </nav>
 
     {tab === "overview" && <div className="shop-map-tab-panel"><CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/><DesignReach/><ListingCheckPanel/>
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
           <h2>Top sellers</h2></div>
-          <button type="button" className="p-button p-button-primary" onClick={() => setTab("sold")}>View sold listings →</button></div>
+          <button type="button" className="p-button p-button-primary" onClick={() => selectTab("sold")}>View sold listings →</button></div>
         {leaders.length ? <div className="shop-map-leader-grid">{leaders.map((listing,index) =>
           <article key={listing.listingId} className={index === 0 ? "lead" : ""}>
             <div className="shop-map-listing-image">{listing.imageUrl

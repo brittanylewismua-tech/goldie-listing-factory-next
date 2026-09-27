@@ -91,7 +91,7 @@ export default function MobileShell() {
 
   if (WORKSPACE.some(pattern => pattern.test(pathname)))
     return <aside className="desktop-only-notice" role="note">
-      <a className="mobile-notice-brand" href="/home">Goldie Suite</a>
+      <a className="mobile-notice-brand" href="/home">The Goldie Suite</a>
       <b>Create listings on a computer.</b>
       <p>
         Listing Factory’s artwork and bulk editors need a larger screen. Your saved work is ready when you return.

@@ -27,7 +27,7 @@ export default function MobileGate() {
       <div className="mobile-brand">
         {/* This gate belongs to the Listing Factory, so it says so — and says
             nothing about an umbrella product that has no name yet. */}
-        <a className="approved-wm" href="/home">Goldie Suite</a>
+        <a className="approved-wm" href="/home">The Goldie Suite</a>
       </div>
       <div className="mobile-card">
         <div className="mobile-command">&#8984;</div>

@@ -9,8 +9,8 @@
  *
  * So this one actually resolves. It searches the two things the shell can
  * answer for without inventing an index: every page and tool in the
- * navigation, and the member's own saved batches, which are fetched once, on
- * the first open, and not before - nothing is spent on a field nobody used.
+ * navigation, and the member's own saved batches. Batch searches use the
+ * server history query, so older work is searchable beyond the first page.
  *
  * The placeholder says what it searches rather than "anything", for the same
  * reason. It finds pages, tools and batches, and those are the words on it.
@@ -20,16 +20,16 @@ import { createPortal } from "react-dom";
 import type { SuiteNavItem } from "./suite-sidebar-nav";
 import { readBatchHistory } from "./batch-history-read";
 
-type Hit = { key: string; label: string; note: string; href: string };
+type Hit = { key: string; label: string; note: string; href: string; searchText?:string };
 
-type BatchRow = { id?: string; batchId?: string; name?: string; title?: string; status?: string };
+type BatchRow = { id?: string; batchId?: string; name?: string; title?: string; status?: string; display_name?:string; product_title?:string; setup_name?:string };
 
 function batchHits(rows: BatchRow[]): Hit[] {
   return rows.flatMap(row => {
     const id = row.batchId || row.id;
-    const label = row.name || row.title;
+    const label = row.display_name || row.name || row.title || row.product_title || row.setup_name;
     if (!id || !label) return [];
-    return [{ key: `batch:${id}`, label, note: row.status ? `Batch · ${row.status}` : "Batch", href: `/batches?open=${encodeURIComponent(id)}` }];
+    return [{ key: `batch:${id}`, label, note: row.status ? `Batch · ${row.status}` : "Batch", searchText:[label,row.product_title,row.setup_name].filter(Boolean).join(" "), href: `/listing-factory?batch=${encodeURIComponent(id)}${row.status==="complete"?"&open=results":""}` }];
   });
 }
 
@@ -50,7 +50,8 @@ export default function SuiteSearch({ items }: { items: SuiteNavItem[] }) {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const [batches, setBatches] = useState<Hit[]>([]);
-  const [batchesRead, setBatchesRead] = useState(false);
+  const [batchLoading,setBatchLoading]=useState(false);
+  const [batchError,setBatchError]=useState(false);
   const field = useRef<HTMLInputElement>(null);
 
   const pages: Hit[] = items.map(item => ({
@@ -71,19 +72,22 @@ export default function SuiteSearch({ items }: { items: SuiteNavItem[] }) {
     return () => window.removeEventListener("keydown", shortcut);
   }, []);
 
+  useEffect(() => { if(open)field.current?.focus(); },[open]);
   useEffect(() => {
-    if (!open) return;
-    field.current?.focus();
-    if (batchesRead) return;
-    setBatchesRead(true);
-    /* A failed history read is not an error the search box should report: the
-       pages still resolve, and Batch History itself says why when opened. */
-    void readBatchHistory<BatchRow>().then(result => setBatches(batchHits(result.batches || [])))
-      .catch(() => undefined);
-  }, [open, batchesRead]);
+    if(!open)return;
+    let active=true;
+    setBatches([]);setBatchLoading(true);setBatchError(false);
+    const timer=window.setTimeout(()=>{
+      void readBatchHistory<BatchRow>(fetch,25000,{query:query.trim(),page:1,sort:"recent"})
+        .then(result=>{if(active)setBatches(batchHits(result.batches));})
+        .catch(()=>{if(active){setBatches([]);setBatchError(true);}})
+        .finally(()=>{if(active)setBatchLoading(false);});
+    },250);
+    return()=>{active=false;window.clearTimeout(timer);};
+  },[open,query]);
 
   const hits = [...pages, ...batches]
-    .map(hit => ({ hit, rank: score(hit.label, query) + (hit.key.startsWith("page:") ? 0.5 : 0) }))
+    .map(hit => ({ hit, rank: Math.max(score(hit.label, query),score(hit.searchText??hit.label,query)) + (hit.key.startsWith("page:") ? 0.5 : 0) }))
     .filter(entry => !query || entry.rank > 0.5)
     .sort((a, b) => b.rank - a.rank)
     .slice(0, 8)
@@ -121,15 +125,18 @@ export default function SuiteSearch({ items }: { items: SuiteNavItem[] }) {
             if (event.key === "ArrowUp") { event.preventDefault(); setCursor(index => Math.max(index - 1, 0)); }
             if (event.key === "Enter") { event.preventDefault(); go(hits[cursor]); }
           }} />
+        <button type="button" className="suite-search-close" aria-label="Close search" onClick={()=>setOpen(false)}>×</button>
       </div>
       <div className="suite-search-hits" role="listbox">
         {hits.map((hit, index) => <a key={hit.key} role="option" aria-selected={index === cursor}
           className={index === cursor ? "current" : undefined} href={hit.href}
           onMouseEnter={() => setCursor(index)}>
           <b>{hit.label}</b><small>{hit.note}</small></a>)}
-        {hits.length === 0 && <p className="suite-search-empty">
+        {hits.length === 0 && !batchLoading && !batchError && <p className="suite-search-empty">
           Nothing here matches that. Search finds pages, tools and your saved batches.</p>}
       </div>
+      {batchLoading&&<p className="suite-search-empty" role="status">Searching saved batches…</p>}
+      {batchError&&<p className="suite-search-empty" role="status">Saved batches couldn’t be searched. <a href="/batches">Open Batch History</a>.</p>}
     </div>
   </div> : null;
 
