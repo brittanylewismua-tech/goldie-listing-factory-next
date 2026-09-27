@@ -865,5 +865,16 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
  #suite-workspace .factory-work .usage-page > header {padding:22px!important}
 }
 
+/* A deliberate two-line lockup, rather than a name wrapping wherever it fits. */
+#suite-workspace .suite-brand {align-items:center!important;gap:12px!important}
 #suite-workspace .suite-brand-copy .current-logo-text,
-#suite-workspace .suite-mobile-brand .suite-brand-copy .current-logo-text {font-size:18px!important;letter-spacing:-.5px!important;line-height:1.2!important;white-space:normal!important;max-width:140px;display:block}
+#suite-workspace .suite-mobile-brand .suite-brand-copy .current-logo-text {
+ display:flex!important;flex-direction:column;gap:3px;max-width:none;
+ font-size:19px!important;letter-spacing:-.6px!important;line-height:1.1!important;
+ white-space:nowrap!important;
+}
+#suite-workspace .current-logo-text .current-logo-prefix {
+ color:inherit!important;font-size:9px;line-height:1;letter-spacing:1.6px;font-weight:650;text-transform:uppercase;
+}
+#suite-workspace .current-logo-text .current-logo-name {color:inherit!important}
+#suite-workspace .suite-brand-mark.suite-brand-g {width:36px!important;min-width:36px!important;height:36px!important;flex-basis:36px!important;font-size:33px!important;border-radius:10px!important}
