@@ -42,6 +42,7 @@ export const ACCESS: Record<string, Rule> = {
   "/signup": { kind: "public" },
   "/api/etsy/callback": { kind: "public" },
   "/auth/callback": { kind: "public" },
+  "/auth/mirrorbot-callback": { kind: "public" },
   "/api/csp-report": { kind: "public" },
   "/api/client-errors": { kind: "public" },
   "/api/version": { kind: "public" },
