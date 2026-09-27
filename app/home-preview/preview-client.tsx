@@ -126,6 +126,8 @@ export default function PreviewClient(){
       <div><b>{usd(perOrder)}</b><small>AVERAGE ORDER</small></div>
       <div><b>{num(t?.activeListings??0)}</b><small>LISTINGS LIVE NOW</small></div>
     </div>
+    {/* D1890 · Three photographs with no way to the other eighty. */}
+    <a className="hero-go" href="/shop-map?tab=sold">See all your sold listings →</a>
     {/* D1886 · A 24-hour sales count across a sample of Etsy, set against a
         static listing count, under her revenue. Two numbers in different
         units that answer no question. The comparison belongs in the product
@@ -156,7 +158,7 @@ export default function PreviewClient(){
   /* D1888 · Every figure opens the place it came from. */
   const Watching=()=><div className="watch">
     {moved.map(x=><a className="w-item" key={x.phrase}
-      href={`/market-watch?keyword=${encodeURIComponent(x.phrase)}`}>
+      href={`/market-watch?keyword=${encodeURIComponent(x.phrase)}&new=1`}>
       <b>{num(x.newly)}</b>
       <div><span>listings started selling in <em>{x.phrase}</em></span>
         <small>keyword you track · since you last opened Research</small></div></a>)}

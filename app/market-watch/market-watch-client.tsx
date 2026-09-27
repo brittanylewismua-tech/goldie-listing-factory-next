@@ -18,7 +18,7 @@ export type Listing = {
   state?: string; label?: string; confirmedAt?: number; intervals: number;
   sold7?: number; sold30?: number; priceCents: number | null; currency: string;
   favorites: number | null; views: number | null; ageDays: number | null;
-  reviewsOnThisListing: number|null; displayFresh: boolean;
+  reviewsOnThisListing: number|null; displayFresh: boolean; startedSince?: boolean;
   tags?: string[]; isPersonalizable?: boolean|null; materials?: string[]; shopSold?: number|null;
   soldUnits?: number|null; soldHours?: number|null;
 };
@@ -49,8 +49,8 @@ const money = (listing: Listing) => listing.priceCents == null ? "Price unavaila
     .format(listing.priceCents / 100);
 
 export default function MarketWatchClient(
-  { signedInEmail, startTab, startKeyword }: { signedInEmail: string;
-    startTab?: "niches" | "shops" | "saved"; startKeyword?: string },
+  { signedInEmail, startTab, startKeyword, startNew = false }: { signedInEmail: string;
+    startTab?: "niches" | "shops" | "saved"; startKeyword?: string; startNew?: boolean },
 ) {
   void signedInEmail;
   const [tab]=useState<"niches"|"shops"|"saved">(startTab??tabFromUrl);
@@ -130,7 +130,7 @@ export default function MarketWatchClient(
 
   if(tab==="saved")return <SavedListings watches={watches} onRetry={()=>void loadNiches()}/>;
   if(selectedShop)return <main className="mw"><ResearchNavigation active="shops"/><button className="back p-button p-button-quiet" onClick={()=>setSelectedShop(null)}>← Tracked shops</button><ShopCard shop={selectedShop}/></main>;
-  if(open)return <NicheDetail view={open} refreshing={Boolean(opening)} onRefresh={()=>void openNiche(open.key)} onBack={()=>{setOpen(null);void loadNiches(true)}}/>;
+  if(open)return <NicheDetail view={open} startNew={startNew} refreshing={Boolean(opening)} onRefresh={()=>void openNiche(open.key)} onBack={()=>{setOpen(null);void loadNiches(true)}}/>;
   return <main className="mw"><ResearchNavigation active={tab==="shops"?"shops":"keywords"}/>
     <header className="mw-intro current-page-heading"><div><p className="current-kicker">Research</p><h1>{tab==="shops"?"Tracked shops":"Tracked keywords"}</h1><p>{tab==="shops"?"Follow specific shops and see their new listings, price changes, and shop totals.":"Save search terms to revisit Etsy results and track individual listings."}</p></div></header>
     {tab==="shops"&&<div className="current-watch-research-link"><a href="/market-watch/research">Find shops with Niche Research →</a></div>}
@@ -178,7 +178,12 @@ function WatchList({load,onRetry,failure,empty,children}:{load:{status:"loading"
   return <>{load.status==="failed"&&<p className="p-notice failed">{failure} Showing the last loaded results. <button className="p-button p-button-quiet" onClick={onRetry}>Try again</button></p>}{load.data.length?children:<p className="empty">{empty}</p>}</>;
 }
 
-function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=>void;refreshing:boolean}){
+function NicheDetail({view,onBack,startNew=false}:{view:NicheView;onBack:()=>void;
+  onRefresh:()=>void;refreshing:boolean;startNew?:boolean}){
+  /* D1889 · Arriving from a figure that counted the listings which started
+     selling shows those listings, not all of them. */
+  const startedCount=(view.listings??[]).filter(l=>l.startedSince).length;
+  const [onlyNew,setOnlyNew]=useState(startNew&&startedCount>0);
   /* Favorites first. It is the ordering Etsy will not give anyone, which is
      the reason to be on this page instead of etsy.com. */
   const [sort,setSort]=useState<KeywordOrder>("favorites");
@@ -260,7 +265,11 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
   const countsExist=rows.some(row=>row.soldUnits!=null);
   const effectiveSort=sort==="sold"&&!countsExist?"favorites":sort;
   const ranked=rankScan(rows,effectiveSort);
-  const visibleRows=ranked.slice(0,shown);
+  /* D1889 · The figure on the front page counts the listings that started
+     selling since this keyword was last opened. Arriving from it shows those
+     listings and says so, rather than the whole list. */
+  const filtered=onlyNew?ranked.filter(row=>(row as {startedSince?:boolean}).startedSince):ranked;
+  const visibleRows=filtered.slice(0,shown);
   const missingPhotoIds=visibleRows.filter(row=>!row.imageUrl&&!(String(row.listingId) in extraPhotos)).slice(0,100).map(row=>row.listingId).join(",");
   useEffect(()=>{
     if(!missingPhotoIds || section!=="search")return;
@@ -305,12 +314,14 @@ function NicheDetail({view,onBack}:{view:NicheView;onBack:()=>void;onRefresh:()=
     listing's quantity, so a phrase scanned for the first time has none yet -
     and the option only appears once something in this scan actually has a
     count behind it. */}
+    {onlyNew&&<p className="market-only-new" role="status">Showing the {startedCount} listing{startedCount===1?"":"s"} that started selling since you last opened this keyword.{" "}
+      <button type="button" onClick={()=>setOnlyNew(false)}>Show all {ranked.length}</button></p>}
     <div className="market-results-sort"><label>Sort these results<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}>{rows.some(row=>row.soldUnits!=null)&&<option value="sold">Observed stock decrease</option>}<option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="newest">Newest first</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price by currency: low to high</option><option value="price-desc">Price by currency: high to low</option></select></label></div>
     {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Try again</button></p>}
     {photoError&&<p className="p-notice failed" role="alert">{photoError} <button className="p-button p-button-quiet" onClick={()=>setPhotoRetry(value=>value+1)}>Retry photos</button></p>}
     {!loading&&!error&&!listings.length&&<p className="empty">No Etsy listings match this search.</p>}
     <div className="cards" aria-busy={loading}>{loading&&!rows.length&&Array.from({length:6},(_unused,index)=><div className="listing-skeleton" key={index} aria-hidden="true"><span/><div><i/><i/></div></div>)}{listings.map(listing=><ListingCard key={listing.listingId} listing={listing} action={<button className="p-button p-button-quiet" disabled={collectionLoading||collectionBusy||Boolean(collectionError)||savedIds.has(listing.listingId)} onClick={()=>void updateCollection("save",listing.listingId)}>{savedIds.has(listing.listingId)?"Tracking":"Save to track"}</button>}/>)}</div>
-    {shown<ranked.length&&<div className="market-pagination"><button className="p-button p-button-primary" onClick={()=>setShown(count=>count+60)}>Show more listings</button></div>}
+    {shown<filtered.length&&<div className="market-pagination"><button className="p-button p-button-primary" onClick={()=>setShown(count=>count+60)}>Show more listings</button></div>}
     </section>}
     {section==="saved"&&<section className="keyword-collection" id="keyword-saved-panel" role="tabpanel" aria-labelledby="keyword-saved-tab">
       <div className="market-result-bar"><div><h2>Saved listings</h2>{entries.length>0&&<p>{entries.length} of 100 saved</p>}</div><button className="p-button p-button-primary" disabled={collectionLoading||collectionBusy||!entries.length||Boolean(collectionError)} onClick={()=>void updateCollection("refresh")}>{collectionBusy?"Updating…":"Check for changes"}</button></div>

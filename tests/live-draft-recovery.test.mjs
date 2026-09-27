@@ -36,7 +36,10 @@ test('explicit retry reuses the same identity and only releases confirmed failur
 test('sorting and pagination hydrate only missing visible listing photos',()=>{
  const client=readFileSync(new URL('../app/market-watch/market-watch-client.tsx',import.meta.url),'utf8');
  const route=readFileSync(new URL('../app/api/market-watch/listing-photos/route.ts',import.meta.url),'utf8');
- assert.match(client,/visibleRows=ranked.slice\(0,shown\)/);
+ /* D1889 · The list may be narrowed to the listings a front-page figure
+    counted, so pagination reads the filtered list rather than the raw one. */
+ assert.match(client,/const filtered=onlyNew\?ranked\.filter/);
+ assert.match(client,/visibleRows=filtered\.slice\(0,shown\)/);
  assert.match(client,/missingPhotoIds=visibleRows.filter/);
  assert.match(client,/\[missingPhotoIds,photoRetry,section\]/);
  assert.match(client,/controller.abort\(\)/);

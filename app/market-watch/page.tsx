@@ -14,7 +14,7 @@ export const metadata = { title: "Research" };
   of the way. It does not tell the seller what to do next.
 */
 export default async function MarketWatchPage(
-  { searchParams }: { searchParams: Promise<{ tab?: string; keyword?: string }> },
+  { searchParams }: { searchParams: Promise<{ tab?: string; keyword?: string; new?: string }> },
 ) {
   const user = await requireFeaturePage("marketWatch", "/market-watch");
   /*
@@ -37,12 +37,14 @@ export default async function MarketWatchPage(
      a keyword from anywhere else in the product. */
   const startKeyword = typeof query?.keyword === "string" && query.keyword.trim()
     ? query.keyword.trim().slice(0, 120) : undefined;
+  /* Arriving from the figure that counted them opens on those listings. */
+  const startNew = query?.new === "1";
   const startTab = requestedTab === "shops" ? "shops" as const : requestedTab === "saved" ? "saved" as const : "niches" as const;
   return (
     /* D1575 · the same rail, topbar, wordmark and footer as the Listing
        Factory. This page rendered as a bare column on white before. */
     <FactoryShell active="market-watch" title="Research" desktopOnly={false}>
-      <MarketWatchClient signedInEmail={user.email} startTab={startTab} startKeyword={startKeyword} />
+      <MarketWatchClient signedInEmail={user.email} startTab={startTab} startKeyword={startKeyword} startNew={startNew} />
     </FactoryShell>
   );
 }

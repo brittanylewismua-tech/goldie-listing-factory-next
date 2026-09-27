@@ -19,6 +19,9 @@
 #suite-workspace .hp .hero-copy{background-color:var(--wash)!important;padding:40px 38px;
   display:flex;flex-direction:column;justify-content:center}
 #suite-workspace .hp .hero-copy .k{color:#a8467f!important}
+#suite-workspace .hp .hero-go{display:inline-block;margin-top:20px;font-size:13px!important;
+  font-weight:500;color:#c2277b!important;text-decoration:none}
+#suite-workspace .hp .hero-go:hover{text-decoration:underline;text-underline-offset:3px}
 #suite-workspace .hp .big{font-size:92px!important;line-height:.86!important;letter-spacing:-.055em;
   font-weight:500;margin:14px 0 0!important;color:#2e0a20}
 .facts{display:flex;gap:26px;flex-wrap:wrap;margin-top:22px;padding-top:18px;border-top:1px solid #f4cfe5}

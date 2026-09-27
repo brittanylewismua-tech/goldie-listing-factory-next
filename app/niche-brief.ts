@@ -22,6 +22,9 @@ export type MarketListing = {
   sold7: number; sold30: number; priceCents: number | null; currency: string;
   favorites: number | null; views: number | null; ageDays: number | null;
   reviewsOnThisListing: number; displayFresh: boolean;
+  /* D1889 · Which listings the "started selling since you last looked" count
+     is actually counting, so the figure can be opened and not just read. */
+  startedSince: boolean;
 };
 
 const db = () => (env as unknown as { DB: D1Database }).DB;
@@ -78,7 +81,7 @@ function evidenceFor(rows: Row[]): ListingEvidence[] {
   }));
 }
 
-function listingFrom(row: Row, now: number): MarketListing {
+function listingFrom(row: Row, now: number, since = 0): MarketListing {
   const evidence = evidenceFor([row])[0];
   const state = evidence ? stateOf(evidence, now) : "watching";
   const ageDays = row.originalCreated
@@ -93,7 +96,11 @@ function listingFrom(row: Row, now: number): MarketListing {
     favorites: row.favorites == null ? null : Number(row.favorites),
     views: row.views == null ? null : Number(row.views), ageDays,
     reviewsOnThisListing: Number(row.reviews) || 0,
-    displayFresh: now - Number(row.displayRefreshedAt) < DISPLAY_FRESHNESS_SECONDS };
+    displayFresh: now - Number(row.displayRefreshedAt) < DISPLAY_FRESHNESS_SECONDS,
+    /* The same test the count uses: in a selling state, and first confirmed
+       after the member last opened this keyword. */
+    startedSince: Boolean(since) && (state === "momentum" || state === "repeated-momentum")
+      && seconds(row.firstSeen) > since };
 }
 
 export async function readNiche(userId: string, _terms: string[], key: string, now: number) {
@@ -101,7 +108,8 @@ export async function readNiche(userId: string, _terms: string[], key: string, n
   const watch = (await watchesFor(userId)).find(row => row.key === key);
   const evidence = evidenceFor(rows);
   const summary = summarize(evidence, now, { since: watch?.lastOpened ?? 0 });
-  const listings = rows.filter(row => row.title).map(row => listingFrom(row, now)).slice(0, 36);
+  const since = watch?.lastOpened ?? 0;
+  const listings = rows.filter(row => row.title).map(row => listingFrom(row, now, since)).slice(0, 36);
   return { key, summary, window: summary.windowSeconds ? describeWindow(summary.windowSeconds) : null,
     listings, gathering: summary.moving === 0 && listings.length > 0,
     staleForDisplay: listings.filter(row => !row.displayFresh).length };
