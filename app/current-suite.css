@@ -929,3 +929,24 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 }
 
 .suite-search-panel .suite-search-close {flex:0 0 40px;width:40px;height:40px;min-height:40px;display:grid;place-items:center;padding:0;border:0;border-radius:8px;background:#f5f3f5;color:#242329;font:24px/1 'Manrope Variable',sans-serif;cursor:pointer}
+
+/* D1851: Current composition, original electric pink, crisp white surfaces. */
+#suite-workspace {--suite-pink:#e50095;--cc-accent-bright:#e50095;--p-pink:#e50095}
+#suite-workspace :is(.current-page-heading,.drop-head,.cc-home-head,.platform-brief-page > header,.mw-detail-head) {
+ background:#fff!important;border:1px solid #242329!important;border-top:8px solid #e50095!important;color:#242329!important;
+}
+#suite-workspace .factory-work .current-home-feature,
+#suite-workspace .co-feature,
+#suite-workspace .nr.nr-library .nr-search,
+#suite-workspace .cc-home-tile[data-tool="Research"] {
+ background-color:#fff!important;
+ background-image:linear-gradient(#e5009555 1px,transparent 1px),linear-gradient(90deg,#e5009555 1px,transparent 1px)!important;
+ background-size:32px 32px!important;
+ border:1px solid #242329!important;
+ border-top:8px solid #e50095!important;
+}
+#suite-workspace .factory-work .current-pill,
+#suite-workspace .co-pill {background:#242329!important;color:#fff!important;border-color:#242329!important}
+#suite-workspace .current-navigation a.active {background:#e50095!important;color:#fff!important}
+#suite-workspace .current-navigation a.active:before {background:#fff!important}
+#suite-workspace .suite-brand-mark.suite-brand-g {background:#e50095!important}
