@@ -10,7 +10,7 @@ export default function BuyerInsights({project,onProducts}:{project:ResearchView
   if(project.phase!=='ready'){setLoading(false);return;}
   const controller=new AbortController();setLoading(true);setError('');
   void (async()=>{try{let response:Response|undefined;
-   for(let retry=0;retry<4;retry++){
+   for(let retry=0;retry<24;retry++){
     response=await fetch('/api/niche-research',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'buyers',id:project.id}),signal:controller.signal});
     if(response.status!==409)break;
     await new Promise<void>(resolve=>{const timer=setTimeout(resolve,5000);controller.signal.addEventListener('abort',()=>{clearTimeout(timer);resolve();},{once:true});});if(controller.signal.aborted)return;
