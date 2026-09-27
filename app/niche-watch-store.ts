@@ -29,6 +29,10 @@ export async function ensureNicheWatchTables() {
       terms TEXT NOT NULL DEFAULT '',
       added_at INTEGER NOT NULL,
       last_opened INTEGER NOT NULL DEFAULT 0,
+      /* D1893 · When the visit that last_opened belongs to began. See
+         markOpened: "since you last looked" has to hold still while the
+         member is looking. */
+      opened_at INTEGER NOT NULL DEFAULT 0,
       paused INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (user_id, niche_key))`),
     db().prepare(
@@ -45,6 +49,22 @@ export async function ensureNicheWatchTables() {
       `CREATE INDEX IF NOT EXISTS niche_watch_history_key
          ON niche_watch_history (niche_key, observed_at DESC)`),
   ]);
+
+  /*
+    D1893 · niche_watches predates opened_at, and CREATE TABLE IF NOT EXISTS
+    does not add a column to a table that already exists. SQLite has no ADD
+    COLUMN IF NOT EXISTS, so the already-there error is the expected outcome on
+    every run after the first.
+
+    There is deliberately no backfill. A cross-member UPDATE is the mistake the
+    user_id scoping guard exists to catch, and it is not needed: markOpened
+    reads opened_at = 0 as "no visit recorded yet" and leaves last_opened
+    exactly where it is, so an existing watch keeps its count and this visit
+    becomes the one the next arrival measures from.
+  */
+  await db().prepare(
+    `ALTER TABLE niche_watches ADD COLUMN opened_at INTEGER NOT NULL DEFAULT 0`)
+    .run().catch(() => undefined);
 }
 
 /* The niche a member typed and the niche another member typed differently are
@@ -105,10 +125,38 @@ export async function watchesFor(userId: string) {
   }));
 }
 
+/* A visit, not a request. The page fetches its own detail more than once per
+   load, so anything shorter than this counts as still the same visit. */
+const SAME_VISIT_SECONDS = 30 * 60;
+
 export async function markOpened(userId: string, key: string, now: number) {
+  await ensureNicheWatchTables();
+  /*
+    D1893 · "SINCE YOU LAST LOOKED" HAS TO HOLD STILL WHILE YOU ARE LOOKING.
+
+    This used to set last_opened to now on every read. The keyword page fetches
+    its detail twice per load, so the first response moved the clock to now and
+    the second — the one that actually renders — found that nothing had started
+    selling since. The member saw "13 listings started selling" on the homepage,
+    clicked it, and was told nothing had. Both numbers came from the same
+    correct rule applied to a clock that had moved in between.
+
+    last_opened now advances only when a new visit begins: the timestamp of the
+    previous visit is promoted, and this visit is recorded separately. Repeat
+    fetches, a refresh, and a back-and-forward within half an hour all get the
+    same answer, and the count clears on the next real visit.
+  */
+  const row = await db().prepare(
+    `SELECT last_opened AS lastOpened, opened_at AS openedAt
+       FROM niche_watches WHERE user_id = ? AND niche_key = ?`)
+    .bind(userId, key).first<{ lastOpened: number; openedAt: number }>();
+  if (!row) return;
+  const openedAt = Number(row.openedAt ?? 0);
+  if (openedAt && now - openedAt < SAME_VISIT_SECONDS) return;
   await db().prepare(
-    `UPDATE niche_watches SET last_opened = ? WHERE user_id = ? AND niche_key = ?`)
-    .bind(now, userId, key).run();
+    `UPDATE niche_watches SET last_opened = ?, opened_at = ?
+      WHERE user_id = ? AND niche_key = ?`)
+    .bind(openedAt || Number(row.lastOpened ?? 0), now, userId, key).run();
 }
 
 export async function appendHistory(
