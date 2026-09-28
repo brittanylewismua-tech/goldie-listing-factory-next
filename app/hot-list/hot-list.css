@@ -2,7 +2,7 @@
   --g-pink:#ee6fc0;--g-pink-soft:#fdeef7;--g-black:#000;--g-ink2:#46433f;--g-ink3:#8a8580;--g-line:#e4e1de;
   max-width:1120px;margin:0 auto;padding:0 0 80px;font-family:inherit;color:#000;
 }
-#suite-workspace .sold-page :is(h1,h2,h3,p,a,button,input,small,strong,span){font-family:inherit!important}
+#suite-workspace .sold-page :is(h1,h2,h3,p,a,button,input,small,strong,span){}
 #suite-workspace .sold-page .drop-head{padding:4px 0 28px;margin:0 0 26px;border-bottom:2px solid #000}
 #suite-workspace .sold-page .drop-head h1{font-size:36px!important;line-height:1.08!important;letter-spacing:-1.3px!important;font-weight:800!important;margin:8px 0!important;color:#000!important}
 #suite-workspace .sold-page .drop-head p:last-child{font-size:13px!important;color:var(--g-ink2)!important;margin:0!important}
@@ -21,12 +21,12 @@
 #suite-workspace .sold-page .sold-windows button[aria-current=true]{background:var(--g-pink)!important;color:#000!important}
 
 #suite-workspace .sold-page .hot-made-to-order{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important;padding:0 0 18px!important;margin-bottom:18px!important;border-bottom:1px solid var(--g-line)!important}
-#suite-workspace .sold-page .hot-made-to-order button{min-height:34px!important;border:1px solid #000!important;border-radius:8px!important;background:#fff!important;color:#000!important;padding:7px 10px!important;font-size:10px!important;font-weight:800!important}
+#suite-workspace .sold-page .hot-made-to-order button{min-height:40px!important;border:1px solid #000!important;border-radius:8px!important;background:#fff!important;color:#000!important;padding:7px 10px!important;font-size:10px!important;font-weight:800!important}
 #suite-workspace .sold-page .hot-made-to-order button.active{background:var(--g-pink-soft)!important}
 #suite-workspace .sold-page .hot-made-to-order small{color:var(--g-ink3)!important;font-size:10px!important}
 
 #suite-workspace .sold-page .drop-tabs{display:flex!important;gap:7px!important;flex-wrap:wrap!important;margin:0 0 24px!important}
-#suite-workspace .sold-page .drop-tabs button{min-height:34px!important;border:1px solid var(--g-line)!important;border-radius:8px!important;background:#fff!important;color:var(--g-ink2)!important;padding:7px 10px!important;font-size:10px!important;font-weight:700!important}
+#suite-workspace .sold-page .drop-tabs button{min-height:40px!important;border:1px solid var(--g-line)!important;border-radius:8px!important;background:#fff!important;color:var(--g-ink2)!important;padding:7px 10px!important;font-size:10px!important;font-weight:700!important}
 #suite-workspace .sold-page .drop-tabs button.active,
 #suite-workspace .sold-page .drop-tabs button[aria-current=true]{background:#000!important;border-color:#000!important;color:#fff!important}
 
