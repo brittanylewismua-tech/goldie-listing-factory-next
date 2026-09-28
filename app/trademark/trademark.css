@@ -73,3 +73,341 @@
 .tm-standalone > h1 { font-size: 22px; margin: 0 0 16px; }
 .tm-standalone .drop-head h1 { font-size: 18px; }
 .tm-standalone input, .tm-standalone button { min-height: 48px; font-size: 16px; }
+
+
+/* ==========================================================================
+   GOLDIE SUITE · TRADEMARK CHECK VISUAL SYSTEM
+   Scoped to Trademark Check only.
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+#suite-workspace .tm-standalone{
+  --g-pink:#ee6fc0;
+  --g-pink-soft:#fdeef7;
+  --g-black:#000;
+  --g-ink:#111;
+  --g-ink-2:#46433f;
+  --g-ink-3:#8a8580;
+  --g-line:#e4e1de;
+  max-width:900px!important;
+  margin:0 auto!important;
+  padding:0 0 80px!important;
+  font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif!important;
+}
+#suite-workspace .tm-standalone :is(h1,h2,h3,p,a,button,input,select,summary,small,strong,span){
+  font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif!important;
+}
+#suite-workspace .tm-standalone .drop-head{
+  padding:4px 0 28px!important;
+  margin:0 0 26px!important;
+  border-bottom:2px solid #000!important;
+}
+#suite-workspace .tm-standalone .drop-head h1{
+  font-size:36px!important;
+  line-height:1.08!important;
+  letter-spacing:-1.3px!important;
+  font-weight:800!important;
+  margin:8px 0!important;
+  color:#000!important;
+}
+#suite-workspace .tm-standalone .drop-head p:last-child{
+  margin:0!important;
+  font-size:13px!important;
+  color:var(--g-ink-2)!important;
+}
+#suite-workspace .tm-standalone .mini-label,
+#suite-workspace .tm-standalone .p-eyebrow{
+  font-size:10px!important;
+  color:var(--g-ink-3)!important;
+  letter-spacing:.15em!important;
+  text-transform:uppercase!important;
+  font-weight:800!important;
+}
+
+#suite-workspace .tm-page .tm-form{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:9px!important;
+  margin:0 0 14px!important;
+}
+#suite-workspace .tm-page .tm-form input{
+  min-height:46px!important;
+  border:1.5px solid #000!important;
+  border-radius:9px!important;
+  padding:11px 13px!important;
+  color:#000!important;
+  background:#fff!important;
+  font-size:14px!important;
+  box-shadow:none!important;
+}
+#suite-workspace .tm-page .tm-form input:focus{
+  outline:none!important;
+  box-shadow:3px 3px 0 var(--g-pink)!important;
+}
+#suite-workspace .tm-page .tm-form button{
+  min-height:46px!important;
+  border:1.5px solid #000!important;
+  border-radius:9px!important;
+  background:#000!important;
+  color:#fff!important;
+  padding:10px 18px!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  box-shadow:3px 3px 0 var(--g-pink)!important;
+}
+#suite-workspace .tm-page .tm-form button:not(:disabled):hover{
+  transform:translate(-1px,-1px)!important;
+  box-shadow:5px 5px 0 var(--g-pink)!important;
+}
+
+#suite-workspace .tm-examples{
+  margin:0 0 30px!important;
+  gap:7px!important;
+}
+#suite-workspace .tm-examples button{
+  min-height:32px!important;
+  border:1px solid var(--g-line)!important;
+  border-radius:7px!important;
+  background:#fff!important;
+  color:var(--g-ink-2)!important;
+  padding:6px 10px!important;
+  font-size:10px!important;
+  font-weight:700!important;
+}
+#suite-workspace .tm-examples button:hover{
+  border-color:#000!important;
+  background:var(--g-pink-soft)!important;
+}
+
+#suite-workspace .tm-verdict{
+  display:block!important;
+  padding:0!important;
+  margin:0 0 42px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+#suite-workspace .tm-result-heading{
+  display:flex!important;
+  justify-content:space-between!important;
+  align-items:flex-end!important;
+  gap:18px!important;
+  padding:0 0 18px!important;
+  border-bottom:2px solid #000!important;
+  margin-bottom:18px!important;
+}
+#suite-workspace .tm-result-heading .tm-phrase{
+  margin:6px 0 0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  font-size:27px!important;
+  line-height:1.25!important;
+  letter-spacing:-.5px!important;
+  font-weight:800!important;
+  color:#000!important;
+}
+#suite-workspace .tm-phrase mark{
+  background:var(--g-pink)!important;
+  color:#000!important;
+  border-radius:3px!important;
+  padding:1px 4px!important;
+}
+#suite-workspace .tm-watch-button{
+  min-height:38px!important;
+  border:1.5px solid #000!important;
+  border-radius:9px!important;
+  background:#fff!important;
+  color:#000!important;
+  padding:8px 12px!important;
+  font-size:11px!important;
+  font-weight:800!important;
+}
+#suite-workspace .tm-watch-button:hover{background:var(--g-pink-soft)!important}
+
+#suite-workspace .tm-brand-alert{
+  border:2px solid #000!important;
+  border-left:6px solid var(--g-pink)!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  padding:18px!important;
+  margin:18px 0!important;
+}
+#suite-workspace .tm-brand-alert h3{
+  font-size:14px!important;
+  margin:0 0 10px!important;
+  font-weight:800!important;
+}
+#suite-workspace .tm-brand-alert li{
+  padding:8px 0!important;
+  border-top:1px solid var(--g-line)!important;
+}
+#suite-workspace .tm-brand-alert li:first-child{border-top:0!important}
+
+#suite-workspace .tm-results-toolbar{
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  margin:28px 0 12px!important;
+  padding-top:20px!important;
+  border-top:1px solid var(--g-line)!important;
+}
+#suite-workspace .tm-results-toolbar h3{
+  font-size:16px!important;
+  margin:0!important;
+  font-weight:800!important;
+}
+#suite-workspace .tm-results-toolbar label{
+  font-size:10px!important;
+  color:var(--g-ink-3)!important;
+  font-weight:800!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+}
+#suite-workspace .tm-results-toolbar select{
+  margin-left:8px!important;
+  min-height:38px!important;
+  border:1.5px solid #000!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  font-size:12px!important;
+}
+
+#suite-workspace .tm-results{
+  list-style:none!important;
+  margin:0!important;
+  padding:0!important;
+  border-top:2px solid #000!important;
+}
+#suite-workspace .tm-record{
+  padding:18px 4px!important;
+  border-bottom:1px solid var(--g-line)!important;
+  background:#fff!important;
+}
+#suite-workspace .tm-record:hover{background:var(--g-pink-soft)!important}
+#suite-workspace .tm-record-top{
+  display:flex!important;
+  justify-content:space-between!important;
+  align-items:baseline!important;
+  gap:16px!important;
+}
+#suite-workspace .tm-record h3{
+  font-size:14px!important;
+  margin:0!important;
+  font-weight:800!important;
+}
+#suite-workspace .tm-record-status{
+  display:inline-flex!important;
+  border:1px solid #000!important;
+  border-radius:7px!important;
+  padding:3px 7px!important;
+  font-size:9px!important;
+  font-weight:800!important;
+  background:#fff!important;
+}
+#suite-workspace .tm-record-owner{
+  margin:5px 0 10px!important;
+  font-size:11px!important;
+  color:var(--g-ink-3)!important;
+}
+#suite-workspace .tm-record-bottom{
+  display:flex!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  font-size:11px!important;
+  color:var(--g-ink-2)!important;
+}
+#suite-workspace .tm-record-bottom a{color:#000!important;font-weight:700!important}
+#suite-workspace .tm-goods{
+  margin-top:10px!important;
+  border-top:1px solid var(--g-line)!important;
+}
+#suite-workspace .tm-goods summary{
+  padding:10px 0 0!important;
+  font-size:10px!important;
+  font-weight:800!important;
+}
+
+#suite-workspace .tm-coverage{
+  border:1px solid #000!important;
+  border-radius:10px!important;
+  padding:14px!important;
+  background:var(--g-pink-soft)!important;
+  margin:16px 0!important;
+}
+#suite-workspace .tm-source{
+  color:var(--g-ink-3)!important;
+  font-size:10px!important;
+}
+#suite-workspace .tm-empty{
+  padding:22px 0!important;
+  color:var(--g-ink-3)!important;
+  font-size:12px!important;
+}
+#suite-workspace .tm-word-matches{
+  border-top:1px solid var(--g-line)!important;
+  margin-top:24px!important;
+}
+#suite-workspace .tm-word-matches>summary{
+  padding:14px 0!important;
+  font-size:12px!important;
+  font-weight:800!important;
+}
+
+#suite-workspace .tm-watches{
+  border:2px solid #000!important;
+  border-radius:14px!important;
+  box-shadow:4px 4px 0 var(--g-pink)!important;
+  padding:0!important;
+  background:#fff!important;
+  overflow:hidden!important;
+}
+#suite-workspace .tm-watches-head{
+  padding:18px 20px!important;
+  border-bottom:2px solid #000!important;
+}
+#suite-workspace .tm-watches-head h2{
+  font-size:16px!important;
+  margin:0!important;
+  font-weight:800!important;
+}
+#suite-workspace .tm-watch-list article{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto auto auto!important;
+  gap:12px!important;
+  align-items:center!important;
+  padding:14px 20px!important;
+  border-bottom:1px solid var(--g-line)!important;
+}
+#suite-workspace .tm-watch-list article:last-child{border-bottom:0!important}
+#suite-workspace .tm-watch-list article.changed{background:var(--g-pink-soft)!important}
+#suite-workspace .tm-watch-list article strong{font-size:12px!important}
+#suite-workspace .tm-watch-list article>div span{display:block!important;font-size:10px!important;color:var(--g-ink-3)!important;margin-top:3px!important}
+#suite-workspace .tm-watch-list button{
+  min-height:32px!important;
+  border:1px solid #000!important;
+  border-radius:7px!important;
+  background:#fff!important;
+  color:#000!important;
+  font-size:10px!important;
+  font-weight:800!important;
+}
+#suite-workspace .tm-watch-list button:hover{background:var(--g-pink-soft)!important}
+#suite-workspace .tm-note{
+  margin-top:24px!important;
+  font-size:10px!important;
+  color:var(--g-ink-3)!important;
+}
+
+@media(max-width:700px){
+  #suite-workspace .tm-standalone{padding-bottom:60px!important}
+  #suite-workspace .tm-standalone .drop-head h1{font-size:31px!important}
+  #suite-workspace .tm-page .tm-form{grid-template-columns:1fr!important}
+  #suite-workspace .tm-result-heading{display:block!important}
+  #suite-workspace .tm-watch-button{margin-top:14px!important}
+  #suite-workspace .tm-results-toolbar{display:block!important}
+  #suite-workspace .tm-results-toolbar label{display:block!important;margin-top:12px!important}
+  #suite-workspace .tm-watch-list article{grid-template-columns:1fr auto!important}
+}
