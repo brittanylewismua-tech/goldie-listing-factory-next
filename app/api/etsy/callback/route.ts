@@ -32,7 +32,7 @@ export async function GET(request:Request){
     const etsyUserId=Number(tokens.access_token.split(".")[0]);if(!etsyUserId)throw new Error("Etsy did not return a valid account identifier.");
     const shop=await etsyFetch<{shop_id:number;shop_name:string}>(`/users/${etsyUserId}/shops`,tokens.access_token,"connect");
     const etsyFirstName=await readEtsyFirstName(etsyUserId,tokens.access_token,String(tokens.scope||""));
-    if(etsyFirstName)await ensureEtsyFirstNameColumn();
+    await ensureEtsyFirstNameColumn();
     if(!shop||!Number.isSafeInteger(Number(shop.shop_id))||Number(shop.shop_id)<=0||!shop.shop_name)throw new Error("No Etsy shop was found on this account. Connect an account with an existing Etsy shop.");
     /*
       SHOP MAP ASKED FOR SALES ACCESS ON ONE SAVED SHOP.
