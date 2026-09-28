@@ -446,3 +446,16 @@
   color:var(--g-ink-3)!important;
   font-size:11px!important;
 }
+
+#suite-workspace .tm-watches-loading{
+  min-height:72px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+  margin:24px 0!important;
+  border:1px dashed var(--g-line)!important;
+  border-radius:10px!important;
+  color:var(--g-ink-3)!important;
+  font-size:12px!important;
+}
