@@ -57,6 +57,12 @@ export const UPDATE_SOURCES:Source[]=[
   evidence. Only images served by the platform being reported on are accepted,
   so a page cannot smuggle in a picture from somewhere else.
 */
+export function articleImage(body:string,platform:Platform):string{
+ try{
+  const json=JSON.parse(body) as {article?:{body?:string}};
+  return json.article?.body?firstImage(String(json.article.body),platform):'';
+ }catch{return '';}
+}
 export function firstImage(html:string,platform:Platform):string{
  const root=platform==='Etsy'?'etsy.com':'printify.com';
  for(const match of String(html).matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["']/gi)){
