@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+#suite-workspace .sold-page{
+  --g-pink:#ee6fc0;--g-pink-soft:#fdeef7;--g-black:#000;--g-ink2:#46433f;--g-ink3:#8a8580;--g-line:#e4e1de;
+  max-width:1120px;margin:0 auto;padding:0 0 80px;font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif;color:#000;
+}
+#suite-workspace .sold-page :is(h1,h2,h3,p,a,button,input,small,strong,span){font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif!important}
+#suite-workspace .sold-page .drop-head{padding:4px 0 28px;margin:0 0 26px;border-bottom:2px solid #000}
+#suite-workspace .sold-page .drop-head h1{font-size:36px!important;line-height:1.08!important;letter-spacing:-1.3px!important;font-weight:800!important;margin:8px 0!important;color:#000!important}
+#suite-workspace .sold-page .drop-head p:last-child{font-size:13px!important;color:var(--g-ink2)!important;margin:0!important}
+#suite-workspace .sold-page .mini-label{font-size:10px!important;letter-spacing:.15em!important;text-transform:uppercase!important;color:var(--g-ink3)!important;font-weight:800!important}
+
+#suite-workspace .sold-page .drop-card-surface{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+#suite-workspace .sold-page .hot-search{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;gap:9px!important;margin:0 0 20px!important}
+#suite-workspace .sold-page .hot-search input{min-height:44px!important;border:1.5px solid #000!important;border-radius:9px!important;padding:10px 12px!important;font-size:13px!important;background:#fff!important}
+#suite-workspace .sold-page .hot-search input:focus{outline:none!important;box-shadow:3px 3px 0 var(--g-pink)!important}
+#suite-workspace .sold-page .hot-search button{min-height:44px!important;border:1.5px solid #000!important;border-radius:9px!important;padding:9px 14px!important;background:#000!important;color:#fff!important;font-size:12px!important;font-weight:800!important;box-shadow:3px 3px 0 var(--g-pink)!important}
+#suite-workspace .sold-page .hot-search button.hot-search-clear{background:#fff!important;color:#000!important;box-shadow:none!important}
+
+#suite-workspace .sold-page .sold-windows{display:flex!important;gap:0!important;border-bottom:2px solid #000!important;margin:0 0 18px!important}
+#suite-workspace .sold-page .sold-windows button{min-height:40px!important;padding:9px 15px!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--g-ink3)!important;font-size:11px!important;font-weight:800!important}
+#suite-workspace .sold-page .sold-windows button.active,
+#suite-workspace .sold-page .sold-windows button[aria-current=true]{background:var(--g-pink)!important;color:#000!important}
+
+#suite-workspace .sold-page .hot-made-to-order{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important;padding:0 0 18px!important;margin-bottom:18px!important;border-bottom:1px solid var(--g-line)!important}
+#suite-workspace .sold-page .hot-made-to-order button{min-height:34px!important;border:1px solid #000!important;border-radius:8px!important;background:#fff!important;color:#000!important;padding:7px 10px!important;font-size:10px!important;font-weight:800!important}
+#suite-workspace .sold-page .hot-made-to-order button.active{background:var(--g-pink-soft)!important}
+#suite-workspace .sold-page .hot-made-to-order small{color:var(--g-ink3)!important;font-size:10px!important}
+
+#suite-workspace .sold-page .drop-tabs{display:flex!important;gap:7px!important;flex-wrap:wrap!important;margin:0 0 24px!important}
+#suite-workspace .sold-page .drop-tabs button{min-height:34px!important;border:1px solid var(--g-line)!important;border-radius:8px!important;background:#fff!important;color:var(--g-ink2)!important;padding:7px 10px!important;font-size:10px!important;font-weight:700!important}
+#suite-workspace .sold-page .drop-tabs button.active,
+#suite-workspace .sold-page .drop-tabs button[aria-current=true]{background:#000!important;border-color:#000!important;color:#fff!important}
+
+#suite-workspace .sold-page .drop-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important}
+#suite-workspace .sold-page .drop-card{margin:0!important;border:1.5px solid #000!important;border-radius:12px!important;overflow:hidden!important;background:#fff!important;box-shadow:none!important;transition:transform .15s ease,box-shadow .15s ease!important}
+#suite-workspace .sold-page .drop-card:hover{transform:translate(-2px,-2px)!important;box-shadow:5px 5px 0 var(--g-pink)!important}
+#suite-workspace .sold-page .drop-shot{display:block!important;position:relative!important;aspect-ratio:1/1!important;background:#f3f1f2!important}
+#suite-workspace .sold-page .drop-shot img{width:100%!important;height:100%!important;object-fit:cover!important;display:block!important}
+#suite-workspace .sold-page .drop-card figcaption{padding:12px!important}
+#suite-workspace .sold-page .drop-figures{margin:0 0 6px!important}
+#suite-workspace .sold-page .drop-unit{font-size:10px!important;font-weight:800!important;color:#000!important}
+#suite-workspace .sold-page .drop-sub{font-size:10px!important;color:var(--g-ink3)!important;margin:0 0 6px!important}
+#suite-workspace .sold-page .drop-title{display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;font-size:11px!important;line-height:1.4!important;color:#000!important;text-decoration:none!important;font-weight:600!important}
+#suite-workspace .sold-page .drop-badge{position:absolute!important;left:8px!important;top:8px!important;border:1.5px solid #000!important;border-radius:7px!important;background:var(--g-pink)!important;color:#000!important;padding:4px 7px!important;font-size:9px!important;font-weight:800!important}
+
+#suite-workspace .sold-page .hot-hits{margin:28px 0!important;padding-top:24px!important;border-top:1px solid var(--g-line)!important}
+#suite-workspace .sold-page .hot-note{padding:12px 14px!important;background:var(--g-pink-soft)!important;border:1px solid #000!important;border-radius:9px!important;font-size:12px!important}
+#suite-workspace .sold-page .drop-loading,
+#suite-workspace .sold-page .drop-error{border:1px solid var(--g-line)!important;border-radius:12px!important;background:#fff!important;padding:24px!important}
+
+@media(max-width:1000px){#suite-workspace .sold-page .drop-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:700px){
+  #suite-workspace .sold-page .drop-head h1{font-size:31px!important}
+  #suite-workspace .sold-page .hot-search{grid-template-columns:1fr!important}
+  #suite-workspace .sold-page .drop-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+}
