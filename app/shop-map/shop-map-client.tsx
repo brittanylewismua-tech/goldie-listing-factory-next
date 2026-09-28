@@ -338,7 +338,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         <article><span>Top product theme</span><strong>{themes[0]?.label ?? "Not enough data"}</strong><small>{themes[0] ? `${themes[0].units??"—"} units sold in 90 days` : "Sales will reveal this"}</small></article>
       </section>
 
-      {insightsLoading&&!shown.whereToFocus?.length?<section className="shop-map-insights-loading" role="status"><span className="shop-map-loader-dot"/><span>Loading shop insights…</span></section>:null}
+      {insightsLoading&&!shown.whereToFocus?.length?<section className="shop-map-insights-loading" role="status"><span className="shop-map-loader-dot"/><span>Loading where to focus…</span></section>:null}
       {!!shown.whereToFocus?.length&&<section className="shop-map-focus-panel">
         <div className="shop-map-section-head"><div><p className="mini-label">WHERE TO FOCUS</p><h2>{shown.standout?.headline||"What deserves your attention"}</h2></div></div>
         <div className="shop-map-focus-list">{shown.whereToFocus.slice(0,3).map(focus=><article key={focus.nicheId||focus.label}>
