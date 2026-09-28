@@ -33,3 +33,10 @@ test("platform updates shows a self-contained loading surface",()=>{
   assert.match(updatesCss,/\.pu-loader-dot/);
   assert.doesNotMatch(updates,/home4-loader-dot/);
 });
+
+
+test("active Research tab loads only the dataset it needs",()=>{
+  const watch=readFileSync("app/market-watch/market-watch-client.tsx","utf8");
+  assert.match(watch,/if\(tab==="shops"\)void loadShops\(\);else void loadNiches\(\)/);
+  assert.doesNotMatch(watch,/void loadNiches\(\);void loadShops\(\)/);
+});
