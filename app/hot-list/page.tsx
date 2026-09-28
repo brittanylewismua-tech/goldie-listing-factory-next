@@ -170,7 +170,7 @@ export default function HotListPage() {
           board.products.reduce((sum, p) => sum + p.listings, 0).toLocaleString("en-US")} listings.${
           board.products.reduce((sum, p) => sum + p.listings, 0) > board.listings.length
             ? ` Showing the ${board.listings.length.toLocaleString("en-US")} with the most favorites gained.` : ""}`
-        : "Loading."}</p>
+        : "Loading listing activity…"}</p>
     </header>
 
     {error && <section className="drop-error" role="alert">
@@ -189,6 +189,22 @@ export default function HotListPage() {
       <div className="drop-card-surface">
         {/* The week leads. Overnight is the sharper look inside it, not a
             rival feature with its own page. */}
+        <nav className="sold-windows" aria-label="Period">
+          {VIEWS.map(v => {
+            const ready = covered >= v.hours;
+            const days = Math.max(1, Math.ceil((v.hours - covered) / 24));
+            return <button key={v.key} type="button"
+              className={view.key === v.key ? "active" : undefined}
+              aria-current={view.key === v.key ? "true" : undefined}
+              disabled={!ready}
+              title={ready ? undefined : `Available in ${days} ${days === 1 ? "day" : "days"}`}
+              onClick={() => ready && load(v)}>
+              {v.tab}
+              {!ready && <small> · in {days}d</small>}
+            </button>;
+          })}
+        </nav>
+
         <form className="hot-search" onSubmit={search}>
           <input type="search" value={term} onChange={e => setTerm(e.target.value)}
             placeholder="Look up a keyword" aria-label="Look up a keyword" />
@@ -235,22 +251,7 @@ export default function HotListPage() {
             Showing it greyed with the day it arrives says the opposite: this
             is coming, and here is when.
         */}
-        {hits === null && <><nav className="sold-windows" aria-label="Period">
-          {VIEWS.map(v => {
-            const ready = covered >= v.hours;
-            const days = Math.max(1, Math.ceil((v.hours - covered) / 24));
-            return <button key={v.key} type="button"
-              className={view.key === v.key ? "active" : undefined}
-              aria-current={view.key === v.key ? "true" : undefined}
-              disabled={!ready}
-              title={ready ? undefined : `Available in ${days} ${days === 1 ? "day" : "days"}`}
-              onClick={() => ready && load(v)}>
-              {v.tab}
-              {!ready && <small> · in {days}d</small>}
-            </button>;
-          })}
-        </nav>
-
+        {hits === null && <>
         {!board.night
           ? <section className="drop-loading">
               <p className="drop-loading-title">Getting started</p>
