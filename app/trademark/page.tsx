@@ -79,15 +79,17 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
   const [watches, setWatches] = useState<Array<{ phrase: string; risk: string;
     changed: boolean; pending: boolean; matches: number|null; error?:string; incomplete?:boolean }>>([]);
   const [watchesLoading,setWatchesLoading]=useState(true);
+  const [watchError,setWatchError]=useState("");
   const [watchBusy, setWatchBusy] = useState("");
 
   const loadWatches = async () => {
+    setWatchError("");
     try {
       const response = await fetch("/api/trademark/watches", { cache: "no-store" });
       if (!response.ok) throw new Error("Your watched phrases could not be loaded.");
       const body = await response.json() as { watches?: typeof watches };
       setWatches(body.watches ?? []);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Your watched phrases could not be loaded."); }
+    } catch (cause) { setWatchError(cause instanceof Error ? cause.message : "Your watched phrases could not be loaded."); }
     finally { setWatchesLoading(false); }
 
   };
@@ -230,6 +232,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
       })()}
 
       {watchesLoading && <section className="tm-watches-loading" role="status"><span className="tm-loader-dot" aria-hidden="true"/><span>Loading watched phrases…</span></section>}
+      {watchError && <section className="tm-watch-load-error" role="alert"><span>{watchError}</span><button type="button" onClick={()=>void loadWatches()}>Try again</button></section>}
       {watches.length > 0 && <section className="tm-watches" aria-labelledby="tm-watches-title">
         <div className="tm-watches-head"><div><h2 id="tm-watches-title">Watched phrases <span>{watches.length}</span></h2><p>Review phrases again when matching records change.</p></div></div>
         <div className="tm-watch-list">{watches.map(watch => <article key={watch.phrase}
