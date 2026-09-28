@@ -51,7 +51,7 @@ type ShopMap = {
   unclassifiedPerformance?: { listings: number; activeListings: number; orders: number;
     revenueMinor: number; reviews: number; ordersLast90: number; revenueLast90Minor: number };
   needsAttention?: { overbuiltWorlds: Array<{ label: string; reason: string }> };
-  shopTotals?: { listings: number; activeListings?:number; orders: number };
+  shopTotals?: { listings: number; activeListings?:number; orders: number; ordersLast90?:number; revenueLast90Minor?:number };
   soldListings?: { period: string; days?:number; listings: Array<{ listingId: number; title: string;
     imageUrl: string; favorites: number; sales: number; revenueMinor: number }> };
   timezoneNeeded?: boolean;
@@ -142,7 +142,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   /* The last map that loaded. A failed refresh shows this rather than nothing. */
   const [lastGood, setLastGood] = useState<ShopMap | null>(null);
   const [failed, setFailed] = useState(false);
-  const [tab, setTab] = useState<"overview" | "themes" | "sold" | "money">("money");
+  const [tab, setTab] = useState<"overview" | "themes" | "sold" | "money">("overview");
 
   const [soldDays,setSoldDays]=useState(90);
   const [selectedMonth,setSelectedMonth]=useState("");
@@ -159,7 +159,10 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const load = useCallback(async () => {
     const sequence=++requestSequence.current;
     setRefreshing(true);
-    const next = await fetch(`/api/shop-map/map?days=${soldDays}${selectedMonth?`&month=${encodeURIComponent(selectedMonth)}`:""}`)
+    const params=new URLSearchParams({view:tab});
+    if(tab==="sold")params.set("days",String(soldDays));
+    if(tab==="money"&&selectedMonth)params.set("month",selectedMonth);
+    const next = await fetch(`/api/shop-map/map?${params.toString()}`)
       .then(response => response.json() as Promise<ShopMap>)
       .catch(() => null);
     if(sequence!==requestSequence.current)return;
@@ -168,7 +171,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setFailed(false);
     setMap(next);
     setLastGood(next);
-  },[soldDays,selectedMonth]);
+  },[tab,soldDays,selectedMonth]);
   useEffect(() => { void load(); }, [load]);
 
   const refreshMoney = async () => {
@@ -252,7 +255,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setBusy("");
   };
 
-  const shown = map ?? lastGood;
+  const shown = refreshing ? null : (map ?? lastGood);
 
   if (!shown && failed)
     return <main className="shop-map"><p className="shop-map-state">
@@ -266,8 +269,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         <p>Loading your connected shop and latest performance…</p>
       </div></header>
       <nav className="shop-map-tabs" aria-label="Your shop sections">
-        <button type="button" aria-current="page" disabled>Your numbers</button>
-        <button type="button" disabled>Overview</button>
+        <button type="button" aria-current="page" disabled>Overview</button>
+        <button type="button" disabled>Your numbers</button>
         <button type="button" disabled>Product themes</button>
         <button type="button" disabled>Sold listings</button>
       </nav>
@@ -291,11 +294,11 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const sold = shown.soldListings?.listings ?? [];
   const leaders=shown.topListings??[];
   return <main className="shop-map shop-map-redesign">
-    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">{monthName(shown.month)}</p><h1>Your shop</h1><p>{shown.shop?.shopName ?? "Your shop"} · Sales, costs, and product performance.</p></div></header>
+    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">YOUR SHOP</p><h1>Your shop</h1><p>{shown.shop?.shopName ?? "Your shop"} · What is selling, where your revenue is coming from, and what deserves your attention.</p></div></header>
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     <nav className="shop-map-tabs" aria-label="Your shop sections">
-      {([['money','Your numbers'],['overview','Overview'],['themes','Product themes'],['sold','Sold listings']] as const)
+      {([['overview','Overview'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
         .map(([key,label]) => <button key={key} type="button" aria-current={tab === key ? 'page' : undefined}
           onClick={() => selectTab(key)}>{label}</button>)}
     </nav>
