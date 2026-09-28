@@ -71,6 +71,7 @@ export default function PreviewClient({platformUpdate,firstName}:{platformUpdate
     topHotProduct?{tag:"HOT LIST",title:topHotProduct.label+" led the Hot List overnight.",body:num(topHotProduct.sold)+" unit"+(topHotProduct.sold===1?"":"s")+" across "+num(topHotProduct.listings)+" tracked listing"+(topHotProduct.listings===1?"":"s")+".",href:"/hot-list?product="+encodeURIComponent(topHotProduct.key),image:hotImage}:null
   ].filter(Boolean) as Array<{tag:string;title:string;body:string;href:string;image?:string|null}>;
   const up=updates;
+  const changes=(up?.items??[]).length+(up?.recent??[]).length;
   const allPlatform=[...(updates?.items??[]),...(updates?.recent??[])].sort((a,b)=>(Number(b.priority==="ACTION REQUIRED")-Number(a.priority==="ACTION REQUIRED"))||b.publishedAt-a.publishedAt);
   const leadPlatform=allPlatform[0]??null;
   const otherPlatform=leadPlatform?allPlatform.find(item=>item.platform!==leadPlatform.platform):null;
