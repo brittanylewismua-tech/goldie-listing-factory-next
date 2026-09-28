@@ -1,4 +1,4 @@
-import {UPDATE_SOURCES,sourceText,addedText,firstImage,publishDay,validateCandidate,type Source,type UpdateItem} from './platform-update-model';
+import {articleImage,UPDATE_SOURCES,sourceText,addedText,firstImage,publishDay,validateCandidate,type Source,type UpdateItem} from './platform-update-model';
 import {ensureUpdateTables,updateDb} from './platform-update-store';
 import {reserveSpend,settleSpend,failSpend} from './spend-guard';
 import {recordFalUsage} from './fal-usage';
@@ -142,7 +142,7 @@ export async function collectPlatformUpdates({retryFailed=false,reseed='',rebuil
    const {quoteKey:_ignored,...rest}=item;
    await db.prepare(`INSERT INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET content=excluded.content`).bind(id,publishDay(new Date(),rest.urgent),rest.topic,JSON.stringify({...rest,id}),rest.publishedAt).run();published++;}
   await db.prepare(`INSERT INTO platform_update_sources(id,content,checked_at,last_error) VALUES (?,?,?,'') ON CONFLICT(id) DO UPDATE SET content=excluded.content,checked_at=excluded.checked_at,last_error=''`).bind(source.id,'counted',now).run();checked++;continue;}
- const response=await fetch(source.fetchUrl,{headers:{'User-Agent':'GoldieSuite/1.0 (official platform update monitor)','Accept':source.kind==='html'?'text/html':'application/json'},signal:AbortSignal.timeout(20000),redirect:'manual'});if(!response.ok)throw new Error(`Official source returned ${response.status}`);const body=await response.text();if(body.length>3000000)throw new Error('Official source too large');const current=sourceText(source,body);const sourceImage=source.kind==='html'?firstImage(body,source.platform):'';if(current.length<150||/enable javascript and cookies|verify you are human|access denied/i.test(current.slice(0,500)))throw new Error('Official source could not be read');
+ const response=await fetch(source.fetchUrl,{headers:{'User-Agent':'GoldieSuite/1.0 (official platform update monitor)','Accept':source.kind==='html'?'text/html':'application/json'},signal:AbortSignal.timeout(20000),redirect:'manual'});if(!response.ok)throw new Error(`Official source returned ${response.status}`);const body=await response.text();if(body.length>3000000)throw new Error('Official source too large');const current=sourceText(source,body);const sourceImage=source.kind==='html'?firstImage(body,source.platform):source.kind==='article'?articleImage(body,source.platform):'';if(current.length<150||/enable javascript and cookies|verify you are human|access denied/i.test(current.slice(0,500)))throw new Error('Official source could not be read');
  if(!stored?.content){baseline++;
   /*
     D1898 · A NEW SOURCE COULD NEVER REPORT THE NEWS ALREADY ON THE PAGE.

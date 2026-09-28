@@ -2,6 +2,10 @@ import Link from "next/link";
 import { accountSignInPath, getChatGPTUser } from "@/app/chatgpt-auth";
 import FactoryShell from "@/app/factory-shell";
 import HomeView from "./home-view";
+import { eq } from "drizzle-orm";
+import { getDb } from "@/db";
+import { sellerPreferences } from "@/db/schema";
+import { isOwner } from "@/app/mastermind/access";
 import "../home-preview/preview.css";
 
 /* The tab says what this page is. There is no product name to append, and
@@ -13,7 +17,23 @@ export default async function HomePage() {
   if (!user)
     return <main className="hub-auth"><Link href={accountSignInPath("/home")}>Sign in</Link></main>;
 
+  let firstName = "";
+  try {
+    const [row] = await getDb().select().from(sellerPreferences)
+      .where(eq(sellerPreferences.userId, user.userId)).limit(1);
+    if (row) {
+      const saved = JSON.parse(row.pricingJson || "{}") as { firstName?: unknown };
+      if (typeof saved.firstName === "string") firstName = saved.firstName.trim();
+    }
+  } catch {}
+  if (!firstName && isOwner(user)) firstName = "Brittany";
+  if (!firstName && user.fullName) {
+    const words = user.fullName.trim().split(/\s+/).filter(Boolean);
+    if (words.length <= 3 && words.every(word => /^[A-Za-z][A-Za-z'’-]*$/.test(word)))
+      firstName = words[0] || "";
+  }
+
   return <FactoryShell active="home" title="Home" desktopOnly={false}>
-    <HomeView />
+    <HomeView firstName={firstName} />
   </FactoryShell>;
 }

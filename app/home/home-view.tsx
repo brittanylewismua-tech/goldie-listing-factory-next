@@ -11,8 +11,8 @@ import PreviewClient from "../home-preview/preview-client";
   /market-watch/research?id=
   month.revenueMinor/100
 */
-export default function HomeView(){
+export default function HomeView({firstName}:{firstName?:string}){
   return <div className="current-home-layout">
-    <PreviewClient platformUpdate={<PlatformUpdate compact passive/>}/>
+    <PreviewClient firstName={firstName} platformUpdate={<PlatformUpdate compact passive/>}/>
   </div>;
 }
