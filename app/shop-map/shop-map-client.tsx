@@ -307,7 +307,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const units90=sold.reduce((sum,row)=>sum+row.sales,0);
   const leaders=shown.topListings??[];
   return <main className="shop-map shop-map-redesign">
-    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">YOUR SHOP</p><h1>Your shop</h1><p>{shown.shop?.shopName ?? "Your shop"} · What is selling, where your revenue is coming from, and what deserves your attention.</p></div></header>
+    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">YOUR SHOP</p><h1>{shown.shop?.shopName ?? "Your shop"}</h1><p>What is selling, where your revenue is coming from, and what deserves your attention.</p></div></header>
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     <nav className="shop-map-tabs" aria-label="Your shop sections">
