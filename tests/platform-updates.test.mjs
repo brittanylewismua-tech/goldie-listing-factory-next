@@ -91,5 +91,10 @@ test('only an announcements board seeds its own first read',()=>{
  const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
  assert.match(collector,/summarize\(source,'',current,current,seen,undefined,true\)/);
  /* A first read has no previous version, so the editor is told the window. */
- assert.match(collector,/within the last 21 days/);
+ /* D1899 · The first version of this instruction demanded every entry prove it
+    was under 21 days old. Newly Crafted lists entries without per-item dates,
+    so nothing could prove it and the seeded read returned nothing - the
+    instruction, not the source, was the blocker. */
+ assert.doesNotMatch(collector,/Report only posts dated or described as within the last 21 days/);
+ assert.match(collector,/do not treat the absence of a date as a reason to skip it/);
 });
