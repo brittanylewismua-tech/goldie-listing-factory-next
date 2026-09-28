@@ -63,7 +63,21 @@ export type Workload = {
 
 export const PAID_WORKLOADS: Workload[] = [
   {key:"nicheBuyerInsights",what:"Read niche reviews in context and produce source-linked buyer findings.",provider:"fal / openrouter",model:"anthropic/claude-sonnet-4.5",unitCost:0.45,costBasis:"estimated",customerFacing:true,memberDailyLimit:null,memberDailyAttempts:20,globalDailyCeiling:3,globalDailyRequests:30,limitStatus:"temporary",retries:0,cachePolicy:"Per project and exact review input. Opening unchanged analysis makes no provider call. Project lease prevents concurrent calls.",priority:2,expectedBehaviour:"Generated when the research overview or Buyer insights is opened; both share the same cached report. Changed reviews invalidate cached findings. At most 1000 deduplicated reviews and 180000 input characters per analysis, followed by one audit restricted to cited reviews."},
-  {key:"platformUpdateBrief",what:"Compare changed official platform sources and write a shared daily seller brief.",provider:"fal / openrouter",model:"google/gemini-2.5-flash",unitCost:0.03,costBasis:"estimated",customerFacing:true,memberDailyLimit:null,memberDailyAttempts:32,globalDailyCeiling:0.50,globalDailyRequests:32,limitStatus:"temporary",retries:1,cachePolicy:"Only changed source content is sent; one shared digest for all members. First reads establish a baseline.",priority:5,expectedBehaviour:"Bounded to four source comparisons per tick and 32 provider attempts per day, including one evidence repair per comparison. The shared daily spending ceiling remains $0.50. No calls for unchanged sources."},
+    /*
+    D1917 · SIZED FOR NINE PAGES, NOW WATCHING SEVEN HUNDRED AND THIRTY-SIX.
+
+    32 attempts and $0.50 a day was the right budget for nine hand-picked help
+    articles, which change rarely. Two sweeps now read every article Etsy and
+    Printify publish, and on a day when several genuinely change, each one is
+    its own comparison - the old ceiling would stop the brief halfway through
+    and report the rest as nothing.
+
+    It is still a small, bounded number: six comparisons per pass, and a pass
+    only spends on an article whose text actually changed. The arithmetic is 60
+    attempts at roughly $0.03 against a $1.00 ceiling, so the ceiling binds
+    first and the spend cannot run away.
+  */
+  {key:"platformUpdateBrief",what:"Compare changed official platform sources and write a shared daily seller brief.",provider:"fal / openrouter",model:"google/gemini-2.5-flash",unitCost:0.03,costBasis:"estimated",customerFacing:true,memberDailyLimit:null,memberDailyAttempts:60,globalDailyCeiling:1.00,globalDailyRequests:60,limitStatus:"temporary",retries:1,cachePolicy:"Only changed source content is sent; one shared digest for all members. First reads establish a baseline.",priority:5,expectedBehaviour:"Bounded to six source comparisons per tick and 60 provider attempts per day, including one evidence repair per comparison. The shared daily spending ceiling is $1.00. No calls for unchanged sources.",},
   {
     key: "designScannerVision",
     what: "One structured extraction per uploaded design.",
