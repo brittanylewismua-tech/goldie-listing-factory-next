@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 type Listing={listingId:number;title:string;imageUrl:string;favorites?:number|null;sales:number;revenueMinor:number};
 type MapData={shop?:{shopName?:string};shopTotals?:{ordersLast30:number;revenueLast30Minor:number;ordersLast90:number;revenueLast90Minor:number};soldListings?:{period:string;days:number;listings:Listing[]}};
-type Home={niches?:Array<{phrase:string;newly:number}>};
+type Home={niches?:Array<{phrase:string;newly:number;imageUrl?:string}>};
 type Sold={listingId:number;title:string;image:string|null;price:number|null;savesGained:number;sold:number;url:string;product?:string};
 type Hot={listings?:Sold[];watched?:number;totalSold?:number;products?:Array<{key:string;label:string;listings:number;sold:number}>};
 type UpdateItem={id?:string;platform:"Etsy"|"Printify";title:string;impact?:string;action?:string;sourceUrl:string;imageUrl?:string|null;priority?:string;publishedAt:number};
@@ -60,16 +60,19 @@ export default function PreviewClient({platformUpdate,firstName}:{platformUpdate
   const marquee=[...listings,...listings];
 
   const moved=(home?.niches??[]).filter(n=>n.newly>0).sort((a,b)=>b.newly-a.newly);
-  const top30=(maps[30]?.soldListings?.listings??[]).slice().sort((a,b)=>b.sales-a.sales||b.revenueMinor-a.revenueMinor)[0]??null;
+  const sold30=(maps[30]?.soldListings?.listings??[]);
+  const top30=sold30.slice().sort((a,b)=>b.sales-a.sales||b.revenueMinor-a.revenueMinor)[0]??null;
+  const total30Units=sold30.reduce((sum,row)=>sum+row.sales,0);
   const topHotProduct=(hot?.products??[]).slice().sort((a,b)=>b.sold-a.sold)[0]??null;
   const hotImage=(hot?.listings??[]).find(l=>l.image&&(!topHotProduct||l.product===topHotProduct.label||l.product===topHotProduct.key))?.image
     ?? (hot?.listings??[]).find(l=>l.image)?.image ?? null;
   const titleCase=(value:string)=>value ? value[0].toUpperCase()+value.slice(1) : value;
+  type DailyStory={tag:string;title:string;body:string;href:string;image?:string|null;graphic?:string;graphicLabel?:string;strength:number};
   const daily=[
-    top30?{tag:"YOUR SHOP",title:"Your top seller in the last 30 days sold "+num(top30.sales)+" unit"+(top30.sales===1?"":"s")+".",body:usd(top30.revenueMinor)+" in revenue from this listing.",href:"/shop-map?tab=sold",image:top30.imageUrl}:null,
-    moved[0]?{tag:"RESEARCH",title:titleCase(moved[0].phrase)+" listings are gaining sales activity.",body:num(moved[0].newly)+" listing"+(moved[0].newly===1?"":"s")+" started selling since your last check.",href:"/market-watch?keyword="+encodeURIComponent(moved[0].phrase)+"&new=1",image:null}:null,
-    topHotProduct?{tag:"HOT LIST",title:topHotProduct.label+" led the Hot List overnight.",body:num(topHotProduct.sold)+" unit"+(topHotProduct.sold===1?"":"s")+" across "+num(topHotProduct.listings)+" tracked listing"+(topHotProduct.listings===1?"":"s")+".",href:"/hot-list?product="+encodeURIComponent(topHotProduct.key),image:hotImage}:null
-  ].filter(Boolean) as Array<{tag:string;title:string;body:string;href:string;image?:string|null}>;
+    top30?{tag:"YOUR SHOP",title:"Your top seller in the last 30 days sold "+num(top30.sales)+" unit"+(top30.sales===1?"":"s")+".",body:usd(top30.revenueMinor)+" in revenue from this listing.",href:"/shop-map?tab=sold",image:top30.imageUrl,strength:top30.sales/Math.max(1,total30Units)}:null,
+    moved[0]?{tag:"RESEARCH",title:titleCase(moved[0].phrase)+" listings are gaining sales activity.",body:num(moved[0].newly)+" listing"+(moved[0].newly===1?"":"s")+" started selling since your last check.",href:"/market-watch?keyword="+encodeURIComponent(moved[0].phrase)+"&new=1",image:moved[0].imageUrl||null,graphic:num(moved[0].newly),graphicLabel:"newly selling listings",strength:moved[0].newly/12}:null,
+    topHotProduct?{tag:"HOT LIST",title:topHotProduct.label+" led the Hot List overnight.",body:num(topHotProduct.sold)+" unit"+(topHotProduct.sold===1?"":"s")+" across "+num(topHotProduct.listings)+" tracked listing"+(topHotProduct.listings===1?"":"s")+".",href:"/hot-list?product="+encodeURIComponent(topHotProduct.key),image:hotImage,strength:topHotProduct.sold/Math.max(1,hot?.totalSold??0)}:null
+  ].filter(Boolean).sort((a,b)=>(b as DailyStory).strength-(a as DailyStory).strength) as DailyStory[];
   const up=updates;
   const changes=(up?.items??[]).length+(up?.recent??[]).length;
   const allPlatform=[...(updates?.items??[]),...(updates?.recent??[])].sort((a,b)=>(Number(b.priority==="ACTION REQUIRED")-Number(a.priority==="ACTION REQUIRED"))||b.publishedAt-a.publishedAt);
@@ -91,7 +94,7 @@ export default function PreviewClient({platformUpdate,firstName}:{platformUpdate
       </div>:<div className="home4-shop-loading" role="status"><span className="home4-loader-dot"/><b>Loading your shop stats…</b><small>The rest of your dashboard is ready while Etsy totals load.</small></div>}
     </section>
 
-    <section className="home4-section pink-band"><header className="home4-section-head"><div className="home4-title"><b>02</b><div><h2>Daily updates</h2><p>The useful movement across your research, shop, and watches</p></div></div></header><div className="home4-daily">{daily.slice(0,3).map((d,i)=><a className={"home4-daily-card "+(i===0?"lead":"")} href={d.href} key={d.title}><div className="home4-daily-copy"><span>{d.tag}</span><h3>{d.title}</h3><p>{d.body}</p><u>Open →</u></div>{d.image&&<img src={d.image} alt="" width={300} height={360} loading="lazy"/>}</a>)}{!daily.length&&<div className="home4-empty">{homeLoaded&&hotReady?"Nothing new needs your attention today.":"Loading today’s updates…"}</div>}</div></section>
+    <section className="home4-section pink-band"><header className="home4-section-head"><div className="home4-title"><b>02</b><div><h2>Daily updates</h2><p>The useful movement across your research, shop, and watches</p></div></div></header><div className="home4-daily">{daily.slice(0,3).map((d,i)=><a className={"home4-daily-card "+(i===0?"lead ":"")+(i===0&&d.image?"has-image":"")} href={d.href} key={d.title}><div className="home4-daily-copy"><span>{d.tag}</span><h3>{d.title}</h3><p>{d.body}</p><u>Open →</u></div>{i===0&&(d.image?<img src={d.image} alt="" width={300} height={360} loading="lazy"/>:d.graphic?<div className="home4-daily-graphic" aria-hidden="true"><strong>{d.graphic}</strong><span>{d.graphicLabel}</span></div>:null)}</a>)}{!daily.length&&<div className="home4-empty">{homeLoaded&&hotReady?"Nothing new needs your attention today.":"Loading today’s updates…"}</div>}</div></section>
 
     <section className="home4-section home4-contained"><header className="home4-section-head"><div className="home4-title"><b>03</b><div><h2>Etsy + Printify updates</h2><p>Headlines from official sources that affect sellers</p>{up&&<small>last 30 days · {num((up.sources??[]).length)} official sources</small>}</div></div><a className="home4-link" href="/platform-updates">See all updates →</a></header>{platform.length?<div className="home4-platform"><a className="home4-platform-lead" href={platform[0].sourceUrl} target="_blank" rel="noreferrer">{platform[0].imageUrl?<img src={platform[0].imageUrl} alt=""/>:<div className="home4-platform-placeholder">{platform[0].platform}</div>}<div><span>{platform[0].platform+" · "+when(platform[0].publishedAt)}</span><h3>{platform[0].title}</h3><p>{platform[0].impact}</p><u>Read update →</u></div></a><div className="home4-headlines">{platform.slice(1).map(p=><a href={p.sourceUrl} target="_blank" rel="noreferrer" key={p.id||p.title}><span>{p.platform}</span><b>{p.title}</b><u>Read →</u></a>)}</div></div>:!updatesLoaded?<div className="home4-inline-loading" role="status"><span className="home4-loader-dot"/><span>Loading Etsy + Printify updates…</span></div>:(platformUpdate??<div className="home4-empty">Nothing new from Etsy or Printify right now.</div>)}</section>
 
