@@ -59,7 +59,7 @@ export default function PlatformUpdate({compact=false,passive=false}:{compact?:b
  return <main className="pu-page">
   <Link href="/home" className="pu-back">← Home</Link>
   <header className="pu-head">
-    <h1>What&rsquo;s New</h1>
+    <h1>Etsy + Printify updates</h1>
     {!!all.length&&<nav className="pu-tabs" aria-label="Platform">
       <Tab value="all" label="Latest"/>
       <Tab value="Etsy" label="Etsy" count={counts.Etsy}/>
