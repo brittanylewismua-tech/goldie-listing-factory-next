@@ -2,6 +2,7 @@ import Link from "next/link";
 import { accountSignInPath, getChatGPTUser } from "@/app/chatgpt-auth";
 import FactoryShell from "@/app/factory-shell";
 import HomeView from "./home-view";
+import "../home-preview/preview.css";
 
 /* The tab says what this page is. There is no product name to append, and
    a placeholder in a tab title is how a stand-in becomes permanent. */
