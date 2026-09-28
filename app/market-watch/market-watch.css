@@ -401,9 +401,9 @@
 #suite-workspace .mw{
   --g-pink:#ee6fc0;--g-pink-soft:#fdeef7;--g-black:#000;--g-ink2:#46433f;--g-ink3:#8a8580;--g-line:#e4e1de;
   max-width:1120px!important;margin:0 auto!important;padding:0 0 80px!important;
-  font-family:inherit!important;color:#000!important;
+  color:#000!important;
 }
-#suite-workspace .mw :is(h1,h2,h3,p,a,button,input,select,small,strong,span){font-family:inherit!important}
+#suite-workspace .mw :is(h1,h2,h3,p,a,button,input,select,small,strong,span){}
 #suite-workspace .mw-intro{
   padding:4px 0 28px!important;margin:0 0 26px!important;border-bottom:2px solid #000!important;
 }
