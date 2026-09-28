@@ -48,3 +48,98 @@
 /* A real target on a phone, not a word in a sentence. */
 .conn .empty .p-button { min-height: 44px; padding: 0 16px; }
 .conn .error { color: var(--risk); font-size: 0.92rem; }
+
+/* Goldie Suite connections visual system. */
+#suite-workspace .conn{
+  --g-pink:#ee6fc0;--g-pink-soft:#fdeef7;--g-ink2:#46433f;--g-ink3:#8a8580;--g-line:#e4e1de;
+  max-width:980px!important;
+  padding:4px 0 90px!important;
+  font-family:inherit!important;
+  color:#000!important;
+}
+#suite-workspace .conn :is(h1,h2,p,a,button,span,strong){font-family:inherit!important}
+#suite-workspace .conn .current-page-heading{
+  padding:4px 0 28px!important;
+  margin:0 0 30px!important;
+  border-bottom:2px solid #000!important;
+}
+#suite-workspace .conn h1{
+  font-size:36px!important;
+  line-height:1.08!important;
+  letter-spacing:-1.3px!important;
+  font-weight:800!important;
+  margin:0 0 8px!important;
+}
+#suite-workspace .conn .lede{font-size:13px!important;color:var(--g-ink2)!important;margin:0!important}
+#suite-workspace .conn h2.utility-heading{
+  margin:34px 0 12px!important;
+  color:#000!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  letter-spacing:.12em!important;
+}
+#suite-workspace .conn .shop{
+  border:2px solid #000!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  padding:20px!important;
+  margin-bottom:14px!important;
+  box-shadow:4px 4px 0 #000!important;
+}
+#suite-workspace .conn .shop .name{
+  font-size:17px!important;
+  font-weight:800!important;
+  letter-spacing:-.02em!important;
+}
+#suite-workspace .conn .shop .badges{gap:7px!important;margin:10px 0 12px!important}
+#suite-workspace .conn .badge{
+  border:1px solid var(--g-line)!important;
+  border-radius:7px!important;
+  padding:4px 8px!important;
+  font-size:9px!important;
+  font-weight:800!important;
+  color:var(--g-ink3)!important;
+  background:#fff!important;
+}
+#suite-workspace .conn .badge[data-on="yes"]{
+  color:#000!important;
+  border-color:#000!important;
+  background:var(--g-pink-soft)!important;
+}
+#suite-workspace .conn .badge[data-on="warn"]{
+  color:#000!important;
+  border-color:#000!important;
+  background:#fff2e3!important;
+}
+#suite-workspace .conn .shop .fact{font-size:12px!important;line-height:1.55!important;color:var(--g-ink3)!important}
+#suite-workspace .conn .shop .row{gap:9px!important;margin-top:16px!important}
+#suite-workspace .conn .shop a,
+#suite-workspace .conn .shop button{
+  min-height:40px!important;
+  line-height:38px!important;
+  padding:0 13px!important;
+  border:1.5px solid #000!important;
+  border-radius:8px!important;
+  font-size:11px!important;
+  font-weight:800!important;
+}
+#suite-workspace .conn .shop .p-button-primary{
+  background:#000!important;color:#fff!important;box-shadow:2px 2px 0 var(--g-pink)!important;
+}
+#suite-workspace .conn .shop button.quiet{border-color:var(--g-line)!important;color:var(--g-ink3)!important}
+#suite-workspace .conn .effect{
+  margin-top:14px!important;
+  padding:14px!important;
+  border:1px dashed #000!important;
+  border-radius:10px!important;
+  background:#fafafa!important;
+  color:var(--g-ink2)!important;
+}
+#suite-workspace .conn .empty{
+  border:1.5px dashed #000!important;border-radius:12px!important;background:#fff!important;padding:20px!important;
+}
+@media(max-width:700px){
+  #suite-workspace .conn{padding-bottom:60px!important}
+  #suite-workspace .conn h1{font-size:31px!important}
+  #suite-workspace .conn .shop{padding:16px!important}
+}
