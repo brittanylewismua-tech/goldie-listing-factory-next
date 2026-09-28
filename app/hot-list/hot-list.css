@@ -116,3 +116,16 @@
   }
   #suite-workspace .sold-page .drop-tabs button{flex:0 0 auto!important}
 }
+
+#suite-workspace .sold-page .drop-figures{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:8px!important;
+}
+#suite-workspace .sold-page .drop-favorites{
+  font-size:9px!important;
+  color:var(--g-ink3)!important;
+  font-weight:700!important;
+  white-space:nowrap!important;
+}
