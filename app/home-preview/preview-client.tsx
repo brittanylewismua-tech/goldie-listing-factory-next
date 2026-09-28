@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Listing={listingId:number;title:string;imageUrl:string;favorites?:number|null;sales:number;revenueMinor:number};
 type MapData={shop?:{shopName?:string};shopTotals?:{ordersLast30:number;revenueLast30Minor:number;ordersLast90:number;revenueLast90Minor:number};soldListings?:{period:string;days:number;listings:Listing[]}};
@@ -62,7 +62,7 @@ export default function PreviewClient(){
     rising[0]?{tag:"RESEARCH",title:rising[0].phrase+" is gaining buyer activity.",body:num(rising[0].reviews)+" reviews, up "+num(rising[0].gain)+", across "+num(rising[0].shops)+" shops in your "+rising[0].niche+" research.",href:rising[0].id?"/market-watch/research?id="+encodeURIComponent(rising[0].id):"/market-watch/research",image:listings[2]?.imageUrl}:null,
     summary&&summary.needReview>0?{tag:"TRADEMARK",title:String(summary.needReview)+" watched phrase"+(summary.needReview===1?"":"s")+" need review.",body:String(summary.phrases)+" phrase"+(summary.phrases===1?"":"s")+" on your watchlist.",href:"/trademark",image:null}:null
   ].filter(Boolean) as Array<{tag:string;title:string;body:string;href:string;image?:string|null}>;
-  const platform=useMemo(()=>[...(updates?.items??[]),...(updates?.recent??[])].sort((a,b)=>(Number(b.priority==="ACTION REQUIRED")-Number(a.priority==="ACTION REQUIRED"))||b.publishedAt-a.publishedAt).slice(0,4),[updates]);
+  const platform=[...(updates?.items??[]),...(updates?.recent??[])].sort((a,b)=>(Number(b.priority==="ACTION REQUIRED")-Number(a.priority==="ACTION REQUIRED"))||b.publishedAt-a.publishedAt).slice(0,4);
   const overnight=(hot.listings??[]).filter(l=>l.image).sort((a,b)=>b.sold-a.sold||b.savesGained-a.savesGained).slice(0,12);
 
   return <div className="home4">
