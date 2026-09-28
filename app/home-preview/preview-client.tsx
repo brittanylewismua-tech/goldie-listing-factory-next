@@ -34,9 +34,9 @@ export default function PreviewClient({platformUpdate}:{platformUpdate?:ReactNod
   const [batchLoaded,setBatchLoaded]=useState(false);
 
   useEffect(()=>{
-    void fetch("/api/shop-map/map?days=90").then(r=>r.ok?r.json() as Promise<MapData>:null)
+    void fetch("/api/shop-map/map?home=1&days=90").then(r=>r.ok?r.json() as Promise<MapData>:null)
       .then(m90=>setMaps(current=>({...current,90:m90}))).catch(()=>undefined);
-    void fetch("/api/shop-map/map?days=30").then(r=>r.ok?r.json() as Promise<MapData>:null)
+    void fetch("/api/shop-map/map?home=1&days=30").then(r=>r.ok?r.json() as Promise<MapData>:null)
       .then(m30=>setMaps(current=>({...current,30:m30}))).catch(()=>undefined);
     void fetch("/api/home").then(r=>r.ok?r.json() as Promise<{blocks:Home}>:null).then(x=>setHome(x?.blocks??null)).catch(()=>undefined).finally(()=>setHomeLoaded(true));
     void fetch("/api/sold-overnight?hours=24").then(r=>r.ok?r.json() as Promise<Hot>:null).then(setHot).catch(()=>undefined);

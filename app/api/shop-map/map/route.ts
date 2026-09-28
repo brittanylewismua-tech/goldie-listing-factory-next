@@ -106,6 +106,46 @@ async function buildMap(request: Request) {
     { now, monthFrom: window?.from ?? 0, monthTo: window?.to ?? 0,
       yearFrom: Math.floor(Date.parse(`${month.slice(0, 4)}-01-01T00:00:00Z`) / 1_000) });
 
+  /*
+    HOME NEEDS THE SHOP'S SCORECARD, NOT THE WHOLE SHOP MAP.
+
+    The full map builds classifications, review evidence, financial coverage,
+    guidance and display refreshes before returning. Home only needs a shop
+    name, period totals and sold listing cards, so this branch returns from the
+    cached shop/sales tables before any of that heavier work begins.
+  */
+  if(parameters.get("home")==="1"){
+    const totalsFor=(days:number)=>{
+      const totals=new Map<number,{sales:number;revenueMinor:number}>();
+      for(const sale of saleRows.results??[]){
+        if(Number(sale.refunded)||Number(sale.sold_at)<now-days*86400||Number(sale.sold_at)>now)continue;
+        const id=Number(sale.listing_id),previous=totals.get(id)??{sales:0,revenueMinor:0};
+        previous.sales+=Number(sale.quantity??0);
+        previous.revenueMinor+=Number(sale.quantity??0)*Number(sale.price_minor??0);
+        totals.set(id,previous);
+      }
+      return totals;
+    };
+    const everyId=rows.map(row=>Number(row.listing_id));
+    const sales30=totalsFor(30),sales90=totalsFor(90),selectedSales=soldDays===30?sales30:sales90;
+    const sum=(field:"last30Orders"|"last30RevenueMinor"|"last90Orders"|"last90RevenueMinor")=>
+      everyId.reduce((total,id)=>total+Number(performance.get(id)?.[field]??0),0);
+    const soldRows=(totals:Map<number,{sales:number;revenueMinor:number}>)=>rows.map(row=>({
+      listingId:Number(row.listing_id),title:String(row.title||"Listing details unavailable"),
+      imageUrl:String(row.image_url||""),favorites:row.favorites===null?null:Number(row.favorites),
+      sales:totals.get(Number(row.listing_id))?.sales??0,
+      revenueMinor:totals.get(Number(row.listing_id))?.revenueMinor??0,
+    })).filter(row=>row.sales>0).sort((a,b)=>b.sales-a.sales||b.revenueMinor-a.revenueMinor);
+    return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},
+      shopTotals:{
+        ordersLast30:sum("last30Orders"),revenueLast30Minor:sum("last30RevenueMinor"),
+        ordersLast90:sum("last90Orders"),revenueLast90Minor:sum("last90RevenueMinor"),
+      },
+      soldListings:{period:`Last ${soldDays} days`,days:soldDays,listings:soldRows(selectedSales)},
+    });
+  }
+
   /* --------------------------------------------------------------- worlds */
   const overrideRows = await db.prepare(
     `SELECT listing_id, world_ids FROM shop_map_world_overrides
