@@ -182,7 +182,23 @@ function NicheDetail({view,onBack,startNew=false}:{view:NicheView;onBack:()=>voi
   onRefresh:()=>void;refreshing:boolean;startNew?:boolean}){
   /* D1889 · Arriving from a figure that counted the listings which started
      selling shows those listings, not all of them. */
-  const startedCount=(view.listings??[]).filter(l=>l.startedSince).length;
+  /*
+    D1895 · THE FILTER WAS POINTED AT THE WRONG LIST.
+
+    startedSince is computed on the watch corpus and arrives on view.listings.
+    The grid below renders `rows`, which is a live Etsy search for the same
+    keyword - a different set of listings that has never carried the field. So
+    `ranked.filter(row => row.startedSince)` matched nothing, every time, and
+    arriving from a figure that counted thirteen listings showed all of them.
+
+    A listing id is the one thing the two lists genuinely share, so that is
+    what the filter joins on. Etsy's search will not always return every
+    counted listing, and when it does not the banner says how many are missing
+    rather than quietly showing a shorter list under a number that promised
+    more.
+  */
+  const startedIds=new Set((view.listings??[]).filter(l=>l.startedSince).map(l=>l.listingId));
+  const startedCount=startedIds.size;
   /*
     D1894 · DERIVED, NOT INITIALISED.
 
@@ -284,8 +300,12 @@ function NicheDetail({view,onBack,startNew=false}:{view:NicheView;onBack:()=>voi
   /* D1889 · The figure on the front page counts the listings that started
      selling since this keyword was last opened. Arriving from it shows those
      listings and says so, rather than the whole list. */
-  const filtered=onlyNew?ranked.filter(row=>(row as {startedSince?:boolean}).startedSince):ranked;
-  const visibleRows=filtered.slice(0,shown);
+  const filtered=onlyNew?ranked.filter(row=>startedIds.has(row.listingId)):ranked;
+  const missingFromSearch=onlyNew?Math.max(0,startedCount-filtered.length):0;
+  /* A filter that removed everything would be a blank page under a heading
+     that promised listings, so an empty join falls back to the full list and
+     the banner above explains why. */
+  const visibleRows=(onlyNew&&filtered.length===0?ranked:filtered).slice(0,shown);
   const missingPhotoIds=visibleRows.filter(row=>!row.imageUrl&&!(String(row.listingId) in extraPhotos)).slice(0,100).map(row=>row.listingId).join(",");
   useEffect(()=>{
     if(!missingPhotoIds || section!=="search")return;
@@ -332,7 +352,11 @@ function NicheDetail({view,onBack,startNew=false}:{view:NicheView;onBack:()=>voi
     count behind it. */}
     {askedForNew&&<p className="market-only-new" role="status">Nothing in this keyword has
       started selling since you last opened it. Showing everything instead.</p>}
-    {onlyNew&&<p className="market-only-new" role="status">Showing the {startedCount} listing{startedCount===1?"":"s"} that started selling since you last opened this keyword.{" "}
+    {startNew&&!showAll&&loaded&&startedCount>0&&filtered.length===0&&
+      <p className="market-only-new" role="status">{startedCount} listing{startedCount===1?"":"s"} started
+      selling since you last opened this keyword, but none of them are in Etsy&rsquo;s current results
+      for it. Showing everything instead.</p>}
+    {onlyNew&&<p className="market-only-new" role="status">Showing the {filtered.length} listing{filtered.length===1?"":"s"} that started selling since you last opened this keyword.{missingFromSearch>0?` ${missingFromSearch} more started selling but ${missingFromSearch===1?"is":"are"} not in Etsy's current results for this keyword.`:""}{" "}
       <button type="button" onClick={()=>setShowAll(true)}>Show all {ranked.length}</button></p>}
     <div className="market-results-sort"><label>Sort these results<select value={sort} onChange={e=>{setSort(e.target.value as KeywordOrder);setShown(60)}}>{rows.some(row=>row.soldUnits!=null)&&<option value="sold">Observed stock decrease</option>}<option value="favorites">Most favorited</option><option value="views">Most viewed</option><option value="newest">Newest first</option><option value="relevance">Etsy’s relevance order</option><option value="price">Price by currency: low to high</option><option value="price-desc">Price by currency: high to low</option></select></label></div>
     {error&&<p className="p-notice failed" role="alert">{error} <button className="p-button p-button-quiet" disabled={loading} onClick={()=>void load()}>Try again</button></p>}

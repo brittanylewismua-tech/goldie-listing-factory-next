@@ -37,9 +37,14 @@ test('sorting and pagination hydrate only missing visible listing photos',()=>{
  const client=readFileSync(new URL('../app/market-watch/market-watch-client.tsx',import.meta.url),'utf8');
  const route=readFileSync(new URL('../app/api/market-watch/listing-photos/route.ts',import.meta.url),'utf8');
  /* D1889 · The list may be narrowed to the listings a front-page figure
-    counted, so pagination reads the filtered list rather than the raw one. */
- assert.match(client,/const filtered=onlyNew\?ranked\.filter/);
- assert.match(client,/visibleRows=filtered\.slice\(0,shown\)/);
+    counted, so pagination reads the filtered list rather than the raw one.
+    D1895 · The narrowing joins on listing id. startedSince is computed on the
+    watch corpus; this grid renders a live Etsy search, which has never carried
+    that field, so filtering the rows by it matched nothing every time. */
+ assert.match(client,/const filtered=onlyNew\?ranked\.filter\(row=>startedIds\.has\(row\.listingId\)\)/);
+ assert.doesNotMatch(client,/ranked\.filter\(row=>\(row as \{startedSince/,
+   'filtering the Etsy search rows by a field only the watch corpus carries');
+ assert.match(client,/visibleRows=\(onlyNew&&filtered\.length===0\?ranked:filtered\)\.slice\(0,shown\)/);
  assert.match(client,/missingPhotoIds=visibleRows.filter/);
  assert.match(client,/\[missingPhotoIds,photoRetry,section\]/);
  assert.match(client,/controller.abort\(\)/);

@@ -74,3 +74,21 @@ test('the filter is derived from the view, not latched at mount', () => {
   assert.match(body, /const askedForNew=startNew&&!showAll&&loaded&&startedCount===0;/,
     'the empty-state banner can claim nothing started selling while loading');
 });
+
+test('the narrowing joins the two lists on listing id', () => {
+  const client = readFileSync(
+    new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
+  /*
+    startedSince is computed on the watch corpus and arrives on view.listings.
+    The grid renders `rows`, a live Etsy search for the same keyword, which has
+    never carried the field - so the filter matched nothing on every single
+    load and a figure that counted 13 opened all 994.
+  */
+  assert.match(client, /const startedIds=new Set\(\(view\.listings\?\?\[\]\)\.filter\(l=>l\.startedSince\)/);
+  assert.match(client, /filtered=onlyNew\?ranked\.filter\(row=>startedIds\.has\(row\.listingId\)\)/);
+  /* Etsy's search need not return every counted listing. Say so, don't hide it. */
+  assert.match(client, /missingFromSearch/);
+  assert.match(client, /are not in Etsy&rsquo;s current results|not in Etsy's current results/);
+  /* And the banner counts what is on screen, not what was hoped for. */
+  assert.match(client, /Showing the \{filtered\.length\} listing/);
+});
