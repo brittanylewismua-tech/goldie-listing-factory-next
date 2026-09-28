@@ -115,3 +115,26 @@
   padding:14px!important;
 }
 #suite-workspace .pu-card[data-priority="ACTION REQUIRED"]:hover{border-top-width:4px!important}
+
+#suite-workspace .pu-loading{
+  min-height:120px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:12px!important;
+  border:1px dashed var(--g-line)!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  margin:0 0 28px!important;
+  padding:22px!important;
+}
+#suite-workspace .pu-loading strong{
+  display:block!important;
+  font-size:14px!important;
+  font-weight:800!important;
+}
+#suite-workspace .pu-loading p{
+  margin:4px 0 0!important;
+  color:var(--g-ink3)!important;
+  font-size:11px!important;
+}
