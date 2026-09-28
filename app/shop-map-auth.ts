@@ -18,7 +18,7 @@ import { etsyApiCredential, etsyConnection } from "@/app/api/etsy/client";
 const db = () => (env as unknown as { DB: D1Database }).DB;
 
 /** What the Listing Factory has always needed. */
-export const BASE_SCOPES = "listings_r listings_w shops_r shops_w email_r";
+export const BASE_SCOPES = "listings_r listings_w shops_r shops_w";
 /** What Shop Map adds: receipts, transactions, payments, the ledger. */
 export const SHOP_MAP_SCOPES = `${BASE_SCOPES} transactions_r`;
 

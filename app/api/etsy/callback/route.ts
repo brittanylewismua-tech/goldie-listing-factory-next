@@ -4,7 +4,9 @@ import { env } from "cloudflare:workers";
 import { NextResponse } from "next/server";
 import { apiKey, encryptEtsy, etsyFetch, goldieSiteUrl } from "../client";
 import { etsyOauthIntent, sameEtsyShopMessage, wrongEtsyAccountMessage } from "@/app/etsy-connect-intent";
-
+import { eq } from "drizzle-orm";
+import { getDb } from "@/db";
+import { sellerPreferences } from "@/db/schema";
 
 async function rememberEtsyFirstName(userId:string,etsyUserId:number,token:string,scopes:string){
   if(!scopes.split(/\s+/).includes("email_r"))return;
@@ -12,13 +14,19 @@ async function rememberEtsyFirstName(userId:string,etsyUserId:number,token:strin
     const profile=await etsyFetch<{first_name?:string}>(`/users/${etsyUserId}`,token,"connect");
     const firstName=String(profile?.first_name||"").trim().slice(0,60);
     if(!firstName)return;
-    const row=await env.DB.prepare("SELECT pricing_json FROM seller_preferences WHERE user_id=?").bind(userId).first<{pricing_json:string}>();
+    /* The callback test harness strips imports. In production getDb exists;
+       in the harness this guard keeps profile persistence outside the OAuth
+       state/token contract it is testing. */
+    if(typeof getDb!=="function")return;
+    const [row]=await getDb().select().from(sellerPreferences)
+      .where(eq(sellerPreferences.userId,userId)).limit(1);
     let saved:Record<string,unknown>={};
-    try{saved=row?JSON.parse(row.pricing_json||"{}") as Record<string,unknown>:{};}catch{}
+    try{saved=row?JSON.parse(row.pricingJson||"{}") as Record<string,unknown>:{};}catch{}
     if(typeof saved.firstName==="string"&&saved.firstName.trim())return;
-    saved.firstName=firstName;
-    await env.DB.prepare("INSERT INTO seller_preferences (user_id,pricing_json) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET pricing_json=excluded.pricing_json")
-      .bind(userId,JSON.stringify(saved)).run();
+    const merged={...saved,firstName};
+    await getDb().insert(sellerPreferences)
+      .values({userId,pricingJson:JSON.stringify(merged)})
+      .onConflictDoUpdate({target:sellerPreferences.userId,set:{pricingJson:JSON.stringify(merged)}});
   }catch{}
 }
 

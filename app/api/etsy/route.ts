@@ -50,7 +50,8 @@ export async function POST(request:Request){
        the existing connection keeps working either way — the callback only
        replaces it once Etsy has actually returned a token. */
     const scope=body.intent==="sales"?SHOP_MAP_SCOPES:BASE_SCOPES;
-    const params=new URLSearchParams({response_type:"code",redirect_uri:redirectUri,scope,client_id:apiKey(),state,code_challenge:challenge,code_challenge_method:"S256"});
+    const requestedScope=body.intent==="sales"?scope:`${scope} email_r`;
+    const params=new URLSearchParams({response_type:"code",redirect_uri:redirectUri,scope:requestedScope,client_id:apiKey(),state,code_challenge:challenge,code_challenge_method:"S256"});
     return NextResponse.json({authorizeUrl:`https://www.etsy.com/oauth/connect?${params}`});
   }catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Etsy connection could not start."},{status:500})}
 }

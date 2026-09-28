@@ -68,3 +68,9 @@
   max-width:none!important;
   width:100%!important;
 }
+
+.home4-shop-loading{min-height:300px;border:2px solid #000;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff}
+.home4-shop-loading b{font-size:14px}.home4-shop-loading small{font-size:11px;color:var(--ink3)}
+.home4-inline-loading{min-height:120px;display:flex;align-items:center;justify-content:center;gap:10px;border:1px dashed var(--line);border-radius:12px;font-size:12px;color:var(--ink3)}
+.home4-loader-dot{width:10px;height:10px;border-radius:50%;background:var(--pink);box-shadow:0 0 0 0 #ee6fc066;animation:home4-pulse 1.3s ease-out infinite}
+@keyframes home4-pulse{70%{box-shadow:0 0 0 8px #ee6fc000}100%{box-shadow:0 0 0 0 #ee6fc000}}
