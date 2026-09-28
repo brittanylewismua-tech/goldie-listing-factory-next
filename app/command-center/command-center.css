@@ -42,3 +42,30 @@
 
 @media (max-width:1100px){.cc-home-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:860px){.cc-home-tile{padding:20px}.cc-home-go{display:none}}
+
+.cc-home{max-width:1120px;margin:0 auto;padding:4px 0 80px}
+.cc-home-head{max-width:760px;margin:0 auto 6px;text-align:left}
+.cc-home-head .mini-label{color:#8a8580;font-size:10px;letter-spacing:.15em}
+.cc-home-head h1{font-size:38px;letter-spacing:-1.5px}
+.cc-home-lede{margin:0;color:#46433f;font-size:14px;line-height:1.6}
+.cc-home-grid{gap:14px}
+.cc-home-tile{
+  border-radius:14px;
+  box-shadow:4px 4px 0 #000;
+  padding:22px;
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+.cc-home-tile:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 #ee6fc0}
+.cc-home-question{
+  display:block;
+  margin:0 0 8px;
+  font-size:11px;
+  line-height:1.35;
+  color:#8a8580;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.cc-home-tile h2{font-size:18px}
+.cc-home-tile p{font-size:12px;color:#46433f}
+.cc-home-stat{background:#fdeef7;color:#000;border:1px solid #f2b5d8;border-radius:8px;font-size:11px}
+.cc-home-icon{border-radius:10px;background:#000;color:#ee6fc0;box-shadow:3px 3px 0 #ee6fc0}
