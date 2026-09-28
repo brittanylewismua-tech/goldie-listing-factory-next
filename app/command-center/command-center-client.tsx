@@ -32,8 +32,8 @@ const icon = (children: React.ReactNode) =>
 /* The question first. The name of the tool is how we file it, not what it is
    for, and a member paying monthly is buying the answer rather than the file. */
 const TOOLS = (summary: Summary | null) => [
-  {href:"/hot-list",name:"Hot List",what:"Find listings gaining favorites or showing stock changes.",stat:null,icon:icon(<path d="m3 17 6-6 4 4 8-10"/>)},
-  {href:"/platform-updates",name:"Etsy + Printify Updates",what:"Read platform changes and the actions that affect your shop.",stat:null,icon:icon(<><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></>)},
+  {href:"/hot-list",name:"Hot List",question:"What is selling across Etsy right now?",what:"Find listings gaining favorites or showing stock changes.",stat:null,icon:icon(<path d="m3 17 6-6 4 4 8-10"/>)},
+  {href:"/platform-updates",name:"Etsy + Printify Updates",question:"What changed on Etsy or Printify?",what:"Read platform changes and the actions that affect your shop.",stat:null,icon:icon(<><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></>)},
   {
     href: "/market-watch/research", name: "Research",
     question: "What are buyers choosing in my niche?",
@@ -97,16 +97,16 @@ export default function CommandCenterClient({embedded=false}:{embedded?:boolean}
     <header className="cc-home-head">
       {/* On Home the two tiles left are Hot List and Trademark Check, and
           neither is research. The kicker belongs to the full page. */}
-      {embedded?null:<p className="mini-label">Research & insights</p>}
+      {embedded?null:<p className="mini-label">COMMAND CENTER</p>}
       {embedded?<h2>Command Center</h2>:<h1>Command Center</h1>}
-
+      {!embedded&&<p className="cc-home-lede">Research your market, understand your shop, monitor platform changes, and check phrases before you use them.</p>}
     </header>
 
     <div className="cc-home-grid">
       {tools.map(tool => (
         <Link key={tool.name} className="cc-home-tile" data-tool={tool.name} href={tool.href}>
           <span className="cc-home-icon" aria-hidden="true">{tool.icon}</span>
-          <div className="cc-directory-copy"><h2>{tool.name}</h2><p>{tool.what}</p></div>
+          <div className="cc-directory-copy">{tool.question&&<strong className="cc-home-question">{tool.question}</strong>}<h2>{tool.name}</h2><p>{tool.what}</p></div>
           {tool.stat && <span className="cc-home-stat">{tool.stat}</span>}
           <i className="cc-home-go" aria-hidden="true">→</i>
         </Link>
