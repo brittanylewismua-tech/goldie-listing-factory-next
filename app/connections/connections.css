@@ -54,10 +54,10 @@
   --g-pink:#ee6fc0;--g-pink-soft:#fdeef7;--g-ink2:#46433f;--g-ink3:#8a8580;--g-line:#e4e1de;
   max-width:980px!important;
   padding:4px 0 90px!important;
-  font-family:inherit!important;
+  
   color:#000!important;
 }
-#suite-workspace .conn :is(h1,h2,p,a,button,span,strong){font-family:inherit!important}
+#suite-workspace .conn :is(h1,h2,p,a,button,span,strong){}
 #suite-workspace .conn .current-page-heading{
   padding:4px 0 28px!important;
   margin:0 0 30px!important;
