@@ -53,9 +53,10 @@ test("the page handles loading, failure, empty sales and timezone setup", () => 
 });
 
 test("the map remains responsive without a desktop-only table", () => {
-  assert.match(css, /\.shop-map-leader-grid/);
-  assert.match(css, /@media\(max-width:560px\)/);
-  assert.match(css, /\.shop-map-sold-table article\{grid-template-columns/);
+  const routeCss=readFileSync(new URL("../app/shop-map/shop-map.css", import.meta.url), "utf8");
+  assert.match(routeCss, /\.shop-map-leader-grid/);
+  assert.match(routeCss, /@media\(max-width:650px\)/);
+  assert.match(routeCss, /\.shop-map-sold-grid article/);
   assert.doesNotMatch(client, /<table|<thead|<tbody/);
 });
 
