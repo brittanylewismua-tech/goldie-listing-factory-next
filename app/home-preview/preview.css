@@ -4,7 +4,6 @@
 #suite-workspace .home4-head h1{font-size:34px!important;line-height:1.08!important;letter-spacing:-.035em!important;font-weight:800!important}
 #suite-workspace .home4-head>div>p:last-child{font-size:13px!important;color:var(--ink3)!important;margin-top:8px!important}
 #suite-workspace .home4-kicker{font-size:10px!important;text-transform:uppercase;letter-spacing:.15em;color:var(--ink3)!important;font-weight:700!important;margin-bottom:6px!important}
-.home4-primary{min-height:40px;display:inline-flex;align-items:center;border:2px solid #000;border-radius:9px;padding:0 14px;background:#000;color:#fff!important;font-size:12px;font-weight:800;box-shadow:3px 3px 0 var(--pink)}
 .home4-section{padding:48px 0;border-top:1px solid var(--line)} .home4-section.first{border-top:0;padding-top:0}
 .home4-section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:20px}.home4-title{display:flex;align-items:baseline;gap:14px}.home4-title>b{font-size:18px;color:var(--pink);font-weight:800}
 #suite-workspace .home4-title h2{font-size:18px!important;letter-spacing:-.02em!important;font-weight:800!important} #suite-workspace .home4-title p{font-size:12px!important;color:var(--ink3)!important;margin-top:4px!important}
