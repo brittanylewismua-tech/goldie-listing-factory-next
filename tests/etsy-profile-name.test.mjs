@@ -12,9 +12,10 @@ test("base Etsy grant stays unchanged while normal connect also requests email_r
   assert.match(connect,/requestedScope=body\.intent==="sales"\?scope:`\$\{scope\} email_r`/);
 });
 
-test("Etsy callback reads first_name and stores it with the connection",()=>{
+test("Etsy callback fills Goldie's first-name preference without overwriting one",()=>{
   assert.match(callback,/first_name/);
-  assert.match(callback,/readEtsyFirstName/);
-  assert.match(callback,/ALTER TABLE etsy_connections ADD COLUMN first_name TEXT/);
-  assert.match(callback,/first_name=CASE WHEN COALESCE/);
+  assert.match(callback,/rememberEtsyFirstName/);
+  assert.match(callback,/sellerPreferences/);
+  assert.match(callback,/if\(typeof saved\.firstName==="string"&&saved\.firstName\.trim\(\)\)return;/);
+  assert.match(callback,/firstName/);
 });
