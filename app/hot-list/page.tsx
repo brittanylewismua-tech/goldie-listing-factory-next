@@ -142,7 +142,8 @@ export default function HotListPage() {
   }
 
   const shown = board
-    ? [...(product === "all" ? board.listings : board.listings.filter(l => l.product === product))].sort((a,b)=>b.savesGained-a.savesGained)
+    ? [...(product === "all" ? board.listings : board.listings.filter(l => l.product === product))]
+      .sort((a,b)=>b.sold-a.sold||b.savesGained-a.savesGained)
     : [];
 
   /* Not "home": the Hot List is reached FROM home and is not it, and lighting
@@ -212,7 +213,8 @@ export default function HotListPage() {
               <figcaption>
                 <p className="drop-figures">
 
-                  <span className="drop-unit">{(hit.savesGained??0)>0?`+${hit.savesGained} favorites`:"Stock decreased"}</span>
+                  <span className="drop-unit">{hit.sold>0?`${hit.sold.toLocaleString()} sold`:"Stock decreased"}</span>
+                  {(hit.savesGained??0)>0&&<span className="drop-favorites">+${hit.savesGained} favorites</span>}
                 </p>
                 {hit.price !== null && <p className="drop-sub">{money(hit.price, hit.currency)}</p>}
                 <a className="drop-title" href={hit.url} target="_blank" rel="noopener noreferrer">
@@ -304,7 +306,8 @@ export default function HotListPage() {
                   </a>
                   <figcaption>
                     <p className="drop-figures">
-                      <span className="drop-unit">{listing.savesGained > 0 ? `+${listing.savesGained.toLocaleString()} favorites` : "Stock decreased"}</span>
+                      <span className="drop-unit">{listing.sold>0?`${listing.sold.toLocaleString()} sold`:"Stock decreased"}</span>
+                      {listing.savesGained>0&&<span className="drop-favorites">+${listing.savesGained.toLocaleString()} favorites</span>}
                     </p>
                     {listing.price !== null &&
                       <p className="drop-sub">{money(listing.price, listing.currency)}</p>}
