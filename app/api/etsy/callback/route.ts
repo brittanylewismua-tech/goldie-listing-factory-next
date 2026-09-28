@@ -5,6 +5,23 @@ import { NextResponse } from "next/server";
 import { apiKey, encryptEtsy, etsyFetch, goldieSiteUrl } from "../client";
 import { etsyOauthIntent, sameEtsyShopMessage, wrongEtsyAccountMessage } from "@/app/etsy-connect-intent";
 
+
+async function rememberEtsyFirstName(userId:string,etsyUserId:number,token:string,scopes:string){
+  if(!scopes.split(/\s+/).includes("email_r"))return;
+  try{
+    const profile=await etsyFetch<{first_name?:string}>(`/users/${etsyUserId}`,token,"connect");
+    const firstName=String(profile?.first_name||"").trim().slice(0,60);
+    if(!firstName)return;
+    const row=await env.DB.prepare("SELECT pricing_json FROM seller_preferences WHERE user_id=?").bind(userId).first<{pricing_json:string}>();
+    let saved:Record<string,unknown>={};
+    try{saved=row?JSON.parse(row.pricing_json||"{}") as Record<string,unknown>:{};}catch{}
+    if(typeof saved.firstName==="string"&&saved.firstName.trim())return;
+    saved.firstName=firstName;
+    await env.DB.prepare("INSERT INTO seller_preferences (user_id,pricing_json) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET pricing_json=excluded.pricing_json")
+      .bind(userId,JSON.stringify(saved)).run();
+  }catch{}
+}
+
 export async function GET(request:Request){
   const url=new URL(request.url),state=url.searchParams.get("state")||"",code=url.searchParams.get("code")||"",denied=url.searchParams.get("error"),intent=etsyOauthIntent(state),adding=intent==="add";
   const pending=state?await env.DB.prepare("SELECT user_id,code_verifier,redirect_uri,return_origin,target_shop_id FROM etsy_oauth_states WHERE state=? AND expires_at>unixepoch()").bind(state).first<{user_id:string;code_verifier:string;redirect_uri:string;return_origin?:string|null;target_shop_id?:number|null}>():null;
@@ -18,6 +35,7 @@ export async function GET(request:Request){
     if(!tokenResponse.ok||!tokens.access_token||!tokens.refresh_token)throw new Error(tokens.error_description||"Etsy did not complete the connection.");
     const etsyUserId=Number(tokens.access_token.split(".")[0]);if(!etsyUserId)throw new Error("Etsy did not return a valid account identifier.");
     const shop=await etsyFetch<{shop_id:number;shop_name:string}>(`/users/${etsyUserId}/shops`,tokens.access_token,"connect");
+    await rememberEtsyFirstName(pending.user_id,etsyUserId,tokens.access_token,String(tokens.scope||""));
     if(!shop||!Number.isSafeInteger(Number(shop.shop_id))||Number(shop.shop_id)<=0||!shop.shop_name)throw new Error("No Etsy shop was found on this account. Connect an account with an existing Etsy shop.");
     /*
       SHOP MAP ASKED FOR SALES ACCESS ON ONE SAVED SHOP.
