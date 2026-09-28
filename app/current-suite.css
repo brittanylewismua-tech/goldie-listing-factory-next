@@ -737,12 +737,13 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .pu-page{max-width:920px}
 #suite-workspace .pu-back{display:inline-block;font-size:13px!important;color:#6f6670!important;margin-bottom:22px}
 #suite-workspace .pu-head{border-bottom:1px solid #e0d9de;padding-bottom:0}
-/* D1913 · The suite already has a display serif - DM Serif Display is the
-   wordmark's face and the one every h2 outside the workspace uses. Reaching
-   for Georgia here would have been a fourth typeface on the same screen,
-   which is the exact thing the one-typeface rule exists to stop. */
-#suite-workspace .pu-head h1{font-family:'DM Serif Display',Georgia,serif!important;font-weight:400!important;
-  font-size:48px!important;letter-spacing:-.02em;line-height:1.05!important;margin:0 0 20px}
+/* D1915 · No serif. The Handbook's masthead is a serif and that is what makes
+   it feel editorial, but nothing else inside this workspace is set in one, and
+   one page wearing a different face is how a product starts looking assembled
+   from parts. The editorial feel has to come from size, weight and space
+   instead - which it can. */
+#suite-workspace .pu-head h1{
+  font-size:48px!important;font-weight:600;letter-spacing:-.035em;line-height:1.02!important;margin:0 0 20px}
 #suite-workspace .pu-tabs{display:flex;gap:30px;margin:0}
 #suite-workspace .pu-tab{border:0;background:transparent!important;cursor:pointer;padding:0 0 12px;
   font-size:14px!important;font-weight:500;color:#6f6670!important;letter-spacing:-.005em;
@@ -766,11 +767,10 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
    layout rather than a missing image. */
 #suite-workspace .pu-lead .pu-noshot{display:flex;align-items:center;justify-content:center;
   background:#ece5ea!important}
-#suite-workspace .pu-lead .pu-noshot b{font-family:'DM Serif Display',Georgia,serif!important;
-  font-size:20px!important;color:#9a8f98!important;font-weight:500;letter-spacing:.02em}
+#suite-workspace .pu-lead .pu-noshot b{font-size:20px!important;color:#9a8f98!important;font-weight:500;letter-spacing:.02em}
 #suite-workspace .pu-lead-copy{padding:34px 36px;align-self:center}
-#suite-workspace .pu-lead-copy h2{font-family:'DM Serif Display',Georgia,serif!important;font-weight:400!important;
-  font-size:31px!important;line-height:1.2!important;letter-spacing:-.015em;margin:0 0 12px}
+#suite-workspace .pu-lead-copy h2{
+  font-size:29px!important;font-weight:650;line-height:1.22!important;letter-spacing:-.025em;margin:0 0 12px}
 #suite-workspace .pu-lead-copy p{font-size:15px!important;line-height:1.6!important;color:#453d45!important;margin:0!important}
 
 #suite-workspace .pu-kicker{font-size:12px!important;font-weight:600;letter-spacing:.02em;
