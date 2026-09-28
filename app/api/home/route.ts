@@ -6,7 +6,7 @@ import { env } from "cloudflare:workers";
 import { memberUsage } from "@/app/spend-guard";
 import { registerSize } from "@/app/trademark-register";
 import { watchesFor } from "@/app/niche-watch-store";
-import { summariesForWatches } from "@/app/niche-brief";
+import { readNiche, summariesForWatches } from "@/app/niche-brief";
 import { dayInShopTimezone, isStale } from "@/app/finance-freshness";
 import { RULE_VERSION } from "@/app/finance-rollup";
 import { monthOf } from "@/app/finance-month";
@@ -171,12 +171,22 @@ export const GET = withErrorLog("home-status", async () => {
     */
     const saved = await watchesFor(user.userId);
     const summaries = await summariesForWatches(saved, now);
-    const moved: Array<{ phrase: string; newly: number }> = [];
+    const moved: Array<{ phrase: string; newly: number; imageUrl?: string }> = [];
     for (const watch of saved) {
       const newly = summaries.get(watch.key)?.newSinceLastBrief ?? 0;
       if (newly > 0) moved.push({ phrase: watch.phrase, newly });
     }
-    if (moved.length) blocks.niches = moved;
+    moved.sort((a,b)=>b.newly-a.newly);
+    if (moved.length) {
+      const strongest = saved.find(watch => watch.phrase === moved[0].phrase);
+      if (strongest) {
+        const detail = await readNiche(user.userId,strongest.terms,strongest.key,now).catch(()=>null);
+        const visual = detail?.listings.find(listing => listing.startedSince && listing.displayFresh && listing.imageUrl)
+          ?? detail?.listings.find(listing => listing.displayFresh && listing.imageUrl);
+        if (visual?.imageUrl) moved[0].imageUrl = visual.imageUrl;
+      }
+      blocks.niches = moved;
+    }
   } catch { /* skip */ }
 
   /* Scans left today. Shown because it is a limit the member can hit. */
