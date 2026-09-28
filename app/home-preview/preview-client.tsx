@@ -178,7 +178,7 @@ export default function PreviewClient(){
         <small>{r.shops} shops in your {r.niche} research · last 30 days</small></div></a>)}
     {up&&<a className="w-item quiet" href="/platform-updates">
       <b>{num(changes)}</b>
-      <div><span>changes at Etsy or Printify</span>
+      <div><span>change{changes===1?"":"s"} at Etsy or Printify</span>
         <small>last 30 days · {num((up.sources??[]).length)} official sources</small></div></a>}
     {sum&&sum.needReview>0&&<a className="w-item quiet" href="/trademark">
       <b>{num(sum.needReview)}</b>
