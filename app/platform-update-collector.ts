@@ -145,18 +145,18 @@ export async function collectPlatformUpdates({retryFailed=false,reseed='',rebuil
  const response=await fetch(source.fetchUrl,{headers:{'User-Agent':'GoldieSuite/1.0 (official platform update monitor)','Accept':source.kind==='html'?'text/html':'application/json'},signal:AbortSignal.timeout(20000),redirect:'manual'});if(!response.ok)throw new Error(`Official source returned ${response.status}`);const body=await response.text();if(body.length>3000000)throw new Error('Official source too large');const current=sourceText(source,body);const sourceImage=source.kind==='html'?firstImage(body,source.platform):source.kind==='article'?articleImage(body,source.platform):'';if(current.length<150||/enable javascript and cookies|verify you are human|access denied/i.test(current.slice(0,500)))throw new Error('Official source could not be read');
  if(!stored?.content){baseline++;
   /*
-    D1898 · A NEW SOURCE COULD NEVER REPORT THE NEWS ALREADY ON THE PAGE.
+    A SEEDED SOURCE THAT CANNOT BE EDITED YET MUST STAY NEW.
 
-    First read stores a baseline and reports nothing, which is right for a help
-    article - its whole text is rules that already exist, and reporting those as
-    changes would announce every standing policy as new. It is wrong for an
-    announcements board, where the posts themselves are the news: adding the
-    board meant the fortnight of announcements sitting on it was swallowed on
-    the way in.
+    Marking it checked when the edit budget is already spent permanently
+    swallows the announcements it was added to recover. Leave it untouched and
+    the next scheduled pass will seed it.
   */
-  if(source.seedOnFirstRead&&edited<4){edited++;
+  if(source.seedOnFirstRead){
+   if(edited>=EDIT_BUDGET)continue;
+   edited++;
    const items=(await summarize(source,'',current,current,seen,undefined,true,8)).map(item=>sourceImage?{...item,imageUrl:sourceImage}:item);
-   for(const item of items){await db.prepare(`INSERT INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET content=excluded.content`).bind(item.id,publishDay(new Date(),item.urgent),item.topic,JSON.stringify(item),item.publishedAt).run();seen.push(item);published++;}}
+   for(const item of items){await db.prepare(`INSERT INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET content=excluded.content`).bind(item.id,publishDay(new Date(),item.urgent),item.topic,JSON.stringify(item),item.publishedAt).run();seen.push(item);published++;}
+  }
  }
  else if(stored.content!==current){const added=addedText(stored.content,current);if(added.length>40&&edited<EDIT_BUDGET){edited++;const items=(await summarize(source,stored.content,current,added,seen,undefined,false,4)).map(item=>sourceImage?{...item,imageUrl:sourceImage}:item);for(const item of items){await db.prepare(`INSERT INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET content=excluded.content`).bind(item.id,publishDay(new Date(),item.urgent),item.topic,JSON.stringify(item),item.publishedAt).run();seen.push(item);published++;}}}
  await db.prepare(`INSERT INTO platform_update_sources(id,content,checked_at,last_error) VALUES (?,?,?,'') ON CONFLICT(id) DO UPDATE SET content=excluded.content,checked_at=excluded.checked_at,last_error=''`).bind(source.id,current,now).run();checked++;

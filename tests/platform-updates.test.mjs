@@ -59,7 +59,7 @@ test('source failures preserve old content and never advance its baseline',()=>{
     posts are themselves the news. A help article still reports nothing on its
     first read. */
  assert.match(s,/if\(!stored\?\.content\)\{baseline\+\+/);
- assert.match(s,/if\(source\.seedOnFirstRead&&edited<4\)/);assert.match(s,/ON CONFLICT\(id\) DO UPDATE SET last_error=excluded.last_error/);assert.match(s,/reserveSpend/);/* D1902 · The budget no longer throws. Going over it threw 'Queued for next
+ assert.match(s,/if\(source\.seedOnFirstRead\)\{/);assert.match(s,/ON CONFLICT\(id\) DO UPDATE SET last_error=excluded.last_error/);assert.match(s,/reserveSpend/);/* D1902 · The budget no longer throws. Going over it threw 'Queued for next
     source check', which the catch recorded as a source FAILURE - a deferred
     source looked broken and dragged the brief to 'partial'. */
  assert.match(s,/edited<EDIT_BUDGET/);
@@ -104,7 +104,7 @@ test('the front page does not report zero from a one-day window',()=>{
  assert.match(home,/last 30 days · \{num\(\(up\.sources\?\?\[\]\)\.length\)\} official sources/);
 });
 
-test('only an announcements board seeds its own first read',()=>{
+test('announcement and roundup sources seed their own first read',()=>{
  /*
    Adding the board stored a baseline and reported nothing, so the fortnight of
    announcements already sitting on it was swallowed on the way in - the exact
@@ -119,7 +119,7 @@ test('only an announcements board seeds its own first read',()=>{
    the new Shop Stats graphs.
  */
  const seeded=UPDATE_SOURCES.filter(s=>s.seedOnFirstRead).map(s=>s.id).sort();
- assert.deepEqual(seeded,['Etsy-10603291042967','etsy-announcements']);
+ assert.deepEqual(seeded,['Etsy-10603291042967','etsy-announcements','printify-holiday-guide-2026','printify-resource-center','printify-seasonal-catalog-2026']);
  /* A help-centre sweep must never seed: its first pass sees all 736 articles
     as new, and reporting those would announce every standing rule Etsy and
     Printify have as a change. */
@@ -265,4 +265,10 @@ test('a curly apostrophe does not empty the brief',()=>{
  /* And a quote lifted from that text must validate against it. */
  const q='We’re testing — “eligible” & more…';
  assert.ok(validateCandidate({...item,quote:q},source,out,out));
+});
+
+
+test('a seeded source stays pending when the edit budget is already full',()=>{
+ const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
+ assert.match(collector,/if\(source\.seedOnFirstRead\)\{\s*if\(edited>=EDIT_BUDGET\)continue;/s);
 });
