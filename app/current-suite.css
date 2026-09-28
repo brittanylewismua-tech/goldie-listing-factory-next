@@ -395,16 +395,9 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fdeef7!important;c
 #suite-workspace .current-page-heading h1{margin:0 0 10px!important}
 #suite-workspace .current-page-heading p{margin:0;color:#46433f;font-size:14px!important}
 #suite-workspace .factory-work .current-kicker{font-size:12px!important;font-weight:750;letter-spacing:1.2px;line-height:1.4!important;text-transform:uppercase;margin:0 0 12px;color:#46433f}
-.current-section-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:50px;padding-bottom:18px}
-#suite-workspace .current-section-heading h2{font-size:18px!important;letter-spacing:-.3px!important;margin:0!important}
-.current-section-heading>span{font-size:12px;color:#46433f}
-.current-shop-peek{background:#fff;border:1px solid #e4e1de;border-radius:14px;padding:26px}
-.current-shop-peek>strong{font-size:40px;letter-spacing:-1.5px;line-height:1.2}
-#suite-workspace .current-shop-peek p:not(.current-kicker){color:#46433f;font-size:14px!important;margin:10px 0 20px}
-.current-shop-peek>a{display:flex;justify-content:space-between;font-size:14px;font-weight:700;color:#000000;text-decoration:none}
 
 @media(max-width:820px){#suite-workspace{display:block!important}#suite-workspace>.topbar{display:none!important}#suite-workspace .factory-work{padding:26px 22px 100px!important}#suite-workspace .factory-work h1{font-size:32px!important}#suite-workspace .suite-mobile-brand .suite-brand-copy .current-logo-text{font-size:28px!important}}
-@media(max-width:600px){#suite-workspace .factory-work{padding:25px 20px 100px!important}#suite-workspace .current-page-heading{display:block;margin-bottom:24px}.current-section-heading>span{font-size:12px}}
+@media(max-width:600px){#suite-workspace .factory-work{padding:25px 20px 100px!important}#suite-workspace .current-page-heading{display:block;margin-bottom:24px}}
 #suite-workspace .nr-head{margin-bottom:28px!important;align-items:flex-start!important}
 #suite-workspace .nr .nr-back{font-size:12px!important;text-transform:uppercase!important;letter-spacing:1px!important;padding:0!important;margin:0 0 14px!important;background:none!important;min-height:20px!important;color:#46433f!important;border:0!important}
 #suite-workspace .nr .nr-update-line{font-size:14px!important;margin:8px 0 0!important}
@@ -471,8 +464,7 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fdeef7!important;c
 #suite-workspace .shop-map .current-page-heading p:not(.current-kicker){text-transform:none!important;letter-spacing:normal!important;font-weight:400!important;font-size:14px!important;line-height:1.65!important}
 #suite-workspace .current-money-total .shop-map-figure{white-space:nowrap;overflow-wrap:normal}
 @media(max-width:600px){#suite-workspace .current-money-total{padding:26px!important;min-height:240px!important}#suite-workspace .current-money-total .shop-map-figure{font-size:clamp(32px,12vw,48px)!important;letter-spacing:-2px!important}}
-#suite-workspace .current-section-heading h2{font-size:26px!important;letter-spacing:-.8px!important}
-@media(max-width:600px){#suite-workspace .current-section-heading h2{font-size:23px!important}}
+@media(max-width:600px){}
 #suite-workspace .suite-brand-g{font-weight:700!important}
 
 
@@ -512,8 +504,6 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fdeef7!important;c
 #suite-workspace :is(a,button,summary){transition:background-color 140ms ease,color 140ms ease,border-color 140ms ease}
 #suite-workspace :is(a,button,summary):focus-visible{outline:2px solid #b35491!important;outline-offset:3px!important}
 #suite-workspace .factory-work .current-kicker{font-weight:600;letter-spacing:1px}
-#suite-workspace .current-section-heading h2{font-size:24px!important;font-weight:650!important}
-#suite-workspace .current-shop-peek>strong{font-size:36px;font-weight:650}
 @media(max-width:820px){#suite-workspace .suite-mobile-brand .suite-brand-copy .current-logo-text{font-size:25px!important}#suite-workspace .suite-search-trigger{min-width:40px!important;width:40px!important;padding:10px!important;background:none!important;border:0!important}#suite-workspace .suite-search-trigger span{display:none!important}}
 @media(max-width:600px){#suite-workspace .factory-work h1{font-size:30px!important}#suite-workspace .factory-work :is(button,.p-button){min-height:44px!important}#suite-workspace .current-navigation a{min-height:44px!important}}
 @media(prefers-reduced-motion:reduce){#suite-workspace :is(a,button,summary){transition:none!important}}
@@ -1018,3 +1008,8 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
    or the destructive one reads exactly like Pause updates beside it. */
 #suite-workspace .factory-work .nr-settings-delete{color:#a4243d;border-color:#e6c9d1}
 #suite-workspace .factory-work .nr-settings-delete:hover:not(:disabled){color:#7d1a2e;border-color:#a4243d}
+
+/* Home shell compatibility marker. The redesigned Home renders one child, so
+   the track declaration is inert unless a second child is introduced. */
+.current-home-layout{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+@media(max-width:820px){.current-home-layout{grid-template-columns:1fr}}
