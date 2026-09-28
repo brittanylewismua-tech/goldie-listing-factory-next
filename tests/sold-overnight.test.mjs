@@ -547,7 +547,7 @@ test("the period is stated once, not on every card", () => {
      accurate. The selected tab says it; the card carries the number. */
   const page = read("hot-list/page.tsx");
   assert.match(page, /<span className="drop-unit">\{listing\.sold>0/);
-  assert.match(page, /"Stock decreased"<\/span>/);
+  assert.match(page, /"Stock decreased"\}<\/span>/);
   assert.match(page, /className="drop-favorites"/);
   assert.doesNotMatch(strip(page), /sold this week<\/span>|sold overnight<\/span>/);
 });
