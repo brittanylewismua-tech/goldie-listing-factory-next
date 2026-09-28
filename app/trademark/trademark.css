@@ -459,3 +459,6 @@
   color:var(--g-ink-3)!important;
   font-size:12px!important;
 }
+
+#suite-workspace .tm-loader-dot{width:10px;height:10px;border-radius:50%;background:var(--g-pink)!important;box-shadow:0 0 0 0 #ee6fc066;animation:tm-loader-pulse 1.3s ease-out infinite;flex:none}
+@keyframes tm-loader-pulse{70%{box-shadow:0 0 0 8px #ee6fc000}100%{box-shadow:0 0 0 0 #ee6fc000}}
