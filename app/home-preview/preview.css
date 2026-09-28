@@ -75,8 +75,18 @@
 /* D1885 · Her watchlists, reported as what changed. */
 .watch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;
   background-color:#eae5e9;border:1px solid #eae5e9;border-radius:16px;overflow:hidden}
-#suite-workspace .hp .w-item{background-color:#fff!important;display:flex;gap:16px;
-  align-items:baseline;padding:18px 22px}
+/* D1902 · Every one of these rows is a link and none of them looked like one.
+   The cue sits at the right edge, vertically centred against the whole row
+   rather than the baseline the figure and its text share. */
+#suite-workspace .hp .w-item{background-color:#fff!important;display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;gap:16px;
+  align-items:center;padding:18px 22px}
+#suite-workspace .hp .w-item>div{align-self:baseline}
+#suite-workspace .hp .w-item b{align-self:baseline}
+#suite-workspace .hp .w-item u{text-decoration:none;font-size:12px!important;
+  white-space:nowrap;color:#a49ba2!important;letter-spacing:.03em;
+  transition:color .12s ease,transform .12s ease}
+#suite-workspace .hp a.w-item:hover u{color:#c2277b!important;transform:translateX(2px)}
 #suite-workspace .hp .w-item b{font-size:32px!important;font-weight:500;letter-spacing:-.04em;
   line-height:1;color:#c2277b;min-width:56px}
 #suite-workspace .hp .w-item.quiet b{color:#a49ba2!important}

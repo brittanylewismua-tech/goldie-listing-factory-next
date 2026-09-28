@@ -108,10 +108,6 @@
 #suite-workspace .acc-line{padding:14px 0!important}
 #suite-workspace .tm-standalone .tm-form{background:white!important;border:1px solid #e4e1de!important;padding:18px!important;border-radius:8px!important}
 #suite-workspace .tm-watches article{border:0!important;border-bottom:1px solid #e4e1de!important;border-radius:0!important;padding:18px 0!important}
-#suite-workspace .platform-brief-page{max-width:850px!important;padding:0!important}
-#suite-workspace .platform-brief-item{padding:26px 0!important;border:0!important;border-bottom:1px solid #e4e1de!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
-
-#suite-workspace .platform-brief-page>footer{padding:24px 0!important}
 @media(max-width:1000px){
 #suite-workspace .cc-home-tile{grid-template-columns:32px 1fr;gap:18px!important}
 #suite-workspace .cc-home-stat{grid-column:2}
@@ -208,7 +204,6 @@
 #suite-workspace .managementOnly .choiceName{font-weight:500!important;font-size:12px!important;overflow-wrap:anywhere}
 #suite-workspace .tm-standalone .tm-verdict{border:1px solid #e4e1de!important;border-radius:8px!important;box-shadow:none!important}
 @media(max-width:650px){#suite-workspace .managementOnly .thumbs{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}}
-#suite-workspace .platform-brief-page>footer{margin:32px 0 0!important;width:100%!important;max-width:100%!important;background:transparent!important}
 #suite-workspace .acc-heading{color:#19161b!important;text-transform:none!important;letter-spacing:normal!important}
 
 /* Current: a white rail, open neutral canvas, and pink/charcoal feature blocks.
@@ -491,7 +486,6 @@ body:has(#suite-workspace) .goldie-tabs a.current{background:#fdeef7!important;c
 #suite-workspace .keyword-workspace{padding:0!important}
 #suite-workspace .managementLibrary{margin-inline:0!important}
 #suite-workspace .factory-work .drop-error{background:#fdeef7!important;border:1px solid #f0c8dc!important;border-left:3px solid #b35491!important;box-shadow:none!important;border-radius:12px!important;padding:20px!important}
-#suite-workspace .platform-brief-page>footer p{color:#46433f!important}
 #suite-workspace .usage-grid{padding-inline:0!important}
 #suite-workspace .factory-work .usage-card{margin-inline:0!important}
 @media(max-width:600px){#suite-workspace .factory-work .nr .nr-tabs{flex-wrap:wrap!important;overflow:visible!important;gap:0 18px!important}#suite-workspace .factory-work .nr .nr-tabs .current-tab-refresh{flex:0 0 100%;width:100%;min-width:0;margin:0!important}}
@@ -722,7 +716,54 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .nr-secondary-section blockquote{margin:18px 0;padding:12px 18px;border-left:3px solid #d696b8;font-size:14px;line-height:1.6}
 #suite-workspace .nr-secondary-section cite{font-size:12px;font-style:normal}
 #suite-workspace .nr-secondary-section input[type=search]{display:block;width:100%;padding:12px;border:1px solid #d7d3d7;border-radius:8px;margin-top:8px;background:#fff;color:#242124}
-.platform-update-history{margin-top:36px;padding-top:24px;border-top:1px solid #ddd5dc}
+/*
+  D1902 · ETSY + PRINTIFY UPDATES.
+
+  One list, ordered by how much the reader has to care and then by when it
+  happened. The page used to open with a full-width bordered card announcing
+  that there was nothing to announce; the header is now a line of text, and the
+  items are the page.
+*/
+#suite-workspace .pu-page{max-width:760px}
+#suite-workspace .pu-back{display:inline-block;font-size:13px!important;color:#6f6670!important;margin-bottom:22px}
+#suite-workspace .pu-head h1{font-size:34px!important;letter-spacing:-.03em;line-height:1.1!important;margin:0}
+#suite-workspace .pu-line{font-size:14px!important;color:#6f6670!important;margin:10px 0 0!important;line-height:1.5!important}
+#suite-workspace .pu-group{margin-top:34px}
+#suite-workspace .pu-group h2{display:flex;align-items:center;gap:12px;font-size:12px!important;
+  font-weight:650;letter-spacing:.12em;text-transform:uppercase;color:#6f6670!important;margin:0 0 14px}
+#suite-workspace .pu-group h2 i{flex:1;height:1px;background:#e6e0e5}
+#suite-workspace .pu-group h2 small{font-size:12px!important;color:#a49ba2!important}
+#suite-workspace .pu-group h2[data-priority="ACTION REQUIRED"]{color:#b0175f!important}
+#suite-workspace .pu-group h2[data-priority="ACTION REQUIRED"] i{background:#f0c7dd}
+
+#suite-workspace .pu-item{background:#fff;border:1px solid #e6e0e5;border-radius:16px;
+  padding:22px 24px;margin-bottom:12px}
+#suite-workspace .pu-group[data-lead] .pu-item{border-color:#eec3da}
+#suite-workspace .pu-meta{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+#suite-workspace .pu-platform{font-size:11px!important;font-weight:650;letter-spacing:.08em;
+  text-transform:uppercase;padding:4px 9px;border-radius:8px;background:#f4eff3;color:#5b525b!important}
+#suite-workspace .pu-platform[data-platform="Etsy"]{background:#fdeee3;color:#8a4a17!important}
+#suite-workspace .pu-platform[data-platform="Printify"]{background:#e8f0ec;color:#245641!important}
+#suite-workspace .pu-when{font-size:12px!important;color:#8d848d!important}
+#suite-workspace .pu-evidence{font-size:11px!important;color:#a49ba2!important;margin-left:auto;text-align:right}
+#suite-workspace .pu-item h3{font-size:20px!important;line-height:1.3!important;letter-spacing:-.015em;margin:0 0 8px}
+#suite-workspace .pu-impact{font-size:15px!important;line-height:1.6!important;color:#3d363d!important;margin:0!important}
+#suite-workspace .pu-action{font-size:14px!important;line-height:1.55!important;margin:14px 0 0!important;
+  padding:12px 14px;border-radius:10px;background:#faf7f9;color:#3d363d!important}
+#suite-workspace .pu-action b{display:block;font-size:11px!important;letter-spacing:.1em;
+  text-transform:uppercase;color:#8d848d!important;margin-bottom:4px}
+#suite-workspace .pu-source{display:inline-block;margin-top:14px;font-size:13px!important;color:#b0175f!important}
+#suite-workspace .pu-empty{font-size:15px!important;line-height:1.6!important;color:#6f6670!important;
+  margin:30px 0 0!important;max-width:52ch}
+#suite-workspace .pu-foot{margin-top:38px;padding-top:20px;border-top:1px solid #e6e0e5}
+#suite-workspace .pu-foot summary{cursor:pointer;font-size:13px!important;color:#6f6670!important;padding:6px 0}
+#suite-workspace .pu-foot ul{margin:8px 0 0;padding-left:18px}
+#suite-workspace .pu-foot li{font-size:13px!important;line-height:1.9!important}
+@media(max-width:600px){
+ #suite-workspace .pu-head h1{font-size:26px!important}
+ #suite-workspace .pu-item{padding:18px;border-radius:14px}
+ #suite-workspace .pu-evidence{display:none}
+}
 
 /* Hot List search uses the same readable primary action at every width. */
 #suite-workspace .hot-search button[type="submit"]{background:#000000!important;color:#fff!important;border-color:#000000!important}
@@ -794,18 +835,6 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .current-navigation>.current-nav-group{margin-top:0}
 #suite-workspace .current-navigation>.current-nav-group>a{font-size:13px!important;min-height:36px!important;padding:8px 12px!important}
 #suite-workspace .current-navigation>.current-nav-group>a:first-child{font-weight:700!important;color:#fff!important}
-
-/* Main tool landing pages share a clear, colorful opening. */
-#suite-workspace .current-page-heading,
-#suite-workspace .drop-head,
-#suite-workspace .cc-home-head,
-#suite-workspace .platform-brief-page > header {
-  background:#ffffff!important;
-  border-radius:16px;
-  padding:28px 32px!important;
-  margin-bottom:24px!important;
-  color:#000000!important;
-}
 #suite-workspace .nr.nr-library .nr-head {
   background:#000000!important;
   color:#fff!important;
@@ -930,9 +959,6 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 
 /* D1852: Exact World Builder palette: #EE6FC0 accent, black ink, white canvas. */
 #suite-workspace {--suite-pink:#ee6fc0;--cc-accent-bright:#ee6fc0;--p-pink:#ee6fc0}
-#suite-workspace :is(.current-page-heading,.drop-head,.cc-home-head,.platform-brief-page > header,.mw-detail-head) {
- background:#fff!important;border:1px solid #000000!important;border-top:8px solid #ee6fc0!important;color:#000000!important;
-}
 #suite-workspace .factory-work .current-home-feature,
 #suite-workspace .co-feature,
 #suite-workspace .nr.nr-library .nr-search,

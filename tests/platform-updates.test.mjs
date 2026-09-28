@@ -27,7 +27,11 @@ test('source failures preserve old content and never advance its baseline',()=>{
     posts are themselves the news. A help article still reports nothing on its
     first read. */
  assert.match(s,/if\(!stored\?\.content\)\{baseline\+\+/);
- assert.match(s,/if\(source\.seedOnFirstRead&&edited<4\)/);assert.match(s,/ON CONFLICT\(id\) DO UPDATE SET last_error=excluded.last_error/);assert.match(s,/reserveSpend/);assert.match(s,/if\(edited>=4\)/)});
+ assert.match(s,/if\(source\.seedOnFirstRead&&edited<4\)/);assert.match(s,/ON CONFLICT\(id\) DO UPDATE SET last_error=excluded.last_error/);assert.match(s,/reserveSpend/);/* D1902 · The budget no longer throws. Going over it threw 'Queued for next
+    source check', which the catch recorded as a source FAILURE - a deferred
+    source looked broken and dragged the brief to 'partial'. */
+ assert.match(s,/edited<EDIT_BUDGET/);
+ assert.doesNotMatch(s.replace(/\/\*[\s\S]*?\*\//g,''),/Queued for next source check/)});
 test('daily job is scheduled and home card opens the actual update',()=>{assert.match(readFileSync(new URL('../scripts/add-scheduled-handler.mjs',import.meta.url),'utf8'),/run\("\/api\/platform-updates\/tick"\)/);assert.match(readFileSync(new URL('../app/home/home-view.tsx',import.meta.url),'utf8'),/<PlatformUpdate compact/);assert.match(readFileSync(new URL('../app/platform-updates/update-view.tsx',import.meta.url),'utf8'),/href="\/platform-updates"/)});
 
 test('tomorrow morning items stay out of the midnight edition while urgent changes appear now',()=>{const before=new Date('2026-09-27T10:00:00Z');assert.equal(editionDay(before),'2026-09-26');assert.equal(publishDay(before,false),'2026-09-27');assert.equal(publishDay(before,true),'2026-09-26');assert.equal(editionDay(new Date('2026-09-27T13:00:00Z')),'2026-09-27')});
@@ -89,7 +93,7 @@ test('only an announcements board seeds its own first read',()=>{
   assert.equal(UPDATE_SOURCES.find(s=>s.id===id).seedOnFirstRead,false,
    id+' would announce standing policy as new');
  const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
- assert.match(collector,/summarize\(source,'',current,current,seen,undefined,true\)/);
+ assert.match(collector,/summarize\(source,'',current,current,seen,undefined,true,8\)/);
  /* A first read has no previous version, so the editor is told the window. */
  /* D1899 · The first version of this instruction demanded every entry prove it
     was under 21 days old. Newly Crafted lists entries without per-item dates,
@@ -111,4 +115,21 @@ test('an item filed into tomorrow morning still counts today',()=>{
  assert.doesNotMatch(store,/WHERE day<\? AND day>=\?/,
    'a future-dated edition falls out of every count again');
  assert.match(store,/WHERE day<>\? AND published_at>=\?/);
+});
+
+test('a roundup of six new tools is not capped at one item',()=>{
+ const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
+ /*
+   Measured live: Newly Crafted listed shared shop access, the quick list form,
+   Etsy Ads ad groups, new Shop Stats graphs and the Stats assistant, and the
+   brief published exactly one item. Four separate caps, none of them related to
+   how much news there was.
+ */
+ assert.doesNotMatch(collector,/At most 2 items per source/);
+ assert.match(collector,/a roundup listing six new tools is six items, not one/);
+ assert.doesNotMatch(collector,/parsed\.items\.slice\(0,2\)/);
+ assert.match(collector,/parsed\.items\.slice\(0,maxItems\)/);
+ /* And one unquotable candidate no longer discards the valid ones beside it. */
+ assert.match(collector,/if\(rejected&&!items\.length\)/,
+   'a single bad candidate throws away the whole source again');
 });

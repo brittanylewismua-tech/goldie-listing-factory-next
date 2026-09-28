@@ -170,20 +170,20 @@ export default function PreviewClient(){
       href={`/market-watch?keyword=${encodeURIComponent(x.phrase)}&new=1`}>
       <b>{num(x.newly)}</b>
       <div><span>listings started selling in <em>{x.phrase}</em></span>
-        <small>keyword you track · since you last opened Research</small></div></a>)}
+        <small>keyword you track · since you last opened Research</small></div><u>Go now →</u></a>)}
     {rising.map(r=><a className="w-item" key={r.niche+r.phrase}
       href={r.id?`/market-watch/research?id=${encodeURIComponent(r.id)}`:"/market-watch/research"}>
       <b>{num(r.reviews)}</b>
       <div><span><em>{r.phrase}</em> reviews, up from {num(r.prior)}</span>
-        <small>{r.shops} shops in your {r.niche} research · last 30 days</small></div></a>)}
+        <small>{r.shops} shops in your {r.niche} research · last 30 days</small></div><u>Go now →</u></a>)}
     {up&&<a className="w-item quiet" href="/platform-updates">
       <b>{num(changes)}</b>
       <div><span>change{changes===1?"":"s"} at Etsy or Printify</span>
-        <small>last 30 days · {num((up.sources??[]).length)} official sources</small></div></a>}
+        <small>last 30 days · {num((up.sources??[]).length)} official sources</small></div><u>Go now →</u></a>}
     {sum&&sum.needReview>0&&<a className="w-item quiet" href="/trademark">
       <b>{num(sum.needReview)}</b>
       <div><span>watched phrase to review</span>
-        <small>{num(sum.phrases)} on your trademark list · checked today</small></div></a>}
+        <small>{num(sum.phrases)} on your trademark list · checked today</small></div><u>Go now →</u></a>}
   </div>;
 
   const Rule=({title,note,href}:{title:string;note?:string;href?:string})=>
