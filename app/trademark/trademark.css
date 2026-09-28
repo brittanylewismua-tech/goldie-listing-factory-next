@@ -689,3 +689,16 @@
   #suite-workspace .tm-watch-list article>button:nth-of-type(1){grid-column:1/2!important}
   #suite-workspace .tm-watch-list article>button:nth-of-type(2){grid-column:2/3!important}
 }
+
+
+/* VISUAL SWEEP · shared Command Center page frame, with a readable search measure. */
+#suite-workspace .tm-standalone{
+  max-width:1160px!important;
+}
+#suite-workspace .tm-page .tm-form,
+#suite-workspace .tm-examples{
+  max-width:900px!important;
+}
+#suite-workspace .tm-standalone .drop-head p:last-child{
+  max-width:720px!important;
+}
