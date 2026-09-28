@@ -830,3 +830,10 @@ test("the count is of listings that sold, not of listings displayed", () => {
   assert.match(page, /board\.products\.reduce\(\(sum, p\) => sum \+ p\.listings, 0\)/);
   assert.doesNotMatch(page, /units across \$\{board\.listings\.length/);
 });
+
+
+test("keyword search ranks units sold before favorites gained", () => {
+  const source = read("sold-overnight.ts");
+  const search = source.slice(source.indexOf("export async function searchSold"));
+  assert.match(search, /ORDER BY sold DESC, saves_gained DESC/);
+});
