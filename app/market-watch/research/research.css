@@ -723,3 +723,72 @@
   #suite-workspace .nr-listings.current-listing-grid{grid-template-columns:1fr!important}
   #suite-workspace .current-research-modal-backdrop{padding:12px!important}
 }
+
+
+/* VISUAL SWEEP · align Research navigation and section tabs to the content grid. */
+#suite-workspace .nr .research-navigation,
+#suite-workspace .nr-tabs{
+  width:100%!important;
+  max-width:none!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+  padding:0 0 10px!important;
+  border:0!important;
+  border-bottom:1.5px solid #000!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#suite-workspace .nr .research-navigation{margin-bottom:36px!important}
+#suite-workspace .nr-tabs{margin-top:0!important;margin-bottom:34px!important}
+#suite-workspace .nr .research-navigation a,
+#suite-workspace .nr-tabs>button{
+  min-height:42px!important;
+  padding:10px 14px!important;
+  border:1px solid transparent!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:var(--g-ink-3)!important;
+}
+#suite-workspace .nr .research-navigation a:hover,
+#suite-workspace .nr-tabs>button:hover{
+  border-color:var(--g-line)!important;
+  background:var(--g-pink-soft)!important;
+  color:#000!important;
+}
+#suite-workspace .nr .research-navigation a[aria-current=page],
+#suite-workspace .nr-tabs>button[aria-current=page]{
+  border-color:#000!important;
+  background:#000!important;
+  color:#fff!important;
+  box-shadow:3px 3px 0 var(--g-pink)!important;
+}
+#suite-workspace .nr-tabs .current-tab-refresh{
+  margin-left:auto!important;
+  padding-left:12px!important;
+  border-left:1px solid var(--g-line)!important;
+}
+#suite-workspace .nr-tabs .current-tab-refresh button{
+  min-height:42px!important;
+  border:1px solid var(--g-line)!important;
+  border-radius:9px!important;
+  background:#fff!important;
+}
+@media(max-width:700px){
+  #suite-workspace .nr .research-navigation,
+  #suite-workspace .nr-tabs{
+    overflow-x:auto!important;
+    border-radius:0!important;
+    scrollbar-width:none!important;
+  }
+  #suite-workspace .nr .research-navigation::-webkit-scrollbar,
+  #suite-workspace .nr-tabs::-webkit-scrollbar{display:none!important}
+  #suite-workspace .nr-tabs .current-tab-refresh{
+    flex:0 0 auto!important;
+    margin-left:0!important;
+    padding-left:0!important;
+    border-left:0!important;
+  }
+}
