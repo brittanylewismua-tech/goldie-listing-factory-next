@@ -704,3 +704,46 @@
   #suite-workspace .current-watch-art{min-height:132px!important}
   #suite-workspace .current-watch-art img{height:132px!important}
 }
+
+
+/* VISUAL SWEEP · primary Research navigation belongs to the page grid, not a floating pill. */
+#suite-workspace .mw .research-navigation{
+  width:100%!important;
+  max-width:none!important;
+  margin:0 0 36px!important;
+  padding:0 0 10px!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+  border:0!important;
+  border-bottom:1.5px solid #000!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#suite-workspace .mw .research-navigation a{
+  min-height:42px!important;
+  padding:10px 14px!important;
+  border:1px solid transparent!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:var(--g-ink3)!important;
+}
+#suite-workspace .mw .research-navigation a:hover{
+  border-color:var(--g-line)!important;
+  background:var(--g-pink-soft)!important;
+  color:#000!important;
+}
+#suite-workspace .mw .research-navigation a[aria-current=page]{
+  border-color:#000!important;
+  background:#000!important;
+  color:#fff!important;
+  box-shadow:3px 3px 0 var(--g-pink)!important;
+}
+@media(max-width:650px){
+  #suite-workspace .mw .research-navigation{
+    overflow-x:auto!important;
+    border-radius:0!important;
+    scrollbar-width:none!important;
+  }
+  #suite-workspace .mw .research-navigation::-webkit-scrollbar{display:none!important}
+}
