@@ -158,3 +158,111 @@
   #suite-workspace .pu-head{gap:0!important}
   #suite-workspace .pu-tabs{margin-left:0!important;margin-right:0!important}
 }
+
+
+/* Etsy + Printify Updates polish: editorial rhythm, clearer lead, stable card interactions. */
+#suite-workspace .pu-page{
+  max-width:1160px!important;
+}
+#suite-workspace .pu-back{
+  display:inline-flex!important;
+  align-items:center!important;
+  min-height:34px!important;
+  margin-bottom:4px!important;
+  font-weight:700!important;
+}
+#suite-workspace .pu-head h1{
+  max-width:760px!important;
+  font-size:42px!important;
+  letter-spacing:-1.7px!important;
+}
+#suite-workspace .pu-line{
+  max-width:720px!important;
+  margin-top:16px!important;
+  font-size:13px!important;
+}
+#suite-workspace .pu-lead{
+  grid-template-columns:minmax(300px,.95fr) minmax(0,1.05fr)!important;
+  min-height:360px!important;
+  box-shadow:6px 6px 0 #000!important;
+}
+#suite-workspace .pu-lead[data-priority="ACTION REQUIRED"]{
+  box-shadow:6px 6px 0 var(--g-pink)!important;
+}
+#suite-workspace .pu-lead-copy{
+  padding:34px!important;
+}
+#suite-workspace .pu-lead h2{
+  font-size:31px!important;
+  line-height:1.16!important;
+  letter-spacing:-.9px!important;
+}
+#suite-workspace .pu-lead-copy>p:not(.pu-kicker){
+  max-width:620px!important;
+}
+#suite-workspace .pu-lead .pu-todo,
+#suite-workspace .pu-card .pu-todo{
+  margin:14px 0 18px!important;
+  padding:10px 0 10px 12px!important;
+  background:linear-gradient(90deg,var(--g-pink-soft),transparent)!important;
+}
+#suite-workspace .pu-grid{
+  gap:34px 24px!important;
+}
+#suite-workspace .pu-card{
+  padding-top:18px!important;
+}
+#suite-workspace .pu-card:hover{
+  transform:none!important;
+  box-shadow:none!important;
+  border:0!important;
+  border-top:2px solid #000!important;
+  border-radius:0!important;
+  padding:18px 0 0!important;
+}
+#suite-workspace .pu-card[data-priority="ACTION REQUIRED"]:hover{
+  border-top:4px solid var(--g-pink)!important;
+}
+#suite-workspace .pu-card h3{
+  font-size:19px!important;
+  line-height:1.28!important;
+}
+#suite-workspace .pu-shot{
+  border:1.5px solid #000!important;
+  border-radius:10px!important;
+}
+#suite-workspace .pu-card:not(:has(.pu-shot))::before{
+  content:"";
+  display:block;
+  width:42px;
+  height:5px;
+  margin-bottom:14px;
+  background:var(--g-pink);
+}
+#suite-workspace .pu-card a,
+#suite-workspace .pu-lead a{
+  display:inline-flex!important;
+  align-items:center!important;
+  width:max-content!important;
+  min-height:34px!important;
+}
+#suite-workspace .pu-foot{
+  margin-top:54px!important;
+}
+#suite-workspace .pu-foot details{
+  padding:10px 0!important;
+  border-bottom:1px solid var(--g-line)!important;
+}
+#suite-workspace .pu-foot summary{
+  min-height:36px!important;
+  display:flex!important;
+  align-items:center!important;
+  cursor:pointer!important;
+}
+@media(max-width:800px){
+  #suite-workspace .pu-head h1{font-size:34px!important}
+  #suite-workspace .pu-lead{min-height:0!important}
+  #suite-workspace .pu-lead-copy{padding:24px!important}
+  #suite-workspace .pu-lead h2{font-size:25px!important}
+  #suite-workspace .pu-grid{gap:30px!important}
+}
