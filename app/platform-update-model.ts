@@ -1,48 +1,51 @@
 export type Platform = 'Etsy' | 'Printify';
 export type UpdateItem = {id:string;platform:Platform;priority:'ACTION REQUIRED'|'GOOD TO KNOW'|'IGNORE THE PANIC';evidence:'Confirmed platform change'|'Official guidance'|'Seller speculation'|'No evidence';title:string;impact:string;action:string;sourceUrl:string;sourceTitle:string;topic:string;urgent:boolean;publishedAt:number};
-export type Source = {id:string;platform:Platform;name:string;url:string;fetchUrl:string;kind:'article'|'html'|'recent'|'catalog';
+export type Source = {id:string;platform:Platform;name:string;url:string;fetchUrl:string;kind:'article'|'html'|'recent'|'catalog'|'sweep';
  /* D1898 · An announcements board's posts ARE the news, so the first read has
     to report the recent ones. A help article's first read must not: its whole
     text is existing rules, and reporting those as changes would announce every
     standing policy as new. */
  seedOnFirstRead?:boolean};
 const article=(platform:Platform,id:string,name:string,seedOnFirstRead=false):Source=>{const host=platform==='Etsy'?'help.etsy.com':'help.printify.com';return{id:`${platform}-${id}`,platform,name,url:`https://${host}/hc/en-us/articles/${id}`,fetchUrl:`https://${host}/api/v2/help_center/en-us/articles/${id}.json`,kind:'article',seedOnFirstRead}};
+const sweep=(platform:Platform,name:string):Source=>{const host=platform==='Etsy'?'help.etsy.com':'help.printify.com';return{id:`${platform}-help-sweep`,platform,name,url:`https://${host}/hc/en-us`,fetchUrl:`https://${host}/api/v2/help_center/en-us/articles.json?sort_by=updated_at&sort_order=desc&per_page=100`,kind:'sweep'}};
 export const UPDATE_SOURCES:Source[]=[
  /*
-   D1899 · THE ONE SOURCE CARRYING ETSY'S "WHAT'S NEW" WAS SWALLOWED WHOLE.
+   D1905 · WHAT THIS LIST IS, AND WHAT IT DELIBERATELY IS NOT.
 
-   Article 10603291042967 is Newly Crafted, Etsy's own roundup of new seller
-   tools. It is not a rules page; it is a list of announcements, and it already
-   held shared shop access, the quick list form, Etsy Ads ad groups, the new
-   Shop Stats comparison graphs and the Stats assistant beta. All of it was
-   present at the moment the source was first read, so all of it became the
-   baseline and none of it was ever reportable. Thirty days of "no changes" with
-   that article sitting there unread is where the front page's zero came from.
+   It used to be nine hand-picked help articles - six at Etsy, three at
+   Printify. That is not a monitoring strategy, it is a list of the pages
+   somebody happened to think of, and it can only ever be as good as that
+   moment of recall. Etsy publishes 342 help articles and Printify 394; a fee
+   change or a new feature documented on any of the other 727 was invisible,
+   and the front page reported that silence as calm.
+
+   Two of the entries below are sweeps: they read every article in a help
+   centre, keep each one's text, and report the ones that actually change. So
+   this list no longer decides WHICH pages get watched. What is left on it are
+   the things a sweep cannot reach: a roundup that needs seeding, a status page
+   that is not in a help centre, a forum board, and a product catalogue that is
+   not a page at all.
  */
- article('Etsy','10603291042967','Etsy seller updates',true),article('Etsy','360024112614','Etsy creativity and allowed items'),article('Etsy','115014483627','Etsy fees'),article('Etsy','5850122619287','Etsy Purchase Protection'),article('Etsy','360000572888','Etsy refunds and cases'),article('Etsy','360016260113','Etsy listing images'),
- article('Printify','22264012673297','Printify price updates'),article('Printify','4483630162833','Printify discontinued products'),article('Printify','4483625090321','Printify order routing'),
+ sweep('Etsy','Etsy Help Center, every article'),
+ sweep('Printify','Printify Help Center, every article'),
+ /* Etsy's own roundup of new seller tools. Kept separate from the sweep
+    because it is a list of announcements, so it seeds its own first read. */
+ article('Etsy','10603291042967','Etsy seller updates',true),
  {id:'printify-network',platform:'Printify',name:'Printify fulfillment updates',url:'https://printify.com/network-fulfillment-status/',fetchUrl:'https://printify.com/network-fulfillment-status/',kind:'html'},
- /*
-   D1897 · WHERE ETSY ACTUALLY ANNOUNCES THINGS.
-
-   Every other source here is a help-centre article. Help articles document
-   rules that already exist; they are rewritten rarely and quietly, which is
-   why thirty days of checking produced nothing at all while Etsy shipped
-   shared shop access, expanded listing appeals and new Shop Stats graphs. Etsy
-   posts seller news to its community announcements board, and each post
-   carries its full text server-rendered, so it diffs the same way an article
-   does.
- */
  /*
    D1904 · Printify announces new products nowhere a machine can read: no
    changelog, a marketing blog, and a catalogue page drawn by JavaScript that
-   arrives empty. This source is not a page at all - it is Printify's own
-   catalogue, counted, where a blueprint id that was not there last week is a
-   new product. See printify-catalog-watch.ts.
+   arrives empty. This source is not a page - it is Printify's own catalogue,
+   counted, where a blueprint id that was not there last week is a new product.
+   See printify-catalog-watch.ts.
  */
  {id:'printify-catalog',platform:'Printify',name:'Printify catalog',url:'https://printify.com/catalog/',fetchUrl:'https://api.printify.com/v1/catalog/blueprints.json',kind:'catalog'},
+ /*
+   D1897 · Where Etsy actually announces things. Help articles document rules
+   that already exist; the announcements board is where new ones are declared,
+   and each post carries its full text server-rendered.
+ */
  {id:'etsy-announcements',platform:'Etsy',name:'Etsy seller announcements',url:'https://community.etsy.com/forum/announcements-290/',fetchUrl:'https://community.etsy.com/forum/announcements-290/',kind:'html',seedOnFirstRead:true},
- ...(['Etsy','Printify'] as const).map(platform=>({id:`${platform}-recent`,platform,name:`${platform} documentation updates`,url:`https://help.${platform.toLowerCase()}.com/hc/en-us`,fetchUrl:`https://help.${platform.toLowerCase()}.com/api/v2/help_center/en-us/articles.json?sort_by=updated_at&sort_order=desc&per_page=30`,kind:'recent' as const}))
 ];
 export function plainText(html:string){return html.replace(/<(script|style|nav|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<\/(p|div|li|h[1-6]|tr)>/gi,'\n').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n').replace(/\n{3,}/g,'\n\n').trim();}
 export function sourceText(source:Source,body:string):string{

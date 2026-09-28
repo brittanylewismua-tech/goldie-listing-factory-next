@@ -2,7 +2,21 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 import {UPDATE_SOURCES,sourceText,plainText,addedText,briefDay,editionDay,publishDay,validateCandidate,dailySummary,officialUrl} from '../app/platform-update-model.ts';
 const source=UPDATE_SOURCES[0],quote='Sellers must disclose the new required product information before October 1.';
 const item={priority:'ACTION REQUIRED',evidence:'Confirmed platform change',title:'Etsy changes a test requirement',impact:'Affected sellers must update their test listings.',action:'Check the required field by October 1.',topic:'test-requirement',quote,urgent:true};
-test('official source manifest covers both platforms and never reads a seller shop',()=>{assert.ok(UPDATE_SOURCES.length>=10);for(const s of UPDATE_SOURCES)assert.ok(officialUrl(s.fetchUrl,s.platform));assert.equal(new Set(UPDATE_SOURCES.map(s=>s.id)).size,UPDATE_SOURCES.length)});
+test('official source manifest covers both platforms and never reads a seller shop',()=>{
+ /*
+   D1905 · This asserted at least ten sources, which was the wrong measure and
+   quietly rewarded the thing that was broken: nine of those ten were
+   hand-picked help articles, and the count going up meant somebody had
+   remembered one more page - not that coverage had improved. Two sweeps now
+   read all 342 Etsy and 394 Printify help articles, so what matters is that
+   both platforms are covered and that the whole help centre is swept, not how
+   many rows the list has.
+ */
+ for(const platform of ['Etsy','Printify']){
+  assert.ok(UPDATE_SOURCES.some(s=>s.platform===platform&&s.kind==='sweep'),
+   platform+' is back to whichever pages somebody remembered to list');
+  assert.ok(UPDATE_SOURCES.some(s=>s.platform===platform));
+ }for(const s of UPDATE_SOURCES)assert.ok(officialUrl(s.fetchUrl,s.platform));assert.equal(new Set(UPDATE_SOURCES.map(s=>s.id)).size,UPDATE_SOURCES.length)});
 test('strip scripts navigation and formatting without treating them as changes',()=>{assert.equal(plainText('<nav>Menu</nav><p>Hello &amp; goodbye</p><script>bad()</script>'),'Hello & goodbye');assert.equal(addedText('A\nB','B\nA'),'')});
 test('help-center body extraction excludes timestamp-only edits',()=>{assert.equal(sourceText(source,JSON.stringify({article:{title:'Title',body:'<p>Text</p>',updated_at:'today'}})),'Title\nText');assert.throws(()=>sourceText(source,'{}'))});
 test('blocked or missing HTML body cannot become an all-clear',()=>{assert.throws(()=>sourceText(UPDATE_SOURCES.find(s=>s.kind==='html'),'<html>Access denied</html>'))});
@@ -88,10 +102,11 @@ test('only an announcements board seeds its own first read',()=>{
  */
  const seeded=UPDATE_SOURCES.filter(s=>s.seedOnFirstRead).map(s=>s.id).sort();
  assert.deepEqual(seeded,['Etsy-10603291042967','etsy-announcements']);
- /* A rules page must never seed: its text is policy that already applies. */
- for(const id of ['Etsy-115014483627','Etsy-360024112614','Printify-22264012673297'])
-  assert.equal(UPDATE_SOURCES.find(s=>s.id===id).seedOnFirstRead,false,
-   id+' would announce standing policy as new');
+ /* A help-centre sweep must never seed: its first pass sees all 736 articles
+    as new, and reporting those would announce every standing rule Etsy and
+    Printify have as a change. */
+ for(const source of UPDATE_SOURCES.filter(s=>s.kind==='sweep'))
+  assert.ok(!source.seedOnFirstRead,source.id+' would announce standing policy as new');
  const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
  assert.match(collector,/summarize\(source,'',current,current,seen,undefined,true,8\)/);
  /* A first read has no previous version, so the editor is told the window. */
@@ -163,4 +178,36 @@ test('the Printify catalog is counted, not scraped or summarised',()=>{
    'the catalog read is picking whichever connection happens to be newest again');
  assert.match(watch,/WHERE user_id = \? AND encrypted_token <> ''/);
  assert.match(watch,/FROM printify_catalog_reader WHERE only_row = 1/);
+});
+
+test('a help centre is swept whole, and a bumped timestamp is not a change',()=>{
+ const sweepFile=readFileSync(new URL('../app/help-center-sweep.ts',import.meta.url),'utf8');
+ /*
+   Etsy publishes 342 help articles and Printify 394. The brief watched nine of
+   them, chosen by hand, so a fee change or a new feature documented on any of
+   the other 727 was invisible and the front page reported that silence as calm.
+
+   Zendesk also bumps updated_at for its own housekeeping - three Printify
+   articles sampled while building this were "updated" within the same half
+   hour carrying a sys_rv_p1 revision label and no visible edit - so the stored
+   body decides whether anything changed, and updated_at only decides order.
+ */
+ assert.match(sweepFile,/sort_by=updated_at&sort_order=desc/);
+ assert.match(sweepFile,/previous !== row\.text && added\.length >= MIN_ADDED/,
+   'a bumped timestamp counts as news again');
+ /* First sweep learns the whole help centre and announces none of it. */
+ assert.match(sweepFile,/if \(!known\.size\)/);
+ /* Over the cap, the old body must stay so the change is still pending. */
+ assert.match(sweepFile,/if \(changed\) continue;/);
+});
+
+test('each changed article is summarised on its own, not in a blob',()=>{
+ const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
+ /* The old "documentation updates" source concatenated thirty articles into
+    one string and asked the model to find the change inside it. It never
+    reported anything. */
+ assert.match(collector,/if\(source\.kind==='sweep'\)/);
+ assert.match(collector,/summarize\(asSource,change\.previous,change\.current,change\.added/);
+ /* The item links to the article that changed, not to a help-centre index. */
+ assert.match(collector,/url:change\.url/);
 });

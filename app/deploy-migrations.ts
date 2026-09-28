@@ -29,6 +29,7 @@
 import { ensureShopInsightTables } from "@/app/shop-watch-insight-store";
 import { ensureUpdateTables } from "@/app/platform-update-store";
 import { ensureCatalogTable } from "@/app/printify-catalog-watch";
+import { ensureHelpArticleTable } from "@/app/help-center-sweep";
 import { ensureNicheResearch } from "@/app/niche-research-store";
 import { ensureMarketCollections } from "@/app/market-collection";
 import { ensureEtsyDisplayCache } from "@/app/etsy-display-cache";
@@ -125,6 +126,7 @@ export const MIGRATIONS: Step[] = [
   { name: "shop_watch_briefs", run: ensureBriefTables },
   { name: "platform_update_sources", run: ensureUpdateTables },
   { name: "printify_catalog_seen", run: ensureCatalogTable },
+  { name: "help_article_state", run: ensureHelpArticleTable },
   { name: "niche_watches", run: ensureNicheWatchTables },
   { name: "niche_research_projects", run: () => ensureNicheResearch() },
   { name: "market_keyword_collections", run: () => ensureMarketCollections(database()) },

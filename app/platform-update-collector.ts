@@ -3,6 +3,7 @@ import {ensureUpdateTables,updateDb} from './platform-update-store';
 import {reserveSpend,settleSpend,failSpend} from './spend-guard';
 import {recordFalUsage} from './fal-usage';
 import {collectPrintifyCatalog} from './printify-catalog-watch';
+import {sweepHelpCentre} from './help-center-sweep';
 const MODEL='google/gemini-2.5-flash';
 /*
   D1902 · How many sources may be edited in one pass. This was 4, and going over
@@ -25,7 +26,7 @@ async function summarize(source:Source,previous:string,current:string,added:stri
    the whole source failed to parse - so lifting the item cap produced fewer
    items, not more. The budget now follows the number of items asked for.
  */
- max_tokens:900+maxItems*700,system_prompt:INSTRUCTIONS,prompt:JSON.stringify({today:new Date().toISOString().slice(0,10),maxItems,source:source.url,validationFeedback:repair,firstRead:firstRead?'This is the first read of this source, so there is no previous version to compare and the whole text counts as added. This source is a roundup of announcements. Report the most significant entries it currently presents as new, recently launched, or coming soon, where the entry itself states a seller-facing feature, tool, fee or rule. Where an entry carries a date, ignore it if older than three months; where no date is given, do not treat the absence of a date as a reason to skip it.':undefined,alreadyCovered:seen.map(i=>({topic:i.topic,title:i.title,impact:i.impact,action:i.action})),previous:previous.slice(0,55000),current:current.slice(0,55000),added})}),signal:AbortSignal.timeout(90000)});
+ max_tokens:900+maxItems*700,system_prompt:INSTRUCTIONS,prompt:JSON.stringify({today:new Date().toISOString().slice(0,10),maxItems,source:source.url,validationFeedback:repair,firstRead:firstRead?'There is no previous version of this page to compare against, so the whole text counts as added. This source is a roundup of announcements. Report the most significant entries it currently presents as new, recently launched, or coming soon, where the entry itself states a seller-facing feature, tool, fee or rule. Where an entry carries a date, ignore it if older than three months; where no date is given, do not treat the absence of a date as a reason to skip it.':undefined,alreadyCovered:seen.map(i=>({topic:i.topic,title:i.title,impact:i.impact,action:i.action})),previous:previous.slice(0,55000),current:current.slice(0,55000),added})}),signal:AbortSignal.timeout(90000)});
  const result=await response.json() as {output?:string;usage?:{cost?:number;prompt_tokens?:number;completion_tokens?:number}};cost=Number(result.usage?.cost||0);if(!response.ok)throw new Error('Update editor could not finish');
  const output=String(result.output||'').replace(/^```(?:json)?\s*|\s*```$/g,'').trim();const parsed=JSON.parse(output);if(!Array.isArray(parsed.items))throw new Error('Update editor returned an incomplete result');
  /*
@@ -74,6 +75,27 @@ export async function collectPlatformUpdates({retryFailed=false,reseed=''}:{retr
    still records checked_at and last_error like every other source, so a broken
    catalogue read shows up as a broken source rather than as quiet news.
  */
+ /*
+   D1905 · A SWEEP IS MANY SOURCES BEHIND ONE ENTRY.
+
+   Every article in the help centre is read and kept. The ones whose text
+   actually changed are summarised one at a time, against their own previous
+   version, so the model is shown a single article's edit rather than asked to
+   find the change inside a blob of thirty concatenated pages - which is what
+   the old "documentation updates" source did, and why it never reported
+   anything. Each changed article borrows this entry's platform but carries its
+   own title and url, so the item links to the article that changed.
+ */
+ if(source.kind==='sweep'){const sweepResult=await sweepHelpCentre(source.platform,now,Math.max(0,EDIT_BUDGET-edited));
+  if(sweepResult.baseline)baseline++;
+  for(const change of sweepResult.changes){
+   if(edited>=EDIT_BUDGET)break;
+   edited++;
+   const asSource:Source={id:`${source.platform}-help-${change.articleId}`,platform:source.platform,
+    name:change.title||source.name,url:change.url,fetchUrl:change.url,kind:'article'};
+   const found=await summarize(asSource,change.previous,change.current,change.added,seen,undefined,change.isNew,3).catch(()=>[]);
+   for(const item of found){await db.prepare(`INSERT OR IGNORE INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?)`).bind(item.id,publishDay(new Date(),item.urgent),item.topic,JSON.stringify(item),item.publishedAt).run();seen.push(item);published++;}}
+  await db.prepare(`INSERT INTO platform_update_sources(id,content,checked_at,last_error) VALUES (?,?,?,'') ON CONFLICT(id) DO UPDATE SET content=excluded.content,checked_at=excluded.checked_at,last_error=''`).bind(source.id,`${sweepResult.scanned} articles`,now).run();checked++;continue;}
  if(source.kind==='catalog'){const result=await collectPrintifyCatalog(now);
   if(result.baseline)baseline++;
   for(const item of result.items){const id=await hashText('Printify|'+item.topic+'|'+item.quoteKey);
