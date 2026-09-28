@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/app/supabase-auth";
 import ConsentClient from "./consent-client";
 import "../../../account/sign-in/sign-in.css";
 import "../../../account/sign-in/sign-in-v2.css";
+import "./consent.css";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Connect MasterBot" };
@@ -26,6 +27,6 @@ export default async function ConsentPage({ searchParams }: { searchParams: Prom
   try {
     const { data } = await (await createSupabaseServerClient()).auth.getUser();
     email = data.user?.email ?? null;
-  } catch {}
+  } catch { /* signed out: show the sign-in choices */ }
   return <ConsentClient authorizationId={authorizationId} signedInEmail={email} />;
 }
