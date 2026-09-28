@@ -23,7 +23,25 @@ test('blocked or missing HTML body cannot become an all-clear',()=>{assert.throw
 test('daily edition follows Pacific morning across daylight saving',()=>{assert.equal(briefDay(new Date('2026-09-27T01:00:00Z')),'2026-09-26');assert.equal(publishDay(new Date('2026-09-26T12:59:00Z'),false),'2026-09-26');assert.equal(publishDay(new Date('2026-09-26T13:00:00Z'),false),'2026-09-27');assert.equal(publishDay(new Date('2026-09-26T15:00:00Z'),true),'2026-09-26');assert.equal(publishDay(new Date('2026-12-26T13:59:00Z'),false),'2026-12-26')});
 test('confirmed item needs exact evidence in the changed text',()=>{assert.ok(validateCandidate(item,source,quote,quote));assert.equal(validateCandidate(item,source,quote,'Unrelated changed text'),null);assert.equal(validateCandidate({...item,quote:'invented evidence that is absent'},source,quote,quote),null)});
 test('guidance and rumors cannot become mandatory rules',()=>{assert.equal(validateCandidate({...item,evidence:'Official guidance'},source,quote,quote),null);assert.equal(validateCandidate({...item,evidence:'Seller speculation'},source,quote,quote),null)});
-test('external and invented source links are refused',()=>{for(const sourceUrl of ['https://etsy.com.evil.test/rule','http://help.etsy.com/rule','https://help.etsy.com/invented','javascript:alert(1)'])assert.equal(validateCandidate({...item,sourceUrl},source,quote,quote),null)});
+test('external and invented source links are refused',()=>{
+ /* A link off the platform, on http, or on a lookalike host is a model
+    inventing a destination. Still refused outright. */
+ for(const sourceUrl of ['https://etsy.com.evil.test/rule','http://help.etsy.com/rule','javascript:alert(1)'])
+  assert.equal(validateCandidate({...item,sourceUrl},source,quote,quote),null);
+ /*
+   D1918 · A link ON the platform that cannot be string-matched is a different
+   case, and rejecting it was throwing away true items. The page text has had
+   its HTML stripped, so a link that exists only as an href is never in it - the
+   model would name a real sub-article and the check could not confirm it.
+   Measured live: every candidate from Etsy's own roundup rejected twice over,
+   reported as 'evidence needs review', and the brief stayed empty. The quote
+   still proves the change; the link only says where to read more, so it falls
+   back to the page the item was found on.
+ */
+ const fallback=validateCandidate({...item,sourceUrl:'https://help.etsy.com/invented'},source,quote,quote);
+ assert.ok(fallback,'a true item is discarded over an unconfirmable link again');
+ assert.equal(fallback.sourceUrl,source.url);
+});
 test('urgent guidance cannot interrupt the daily brief',()=>{assert.equal(validateCandidate({...item,priority:'GOOD TO KNOW',evidence:'Official guidance'},source,quote,quote).urgent,false)});
 test('empty daily result is explicit and does not manufacture content',()=>{
  /*

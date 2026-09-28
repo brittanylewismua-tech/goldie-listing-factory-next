@@ -97,7 +97,29 @@ export function validateCandidate(raw:any,source:Source,current:string,added:str
  if(raw.priority==='ACTION REQUIRED'&&raw.evidence!=='Confirmed platform change')return null;
  if(raw.evidence==='Seller speculation')return null; // This collector only reads official sources.
  if(raw.priority==='IGNORE THE PANIC'&&!['Official guidance','No evidence'].includes(raw.evidence))return null;
- const sourceUrl=String(raw.sourceUrl||source.url);if(!officialUrl(sourceUrl,source.platform)||(sourceUrl!==source.url&&!current.includes(sourceUrl)))return null;
+ /*
+   D1918 · AN UNVERIFIABLE LINK IS NOT AN UNVERIFIABLE FACT.
+
+   This rejected the whole candidate when the proposed sourceUrl was not found
+   verbatim in the page text - and the page text has had its HTML stripped, so
+   a link that exists only as an href is never in it. The model would name a
+   real sub-article, the check could not confirm the string, and a true,
+   quoted, evidenced item was thrown away. Measured live: every candidate from
+   Etsy's own roundup rejected twice in a row, reported as "evidence needs
+   review", and the brief stayed empty.
+
+   The quote is what proves the change, and it is still checked against both
+   the current and the added text. The link only says where to read more, so an
+   unconfirmable one falls back to the page the item was actually found on
+   rather than discarding the item. A link on the wrong host is still refused
+   outright - that is a different thing, and it is the one this guard is for.
+ */
+ const proposed=String(raw.sourceUrl||'').trim();
+ /* A link somewhere off the platform is a different matter: that is a model
+    inventing a destination, and it stays a refusal. */
+ if(proposed&&!officialUrl(proposed,source.platform))return null;
+ const sourceUrl=proposed&&current.includes(proposed)?proposed:source.url;
+ if(!officialUrl(sourceUrl,source.platform))return null;
  return{platform:source.platform,priority:raw.priority,evidence:raw.evidence,title,impact,action,sourceUrl,sourceTitle:source.name,topic:topic.slice(0,160),urgent:raw.urgent===true&&raw.priority==='ACTION REQUIRED'};
 }
 export function dailySummary(items:UpdateItem[]){const action=items.filter(i=>i.priority==='ACTION REQUIRED').length,other=items.length-action;return items.length?`${action?`${action} ${action===1?'change needs':'changes need'} your attention.`:'No action required.'}${other?` ${other} ${other===1?'item is':'items are'} good to know.`:''}`:
