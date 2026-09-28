@@ -3,192 +3,131 @@ import { requireChatGPTUser } from "@/app/chatgpt-auth";
 
 export const dynamic = "force-dynamic";
 
-const Arrow = () => <span aria-hidden="true">↗</span>;
+const Arrow=()=> <span aria-hidden="true">→</span>;
 
-export default async function DesignLab() {
-  if (process.env.NODE_ENV === "production") {
-    await requireChatGPTUser("/design-lab");
-  }
-
-  return (
-    <main className="goldie-lab">
-      <section className="lab-intro">
+export default async function DesignLab(){
+  if(process.env.NODE_ENV==="production") await requireChatGPTUser("/design-lab");
+  return <>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin=""/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <main className="g2">
+      <header className="g2-head">
         <div>
-          <p className="lab-kicker">Goldie UI system / 01</p>
-          <h1>Sharp enough for the product we built.</h1>
-          <p className="lab-deck">
-            Black, white, hot pink. Editorial scale. Dense when the data matters.
-            Quiet when the seller needs to decide.
-          </p>
+          <p className="eyebrow">Goldie design system / reference pass 02</p>
+          <h1>Built like a serious tool. Still looks like Goldie.</h1>
+          <span className="rule"/>
         </div>
-        <div className="lab-intro-meta">
-          <span>Sans serif only</span>
-          <span>High contrast</span>
-          <span>Real product patterns</span>
+        <p className="lede">World Builder gives us the brand language. Shopify gives us de-layering. Linear gives us restraint. Goldie keeps the density and Etsy-specific intelligence.</p>
+      </header>
+
+      <section className="specimen">
+        <div className="section-label"><b>01</b><span>Core language</span></div>
+        <div className="card-grid">
+          <article className="signature-card">
+            <div className="dots"><i/><i/><i/></div>
+            <p className="eyebrow">Market Watch</p>
+            <h2>What changed while you were away</h2>
+            <p>109 listings in Halloween started showing momentum since your last check.</p>
+            <a href="/market-watch">Open Market Watch <Arrow/></a>
+          </article>
+          <article className="quiet-panel">
+            <p className="eyebrow">Type scale</p>
+            <h1 className="sample-h1">Your shop</h1>
+            <h2 className="sample-h2">What sold this month</h2>
+            <h3 className="sample-h3">Top listings</h3>
+            <p className="sample-body">Readable, compact, and comfortable enough for long working sessions.</p>
+            <small>LAST SYNCED 18 MINUTES AGO</small>
+          </article>
         </div>
       </section>
 
-      <section className="lab-section">
-        <div className="lab-section-head">
-          <p>01 / Type + actions</p>
-          <span>The interface should feel confident before color does anything.</span>
-        </div>
-
-        <div className="lab-type-grid">
-          <div className="lab-type-display">
-            <span>Display</span>
-            <strong>Know what moved.</strong>
-          </div>
-          <div className="lab-type-stack">
-            <div><span>Page title</span><h2>Market Watch</h2></div>
-            <div><span>Section title</span><h3>What changed overnight</h3></div>
-            <div><span>Body</span><p>See the listings, shops, and product families that changed while you were away.</p></div>
-            <div><span>Metadata</span><small>LAST CHECKED 18 MINUTES AGO</small></div>
-          </div>
-        </div>
-
-        <div className="lab-actions">
-          <button className="lab-button lab-button-primary">Start a new batch</button>
-          <button className="lab-button lab-button-dark">Open research</button>
-          <button className="lab-button lab-button-quiet">View all</button>
-          <button className="lab-link-button">See sold listings <Arrow/></button>
-        </div>
-      </section>
-
-      <section className="lab-section">
-        <div className="lab-section-head">
-          <p>02 / Shop pulse</p>
-          <span>Performance should read in seconds, without becoming a finance dashboard.</span>
-        </div>
-
-        <div className="lab-pulse">
-          <div className="lab-pulse-main">
-            <p className="lab-kicker light">SHE'S A WOLF CLOTHING · LAST 30 DAYS</p>
+      <section className="specimen">
+        <div className="section-label"><b>02</b><span>Homepage pulse</span></div>
+        <article className="shop-pulse card">
+          <div className="pulse-main">
+            <div className="dots"><i/><i/><i/></div>
+            <p className="eyebrow">She’s A Wolf Clothing · last 30 days</p>
             <strong>$8,492</strong>
-            <span>Revenue</span>
+            <span>revenue</span>
           </div>
-          <div className="lab-pulse-stat"><strong>127</strong><span>Orders</span></div>
-          <div className="lab-pulse-stat"><strong>$66.87</strong><span>Avg. order</span></div>
-          <div className="lab-pulse-stat"><strong>83</strong><span>Listings live</span></div>
-          <a className="lab-pulse-link" href="#listing-strip">See what sold <Arrow/></a>
-        </div>
+          <div className="metric"><b>127</b><span>orders</span></div>
+          <div className="metric"><b>$66.87</b><span>avg. order</span></div>
+          <div className="metric"><b>83</b><span>listings live</span></div>
+          <a href="/shop-map">Open your shop <Arrow/></a>
+        </article>
       </section>
 
-      <section className="lab-section">
-        <div className="lab-section-head">
-          <p>03 / Intelligence</p>
-          <span>Goldie should report discoveries, not introduce its own features.</span>
-        </div>
-
-        <div className="lab-intel-grid">
-          <article className="lab-intel lab-intel-feature">
-            <div className="lab-intel-number">01</div>
-            <div>
-              <p className="lab-kicker light">MARKET WATCH</p>
-              <h2>Halloween moved hard overnight.</h2>
-              <p>109 listings in a niche you follow started showing momentum since your last look.</p>
-              <a href="/market-watch">See the movement <Arrow/></a>
-            </div>
-            <div className="lab-mini-posters" aria-hidden="true">
-              <div className="poster p1">GHOST<br/>MODE</div>
-              <div className="poster p2">HEX<br/>CLUB</div>
-              <div className="poster p3">SPOOKY<br/>SEASON</div>
-            </div>
+      <section className="specimen">
+        <div className="section-label"><b>03</b><span>Goldie notices</span></div>
+        <div className="notice-grid">
+          <article className="card hover notice-card">
+            <div className="notice-top"><span className="numeral">01</span><span className="chip">market watch</span></div>
+            <h2>Halloween is moving again.</h2>
+            <p>109 new listings started showing momentum. 68 are now repeating across multiple shops.</p>
+            <a href="/market-watch">See the movement <Arrow/></a>
           </article>
-
-          <article className="lab-intel lab-intel-compact">
-            <p className="lab-kicker">YOUR SHOP</p>
-            <strong>“Feminist” is carrying the most revenue.</strong>
-            <div className="lab-spark" aria-hidden="true"><i/><i/><i/><i/><i/><i/><i/><i/></div>
-            <span>$3,184 all time · $942 last 90 days</span>
+          <article className="card hover notice-card">
+            <div className="notice-top"><span className="numeral">02</span><span className="chip">your shop</span></div>
+            <h2>“Feminist” is your strongest world.</h2>
+            <p>$942 in the last 90 days across 24 live listings.</p>
+            <a href="/shop-map?tab=themes">Open Shop Map <Arrow/></a>
           </article>
-
-          <article className="lab-intel lab-intel-compact pink">
-            <p className="lab-kicker">HOT LIST</p>
-            <strong>T-shirts led Etsy yesterday.</strong>
-            <span>842 units across the listings Goldie tracks</span>
+          <article className="card hover notice-card">
+            <div className="notice-top"><span className="numeral">03</span><span className="chip accent">hot list</span></div>
+            <h2>T-shirts led Etsy yesterday.</h2>
+            <p>842 units across listings Goldie tracks.</p>
             <a href="/hot-list">View what sold <Arrow/></a>
           </article>
         </div>
       </section>
 
-      <section className="lab-section" id="listing-strip">
-        <div className="lab-section-head">
-          <p>04 / Product imagery</p>
-          <span>Real listing imagery should create energy instead of six tiny equal cards.</span>
-        </div>
-
-        <div className="lab-listings">
-          <article className="lab-listing lab-listing-lead">
-            <div className="listing-art art-a"><span>HOT GIRLS<br/>READ BOOKS</span></div>
-            <div className="listing-caption"><strong>42 sold</strong><span>in 30 days</span></div>
+      <section className="specimen">
+        <div className="section-label"><b>04</b><span>Listing imagery</span></div>
+        <div className="listing-grid">
+          <article className="listing-card card hover">
+            <div className="fake-photo rose">HOT GIRLS<br/>READ BOOKS</div>
+            <div><b>42 sold</b><span>last 30 days</span></div>
           </article>
-          <article className="lab-listing">
-            <div className="listing-art art-b"><span>BOOK<br/>CLUB</span></div>
-            <div className="listing-caption"><strong>26 sold</strong><span>in 30 days</span></div>
+          <article className="listing-card card hover">
+            <div className="fake-photo black">BOOK<br/>CLUB</div>
+            <div><b>26 sold</b><span>last 30 days</span></div>
           </article>
-          <article className="lab-listing">
-            <div className="listing-art art-c"><span>FEMINIST<br/>AGENDA</span></div>
-            <div className="listing-caption"><strong>19 sold</strong><span>in 30 days</span></div>
+          <article className="listing-card card hover">
+            <div className="fake-photo cream">FEMINIST<br/>AGENDA</div>
+            <div><b>19 sold</b><span>last 30 days</span></div>
           </article>
         </div>
       </section>
 
-      <section className="lab-section">
-        <div className="lab-section-head">
-          <p>05 / Dense information</p>
-          <span>Tables should feel like product UI, not exported spreadsheets.</span>
-        </div>
-
-        <div className="lab-table">
-          <div className="lab-table-head">
-            <span>World</span><span>Live listings</span><span>Last 90</span><span>All time</span>
-          </div>
+      <section className="specimen">
+        <div className="section-label"><b>05</b><span>Dense data</span></div>
+        <div className="data-panel">
+          <div className="data-head"><span>World</span><span>Live</span><span>Last 90</span><span>All time</span></div>
           {[
-            ["Feminist", "24", "$942", "$3,184"],
-            ["Bookish", "18", "$714", "$2,621"],
-            ["Dog Mom", "12", "$366", "$1,427"],
-            ["Halloween", "9", "$228", "$841"],
-          ].map((row, index) => (
-            <a href="/shop-map?tab=themes" className="lab-table-row" key={row[0]}>
-              <div><b>{row[0]}</b><i style={{width:`${92-index*17}%`}}/></div>
-              <span>{row[1]}</span><strong>{row[2]}</strong><span>{row[3]}</span>
-            </a>
-          ))}
+            ["Feminist","24","$942","$3,184","92%"],
+            ["Bookish","18","$714","$2,621","76%"],
+            ["Dog Mom","12","$366","$1,427","54%"],
+            ["Halloween","9","$228","$841","39%"],
+          ].map(r=><a href="/shop-map?tab=themes" className="data-row" key={r[0]}>
+            <div><b>{r[0]}</b><i><span style={{width:r[4]}}/></i></div><span>{r[1]}</span><strong>{r[2]}</strong><span>{r[3]}</span>
+          </a>)}
         </div>
       </section>
 
-      <section className="lab-section">
-        <div className="lab-section-head">
-          <p>06 / Forms + states</p>
-          <span>Operational screens stay calmer than discovery screens.</span>
-        </div>
-
-        <div className="lab-form-grid">
-          <div className="lab-form-card">
-            <label>
-              <span>Phrase to check</span>
-              <input placeholder="sometimes the king is a woman"/>
-            </label>
-            <button className="lab-button lab-button-primary">Check trademark</button>
-            <div className="lab-status"><i/> Register checked today</div>
-          </div>
-
-          <div className="lab-state-stack">
-            <div className="lab-state"><b>Watching</b><span>7 keywords · 3 shops · 2 niches</span></div>
-            <div className="lab-state attention"><b>1 phrase needs review</b><span>Trademark Tracker</span></div>
-            <div className="lab-state empty"><b>Nothing new here</b><span>We will show movement when there is something worth seeing.</span></div>
-          </div>
+      <section className="specimen">
+        <div className="section-label"><b>06</b><span>Controls</span></div>
+        <div className="control-card card">
+          <label><span>Phrase to check</span><input placeholder="sometimes the king is a woman"/></label>
+          <button className="btn primary">Check trademark</button>
+          <button className="btn ghost">Save phrase</button>
+          <span className="status-dot">Register checked today</span>
         </div>
       </section>
 
-      <section className="lab-section">
-        <div className="lab-section-head">
-          <p>07 / Navigation language</p>
-          <span>Tools can stay easy to find without turning Home into a feature directory.</span>
-        </div>
-
-        <nav className="lab-directory" aria-label="Goldie tools">
+      <section className="specimen">
+        <div className="section-label"><b>07</b><span>Navigation density</span></div>
+        <nav className="directory">
           {[
             ["Listing Factory","Build Etsy listings in bulk","/listing-factory"],
             ["Research","Understand a niche before you build","/market-watch/research"],
@@ -196,11 +135,9 @@ export default async function DesignLab() {
             ["Shop Watch","Follow shops that matter","/market-watch?tab=shops"],
             ["Shop Map","See what your own shop is made of","/shop-map"],
             ["Trademark Check","Screen phrases before you print","/trademark"],
-          ].map(([name,desc,href]) => (
-            <a href={href} key={name}><b>{name}</b><span>{desc}</span><Arrow/></a>
-          ))}
+          ].map(([name,desc,href])=><a href={href} key={name}><b>{name}</b><span>{desc}</span><Arrow/></a>)}
         </nav>
       </section>
     </main>
-  );
+  </>;
 }
