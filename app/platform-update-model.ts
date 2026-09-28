@@ -71,7 +71,33 @@ export function firstImage(html:string,platform:Platform):string{
  }
  return '';
 }
-export function plainText(html:string){return html.replace(/<(script|style|nav|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<\/(p|div|li|h[1-6]|tr)>/gi,'\n').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n').replace(/\n{3,}/g,'\n\n').trim();}
+/*
+  D1920 · THE APOSTROPHE THAT EMPTIED THE BRIEF.
+
+  Measured live, the rejected quote was: "We&rsquo;re testing an experience
+  that lets buyers turn eligible digital purchases into physical" - a true
+  sentence, from Etsy's own roundup, refused because it could not be found in
+  the source. It could not be found because this function decoded five named
+  entities and Zendesk writes &rsquo;, &ldquo;, &mdash; and the rest. The
+  stored text kept a literal "&rsquo;" while the model, reading the same text,
+  quoted it back with a real apostrophe, so the two could never match.
+
+  Every entity is decoded now: numeric, hex, and the named ones that actually
+  appear in help-centre prose. It was also putting raw "&rsquo;" into anything
+  that did get published.
+*/
+const NAMED:Record<string,string>={nbsp:' ',amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',
+ rsquo:'\u2019',lsquo:'\u2018',rdquo:'\u201d',ldquo:'\u201c',mdash:'\u2014',ndash:'\u2013',
+ hellip:'\u2026',trade:'\u2122',reg:'\u00ae',copy:'\u00a9',deg:'\u00b0',eacute:'\u00e9',
+ bull:'\u2022',middot:'\u00b7',laquo:'\u00ab',raquo:'\u00bb',euro:'\u20ac',pound:'\u00a3',
+ frac12:'\u00bd',times:'\u00d7',minus:'\u2212',ndashx:'\u2013'};
+export function decodeEntities(text:string):string{
+ return String(text??'')
+  .replace(/&#(\d+);/g,(_w,code)=>String.fromCodePoint(Number(code)))
+  .replace(/&#x([0-9a-f]+);/gi,(_w,code)=>String.fromCodePoint(parseInt(code,16)))
+  .replace(/&([a-z][a-z0-9]{1,9});/gi,(whole,name)=>NAMED[String(name).toLowerCase()]??whole);
+}
+export function plainText(html:string){return decodeEntities(html.replace(/<(script|style|nav|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<\/(p|div|li|h[1-6]|tr)>/gi,'\n').replace(/<[^>]*>/g,' ')).replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n').replace(/\n{3,}/g,'\n\n').trim();}
 export function sourceText(source:Source,body:string):string{
  if(source.kind==='html'){
   /* D1897 · Prefer <main>, but a page that does not use the tag is still a

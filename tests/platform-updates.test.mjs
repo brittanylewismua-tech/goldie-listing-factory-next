@@ -246,3 +246,23 @@ test('a pass fits the worker ceiling and never empties the brief',()=>{
    'the brief can be emptied again with nothing written to replace it');
  assert.match(collector,/ON CONFLICT\(id\) DO UPDATE SET content=excluded\.content/);
 });
+
+test('a curly apostrophe does not empty the brief',()=>{
+ /*
+   Measured live. The rejected quote was: "We&rsquo;re testing an experience
+   that lets buyers turn eligible digital purchases into physical" - a true
+   sentence from Etsy's own roundup, refused because it could not be found in
+   the source. plainText decoded five named entities; Zendesk writes &rsquo;,
+   &ldquo;, &mdash; and the rest. The stored text kept a literal "&rsquo;"
+   while the model quoted it back with a real apostrophe, so the strings could
+   never match and the whole source published nothing.
+ */
+ const out=plainText('<p>We&rsquo;re testing &mdash; &ldquo;eligible&rdquo; &amp; more&hellip;</p>');
+ assert.equal(out,'We’re testing — “eligible” & more…');
+ assert.doesNotMatch(out,/&[a-z]+;/i,'a raw entity is being stored and shown again');
+ /* Numeric and hex forms too, since help-centre prose carries both. */
+ assert.equal(plainText('<p>&#8217;&#x2014;</p>'),'’—');
+ /* And a quote lifted from that text must validate against it. */
+ const q='We’re testing — “eligible” & more…';
+ assert.ok(validateCandidate({...item,quote:q},source,out,out));
+});
