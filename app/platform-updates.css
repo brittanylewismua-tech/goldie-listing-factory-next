@@ -266,3 +266,55 @@
   #suite-workspace .pu-lead h2{font-size:25px!important}
   #suite-workspace .pu-grid{gap:30px!important}
 }
+
+
+/* VISUAL SWEEP · platform filters sit in the editorial grid, not a centered control island. */
+#suite-workspace .pu-head{
+  display:block!important;
+  padding-bottom:0!important;
+  border-bottom:0!important;
+}
+#suite-workspace .pu-head h1{
+  margin-bottom:22px!important;
+}
+#suite-workspace .pu-tabs{
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0 0 10px!important;
+  justify-content:flex-start!important;
+  gap:8px!important;
+  border:0!important;
+  border-bottom:1.5px solid #000!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#suite-workspace .pu-tab{
+  min-height:42px!important;
+  padding:10px 14px!important;
+  border:1px solid transparent!important;
+  border-radius:9px!important;
+  background:transparent!important;
+}
+#suite-workspace .pu-tab:hover{
+  border-color:var(--g-line)!important;
+  background:var(--g-pink-soft)!important;
+  color:#000!important;
+}
+#suite-workspace .pu-tab[aria-pressed=true]{
+  border-color:#000!important;
+  background:#000!important;
+  color:#fff!important;
+  box-shadow:3px 3px 0 var(--g-pink)!important;
+}
+@media(max-width:800px){
+  #suite-workspace .pu-tabs{
+    width:100%!important;
+    margin:0!important;
+    overflow-x:auto!important;
+    border-radius:0!important;
+    scrollbar-width:none!important;
+  }
+  #suite-workspace .pu-tabs::-webkit-scrollbar{display:none!important}
+}
