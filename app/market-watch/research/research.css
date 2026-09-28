@@ -792,3 +792,7 @@
     border-left:0!important;
   }
 }
+
+
+/* VISUAL SWEEP · shared Command Center page frame. */
+#suite-workspace .nr{max-width:1160px!important}
