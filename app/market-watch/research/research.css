@@ -453,3 +453,37 @@
   #suite-workspace .nr .research-navigation a,
   #suite-workspace .nr-tabs>button{flex:0 0 auto!important}
 }
+
+#suite-workspace .nr-library-title{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+#suite-workspace .nr-library-title span{
+  display:inline-grid!important;
+  place-items:center!important;
+  min-width:24px!important;
+  height:24px!important;
+  padding:0 7px!important;
+  border-radius:999px!important;
+  background:var(--g-pink)!important;
+  color:#000!important;
+  font-size:10px!important;
+  font-weight:800!important;
+}
+#suite-workspace .nr-library-loading{
+  min-height:110px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:14px!important;
+}
+#suite-workspace .nr-library-loading strong{
+  display:block!important;
+  font-size:14px!important;
+  font-weight:800!important;
+}
+#suite-workspace .nr-library-loading p{
+  margin:5px 0 0!important;
+  font-size:12px!important;
+  color:var(--g-ink-3)!important;
+}
