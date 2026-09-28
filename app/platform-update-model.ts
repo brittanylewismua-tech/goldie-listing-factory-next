@@ -6,11 +6,30 @@ export const UPDATE_SOURCES:Source[]=[
  article('Etsy','10603291042967','Etsy seller updates'),article('Etsy','360024112614','Etsy creativity and allowed items'),article('Etsy','115014483627','Etsy fees'),article('Etsy','5850122619287','Etsy Purchase Protection'),article('Etsy','360000572888','Etsy refunds and cases'),article('Etsy','360016260113','Etsy listing images'),
  article('Printify','22264012673297','Printify price updates'),article('Printify','4483630162833','Printify discontinued products'),article('Printify','4483625090321','Printify order routing'),
  {id:'printify-network',platform:'Printify',name:'Printify fulfillment updates',url:'https://printify.com/network-fulfillment-status/',fetchUrl:'https://printify.com/network-fulfillment-status/',kind:'html'},
+ /*
+   D1897 · WHERE ETSY ACTUALLY ANNOUNCES THINGS.
+
+   Every other source here is a help-centre article. Help articles document
+   rules that already exist; they are rewritten rarely and quietly, which is
+   why thirty days of checking produced nothing at all while Etsy shipped
+   shared shop access, expanded listing appeals and new Shop Stats graphs. Etsy
+   posts seller news to its community announcements board, and each post
+   carries its full text server-rendered, so it diffs the same way an article
+   does.
+ */
+ {id:'etsy-announcements',platform:'Etsy',name:'Etsy seller announcements',url:'https://community.etsy.com/forum/announcements-290/',fetchUrl:'https://community.etsy.com/forum/announcements-290/',kind:'html'},
  ...(['Etsy','Printify'] as const).map(platform=>({id:`${platform}-recent`,platform,name:`${platform} documentation updates`,url:`https://help.${platform.toLowerCase()}.com/hc/en-us`,fetchUrl:`https://help.${platform.toLowerCase()}.com/api/v2/help_center/en-us/articles.json?sort_by=updated_at&sort_order=desc&per_page=30`,kind:'recent' as const}))
 ];
 export function plainText(html:string){return html.replace(/<(script|style|nav|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<\/(p|div|li|h[1-6]|tr)>/gi,'\n').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n').replace(/\n{3,}/g,'\n\n').trim();}
 export function sourceText(source:Source,body:string):string{
- if(source.kind==='html'){const main=body.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i);if(!main)throw new Error('Source content unavailable');return plainText(main[1]).slice(0,90000);}
+ if(source.kind==='html'){
+  /* D1897 · Prefer <main>, but a page that does not use the tag is still a
+     readable page. Throwing here turned a layout choice into a dead source,
+     and a dead source is indistinguishable from quiet news. */
+  const main=body.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i);
+  const region=main?main[1]:(body.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i)?.[1]??'');
+  const text=plainText(region);if(text.length<150)throw new Error('Source content unavailable');
+  return text.slice(0,90000);}
  const json=JSON.parse(body);if(source.kind==='recent'){if(!Array.isArray(json.articles))throw new Error('Source content unavailable');return json.articles.filter((a:any)=>!a.draft).map((a:any)=>`${a.html_url}\n${a.title}\n${plainText(String(a.body??''))}`).join('\n\n').slice(0,90000);}
  if(!json.article?.body)throw new Error('Source content unavailable');return `${json.article.title}\n${plainText(json.article.body)}`.slice(0,90000);
 }
@@ -30,4 +49,7 @@ export function validateCandidate(raw:any,source:Source,current:string,added:str
  const sourceUrl=String(raw.sourceUrl||source.url);if(!officialUrl(sourceUrl,source.platform)||(sourceUrl!==source.url&&!current.includes(sourceUrl)))return null;
  return{platform:source.platform,priority:raw.priority,evidence:raw.evidence,title,impact,action,sourceUrl,sourceTitle:source.name,topic:topic.slice(0,160),urgent:raw.urgent===true&&raw.priority==='ACTION REQUIRED'};
 }
-export function dailySummary(items:UpdateItem[]){const action=items.filter(i=>i.priority==='ACTION REQUIRED').length,other=items.length-action;return items.length?`${action?`${action} ${action===1?'change needs':'changes need'} your attention.`:'No action required.'}${other?` ${other} ${other===1?'item is':'items are'} good to know.`:''}`:'No important Etsy or Printify changes today.';}
+export function dailySummary(items:UpdateItem[]){const action=items.filter(i=>i.priority==='ACTION REQUIRED').length,other=items.length-action;return items.length?`${action?`${action} ${action===1?'change needs':'changes need'} your attention.`:'No action required.'}${other?` ${other} ${other===1?'item is':'items are'} good to know.`:''}`:
+ /* D1897 · This said "No important Etsy or Printify changes today", which
+    claims the day was quiet. It knows only what its own sources said. */
+ 'Nothing new in today\'s check of the official sources. Recent items are below.';}

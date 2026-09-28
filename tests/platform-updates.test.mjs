@@ -11,8 +11,55 @@ test('confirmed item needs exact evidence in the changed text',()=>{assert.ok(va
 test('guidance and rumors cannot become mandatory rules',()=>{assert.equal(validateCandidate({...item,evidence:'Official guidance'},source,quote,quote),null);assert.equal(validateCandidate({...item,evidence:'Seller speculation'},source,quote,quote),null)});
 test('external and invented source links are refused',()=>{for(const sourceUrl of ['https://etsy.com.evil.test/rule','http://help.etsy.com/rule','https://help.etsy.com/invented','javascript:alert(1)'])assert.equal(validateCandidate({...item,sourceUrl},source,quote,quote),null)});
 test('urgent guidance cannot interrupt the daily brief',()=>{assert.equal(validateCandidate({...item,priority:'GOOD TO KNOW',evidence:'Official guidance'},source,quote,quote).urgent,false)});
-test('empty daily result is explicit and does not manufacture content',()=>{assert.equal(dailySummary([]),'No important Etsy or Printify changes today.');assert.match(dailySummary([item]),/1 change needs your attention/)});
+test('empty daily result is explicit and does not manufacture content',()=>{
+ /*
+   D1897 · It used to say "No important Etsy or Printify changes today", which
+   asserts the day was quiet at Etsy and Printify. It knows only what its own
+   twelve sources said, and for thirty days those were help-centre articles
+   that document existing rules rather than announce new ones - so it reported
+   a quiet month while Etsy shipped shared shop access and expanded appeals.
+   The empty line now describes the check, not the world.
+ */
+ assert.match(dailySummary([]),/^Nothing new in today's check of the official sources\./);
+ assert.doesNotMatch(dailySummary([]),/No important Etsy or Printify changes/);
+ assert.match(dailySummary([item]),/1 change needs your attention/)});
 test('source failures preserve old content and never advance its baseline',()=>{const s=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');assert.match(s,/if\(!stored\?\.content\)baseline\+\+/);assert.match(s,/ON CONFLICT\(id\) DO UPDATE SET last_error=excluded.last_error/);assert.match(s,/reserveSpend/);assert.match(s,/if\(edited>=4\)/)});
 test('daily job is scheduled and home card opens the actual update',()=>{assert.match(readFileSync(new URL('../scripts/add-scheduled-handler.mjs',import.meta.url),'utf8'),/run\("\/api\/platform-updates\/tick"\)/);assert.match(readFileSync(new URL('../app/home/home-view.tsx',import.meta.url),'utf8'),/<PlatformUpdate compact/);assert.match(readFileSync(new URL('../app/platform-updates/update-view.tsx',import.meta.url),'utf8'),/href="\/platform-updates"/)});
 
 test('tomorrow morning items stay out of the midnight edition while urgent changes appear now',()=>{const before=new Date('2026-09-27T10:00:00Z');assert.equal(editionDay(before),'2026-09-26');assert.equal(publishDay(before,false),'2026-09-27');assert.equal(publishDay(before,true),'2026-09-26');assert.equal(editionDay(new Date('2026-09-27T13:00:00Z')),'2026-09-27')});
+
+test('the board where Etsy announces things is a source',()=>{
+ /*
+   Measured live on 2026-09-27: status "ready", all twelve sources read without
+   error, zero items today and zero in the previous thirty days - while Etsy
+   had announced shared shop access, expanded listing appeals and new Shop
+   Stats graphs. Every source was a help-centre article, and help articles
+   document rules that already exist rather than announce new ones.
+ */
+ const model=readFileSync(new URL('../app/platform-update-model.ts',import.meta.url),'utf8');
+ assert.match(model,/community\.etsy\.com\/forum\/announcements-290/,
+   'the only channel Etsy actually posts seller news to is not being watched');
+ /* community.etsy.com must pass the official-host check. */
+ assert.equal(officialUrl('https://community.etsy.com/forum/announcements-290/','Etsy'),true);
+ /* A page with no <main> is a layout choice, not a dead source. */
+ assert.doesNotMatch(model,/if\(!main\)throw new Error\('Source content unavailable'\)/);
+});
+
+test('a new seller-facing feature counts as news',()=>{
+ const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
+ /* The editor was told to ignore "minor launches", so a new tool - the thing a
+    seller most wants to hear about - was binned by instruction. */
+ assert.doesNotMatch(collector,/minor launches/);
+ assert.match(collector,/IS reportable even if it is optional and even if it is described as a launch/);
+ /* Sweepstakes and award programmes still are not news. */
+ assert.match(collector,/Sweepstakes, award programmes, events, petitions and webinars are not reportable/);
+});
+
+test('the front page does not report zero from a one-day window',()=>{
+ const home=readFileSync(new URL('../app/home-preview/preview-client.tsx',import.meta.url),'utf8');
+ /* It counted today's edition only, so it read "0 changes at Etsy or Printify"
+    on almost every day for sources that publish weekly at best. */
+ assert.doesNotMatch(home,/const changes=\(up\?\.items\?\?\[\]\)\.length;/);
+ assert.match(home,/const changes=\(up\?\.items\?\?\[\]\)\.length\+\(up\?\.recent\?\?\[\]\)\.length;/);
+ assert.match(home,/last 30 days · \{num\(\(up\.sources\?\?\[\]\)\.length\)\} official sources/);
+});

@@ -29,7 +29,7 @@ type Hot={listings?:Sold[];watched?:number;totalSold?:number;
   products?:Array<{key:string;label:string;listings:number;sold:number}>};
 type Mine={title:string;state:string};
 type Summary={keywords:number;shops:number;phrases:number;needReview:number};
-type Updates={items?:Array<unknown>;sources?:Array<unknown>};
+type Updates={items?:Array<unknown>;recent?:Array<unknown>;sources?:Array<unknown>;checkedAt?:number};
 type Niche={id?:string;name:string;analysis?:{opportunities?:Array<{phrase:string;reviews:number;prior:number;shops:number;listings:number}>}};
 
 const usd=(minor:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",
@@ -154,7 +154,16 @@ export default function PreviewClient(){
     .filter(o=>o.reviews>=5&&o.reviews>o.prior)
     .map(o=>({...o,niche:n.name,id:n.id,gain:o.reviews-o.prior})))
     .sort((a,b)=>b.gain-a.gain).slice(0,3);
-  const changes=(up?.items??[]).length;
+  /*
+    D1897 · A ONE-DAY WINDOW REPORTED ZERO ALMOST EVERY DAY.
+
+    This counted only today's edition, so the front page read "0 changes at
+    Etsy or Printify" on any day nothing new happened to land - which, for
+    sources that publish weekly at best, was almost every day. It looked like a
+    claim that nothing was going on. The window is now the same fortnight the
+    rest of this page works in, and the line says which window it is.
+  */
+  const changes=(up?.items??[]).length+(up?.recent??[]).length;
   /* D1888 · Every figure opens the place it came from. */
   const Watching=()=><div className="watch">
     {moved.map(x=><a className="w-item" key={x.phrase}
@@ -167,10 +176,10 @@ export default function PreviewClient(){
       <b>{num(r.reviews)}</b>
       <div><span><em>{r.phrase}</em> reviews, up from {num(r.prior)}</span>
         <small>{r.shops} shops in your {r.niche} research · last 30 days</small></div></a>)}
-    <a className="w-item quiet" href="/platform-updates">
-      <b>{changes||"0"}</b>
+    {up&&<a className="w-item quiet" href="/platform-updates">
+      <b>{num(changes)}</b>
       <div><span>changes at Etsy or Printify</span>
-        <small>{num((up?.sources??[]).length)} sources checked today</small></div></a>
+        <small>last 30 days · {num((up.sources??[]).length)} official sources</small></div></a>}
     {sum&&sum.needReview>0&&<a className="w-item quiet" href="/trademark">
       <b>{num(sum.needReview)}</b>
       <div><span>watched phrase to review</span>
@@ -187,13 +196,20 @@ export default function PreviewClient(){
     {typeof l.price==="number"&&<span className="price">${l.price.toFixed(2)}</span>}
   </a>;
 
-  const Shelves=({limit=8}:{limit?:number})=><div className="table">
-    <div className="row head"><span>Product</span><span/><span>Sold in 24h</span><span>Your live listings</span></div>
+  /*
+    D1897 · THE COUNT OF HER OWN LISTINGS DID NOT BELONG HERE.
+
+    This column said how many tees or mugs she has live beside how many sold
+    across Etsy. Knowing she has seventy tees listed answers no question this
+    section asks - the section is about what is selling out there - and a number
+    with nothing to compare it against is not a fact anybody acts on.
+  */
+  const Shelves=({limit=8}:{limit?:number})=><div className="table three">
+    <div className="row head"><span>Product</span><span/><span>Sold in 24h</span></div>
     {shelves.slice(0,limit).map(s=><a className="row" key={s.key} href="/hot-list">
       <div><b className="name">{s.label}</b><small>{num(s.listings)} listings sold something</small></div>
       <div><div className="bar now"><i style={{width:`${Math.round(s.sold/peak*100)}%`}}/></div></div>
       <div className="figure">{num(s.sold)}<small>units</small></div>
-      <div className={s.yours?"figure":"figure none"}>{s.yours?num(s.yours):"none"}<small>{s.yours?"live":"in your shop"}</small></div>
     </a>)}
   </div>;
 
