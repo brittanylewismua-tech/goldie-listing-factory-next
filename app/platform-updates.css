@@ -8,9 +8,9 @@
 #suite-workspace .pu-page{
   --g-pink:#ee6fc0;--g-pink-soft:#fdeef7;--g-black:#000;--g-ink2:#46433f;--g-ink3:#8a8580;--g-line:#e4e1de;
   max-width:1120px!important;margin:0 auto!important;padding:0 0 80px!important;
-  font-family:'Manrope Variable',Manrope,Arial,sans-serif!important;color:#000!important;
+  font-family:inherit!important;color:#000!important;
 }
-#suite-workspace .pu-page :is(h1,h2,h3,p,a,button,summary,small,strong,span){font-family:'Manrope Variable',Manrope,Arial,sans-serif!important}
+#suite-workspace .pu-page :is(h1,h2,h3,p,a,button,summary,small,strong,span){font-family:inherit!important}
 #suite-workspace .pu-back{font-size:11px!important;color:var(--g-ink3)!important;text-decoration:none!important}
 #suite-workspace .pu-head{display:flex!important;align-items:end!important;justify-content:space-between!important;gap:20px!important;padding:8px 0 20px!important;border-bottom:2px solid #000!important}
 #suite-workspace .pu-head h1{font-size:36px!important;line-height:1.08!important;letter-spacing:-1.3px!important;font-weight:800!important;margin:8px 0 0!important}
@@ -49,7 +49,7 @@
 #suite-workspace .platform-brief-card{
   border:1.5px solid #000!important;border-left:5px solid var(--g-pink)!important;
   border-radius:12px!important;box-shadow:none!important;background:#fff!important;
-  font-family:'Manrope Variable',Manrope,Arial,sans-serif!important;
+  font-family:inherit!important;
 }
 #suite-workspace .platform-brief-eyebrow{color:var(--g-ink3)!important;font-size:9px!important;letter-spacing:.13em!important}
 #suite-workspace .platform-brief-card h2{font-size:17px!important;font-weight:800!important}
@@ -61,4 +61,44 @@
   #suite-workspace .pu-lead{grid-template-columns:1fr!important}
   #suite-workspace .pu-lead-shot{min-height:220px!important;border-right:0!important;border-bottom:2px solid #000!important}
   #suite-workspace .pu-grid{grid-template-columns:1fr!important}
+}
+
+/* Centered platform filter rail, shared with the rest of the suite. */
+#suite-workspace .pu-tabs{
+  width:max-content!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:4px!important;
+  padding:5px!important;
+  border:1.5px solid #000!important;
+  border-radius:999px!important;
+  background:#f4f2f1!important;
+  box-shadow:3px 3px 0 var(--g-pink)!important;
+}
+#suite-workspace .pu-tab{
+  min-height:38px!important;
+  padding:9px 16px!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  color:var(--g-ink3)!important;
+  font-size:12px!important;
+  font-weight:700!important;
+  letter-spacing:-.01em!important;
+}
+#suite-workspace .pu-tab[aria-pressed=true]{
+  background:#000!important;
+  color:#fff!important;
+}
+@media(max-width:800px){
+  #suite-workspace .pu-tabs{
+    width:100%!important;
+    margin:18px 0 0!important;
+    justify-content:flex-start!important;
+    overflow-x:auto!important;
+    border-radius:14px!important;
+  }
+  #suite-workspace .pu-tab{flex:0 0 auto!important}
 }
