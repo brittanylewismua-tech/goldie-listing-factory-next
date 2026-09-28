@@ -59,6 +59,6 @@ test("Sold Listings uses one toolbar and image-led rows",()=>{
 
 test("Overview renders its scorecard before deeper insights finish",()=>{
   assert.match(client,/view=overview-insights/);
-  assert.match(client,/Loading shop insights/);
+  assert.match(client,/Loading where to focus/);
   assert.match(client,/setMap\(current=>current\?\{\.\.\.current,\.\.\.detail\}:detail\)/);
 });

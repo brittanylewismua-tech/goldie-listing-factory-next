@@ -16,7 +16,7 @@ test("redesigned suite surfaces use literal member-facing copy",()=>{
   assert.ok(research.includes("See all buyer findings →"));
   assert.ok(hot.includes("Loading sales and stock changes…"));
   assert.ok(hot.includes("RESULTS IN THIS PERIOD FOR"));
-  assert.ok(watch.includes("Buyer feedback"));
+  assert.ok(watch.includes("Review themes"));
   assert.ok(watch.includes("Sale-linked changes observed on"));
 });
 
