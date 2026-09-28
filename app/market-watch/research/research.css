@@ -14,7 +14,6 @@
    Scoped to Research only. Listing Factory and shared workflow styles are not
    changed by this pass.
    ========================================================================== */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 #suite-workspace .nr{
   --g-pink:#ee6fc0;
@@ -26,12 +25,12 @@
   --g-line:#e4e1de;
   --g-soft:#f4f2f1;
   max-width:1120px!important;
-  font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif!important;
+  font-family:inherit!important;
   color:var(--g-black)!important;
   padding-bottom:80px!important;
 }
 #suite-workspace .nr :is(h1,h2,h3,p,button,input,textarea,select,a,summary,small,strong,span){
-  font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif!important;
+  font-family:inherit!important;
 }
 #suite-workspace .nr-head{
   padding:4px 0 30px!important;
