@@ -211,3 +211,20 @@ test('each changed article is summarised on its own, not in a blob',()=>{
  /* The item links to the article that changed, not to a help-centre index. */
  assert.match(collector,/url:change\.url/);
 });
+
+test('a pass fits the worker ceiling and never empties the brief',()=>{
+ const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
+ const route=readFileSync(new URL('../app/api/platform-updates/tick/route.ts',import.meta.url),'utf8');
+ /*
+   Measured live: a rebuild cleared every item in milliseconds, then spent
+   longer than maxDuration regenerating them. The worker killed the run, so it
+   never marked itself finished, and the brief sat empty for the full fifteen
+   minute lease while every tick answered "busy".
+ */
+ assert.match(route,/export const maxDuration=300/);
+ assert.match(collector,/const EDIT_BUDGET=6;/);
+ /* Nothing is emptied to refresh it: the write updates in place. */
+ assert.doesNotMatch(collector,/DELETE FROM platform_update_items/,
+   'the brief can be emptied again with nothing written to replace it');
+ assert.match(collector,/ON CONFLICT\(id\) DO UPDATE SET content=excluded\.content/);
+});
