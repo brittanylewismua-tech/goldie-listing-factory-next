@@ -22,11 +22,11 @@ test("Daily Updates uses shop research and Hot List, not trademark or vague move
   assert.match(daily,/started selling since your last check/);
 });
 
-test("Research Daily Update does not borrow an image from the member's Shop Stats",()=>{
+test("Research Daily Update never borrows an image from the member's Shop Stats",()=>{
   const daily=home.slice(home.indexOf("const daily=["),home.indexOf("const up=updates"));
   const research=daily.slice(daily.indexOf('tag:"RESEARCH"'),daily.indexOf('tag:"HOT LIST"'));
-  assert.match(research,/image:null/);
-  assert.doesNotMatch(research,/listings\[[0-9]+\]\?\.imageUrl/);
+  assert.match(research,/image:moved\[0\]\.imageUrl\|\|null/);
+  assert.doesNotMatch(research,/listings\[[0-9]+\]\?\.imageUrl|top30\.imageUrl/);
 });
 
 test("Home keeps the highest-priority platform update first and includes the other platform when available",()=>{
