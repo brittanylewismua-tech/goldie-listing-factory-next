@@ -50,7 +50,6 @@
 .shop-map-bar>span{display:block;height:100%;background:#a33a48}
 .shop-map-evidence{margin:0 12px 8px;font-size:12px;line-height:1.5}
 .shop-map-attention ul{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px;line-height:1.5}
-.shop-map-clear{}
 @media (min-width:700px){.shop-map{padding:28px 20px 64px}}
 /* D1743 · The pink itself reads at 4.81:1; the .7 opacity took it to 3.41.
    Removing the fade keeps the exact brand colour and makes it legible. */
@@ -661,7 +660,6 @@
   object-fit:cover!important;
   border:1px solid var(--g-line)!important;
 }
-#suite-workspace .shop-map-redesign .shop-map-world-bar{}
 #suite-workspace .shop-map-redesign .shop-map-theme-toolbar{
   display:grid!important;
   grid-template-columns:minmax(0,1fr) 180px 180px!important;
@@ -832,3 +830,17 @@
   #suite-workspace .shop-map-redesign .shop-map-world .shop-map-bar,
   #suite-workspace .shop-map-redesign .shop-map-world .shop-map-lifetime{grid-row:auto!important}
 }
+
+#suite-workspace .shop-map-redesign .shop-map-correction-tool{
+  margin-top:24px!important;
+  padding:14px 16px!important;
+  border:1px solid var(--g-line)!important;
+  border-radius:10px!important;
+  background:#fff!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-correction-tool>summary{
+  cursor:pointer!important;
+  font-size:13px!important;
+  font-weight:800!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-correction-tool[open]>summary{margin-bottom:14px!important}
