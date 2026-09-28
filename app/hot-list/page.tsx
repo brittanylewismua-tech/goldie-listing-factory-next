@@ -135,7 +135,7 @@ export default function HotListPage() {
       if(request!==searchRequest.current)return;
       setHits(result.listings ?? []);
       if (!result.listings?.length)
-        setNote(`Nothing matching \u201c${term.trim()}\u201d has recorded activity in this period.`);
+        setNote(`Nothing matching \u201c${term.trim()}\u201d recorded a sale or stock decrease in this period.`);
     } catch (error) {
       if(request===searchRequest.current)setNote(error instanceof Error ? error.message : "That could not be looked up.");
     } finally { if(request===searchRequest.current)setLooking(false); }
@@ -170,7 +170,7 @@ export default function HotListPage() {
           board.products.reduce((sum, p) => sum + p.listings, 0).toLocaleString("en-US")} listings.${
           board.products.reduce((sum, p) => sum + p.listings, 0) > board.listings.length
             ? ` Showing the ${board.listings.length.toLocaleString("en-US")} with the most favorites gained.` : ""}`
-        : "Loading listing activity…"}</p>
+        : "Loading sales and stock changes…"}</p>
     </header>
 
     {error && <section className="drop-error" role="alert">
@@ -180,7 +180,7 @@ export default function HotListPage() {
     </section>}
 
     {!board && !error && <section className="drop-loading">
-      <p className="drop-loading-title">Loading listing activity</p>
+      <p className="drop-loading-title">Loading sales and stock changes</p>
       <span className="drop-loading-track" aria-hidden><i /></span>
       <p className="drop-loading-sub">One moment</p>
     </section>}
@@ -217,7 +217,7 @@ export default function HotListPage() {
         {note && <p className="hot-note" role="status">{note}</p>}
 
         {hits && hits.length > 0 && <section className="hot-hits">
-          <p className="mini-label">ACTIVITY IN THIS PERIOD FOR &ldquo;{searchedTerm}&rdquo;{product!=="all"?` · ${product}`:""}</p>
+          <p className="mini-label">RESULTS IN THIS PERIOD FOR &ldquo;{searchedTerm}&rdquo;{product!=="all"?` · ${product}`:""}</p>
           <div className="drop-grid">
             {hits.map(hit => <figure key={hit.listingId} className="drop-card">
               <a href={hit.url} target="_blank" rel="noopener noreferrer" className="drop-shot">
@@ -256,7 +256,7 @@ export default function HotListPage() {
           ? <section className="drop-loading">
               <p className="drop-loading-title">Getting started</p>
               <span className="drop-loading-track" aria-hidden><i /></span>
-              <p className="drop-loading-sub">No activity is available yet. Try again later.</p>
+              <p className="drop-loading-sub">No sales or stock changes are available yet. Try again later.</p>
             </section>
           : board.listings.length === 0
             ? <section className="drop-loading">
@@ -318,7 +318,7 @@ export default function HotListPage() {
                 </figure>)}
 
                 {shown.length === 0 && <p className="drop-none">
-                  No activity was recorded for {product} in this period.</p>}
+                  No sales or stock decreases were recorded for {product} in this period.</p>}
               </section>
             </>}</>}
       </div>
