@@ -175,7 +175,16 @@ test("the page labels observed activity without unnecessary explanations", () =>
   assert.doesNotMatch(page, /How these listings are selected/);
   assert.match(page, /favorites/);
   assert.match(page, /Stock decreased/);
-  assert.match(page, /Browse Etsy listing activity/i);
+  /*
+    D1906 · The heading was "Recent listing activity", which describes nothing
+    and does not correspond to the figure that brings a reader here. A row
+    reading "T-shirts sold 698 times" linking to "recent listing activity" is a
+    non sequitur; the page has to make the same claim the number did.
+  */
+  assert.match(page, /What sold on Etsy \{view\.hours >= 168 \? "this week" : "in the last 24 hours"\}/);
+  assert.doesNotMatch(strip(page), /Recent listing activity/);
+  /* And it still must not narrate how the count was produced. */
+  assert.doesNotMatch(strip(page), /being watched/i);
   for (const leak of [/compare/i, /reading before/i, /listings we watch/i])
     assert.doesNotMatch(strip(page), leak,
       `the page must not describe how the count is produced: ${leak}`);
@@ -785,4 +794,27 @@ test("an exact figure is distinguished from a corroborated one", () => {
   const page = read("hot-list/page.tsx");
   assert.doesNotMatch(page, /card.sold/);
   assert.match(page, /Stock decreased/);
+});
+
+test("a parked unlock ladder does not still lock the board", () => {
+  const route = read("api/sold-overnight/route.ts");
+  /*
+    Measured live: 272 T-shirt listings sold something in 24 hours and the page
+    showed two. The board was cut to twelve listings across every product
+    family, 388 held, behind an unlock ladder that is parked - the keyword
+    search on the same feature says so and is deliberately not gated, but the
+    board never got the same treatment. A sample of twelve, presented with no
+    sign it was a sample.
+  */
+  assert.match(route, /const LADDER_PARKED = true;/);
+  assert.match(route, /const unlocked = LADDER_PARKED/);
+});
+
+test("clicking a product family lands on that product family", () => {
+  const home = read("home-preview/preview-client.tsx");
+  const page = read("hot-list/page.tsx");
+  /* The row linked to a bare /hot-list, which opened on everything and left
+     the reader to find the product they had just clicked. */
+  assert.match(home, /\/hot-list\?product=\$\{encodeURIComponent\(s\.key\)\}/);
+  assert.match(page, /new URLSearchParams\(window\.location\.search\)\.get\("product"\)/);
 });

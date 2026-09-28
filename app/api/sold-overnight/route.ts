@@ -45,7 +45,24 @@ export const GET = withErrorLog("sold-overnight", async (request: Request) => {
     unlock scheme would be a second thing to learn for no reason — this is one
     more shelf in the same shop, not a separate reward system.
   */
-  const unlocked = streak.hit || unlocks.milestones.some(m => m.key === "full-drop" && m.unlocked);
+  /*
+    D1906 · A PARKED LADDER WAS STILL LOCKING THE DOOR.
+
+    Measured live: 272 T-shirt listings sold something in the last 24 hours and
+    the page showed two, because the board was cut to twelve listings across
+    every product family and the remaining 388 were held. The unlock ladder is
+    parked - it says so in this file's sibling, over the keyword search, and it
+    is why that search is not gated - but the board never got the same
+    treatment, so a seller looking at their own product families saw a sample
+    of twelve and no indication that it was one.
+
+    The machinery stays; LADDER_PARKED is the single line to flip when the
+    ladder is picked back up. Until then the board is not sliced, and `held` is
+    honestly zero rather than a number nobody can act on.
+  */
+  const LADDER_PARKED = true;
+  const unlocked = LADDER_PARKED
+    || streak.hit || unlocks.milestones.some(m => m.key === "full-drop" && m.unlocked);
   const listings = unlocked ? board.listings : board.listings.slice(0, PREVIEW);
 
   return NextResponse.json({

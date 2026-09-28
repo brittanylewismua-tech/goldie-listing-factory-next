@@ -206,7 +206,7 @@ export default function PreviewClient(){
   */
   const Shelves=({limit=8}:{limit?:number})=><div className="table three">
     <div className="row head"><span>Product</span><span/><span>Sold in 24h</span></div>
-    {shelves.slice(0,limit).map(s=><a className="row" key={s.key} href="/hot-list">
+    {shelves.slice(0,limit).map(s=><a className="row" key={s.key} href={`/hot-list?product=${encodeURIComponent(s.key)}`}>
       <div><b className="name">{s.label}</b><small>{num(s.listings)} listings sold something</small></div>
       <div><div className="bar now"><i style={{width:`${Math.round(s.sold/peak*100)}%`}}/></div></div>
       <div className="figure">{num(s.sold)}<small>units</small></div>

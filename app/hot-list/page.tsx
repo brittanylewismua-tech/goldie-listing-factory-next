@@ -48,7 +48,15 @@ const money = (value: number | null, currency: string) =>
 export default function HotListPage() {
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
-  const [product, setProduct] = useState("all");
+  /*
+    D1906 · Arriving from "T-shirts sold 698 times" now lands on T-shirts.
+    The row linked to a bare /hot-list, which opened on everything and left the
+    reader to find the product they had just clicked.
+  */
+  const [product, setProduct] = useState(() => {
+    if (typeof window === "undefined") return "all";
+    return new URLSearchParams(window.location.search).get("product") || "all";
+  });
   const [view, setView] = useState(VIEWS[0]);
   /* Which periods there is enough history to answer. Never shown, only used
      to decide what may be asked for. */
@@ -136,8 +144,17 @@ export default function HotListPage() {
   return <FactoryShell active="hotlist" title="Hot List"><div className="drop-page sold-page interior-page">
     <header className="drop-head">
       <p className="mini-label">HOT LIST</p>
-      <h1>Recent listing activity</h1>
-      <p>Browse Etsy listing activity from {view.hours >= 168 ? "this week" : "the last 24 hours"}.</p>
+      {/*
+          D1906 · "Recent listing activity" described nothing. The page is a
+          record of what sold, counted from stock falling across the listings
+          being watched, and the figure that brings a reader here is a number
+          of units - so the heading has to be the same claim, or the two do not
+          correspond and the link is a non sequitur.
+      */}
+      <h1>What sold on Etsy {view.hours >= 168 ? "this week" : "in the last 24 hours"}</h1>
+      <p>{board
+        ? `${board.totalSold.toLocaleString("en-US")} units across ${board.listings.length.toLocaleString("en-US")} listings.`
+        : "Loading."}</p>
     </header>
 
     {error && <section className="drop-error" role="alert">
