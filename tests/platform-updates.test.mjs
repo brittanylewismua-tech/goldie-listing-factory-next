@@ -133,3 +133,12 @@ test('a roundup of six new tools is not capped at one item',()=>{
  assert.match(collector,/if\(rejected&&!items\.length\)/,
    'a single bad candidate throws away the whole source again');
 });
+
+test('the output budget follows the number of items asked for',()=>{
+ const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
+ /* Measured live after the cap was lifted: "Unterminated string in JSON at
+    position 7340". The reply was cut off mid-item and the source failed to
+    parse, so raising the cap produced fewer items than before. */
+ assert.doesNotMatch(collector,/max_tokens:1800/);
+ assert.match(collector,/max_tokens:900\+maxItems\*700/);
+});
