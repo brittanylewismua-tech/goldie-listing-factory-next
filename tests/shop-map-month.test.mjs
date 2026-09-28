@@ -32,9 +32,9 @@ test("anything unparseable is shown as it came, not guessed", () => {
   assert.equal(monthName(undefined), "");
 });
 
-test("the page renders it through the function", () => {
+test("the page keeps raw month keys out of the page header", () => {
   const source = readFileSync(new URL(
     "../app/shop-map/shop-map-client.tsx", import.meta.url), "utf8");
-  assert.match(source, /monthName\(shown\.month\)/);
+  assert.match(source, /current-kicker">YOUR SHOP/);
   assert.ok(!/<p>\{shown\.month\}<\/p>/.test(source));
 });
