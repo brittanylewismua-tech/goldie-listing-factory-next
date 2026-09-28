@@ -4,14 +4,14 @@
 /* ==========================================================================
    GOLDIE SUITE · ETSY + PRINTIFY UPDATES VISUAL SYSTEM
    ========================================================================== */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+500;600;700;800&display=swap');
 
 #suite-workspace .pu-page{
   --g-pink:#ee6fc0;--g-pink-soft:#fdeef7;--g-black:#000;--g-ink2:#46433f;--g-ink3:#8a8580;--g-line:#e4e1de;
   max-width:1120px!important;margin:0 auto!important;padding:0 0 80px!important;
-  font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif!important;color:#000!important;
+  font-family:'Manrope Variable',Manrope,Arial,sans-serif!important;color:#000!important;
 }
-#suite-workspace .pu-page :is(h1,h2,h3,p,a,button,summary,small,strong,span){font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif!important}
+#suite-workspace .pu-page :is(h1,h2,h3,p,a,button,summary,small,strong,span){font-family:'Manrope Variable',Manrope,Arial,sans-serif!important}
 #suite-workspace .pu-back{font-size:11px!important;color:var(--g-ink3)!important;text-decoration:none!important}
 #suite-workspace .pu-head{display:flex!important;align-items:end!important;justify-content:space-between!important;gap:20px!important;padding:8px 0 20px!important;border-bottom:2px solid #000!important}
 #suite-workspace .pu-head h1{font-size:36px!important;line-height:1.08!important;letter-spacing:-1.3px!important;font-weight:800!important;margin:8px 0 0!important}
@@ -50,7 +50,7 @@
 #suite-workspace .platform-brief-card{
   border:1.5px solid #000!important;border-left:5px solid var(--g-pink)!important;
   border-radius:12px!important;box-shadow:none!important;background:#fff!important;
-  font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif!important;
+  font-family:'Manrope Variable',Manrope,Arial,sans-serif!important;
 }
 #suite-workspace .platform-brief-eyebrow{color:var(--g-ink3)!important;font-size:9px!important;letter-spacing:.13em!important}
 #suite-workspace .platform-brief-card h2{font-size:17px!important;font-weight:800!important}
