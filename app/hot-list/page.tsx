@@ -83,7 +83,8 @@ export default function HotListPage() {
   const [note, setNote] = useState("");
 
   const boardRequest=useRef(0),searchRequest=useRef(0);
-  const load = (next = view, custom = madeToOrder, licensed = rights, preferLongest=false) => {
+  const load = (next = view, custom = madeToOrder, licensed = rights, preferLongest=false,
+    keepProduct=false) => {
     const request=++boardRequest.current;++searchRequest.current;setLooking(false);
     setBoard(null); setError(""); setView(next); setHits(null); setNote("");
     setMadeToOrder(custom); setRights(licensed);
@@ -96,7 +97,12 @@ export default function HotListPage() {
         if (!response.ok) throw new Error(result.error || "This could not be loaded.");
         if(request!==boardRequest.current)return;
         setBoard(result);
-        setProduct("all");
+        /* D1907 · The first load reset the filter to everything, which threw
+           away the ?product= the reader arrived with: clicking T-shirts landed
+           on T-shirts and then immediately un-filtered itself. Switching period
+           or toggling a filter still resets, because those change what the
+           board contains. */
+        if (!keepProduct) setProduct("all");
         setCovered(result.coveredHours ?? 0);
         const list = VIEWS.filter(v => (result.coveredHours ?? 0) >= v.hours);
         /* The longest honourable period leads. Once a week of history exists
@@ -106,7 +112,7 @@ export default function HotListPage() {
       })
       .catch(e => {if(request===boardRequest.current)setError(e instanceof Error ? e.message : "This could not be loaded.")});
   };
-  useEffect(() => { load(VIEWS[0],false,false,true); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => { load(VIEWS[0],false,false,true,true); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   /*
     LOOK A PHRASE UP AGAINST WHAT SOLD.

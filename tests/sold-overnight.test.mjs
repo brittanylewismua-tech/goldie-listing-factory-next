@@ -817,6 +817,9 @@ test("clicking a product family lands on that product family", () => {
      the reader to find the product they had just clicked. */
   assert.match(home, /\/hot-list\?product=\$\{encodeURIComponent\(s\.key\)\}/);
   assert.match(page, /new URLSearchParams\(window\.location\.search\)\.get\("product"\)/);
+  /* And the first load must not immediately throw that choice away. */
+  assert.match(page, /if \(!keepProduct\) setProduct\("all"\);/);
+  assert.match(page, /load\(VIEWS\[0\],false,false,true,true\)/);
 });
 
 test("the count is of listings that sold, not of listings displayed", () => {
