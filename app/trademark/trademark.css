@@ -410,3 +410,39 @@
   #suite-workspace .tm-results-toolbar label{display:block!important;margin-top:12px!important}
   #suite-workspace .tm-watch-list article{grid-template-columns:1fr auto!important}
 }
+
+/* Make the checker itself the primary surface. */
+#suite-workspace .tm-page .tm-form{
+  padding:10px!important;
+  border:2px solid #000!important;
+  border-radius:14px!important;
+  background:#fff!important;
+  box-shadow:4px 4px 0 var(--g-pink)!important;
+  margin-bottom:16px!important;
+}
+#suite-workspace .tm-page .tm-form input{
+  border:0!important;
+  border-radius:8px!important;
+  background:#f8f7f8!important;
+}
+#suite-workspace .tm-page .tm-form input:focus{
+  box-shadow:inset 0 0 0 1.5px #000!important;
+}
+#suite-workspace .tm-watches-head h2 span{
+  display:inline-grid!important;
+  place-items:center!important;
+  min-width:24px!important;
+  height:24px!important;
+  margin-left:6px!important;
+  padding:0 7px!important;
+  border-radius:999px!important;
+  background:var(--g-pink)!important;
+  color:#000!important;
+  font-size:10px!important;
+  vertical-align:middle!important;
+}
+#suite-workspace .tm-watches-head p{
+  margin:5px 0 0!important;
+  color:var(--g-ink-3)!important;
+  font-size:11px!important;
+}
