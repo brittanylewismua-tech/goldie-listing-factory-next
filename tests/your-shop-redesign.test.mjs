@@ -13,11 +13,14 @@ test("Your Shop defaults to Overview and requests only the active tab",()=>{
   assert.match(client,/new URLSearchParams\(\{view:tab\}\)/);
 });
 
-test("Your Numbers and Sold Listings return before world building",()=>{
+test("Your Numbers, Sold Listings, and the first Overview render return before world building",()=>{
   const sold=route.indexOf('if(view==="sold")');
   const money=route.indexOf('if(view==="money")');
+  const overview=route.indexOf('if(view==="overview")');
+  const listings=route.indexOf("/* ------------------------------------------------------------- listings */");
   const worlds=route.indexOf("/* --------------------------------------------------------------- worlds */");
-  assert.ok(sold>-1&&money>-1&&worlds>-1&&sold<worlds&&money<worlds);
+  assert.ok(money>-1&&money<listings,"Your Numbers is scanning the listing catalog again");
+  assert.ok(sold>-1&&overview>-1&&worlds>-1&&sold<worlds&&overview<worlds);
 });
 
 test("tab reads do not block on live Etsy display refreshes",()=>{
@@ -51,4 +54,11 @@ test("Sold Listings uses one toolbar and image-led rows",()=>{
   assert.match(sold,/shop-map-sold-toolbar/);
   assert.match(sold,/shop-map-sold-grid/);
   assert.doesNotMatch(sold,/shop-map-sold-table/);
+});
+
+
+test("Overview renders its scorecard before deeper insights finish",()=>{
+  assert.match(client,/view=overview-insights/);
+  assert.match(client,/Loading shop insights/);
+  assert.match(client,/setMap\(current=>current\?\{\.\.\.current,\.\.\.detail\}:detail\)/);
 });
