@@ -5,7 +5,6 @@ import {browseOwnListings} from "@/app/market-listing-browser";
 import {designsOnOneProduct,familyLabel,shortLabel,type Reach,type ReachListing} from "@/app/design-reach";
 import type {CatalogAction} from "@/app/shop-map-actions";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { monthName } from "@/app/shop-map-month";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
 type Niche = {
@@ -369,7 +368,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       <div className="shop-map-sold-toolbar"><label>Period<select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label><label className="search">Search<input type="search" value={soldQuery} onChange={e=>setSoldQuery(e.target.value)} placeholder="Find a listing"/></label><label>Sort<select value={soldSort} onChange={e=>setSoldSort(e.target.value as "sales"|"revenue")}><option value="sales">Most units sold</option><option value="revenue">Highest revenue</option></select></label></div>
       {!refreshing&&browseOwnListings(sold,soldSort,soldQuery).length!==sold.length
         &&<p role="status">{browseOwnListings(sold,soldSort,soldQuery).length} of {sold.length} sold listings match your search</p>}
-      {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-grid">
+      {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-grid" aria-label="Listings">
         {browseOwnListings(sold,soldSort,soldQuery).map(listing => <article key={listing.listingId}>{listing.imageUrl ? <img src={listing.imageUrl} alt="" loading="lazy"/> : <i>G</i>}
           <div><strong><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{shortLabel(listing.title)}</a></strong><small>{listing.sales} unit{listing.sales===1?"":"s"} sold</small></div><b>{money(listing.revenueMinor)}</b></article>)}</div>}
     </section>}
