@@ -844,3 +844,89 @@
   font-weight:800!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-correction-tool[open]>summary{margin-bottom:14px!important}
+
+
+/* YOUR SHOP VISUAL REPAIR · one alignment system, no floating pill rail. */
+#suite-workspace .shop-map-redesign .shop-map-head{
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:4px 0 24px!important;
+  text-align:left!important;
+  border-bottom:0!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-head>div{
+  width:100%!important;
+  max-width:none!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-head h1{
+  margin:7px 0 8px!important;
+  font-size:40px!important;
+  line-height:1.05!important;
+  letter-spacing:-1.65px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-head>div>p:last-child{
+  max-width:760px!important;
+  margin:0!important;
+  font-size:13px!important;
+  line-height:1.55!important;
+}
+
+#suite-workspace .shop-map-redesign .shop-map-tabs{
+  width:100%!important;
+  max-width:none!important;
+  margin:0 0 40px!important;
+  padding:0 0 10px!important;
+  display:flex!important;
+  justify-content:flex-start!important;
+  align-items:center!important;
+  gap:8px!important;
+  border:0!important;
+  border-bottom:1.5px solid #000!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-tabs button{
+  min-height:42px!important;
+  padding:10px 15px!important;
+  border:1px solid transparent!important;
+  border-radius:9px!important;
+  background:transparent!important;
+  color:var(--g-ink-2)!important;
+  font-size:12px!important;
+  font-weight:750!important;
+  letter-spacing:-.01em!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-tabs button:hover{
+  border-color:var(--g-line)!important;
+  background:var(--g-pink-soft)!important;
+  color:#000!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-tabs button[aria-current=page]{
+  border-color:#000!important;
+  background:#000!important;
+  color:#fff!important;
+  box-shadow:3px 3px 0 var(--g-pink)!important;
+}
+
+@media(max-width:650px){
+  #suite-workspace .shop-map-redesign .shop-map-head h1{font-size:34px!important}
+  #suite-workspace .shop-map-redesign .shop-map-tabs{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    justify-content:flex-start!important;
+    gap:6px!important;
+    padding-bottom:12px!important;
+    border-radius:0!important;
+    scrollbar-width:none!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-tabs::-webkit-scrollbar{display:none!important}
+  #suite-workspace .shop-map-redesign .shop-map-tabs button{
+    flex:0 0 auto!important;
+    padding-inline:13px!important;
+  }
+}
