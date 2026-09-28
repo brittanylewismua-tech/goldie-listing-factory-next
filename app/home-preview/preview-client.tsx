@@ -7,7 +7,6 @@ type MapData={shop?:{shopName?:string};shopTotals?:{ordersLast30:number;revenueL
 type Home={niches?:Array<{phrase:string;newly:number}>};
 type Sold={listingId:number;title:string;image:string|null;price:number|null;savesGained:number;sold:number;url:string;product?:string};
 type Hot={listings?:Sold[];watched?:number;totalSold?:number;products?:Array<{key:string;label:string;listings:number;sold:number}>};
-type Summary={phrases:number;needReview:number};
 type UpdateItem={id?:string;platform:"Etsy"|"Printify";title:string;impact?:string;action?:string;sourceUrl:string;imageUrl?:string|null;priority?:string;publishedAt:number};
 type Updates={items?:UpdateItem[];recent?:Array<UpdateItem&{day?:string}>;sources?:Array<unknown>;checkedAt?:number};
 type Niche={id?:string;name:string;analysis?:{opportunities?:Array<{phrase:string;reviews:number;prior:number;shops:number;listings:number}>}};
@@ -27,7 +26,6 @@ export default function PreviewClient({platformUpdate,firstName}:{platformUpdate
   const [batch,setBatch]=useState<Batch|null>(null);
   const [homeLoaded,setHomeLoaded]=useState(false);
   const [updatesLoaded,setUpdatesLoaded]=useState(false);
-  const [nichesLoaded,setNichesLoaded]=useState(false);
   const [batchLoaded,setBatchLoaded]=useState(false);
 
   useEffect(()=>{
@@ -46,7 +44,7 @@ export default function PreviewClient({platformUpdate,firstName}:{platformUpdate
         return d?.project?{...d.project,id:p.id}:null;
       }));
       setNiches(details.filter(Boolean) as Niche[]);
-    }).catch(()=>undefined).finally(()=>setNichesLoaded(true));
+    }).catch(()=>undefined);
   },[]);
 
   const map=maps[period]??maps[90];
@@ -73,11 +71,10 @@ export default function PreviewClient({platformUpdate,firstName}:{platformUpdate
     topHotProduct?{tag:"HOT LIST",title:topHotProduct.label+" led the Hot List overnight.",body:num(topHotProduct.sold)+" unit"+(topHotProduct.sold===1?"":"s")+" across "+num(topHotProduct.listings)+" tracked listing"+(topHotProduct.listings===1?"":"s")+".",href:"/hot-list?product="+encodeURIComponent(topHotProduct.key),image:hotImage}:null
   ].filter(Boolean) as Array<{tag:string;title:string;body:string;href:string;image?:string|null}>;
   const up=updates;
-  const changes=(up?.items??[]).length+(up?.recent??[]).length;
   const allPlatform=[...(updates?.items??[]),...(updates?.recent??[])].sort((a,b)=>(Number(b.priority==="ACTION REQUIRED")-Number(a.priority==="ACTION REQUIRED"))||b.publishedAt-a.publishedAt);
-  const bestEtsy=allPlatform.find(item=>item.platform==="Etsy");
-  const bestPrintify=allPlatform.find(item=>item.platform==="Printify");
-  const platformSeed=[bestEtsy,bestPrintify].filter(Boolean) as UpdateItem[];
+  const leadPlatform=allPlatform[0]??null;
+  const otherPlatform=leadPlatform?allPlatform.find(item=>item.platform!==leadPlatform.platform):null;
+  const platformSeed=[leadPlatform,otherPlatform].filter(Boolean) as UpdateItem[];
   const platform=[...platformSeed,...allPlatform.filter(item=>!platformSeed.includes(item))]
     .filter((item,index,array)=>array.findIndex(other=>(other.id||other.title)===(item.id||item.title))===index)
     .slice(0,4);
