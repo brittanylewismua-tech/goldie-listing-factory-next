@@ -13,3 +13,16 @@ function editor(outputs){const prompts=[],billed=[];const run=make({MODEL:'test'
 test('an invalid generated update gets one evidence-constrained retry and only the validated result survives',async()=>{const e=editor([[{...good,quote:'This invented quote is not in the source document.'}],[good]]);const items=await e.run();assert.equal(items.length,1);assert.equal(items[0].title,good.title);assert.equal(e.prompts.length,2);assert.match(JSON.parse(e.prompts[1]).validationFeedback,/failed validation/);assert.deepEqual(e.billed,['failed','settled']);});
 test('two invalid summaries remain a failure rather than publishing invented facts or claiming no changes',async()=>{const bad={...good,sourceUrl:'https://example.com/fake'};const e=editor([[bad],[bad]]);await assert.rejects(e.run,/Update evidence needs review/);assert.equal(e.prompts.length,2);assert.deepEqual(e.billed,['failed','failed']);});
 test('valid summaries never incur an unnecessary repair call',async()=>{const e=editor([[good]]);assert.equal((await e.run()).length,1);assert.equal(e.prompts.length,1);});
+
+test('the retry survives a change to the failure message',async()=>{
+ /* D1919 · The repair branch matched the message by exact equality, so adding
+    the rejected quote to it silently disabled the one retry this loop exists
+    for - a diagnostic improvement that would have cost every borderline item
+    its second chance. */
+ const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
+ assert.doesNotMatch(collector,/error\.message==='Update evidence needs review'/);
+ assert.match(collector,/error\.message\.startsWith\('Update evidence needs review'\)/);
+ /* And the message has to say which field failed, or a failure is unreadable
+    from the outside - which cost three deploys of guessing. */
+ assert.match(collector,/quote not found in source/);
+});

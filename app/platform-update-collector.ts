@@ -50,12 +50,24 @@ async function summarize(source:Source,previous:string,current:string,added:stri
  */
  const items=[];let rejected:unknown=null;
  for(const raw of parsed.items.slice(0,maxItems)){const item=validateCandidate(raw,source,current,added);if(!item){rejected=raw;continue;}const old=seen.find(s=>s.platform===item.platform&&s.topic===item.topic);if(old&&(!raw.meaningfulRevision||old.title===item.title&&old.impact===item.impact&&old.action===item.action))continue;items.push({...item,id:await hashText(source.platform+'|'+item.topic+'|'+String(raw.quote)),publishedAt:Math.floor(Date.now()/1000)});}
- if(rejected&&!items.length){const error=new Error('Update evidence needs review');Object.assign(error,{candidate:rejected});throw error;}
+ if(rejected&&!items.length){
+  /*
+    D1919 · "Update evidence needs review" named the symptom and nothing else,
+    so three deploys in a row were spent guessing which field had failed. The
+    rejected quote goes in the message: it is the field that fails most often,
+    it is the only one whose failure is invisible from the outside, and it is
+    the platform's own words rather than anything private.
+  */
+  const why=String((rejected as {quote?:unknown})?.quote??'').slice(0,90);
+  const error=new Error(`Update evidence needs review${why?` · quote not found in source: "${why}"`:' · no quote offered'}`);
+  Object.assign(error,{candidate:rejected});throw error;}
  await recordFalUsage({model:MODEL,cost,inputTokens:Number(result.usage?.prompt_tokens||0),outputTokens:Number(result.usage?.completion_tokens||0),workload:'platformUpdateBrief'});await settleSpend(reservation.id,cost);return items;
  }catch(error){await failSpend(reservation.id,{billed:cost});
  // Retry an invalid generated candidate once, using the same source evidence.
  // A second invalid result stays a source failure; it cannot become an all-clear.
- if(!repair&&error instanceof Error&&error.message==='Update evidence needs review'){
+ /* D1919 · Matched by exact equality, so putting the rejected quote into the
+ // message silently disabled the one retry this loop exists for. */
+ if(!repair&&error instanceof Error&&error.message.startsWith('Update evidence needs review')){
   return summarize(source,previous,current,added,seen,`Your previous candidate failed validation: ${JSON.stringify((error as Error&{candidate?:unknown}).candidate)}. Recheck every field. The quote must be copied exactly from both current and added text, 25–300 characters. The sourceUrl must be an exact official article URL present in current text. Respect all length limits and evidence rules. Return no item if the text does not prove a meaningful change.`,firstRead,maxItems);
  }
  throw error;}
