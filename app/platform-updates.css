@@ -102,3 +102,16 @@
   }
   #suite-workspace .pu-tab{flex:0 0 auto!important}
 }
+
+#suite-workspace .pu-card{
+  transition:transform .15s ease,box-shadow .15s ease!important;
+}
+#suite-workspace .pu-card:hover{
+  transform:translate(-2px,-2px)!important;
+  box-shadow:5px 5px 0 var(--g-pink)!important;
+  border:1.5px solid #000!important;
+  border-top-width:2px!important;
+  border-radius:10px!important;
+  padding:14px!important;
+}
+#suite-workspace .pu-card[data-priority="ACTION REQUIRED"]:hover{border-top-width:4px!important}
