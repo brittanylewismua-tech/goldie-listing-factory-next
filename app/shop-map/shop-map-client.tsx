@@ -259,25 +259,26 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       Your shop data could not load. Try again.
     </p></main>;
   if (!shown)
-    /*
-      D1604 · A sentence on a white page was the whole loading state, and Shop
-      Map takes a few seconds to read a shop. The shape of what is coming is
-      drawn instead, so the wait has somewhere to land and the page does not
-      jump when it arrives.
-    */
-    return <main className="shop-map p-grid">
-      <div className="p-page">
-        <div className="p-head">
-          <p className="p-eyebrow">Your shop</p>
-          <div className="p-skeleton p-skeleton-line" style={{ width: "40%", height: 26 }} />
-          <div className="p-skeleton p-skeleton-line" style={{ width: "62%" }} />
-        </div>
-        <p className="shop-map-state" role="status">Loading your shop…</p>
-        <div className="p-stack" aria-hidden="true">
-          <div className="p-skeleton p-skeleton-card" />
-          <div className="p-skeleton p-skeleton-card" />
-          <div className="p-skeleton p-skeleton-card" />
-        </div>
+    return <main className="shop-map shop-map-redesign">
+      <header className="shop-map-head current-page-heading"><div>
+        <p className="current-kicker">YOUR SHOP</p>
+        <h1>Your shop</h1>
+        <p>Loading your connected shop and latest performance…</p>
+      </div></header>
+      <nav className="shop-map-tabs" aria-label="Your shop sections">
+        <button type="button" aria-current="page" disabled>Your numbers</button>
+        <button type="button" disabled>Overview</button>
+        <button type="button" disabled>Product themes</button>
+        <button type="button" disabled>Sold listings</button>
+      </nav>
+      <section className="shop-map-progressive-loading" role="status">
+        <span className="shop-map-loader-dot" aria-hidden="true"/>
+        <div><strong>Loading your shop data…</strong>
+        <p>The page is ready. Etsy totals and product performance are filling in now.</p></div>
+      </section>
+      <div className="shop-map-loading-grid" aria-hidden="true">
+        <div className="p-skeleton p-skeleton-card"/><div className="p-skeleton p-skeleton-card"/>
+        <div className="p-skeleton p-skeleton-card"/>
       </div>
     </main>;
 
