@@ -141,3 +141,20 @@
 
 #suite-workspace .pu-loader-dot{width:10px;height:10px;border-radius:50%;background:var(--g-pink)!important;box-shadow:0 0 0 0 #ee6fc066;animation:pu-loader-pulse 1.3s ease-out infinite;flex:none}
 @keyframes pu-loader-pulse{70%{box-shadow:0 0 0 8px #ee6fc000}100%{box-shadow:0 0 0 0 #ee6fc000}}
+
+/* Keep the page title editorial and center the platform switcher beneath it. */
+#suite-workspace .pu-head{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  justify-items:stretch!important;
+  align-items:start!important;
+  gap:18px!important;
+}
+#suite-workspace .pu-tabs{
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+@media(max-width:800px){
+  #suite-workspace .pu-head{gap:0!important}
+  #suite-workspace .pu-tabs{margin-left:0!important;margin-right:0!important}
+}
