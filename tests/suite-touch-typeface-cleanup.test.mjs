@@ -1,1 +1,29 @@
-import test from "node:test";\nimport assert from "node:assert/strict";\nimport { readFileSync } from "node:fs";\n\nconst files=[\n  "app/market-watch/research/research.css",\n  "app/market-watch/market-watch.css",\n  "app/hot-list/hot-list.css",\n  "app/trademark/trademark.css",\n  "app/shop-map/shop-map.css",\n  "app/connections/connections.css",\n];\n\ntest("suite pages do not force inherit with !important",()=>{\n  for(const file of files){\n    const css=readFileSync(file,"utf8");\n    assert.doesNotMatch(css,/font-family\s*:\s*inherit\s*!important/i,file);\n  }\n});\n\ntest("suite navigation and compact action controls keep 40px touch targets",()=>{\n  const research=readFileSync("app/market-watch/research/research.css","utf8");\n  const hot=readFileSync("app/hot-list/hot-list.css","utf8");\n  const tm=readFileSync("app/trademark/trademark.css","utf8");\n  const shop=readFileSync("app/shop-map/shop-map.css","utf8");\n  for(const css of [research,hot,tm,shop]){\n    assert.doesNotMatch(css,/min-height:(?:30|32|34|38)px!important/);\n  }\n});\n
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+const files=[
+  "app/market-watch/research/research.css",
+  "app/market-watch/market-watch.css",
+  "app/hot-list/hot-list.css",
+  "app/trademark/trademark.css",
+  "app/shop-map/shop-map.css",
+  "app/connections/connections.css",
+];
+
+test("suite pages do not force inherit with !important",()=>{
+  for(const file of files){
+    const css=readFileSync(file,"utf8");
+    assert.doesNotMatch(css,/font-family\s*:\s*inherit\s*!important/i,file);
+  }
+});
+
+test("suite navigation and compact action controls keep 40px touch targets",()=>{
+  const research=readFileSync("app/market-watch/research/research.css","utf8");
+  const hot=readFileSync("app/hot-list/hot-list.css","utf8");
+  const tm=readFileSync("app/trademark/trademark.css","utf8");
+  const shop=readFileSync("app/shop-map/shop-map.css","utf8");
+  for(const css of [research,hot,tm,shop]){
+    assert.doesNotMatch(css,/min-height:(?:30|32|34|38)px!important/);
+  }
+});
