@@ -267,6 +267,57 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setBusy("");
   };
 
+  /*
+    A CORRECTION THAT FAILED MUST NOT LOOK LIKE ONE THAT WORKED.
+
+    This swallowed every failure and reloaded the map, so a member who moved a
+    listing into the wrong niche and was refused saw the listing sitting
+    exactly where it had been, with no error — indistinguishable from a move
+    that had been saved and then correctly shown. Correcting a classification
+    is the one thing on this page a member does TO their data, so it is the
+    one place silence is least affordable.
+  */
+  const [correctionFailed, setCorrectionFailed] = useState("");
+
+  const moveListing = async (listingId: number, nicheId: string) => {
+    setBusy(`move:${listingId}`);
+    setCorrectionFailed("");
+    try {
+      const response = await fetch("/api/shop-map/correct", { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "move-listing", listingId,
+          worldIds: nicheId === "unclassified" ? [] : [nicheId] }) });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        setCorrectionFailed(body.error
+          ?? "That change could not be saved. The listing is where it was.");
+      }
+    } catch {
+      setCorrectionFailed("That change could not be saved. The listing is where it was.");
+    }
+    await load();
+    setBusy("");
+  };
+
+  const clearCorrection = async (listingId: number) => {
+    setBusy(`clear:${listingId}`);
+    setCorrectionFailed("");
+    try {
+      const response = await fetch("/api/shop-map/correct", { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear-correction", listingId }) });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({})) as { error?: string };
+        setCorrectionFailed(body.error
+          ?? "That correction could not be cleared. It is still in place.");
+      }
+    } catch {
+      setCorrectionFailed("That correction could not be cleared. It is still in place.");
+    }
+    await load();
+    setBusy("");
+  };
+
   const shown = refreshing ? null : (map ?? lastGood);
 
   if (!shown && failed)
@@ -369,10 +420,11 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           <span className="shop-map-lifetime">Lifetime: {money(niche.lifetimeRevenueMinor)} · {niche.lifetimeUnits??"—"} units</span>
         </button>{open === niche.worldId ? <div className="shop-map-evidence"><p>{niche.evidence}</p>
           <p>{niche.listings} total listings: {niche.activeListings} active and {Math.max(0,niche.listings-niche.activeListings)} inactive. Sales below cover the last 90 days.</p>
-          <div className="shop-map-theme-toolbar"><label>Search<input type="search" value={themeQuery} onChange={e=>setThemeQuery(e.target.value)} placeholder="Find a listing"/></label><label>Status<select value={themeState} onChange={e=>setThemeState(e.target.value)}><option value="all">All statuses</option><option value="active">Active only</option><option value="inactive">Inactive only</option></select></label><label>Sort<select value={themeSort} onChange={e=>setThemeSort(e.target.value as "sales"|"favorites")}><option value="sales">Most units sold</option><option value="favorites">Highest favorites</option></select></label></div>
+          <div className="shop-map-theme-toolbar shop-map-browse-controls"><label>Search<input type="search" value={themeQuery} onChange={e=>setThemeQuery(e.target.value)} placeholder="Find a listing"/></label><label>Status<select value={themeState} onChange={e=>setThemeState(e.target.value)}><option value="all">All statuses</option><option value="active">Active only</option><option value="inactive">Inactive only</option></select></label><label>Sort<select value={themeSort} onChange={e=>setThemeSort(e.target.value as "sales"|"favorites")}><option value="sales">Most units sold</option><option value="favorites">Highest favorites</option></select></label></div>
           {members.length!== (niche.memberListings?.length??0)&&<p role="status">{members.length} of {niche.memberListings?.length??0} listings shown</p>}{members.length===0&&<p>No listings match this search and status. Change the filters to see more.</p>}
           <div className="shop-map-theme-listings">{members.map(listing=><a key={listing.listingId} href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.imageUrl?<img src={listing.imageUrl} alt="" loading="lazy" width={68} height={68}/>:null}<span><strong>{shortLabel(listing.title)}</strong><small>{listing.sales} sold in 90 days · {listing.favorites==null?"Favorites unavailable":`${listing.favorites} total favorites`} · {listing.state}</small></span></a>)}</div></div> : null}</li>})}</ul>
       {unclassifiedTheme&&<details className="shop-map-unclassified"><summary>Unclassified listings · {unclassifiedTheme.listings}</summary><p>These listings are not currently grouped into a product theme.</p></details>}
+      <details className="shop-map-correction-tool"><summary>Correct a listing’s theme</summary>{correctionFailed&&<p className="p-notice p-notice-bad shop-map-correction-failed" role="alert">{correctionFailed}</p>}<MoveControl niches={niches} busy={busy} onMove={moveListing} onClear={clearCorrection}/></details>
     </section>}
 
     {tab === "sold" && <section className="shop-map-card shop-map-sold">
@@ -382,8 +434,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       <div className="shop-map-sold-toolbar"><label>Period<select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label><label className="search">Search<input type="search" value={soldQuery} onChange={e=>setSoldQuery(e.target.value)} placeholder="Find a listing"/></label><label>Sort<select value={soldSort} onChange={e=>setSoldSort(e.target.value as "sales"|"revenue")}><option value="sales">Most units sold</option><option value="revenue">Highest revenue</option></select></label></div>
       {!refreshing&&browseOwnListings(sold,soldSort,soldQuery).length!==sold.length
         &&<p role="status">{browseOwnListings(sold,soldSort,soldQuery).length} of {sold.length} sold listings match your search</p>}
-      {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-grid" aria-label="Listings">
-        {browseOwnListings(sold,soldSort,soldQuery).map(listing => <article key={listing.listingId}>{listing.imageUrl ? <img src={listing.imageUrl} alt="" loading="lazy"/> : <i>G</i>}
+      {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-grid shop-map-sold-table" aria-label="Listings">
+        {browseOwnListings(sold,soldSort,soldQuery).map(listing => <article key={listing.listingId}>{listing.imageUrl ? <img src={listing.imageUrl} alt="" width={84} height={84} loading="lazy"/> : <i>G</i>}
           <div><strong><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{shortLabel(listing.title)}</a></strong><small>{listing.sales} unit{listing.sales===1?"":"s"} sold</small></div><b>{money(listing.revenueMinor)}</b></article>)}</div>}
     </section>}
 
@@ -420,3 +472,120 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     {signedInEmail ? null : null}
   </main>;
 }
+type Placement = { listingId: number; title: string; nicheId: string;
+  nicheLabel: string; corrected: boolean; why: string };
+
+function MoveControl(
+  { niches, busy, onMove, onClear }:
+  { niches: Niche[]; busy: string;
+    onMove: (listingId: number, nicheId: string) => Promise<void>;
+    onClear: (listingId: number) => Promise<void> },
+) {
+  const [listingId, setListingId] = useState("");
+  const [nicheId, setNicheId] = useState("unclassified");
+  /*
+    CORRECTING SOMETHING YOU CANNOT SEE THE REASON FOR IS GUESSING.
+
+    A member could already move a listing, but nothing on the page told them
+    where the listing currently sits or why. Looking it up first is a read:
+    it changes nothing, and the sentence it shows is built on the server so
+    this component never handles the wording behind a placement.
+  */
+  const [placement, setPlacement] = useState<Placement | null>(null);
+  const [lookupFailed, setLookupFailed] = useState("");
+  const [looking, setLooking] = useState(false);
+
+  const look = async (id: string) => {
+    setLooking(true);
+    setPlacement(null);
+    setLookupFailed("");
+    try {
+      const response = await fetch(`/api/shop-map/map?listingId=${encodeURIComponent(id)}`);
+      if (!response.ok) {
+        setLookupFailed("That listing could not be looked up just now. Nothing was changed.");
+      } else {
+        const body = await response.json() as { placement?: Placement | null };
+        if (body.placement) {
+          setPlacement(body.placement);
+          setNicheId(body.placement.nicheId || "unclassified");
+        } else {
+          setLookupFailed(`Listing ${id} is not in this shop's map. Check the ID on `
+            + `Etsy — it is the number in the listing's own URL.`);
+        }
+      }
+    } catch {
+      setLookupFailed("That listing could not be looked up just now. Nothing was changed.");
+    }
+    setLooking(false);
+  };
+
+  const working = busy.startsWith("move:");
+  return (
+    <div className="shop-map-move">
+      <label>
+        <span>Etsy listing ID</span>
+        <input inputMode="numeric" value={listingId} placeholder="e.g. 1234567890"
+          onChange={event => {
+            setListingId(event.target.value.replace(/[^0-9]/g, ""));
+            setPlacement(null);
+            setLookupFailed("");
+          }} />
+      </label>
+      <button type="button" className="shop-map-look" disabled={!listingId || looking}
+        onClick={() => void look(listingId)}>
+        {looking ? "Looking…" : "Where is it now?"}
+      </button>
+      {lookupFailed && (
+        <p className="p-notice p-notice-bad shop-map-lookup-failed" role="alert">
+          {lookupFailed}
+        </p>
+      )}
+      {placement && (
+        <div className="shop-map-placement">
+          {placement.title && <p className="shop-map-placement-title">{placement.title}</p>}
+          <p className="shop-map-placement-where">
+            In <strong>{placement.nicheLabel}</strong>
+            {placement.corrected ? " — your correction" : ""}
+          </p>
+          <p className="shop-map-placement-why">{placement.why}</p>
+          {placement.corrected && (
+            /*
+              A correction made by mistake was permanent. Moving the listing
+              to Unclassified is not the same thing — that is a member saying
+              it belongs nowhere, which is itself a correction.
+            */
+            <button type="button" className="shop-map-clear-correction"
+              disabled={busy.startsWith("clear:")}
+              onClick={() => void (async () => {
+                await onClear(placement.listingId);
+                await look(String(placement.listingId));
+              })()}>
+              {busy.startsWith("clear:") ? "Clearing…" : "Use the automatic placement instead"}
+            </button>
+          )}
+        </div>
+      )}
+      <label>
+        <span>Move to</span>
+        <select value={nicheId} onChange={event => setNicheId(event.target.value)}>
+          {niches.filter(niche => niche.worldId !== "unclassified").map(niche =>
+            <option key={niche.worldId} value={niche.worldId}>{niche.label}</option>)}
+          <option value="unclassified">Unclassified</option>
+        </select>
+      </label>
+      <button type="button" disabled={!listingId || working}
+        onClick={() => void (async () => {
+          await onMove(Number(listingId), nicheId);
+          /*
+            The panel above described where the listing WAS. Leaving it there
+            after a move would state the old niche beside a map that now
+            shows the new one, so it is read again rather than kept.
+          */
+          if (placement) await look(listingId);
+        })()}>
+        {working ? "Moving…" : "Move listing"}
+      </button>
+    </div>
+  );
+}
+
