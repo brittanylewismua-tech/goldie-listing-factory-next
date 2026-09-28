@@ -39,7 +39,14 @@ for (const name of readdirSync(new URL("../app", import.meta.url)).filter(file =
     ]);
     if (name === "current-suite.css" && /^'Bricolage Grotesque Variable',Arial,sans-serif$/.test(decl.value)
       && selector.split(",").every(part => currentHeadings.has(part.trim()))) return;
-    if (name === "production-repair.css" && /h1/.test(selector) && /DM Serif Display/.test(decl.value)) return;                 /* saying Manrope loudly is fine */
+    if (name === "production-repair.css" && /h1/.test(selector) && /DM Serif Display/.test(decl.value)) return;
+    /* D1913 · What's New is an editorial page built from Etsy's Seller
+       Handbook, whose masthead is a serif - that is what stops a page of short
+       blurbs reading like software documentation. It uses the suite's OWN
+       display serif, the wordmark's face, rather than introducing a fourth
+       family, which is what this rule is really guarding against. */
+    if (name === "current-suite.css" && /DM Serif Display/.test(decl.value)
+      && /\.pu-(head h1|lead-copy h2|lead \.pu-noshot b)$/.test(selector.trim())) return;                 /* saying Manrope loudly is fine */
     offenders.push(`${name}: ${selector.replace(/\s+/g, " ").slice(0, 52)} — ${decl.value.slice(0, 30)}`);
   });
 }

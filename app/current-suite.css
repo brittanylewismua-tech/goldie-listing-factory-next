@@ -737,8 +737,12 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .pu-page{max-width:920px}
 #suite-workspace .pu-back{display:inline-block;font-size:13px!important;color:#6f6670!important;margin-bottom:22px}
 #suite-workspace .pu-head{border-bottom:1px solid #e0d9de;padding-bottom:0}
-#suite-workspace .pu-head h1{font-family:ui-serif,Georgia,"Iowan Old Style","Times New Roman",serif;
-  font-size:46px!important;font-weight:500;letter-spacing:-.015em;line-height:1.05!important;margin:0 0 20px}
+/* D1913 · The suite already has a display serif - DM Serif Display is the
+   wordmark's face and the one every h2 outside the workspace uses. Reaching
+   for Georgia here would have been a fourth typeface on the same screen,
+   which is the exact thing the one-typeface rule exists to stop. */
+#suite-workspace .pu-head h1{font-family:'DM Serif Display',Georgia,serif!important;font-weight:400!important;
+  font-size:48px!important;letter-spacing:-.02em;line-height:1.05!important;margin:0 0 20px}
 #suite-workspace .pu-tabs{display:flex;gap:30px;margin:0}
 #suite-workspace .pu-tab{border:0;background:transparent!important;cursor:pointer;padding:0 0 12px;
   font-size:14px!important;font-weight:500;color:#6f6670!important;letter-spacing:-.005em;
@@ -754,13 +758,19 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .pu-lead[data-priority="ACTION REQUIRED"]{background-color:#fbeaf2!important}
 #suite-workspace .pu-lead-shot{display:block;width:100%;height:100%;min-height:260px;
   object-fit:cover;background:#ece5ea}
-#suite-workspace .pu-noshot{display:flex;align-items:center;justify-content:center;
+/* D1913b · Not every announcement ships with a picture. A row of grey plates
+   stamped with the platform's name is worse than none: it takes the space a
+   photograph would and returns nothing, and it made the page look like it had
+   failed to load. A card without a picture simply starts at its title. The
+   featured block keeps a tinted panel, because that one is a shape in the
+   layout rather than a missing image. */
+#suite-workspace .pu-lead .pu-noshot{display:flex;align-items:center;justify-content:center;
   background:#ece5ea!important}
-#suite-workspace .pu-noshot b{font-family:ui-serif,Georgia,serif;font-size:20px!important;
-  color:#9a8f98!important;font-weight:500;letter-spacing:.02em}
+#suite-workspace .pu-lead .pu-noshot b{font-family:'DM Serif Display',Georgia,serif!important;
+  font-size:20px!important;color:#9a8f98!important;font-weight:500;letter-spacing:.02em}
 #suite-workspace .pu-lead-copy{padding:34px 36px;align-self:center}
-#suite-workspace .pu-lead-copy h2{font-family:ui-serif,Georgia,"Iowan Old Style","Times New Roman",serif;
-  font-size:30px!important;font-weight:500;line-height:1.2!important;letter-spacing:-.015em;margin:0 0 12px}
+#suite-workspace .pu-lead-copy h2{font-family:'DM Serif Display',Georgia,serif!important;font-weight:400!important;
+  font-size:31px!important;line-height:1.2!important;letter-spacing:-.015em;margin:0 0 12px}
 #suite-workspace .pu-lead-copy p{font-size:15px!important;line-height:1.6!important;color:#453d45!important;margin:0!important}
 
 #suite-workspace .pu-kicker{font-size:12px!important;font-weight:600;letter-spacing:.02em;

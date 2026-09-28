@@ -48,7 +48,7 @@ const NAMES_IN_ITEM = 6;
 */
 const IMPLAUSIBLE_ARRIVALS = 60;
 
-type Blueprint = { id: number; title: string; brand: string };
+type Blueprint = { id: number; title: string; brand: string; image: string };
 
 const db = () => (env as unknown as { DB: D1Database }).DB;
 
@@ -107,12 +107,20 @@ async function readCatalog(token: string): Promise<Blueprint[]> {
   const body = await response.json() as unknown;
   if (!Array.isArray(body)) throw new Error("Printify catalog could not be read");
   return body
-    .map(row => row as { id?: unknown; title?: unknown; brand?: unknown })
+    .map(row => row as { id?: unknown; title?: unknown; brand?: unknown; images?: unknown })
     .filter(row => Number(row.id) > 0)
     .map(row => ({
       id: Number(row.id),
       title: String(row.title ?? "").trim().slice(0, 120),
       brand: String(row.brand ?? "").trim().slice(0, 60),
+      /* D1913 · Printify's own photograph of the product it just added. */
+      image: (() => {
+        const first = Array.isArray(row.images) ? String(row.images[0] ?? "") : "";
+        try {
+          const url = new URL(first);
+          return url.protocol === "https:" ? url.toString().slice(0, 400) : "";
+        } catch { return ""; }
+      })(),
     }));
 }
 
@@ -153,6 +161,7 @@ export async function collectPrintifyCatalog(now: number): Promise<{
 
   return { baseline: false, items: [{
     platform: "Printify",
+    imageUrl: arrivals.find(row => row.image)?.image ?? "",
     priority: "GOOD TO KNOW",
     /* Counted from Printify's own catalogue, not read off a page. */
     evidence: "Confirmed platform change",

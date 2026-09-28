@@ -89,9 +89,7 @@ export default function PlatformUpdate({compact=false}:{compact?:boolean}){const
 
   <div className="pu-grid">
     {rest.map(item=><article key={item.id} className="pu-card" data-priority={item.priority}>
-      {item.imageUrl
-        ? <img className="pu-shot" src={item.imageUrl} alt=""/>
-        : <span className="pu-shot pu-noshot" aria-hidden><b>{item.platform}</b></span>}
+      {item.imageUrl&&<img className="pu-shot" src={item.imageUrl} alt=""/>}
       <p className="pu-kicker">{item.platform} · {when(item.publishedAt)}
         {item.priority==='ACTION REQUIRED'&&<b> · Worth acting on</b>}</p>
       <h3>{item.title}</h3>

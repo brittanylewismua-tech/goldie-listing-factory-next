@@ -51,7 +51,7 @@ async function summarize(source:Source,previous:string,current:string,added:stri
  }
  throw error;}
 }
-export async function collectPlatformUpdates({retryFailed=false,reseed=''}:{retryFailed?:boolean;reseed?:string}={}){await ensureUpdateTables();const db=updateDb(),now=Math.floor(Date.now()/1000),id=crypto.randomUUID();
+export async function collectPlatformUpdates({retryFailed=false,reseed='',rebuild=false}:{retryFailed?:boolean;reseed?:string;rebuild?:boolean}={}){await ensureUpdateTables();const db=updateDb(),now=Math.floor(Date.now()/1000),id=crypto.randomUUID();
  /*
    D1898 · Adding a source that seeds its own first read is only useful once,
    and a source added before seeding existed has already stored its baseline.
@@ -60,6 +60,18 @@ export async function collectPlatformUpdates({retryFailed=false,reseed=''}:{retr
  */
  if(reseed&&UPDATE_SOURCES.some(s=>s.id===reseed))
   await db.prepare(`DELETE FROM platform_update_sources WHERE id=?`).bind(reseed).run();
+ /*
+   D1913 · An item is stored as finished JSON, so a change to what an item
+   CARRIES - a picture, say - cannot reach the ones already written, and
+   re-reading a source produces the same id and is ignored as a duplicate.
+   This clears the written items and the baselines of the sources that seed
+   themselves, so the brief is rebuilt in the current shape. Owner-only, and
+   only useful while that shape is still moving.
+ */
+ if(rebuild){await db.prepare(`DELETE FROM platform_update_items`).run();
+  for(const source of UPDATE_SOURCES.filter(s=>s.seedOnFirstRead||s.kind==='catalog'))
+   await db.prepare(`DELETE FROM platform_update_sources WHERE id=?`).bind(source.id).run();
+  await db.prepare(`DELETE FROM printify_catalog_seen`).run().catch(()=>undefined);}
  // One collector at a time; crashed leases expire. A public read never starts work.
  const active=await db.prepare(`SELECT id FROM platform_update_runs WHERE finished_at=0 AND started_at>? LIMIT 1`).bind(now-900).first();if(active)return{busy:true};
  const claim=await db.prepare(`INSERT INTO platform_update_runs(id,started_at) SELECT ?,? WHERE NOT EXISTS(SELECT 1 FROM platform_update_runs WHERE finished_at=0 AND started_at>?)`).bind(id,now,now-900).run();if(!claim.meta.changes)return{busy:true};
