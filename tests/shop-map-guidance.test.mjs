@@ -24,14 +24,14 @@ const client = readFileSync(new URL(
 
 test("the overview names the leading product theme", () => {
   assert.match(client, /Top product theme/);
-  assert.match(client, /niches\[0\]\?\.label/);
+  assert.match(client, /themes\[0\]\?\.label/);
   assert.match(client, /units sold in 90 days/);
 });
 
 test("product themes are kept together in their own tab", () => {
   assert.match(client, /tab === "themes"/);
   assert.match(client, /Sales by product theme/);
-  assert.match(client, /niches\.map\(niche/);
+  assert.match(client, /themes\.map\(niche/);
 });
 
 test("the grouping mechanics stay off the page, as the existing rule requires", () => {
@@ -44,7 +44,7 @@ test("the grouping mechanics stay off the page, as the existing rule requires", 
 });
 
 test("the section stays absent when there is nothing to say", () => {
-  assert.match(client, /niches\[0\] \? `\$\{niches\[0\]\.units\?\?"—"\} units sold in 90 days` : "Sales will reveal this"/);
+  assert.match(client, /themes\[0\] \? `\$\{themes\[0\]\.units\?\?"—"\} units sold in 90 days` : "Sales will reveal this"/);
 });
 
 test("pointingHere is deliberately not rendered", () => {

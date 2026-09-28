@@ -53,7 +53,7 @@ test("Sold Listings uses one toolbar and image-led rows",()=>{
   const sold=client.slice(client.indexOf('{tab === "sold"'),client.indexOf('{tab === "money"'));
   assert.match(sold,/shop-map-sold-toolbar/);
   assert.match(sold,/shop-map-sold-grid/);
-  assert.doesNotMatch(sold,/shop-map-sold-table/);
+  assert.match(sold,/width=\{84\} height=\{84\}/);
 });
 
 
