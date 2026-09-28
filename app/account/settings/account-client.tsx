@@ -221,17 +221,22 @@ export default function AccountClient({ email }: { email: string }) {
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
 
   useEffect(() => {
     void (async () => {
       try {
-        const [held, plan] = await Promise.all([
+        const [held, plan, prefs] = await Promise.all([
           fetch("/api/account/data?action=account-deletion"),
           fetch("/api/usage"),
+          fetch("/api/seller-preferences"),
         ]);
         if (held.ok) setData(await held.json() as DataView);
         if (plan.ok) setUsage(await plan.json() as Usage);
-        if (!held.ok || !plan.ok)
+        if (prefs.ok) { const profile = await prefs.json() as { firstName?: string }; setFirstName(profile.firstName || ""); }
+        if (!held.ok || !plan.ok || !prefs.ok)
           setError("Your account details could not be loaded just now. Nothing has changed.");
       } catch {
         setError("Your account details could not be loaded just now. Nothing has changed.");
@@ -254,6 +259,25 @@ export default function AccountClient({ email }: { email: string }) {
         <h2 className="acc-heading">Signed in</h2>
         <div className="acc-card">
           <div className="acc-line"><span>Email</span><b>{email}</b></div>
+          <div className="acc-profile-name">
+            <label htmlFor="account-first-name">First name</label>
+            <div>
+              <input id="account-first-name" className="p-input" value={firstName}
+                onChange={event => { setFirstName(event.target.value); setNameSaved(false); }}
+                placeholder="Your first name" autoComplete="given-name" maxLength={60}/>
+              <button type="button" className="p-button p-button-quiet" disabled={nameBusy || !firstName.trim()}
+                onClick={async()=>{
+                  setNameBusy(true); setError(""); setNameSaved(false);
+                  try{
+                    const response=await fetch("/api/seller-preferences",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({firstName})});
+                    if(!response.ok) throw new Error();
+                    setNameSaved(true);
+                  }catch{setError("Your first name could not be saved just now.");}
+                  finally{setNameBusy(false);}
+                }}>{nameBusy?"Saving…":"Save name"}</button>
+            </div>
+            <small>{nameSaved?"Saved. This is the name Goldie uses to greet you.":"Used for your greeting inside the suite."}</small>
+          </div>
           {!loaded && <div className="p-skeleton p-skeleton-line" style={{ width: "50%" }} />}
           {/*
             ACCESS COMES FROM THE PLAN, NOT FROM STRIPE.

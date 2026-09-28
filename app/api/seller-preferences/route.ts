@@ -30,6 +30,7 @@ export async function GET() {
   const saved = row ? JSON.parse(row.pricingJson || "{}") as Record<string, unknown> : null;
   return NextResponse.json({
     pricing: saved,
+    firstName: typeof saved?.firstName === "string" ? saved.firstName : "",
     listingGoal: saved && saved.listingGoal ? readGoal(saved.listingGoal) : DEFAULT_GOAL,
   });
 }
@@ -37,7 +38,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await getChatGPTUser();
   if (!user) return NextResponse.json({ error: "Sign in to save seller preferences." }, { status: 401 });
-  const body = await request.json() as { pricing?: Record<string, number>; listingGoal?: Partial<ListingGoal> };
+  const body = await request.json() as { pricing?: Record<string, number>; listingGoal?: Partial<ListingGoal>; firstName?: string };
 
   const [row] = await getDb().select().from(sellerPreferences).where(eq(sellerPreferences.userId, user.userId)).limit(1);
   let existing: Record<string, unknown> = {};
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
     merged.listingFee = Math.max(0, Number(pricing?.listingFee ?? 0.2));
   }
   if (body.listingGoal !== undefined) merged.listingGoal = readGoal(body.listingGoal);
+  if (body.firstName !== undefined) merged.firstName = body.firstName.trim().slice(0, 60);
 
   await getDb().insert(sellerPreferences)
     .values({ userId: user.userId, pricingJson: JSON.stringify(merged) })

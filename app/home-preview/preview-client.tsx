@@ -26,7 +26,7 @@ export default function PreviewClient({platformUpdate}:{platformUpdate?:ReactNod
   const [updates,setUpdates]=useState<Updates|null>(null);
   const [niches,setNiches]=useState<Niche[]>([]);
   const [batch,setBatch]=useState<Batch|null>(null);
-  const [account,setAccount]=useState<{name?:string}|null>(null);
+  const [account,setAccount]=useState<{name?:string;firstName?:string}|null>(null);
 
   useEffect(()=>{
     void Promise.all([30,90].map(days=>fetch("/api/shop-map/map?days="+days).then(r=>r.ok?r.json() as Promise<MapData>:null)))
@@ -36,7 +36,7 @@ export default function PreviewClient({platformUpdate}:{platformUpdate?:ReactNod
     void fetch("/api/command-center/summary").then(r=>r.ok?r.json() as Promise<Summary>:null).then(setSummary).catch(()=>undefined);
     void fetch("/api/platform-updates").then(r=>r.ok?r.json() as Promise<Updates>:null).then(setUpdates).catch(()=>undefined);
     void fetch("/api/batches").then(r=>r.ok?r.json() as Promise<{batches?:Batch[]}>:null).then(x=>setBatch(x?.batches?.[0]??null)).catch(()=>undefined);
-    void fetch("/api/account").then(r=>r.ok?r.json() as Promise<{name?:string}>:null).then(setAccount).catch(()=>undefined);
+    void fetch("/api/account").then(r=>r.ok?r.json() as Promise<{name?:string;firstName?:string}>:null).then(setAccount).catch(()=>undefined);
     void fetch("/api/niche-research").then(r=>r.ok?r.json() as Promise<{projects?:Array<{id:string}>}>:null).then(async body=>{
       const out:Niche[]=[];
       for(const p of (body?.projects??[]).slice(0,2)){
@@ -72,7 +72,7 @@ export default function PreviewClient({platformUpdate}:{platformUpdate?:ReactNod
   const shelves=(hot.products??[]).slice().sort((a,b)=>b.sold-a.sold).slice(0,6);
 
   return <div className="home4">
-    <header className="home4-head home4-contained"><div><p className="home4-kicker">{new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}</p><h1>{"Good morning"+(account?.name?", "+account.name.split(" ")[0]:"")+"."}</h1><p className="home4-shop-name">{shopName}</p></div></header>
+    <header className="home4-head home4-contained"><div><p className="home4-kicker">{new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}</p><h1>{"Good morning"+(account?.firstName?", "+account.firstName:"")+"."}</h1><p className="home4-shop-name">{shopName}</p></div></header>
 
     <section className="home4-section first home4-contained"><header className="home4-section-head"><div className="home4-title"><b>01</b><div><h2>Shop stats</h2><p>Top 10 listings ranked by units sold</p></div></div><select value={period} onChange={e=>setPeriod(Number(e.target.value) as 30|90)} aria-label="Shop stats period"><option value={90}>Last 90 days</option><option value={30}>Last 30 days</option></select></header>
       <div className="home4-hero"><div className="home4-marquee-mask"><div className="home4-marquee">{marquee.map((l,i)=><a className={"home4-rank "+(i%10===0?"first":"")} key={String(l.listingId)+"-"+String(i)} href={"https://www.etsy.com/listing/"+String(l.listingId)} target="_blank" rel="noreferrer"><span className="home4-rank-num">{i%10+1}</span><img src={l.imageUrl} alt="" loading={i<5?"eager":"lazy"}/><div><b>{num(l.sales)} sold</b><span>{usd(l.revenueMinor)}<small>revenue</small></span></div></a>)}</div></div>
