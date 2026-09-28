@@ -229,7 +229,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         </section>;
       })()}
 
-      {watchesLoading && <section className="tm-watches-loading" role="status"><span className="home4-loader-dot" aria-hidden="true"/><span>Loading watched phrases…</span></section>}
+      {watchesLoading && <section className="tm-watches-loading" role="status"><span className="tm-loader-dot" aria-hidden="true"/><span>Loading watched phrases…</span></section>}
       {watches.length > 0 && <section className="tm-watches" aria-labelledby="tm-watches-title">
         <div className="tm-watches-head"><div><h2 id="tm-watches-title">Watched phrases <span>{watches.length}</span></h2><p>Review phrases again when matching records change.</p></div></div>
         <div className="tm-watch-list">{watches.map(watch => <article key={watch.phrase}
