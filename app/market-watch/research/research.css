@@ -487,3 +487,22 @@
   font-size:12px!important;
   color:var(--g-ink-3)!important;
 }
+
+#suite-workspace .nr-secondary-section>summary{
+  list-style:none!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+}
+#suite-workspace .nr-secondary-section>summary::-webkit-details-marker{display:none!important}
+#suite-workspace .nr-secondary-section>summary::after{
+  content:"›";
+  flex:0 0 auto;
+  font-size:22px;
+  line-height:1;
+  font-weight:500;
+  transform:rotate(90deg);
+  transition:transform .15s ease;
+}
+#suite-workspace .nr-secondary-section:not([open])>summary::after{transform:rotate(0deg)}
