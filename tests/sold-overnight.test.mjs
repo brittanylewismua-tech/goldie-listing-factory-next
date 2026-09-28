@@ -818,3 +818,11 @@ test("clicking a product family lands on that product family", () => {
   assert.match(home, /\/hot-list\?product=\$\{encodeURIComponent\(s\.key\)\}/);
   assert.match(page, /new URLSearchParams\(window\.location\.search\)\.get\("product"\)/);
 });
+
+test("the count is of listings that sold, not of listings displayed", () => {
+  const page = read("hot-list/page.tsx");
+  /* board.listings is capped at 400, so printing its length claimed 400
+     listings sold when 971 did. The product totals are the real count. */
+  assert.match(page, /board\.products\.reduce\(\(sum, p\) => sum \+ p\.listings, 0\)/);
+  assert.doesNotMatch(page, /units across \$\{board\.listings\.length/);
+});

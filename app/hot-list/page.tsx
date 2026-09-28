@@ -152,8 +152,16 @@ export default function HotListPage() {
           correspond and the link is a non sequitur.
       */}
       <h1>What sold on Etsy {view.hours >= 168 ? "this week" : "in the last 24 hours"}</h1>
+      {/*
+          D1906b · board.listings is capped, so printing its length claimed 400
+          listings sold when 971 did. The product totals are the real count;
+          the cap is stated separately rather than quietly standing in for it.
+      */}
       <p>{board
-        ? `${board.totalSold.toLocaleString("en-US")} units across ${board.listings.length.toLocaleString("en-US")} listings.`
+        ? `${board.totalSold.toLocaleString("en-US")} units across ${
+          board.products.reduce((sum, p) => sum + p.listings, 0).toLocaleString("en-US")} listings.${
+          board.products.reduce((sum, p) => sum + p.listings, 0) > board.listings.length
+            ? ` Showing the ${board.listings.length.toLocaleString("en-US")} with the most favorites gained.` : ""}`
         : "Loading."}</p>
     </header>
 
