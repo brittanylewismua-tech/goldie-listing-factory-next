@@ -269,10 +269,9 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         <p>Loading your connected shop and latest performance…</p>
       </div></header>
       <nav className="shop-map-tabs" aria-label="Your shop sections">
-        <button type="button" aria-current="page" disabled>Overview</button>
-        <button type="button" disabled>Your numbers</button>
-        <button type="button" disabled>Product themes</button>
-        <button type="button" disabled>Sold listings</button>
+        {([['overview','Overview'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
+          .map(([key,label])=><button key={key} type="button" aria-current={tab===key?'page':undefined}
+            onClick={()=>selectTab(key)}>{label}</button>)}
       </nav>
       <section className="shop-map-progressive-loading" role="status">
         <span className="shop-map-loader-dot" aria-hidden="true"/>
@@ -396,6 +395,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
               <p className="shop-map-figure" data-basis="unavailable">{money(month?.revenueMinor,month?.currency)}</p></>
           : <><p className="shop-map-headline-label">Profit this month</p>
               <p className="shop-map-figure" data-basis={monthBasis(month)}>{money(month.profitMinor,month.currency)}</p></>}
+        {month?.profitMinor==null&&month?.headline?<p className="shop-map-money-status">{month.headline}</p>:null}
         <p className="shop-map-accuracy">{month?.accuracy}</p>
         {month?.freshness ? <p className="shop-map-freshness" data-stale={month.salesStale ? "yes" : "no"}>{month.freshness}</p> : null}
         </div><dl className="shop-map-rows">
