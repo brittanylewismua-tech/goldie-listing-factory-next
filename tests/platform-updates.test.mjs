@@ -142,3 +142,25 @@ test('the output budget follows the number of items asked for',()=>{
  assert.doesNotMatch(collector,/max_tokens:1800/);
  assert.match(collector,/max_tokens:900\+maxItems\*700/);
 });
+
+test('the Printify catalog is counted, not scraped or summarised',()=>{
+ const watch=readFileSync(new URL('../app/printify-catalog-watch.ts',import.meta.url),'utf8');
+ /*
+   Printify announces new products nowhere a machine can read: no changelog, a
+   marketing blog, and a catalogue page drawn by JavaScript that fetches as an
+   empty document. So this source is not a page. A blueprint id absent from last
+   week's catalogue is a new product - a counted fact, with the product's own
+   title and brand reported rather than a model's wording.
+ */
+ const catalog=UPDATE_SOURCES.find(s=>s.kind==='catalog');
+ assert.ok(catalog,'the catalog source is gone');
+ assert.equal(officialUrl(catalog.fetchUrl,'Printify'),true);
+ assert.match(watch,/catalog\/blueprints\.json/);
+ /* Day one is not a launch of eleven hundred products. */
+ assert.match(watch,/if \(!seen\.size \|\| !arrivals\.length \|\| arrivals\.length > IMPLAUSIBLE_ARRIVALS\)/);
+ /* And it borrows nobody's credentials. */
+ assert.doesNotMatch(watch,/ORDER BY rowid DESC LIMIT 1/,
+   'the catalog read is picking whichever connection happens to be newest again');
+ assert.match(watch,/WHERE user_id = \? AND encrypted_token <> ''/);
+ assert.match(watch,/FROM printify_catalog_reader WHERE only_row = 1/);
+});

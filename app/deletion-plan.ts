@@ -93,6 +93,17 @@ export const DELETION_PLAN: PlanStep[] = [
   { table: "printify_connections", disposition: "retire",
     sql: `UPDATE printify_connections SET encrypted_token = '' WHERE user_id = ?`,
     say: "Your Printify connection is switched off and its key destroyed." },
+  /*
+    D1904 · If this account was the one nominated to read Printify's public
+    catalogue for the update brief, that nomination goes with it. The catalogue
+    itself is not member data and stays; only the pointer to whose connection
+    reads it is removed, and with nobody nominated the brief reports that source
+    as unread rather than reaching for another member's key.
+  */
+  { table: "printify_catalog_reader", disposition: "delete",
+    sql: `DELETE FROM printify_catalog_reader WHERE user_id = ?`,
+    say: "If your connection was the one reading Printify's public product "
+      + "catalog for platform updates, it stops being used for that." },
   { table: "member_entitlements", disposition: "retire",
     sql: `UPDATE member_entitlements SET state = 'none', plan = NULL WHERE user_id = ?`,
     say: "Your access to these features ends." },

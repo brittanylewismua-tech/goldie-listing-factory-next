@@ -2,6 +2,7 @@ import {UPDATE_SOURCES,sourceText,addedText,publishDay,validateCandidate,type So
 import {ensureUpdateTables,updateDb} from './platform-update-store';
 import {reserveSpend,settleSpend,failSpend} from './spend-guard';
 import {recordFalUsage} from './fal-usage';
+import {collectPrintifyCatalog} from './printify-catalog-watch';
 const MODEL='google/gemini-2.5-flash';
 /*
   D1902 · How many sources may be edited in one pass. This was 4, and going over
@@ -66,7 +67,20 @@ export async function collectPlatformUpdates({retryFailed=false,reseed=''}:{retr
  for(const source of UPDATE_SOURCES){const stored=await db.prepare(`SELECT s.content,s.checked_at,s.last_error,a.attempted_at FROM platform_update_sources s LEFT JOIN platform_update_source_attempts a ON a.id=s.id WHERE s.id=?`).bind(source.id).first<{content:string;checked_at:number;last_error:string;attempted_at?:number}>();
  const cadence=source.id==='printify-network'||stored?.last_error?1200:6*3600;if(stored&&!(retryFailed&&stored.last_error)&&now-(stored.last_error?stored.attempted_at||stored.checked_at:stored.checked_at)<cadence)continue;
  await db.prepare(`INSERT INTO platform_update_source_attempts(id,attempted_at) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET attempted_at=excluded.attempted_at`).bind(source.id,now).run();
- try{const response=await fetch(source.fetchUrl,{headers:{'User-Agent':'GoldieSuite/1.0 (official platform update monitor)','Accept':source.kind==='html'?'text/html':'application/json'},signal:AbortSignal.timeout(20000),redirect:'manual'});if(!response.ok)throw new Error(`Official source returned ${response.status}`);const body=await response.text();if(body.length>3000000)throw new Error('Official source too large');const current=sourceText(source,body);if(current.length<150||/enable javascript and cookies|verify you are human|access denied/i.test(current.slice(0,500)))throw new Error('Official source could not be read');
+ try{
+ /*
+   D1904 · The catalogue is counted, not fetched-and-diffed, so it takes the
+   whole branch: no page text, no language model, no quote to validate. It
+   still records checked_at and last_error like every other source, so a broken
+   catalogue read shows up as a broken source rather than as quiet news.
+ */
+ if(source.kind==='catalog'){const result=await collectPrintifyCatalog(now);
+  if(result.baseline)baseline++;
+  for(const item of result.items){const id=await hashText('Printify|'+item.topic+'|'+item.quoteKey);
+   const {quoteKey:_ignored,...rest}=item;
+   await db.prepare(`INSERT OR IGNORE INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?)`).bind(id,publishDay(new Date(),rest.urgent),rest.topic,JSON.stringify({...rest,id}),rest.publishedAt).run();published++;}
+  await db.prepare(`INSERT INTO platform_update_sources(id,content,checked_at,last_error) VALUES (?,?,?,'') ON CONFLICT(id) DO UPDATE SET content=excluded.content,checked_at=excluded.checked_at,last_error=''`).bind(source.id,'counted',now).run();checked++;continue;}
+ const response=await fetch(source.fetchUrl,{headers:{'User-Agent':'GoldieSuite/1.0 (official platform update monitor)','Accept':source.kind==='html'?'text/html':'application/json'},signal:AbortSignal.timeout(20000),redirect:'manual'});if(!response.ok)throw new Error(`Official source returned ${response.status}`);const body=await response.text();if(body.length>3000000)throw new Error('Official source too large');const current=sourceText(source,body);if(current.length<150||/enable javascript and cookies|verify you are human|access denied/i.test(current.slice(0,500)))throw new Error('Official source could not be read');
  if(!stored?.content){baseline++;
   /*
     D1898 · A NEW SOURCE COULD NEVER REPORT THE NEWS ALREADY ON THE PAGE.

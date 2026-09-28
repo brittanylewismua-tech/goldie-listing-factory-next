@@ -1,6 +1,6 @@
 export type Platform = 'Etsy' | 'Printify';
 export type UpdateItem = {id:string;platform:Platform;priority:'ACTION REQUIRED'|'GOOD TO KNOW'|'IGNORE THE PANIC';evidence:'Confirmed platform change'|'Official guidance'|'Seller speculation'|'No evidence';title:string;impact:string;action:string;sourceUrl:string;sourceTitle:string;topic:string;urgent:boolean;publishedAt:number};
-export type Source = {id:string;platform:Platform;name:string;url:string;fetchUrl:string;kind:'article'|'html'|'recent';
+export type Source = {id:string;platform:Platform;name:string;url:string;fetchUrl:string;kind:'article'|'html'|'recent'|'catalog';
  /* D1898 · An announcements board's posts ARE the news, so the first read has
     to report the recent ones. A help article's first read must not: its whole
     text is existing rules, and reporting those as changes would announce every
@@ -33,6 +33,14 @@ export const UPDATE_SOURCES:Source[]=[
    carries its full text server-rendered, so it diffs the same way an article
    does.
  */
+ /*
+   D1904 · Printify announces new products nowhere a machine can read: no
+   changelog, a marketing blog, and a catalogue page drawn by JavaScript that
+   arrives empty. This source is not a page at all - it is Printify's own
+   catalogue, counted, where a blueprint id that was not there last week is a
+   new product. See printify-catalog-watch.ts.
+ */
+ {id:'printify-catalog',platform:'Printify',name:'Printify catalog',url:'https://printify.com/catalog/',fetchUrl:'https://api.printify.com/v1/catalog/blueprints.json',kind:'catalog'},
  {id:'etsy-announcements',platform:'Etsy',name:'Etsy seller announcements',url:'https://community.etsy.com/forum/announcements-290/',fetchUrl:'https://community.etsy.com/forum/announcements-290/',kind:'html',seedOnFirstRead:true},
  ...(['Etsy','Printify'] as const).map(platform=>({id:`${platform}-recent`,platform,name:`${platform} documentation updates`,url:`https://help.${platform.toLowerCase()}.com/hc/en-us`,fetchUrl:`https://help.${platform.toLowerCase()}.com/api/v2/help_center/en-us/articles.json?sort_by=updated_at&sort_order=desc&per_page=30`,kind:'recent' as const}))
 ];
