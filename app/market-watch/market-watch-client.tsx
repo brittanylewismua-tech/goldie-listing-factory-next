@@ -75,7 +75,7 @@ export default function MarketWatchClient(
 
   const loadNiches=useCallback(async(quiet=false)=>{if(!quiet)setWatches(w=>({...w,status:"loading"}));try{const response=await fetch("/api/market-watch/niches");if(!response.ok)throw new Error();const body=await response.json() as {watches:WatchRow[]};setWatches({status:"ready",data:body.watches??[]})}catch{setWatches(w=>({status:"failed",data:w.data}))}},[]);
   const loadShops=useCallback(async(quiet=false)=>{if(!quiet)setShops(w=>({...w,status:"loading"}));try{const response=await fetch("/api/shop-watch/brief");if(!response.ok)throw new Error();const body=await response.json() as {shops:ShopView[]};setShops({status:"ready",data:body.shops??[]})}catch{setShops(w=>({status:"failed",data:w.data}))}},[]);
-  useEffect(()=>{void loadNiches();void loadShops()},[loadNiches,loadShops]);
+  useEffect(()=>{if(tab==="shops")void loadShops();else void loadNiches()},[tab,loadNiches,loadShops]);
 
   const add = async () => {
     const value=input.trim(); if(!value||busy)return;

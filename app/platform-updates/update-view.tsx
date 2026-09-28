@@ -72,6 +72,7 @@ export default function PlatformUpdate({compact=false,passive=false}:{compact?:b
     :all.length?`Etsy and Printify news worth a minute. Checked ${checked}.`
     :`Nothing new to report. Checked ${checked}.`}</p>
   {error&&<button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button>}
+  {!data&&!error&&<section className="pu-loading" role="status"><span className="pu-loader-dot" aria-hidden="true"/><div><strong>Loading platform updates…</strong><p>Checking the latest saved Etsy and Printify changes.</p></div></section>}
 
   {lead&&<article className="pu-lead" data-priority={lead.priority}>
     {/* No loading="lazy": D832 - a deferred image with no size is an empty box. */}

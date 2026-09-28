@@ -115,3 +115,29 @@
   padding:14px!important;
 }
 #suite-workspace .pu-card[data-priority="ACTION REQUIRED"]:hover{border-top-width:4px!important}
+
+#suite-workspace .pu-loading{
+  min-height:120px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:12px!important;
+  border:1px dashed var(--g-line)!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  margin:0 0 28px!important;
+  padding:22px!important;
+}
+#suite-workspace .pu-loading strong{
+  display:block!important;
+  font-size:14px!important;
+  font-weight:800!important;
+}
+#suite-workspace .pu-loading p{
+  margin:4px 0 0!important;
+  color:var(--g-ink3)!important;
+  font-size:11px!important;
+}
+
+#suite-workspace .pu-loader-dot{width:10px;height:10px;border-radius:50%;background:var(--g-pink)!important;box-shadow:0 0 0 0 #ee6fc066;animation:pu-loader-pulse 1.3s ease-out infinite;flex:none}
+@keyframes pu-loader-pulse{70%{box-shadow:0 0 0 8px #ee6fc000}100%{box-shadow:0 0 0 0 #ee6fc000}}
