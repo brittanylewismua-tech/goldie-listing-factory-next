@@ -92,3 +92,27 @@
   }
   #suite-workspace .sold-page .sold-windows button{flex:0 0 auto!important}
 }
+
+#suite-workspace .sold-page .drop-tabs{
+  justify-content:center!important;
+  padding:4px!important;
+  border-radius:10px!important;
+  background:#fafafa!important;
+}
+#suite-workspace .sold-page .drop-tabs button:hover{
+  border-color:#000!important;
+  background:var(--g-pink-soft)!important;
+}
+#suite-workspace .sold-page .drop-tabs button.active,
+#suite-workspace .sold-page .drop-tabs button[aria-current=true]{
+  background:#000!important;
+  color:#fff!important;
+}
+@media(max-width:700px){
+  #suite-workspace .sold-page .drop-tabs{
+    justify-content:flex-start!important;
+    overflow-x:auto!important;
+    flex-wrap:nowrap!important;
+  }
+  #suite-workspace .sold-page .drop-tabs button{flex:0 0 auto!important}
+}
