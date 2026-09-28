@@ -13,6 +13,6 @@ import PreviewClient from "../home-preview/preview-client";
 */
 export default function HomeView(){
   return <div className="current-home-layout">
-    <PreviewClient platformUpdate={<PlatformUpdate compact/>}/>
+    <PreviewClient platformUpdate={<PlatformUpdate compact passive/>}/>
   </div>;
 }
