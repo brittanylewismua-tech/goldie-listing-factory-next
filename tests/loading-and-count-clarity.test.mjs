@@ -9,7 +9,7 @@ const updates=readFileSync("app/platform-updates/update-view.tsx","utf8");
 const updatesCss=readFileSync("app/platform-updates.css","utf8");
 
 test("Research exposes saved niche and listing counts",()=>{
-  assert.match(research,/Your niches <span>\{saved\.length\}<\/span>/);
+  assert.ok(research.includes('Your niches {!savedLoading&&<span>{saved.length}</span>}'));
   assert.match(research,/t===\x27listings\x27/);
   assert.match(research,/p\.listings\?\.length\?\?0/);
 });
