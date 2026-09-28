@@ -506,3 +506,220 @@
   transition:transform .15s ease;
 }
 #suite-workspace .nr-secondary-section:not([open])>summary::after{transform:rotate(0deg)}
+
+
+/* Research polish pass: editorial hierarchy, clearer saved-niche library, calmer controls. */
+#suite-workspace .nr-library .nr-head{
+  padding-top:0!important;
+  align-items:flex-start!important;
+}
+#suite-workspace .nr-library .nr-head h1{
+  font-size:42px!important;
+  letter-spacing:-1.7px!important;
+}
+#suite-workspace .nr-library .nr-head p:not(.nr-eyebrow){
+  max-width:520px!important;
+  font-size:14px!important;
+}
+#suite-workspace .nr-library-layout{
+  gap:42px!important;
+  margin-top:4px!important;
+}
+#suite-workspace .nr-library-layout .nr-search{
+  position:relative!important;
+  overflow:hidden!important;
+}
+#suite-workspace .nr-library-layout .nr-search::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:7px;
+  background:var(--g-pink);
+  border-bottom:1.5px solid #000;
+}
+#suite-workspace .nr-library-layout .nr-search>label{
+  display:block!important;
+  margin-top:5px!important;
+  font-size:20px!important;
+  line-height:1.25!important;
+  letter-spacing:-.45px!important;
+}
+#suite-workspace .nr-library-layout .nr-search .nr-muted{
+  max-width:560px!important;
+  margin-bottom:0!important;
+}
+#suite-workspace .nr-library-title{
+  margin-bottom:16px!important;
+  font-size:20px!important;
+  letter-spacing:-.35px!important;
+}
+#suite-workspace .nr-saved button{
+  min-height:82px!important;
+  padding:17px 18px!important;
+  align-items:center!important;
+}
+#suite-workspace .nr-saved button strong{
+  max-width:70%!important;
+  font-size:14px!important;
+  line-height:1.3!important;
+}
+#suite-workspace .nr-saved button span{
+  flex:0 0 auto!important;
+  text-align:right!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  letter-spacing:.03em!important;
+  text-transform:uppercase!important;
+}
+#suite-workspace .nr-header-tools{
+  display:flex!important;
+  align-items:center!important;
+  gap:9px!important;
+  flex-wrap:wrap!important;
+  justify-content:flex-end!important;
+}
+#suite-workspace .nr-settings>summary{
+  min-height:40px!important;
+  display:flex!important;
+  align-items:center!important;
+  padding:9px 12px!important;
+  border:1px solid var(--g-line)!important;
+  border-radius:9px!important;
+  background:#fff!important;
+  color:var(--g-ink-2)!important;
+}
+#suite-workspace .nr-settings>div{
+  margin-top:8px!important;
+  min-width:300px!important;
+  max-width:390px!important;
+  padding:16px!important;
+  border:1.5px solid #000!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  box-shadow:4px 4px 0 var(--g-pink)!important;
+}
+#suite-workspace .nr-settings-delete{
+  color:#8f153b!important;
+}
+#suite-workspace .nr-tabs{
+  margin-top:4px!important;
+  margin-bottom:34px!important;
+}
+#suite-workspace .co-board{
+  grid-template-columns:minmax(0,1.7fr) minmax(230px,.65fr)!important;
+}
+#suite-workspace .co-feature{
+  min-height:330px!important;
+}
+#suite-workspace .co-photo-story{
+  min-width:0!important;
+}
+#suite-workspace .co-photos{
+  gap:7px!important;
+}
+#suite-workspace .co-photos button{
+  border:1px solid #000!important;
+  border-radius:10px!important;
+  overflow:hidden!important;
+  background:#fff!important;
+  box-shadow:2px 2px 0 var(--g-pink)!important;
+}
+#suite-workspace .co-photos img{
+  aspect-ratio:1/1!important;
+  object-fit:cover!important;
+}
+#suite-workspace .co-price{
+  padding:22px!important;
+}
+#suite-workspace .co-price strong{
+  display:block!important;
+  margin:12px 0 8px!important;
+  font-size:29px!important;
+  line-height:1.1!important;
+  letter-spacing:-.8px!important;
+}
+#suite-workspace .co-bottom{
+  gap:18px!important;
+}
+#suite-workspace .co-findings,
+#suite-workspace .co-mix{
+  overflow:hidden!important;
+}
+#suite-workspace .co-findings>header,
+#suite-workspace .co-mix>header{
+  padding:16px 18px!important;
+  border-bottom:1px solid var(--g-line)!important;
+}
+#suite-workspace .co-findings h3,
+#suite-workspace .co-mix h3{
+  margin:0!important;
+  font-size:14px!important;
+}
+#suite-workspace .co-finding-rows button,
+#suite-workspace .co-mix-row{
+  min-height:58px!important;
+}
+#suite-workspace .current-research-modal-backdrop{
+  padding:22px!important;
+  background:rgba(0,0,0,.38)!important;
+  backdrop-filter:blur(3px)!important;
+}
+#suite-workspace .current-research-modal{
+  width:min(620px,100%)!important;
+  max-height:min(760px,calc(100vh - 44px))!important;
+  overflow:auto!important;
+  border:2px solid #000!important;
+  border-radius:16px!important;
+  background:#fff!important;
+  box-shadow:8px 8px 0 var(--g-pink)!important;
+}
+#suite-workspace .current-research-modal>header{
+  position:sticky!important;
+  top:0!important;
+  z-index:1!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  padding:18px 20px!important;
+  border-bottom:1px solid var(--g-line)!important;
+  background:#fff!important;
+}
+#suite-workspace .current-research-modal>header h2{
+  margin:0!important;
+  font-size:19px!important;
+}
+#suite-workspace .current-research-modal .nr-search{
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+}
+#suite-workspace .nr-error{
+  border:1.5px solid #000!important;
+  border-left:6px solid #b4234b!important;
+  border-radius:10px!important;
+  background:#fff6f7!important;
+}
+@media(max-width:900px){
+  #suite-workspace .co-board{grid-template-columns:1fr!important}
+  #suite-workspace .co-price{min-height:0!important}
+}
+@media(max-width:700px){
+  #suite-workspace .nr-library .nr-head h1{font-size:34px!important}
+  #suite-workspace .nr-library-layout{gap:30px!important}
+  #suite-workspace .nr-saved button{min-height:74px!important}
+  #suite-workspace .nr-saved button strong{max-width:62%!important}
+  #suite-workspace .nr-header-tools{justify-content:flex-start!important}
+  #suite-workspace .nr-settings>div{min-width:min(300px,calc(100vw - 40px))!important}
+  #suite-workspace .co-stats{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+  #suite-workspace .co-stats>div{
+    border-right:0!important;
+    border-bottom:1px solid var(--g-line)!important;
+  }
+  #suite-workspace .co-stats>div:last-child{border-bottom:0!important}
+  #suite-workspace .nr-listings.current-listing-grid{grid-template-columns:1fr!important}
+  #suite-workspace .current-research-modal-backdrop{padding:12px!important}
+}
