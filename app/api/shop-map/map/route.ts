@@ -75,6 +75,37 @@ async function buildMap(request: Request) {
   const month = parameters.get("month") ?? (timezone ? monthOf(now, timezone) ?? "" : "");
   const window = timezone ? monthWindow(month, timezone) : null;
 
+  if(view==="money"){
+    const financial=timezone?await readFinancialMonth(user.userId,shopId,month,timezone):null;
+    const productionCoverage=financial?.coverage.productionCoverage??0;
+    const profit=financial?.knownOperatingProfitMinor??null;
+    const missingCosts=financial?Math.round((1-productionCoverage)*(financial.coverage.receipts??0)):0;
+    const sourceRows=await db.prepare(
+      `SELECT source, refreshed_at, last_error FROM finance_sources WHERE user_id = ? AND shop_id = ?`)
+      .bind(user.userId,shopId).all<{source:string;refreshed_at:number;last_error:string}>();
+    const asOf=financialAsOf((sourceRows.results??[]).map(row=>({
+      source:row.source,refreshedAt:Number(row.refreshed_at),lastError:row.last_error})));
+    const nowSeconds=Math.floor(Date.now()/1000);
+    return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},timezoneNeeded:!timezone,month,
+      thisMonth:{
+        revenueMinor:financial?.grossSellerRevenueMinor??null,
+        etsyFeesMinor:financial?financial.etsyTransactionFeesMinor+financial.etsyProcessingFeesMinor+financial.etsyListingFeesMinor+financial.etsyAdvertisingFeesMinor+financial.etsyOtherFeesMinor:null,
+        productionCostMinor:financial&&productionCoverage===1?financial.productionCostMinor+financial.productionShippingMinor:null,
+        refundsMinor:financial?.refundsMinor??null,adjustmentsMinor:financial?.adjustmentsMinor??null,
+        currency:financial?.currency??"USD",
+        headline:profit===null?(missingCosts===1?"One order's cost is missing":missingCosts>1?`${missingCosts} order costs are missing`:"Profit not available yet"):financial?.manualCostCount?"Profit with your entered costs":"Verified profit",
+        label:profit===null?"unavailable":"verified",
+        salesAsOf:asOf,salesStale:isStale(asOf,nowSeconds),
+        freshness:asOf?freshnessNote({asOf,nowSeconds,timezone:timezone||"UTC"}):"The financial refresh is incomplete. Refresh your numbers to try again.",
+        profitMinor:profit,
+        accuracy:profit===null?(missingCosts>0?`Add production costs for ${missingCosts} ${missingCosts===1?"order":"orders"} to calculate profit.`:"Profit is unavailable while sales, fees, refunds, or production costs are missing."):`Includes sales, Etsy fees, refunds, adjustments, and production costs.${financial?.manualCostCount?` ${financial.manualCostCount} order costs were entered by you.`:""}`,
+        coverage:{verified:productionCoverage,estimated:0,unavailable:1-productionCoverage},
+        orders:financial?.coverage.receipts??0,
+      },
+    });
+  }
+
   /* ------------------------------------------------------------- listings */
   const listingRows = await db.prepare(
     `SELECT listing_id, title, tags, shop_section, state, created_at, views, favorites, image_url,
@@ -206,6 +237,26 @@ async function buildMap(request: Request) {
     });
   }
 
+
+  if(view==="overview"){
+    const sales90=totalsForFast(90);
+    const everyId=rows.map(row=>Number(row.listing_id));
+    const sum=(field:"last90Orders"|"last90RevenueMinor")=>
+      everyId.reduce((total,id)=>total+Number(performance.get(id)?.[field]??0),0);
+    const sold=soldRowsFast(sales90);
+    return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},month,
+      shopTotals:{
+        listings:everyId.length,
+        activeListings:rows.filter(row=>String(row.state)==="active").length,
+        orders:everyId.reduce((total,id)=>total+Number(performance.get(id)?.lifetimeOrders??0),0),
+        ordersLast90:sum("last90Orders"),
+        revenueLast90Minor:sum("last90RevenueMinor"),
+      },
+      soldListings:{period:"Last 90 days",days:90,listings:sold},
+      topListings:sold.slice(0,3),
+    });
+  }
 
   /* --------------------------------------------------------------- worlds */
   const overrideRows = await db.prepare(
