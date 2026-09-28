@@ -6,20 +6,16 @@ import { apiKey, encryptEtsy, etsyFetch, goldieSiteUrl } from "../client";
 import { etsyOauthIntent, sameEtsyShopMessage, wrongEtsyAccountMessage } from "@/app/etsy-connect-intent";
 
 
-async function rememberEtsyFirstName(userId:string,etsyUserId:number,token:string,scopes:string){
-  if(!scopes.split(/\s+/).includes("email_r"))return;
+async function ensureEtsyFirstNameColumn(){
+  try{await env.DB.prepare("ALTER TABLE etsy_connections ADD COLUMN first_name TEXT").run();}
+  catch(error){if(!/duplicate column/i.test(error instanceof Error?error.message:""))throw error;}
+}
+async function readEtsyFirstName(etsyUserId:number,token:string,scopes:string){
+  if(!scopes.split(/\s+/).includes("email_r"))return "";
   try{
     const profile=await etsyFetch<{first_name?:string}>(`/users/${etsyUserId}`,token,"connect");
-    const firstName=String(profile?.first_name||"").trim().slice(0,60);
-    if(!firstName)return;
-    const row=await env.DB.prepare("SELECT pricing_json FROM seller_preferences WHERE user_id=?").bind(userId).first<{pricing_json:string}>();
-    let saved:Record<string,unknown>={};
-    try{saved=row?JSON.parse(row.pricing_json||"{}") as Record<string,unknown>:{};}catch{}
-    if(typeof saved.firstName==="string"&&saved.firstName.trim())return;
-    saved.firstName=firstName;
-    await env.DB.prepare("INSERT INTO seller_preferences (user_id,pricing_json) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET pricing_json=excluded.pricing_json")
-      .bind(userId,JSON.stringify(saved)).run();
-  }catch{}
+    return String(profile?.first_name||"").trim().slice(0,60);
+  }catch{return "";}
 }
 
 export async function GET(request:Request){
@@ -35,7 +31,8 @@ export async function GET(request:Request){
     if(!tokenResponse.ok||!tokens.access_token||!tokens.refresh_token)throw new Error(tokens.error_description||"Etsy did not complete the connection.");
     const etsyUserId=Number(tokens.access_token.split(".")[0]);if(!etsyUserId)throw new Error("Etsy did not return a valid account identifier.");
     const shop=await etsyFetch<{shop_id:number;shop_name:string}>(`/users/${etsyUserId}/shops`,tokens.access_token,"connect");
-    await rememberEtsyFirstName(pending.user_id,etsyUserId,tokens.access_token,String(tokens.scope||""));
+    const etsyFirstName=await readEtsyFirstName(etsyUserId,tokens.access_token,String(tokens.scope||""));
+    if(etsyFirstName)await ensureEtsyFirstNameColumn();
     if(!shop||!Number.isSafeInteger(Number(shop.shop_id))||Number(shop.shop_id)<=0||!shop.shop_name)throw new Error("No Etsy shop was found on this account. Connect an account with an existing Etsy shop.");
     /*
       SHOP MAP ASKED FOR SALES ACCESS ON ONE SAVED SHOP.
@@ -77,8 +74,8 @@ export async function GET(request:Request){
         that had done exactly the right thing.
       */
       if(!intended)return fail("That shop is not connected to this account yet. Connect it first, then add sales access.");
-      await env.DB.prepare("UPDATE etsy_connections SET encrypted_access_token=?, encrypted_refresh_token=?, expires_at=?, etsy_user_id=?, shop_name=?, scopes=?, scopes_checked_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND shop_id=?")
-        .bind(await encryptEtsy(tokens.access_token),await encryptEtsy(tokens.refresh_token),Math.floor(Date.now()/1000)+Number(tokens.expires_in||3600),etsyUserId,shop.shop_name,String(tokens.scope||""),pending.user_id,targetShopId).run();
+      await env.DB.prepare("UPDATE etsy_connections SET encrypted_access_token=?, encrypted_refresh_token=?, expires_at=?, etsy_user_id=?, shop_name=?, scopes=?, scopes_checked_at=CURRENT_TIMESTAMP, first_name=CASE WHEN COALESCE(first_name,'')='' THEN ? ELSE first_name END, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND shop_id=?")
+        .bind(await encryptEtsy(tokens.access_token),await encryptEtsy(tokens.refresh_token),Math.floor(Date.now()/1000)+Number(tokens.expires_in||3600),etsyUserId,shop.shop_name,String(tokens.scope||""),etsyFirstName,pending.user_id,targetShopId).run();
       /*
         RETURN TO A PAGE, NOT A JSON ENDPOINT.
 
@@ -98,16 +95,16 @@ export async function GET(request:Request){
          must not change the active destination or advance the workflow when
          Etsy silently reused the browser's current login. */
       await env.DB.prepare("UPDATE etsy_connections SET scopes=?, scopes_checked_at=CURRENT_TIMESTAMP WHERE user_id=? AND shop_id=?").bind(String(tokens.scope||""),pending.user_id,shop.shop_id).run().catch(()=>{});
-      await env.DB.prepare("UPDATE etsy_connections SET encrypted_access_token=?, encrypted_refresh_token=?, expires_at=?, etsy_user_id=?, shop_name=?, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND shop_id=?")
-        .bind(await encryptEtsy(tokens.access_token),await encryptEtsy(tokens.refresh_token),Math.floor(Date.now()/1000)+Number(tokens.expires_in||3600),etsyUserId,shop.shop_name,pending.user_id,shop.shop_id).run();
+      await env.DB.prepare("UPDATE etsy_connections SET encrypted_access_token=?, encrypted_refresh_token=?, expires_at=?, etsy_user_id=?, shop_name=?, first_name=CASE WHEN COALESCE(first_name,'')='' THEN ? ELSE first_name END, updated_at=CURRENT_TIMESTAMP WHERE user_id=? AND shop_id=?")
+        .bind(await encryptEtsy(tokens.access_token),await encryptEtsy(tokens.refresh_token),Math.floor(Date.now()/1000)+Number(tokens.expires_in||3600),etsyUserId,shop.shop_name,etsyFirstName,pending.user_id,shop.shop_id).run();
       return fail(sameEtsyShopMessage(shop.shop_name));
     }
     /* D835 · A second shop is added, not swapped in. The one just authorised
        becomes active; the others stay connected and switchable. */
     await env.DB.batch([
       env.DB.prepare("UPDATE etsy_connections SET is_active=0 WHERE user_id=?").bind(pending.user_id),
-      env.DB.prepare("INSERT INTO etsy_connections (user_id,shop_id,encrypted_access_token,encrypted_refresh_token,expires_at,etsy_user_id,shop_name,is_active,updated_at) VALUES (?,?,?,?,?,?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(user_id,shop_id) DO UPDATE SET encrypted_access_token=excluded.encrypted_access_token, encrypted_refresh_token=excluded.encrypted_refresh_token, expires_at=excluded.expires_at, etsy_user_id=excluded.etsy_user_id, shop_name=excluded.shop_name, is_active=1, updated_at=CURRENT_TIMESTAMP")
-        .bind(pending.user_id,shop.shop_id,await encryptEtsy(tokens.access_token),await encryptEtsy(tokens.refresh_token),Math.floor(Date.now()/1000)+Number(tokens.expires_in||3600),etsyUserId,shop.shop_name),
+      env.DB.prepare("INSERT INTO etsy_connections (user_id,shop_id,encrypted_access_token,encrypted_refresh_token,expires_at,etsy_user_id,shop_name,first_name,is_active,updated_at) VALUES (?,?,?,?,?,?,?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(user_id,shop_id) DO UPDATE SET encrypted_access_token=excluded.encrypted_access_token, encrypted_refresh_token=excluded.encrypted_refresh_token, expires_at=excluded.expires_at, etsy_user_id=excluded.etsy_user_id, shop_name=excluded.shop_name, first_name=CASE WHEN COALESCE(etsy_connections.first_name,'')='' THEN excluded.first_name ELSE etsy_connections.first_name END, is_active=1, updated_at=CURRENT_TIMESTAMP")
+        .bind(pending.user_id,shop.shop_id,await encryptEtsy(tokens.access_token),await encryptEtsy(tokens.refresh_token),Math.floor(Date.now()/1000)+Number(tokens.expires_in||3600),etsyUserId,shop.shop_name,etsyFirstName),
     ]);
     /* What Etsy actually granted, recorded against the connection. Shop Map
        reads this to decide whether it can ask for receipts, and a grant that
