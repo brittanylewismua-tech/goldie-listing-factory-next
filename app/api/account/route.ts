@@ -4,7 +4,6 @@ import { isOwner } from "@/app/mastermind/access";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { sellerPreferences } from "@/db/schema";
-import { env } from "cloudflare:workers";
 
 export async function GET() {
   const user = await getChatGPTUser();
@@ -28,21 +27,12 @@ export async function GET() {
       }
     } catch {}
   }
-  let etsyFirstName = "";
-  if (user) {
-    try {
-      const row = await (env as unknown as {DB:D1Database}).DB
-        .prepare("SELECT first_name FROM etsy_connections WHERE user_id=? AND is_active=1 LIMIT 1")
-        .bind(user.userId).first<{first_name:string|null}>();
-      etsyFirstName = String(row?.first_name || "").trim();
-    } catch {}
-  }
   const displayName = user?.fullName || user?.displayName || null;
   const metadataWords = (user?.fullName || "").trim().split(/\s+/).filter(Boolean);
   const metadataFirstName = metadataWords.length >= 1 && metadataWords.length <= 3
     && metadataWords.every(word => /^[A-Za-z][A-Za-z'’-]*$/.test(word))
     ? metadataWords[0] : "";
-  const firstName = savedFirstName || etsyFirstName || metadataFirstName || (user && isOwner(user) ? "Brittany" : "");
+  const firstName = savedFirstName || metadataFirstName || (user && isOwner(user) ? "Brittany" : "");
   const initials = displayName
     ? displayName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase()
     : null;
