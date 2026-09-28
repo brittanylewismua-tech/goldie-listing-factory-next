@@ -59,7 +59,7 @@ test('source failures preserve old content and never advance its baseline',()=>{
     posts are themselves the news. A help article still reports nothing on its
     first read. */
  assert.match(s,/if\(!stored\?\.content\)\{baseline\+\+/);
- assert.match(s,/if\(source\.seedOnFirstRead&&edited<4\)/);assert.match(s,/ON CONFLICT\(id\) DO UPDATE SET last_error=excluded.last_error/);assert.match(s,/reserveSpend/);/* D1902 · The budget no longer throws. Going over it threw 'Queued for next
+ assert.match(s,/if\(source\.seedOnFirstRead\)\{/);assert.match(s,/ON CONFLICT\(id\) DO UPDATE SET last_error=excluded.last_error/);assert.match(s,/reserveSpend/);/* D1902 · The budget no longer throws. Going over it threw 'Queued for next
     source check', which the catch recorded as a source FAILURE - a deferred
     source looked broken and dragged the brief to 'partial'. */
  assert.match(s,/edited<EDIT_BUDGET/);
@@ -265,4 +265,10 @@ test('a curly apostrophe does not empty the brief',()=>{
  /* And a quote lifted from that text must validate against it. */
  const q='We’re testing — “eligible” & more…';
  assert.ok(validateCandidate({...item,quote:q},source,out,out));
+});
+
+
+test('a seeded source stays pending when the edit budget is already full',()=>{
+ const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
+ assert.match(collector,/if\(source\.seedOnFirstRead\)\{\s*if\(edited>=EDIT_BUDGET\)continue;/s);
 });
