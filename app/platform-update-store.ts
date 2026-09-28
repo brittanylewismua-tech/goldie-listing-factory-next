@@ -12,5 +12,16 @@ export async function readDailyUpdate(){await ensureUpdateTables();const db=upda
  db.prepare(`SELECT content FROM platform_update_items WHERE day=? ORDER BY published_at DESC`).bind(day).all<{content:string}>(),
  db.prepare(`SELECT id,checked_at,last_error FROM platform_update_sources`).all<{id:string;checked_at:number;last_error:string}>(),
  db.prepare(`SELECT MIN(started_at) started FROM platform_update_runs WHERE finished_at>0 AND checked>0`).first<{started:number}>(),
- db.prepare(`SELECT content,day FROM platform_update_items WHERE day<? AND day>=? ORDER BY day DESC,published_at DESC LIMIT 100`).bind(day,new Date(now.getTime()-30*86400000).toISOString().slice(0,10)).all<{content:string;day:string}>()
+ /*
+   D1900 · A PUBLISHED ITEM THAT APPEARED IN NO COUNT AT ALL.
+
+   Non-urgent items are filed into tomorrow morning's edition on purpose, so the
+   brief reads as one daily batch. But this list selected day < today, and the
+   today list selects day = today, so an item written into tomorrow was in
+   neither: the collector reported "published 1" and every figure on the site
+   said zero. Selecting by when the item was published, rather than by which
+   edition bucket it was filed in, makes an item visible as soon as it exists
+   while leaving the edition it belongs to alone.
+ */
+ db.prepare(`SELECT content,day FROM platform_update_items WHERE day<>? AND published_at>=? ORDER BY published_at DESC LIMIT 100`).bind(day,Math.floor((now.getTime()-30*86400000)/1000)).all<{content:string;day:string}>()
 ]);const sources=UPDATE_SOURCES.map(s=>rows.results.find(r=>r.id===s.id));const current=sources.every(s=>s&&s.checked_at>Date.now()/1000-28*3600&&!s.last_error);const checkedAt=Math.min(...sources.map(s=>s?.checked_at||0));return{day,recent:recent.results.map(row=>({...JSON.parse(row.content) as UpdateItem,day:row.day})),items:items.results.map(row=>JSON.parse(row.content) as UpdateItem).sort((a,b)=>Number(b.priority==='ACTION REQUIRED')-Number(a.priority==='ACTION REQUIRED')),status:current?'ready':rows.results.length?'partial':'pending',baseline:!!first?.started&&briefDay(new Date(first.started*1000))===day,checkedAt,sources:UPDATE_SOURCES.map(s=>({name:s.name,url:s.url}))};}

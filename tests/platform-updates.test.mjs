@@ -98,3 +98,17 @@ test('only an announcements board seeds its own first read',()=>{
  assert.doesNotMatch(collector,/Report only posts dated or described as within the last 21 days/);
  assert.match(collector,/do not treat the absence of a date as a reason to skip it/);
 });
+
+test('an item filed into tomorrow morning still counts today',()=>{
+ const store=readFileSync(new URL('../app/platform-update-store.ts',import.meta.url),'utf8');
+ /*
+   Measured live: the collector returned published:1 and every figure on the
+   site read zero. Non-urgent items are filed into tomorrow's edition by design;
+   the recent list selected day < today and the current list selects day =
+   today, so an item written into tomorrow fell between them and existed in no
+   count at all.
+ */
+ assert.doesNotMatch(store,/WHERE day<\? AND day>=\?/,
+   'a future-dated edition falls out of every count again');
+ assert.match(store,/WHERE day<>\? AND published_at>=\?/);
+});
