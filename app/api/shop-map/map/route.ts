@@ -52,6 +52,7 @@ async function buildMap(request: Request) {
   const parameters = new URL(request.url).searchParams;
   const now = Math.floor(Date.now() / 1_000);
   const soldDays=[30,90,365].includes(Number(parameters.get("days")))?Number(parameters.get("days")):90;
+  const view=String(parameters.get("view")||"");
 
   const shopRow = await db.prepare(
     `SELECT c.shop_id, c.shop_name, COALESCE(p.image_url, '') AS image_url, COALESCE(p.updated_at,0) AS profile_updated_at
@@ -73,6 +74,37 @@ async function buildMap(request: Request) {
   const timezone = await shopTimezone(user.userId, shopId);
   const month = parameters.get("month") ?? (timezone ? monthOf(now, timezone) ?? "" : "");
   const window = timezone ? monthWindow(month, timezone) : null;
+
+  if(view==="money"){
+    const financial=timezone?await readFinancialMonth(user.userId,shopId,month,timezone):null;
+    const productionCoverage=financial?.coverage.productionCoverage??0;
+    const profit=financial?.knownOperatingProfitMinor??null;
+    const missingCosts=financial?Math.round((1-productionCoverage)*(financial.coverage.receipts??0)):0;
+    const sourceRows=await db.prepare(
+      `SELECT source, refreshed_at, last_error FROM finance_sources WHERE user_id = ? AND shop_id = ?`)
+      .bind(user.userId,shopId).all<{source:string;refreshed_at:number;last_error:string}>();
+    const asOf=financialAsOf((sourceRows.results??[]).map(row=>({
+      source:row.source,refreshedAt:Number(row.refreshed_at),lastError:row.last_error})));
+    const nowSeconds=Math.floor(Date.now()/1000);
+    return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},timezoneNeeded:!timezone,month,
+      thisMonth:{
+        revenueMinor:financial?.grossSellerRevenueMinor??null,
+        etsyFeesMinor:financial?financial.etsyTransactionFeesMinor+financial.etsyProcessingFeesMinor+financial.etsyListingFeesMinor+financial.etsyAdvertisingFeesMinor+financial.etsyOtherFeesMinor:null,
+        productionCostMinor:financial&&productionCoverage===1?financial.productionCostMinor+financial.productionShippingMinor:null,
+        refundsMinor:financial?.refundsMinor??null,adjustmentsMinor:financial?.adjustmentsMinor??null,
+        currency:financial?.currency??"USD",
+        headline:profit===null?(missingCosts===1?"One order's cost is missing":missingCosts>1?`${missingCosts} order costs are missing`:"Profit not available yet"):financial?.manualCostCount?"Profit with your entered costs":"Verified profit",
+        label:profit===null?"unavailable":"verified",
+        salesAsOf:asOf,salesStale:isStale(asOf,nowSeconds),
+        freshness:asOf?freshnessNote({asOf,nowSeconds,timezone:timezone||"UTC"}):"The financial refresh is incomplete. Refresh your numbers to try again.",
+        profitMinor:profit,
+        accuracy:profit===null?(missingCosts>0?`Add production costs for ${missingCosts} ${missingCosts===1?"order":"orders"} to calculate profit.`:"Profit is unavailable while sales, fees, refunds, or production costs are missing."):`Includes sales, Etsy fees, refunds, adjustments, and production costs.${financial?.manualCostCount?` ${financial.manualCostCount} order costs were entered by you.`:""}`,
+        coverage:{verified:productionCoverage,estimated:0,unavailable:1-productionCoverage},
+        orders:financial?.coverage.receipts??0,
+      },
+    });
+  }
 
   /* ------------------------------------------------------------- listings */
   const listingRows = await db.prepare(
@@ -143,6 +175,86 @@ async function buildMap(request: Request) {
         ordersLast90:sum("last90Orders"),revenueLast90Minor:sum("last90RevenueMinor"),
       },
       soldListings:{period:`Last ${soldDays} days`,days:soldDays,listings:soldRows(selectedSales)},
+    });
+  }
+
+  const totalsForFast=(days:number)=>{
+    const totals=new Map<number,{sales:number;revenueMinor:number}>();
+    for(const sale of saleRows.results??[]){
+      if(Number(sale.refunded)||Number(sale.sold_at)<now-days*86400||Number(sale.sold_at)>now)continue;
+      const id=Number(sale.listing_id),previous=totals.get(id)??{sales:0,revenueMinor:0};
+      previous.sales+=Number(sale.quantity??0);
+      previous.revenueMinor+=Number(sale.quantity??0)*Number(sale.price_minor??0);
+      totals.set(id,previous);
+    }
+    return totals;
+  };
+  const soldRowsFast=(totals:Map<number,{sales:number;revenueMinor:number}>)=>rows.map(row=>({
+    listingId:Number(row.listing_id),title:String(row.title||"Listing details unavailable"),
+    imageUrl:String(row.image_url||""),favorites:row.favorites===null?null:Number(row.favorites),
+    sales:totals.get(Number(row.listing_id))?.sales??0,
+    revenueMinor:totals.get(Number(row.listing_id))?.revenueMinor??0,
+  })).filter(row=>row.sales>0).sort((a,b)=>b.sales-a.sales||b.revenueMinor-a.revenueMinor);
+
+  if(view==="sold"){
+    const selectedSales=totalsForFast(soldDays);
+    return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},
+      month,
+      soldListings:{period:`Last ${soldDays} days`,days:soldDays,listings:soldRowsFast(selectedSales)},
+    });
+  }
+
+  if(view==="money"){
+    const financial=timezone?await readFinancialMonth(user.userId,shopId,month,timezone):null;
+    const productionCoverage=financial?.coverage.productionCoverage??0;
+    const profit=financial?.knownOperatingProfitMinor??null;
+    const missingCosts=financial?Math.round((1-productionCoverage)*(financial.coverage.receipts??0)):0;
+    const sourceRows=await db.prepare(
+      `SELECT source, refreshed_at, last_error FROM finance_sources WHERE user_id = ? AND shop_id = ?`)
+      .bind(user.userId,shopId).all<{source:string;refreshed_at:number;last_error:string}>();
+    const asOf=financialAsOf((sourceRows.results??[]).map(row=>({
+      source:row.source,refreshedAt:Number(row.refreshed_at),lastError:row.last_error})));
+    const nowSeconds=Math.floor(Date.now()/1000);
+    return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},
+      timezoneNeeded:!timezone,month,
+      thisMonth:{
+        revenueMinor:financial?.grossSellerRevenueMinor??null,
+        etsyFeesMinor:financial?financial.etsyTransactionFeesMinor+financial.etsyProcessingFeesMinor+financial.etsyListingFeesMinor+financial.etsyAdvertisingFeesMinor+financial.etsyOtherFeesMinor:null,
+        productionCostMinor:financial&&productionCoverage===1?financial.productionCostMinor+financial.productionShippingMinor:null,
+        refundsMinor:financial?.refundsMinor??null,adjustmentsMinor:financial?.adjustmentsMinor??null,
+        currency:financial?.currency??"USD",
+        headline:profit===null?(missingCosts===1?"One order's cost is missing":missingCosts>1?`${missingCosts} order costs are missing`:"Profit not available yet"):financial?.manualCostCount?"Profit with your entered costs":"Verified profit",
+        label:profit===null?"unavailable":"verified",
+        salesAsOf:asOf,salesStale:isStale(asOf,nowSeconds),
+        freshness:asOf?freshnessNote({asOf,nowSeconds,timezone:timezone||"UTC"}):"The financial refresh is incomplete. Refresh your numbers to try again.",
+        profitMinor:profit,
+        accuracy:profit===null?(missingCosts>0?`Add production costs for ${missingCosts} ${missingCosts===1?"order":"orders"} to calculate profit.`:"Profit is unavailable while sales, fees, refunds, or production costs are missing."):`Includes sales, Etsy fees, refunds, adjustments, and production costs.${financial?.manualCostCount?` ${financial.manualCostCount} order costs were entered by you.`:""}`,
+        coverage:{verified:productionCoverage,estimated:0,unavailable:1-productionCoverage},
+        orders:financial?.coverage.receipts??0,
+      },
+    });
+  }
+
+
+  if(view==="overview"){
+    const sales90=totalsForFast(90);
+    const everyId=rows.map(row=>Number(row.listing_id));
+    const sum=(field:"last90Orders"|"last90RevenueMinor")=>
+      everyId.reduce((total,id)=>total+Number(performance.get(id)?.[field]??0),0);
+    const sold=soldRowsFast(sales90);
+    return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},month,
+      shopTotals:{
+        listings:everyId.length,
+        activeListings:rows.filter(row=>String(row.state)==="active").length,
+        orders:everyId.reduce((total,id)=>total+Number(performance.get(id)?.lifetimeOrders??0),0),
+        ordersLast90:sum("last90Orders"),
+        revenueLast90Minor:sum("last90RevenueMinor"),
+      },
+      soldListings:{period:"Last 90 days",days:90,listings:sold},
+      topListings:sold.slice(0,3),
     });
   }
 
@@ -399,7 +511,7 @@ async function buildMap(request: Request) {
   const sales90=totalsFor(90), selectedSales=totalsFor(soldDays);
   const selectedIds=[...new Set([...sales90.keys(),...selectedSales.keys(),...rows.filter(row=>row.state==="active").map(row=>Number(row.listing_id))])].slice(0,100);
   let displayUnavailable=false;
-  if(selectedIds.some(id=>!rows.find(row=>Number(row.listing_id)===id)?.image_url)||!shopRow.image_url||Number(shopRow.profile_updated_at)<now-6*3600){
+  if(!view&&(selectedIds.some(id=>!rows.find(row=>Number(row.listing_id)===id)?.image_url)||!shopRow.image_url||Number(shopRow.profile_updated_at)<now-6*3600)){
     try{
       const connection=await etsyConnection(user.userId);
       if(!shopRow.image_url||Number(shopRow.profile_updated_at)<now-6*3600){

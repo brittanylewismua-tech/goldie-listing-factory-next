@@ -21,8 +21,9 @@ test("overview leads with sold listings and plain timing", () => {
 
 test("sold listings keep every metric within the selected sales period", () => {
   const sold=client.slice(client.indexOf('{tab === "sold"'),client.indexOf('{tab === "money"'));
-  for (const label of ["Listing", "Units sold", "Revenue"])
-    assert.ok(sold.includes(label), `${label} is missing`);
+  assert.match(sold,/Sold listings · last/);
+  assert.match(sold,/unit\{listing\.sales===1\?"":"s"\} sold/);
+  assert.match(sold,/money\(listing\.revenueMinor\)/);
   // Lifetime totals must not masquerade as favorites earned in the sales period.
   assert.doesNotMatch(sold,/listing.favorites|value="favorites"/);
   assert.match(sold,/shown.soldListings\?\.days\?\?90/);
@@ -53,9 +54,10 @@ test("the page handles loading, failure, empty sales and timezone setup", () => 
 });
 
 test("the map remains responsive without a desktop-only table", () => {
-  assert.match(css, /\.shop-map-leader-grid/);
-  assert.match(css, /@media\(max-width:560px\)/);
-  assert.match(css, /\.shop-map-sold-table article\{grid-template-columns/);
+  const routeCss=readFileSync(new URL("../app/shop-map/shop-map.css", import.meta.url), "utf8");
+  assert.match(routeCss, /\.shop-map-leader-grid/);
+  assert.match(routeCss, /@media\(max-width:650px\)/);
+  assert.match(routeCss, /\.shop-map-sold-grid article/);
   assert.doesNotMatch(client, /<table|<thead|<tbody/);
 });
 
