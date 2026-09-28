@@ -138,3 +138,6 @@
   color:var(--g-ink3)!important;
   font-size:11px!important;
 }
+
+#suite-workspace .pu-loader-dot{width:10px;height:10px;border-radius:50%;background:var(--g-pink)!important;box-shadow:0 0 0 0 #ee6fc066;animation:pu-loader-pulse 1.3s ease-out infinite;flex:none}
+@keyframes pu-loader-pulse{70%{box-shadow:0 0 0 8px #ee6fc000}100%{box-shadow:0 0 0 0 #ee6fc000}}
