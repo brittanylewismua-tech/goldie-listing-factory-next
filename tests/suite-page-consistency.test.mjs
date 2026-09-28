@@ -29,7 +29,7 @@ test("tracked keyword and shop cards expose their existing evidence",()=>{
   assert.match(watchPage,/Selling listings/);
   assert.match(watchPage,/Repeat-selling listings/);
   assert.match(watchPage,/Listings to review/);
-  assert.match(watchPage,/Buyer feedback/);
+  assert.match(watchPage,/Review themes/);
 });
 
 test("Trademark Check makes the checker primary and shows watch count",()=>{
