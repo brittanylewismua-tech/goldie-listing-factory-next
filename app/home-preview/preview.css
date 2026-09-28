@@ -51,3 +51,20 @@
 .home4-night-products{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
 .home4-night-products a{display:inline-flex;align-items:center;min-height:40px;padding:7px 10px;border:1px solid #000;border-radius:8px;background:#fff;font-size:10px;font-weight:800}
 .home4-night-products a:hover{background:var(--pink-soft)}
+
+/* Home owns its own inner grid. Remove the shared workspace gutters so solid
+   bands can span from the sidebar edge to the right edge of the workspace. */
+#suite-workspace .factory-work:has(.home4){
+  padding-left:0!important;
+  padding-right:0!important;
+}
+#suite-workspace .factory-work:has(.home4)>.current-home-layout{
+  max-width:none!important;
+  width:100%!important;
+  margin-inline:0!important;
+  display:block!important;
+}
+#suite-workspace .factory-work:has(.home4)>.current-home-layout>.home4{
+  max-width:none!important;
+  width:100%!important;
+}
