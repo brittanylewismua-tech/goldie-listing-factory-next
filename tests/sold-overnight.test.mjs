@@ -546,8 +546,9 @@ test("the period is stated once, not on every card", () => {
   /* Four hundred cards each repeating the window was noise even when it was
      accurate. The selected tab says it; the card carries the number. */
   const page = read("hot-list/page.tsx");
-  assert.match(page, /<span className="drop-unit">\{listing\.savesGained > 0/);
-  assert.match(page, /: "Stock decreased"\}<\/span>/);
+  assert.match(page, /<span className="drop-unit">\{listing\.sold>0/);
+  assert.match(page, /"Stock decreased"<\/span>/);
+  assert.match(page, /className="drop-favorites"/);
   assert.doesNotMatch(strip(page), /sold this week<\/span>|sold overnight<\/span>/);
 });
 
