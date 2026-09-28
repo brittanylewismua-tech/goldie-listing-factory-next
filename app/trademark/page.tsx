@@ -211,6 +211,20 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         const wordMatches = all.filter(m => !phraseMatches.includes(m));
         const incomplete = verdict.registerReady === false || verdict.registerComplete === false || verdict.registerRead === false;
         const visible = (matches: RegisterMatch[]) => matches.filter(m => !productClass || m.classes.some(c => c.padStart(3,"0") === productClass));
+        const summaryTitle = verdict.registerRead === false
+          ? "USPTO records could not be checked"
+          : phraseMatches.length
+            ? `${phraseMatches.length} phrase match${phraseMatches.length === 1 ? "" : "es"} found`
+            : verdict.hits.length
+              ? "Brand or character name found in this phrase"
+              : "No phrase match found in this search";
+        const summaryBody = verdict.registerRead === false
+          ? "Try the search again or open the USPTO search directly."
+          : phraseMatches.length
+            ? "Review the matching records and product categories below."
+            : verdict.hits.length
+              ? "Review the named brand or character before using the phrase."
+              : "No exact phrase match appeared in this search. Individual word matches are shown below when present.";
         const records = (matches: RegisterMatch[]) => <ul className="tm-results">{matches.map((m,index) => <li className="tm-record" key={m.serial || `${m.mark}-${index}`}>
           <div className="tm-record-top"><h3>{m.mark}</h3><span className="tm-record-status">{m.registered ? "Registered" : "Pending application"}</span></div>
           <p className="tm-record-owner">{m.owner || "Applicant not provided"}</p>
@@ -221,6 +235,10 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
         </li>)}</ul>;
         return <section className="tm-verdict" aria-live="polite">
           <div className="tm-result-heading"><div><p className="p-eyebrow">RESULTS FOR</p><h2 className="tm-phrase">{marked()}</h2></div><button className="tm-watch-button" type="button" disabled={watchBusy === verdict.phrase} onClick={() => void watchPhrase()}>{watches.some(w => w.phrase.toLowerCase() === verdict.phrase.toLowerCase()) ? "Update watch" : "Watch phrase"}</button></div>
+          <div className="tm-result-summary" data-has-matches={phraseMatches.length > 0 || verdict.hits.length > 0 ? "yes" : "no"}>
+            <div><span>SUMMARY</span><strong>{summaryTitle}</strong><p>{summaryBody}</p></div>
+            <dl><div><dt>Phrase matches</dt><dd>{phraseMatches.length}</dd></div><div><dt>Word matches</dt><dd>{wordMatches.length}</dd></div><div><dt>Brand / character flags</dt><dd>{verdict.hits.length}</dd></div></dl>
+          </div>
           {incomplete && <div className="tm-coverage" role="status"><strong>{verdict.registerRead === false ? "Records unavailable" : verdict.liveSource ? "More matches available at USPTO" : "Some trademark records are still missing"}</strong><span>{verdict.registerRead === false ? "Try again." : "Check the full USPTO database before using this phrase."}</span><a href="https://tmsearch.uspto.gov/search/" target="_blank" rel="noopener noreferrer">Search USPTO ↗</a></div>}
           {verdict.liveSource && <p className="tm-source">USPTO · checked {new Date((verdict.sourceCheckedAt??0)*1000).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</p>}
           {verdict.hits.length > 0 && <div className="tm-brand-alert"><h3>Brand or character names in this phrase</h3><ul>{verdict.hits.map((hit,index)=><li key={index}><strong>{hit.matched}</strong><span>{hit.category} · {hit.owner}</span></li>)}</ul></div>}
