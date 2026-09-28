@@ -462,3 +462,28 @@
 
 #suite-workspace .tm-loader-dot{width:10px;height:10px;border-radius:50%;background:var(--g-pink)!important;box-shadow:0 0 0 0 #ee6fc066;animation:tm-loader-pulse 1.3s ease-out infinite;flex:none}
 @keyframes tm-loader-pulse{70%{box-shadow:0 0 0 8px #ee6fc000}100%{box-shadow:0 0 0 0 #ee6fc000}}
+
+#suite-workspace .tm-watch-load-error{
+  min-height:48px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  margin:24px 0!important;
+  padding:12px 14px!important;
+  border:1px solid #000!important;
+  border-radius:10px!important;
+  background:#fff8fb!important;
+  color:#000!important;
+  font-size:12px!important;
+}
+#suite-workspace .tm-watch-load-error button{
+  min-height:40px!important;
+  padding:8px 12px!important;
+  border:1.5px solid #000!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  color:#000!important;
+  font-size:11px!important;
+  font-weight:800!important;
+}
