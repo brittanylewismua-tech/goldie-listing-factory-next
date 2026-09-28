@@ -21,8 +21,9 @@ test("overview leads with sold listings and plain timing", () => {
 
 test("sold listings keep every metric within the selected sales period", () => {
   const sold=client.slice(client.indexOf('{tab === "sold"'),client.indexOf('{tab === "money"'));
-  for (const label of ["Listing", "Units sold", "Revenue"])
-    assert.ok(sold.includes(label), `${label} is missing`);
+  assert.match(sold,/Sold listings · last/);
+  assert.match(sold,/unit\{listing\.sales===1\?"":"s"\} sold/);
+  assert.match(sold,/money\(listing\.revenueMinor\)/);
   // Lifetime totals must not masquerade as favorites earned in the sales period.
   assert.doesNotMatch(sold,/listing.favorites|value="favorites"/);
   assert.match(sold,/shown.soldListings\?\.days\?\?90/);
