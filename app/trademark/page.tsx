@@ -228,7 +228,7 @@ export default function TrademarkPage({ initialPhrase }: { initialPhrase?: strin
       })()}
 
       {watches.length > 0 && <section className="tm-watches" aria-labelledby="tm-watches-title">
-        <div className="tm-watches-head"><div><h2 id="tm-watches-title">Watched phrases</h2></div></div>
+        <div className="tm-watches-head"><div><h2 id="tm-watches-title">Watched phrases <span>{watches.length}</span></h2><p>Review phrases again when matching records change.</p></div></div>
         <div className="tm-watch-list">{watches.map(watch => <article key={watch.phrase}
           className={watch.changed ? "changed" : ""}>
           <div><strong>{watch.phrase}</strong><span>{watch.error|| (watch.changed

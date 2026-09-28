@@ -381,3 +381,75 @@
   #suite-workspace .nr-header-tools{margin-top:18px!important}
   #suite-workspace .nr-listings.current-listing-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+
+/* Suite-consistent centered navigation. */
+#suite-workspace .nr .research-navigation,
+#suite-workspace .nr-tabs{
+  width:max-content!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:4px!important;
+  padding:5px!important;
+  border:1.5px solid #000!important;
+  border-radius:999px!important;
+  background:#f4f2f1!important;
+  box-shadow:3px 3px 0 var(--g-pink)!important;
+  position:static!important;
+  backdrop-filter:none!important;
+}
+#suite-workspace .nr .research-navigation{margin-bottom:30px!important}
+#suite-workspace .nr .research-navigation a,
+#suite-workspace .nr-tabs>button{
+  min-height:38px!important;
+  padding:9px 16px!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  color:var(--g-ink-3)!important;
+  font-size:12px!important;
+  font-weight:700!important;
+  letter-spacing:-.01em!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+#suite-workspace .nr .research-navigation a[aria-current=page],
+#suite-workspace .nr-tabs>button[aria-current=page]{
+  background:#000!important;
+  color:#fff!important;
+}
+#suite-workspace .nr .research-navigation a[aria-current=page]::after{display:none!important}
+#suite-workspace .nr-tabs .current-tab-refresh{
+  margin-left:4px!important;
+  padding-left:4px!important;
+  border-left:1px solid #d8d5d3!important;
+}
+#suite-workspace .nr-tabs .current-tab-refresh button{
+  min-height:34px!important;
+  padding:8px 12px!important;
+  border-radius:999px!important;
+  background:#fff!important;
+}
+#suite-workspace .nr-saved button{
+  background:#fff!important;
+  border:1.5px solid #000!important;
+  box-shadow:2px 2px 0 var(--g-pink)!important;
+}
+#suite-workspace .nr-saved button:hover{
+  transform:translate(-1px,-1px)!important;
+  box-shadow:4px 4px 0 var(--g-pink)!important;
+}
+@media(max-width:700px){
+  #suite-workspace .nr .research-navigation,
+  #suite-workspace .nr-tabs{
+    width:100%!important;
+    justify-content:flex-start!important;
+    overflow-x:auto!important;
+    border-radius:14px!important;
+  }
+  #suite-workspace .nr .research-navigation a,
+  #suite-workspace .nr-tabs>button{flex:0 0 auto!important}
+}
