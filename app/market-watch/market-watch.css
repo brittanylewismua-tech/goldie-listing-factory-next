@@ -562,3 +562,34 @@
   }
   #suite-workspace .mw .research-navigation a{flex:0 0 auto!important}
 }
+
+#suite-workspace .current-watch-metrics{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  margin:4px 16px 8px!important;
+  border-top:1px solid var(--g-line)!important;
+  border-bottom:1px solid var(--g-line)!important;
+}
+#suite-workspace .current-watch-metrics div{
+  padding:10px 8px!important;
+  border-right:1px solid var(--g-line)!important;
+}
+#suite-workspace .current-watch-metrics div:last-child{border-right:0!important}
+#suite-workspace .current-watch-metrics dt{
+  font-size:9px!important;
+  line-height:1.25!important;
+  color:var(--g-ink3)!important;
+  text-transform:uppercase!important;
+  letter-spacing:.06em!important;
+}
+#suite-workspace .current-watch-metrics dd{
+  margin:4px 0 0!important;
+  font-size:18px!important;
+  font-weight:800!important;
+  letter-spacing:-.03em!important;
+}
+#suite-workspace .current-shop-metrics{margin-top:12px!important}
+@media(max-width:480px){
+  #suite-workspace .current-watch-metrics dt{font-size:8px!important}
+  #suite-workspace .current-watch-metrics dd{font-size:16px!important}
+}
