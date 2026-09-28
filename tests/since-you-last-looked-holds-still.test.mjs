@@ -92,3 +92,20 @@ test('the narrowing joins the two lists on listing id', () => {
   /* And the banner counts what is on screen, not what was hoped for. */
   assert.match(client, /Showing the \{filtered\.length\} listing/);
 });
+
+test('opening a saved watch still loads the corpus the figure counted', () => {
+  const client = readFileSync(
+    new URL('../app/market-watch/market-watch-client.tsx', import.meta.url), 'utf8');
+  /*
+    The end of the chain. A saved watch opened straight from the list without
+    fetching its detail, because the grid runs its own Etsy search. But
+    startedSince lives on the corpus, so NicheDetail was handed a view with no
+    listings: nothing to filter by and nothing to say either. Every earlier fix
+    was correct and invisible because of this one line.
+  */
+  assert.doesNotMatch(client, /if\(saved\)\{setOpen\(\{key:saved\.key,phrase:saved\.phrase\}\);return;\}/,
+    'the saved-watch shortcut is dropping the listings again');
+  assert.match(client, /setOpen\(\{key:saved\.key,phrase:saved\.phrase,listings:saved\.listings\}\)/);
+  assert.match(client, /setOpen\(current=>current&&current\.key===saved\.key\?\{\.\.\.current,\.\.\.body\}:current\)/,
+    'the detail fetch must not overwrite a view the member has moved on from');
+});

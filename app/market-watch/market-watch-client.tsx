@@ -123,7 +123,26 @@ export default function MarketWatchClient(
   };
   const openNiche=async(key:string)=>{const saved=watches.data.find(row=>row.key===key
     /* An address may carry the phrase a member reads rather than the key. */
-    ||row.phrase.toLowerCase()===key.toLowerCase());if(saved){setOpen({key:saved.key,phrase:saved.phrase});return;}setError("");setOpening(key);try{const response=await fetch(`/api/market-watch/niches?key=${encodeURIComponent(key)}`),body=await response.json() as NicheView&{error?:string};if(!response.ok)setError(body.error??"Those listings could not be opened.");else setOpen(body)}catch{setError("Those listings could not be opened.")}finally{setOpening("")}};
+    ||row.phrase.toLowerCase()===key.toLowerCase());if(saved){
+    /*
+      D1896 · THE SHORTCUT DROPPED THE LISTINGS.
+
+      A saved watch opened straight from the list without fetching its detail,
+      because the grid runs its own Etsy search and the corpus was not needed
+      to draw it. But startedSince lives on that corpus, so arriving from the
+      "13 listings started selling" figure handed NicheDetail a view with no
+      listings at all: nothing to filter by, and nothing to say either.
+
+      The shortcut stays - the page still opens at once with whatever the watch
+      list already has - and the detail is fetched behind it. The filter is
+      derived, so it applies the moment those listings land.
+    */
+    setOpen({key:saved.key,phrase:saved.phrase,listings:saved.listings});
+    void fetch(`/api/market-watch/niches?key=${encodeURIComponent(saved.key)}`)
+      .then(response=>response.ok?response.json() as Promise<NicheView>:null)
+      .then(body=>{if(body)setOpen(current=>current&&current.key===saved.key?{...current,...body}:current)})
+      .catch(()=>undefined);
+    return;}setError("");setOpening(key);try{const response=await fetch(`/api/market-watch/niches?key=${encodeURIComponent(key)}`),body=await response.json() as NicheView&{error?:string};if(!response.ok)setError(body.error??"Those listings could not be opened.");else setOpen(body)}catch{setError("Those listings could not be opened.")}finally{setOpening("")}};
   /* Wait for the watch list, so a phrase in the address can be matched. */
   useEffect(()=>{if(startKeyword&&watches.status!=="loading")void openNiche(startKeyword)},
     [startKeyword,watches.status]);
