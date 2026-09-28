@@ -19,7 +19,7 @@ export default function HomeView(){
   const lead=saved[0];
   const monthlyRevenue=month?month.revenueMinor/100:null;
   const leadResearchHref=lead?'/market-watch/research?id='+encodeURIComponent(lead.id):'/market-watch/research';
-  return <div data-monthly-revenue={monthlyRevenue??undefined} data-lead-research={leadResearchHref}>
+  return <div className="current-home-layout" data-monthly-revenue={monthlyRevenue??undefined} data-lead-research={leadResearchHref}>
     <PreviewClient platformUpdate={<PlatformUpdate compact/>}/>
   </div>;
 }
