@@ -24,4 +24,15 @@ export async function readDailyUpdate(){await ensureUpdateTables();const db=upda
    while leaving the edition it belongs to alone.
  */
  db.prepare(`SELECT content,day FROM platform_update_items WHERE day<>? AND published_at>=? ORDER BY published_at DESC LIMIT 100`).bind(day,Math.floor((now.getTime()-30*86400000)/1000)).all<{content:string;day:string}>()
-]);const sources=UPDATE_SOURCES.map(s=>rows.results.find(r=>r.id===s.id));const current=sources.every(s=>s&&s.checked_at>Date.now()/1000-28*3600&&!s.last_error);const checkedAt=Math.min(...sources.map(s=>s?.checked_at||0));return{day,recent:recent.results.map(row=>({...JSON.parse(row.content) as UpdateItem,day:row.day})),items:items.results.map(row=>JSON.parse(row.content) as UpdateItem).sort((a,b)=>Number(b.priority==='ACTION REQUIRED')-Number(a.priority==='ACTION REQUIRED')),status:current?'ready':rows.results.length?'partial':'pending',baseline:!!first?.started&&briefDay(new Date(first.started*1000))===day,checkedAt,sources:UPDATE_SOURCES.map(s=>({name:s.name,url:s.url}))};}
+]);const sources=UPDATE_SOURCES.map(s=>rows.results.find(r=>r.id===s.id));const current=sources.every(s=>s&&s.checked_at>Date.now()/1000-28*3600&&!s.last_error);const checkedAt=Math.min(...sources.map(s=>s?.checked_at||0));return{day,recent:recent.results.map(row=>({...JSON.parse(row.content) as UpdateItem,day:row.day})),items:items.results.map(row=>JSON.parse(row.content) as UpdateItem).sort((a,b)=>Number(b.priority==='ACTION REQUIRED')-Number(a.priority==='ACTION REQUIRED')),status:current?'ready':rows.results.length?'partial':'pending',baseline:!!first?.started&&briefDay(new Date(first.started*1000))===day,checkedAt,sources:UPDATE_SOURCES.map(s=>({name:s.name,url:s.url})),
+ /*
+   D1909 · "6 official sources" undersold the thing by two orders of magnitude.
+   Two of those six are help-centre sweeps covering 342 and 394 articles, and a
+   sweep stores how many it scanned. Counting rows in the manifest described
+   the shape of the code rather than what is actually being watched.
+ */
+ pagesWatched:UPDATE_SOURCES.reduce((total,source)=>{
+  if(source.kind!=='sweep')return total+1;
+  const row=rows.results.find(r=>r.id===source.id);
+  return total+(Number(String(row?.content??'').match(/^(\d+)/)?.[1])||0);
+ },0)};}

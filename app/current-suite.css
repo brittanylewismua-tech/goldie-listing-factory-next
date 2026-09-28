@@ -717,52 +717,85 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 #suite-workspace .nr-secondary-section cite{font-size:12px;font-style:normal}
 #suite-workspace .nr-secondary-section input[type=search]{display:block;width:100%;padding:12px;border:1px solid #d7d3d7;border-radius:8px;margin-top:8px;background:#fff;color:#242124}
 /*
-  D1902 · ETSY + PRINTIFY UPDATES.
+  D1913 · WHAT'S NEW, BUILT FROM ETSY'S SELLER HANDBOOK.
 
-  One list, ordered by how much the reader has to care and then by when it
-  happened. The page used to open with a full-width bordered card announcing
-  that there was nothing to announce; the header is now a line of text, and the
-  items are the page.
+  Same reader and same kind of content as etsy.com/seller-handbook - short
+  helpful pieces for somebody running a shop - so the structure is taken from
+  there rather than from a developer changelog, which is what the previous
+  three attempts looked like.
+
+  The load-bearing decisions, all copied deliberately:
+   · a large serif masthead. A page of blurbs under a sans headline reads as
+     software documentation; under a serif it reads as something written for
+     a person.
+   · flat text tabs with an underline on the active one, not pills or buttons.
+     Choosing a section should not become furniture.
+   · cards that are NOT boxes. No border, no shadow - the photograph is the
+     edge. A bordered grid is a dashboard; an unbordered one is a magazine,
+     and that single difference was most of why this looked homemade.
 */
-#suite-workspace .pu-page{max-width:760px}
+#suite-workspace .pu-page{max-width:920px}
 #suite-workspace .pu-back{display:inline-block;font-size:13px!important;color:#6f6670!important;margin-bottom:22px}
-#suite-workspace .pu-head h1{font-size:34px!important;letter-spacing:-.03em;line-height:1.1!important;margin:0}
-#suite-workspace .pu-line{font-size:14px!important;color:#6f6670!important;margin:10px 0 0!important;line-height:1.5!important}
-#suite-workspace .pu-group{margin-top:34px}
-#suite-workspace .pu-group h2{display:flex;align-items:center;gap:12px;font-size:12px!important;
-  font-weight:650;letter-spacing:.12em;text-transform:uppercase;color:#6f6670!important;margin:0 0 14px}
-#suite-workspace .pu-group h2 i{flex:1;height:1px;background:#e6e0e5}
-#suite-workspace .pu-group h2 small{font-size:12px!important;color:#a49ba2!important}
-#suite-workspace .pu-group h2[data-priority="ACTION REQUIRED"]{color:#b0175f!important}
-#suite-workspace .pu-group h2[data-priority="ACTION REQUIRED"] i{background:#f0c7dd}
+#suite-workspace .pu-head{border-bottom:1px solid #e0d9de;padding-bottom:0}
+#suite-workspace .pu-head h1{font-family:ui-serif,Georgia,"Iowan Old Style","Times New Roman",serif;
+  font-size:46px!important;font-weight:500;letter-spacing:-.015em;line-height:1.05!important;margin:0 0 20px}
+#suite-workspace .pu-tabs{display:flex;gap:30px;margin:0}
+#suite-workspace .pu-tab{border:0;background:transparent!important;cursor:pointer;padding:0 0 12px;
+  font-size:14px!important;font-weight:500;color:#6f6670!important;letter-spacing:-.005em;
+  border-bottom:2px solid transparent;margin-bottom:-1px}
+#suite-workspace .pu-tab:hover{color:#1a151a!important}
+#suite-workspace .pu-tab[aria-pressed="true"]{color:#1a151a!important;font-weight:650;border-bottom-color:#1a151a}
+#suite-workspace .pu-line{font-size:14px!important;color:#6f6670!important;margin:22px 0 0!important}
 
-#suite-workspace .pu-item{background:#fff;border:1px solid #e6e0e5;border-radius:16px;
-  padding:22px 24px;margin-bottom:12px}
-#suite-workspace .pu-group[data-lead] .pu-item{border-color:#eec3da}
-#suite-workspace .pu-meta{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-#suite-workspace .pu-platform{font-size:11px!important;font-weight:650;letter-spacing:.08em;
-  text-transform:uppercase;padding:4px 9px;border-radius:8px;background:#f4eff3;color:#5b525b!important}
-#suite-workspace .pu-platform[data-platform="Etsy"]{background:#fdeee3;color:#8a4a17!important}
-#suite-workspace .pu-platform[data-platform="Printify"]{background:#e8f0ec;color:#245641!important}
-#suite-workspace .pu-when{font-size:12px!important;color:#8d848d!important}
-#suite-workspace .pu-evidence{font-size:11px!important;color:#a49ba2!important;margin-left:auto;text-align:right}
-#suite-workspace .pu-item h3{font-size:20px!important;line-height:1.3!important;letter-spacing:-.015em;margin:0 0 8px}
-#suite-workspace .pu-impact{font-size:15px!important;line-height:1.6!important;color:#3d363d!important;margin:0!important}
-#suite-workspace .pu-action{font-size:14px!important;line-height:1.55!important;margin:14px 0 0!important;
-  padding:12px 14px;border-radius:10px;background:#faf7f9;color:#3d363d!important}
-#suite-workspace .pu-action b{display:block;font-size:11px!important;letter-spacing:.1em;
-  text-transform:uppercase;color:#8d848d!important;margin-bottom:4px}
-#suite-workspace .pu-source{display:inline-block;margin-top:14px;font-size:13px!important;color:#b0175f!important}
-#suite-workspace .pu-empty{font-size:15px!important;line-height:1.6!important;color:#6f6670!important;
-  margin:30px 0 0!important;max-width:52ch}
-#suite-workspace .pu-foot{margin-top:38px;padding-top:20px;border-top:1px solid #e6e0e5}
+/* One featured piece on a tinted block, picture beside a serif headline. */
+#suite-workspace .pu-lead{display:grid;grid-template-columns:minmax(0,46%) minmax(0,1fr);
+  gap:0;align-items:stretch;margin-top:26px;border-radius:12px;overflow:hidden;
+  background-color:#f6f0f4!important}
+#suite-workspace .pu-lead[data-priority="ACTION REQUIRED"]{background-color:#fbeaf2!important}
+#suite-workspace .pu-lead-shot{display:block;width:100%;height:100%;min-height:260px;
+  object-fit:cover;background:#ece5ea}
+#suite-workspace .pu-noshot{display:flex;align-items:center;justify-content:center;
+  background:#ece5ea!important}
+#suite-workspace .pu-noshot b{font-family:ui-serif,Georgia,serif;font-size:20px!important;
+  color:#9a8f98!important;font-weight:500;letter-spacing:.02em}
+#suite-workspace .pu-lead-copy{padding:34px 36px;align-self:center}
+#suite-workspace .pu-lead-copy h2{font-family:ui-serif,Georgia,"Iowan Old Style","Times New Roman",serif;
+  font-size:30px!important;font-weight:500;line-height:1.2!important;letter-spacing:-.015em;margin:0 0 12px}
+#suite-workspace .pu-lead-copy p{font-size:15px!important;line-height:1.6!important;color:#453d45!important;margin:0!important}
+
+#suite-workspace .pu-kicker{font-size:12px!important;font-weight:600;letter-spacing:.02em;
+  color:#8d848d!important;margin:0 0 10px!important;text-transform:none}
+#suite-workspace .pu-kicker b{color:#c2277b!important;font-weight:650}
+
+/* The grid. Picture, title, two lines, a link. No box around any of it. */
+#suite-workspace .pu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:40px 34px;margin-top:44px}
+#suite-workspace .pu-card{min-width:0}
+#suite-workspace .pu-shot{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;
+  border-radius:12px;margin-bottom:16px;background:#ece5ea}
+#suite-workspace .pu-card h3{font-size:17px!important;font-weight:650;line-height:1.35!important;
+  letter-spacing:-.01em;margin:0 0 8px}
+#suite-workspace .pu-impact{font-size:14px!important;line-height:1.6!important;color:#5c545c!important;margin:0!important}
+#suite-workspace .pu-todo{font-size:14px!important;line-height:1.6!important;color:#453d45!important;
+  margin:12px 0 0!important;padding-left:14px;border-left:2px solid #e2d5de}
+#suite-workspace .pu-card a,#suite-workspace .pu-lead-copy a{display:inline-block;margin-top:14px;
+  font-size:13px!important;font-weight:650;color:#1a151a!important}
+#suite-workspace .pu-card a:hover,#suite-workspace .pu-lead-copy a:hover{color:#c2277b!important}
+
+#suite-workspace .pu-empty{font-size:16px!important;line-height:1.65!important;
+  color:#6f6670!important;margin:40px 0 0!important;max-width:52ch}
+#suite-workspace .pu-foot{margin-top:56px;padding-top:22px;border-top:1px solid #e0d9de}
 #suite-workspace .pu-foot summary{cursor:pointer;font-size:13px!important;color:#6f6670!important;padding:6px 0}
 #suite-workspace .pu-foot ul{margin:8px 0 0;padding-left:18px}
 #suite-workspace .pu-foot li{font-size:13px!important;line-height:1.9!important}
-@media(max-width:600px){
- #suite-workspace .pu-head h1{font-size:26px!important}
- #suite-workspace .pu-item{padding:18px;border-radius:14px}
- #suite-workspace .pu-evidence{display:none}
+@media(max-width:760px){
+ #suite-workspace .pu-head h1{font-size:32px!important}
+ #suite-workspace .pu-tabs{gap:22px}
+ #suite-workspace .pu-lead{grid-template-columns:minmax(0,1fr)}
+ #suite-workspace .pu-lead-shot{min-height:0;aspect-ratio:16/9}
+ #suite-workspace .pu-lead-copy{padding:24px}
+ #suite-workspace .pu-lead-copy h2{font-size:24px!important}
+ #suite-workspace .pu-grid{grid-template-columns:minmax(0,1fr);gap:34px}
 }
 
 /* Hot List search uses the same readable primary action at every width. */

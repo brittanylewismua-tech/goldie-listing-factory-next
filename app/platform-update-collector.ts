@@ -1,4 +1,4 @@
-import {UPDATE_SOURCES,sourceText,addedText,publishDay,validateCandidate,type Source,type UpdateItem} from './platform-update-model';
+import {UPDATE_SOURCES,sourceText,addedText,firstImage,publishDay,validateCandidate,type Source,type UpdateItem} from './platform-update-model';
 import {ensureUpdateTables,updateDb} from './platform-update-store';
 import {reserveSpend,settleSpend,failSpend} from './spend-guard';
 import {recordFalUsage} from './fal-usage';
@@ -93,7 +93,8 @@ export async function collectPlatformUpdates({retryFailed=false,reseed=''}:{retr
    edited++;
    const asSource:Source={id:`${source.platform}-help-${change.articleId}`,platform:source.platform,
     name:change.title||source.name,url:change.url,fetchUrl:change.url,kind:'article'};
-   const found=await summarize(asSource,change.previous,change.current,change.added,seen,undefined,change.isNew,3).catch(()=>[]);
+   const found=(await summarize(asSource,change.previous,change.current,change.added,seen,undefined,change.isNew,3).catch(()=>[]))
+    .map(item=>change.imageUrl?{...item,imageUrl:change.imageUrl}:item);
    for(const item of found){await db.prepare(`INSERT OR IGNORE INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?)`).bind(item.id,publishDay(new Date(),item.urgent),item.topic,JSON.stringify(item),item.publishedAt).run();seen.push(item);published++;}}
   await db.prepare(`INSERT INTO platform_update_sources(id,content,checked_at,last_error) VALUES (?,?,?,'') ON CONFLICT(id) DO UPDATE SET content=excluded.content,checked_at=excluded.checked_at,last_error=''`).bind(source.id,`${sweepResult.scanned} articles`,now).run();checked++;continue;}
  if(source.kind==='catalog'){const result=await collectPrintifyCatalog(now);
@@ -102,7 +103,7 @@ export async function collectPlatformUpdates({retryFailed=false,reseed=''}:{retr
    const {quoteKey:_ignored,...rest}=item;
    await db.prepare(`INSERT OR IGNORE INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?)`).bind(id,publishDay(new Date(),rest.urgent),rest.topic,JSON.stringify({...rest,id}),rest.publishedAt).run();published++;}
   await db.prepare(`INSERT INTO platform_update_sources(id,content,checked_at,last_error) VALUES (?,?,?,'') ON CONFLICT(id) DO UPDATE SET content=excluded.content,checked_at=excluded.checked_at,last_error=''`).bind(source.id,'counted',now).run();checked++;continue;}
- const response=await fetch(source.fetchUrl,{headers:{'User-Agent':'GoldieSuite/1.0 (official platform update monitor)','Accept':source.kind==='html'?'text/html':'application/json'},signal:AbortSignal.timeout(20000),redirect:'manual'});if(!response.ok)throw new Error(`Official source returned ${response.status}`);const body=await response.text();if(body.length>3000000)throw new Error('Official source too large');const current=sourceText(source,body);if(current.length<150||/enable javascript and cookies|verify you are human|access denied/i.test(current.slice(0,500)))throw new Error('Official source could not be read');
+ const response=await fetch(source.fetchUrl,{headers:{'User-Agent':'GoldieSuite/1.0 (official platform update monitor)','Accept':source.kind==='html'?'text/html':'application/json'},signal:AbortSignal.timeout(20000),redirect:'manual'});if(!response.ok)throw new Error(`Official source returned ${response.status}`);const body=await response.text();if(body.length>3000000)throw new Error('Official source too large');const current=sourceText(source,body);const sourceImage=source.kind==='html'?firstImage(body,source.platform):'';if(current.length<150||/enable javascript and cookies|verify you are human|access denied/i.test(current.slice(0,500)))throw new Error('Official source could not be read');
  if(!stored?.content){baseline++;
   /*
     D1898 · A NEW SOURCE COULD NEVER REPORT THE NEWS ALREADY ON THE PAGE.
@@ -115,10 +116,10 @@ export async function collectPlatformUpdates({retryFailed=false,reseed=''}:{retr
     the way in.
   */
   if(source.seedOnFirstRead&&edited<4){edited++;
-   const items=await summarize(source,'',current,current,seen,undefined,true,8);
+   const items=(await summarize(source,'',current,current,seen,undefined,true,8)).map(item=>sourceImage?{...item,imageUrl:sourceImage}:item);
    for(const item of items){await db.prepare(`INSERT OR IGNORE INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?)`).bind(item.id,publishDay(new Date(),item.urgent),item.topic,JSON.stringify(item),item.publishedAt).run();seen.push(item);published++;}}
  }
- else if(stored.content!==current){const added=addedText(stored.content,current);if(added.length>40&&edited<EDIT_BUDGET){edited++;const items=await summarize(source,stored.content,current,added,seen,undefined,false,4);for(const item of items){await db.prepare(`INSERT OR IGNORE INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?)`).bind(item.id,publishDay(new Date(),item.urgent),item.topic,JSON.stringify(item),item.publishedAt).run();seen.push(item);published++;}}}
+ else if(stored.content!==current){const added=addedText(stored.content,current);if(added.length>40&&edited<EDIT_BUDGET){edited++;const items=(await summarize(source,stored.content,current,added,seen,undefined,false,4)).map(item=>sourceImage?{...item,imageUrl:sourceImage}:item);for(const item of items){await db.prepare(`INSERT OR IGNORE INTO platform_update_items(id,day,topic,content,published_at) VALUES (?,?,?,?,?)`).bind(item.id,publishDay(new Date(),item.urgent),item.topic,JSON.stringify(item),item.publishedAt).run();seen.push(item);published++;}}}
  await db.prepare(`INSERT INTO platform_update_sources(id,content,checked_at,last_error) VALUES (?,?,?,'') ON CONFLICT(id) DO UPDATE SET content=excluded.content,checked_at=excluded.checked_at,last_error=''`).bind(source.id,current,now).run();checked++;
  }catch(error){failed++;const message=error instanceof Error?error.message:'Source check failed';failures.push({source:source.name,error:message});await db.prepare(`INSERT INTO platform_update_sources(id,checked_at,last_error) VALUES (?,0,?) ON CONFLICT(id) DO UPDATE SET last_error=excluded.last_error`).bind(source.id,message).run();}}
  }finally{await db.prepare(`UPDATE platform_update_runs SET finished_at=?,checked=?,failed=?,error=? WHERE id=?`).bind(Math.floor(Date.now()/1000),checked,failed,JSON.stringify(failures),id).run();}

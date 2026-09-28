@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { plainText, addedText, type Platform } from "@/app/platform-update-model";
+import { plainText, addedText, firstImage, type Platform } from "@/app/platform-update-model";
 
 /**
  * EVERY HELP ARTICLE, NOT THE ONES SOMEBODY REMEMBERED TO LIST.
@@ -41,6 +41,8 @@ const MIN_ADDED = 40;
 export type ArticleChange = {
   platform: Platform; articleId: number; title: string; url: string;
   previous: string; current: string; added: string; isNew: boolean;
+  /* D1910 · The article's own screenshot of what changed, when it has one. */
+  imageUrl: string;
 };
 
 const db = () => (env as unknown as { DB: D1Database }).DB;
@@ -60,7 +62,7 @@ export async function ensureHelpArticleTable() {
   ]);
 }
 
-type Fetched = { id: number; title: string; url: string; text: string };
+type Fetched = { id: number; title: string; url: string; text: string; imageUrl: string };
 
 async function readAll(platform: Platform): Promise<Fetched[]> {
   const out: Fetched[] = [];
@@ -81,9 +83,11 @@ async function readAll(platform: Platform): Promise<Fetched[]> {
       const id = Number(row.id);
       if (!(id > 0)) continue;
       const title = String(row.title ?? "").trim();
+      const html = String(row.body ?? "");
       out.push({ id, title,
         url: String(row.html_url ?? `https://${HOST[platform]}/hc/en-us/articles/${id}`),
-        text: `${title}\n${plainText(String(row.body ?? ""))}`.slice(0, 60000) });
+        text: `${title}\n${plainText(html)}`.slice(0, 60000),
+        imageUrl: firstImage(html, platform) });
     }
     if (!body.next_page) break;
   }
@@ -128,7 +132,7 @@ export async function sweepHelpCentre(
     const changed = isNew || (previous !== row.text && added.length >= MIN_ADDED);
     if (changed && changes.length < maxChanges) {
       changes.push({ platform, articleId: row.id, title: row.title, url: row.url,
-        previous: previous ?? "", current: row.text, added, isNew });
+        previous: previous ?? "", current: row.text, added, isNew, imageUrl: row.imageUrl });
       await save(row);
       continue;
     }

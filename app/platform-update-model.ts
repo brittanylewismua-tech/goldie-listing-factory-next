@@ -1,5 +1,5 @@
 export type Platform = 'Etsy' | 'Printify';
-export type UpdateItem = {id:string;platform:Platform;priority:'ACTION REQUIRED'|'GOOD TO KNOW'|'IGNORE THE PANIC';evidence:'Confirmed platform change'|'Official guidance'|'Seller speculation'|'No evidence';title:string;impact:string;action:string;sourceUrl:string;sourceTitle:string;topic:string;urgent:boolean;publishedAt:number};
+export type UpdateItem = {id:string;platform:Platform;imageUrl?:string;priority:'ACTION REQUIRED'|'GOOD TO KNOW'|'IGNORE THE PANIC';evidence:'Confirmed platform change'|'Official guidance'|'Seller speculation'|'No evidence';title:string;impact:string;action:string;sourceUrl:string;sourceTitle:string;topic:string;urgent:boolean;publishedAt:number};
 export type Source = {id:string;platform:Platform;name:string;url:string;fetchUrl:string;kind:'article'|'html'|'recent'|'catalog'|'sweep';
  /* D1898 · An announcements board's posts ARE the news, so the first read has
     to report the recent ones. A help article's first read must not: its whole
@@ -47,6 +47,30 @@ export const UPDATE_SOURCES:Source[]=[
  */
  {id:'etsy-announcements',platform:'Etsy',name:'Etsy seller announcements',url:'https://community.etsy.com/forum/announcements-290/',fetchUrl:'https://community.etsy.com/forum/announcements-290/',kind:'html',seedOnFirstRead:true},
 ];
+/*
+  D1910 · A PICTURE FROM THE ANNOUNCEMENT ITSELF, OR NONE AT ALL.
+
+  Zendesk articles embed their own screenshots as attachments, and Printify's
+  catalogue carries product photography. Both are the platform's own images of
+  the thing being announced, which is the only kind worth showing here - a
+  stock photo chosen to fill a card would be decoration pretending to be
+  evidence. Only images served by the platform being reported on are accepted,
+  so a page cannot smuggle in a picture from somewhere else.
+*/
+export function firstImage(html:string,platform:Platform):string{
+ const root=platform==='Etsy'?'etsy.com':'printify.com';
+ for(const match of String(html).matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["']/gi)){
+  const raw=match[1];
+  try{const url=new URL(raw);
+   if(url.protocol!=='https:')continue;
+   if(!(url.hostname===root||url.hostname.endsWith('.'+root)))continue;
+   /* Avatars and spacers are not pictures of what changed. */
+   if(/avatar|icon|logo|spacer|emoji/i.test(url.pathname))continue;
+   return url.toString().slice(0,400);
+  }catch{continue}
+ }
+ return '';
+}
 export function plainText(html:string){return html.replace(/<(script|style|nav|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<\/(p|div|li|h[1-6]|tr)>/gi,'\n').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n').replace(/\n{3,}/g,'\n\n').trim();}
 export function sourceText(source:Source,body:string):string{
  if(source.kind==='html'){
