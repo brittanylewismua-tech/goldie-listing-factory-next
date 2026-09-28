@@ -27,11 +27,6 @@ export default async function HomePage() {
     }
   } catch {}
   if (!firstName && isOwner(user)) firstName = "Brittany";
-  if (!firstName && user.fullName) {
-    const words = user.fullName.trim().split(/\s+/).filter(Boolean);
-    if (words.length <= 3 && words.every(word => /^[A-Za-z][A-Za-z'’-]*$/.test(word)))
-      firstName = words[0] || "";
-  }
 
   return <FactoryShell active="home" title="Home" desktopOnly={false}>
     <HomeView firstName={firstName} />
