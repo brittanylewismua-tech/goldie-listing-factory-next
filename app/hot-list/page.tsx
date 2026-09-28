@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import FactoryShell from "../factory-shell";
 import { decodeEntities } from "../shop-map-worlds";
+import "./hot-list.css";
 
 /** Observed listing changes for product research; never a competitor sales report. */
 

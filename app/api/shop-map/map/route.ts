@@ -309,6 +309,8 @@ async function buildMap(request: Request) {
     activeListings: everyId.filter(id => activeIds.has(id)).length,
     orders: sumOver(everyId, row => row.lifetimeOrders),
     revenueMinor: sumOver(everyId, row => row.lifetimeRevenueMinor),
+    ordersLast30: sumOver(everyId, row => row.last30Orders),
+    revenueLast30Minor: sumOver(everyId, row => row.last30RevenueMinor),
     ordersLast90: sumOver(everyId, row => row.last90Orders),
     revenueLast90Minor: sumOver(everyId, row => row.last90RevenueMinor),
     reviews: everyId.reduce((total, id) =>

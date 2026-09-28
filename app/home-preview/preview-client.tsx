@@ -1,252 +1,87 @@
 "use client";
 import { useEffect, useState } from "react";
 
-/* ============================================================================
- * D1882 · THREE HOMEPAGES. OBSERVATION ONLY.
- *
- * Out, and not coming back: margin alarms (they assume Printify, and sellers
- * run Printful, Gelato, several or none), listings at risk (needs a blank
- * mapping that covers 5 of 83), make this and fix this (a guess in a confident
- * voice, and an argument with a seller who already knows to move on).
- *
- * What is left is the only thing here nobody else has: 18,046 live Etsy
- * listings read twice a day, and the difference in their stock counted as
- * units sold. 2,136 of them yesterday. Beside that, the seller's own
- * catalogue. Where the two do not line up is the whole point, and it is a
- * fact rather than an instruction.
- * ==========================================================================*/
-
-type Listing={listingId:number;title:string;imageUrl:string;favorites?:number;sales:number;revenueMinor:number};
-type World={label:string;activeListings:number;units:number;revenueMinor:number;
-  lifetimeUnits:number;lifetimeRevenueMinor:number};
-type Map={shopTotals?:{activeListings:number;ordersLast90:number;revenueLast90Minor:number;
-  revenueMinor:number;orders:number;reviews:number};
-  worlds?:World[];topListings?:Listing[];worldsPeriod?:string};
-type Home={topListings?:{listings:Array<Listing&{favorites:number}>};niches?:Array<{phrase:string;newly:number}>};
-type Sold={listingId:number;title:string;image:string|null;price:number|null;
-  savesGained:number;sold:number;url:string;product?:string};
-type Hot={listings?:Sold[];watched?:number;totalSold?:number;
-  products?:Array<{key:string;label:string;listings:number;sold:number}>};
-type Mine={title:string;state:string};
-type Summary={keywords:number;shops:number;phrases:number;needReview:number};
-type Updates={items?:Array<unknown>;recent?:Array<unknown>;sources?:Array<unknown>;checkedAt?:number};
+type Listing={listingId:number;title:string;imageUrl:string;favorites?:number|null;sales:number;revenueMinor:number};
+type MapData={shop?:{shopName?:string};shopTotals?:{ordersLast30:number;revenueLast30Minor:number;ordersLast90:number;revenueLast90Minor:number};soldListings?:{period:string;days:number;listings:Listing[]}};
+type Home={niches?:Array<{phrase:string;newly:number}>};
+type Sold={listingId:number;title:string;image:string|null;price:number|null;savesGained:number;sold:number;url:string;product?:string};
+type Hot={listings?:Sold[];watched?:number;totalSold?:number};
+type Summary={phrases:number;needReview:number};
+type UpdateItem={id?:string;platform:"Etsy"|"Printify";title:string;impact?:string;action?:string;sourceUrl:string;imageUrl?:string|null;priority?:string;publishedAt:number};
+type Updates={items?:UpdateItem[];recent?:Array<UpdateItem&{day?:string}>;checkedAt?:number};
 type Niche={id?:string;name:string;analysis?:{opportunities?:Array<{phrase:string;reviews:number;prior:number;shops:number;listings:number}>}};
+type Batch={id:string;display_name?:string;step?:string;status?:string;draft_count?:number;expected_listing_count?:number};
 
-const usd=(minor:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",
-  maximumFractionDigits:0}).format(minor/100);
+const usd=(minor:number)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(minor/100);
 const num=(n:number)=>n.toLocaleString("en-US");
-
-/* Her catalogue at the same grain the board reports, read from her own
-   titles because that is all 83 of her live listings carry. */
-const FAMILY:Record<string,RegExp>={
-  "T-shirts":/\bt[- ]?shirts?\b|\btees?\b|(?<!sweat)\bshirts?\b/i,
-  "Sweatshirts & Hoodies":/sweat\s*shirt|sweatshirt|hoodie|crewneck|sweater/i,
-  "Tanks":/\btank\b/i,"Mugs":/\bmug\b/i,"Phone Cases":/phone case/i,
-  "Stickers":/\bsticker/i,"Hats":/\bhat\b|\bcap\b|beanie/i,
-  "Baby Bodysuits":/bodysuit|onesie/i,"Throw Pillows":/pillow/i,"Blankets":/blanket/i,
-  "Tote Bags":/tote/i,"Wall Art":/\bposter\b|wall art|\bprint\b/i};
+const when=(seconds:number)=>{const days=Math.floor((Date.now()/1000-seconds)/86400);return days<=0?"Today":days===1?"Yesterday":days<7?String(days)+" days ago":new Date(seconds*1000).toLocaleDateString("en-US",{month:"short",day:"numeric"});};
 
 export default function PreviewClient(){
-  const [m,setM]=useState<Map|null>(null);
-  const [h,setH]=useState<Home|null>(null);
+  const [period,setPeriod]=useState<30|90>(90);
+  const [maps,setMaps]=useState<{30:MapData|null;90:MapData|null}>({30:null,90:null});
+  const [home,setHome]=useState<Home|null>(null);
   const [hot,setHot]=useState<Hot|null>(null);
-  const [mine,setMine]=useState<Mine[]>([]);
-  const [sum,setSum]=useState<Summary|null>(null);
-  const [up,setUp]=useState<Updates|null>(null);
+  const [summary,setSummary]=useState<Summary|null>(null);
+  const [updates,setUpdates]=useState<Updates|null>(null);
   const [niches,setNiches]=useState<Niche[]>([]);
+  const [batch,setBatch]=useState<Batch|null>(null);
+  const [account,setAccount]=useState<{name?:string}|null>(null);
 
   useEffect(()=>{
-    void fetch("/api/shop-map/map").then(r=>r.ok?r.json() as Promise<Map>:null).then(setM).catch(()=>undefined);
-    void fetch("/api/home").then(r=>r.ok?r.json() as Promise<{blocks:Home}>:null)
-      .then(x=>setH(x?.blocks??null)).catch(()=>undefined);
-    void fetch("/api/sold-overnight?hours=24").then(r=>r.ok?r.json() as Promise<Hot>:null)
-      .then(setHot).catch(()=>undefined);
-    void fetch("/api/shop-map/my-listings").then(r=>r.ok?r.json() as Promise<{listings?:Mine[]}>:null)
-      .then(x=>setMine(x?.listings??[])).catch(()=>undefined);
-    void fetch("/api/command-center/summary").then(r=>r.ok?r.json() as Promise<Summary>:null)
-      .then(setSum).catch(()=>undefined);
-    void fetch("/api/platform-updates").then(r=>r.ok?r.json() as Promise<Updates>:null)
-      .then(setUp).catch(()=>undefined);
-    void fetch("/api/niche-research").then(r=>r.ok?r.json() as Promise<{projects?:Array<{id:string}>}>:null)
-      .then(async body=>{
-        const out:Niche[]=[];
-        for(const p of (body?.projects??[]).slice(0,2)){
-          const d=await fetch(`/api/niche-research?id=${encodeURIComponent(p.id)}`)
-            .then(r=>r.ok?r.json() as Promise<{project:Niche}>:null).catch(()=>null);
-          if(d?.project?.analysis)out.push({...d.project,id:p.id});
-        }
-        setNiches(out);
-      }).catch(()=>undefined);
+    void Promise.all([30,90].map(days=>fetch("/api/shop-map/map?days="+days).then(r=>r.ok?r.json() as Promise<MapData>:null)))
+      .then(([m30,m90])=>setMaps({30:m30,90:m90})).catch(()=>undefined);
+    void fetch("/api/home").then(r=>r.ok?r.json() as Promise<{blocks:Home}>:null).then(x=>setHome(x?.blocks??null)).catch(()=>undefined);
+    void fetch("/api/sold-overnight?hours=24").then(r=>r.ok?r.json() as Promise<Hot>:null).then(setHot).catch(()=>undefined);
+    void fetch("/api/command-center/summary").then(r=>r.ok?r.json() as Promise<Summary>:null).then(setSummary).catch(()=>undefined);
+    void fetch("/api/platform-updates").then(r=>r.ok?r.json() as Promise<Updates>:null).then(setUpdates).catch(()=>undefined);
+    void fetch("/api/batches").then(r=>r.ok?r.json() as Promise<{batches?:Batch[]}>:null).then(x=>setBatch(x?.batches?.[0]??null)).catch(()=>undefined);
+    void fetch("/api/account").then(r=>r.ok?r.json() as Promise<{name?:string}>:null).then(setAccount).catch(()=>undefined);
+    void fetch("/api/niche-research").then(r=>r.ok?r.json() as Promise<{projects?:Array<{id:string}>}>:null).then(async body=>{
+      const out:Niche[]=[];
+      for(const p of (body?.projects??[]).slice(0,2)){
+        const d=await fetch("/api/niche-research?id="+encodeURIComponent(p.id)).then(r=>r.ok?r.json() as Promise<{project:Niche}>:null).catch(()=>null);
+        if(d?.project)out.push({...d.project,id:p.id});
+      }
+      setNiches(out);
+    }).catch(()=>undefined);
   },[]);
 
-  if(!m||!hot) return <div className="hp"><div className="hp-load"/></div>;
+  const map=maps[period];
+  if(!map||!hot)return <div className="home4"><div className="home4-load"/></div>;
+  const listings=(map.soldListings?.listings??[]).filter(l=>l.imageUrl).slice(0,10);
+  const totals=map.shopTotals;
+  const revenue=period===90?(totals?.revenueLast90Minor??0):(totals?.revenueLast30Minor??0);
+  const orders=period===90?(totals?.ordersLast90??0):(totals?.ordersLast30??0);
+  const units=(map.soldListings?.listings??[]).reduce((sum,l)=>sum+l.sales,0);
+  const aov=orders?Math.round(revenue/orders):0;
+  const shopName=map.shop?.shopName||"Your shop";
+  const marquee=[...listings,...listings];
 
-  const t=m.shopTotals;
-  const active=mine.filter(l=>l.state==="active");
-  const yours=(label:string)=>{const re=FAMILY[label];return re?active.filter(l=>re.test(l.title||"")).length:0;};
-  const shelves=(hot.products??[]).slice().sort((a,b)=>b.sold-a.sold)
-    .map(p=>({...p,yours:yours(p.label)}));
-  const peak=Math.max(1,...shelves.map(s=>s.sold));
-  const sold=(hot.listings??[]).filter(l=>l.image&&l.sold>0);
-  const moved=(h?.niches??[]).filter(n=>n.newly>0).sort((a,b)=>b.newly-a.newly).slice(0,3);
-  const worlds=(m.worlds??[]).slice().sort((a,b)=>b.lifetimeRevenueMinor-a.lifetimeRevenueMinor);
-  const topLife=Math.max(1,...worlds.map(w=>w.lifetimeRevenueMinor));
-  /*
-    D1886 · ONE WINDOW PER BLOCK, AND IT SAYS WHICH.
+  const moved=(home?.niches??[]).filter(n=>n.newly>0).sort((a,b)=>b.newly-a.newly);
+  const rising=niches.flatMap(n=>(n.analysis?.opportunities??[]).filter(o=>o.reviews>o.prior).map(o=>({...o,niche:n.name,id:n.id,gain:o.reviews-o.prior}))).sort((a,b)=>b.gain-a.gain);
+  const daily=[
+    moved[0]?{tag:"RESEARCH",title:moved[0].phrase+" moved again.",body:num(moved[0].newly)+" listings started showing momentum since your last check.",href:"/market-watch?keyword="+encodeURIComponent(moved[0].phrase)+"&new=1",image:listings[1]?.imageUrl}:null,
+    rising[0]?{tag:"RESEARCH",title:rising[0].phrase+" is gaining buyer activity.",body:num(rising[0].reviews)+" reviews, up "+num(rising[0].gain)+", across "+num(rising[0].shops)+" shops in your "+rising[0].niche+" research.",href:rising[0].id?"/market-watch/research?id="+encodeURIComponent(rising[0].id):"/market-watch/research",image:listings[2]?.imageUrl}:null,
+    summary&&summary.needReview>0?{tag:"TRADEMARK",title:String(summary.needReview)+" watched phrase"+(summary.needReview===1?"":"s")+" need review.",body:String(summary.phrases)+" phrase"+(summary.phrases===1?"":"s")+" on your watchlist.",href:"/trademark",image:null}:null
+  ].filter(Boolean) as Array<{tag:string;title:string;body:string;href:string;image?:string|null}>;
+  const platform=[...(updates?.items??[]),...(updates?.recent??[])].sort((a,b)=>(Number(b.priority==="ACTION REQUIRED")-Number(a.priority==="ACTION REQUIRED"))||b.publishedAt-a.publishedAt).slice(0,4);
+  const overnight=(hot.listings??[]).filter(l=>l.image).sort((a,b)=>b.sold-a.sold||b.savesGained-a.savesGained).slice(0,12);
 
-    The hero carried four at once: revenue over ninety days, orders over
-    ninety, a lifetime saves count on each photograph, and units sold over
-    thirty, none of them labelled. The photographs come from the ninety-day
-    list now, and every figure on the page states its own window.
-  */
-  const gallery=(m.topListings??[]).filter(l=>l.imageUrl);
-  const absent=shelves.filter(s=>s.yours===0&&s.sold>=70);
-  /*
-    D1883 · THE BIGGEST NUMBER HAS TO BE ABOUT HER.
+  return <div className="home4">
+    <header className="home4-head home4-contained"><div><p className="home4-kicker">{new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}</p><h1>{"Good morning"+(account?.name?", "+account.name.split(" ")[0]:"")+"."}</h1><p className="home4-shop-name">{shopName}</p></div></header>
 
-    It was 2,190 - everything sold across every listing Goldie watches. That
-    is a fact about the dataset, not about this shop, and putting it in 92px
-    flattered the tool instead of serving the seller.
+    <section className="home4-section first home4-contained"><header className="home4-section-head"><div className="home4-title"><b>01</b><div><h2>Shop stats</h2><p>Top 10 listings ranked by units sold</p></div></div><select value={period} onChange={e=>setPeriod(Number(e.target.value) as 30|90)} aria-label="Shop stats period"><option value={90}>Last 90 days</option><option value={30}>Last 30 days</option></select></header>
+      <div className="home4-hero"><div className="home4-marquee-mask"><div className="home4-marquee">{marquee.map((l,i)=><a className={"home4-rank "+(i%10===0?"first":"")} key={String(l.listingId)+"-"+String(i)} href={"https://www.etsy.com/listing/"+String(l.listingId)} target="_blank" rel="noreferrer"><span className="home4-rank-num">{i%10+1}</span><img src={l.imageUrl} alt="" loading={i<5?"eager":"lazy"}/><div><b>{num(l.sales)} sold</b><span>{usd(l.revenueMinor)}<small>revenue</small></span></div></a>)}</div></div>
+        <div className="home4-stats"><div className="home4-stat-main"><span className="home4-kicker">{shopName+" · last "+String(period)+" days"}</span><strong>{usd(revenue)}</strong><small>revenue</small></div><div className="home4-stat"><b>{num(orders)}</b><span>orders</span></div><div className="home4-stat"><b>{num(units)}</b><span>units sold</span></div><div className="home4-stat"><b>{usd(aov)}</b><span>average order</span></div><a href="/shop-map?tab=sold">See all sold listings <b>→</b></a></div>
+      </div>
+    </section>
 
-    What belongs there is demand for what she actually sells: the category she
-    is already in that sold most yesterday, and how many listings she has
-    standing in it.
-  */
-  const mine0=shelves.filter(s=>s.yours>0).sort((a,b)=>b.sold-a.sold)[0];
-  const lead=mine0??shelves[0];
-  const perOrder=t&&t.ordersLast90?Math.round(t.revenueLast90Minor/t.ordersLast90):0;
+    <section className="home4-section pink-band"><header className="home4-section-head"><div className="home4-title"><b>02</b><div><h2>Daily updates</h2><p>The useful movement across your research, shop, and watches</p></div></div></header><div className="home4-daily">{daily.slice(0,3).map((d,i)=><a className={"home4-daily-card "+(i===0?"lead":"")} href={d.href} key={d.title}><div className="home4-daily-copy"><span>{d.tag}</span><h3>{d.title}</h3><p>{d.body}</p><u>Open →</u></div>{d.image&&<img src={d.image} alt="" loading="lazy"/>}</a>)}{!daily.length&&<div className="home4-empty">Nothing new needs your attention today.</div>}</div></section>
 
-  /* D1884 · Her shop is the top of her own homepage. The market is context
-     underneath it, not the headline. */
-  const Hers=()=><div className="hero-copy">
-    <p className="k">She’s A Wolf Clothing · last 90 days</p>
-    <div className="big">{usd(t?.revenueLast90Minor??0)}</div>
-    <div className="facts">
-      <div><b>{num(t?.ordersLast90??0)}</b><small>ORDERS</small></div>
-      <div><b>{usd(perOrder)}</b><small>AVERAGE ORDER</small></div>
-      <div><b>{num(t?.activeListings??0)}</b><small>LISTINGS LIVE NOW</small></div>
-    </div>
-    {/* D1890 · Three photographs with no way to the other eighty. */}
-    <a className="hero-go" href="/shop-map?tab=sold">See all your sold listings →</a>
-    {/* D1886 · A 24-hour sales count across a sample of Etsy, set against a
-        static listing count, under her revenue. Two numbers in different
-        units that answer no question. The comparison belongs in the product
-        board below, where the columns say what each figure is. */}
-  </div>;
+    <section className="home4-section home4-contained"><header className="home4-section-head"><div className="home4-title"><b>03</b><div><h2>Etsy + Printify updates</h2><p>Headlines from official sources that affect sellers</p></div></div><a className="home4-link" href="/platform-updates">See all updates →</a></header>{platform.length?<div className="home4-platform"><a className="home4-platform-lead" href={platform[0].sourceUrl} target="_blank" rel="noreferrer">{platform[0].imageUrl?<img src={platform[0].imageUrl} alt=""/>:<div className="home4-platform-placeholder">{platform[0].platform}</div>}<div><span>{platform[0].platform+" · "+when(platform[0].publishedAt)}</span><h3>{platform[0].title}</h3><p>{platform[0].impact}</p><u>Read update →</u></div></a><div className="home4-headlines">{platform.slice(1).map(p=><a href={p.sourceUrl} target="_blank" rel="noreferrer" key={p.id||p.title}><span>{p.platform}</span><b>{p.title}</b><u>Read →</u></a>)}</div></div>:<div className="home4-empty">Nothing new from Etsy or Printify right now.</div>}</section>
 
-  const Yourshots=({n=3}:{n?:number})=><div className="shots">
-    {gallery.slice(0,n).map(l=><a className="shot" key={l.listingId}
-      href={`https://www.etsy.com/listing/${l.listingId}`} target="_blank" rel="noopener noreferrer">
-      <img src={l.imageUrl} alt="" width={570} height={712} loading="eager"/>
-      <span className="chip"><b>{num(l.sales)}</b><small>SOLD IN 90 DAYS</small></span>
-    </a>)}
-  </div>;
+    <section className="home4-section pink-band"><header className="home4-section-head"><div className="home4-title"><b>04</b><div><h2>Pick up where you left off</h2><p>Resume work already in motion</p></div></div></header><div className="home4-pickup"><a className="home4-work" href={batch?"/listing-factory?batch="+encodeURIComponent(batch.id):"/listing-factory?step=setup"}><span>LISTING FACTORY</span><h3>{batch?.display_name||"Start a new batch"}</h3><p>{batch?[String(batch.draft_count??0)+" drafts created",batch.step?"last step: "+batch.step:null].filter(Boolean).join(" · "):"Turn finished designs into ready-to-publish listings."}</p><u>{batch?"Continue batch":"Start batch"} →</u></a><a className="home4-work" href={niches[0]?.id?"/market-watch/research?id="+encodeURIComponent(niches[0].id):"/market-watch/research"}><span>RESEARCH</span><h3>{niches[0]?.name||"Research a niche"}</h3><p>{niches[0]?.analysis?.opportunities?.length?String(niches[0].analysis!.opportunities!.length)+" opportunities in the current brief":"Open your saved research and keep going."}</p><u>Open research →</u></a></div></section>
 
-  /*
-    D1885 · HER WATCHLISTS, WHICH THE HOMEPAGE HAD NEVER ONCE OPENED.
-
-    She told this product what she cares about - seven keywords, three shops,
-    two research niches, a watched phrase, twelve Etsy and Printify sources -
-    and the front page read none of them. Everything below is something she
-    asked to be watched, reported as what changed since she last looked.
-  */
-  const rising=niches.flatMap(n=>(n.analysis?.opportunities??[])
-    .filter(o=>o.reviews>=5&&o.reviews>o.prior)
-    .map(o=>({...o,niche:n.name,id:n.id,gain:o.reviews-o.prior})))
-    .sort((a,b)=>b.gain-a.gain).slice(0,3);
-  /*
-    D1897 · A ONE-DAY WINDOW REPORTED ZERO ALMOST EVERY DAY.
-
-    This counted only today's edition, so the front page read "0 changes at
-    Etsy or Printify" on any day nothing new happened to land - which, for
-    sources that publish weekly at best, was almost every day. It looked like a
-    claim that nothing was going on. The window is now the same fortnight the
-    rest of this page works in, and the line says which window it is.
-  */
-  const changes=(up?.items??[]).length+(up?.recent??[]).length;
-  /* D1888 · Every figure opens the place it came from. */
-  const Watching=()=><div className="watch">
-    {moved.map(x=><a className="w-item" key={x.phrase}
-      href={`/market-watch?keyword=${encodeURIComponent(x.phrase)}&new=1`}>
-      <b>{num(x.newly)}</b>
-      <div><span>listings started selling in <em>{x.phrase}</em></span>
-        <small>keyword you track · since you last opened Research</small></div><u>Go now →</u></a>)}
-    {rising.map(r=><a className="w-item" key={r.niche+r.phrase}
-      href={r.id?`/market-watch/research?id=${encodeURIComponent(r.id)}`:"/market-watch/research"}>
-      <b>{num(r.reviews)}</b>
-      <div><span><em>{r.phrase}</em> reviews, up from {num(r.prior)}</span>
-        <small>{r.shops} shops in your {r.niche} research · last 30 days</small></div><u>Go now →</u></a>)}
-    {up&&<a className="w-item quiet" href="/platform-updates">
-      <b>{num(changes)}</b>
-      <div><span>change{changes===1?"":"s"} at Etsy or Printify</span>
-        <small>last 30 days · {num((up.sources??[]).length)} official sources</small></div><u>Go now →</u></a>}
-    {sum&&sum.needReview>0&&<a className="w-item quiet" href="/trademark">
-      <b>{num(sum.needReview)}</b>
-      <div><span>watched phrase to review</span>
-        <small>{num(sum.phrases)} on your trademark list · checked today</small></div><u>Go now →</u></a>}
-  </div>;
-
-  const Rule=({title,note,href}:{title:string;note?:string;href?:string})=>
-    <div className="rule">{href?<a href={href}><h2>{title}</h2></a>:<h2>{title}</h2>}<i/>
-      {note&&<small>{note}</small>}{href&&<a className="go" href={href}>Open →</a>}</div>;
-
-  const Tile=({l}:{l:Sold})=><a className="shot" href={l.url} target="_blank" rel="noopener noreferrer">
-    {l.image&&<img src={l.image} alt="" width={570} height={712} loading="lazy"/>}
-    <span className="chip"><b>{num(l.sold)}</b><small>SOLD</small></span>
-    {typeof l.price==="number"&&<span className="price">${l.price.toFixed(2)}</span>}
-  </a>;
-
-  /*
-    D1897 · THE COUNT OF HER OWN LISTINGS DID NOT BELONG HERE.
-
-    This column said how many tees or mugs she has live beside how many sold
-    across Etsy. Knowing she has seventy tees listed answers no question this
-    section asks - the section is about what is selling out there - and a number
-    with nothing to compare it against is not a fact anybody acts on.
-  */
-  const Shelves=({limit=8}:{limit?:number})=><div className="table three">
-    <div className="row head"><span>Product</span><span/><span>Sold in 24h</span></div>
-    {shelves.slice(0,limit).map(s=><a className="row" key={s.key} href={`/hot-list?product=${encodeURIComponent(s.key)}`}>
-      <div><b className="name">{s.label}</b><small>{num(s.listings)} listings sold something</small></div>
-      <div><div className="bar now"><i style={{width:`${Math.round(s.sold/peak*100)}%`}}/></div></div>
-      <div className="figure">{num(s.sold)}<small>units</small></div>
-    </a>)}
-  </div>;
-
-  const Yours=()=><div className="table">
-    <div className="row head"><span>Keyword</span><span/><span>All time</span><span>Last 90</span></div>
-    {worlds.map(w=><a className="row" key={w.label} href="/shop-map?tab=themes">
-      <div><b className="name">{w.label}</b><small>{w.activeListings} live</small></div>
-      <div><div className="bar"><i style={{width:`${Math.round(w.lifetimeRevenueMinor/topLife*100)}%`}}/></div>
-        <div className="bar now"><i style={{width:`${w.revenueMinor?Math.max(3,Math.round(w.revenueMinor/topLife*100)):0}%`}}/></div></div>
-      <div className="figure">{usd(w.lifetimeRevenueMinor)}<small>{num(w.lifetimeUnits)} units</small></div>
-      <div className="figure accent">{w.revenueMinor?usd(w.revenueMinor):"—"}<small>{w.units?`${w.units} units`:"nothing"}</small></div>
-    </a>)}
-  </div>;
-
-
-  /*
-    D1887 · ONE PAGE, AND NOTHING ON IT TWICE.
-
-    Three toggles were never a design - they were three arrangements of the
-    same blocks, and two of them repeated the hero as "your own best sellers"
-    further down. Her shop, then what changed in the lists she keeps, then
-    what sold on Etsy yesterday, then what her own keywords have earned. Each
-    of those appears once, and each states its own window.
-  */
-  return <div className="hp">
-    <section className="hero"><Hers/><Yourshots/></section>
-
-    <Rule href="/market-watch" title="Since you last looked"
-      note={sum?`${sum.keywords} keywords · ${sum.shops} shops · ${niches.length} niches you follow`:undefined}/>
-    <Watching/>
-
-    <Rule href="/hot-list" title="What sold on Etsy yesterday"
-      note={`${num(hot.totalSold??0)} units across ${num(hot.watched??0)} listings`}/>
-    <div className="shots six">{sold.slice(0,12).map(l=><Tile l={l} key={l.listingId}/>)}</div>
-    <div className="board"><Shelves limit={10}/></div>
-
-    <Rule href="/shop-map?tab=themes" title="What your keywords have earned" note="all time against the last 90 days"/>
-    <Yours/>
+    <section className="home4-section home4-contained"><header className="home4-section-head"><div className="home4-title"><b>05</b><div><h2>What sold overnight</h2><p>Observed listing activity across Etsy in the last 24 hours</p></div></div><a className="home4-link" href="/hot-list">Open Hot List →</a></header><div className="home4-night-summary"><strong>{num(hot.totalSold??0)} units</strong><span>across {num(hot.watched??0)} tracked listings</span></div><div className="home4-night-grid">{overnight.map(l=><a className="home4-night" href={l.url} target="_blank" rel="noreferrer" key={l.listingId}><div className="home4-night-img"><img src={l.image!} alt="" loading="lazy"/><span>{l.sold>0?num(l.sold)+" sold":l.savesGained>0?"+"+num(l.savesGained)+" favorites":"activity"}</span></div><div><b>{l.product||"Listing"}</b><small>{l.savesGained>0?"+"+num(l.savesGained)+" favorites":"Stock decreased"}</small></div></a>)}</div></section>
   </div>;
 }
