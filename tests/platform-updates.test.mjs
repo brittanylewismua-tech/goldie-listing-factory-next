@@ -23,7 +23,11 @@ test('empty daily result is explicit and does not manufacture content',()=>{
  assert.match(dailySummary([]),/^Nothing new in today's check of the official sources\./);
  assert.doesNotMatch(dailySummary([]),/No important Etsy or Printify changes/);
  assert.match(dailySummary([item]),/1 change needs your attention/)});
-test('source failures preserve old content and never advance its baseline',()=>{const s=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');assert.match(s,/if\(!stored\?\.content\)baseline\+\+/);assert.match(s,/ON CONFLICT\(id\) DO UPDATE SET last_error=excluded.last_error/);assert.match(s,/reserveSpend/);assert.match(s,/if\(edited>=4\)/)});
+test('source failures preserve old content and never advance its baseline',()=>{const s=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');/* D1898 · The baseline branch now also seeds an announcements board, whose
+    posts are themselves the news. A help article still reports nothing on its
+    first read. */
+ assert.match(s,/if\(!stored\?\.content\)\{baseline\+\+/);
+ assert.match(s,/if\(source\.seedOnFirstRead&&edited<4\)/);assert.match(s,/ON CONFLICT\(id\) DO UPDATE SET last_error=excluded.last_error/);assert.match(s,/reserveSpend/);assert.match(s,/if\(edited>=4\)/)});
 test('daily job is scheduled and home card opens the actual update',()=>{assert.match(readFileSync(new URL('../scripts/add-scheduled-handler.mjs',import.meta.url),'utf8'),/run\("\/api\/platform-updates\/tick"\)/);assert.match(readFileSync(new URL('../app/home/home-view.tsx',import.meta.url),'utf8'),/<PlatformUpdate compact/);assert.match(readFileSync(new URL('../app/platform-updates/update-view.tsx',import.meta.url),'utf8'),/href="\/platform-updates"/)});
 
 test('tomorrow morning items stay out of the midnight edition while urgent changes appear now',()=>{const before=new Date('2026-09-27T10:00:00Z');assert.equal(editionDay(before),'2026-09-26');assert.equal(publishDay(before,false),'2026-09-27');assert.equal(publishDay(before,true),'2026-09-26');assert.equal(editionDay(new Date('2026-09-27T13:00:00Z')),'2026-09-27')});
@@ -62,4 +66,19 @@ test('the front page does not report zero from a one-day window',()=>{
  assert.doesNotMatch(home,/const changes=\(up\?\.items\?\?\[\]\)\.length;/);
  assert.match(home,/const changes=\(up\?\.items\?\?\[\]\)\.length\+\(up\?\.recent\?\?\[\]\)\.length;/);
  assert.match(home,/last 30 days · \{num\(\(up\.sources\?\?\[\]\)\.length\)\} official sources/);
+});
+
+test('only an announcements board seeds its own first read',()=>{
+ /*
+   Adding the board stored a baseline and reported nothing, so the fortnight of
+   announcements already sitting on it was swallowed on the way in - the exact
+   news that was missing in the first place. Seeding is correct there and wrong
+   for a help article, whose whole text is rules that already exist.
+ */
+ const seeded=UPDATE_SOURCES.filter(s=>s.seedOnFirstRead).map(s=>s.id);
+ assert.deepEqual(seeded,['etsy-announcements']);
+ const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
+ assert.match(collector,/summarize\(source,'',current,current,seen,undefined,true\)/);
+ /* A first read has no previous version, so the editor is told the window. */
+ assert.match(collector,/within the last 21 days/);
 });

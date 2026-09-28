@@ -1,6 +1,11 @@
 export type Platform = 'Etsy' | 'Printify';
 export type UpdateItem = {id:string;platform:Platform;priority:'ACTION REQUIRED'|'GOOD TO KNOW'|'IGNORE THE PANIC';evidence:'Confirmed platform change'|'Official guidance'|'Seller speculation'|'No evidence';title:string;impact:string;action:string;sourceUrl:string;sourceTitle:string;topic:string;urgent:boolean;publishedAt:number};
-export type Source = {id:string;platform:Platform;name:string;url:string;fetchUrl:string;kind:'article'|'html'|'recent'};
+export type Source = {id:string;platform:Platform;name:string;url:string;fetchUrl:string;kind:'article'|'html'|'recent';
+ /* D1898 · An announcements board's posts ARE the news, so the first read has
+    to report the recent ones. A help article's first read must not: its whole
+    text is existing rules, and reporting those as changes would announce every
+    standing policy as new. */
+ seedOnFirstRead?:boolean};
 const article=(platform:Platform,id:string,name:string):Source=>{const host=platform==='Etsy'?'help.etsy.com':'help.printify.com';return{id:`${platform}-${id}`,platform,name,url:`https://${host}/hc/en-us/articles/${id}`,fetchUrl:`https://${host}/api/v2/help_center/en-us/articles/${id}.json`,kind:'article'}};
 export const UPDATE_SOURCES:Source[]=[
  article('Etsy','10603291042967','Etsy seller updates'),article('Etsy','360024112614','Etsy creativity and allowed items'),article('Etsy','115014483627','Etsy fees'),article('Etsy','5850122619287','Etsy Purchase Protection'),article('Etsy','360000572888','Etsy refunds and cases'),article('Etsy','360016260113','Etsy listing images'),
@@ -17,7 +22,7 @@ export const UPDATE_SOURCES:Source[]=[
    carries its full text server-rendered, so it diffs the same way an article
    does.
  */
- {id:'etsy-announcements',platform:'Etsy',name:'Etsy seller announcements',url:'https://community.etsy.com/forum/announcements-290/',fetchUrl:'https://community.etsy.com/forum/announcements-290/',kind:'html'},
+ {id:'etsy-announcements',platform:'Etsy',name:'Etsy seller announcements',url:'https://community.etsy.com/forum/announcements-290/',fetchUrl:'https://community.etsy.com/forum/announcements-290/',kind:'html',seedOnFirstRead:true},
  ...(['Etsy','Printify'] as const).map(platform=>({id:`${platform}-recent`,platform,name:`${platform} documentation updates`,url:`https://help.${platform.toLowerCase()}.com/hc/en-us`,fetchUrl:`https://help.${platform.toLowerCase()}.com/api/v2/help_center/en-us/articles.json?sort_by=updated_at&sort_order=desc&per_page=30`,kind:'recent' as const}))
 ];
 export function plainText(html:string){return html.replace(/<(script|style|nav|footer|header)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<\/(p|div|li|h[1-6]|tr)>/gi,'\n').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;|&apos;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n').replace(/\n{3,}/g,'\n\n').trim();}
