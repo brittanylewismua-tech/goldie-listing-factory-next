@@ -930,3 +930,45 @@
     padding-inline:13px!important;
   }
 }
+
+
+/* VISUAL SWEEP · reduce dashboard nesting on Your Shop overview. */
+#suite-workspace .shop-map-redesign .shop-map-focus-panel{
+  margin:0 0 46px!important;
+  padding:30px 0 0!important;
+  border:0!important;
+  border-top:2px solid #000!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-focus-panel .shop-map-section-head{
+  margin-bottom:20px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-focus-list{
+  gap:16px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-focus-list article{
+  min-height:150px!important;
+  padding:18px!important;
+  border:1.5px solid #000!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  box-shadow:3px 3px 0 var(--g-pink)!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-focus-list article>span{
+  color:#000!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-opportunities{
+  margin-top:0!important;
+  padding-top:30px!important;
+  border-top:2px solid #000!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-opportunity-stack{
+  gap:18px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-opportunity-stack>.cc-tool,
+#suite-workspace .shop-map-redesign .shop-map-opportunity-stack>.listing-check{
+  border:1px solid var(--g-line)!important;
+  box-shadow:none!important;
+}
