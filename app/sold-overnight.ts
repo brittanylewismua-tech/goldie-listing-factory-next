@@ -1353,7 +1353,7 @@ export async function searchSold(keyword: string, hoursBack = 168, limit = 24, m
         AND ${where}
         AND (? = 'all' OR w.taxonomy_id IN (SELECT value FROM json_each(?)))
       GROUP BY m.listing_id
-      ORDER BY saves_gained DESC, sold DESC
+      ORDER BY sold DESC, saves_gained DESC
       LIMIT ?`)
     .bind(since, MAX_UNITS_PER_READ,
           new Date(Date.now() - DISPLAY_MAX_AGE_HOURS * 3_600_000).toISOString(),
