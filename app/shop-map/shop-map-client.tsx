@@ -154,6 +154,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const [refreshing,setRefreshing]=useState(false);
   const [syncingMoney,setSyncingMoney]=useState(false);
   const [moneyRefreshError,setMoneyRefreshError]=useState("");
+  const [insightsLoading,setInsightsLoading]=useState(false);
   const requestSequence=useRef(0);
   const load = useCallback(async () => {
     const sequence=++requestSequence.current;
@@ -170,6 +171,18 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setFailed(false);
     setMap(next);
     setLastGood(next);
+    if(tab==="overview"){
+      setInsightsLoading(true);
+      void fetch("/api/shop-map/map?view=overview-insights")
+        .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
+        .then(detail=>{
+          if(sequence!==requestSequence.current||!detail||detail.error)return;
+          setMap(current=>current?{...current,...detail}:detail);
+          setLastGood(current=>current?{...current,...detail}:detail);
+        })
+        .catch(()=>undefined)
+        .finally(()=>{if(sequence===requestSequence.current)setInsightsLoading(false);});
+    } else setInsightsLoading(false);
   },[tab,soldDays,selectedMonth]);
   useEffect(() => { void load(); }, [load]);
 
@@ -325,6 +338,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         <article><span>Top product theme</span><strong>{themes[0]?.label ?? "Not enough data"}</strong><small>{themes[0] ? `${themes[0].units??"—"} units sold in 90 days` : "Sales will reveal this"}</small></article>
       </section>
 
+      {insightsLoading&&!shown.whereToFocus?.length?<section className="shop-map-insights-loading" role="status"><span className="shop-map-loader-dot"/><span>Loading shop insights…</span></section>:null}
       {!!shown.whereToFocus?.length&&<section className="shop-map-focus-panel">
         <div className="shop-map-section-head"><div><p className="mini-label">WHERE TO FOCUS</p><h2>{shown.standout?.headline||"What deserves your attention"}</h2></div></div>
         <div className="shop-map-focus-list">{shown.whereToFocus.slice(0,3).map(focus=><article key={focus.nicheId||focus.label}>
@@ -332,14 +346,14 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         </article>)}</div>
       </section>}
 
-      <section className="shop-map-opportunities">
+      {!insightsLoading||shown.catalogActions||shown.whereToFocus?<section className="shop-map-opportunities">
         <div className="shop-map-section-head"><div><p className="mini-label">OPPORTUNITIES IN YOUR SHOP</p><h2>Things worth reviewing</h2></div></div>
         <div className="shop-map-opportunity-stack">
           <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
           <DesignReach/>
           <ListingCheckPanel/>
         </div>
-      </section>
+      </section>:null}
     </div>}
 
     {tab === "themes" && <section className="shop-map-card shop-map-themes">
