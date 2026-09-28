@@ -32,6 +32,9 @@ export const UPDATE_SOURCES:Source[]=[
     because it is a list of announcements, so it seeds its own first read. */
  article('Etsy','10603291042967','Etsy seller updates',true),
  {id:'printify-network',platform:'Printify',name:'Printify fulfillment updates',url:'https://printify.com/network-fulfillment-status/',fetchUrl:'https://printify.com/network-fulfillment-status/',kind:'html'},
+ {id:'printify-resource-center',platform:'Printify',name:'Printify Resource Center',url:'https://printify.com/resource-center/',fetchUrl:'https://printify.com/resource-center/',kind:'html',seedOnFirstRead:true},
+ {id:'printify-holiday-guide-2026',platform:'Printify',name:'Printify holiday guide 2026',url:'https://printify.com/blog/holiday-guide/',fetchUrl:'https://printify.com/blog/holiday-guide/',kind:'html',seedOnFirstRead:true},
+ {id:'printify-seasonal-catalog-2026',platform:'Printify',name:'Printify seasonal catalog updates',url:'https://printify.com/blog/seasonal-product-trends/',fetchUrl:'https://printify.com/blog/seasonal-product-trends/',kind:'html',seedOnFirstRead:true},
  /*
    D1904 · Printify announces new products nowhere a machine can read: no
    changelog, a marketing blog, and a catalogue page drawn by JavaScript that
