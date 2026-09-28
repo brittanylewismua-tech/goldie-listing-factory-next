@@ -397,14 +397,14 @@
    GOLDIE SUITE · TRACKED KEYWORDS / SHOPS VISUAL SYSTEM
    Scoped to Market Watch only.
    ========================================================================== */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+500;600;700;800&display=swap');
 
 #suite-workspace .mw{
   --g-pink:#ee6fc0;--g-pink-soft:#fdeef7;--g-black:#000;--g-ink2:#46433f;--g-ink3:#8a8580;--g-line:#e4e1de;
   max-width:1120px!important;margin:0 auto!important;padding:0 0 80px!important;
-  font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif!important;color:#000!important;
+  font-family:inherit!important;color:#000!important;
 }
-#suite-workspace .mw :is(h1,h2,h3,p,a,button,input,select,small,strong,span){font-family:"Plus Jakarta Sans",Inter,system-ui,sans-serif!important}
+#suite-workspace .mw :is(h1,h2,h3,p,a,button,input,select,small,strong,span){font-family:inherit!important}
 #suite-workspace .mw-intro{
   padding:4px 0 28px!important;margin:0 0 26px!important;border-bottom:2px solid #000!important;
 }
@@ -459,10 +459,10 @@
 #suite-workspace .keyword-watch-head h2{font-size:17px!important;line-height:1.25!important;letter-spacing:-.3px!important;margin:0!important;font-weight:800!important}
 #suite-workspace .watch-card-actions{padding:8px 16px 16px!important;gap:10px!important}
 #suite-workspace .watch-card-actions .p-button-primary{
-  min-height:36px!important;border:1.5px solid #000!important;border-radius:8px!important;background:#000!important;color:#fff!important;font-size:10px!important;font-weight:800!important;box-shadow:2px 2px 0 var(--g-pink)!important;
+  min-height:40px!important;border:1.5px solid #000!important;border-radius:8px!important;background:#000!important;color:#fff!important;font-size:10px!important;font-weight:800!important;box-shadow:2px 2px 0 var(--g-pink)!important;
 }
 #suite-workspace .watch-card-actions .p-button-quiet{
-  min-height:36px!important;border:1px solid var(--g-line)!important;border-radius:8px!important;background:#fff!important;color:#000!important;font-size:10px!important;font-weight:700!important;
+  min-height:40px!important;border:1px solid var(--g-line)!important;border-radius:8px!important;background:#fff!important;color:#000!important;font-size:10px!important;font-weight:700!important;
 }
 #suite-workspace .watch-remove{font-size:10px!important;color:var(--g-ink3)!important}
 
@@ -501,7 +501,7 @@
 #suite-workspace .mw .card .body{padding:12px!important}
 #suite-workspace .mw .card .title{font-size:12px!important;line-height:1.4!important;font-weight:700!important}
 #suite-workspace .mw .tag{border-radius:7px!important;font-size:9px!important;padding:3px 7px!important}
-#suite-workspace .mw .card a{min-height:36px!important;line-height:36px!important;font-size:10px!important;font-weight:800!important}
+#suite-workspace .mw .card a{min-height:40px!important;line-height:36px!important;font-size:10px!important;font-weight:800!important}
 
 #suite-workspace .winner-profile{
   border:2px solid #000!important;border-radius:14px!important;box-shadow:4px 4px 0 var(--g-pink)!important;background:#fff!important;padding:20px!important;
