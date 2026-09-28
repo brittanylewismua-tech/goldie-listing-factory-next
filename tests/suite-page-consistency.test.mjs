@@ -26,10 +26,10 @@ test("Hot List inherits the suite typeface",()=>{
 
 test("tracked keyword and shop cards expose their existing evidence",()=>{
   assert.match(watchPage,/current-watch-metrics/);
-  assert.match(watchPage,/Listings with activity/);
-  assert.match(watchPage,/Repeated activity/);
-  assert.match(watchPage,/Activity items/);
-  assert.match(watchPage,/Buyer signals/);
+  assert.match(watchPage,/Selling listings/);
+  assert.match(watchPage,/Repeat-selling listings/);
+  assert.match(watchPage,/Listings to review/);
+  assert.match(watchPage,/Buyer feedback/);
 });
 
 test("Trademark Check makes the checker primary and shows watch count",()=>{
