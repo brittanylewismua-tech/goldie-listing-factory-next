@@ -6,9 +6,20 @@ export type Source = {id:string;platform:Platform;name:string;url:string;fetchUr
     text is existing rules, and reporting those as changes would announce every
     standing policy as new. */
  seedOnFirstRead?:boolean};
-const article=(platform:Platform,id:string,name:string):Source=>{const host=platform==='Etsy'?'help.etsy.com':'help.printify.com';return{id:`${platform}-${id}`,platform,name,url:`https://${host}/hc/en-us/articles/${id}`,fetchUrl:`https://${host}/api/v2/help_center/en-us/articles/${id}.json`,kind:'article'}};
+const article=(platform:Platform,id:string,name:string,seedOnFirstRead=false):Source=>{const host=platform==='Etsy'?'help.etsy.com':'help.printify.com';return{id:`${platform}-${id}`,platform,name,url:`https://${host}/hc/en-us/articles/${id}`,fetchUrl:`https://${host}/api/v2/help_center/en-us/articles/${id}.json`,kind:'article',seedOnFirstRead}};
 export const UPDATE_SOURCES:Source[]=[
- article('Etsy','10603291042967','Etsy seller updates'),article('Etsy','360024112614','Etsy creativity and allowed items'),article('Etsy','115014483627','Etsy fees'),article('Etsy','5850122619287','Etsy Purchase Protection'),article('Etsy','360000572888','Etsy refunds and cases'),article('Etsy','360016260113','Etsy listing images'),
+ /*
+   D1899 · THE ONE SOURCE CARRYING ETSY'S "WHAT'S NEW" WAS SWALLOWED WHOLE.
+
+   Article 10603291042967 is Newly Crafted, Etsy's own roundup of new seller
+   tools. It is not a rules page; it is a list of announcements, and it already
+   held shared shop access, the quick list form, Etsy Ads ad groups, the new
+   Shop Stats comparison graphs and the Stats assistant beta. All of it was
+   present at the moment the source was first read, so all of it became the
+   baseline and none of it was ever reportable. Thirty days of "no changes" with
+   that article sitting there unread is where the front page's zero came from.
+ */
+ article('Etsy','10603291042967','Etsy seller updates',true),article('Etsy','360024112614','Etsy creativity and allowed items'),article('Etsy','115014483627','Etsy fees'),article('Etsy','5850122619287','Etsy Purchase Protection'),article('Etsy','360000572888','Etsy refunds and cases'),article('Etsy','360016260113','Etsy listing images'),
  article('Printify','22264012673297','Printify price updates'),article('Printify','4483630162833','Printify discontinued products'),article('Printify','4483625090321','Printify order routing'),
  {id:'printify-network',platform:'Printify',name:'Printify fulfillment updates',url:'https://printify.com/network-fulfillment-status/',fetchUrl:'https://printify.com/network-fulfillment-status/',kind:'html'},
  /*

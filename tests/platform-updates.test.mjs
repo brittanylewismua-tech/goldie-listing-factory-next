@@ -75,8 +75,19 @@ test('only an announcements board seeds its own first read',()=>{
    news that was missing in the first place. Seeding is correct there and wrong
    for a help article, whose whole text is rules that already exist.
  */
- const seeded=UPDATE_SOURCES.filter(s=>s.seedOnFirstRead).map(s=>s.id);
- assert.deepEqual(seeded,['etsy-announcements']);
+ /*
+   D1899 · Newly Crafted joins it. That article is Etsy's own roundup of new
+   seller tools - a list of announcements, not a rules page - and its entire
+   contents were baselined on first read, which is why thirty days of checking
+   reported nothing while it sat there listing shared shop access, ad groups and
+   the new Shop Stats graphs.
+ */
+ const seeded=UPDATE_SOURCES.filter(s=>s.seedOnFirstRead).map(s=>s.id).sort();
+ assert.deepEqual(seeded,['Etsy-10603291042967','etsy-announcements']);
+ /* A rules page must never seed: its text is policy that already applies. */
+ for(const id of ['Etsy-115014483627','Etsy-360024112614','Printify-22264012673297'])
+  assert.equal(UPDATE_SOURCES.find(s=>s.id===id).seedOnFirstRead,false,
+   id+' would announce standing policy as new');
  const collector=readFileSync(new URL('../app/platform-update-collector.ts',import.meta.url),'utf8');
  assert.match(collector,/summarize\(source,'',current,current,seen,undefined,true\)/);
  /* A first read has no previous version, so the editor is told the window. */
