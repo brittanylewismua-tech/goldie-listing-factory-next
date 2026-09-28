@@ -286,12 +286,14 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     </main>;
 
   const month = shown.thisMonth;
-  const niches = [...(shown.worlds ?? [])];
-  if (shown.unclassifiedCard?.listings) niches.push(shown.unclassifiedCard);
+  const themes = [...(shown.worlds ?? [])];
+  const unclassifiedTheme = shown.unclassifiedCard?.listings ? shown.unclassifiedCard : null;
+  const niches = unclassifiedTheme ? [...themes,unclassifiedTheme] : themes;
   const recentTotal = niches.reduce((sum, niche) => sum + niche.revenueMinor, 0);
   const noSalesYet = (shown.shopTotals?.orders ?? 0) === 0;
 
   const sold = shown.soldListings?.listings ?? [];
+  const units90=sold.reduce((sum,row)=>sum+row.sales,0);
   const leaders=shown.topListings??[];
   return <main className="shop-map shop-map-redesign">
     <header className="shop-map-head current-page-heading"><div><p className="current-kicker">YOUR SHOP</p><h1>Your shop</h1><p>{shown.shop?.shopName ?? "Your shop"} · What is selling, where your revenue is coming from, and what deserves your attention.</p></div></header>
@@ -303,7 +305,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           onClick={() => selectTab(key)}>{label}</button>)}
     </nav>
 
-    {tab === "overview" && <div className="shop-map-tab-panel"><CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/><DesignReach/><ListingCheckPanel/>
+    {tab === "overview" && <div className="shop-map-tab-panel">
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
           <h2>Top sellers</h2></div>
@@ -318,49 +320,59 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           </article>)}</div> : <div className="shop-map-empty"><b>No sales in the last 90 days.</b>
             <p>Your sold listings will appear here after the next Etsy sales import.</p></div>}
       </section>
-      {/* D1799 · Facts first, then what to do about them. These two action
-          panels opened the page, so Shop Map began with eight rows of
-          near-identical SEO titles and the shop's own sales were pushed
-          below the fold. */}
 
-      <section className="shop-map-summary-grid">
-        <article><span>Orders this month</span><strong>{month?.orders ?? "—"}</strong><small>{money(month?.revenueMinor,month?.currency)} revenue</small></article>
-        <article><span>Active listings</span><strong>{shown.shopTotals?.activeListings ?? 0}</strong><small>in your current catalog</small></article>
-        <article><span>Top product theme</span><strong>{niches[0]?.label ?? "Not enough data"}</strong><small>{niches[0] ? `${niches[0].units??"—"} units sold in 90 days` : "Sales will reveal this"}</small></article>
+      <section className="shop-map-summary-grid" aria-label="Last 90 days summary">
+        <article><span>Revenue · 90 days</span><strong>{money(shown.shopTotals?.revenueLast90Minor)}</strong><small>across your shop</small></article>
+        <article><span>Units sold · 90 days</span><strong>{units90}</strong><small>from sold listings</small></article>
+        <article><span>Top product theme</span><strong>{themes[0]?.label ?? "Not enough data"}</strong><small>{themes[0] ? `${themes[0].units??"—"} units sold in 90 days` : "Sales will reveal this"}</small></article>
+      </section>
+
+      {!!shown.whereToFocus?.length&&<section className="shop-map-focus-panel">
+        <div className="shop-map-section-head"><div><p className="mini-label">WHERE TO FOCUS</p><h2>{shown.standout?.headline||"What deserves your attention"}</h2></div></div>
+        <div className="shop-map-focus-list">{shown.whereToFocus.slice(0,3).map(focus=><article key={focus.nicheId||focus.label}>
+          <span>{focus.label}</span><strong>{focus.headline}</strong><p>{focus.advice}</p>
+        </article>)}</div>
+      </section>}
+
+      <section className="shop-map-opportunities">
+        <div className="shop-map-section-head"><div><p className="mini-label">OPPORTUNITIES IN YOUR SHOP</p><h2>Things worth reviewing</h2></div></div>
+        <div className="shop-map-opportunity-stack">
+          <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
+          <DesignReach/>
+          <ListingCheckPanel/>
+        </div>
       </section>
     </div>}
 
     {tab === "themes" && <section className="shop-map-card shop-map-themes">
       <div className="shop-map-section-head"><div><p className="mini-label">PRODUCT THEMES</p><h2>Sales by product theme</h2>
         <p>{shown.worldsPeriod?.replace(/^./,letter=>letter.toUpperCase())}. Open a theme to see what is included.</p></div></div>
-      <ul className="shop-map-worlds">{niches.map(niche => { const share = recentTotal ? niche.revenueMinor / recentTotal : 0; const members=browseOwnListings(niche.memberListings??[],themeSort,themeQuery,themeState);
+      <ul className="shop-map-worlds">{themes.map(niche => { const share = recentTotal ? niche.revenueMinor / recentTotal : 0; const members=browseOwnListings(niche.memberListings??[],themeSort,themeQuery,themeState);
         return <li key={niche.worldId} className={open === niche.worldId ? "theme-expanded" : undefined}><button type="button" className="shop-map-world"
           aria-expanded={open === niche.worldId} onClick={() => {setOpen(open === niche.worldId ? "" : niche.worldId);setThemeQuery("");setThemeState("all")}}>
           <span className="shop-map-world-label">{niche.label}</span><span className="shop-map-world-figure">{money(niche.revenueMinor)}</span>
-          <span className="shop-map-world-meta">{niche.activeListings} active listings · {niche.units??"—"} units sold</span>
+          <span className="shop-map-world-meta">{Math.round(share*100)}% of 90-day revenue · {niche.units??"—"} units · {niche.activeListings} active</span>
+          <span className="shop-map-world-thumbs">{(niche.memberListings??[]).filter(listing=>listing.imageUrl).slice(0,3).map(listing=><img key={listing.listingId} src={listing.imageUrl} alt="" width={42} height={42} loading="lazy"/>)}</span>
           <span className="shop-map-bar"><span style={{width:`${Math.max(2,Math.round(share*100))}%`}}/></span>
-          <span className="shop-map-lifetime">All recorded years: {money(niche.lifetimeRevenueMinor)} · {niche.lifetimeUnits??"—"} units sold</span>
+          <span className="shop-map-lifetime">Lifetime: {money(niche.lifetimeRevenueMinor)} · {niche.lifetimeUnits??"—"} units</span>
         </button>{open === niche.worldId ? <div className="shop-map-evidence"><p>{niche.evidence}</p>
           <p>{niche.listings} total listings: {niche.activeListings} active and {Math.max(0,niche.listings-niche.activeListings)} inactive. Sales below cover the last 90 days.</p>
-          <div className="shop-map-browse-controls"><label>Search this theme<input type="search" value={themeQuery} onChange={e=>setThemeQuery(e.target.value)} placeholder="Find a listing"/></label><label>Listing status<select value={themeState} onChange={e=>setThemeState(e.target.value)}><option value="all">All statuses</option><option value="active">Active only</option><option value="inactive">Inactive only</option></select></label></div>
-          <p role="status">{members.length} of {niche.memberListings?.length??0} listings shown</p>{members.length===0&&<p>No listings match this search and status. Change the filters to see more.</p>}
-<div className="market-results-sort"><label>Sort theme listings<select value={themeSort} onChange={e=>setThemeSort(e.target.value as "sales"|"favorites")}><option value="sales">Most units sold</option><option value="favorites">Highest total favorites</option></select></label></div>
+          <div className="shop-map-theme-toolbar"><label>Search<input type="search" value={themeQuery} onChange={e=>setThemeQuery(e.target.value)} placeholder="Find a listing"/></label><label>Status<select value={themeState} onChange={e=>setThemeState(e.target.value)}><option value="all">All statuses</option><option value="active">Active only</option><option value="inactive">Inactive only</option></select></label><label>Sort<select value={themeSort} onChange={e=>setThemeSort(e.target.value as "sales"|"favorites")}><option value="sales">Most units sold</option><option value="favorites">Highest favorites</option></select></label></div>
+          {members.length!== (niche.memberListings?.length??0)&&<p role="status">{members.length} of {niche.memberListings?.length??0} listings shown</p>}{members.length===0&&<p>No listings match this search and status. Change the filters to see more.</p>}
           <div className="shop-map-theme-listings">{members.map(listing=><a key={listing.listingId} href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{listing.imageUrl?<img src={listing.imageUrl} alt="" loading="lazy" width={68} height={68}/>:null}<span><strong>{shortLabel(listing.title)}</strong><small>{listing.sales} sold in 90 days · {listing.favorites==null?"Favorites unavailable":`${listing.favorites} total favorites`} · {listing.state}</small></span></a>)}</div></div> : null}</li>})}</ul>
+      {unclassifiedTheme&&<details className="shop-map-unclassified"><summary>Unclassified listings · {unclassifiedTheme.listings}</summary><p>These listings are not currently grouped into a product theme.</p></details>}
     </section>}
 
     {tab === "sold" && <section className="shop-map-card shop-map-sold">
       <div className="shop-map-section-head"><div><p className="mini-label">SOLD LISTINGS</p><h2>Sold listings · last {shown.soldListings?.days??90} days</h2>
         <p>Units sold and revenue for the selected period.</p></div></div>
 
-      <div className="shop-map-browse-controls"><label>Sales period <select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label><label>Search sold listings<input type="search" value={soldQuery} onChange={e=>setSoldQuery(e.target.value)} placeholder="Find a listing"/></label></div>
-      {/* D1865 · "10 of 10 sold listings shown" is not information. It is only
-          worth a line once a search has actually hidden something. */}
+      <div className="shop-map-sold-toolbar"><label>Period<select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label><label className="search">Search<input type="search" value={soldQuery} onChange={e=>setSoldQuery(e.target.value)} placeholder="Find a listing"/></label><label>Sort<select value={soldSort} onChange={e=>setSoldSort(e.target.value as "sales"|"revenue")}><option value="sales">Most units sold</option><option value="revenue">Highest revenue</option></select></label></div>
       {!refreshing&&browseOwnListings(sold,soldSort,soldQuery).length!==sold.length
         &&<p role="status">{browseOwnListings(sold,soldSort,soldQuery).length} of {sold.length} sold listings match your search</p>}
-<div className="market-results-sort"><label>Sort sold listings<select value={soldSort} onChange={e=>setSoldSort(e.target.value as "sales"|"revenue")}><option value="sales">Most units sold</option><option value="revenue">Highest revenue</option></select></label></div>
-      {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-table"><div className="head"><span>Listing</span><span>Units sold</span><span>Revenue</span></div>
-        {browseOwnListings(sold,soldSort,soldQuery).map(listing => <article key={listing.listingId}><div>{listing.imageUrl ? <img src={listing.imageUrl} alt=""/> : <i>G</i>}
-          <strong><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{shortLabel(listing.title)}</a></strong></div><b data-label="Units sold">{listing.sales}</b><span data-label="Revenue">{money(listing.revenueMinor)}</span></article>)}</div>}
+      {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-grid">
+        {browseOwnListings(sold,soldSort,soldQuery).map(listing => <article key={listing.listingId}>{listing.imageUrl ? <img src={listing.imageUrl} alt="" loading="lazy"/> : <i>G</i>}
+          <div><strong><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{shortLabel(listing.title)}</a></strong><small>{listing.sales} unit{listing.sales===1?"":"s"} sold</small></div><b>{money(listing.revenueMinor)}</b></article>)}</div>}
     </section>}
 
     {tab === "money" && <section className="shop-map-card shop-map-money shop-map-money-redesign">
