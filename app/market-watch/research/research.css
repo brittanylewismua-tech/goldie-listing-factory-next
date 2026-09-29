@@ -813,3 +813,7 @@
   #suite-workspace .nr h1,
   #suite-workspace .nr-library .nr-head h1{font-size:34px!important}
 }
+
+
+/* VISUAL SWEEP · enforce the suite typeface on this route. */
+#suite-workspace .nr{font-family:'Manrope Variable',Manrope,sans-serif!important}
