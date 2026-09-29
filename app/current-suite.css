@@ -1011,5 +1011,4 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 
 /* Home shell compatibility marker. The redesigned Home renders one child, so
    the track declaration is inert unless a second child is introduced. */
-.current-home-layout{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
-@media(max-width:820px){.current-home-layout{grid-template-columns:1fr}}
+
