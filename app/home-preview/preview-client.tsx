@@ -34,10 +34,19 @@ const relativeDate=(seconds:number)=>{
   return new Date(seconds*1000).toLocaleDateString("en-US",{month:"short",day:"numeric"});
 };
 
-export default function PreviewClient({firstName}:{firstName?:string}={}){
-  const [shopName,setShopName]=useState("Your shop");
-  const [updates,setUpdates]=useState<Updates|null>(null);
-  const [updatesLoaded,setUpdatesLoaded]=useState(false);
+const REVIEW_UPDATES:Updates={items:[
+  {id:"etsy-1",platform:"Etsy",title:"Search and discovery update",impact:"A search change sellers should know about.",sourceUrl:"#",publishedAt:Math.floor(Date.now()/1000)-3600},
+  {id:"etsy-2",platform:"Etsy",title:"Marketplace policy or fee change",impact:"What changed and what it means for your shop.",sourceUrl:"#",publishedAt:Math.floor(Date.now()/1000)-7200},
+  {id:"etsy-3",platform:"Etsy",title:"New seller feature",impact:"A new Etsy feature worth paying attention to.",sourceUrl:"#",publishedAt:Math.floor(Date.now()/1000)-10800},
+  {id:"printify-1",platform:"Printify",title:"New product worth knowing about",impact:"A catalog addition with real product potential.",sourceUrl:"#",publishedAt:Math.floor(Date.now()/1000)-3600},
+  {id:"printify-2",platform:"Printify",title:"Production or fulfillment update",impact:"An operational change that may affect sellers.",sourceUrl:"#",publishedAt:Math.floor(Date.now()/1000)-7200},
+  {id:"printify-3",platform:"Printify",title:"Provider or catalog expansion",impact:"The strongest additional Printify change.",sourceUrl:"#",publishedAt:Math.floor(Date.now()/1000)-10800},
+]};
+
+export default function PreviewClient({firstName,visualReview=false}:{firstName?:string;visualReview?:boolean}={}){
+  const [shopName,setShopName]=useState(visualReview?"She's A Wolf Clothing":"Your shop");
+  const [updates,setUpdates]=useState<Updates|null>(visualReview?REVIEW_UPDATES:null);
+  const [updatesLoaded,setUpdatesLoaded]=useState(visualReview);
   const [layout,setLayoutState]=useState<"orbit"|"line">("orbit");
   const [typed,setTyped]=useState("");
   const [typedDone,setTypedDone]=useState(false);
@@ -55,6 +64,7 @@ export default function PreviewClient({firstName}:{firstName?:string}={}){
       const saved=window.localStorage.getItem("goldie-home-layout");
       if(saved==="line"||saved==="orbit")setLayoutState(saved);
     }catch{}
+    if(visualReview)return;
     void fetch("/api/shop-map/map?home=1&days=30")
       .then(r=>r.ok?r.json() as Promise<MapData>:null)
       .then(data=>{if(data?.shop?.shopName)setShopName(data.shop.shopName);})
@@ -62,7 +72,7 @@ export default function PreviewClient({firstName}:{firstName?:string}={}){
     void fetch("/api/platform-updates",{cache:"no-store"})
       .then(r=>r.ok?r.json() as Promise<Updates>:null)
       .then(setUpdates).catch(()=>undefined).finally(()=>setUpdatesLoaded(true));
-  },[]);
+  },[visualReview]);
 
   useEffect(()=>{
     setTyped("");
