@@ -8,6 +8,7 @@ import { env } from "cloudflare:workers";
 import { ensureListingTables, performanceFrom } from "@/app/shop-map-listings";
 import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-map-worlds";
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
+import { buildAttentionMap } from "@/app/shop-map-attention";
 import { guidance, standout, DIRECTION_BASIS, SHOP_MAP_MIN_RECENT_ORDERS } from "@/app/shop-map-guidance";
 import { collapseFacets } from "@/app/niche-classifier";
 import { rejectAsNiche } from "@/app/shop-map-identity";
@@ -180,7 +181,22 @@ async function buildMap(request: Request) {
       sales:totals.get(Number(row.listing_id))?.sales??0,
       revenueMinor:totals.get(Number(row.listing_id))?.revenueMinor??0,
     })).filter(row=>row.sales>0).sort((a,b)=>b.sales-a.sales||b.revenueMinor-a.revenueMinor);
-    return NextResponse.json({
+    const primaryWorldByListing=new Map(assignments.map(row=>[row.listingId,row.worldIds[0]??null] as const));
+  const attention=buildAttentionMap(rows.map(row=>{
+    const id=Number(row.listing_id);
+    return {
+      listingId:id,title:String(row.title||"Listing details unavailable"),
+      imageUrl:String(row.image_url||""),state:String(row.state||""),
+      favorites:row.favorites===null?null:Number(row.favorites),
+      sales90:sales90.get(id)?.sales??0,
+      lifetimeSales:performance.get(id)?.lifetimeUnits??0,
+      worldId:primaryWorldByListing.get(id)??null,
+    };
+  }),worldPerformance.map(world=>({
+    worldId:world.worldId,label:world.label,activeListings:world.activeListings,
+  })));
+
+  return NextResponse.json({
       shop:{shopId,shopName:shopRow.shop_name},
       shopTotals:{
         ordersLast30:sum("last30Orders"),revenueLast30Minor:sum("last30RevenueMinor"),
@@ -576,6 +592,7 @@ async function buildMap(request: Request) {
     .sort((a,b)=>b.sales-a.sales||Number(b.state==="active")-Number(a.state==="active"));
 
   return NextResponse.json({
+    attention,
     catalogActions: catalogActions(rows, saleRows.results ?? [], now),
     shop: { shopId, shopName: shopRow.shop_name, imageUrl: shopRow.image_url, timezone },
     /* The money section is blocked until this shop's own timezone is set. */
