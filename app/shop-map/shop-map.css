@@ -1107,3 +1107,14 @@
     font-size:38px!important;
   }
 }
+
+
+/* VISUAL SWEEP · phone composition should breathe, not merely fit. */
+@media(max-width:560px){
+  #suite-workspace .shop-map-redesign .shop-map-leader-grid{
+    grid-template-columns:1fr!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-leader-grid>article:first-child{
+    grid-column:auto!important;
+  }
+}
