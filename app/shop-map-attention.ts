@@ -50,7 +50,6 @@ export type AttentionWorld = {
   buildGap: number;
   buildGapPoints: number;
   state: "underbuilt" | "aligned" | "overbuilt";
-  recommendedNext10: number;
 };
 
 export type AttentionMap = {
@@ -121,30 +120,8 @@ export function buildAttentionMap(
     || b.buildGap-a.buildGap
     || a.label.localeCompare(b.label));
 
-  /*
-    TURN THE ATTENTION SHARE INTO A REAL BUILD CYCLE.
-
-    Independent rounding can tell a seller to build 11 things in a ten-listing
-    plan. Largest-remainder allocation keeps the advice proportional while
-    guaranteeing that a ten-listing cycle still contains exactly ten slots.
-    Signal that belongs to unclassified listings is deliberately left
-    unallocated rather than invented into a named world.
-  */
-  const classifiedShare=worldDrafts.reduce((sum,world)=>sum+world.attentionShare,0);
-  const availableSlots=Math.max(0,Math.min(10,Math.round(classifiedShare*10)));
-  const slotDrafts=worldDrafts.map((world,index)=>{
-    const raw=world.attentionShare*10;
-    const base=Math.floor(raw);
-    return {index,base,remainder:raw-base};
-  });
-  let assigned=slotDrafts.reduce((sum,row)=>sum+row.base,0);
-  for(const row of [...slotDrafts].sort((a,b)=>b.remainder-a.remainder||a.index-b.index)){
-    if(assigned>=availableSlots)break;
-    row.base+=1;assigned+=1;
-  }
-  const slotsByIndex=new Map(slotDrafts.map(row=>[row.index,row.base]));
   const rankedWorlds=worldDrafts
-    .map((world,index)=>({...world,rank:index+1,recommendedNext10:slotsByIndex.get(index)??0}));
+    .map((world,index)=>({...world,rank:index+1}));
 
   return {
     basis,
