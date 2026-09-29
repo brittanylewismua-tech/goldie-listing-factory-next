@@ -5,9 +5,9 @@ import { readFileSync } from "node:fs";
 const route=readFileSync("app/api/shop-map/map/route.ts","utf8");
 const home=readFileSync("app/home-preview/preview-client.tsx","utf8");
 
-test("Home asks Shop Map for the lightweight scorecard response",()=>{
-  assert.match(home,/\/api\/shop-map\/map\?home=1&days=90/);
+test("Home asks Shop Map for the lightweight connected-shop identity",()=>{
   assert.match(home,/\/api\/shop-map\/map\?home=1&days=30/);
+  assert.match(home,/data\?\.shop\?\.shopName/);
 });
 
 test("Home scorecard returns before Shop Map worlds and finance work",()=>{
