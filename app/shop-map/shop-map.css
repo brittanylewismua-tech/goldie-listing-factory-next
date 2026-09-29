@@ -972,3 +972,138 @@
   border:1px solid var(--g-line)!important;
   box-shadow:none!important;
 }
+
+
+/* VISUAL SWEEP · Your Numbers gets an intentional composition. */
+#suite-workspace .shop-map-redesign .shop-map-money-redesign{
+  color:#000!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-money-head{
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:space-between!important;
+  gap:20px!important;
+  margin:0 0 22px!important;
+  padding:0 0 18px!important;
+  border-bottom:2px solid #000!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-money-head h2{
+  margin:0!important;
+  font-size:22px!important;
+  line-height:1.2!important;
+  letter-spacing:-.45px!important;
+  font-weight:800!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-money-controls{
+  display:flex!important;
+  align-items:flex-end!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-period{
+  display:grid!important;
+  gap:5px!important;
+  margin:0!important;
+  color:var(--g-ink-3)!important;
+  font-size:10px!important;
+  font-weight:800!important;
+  letter-spacing:.06em!important;
+  text-transform:uppercase!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-period input{
+  min-width:170px!important;
+  min-height:42px!important;
+}
+#suite-workspace .shop-map-redesign .current-money-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)!important;
+  gap:16px!important;
+  align-items:stretch!important;
+}
+#suite-workspace .shop-map-redesign .current-money-total{
+  min-width:0!important;
+  padding:28px!important;
+  border:2px solid #000!important;
+  border-radius:14px!important;
+  background:#000!important;
+  color:#fff!important;
+  box-shadow:4px 4px 0 var(--g-pink)!important;
+}
+#suite-workspace .shop-map-redesign .current-money-total .shop-map-headline-label{
+  color:#fff!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  letter-spacing:.1em!important;
+  text-transform:uppercase!important;
+}
+#suite-workspace .shop-map-redesign .current-money-total .shop-map-figure{
+  margin:12px 0 10px!important;
+  color:#fff!important;
+  font-size:46px!important;
+  line-height:1!important;
+  letter-spacing:-.055em!important;
+  font-weight:800!important;
+}
+#suite-workspace .shop-map-redesign .current-money-total .shop-map-money-status{
+  background:var(--g-pink)!important;
+  color:#000!important;
+}
+#suite-workspace .shop-map-redesign .current-money-total .shop-map-accuracy,
+#suite-workspace .shop-map-redesign .current-money-total .shop-map-freshness{
+  margin:10px 0 0!important;
+  color:#d6d1d4!important;
+  font-size:11px!important;
+  line-height:1.5!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-rows{
+  margin:0!important;
+  padding:12px 20px!important;
+  display:grid!important;
+  gap:0!important;
+  border:1.5px solid #000!important;
+  border-radius:14px!important;
+  background:#fff!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-rows>div{
+  min-height:52px!important;
+  padding:12px 0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:20px!important;
+  border-bottom:1px solid var(--g-line)!important;
+  font-size:13px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-rows>div:last-child{border-bottom:0!important}
+#suite-workspace .shop-map-redesign .shop-map-rows dt{
+  color:var(--g-ink-2)!important;
+  font-weight:650!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-rows dd{
+  color:#000!important;
+  font-weight:800!important;
+}
+#suite-workspace .shop-map-redesign .current-money-grid>.shop-map-fix{
+  grid-column:1/-1!important;
+  width:max-content!important;
+  margin-top:2px!important;
+}
+@media(max-width:760px){
+  #suite-workspace .shop-map-redesign .shop-map-money-head{
+    display:grid!important;
+    align-items:start!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-money-controls{
+    justify-content:flex-start!important;
+  }
+  #suite-workspace .shop-map-redesign .current-money-grid{
+    grid-template-columns:1fr!important;
+  }
+  #suite-workspace .shop-map-redesign .current-money-total{
+    padding:22px!important;
+  }
+  #suite-workspace .shop-map-redesign .current-money-total .shop-map-figure{
+    font-size:38px!important;
+  }
+}
