@@ -7,10 +7,10 @@ const home=readFileSync("app/home-preview/preview-client.tsx","utf8");
 const css=readFileSync("app/home-preview/preview.css","utf8");
 const collector=readFileSync("app/platform-update-collector.ts","utf8");
 
-test("Home greeting is server-fed and does not derive from the shop name",()=>{
+test("Home removes the greeting so the launcher owns the first viewport",()=>{
   assert.match(page,/HomeView firstName=\{firstName\}/);
-  assert.match(home,/firstName\?", "\+firstName/);
-  assert.doesNotMatch(home,/account\?\.name|account\?\.firstName/);
+  assert.doesNotMatch(home,/Good morning|Good afternoon|Good evening|Your command center/);
+  assert.match(home,/goldie-background-g/);
 });
 
 test("Home is the Goldie Suite launcher, not the retired dashboard",()=>{
@@ -21,10 +21,12 @@ test("Home is the Goldie Suite launcher, not the retired dashboard",()=>{
   assert.doesNotMatch(home,/Daily updates|What sold overnight|Pick up where you left off/);
 });
 
-test("Orbit cards stay upright and the orbit uses the approved pace",()=>{
+test("Orbit cards stay upright and the enlarged orbit uses the approved pace",()=>{
   assert.match(home,/delta\*360\/600000/);
   assert.match(home,/-base-angle/);
   assert.match(css,/\.goldie-orbit-ring circle\{[^}]*stroke:var\(--grey\)[^}]*stroke-width:1\.5/);
+  assert.match(css,/\.goldie-orbit-ring\{[^}]*width:560px;height:560px/);
+  assert.match(css,/\.goldie-feature-card\{[^}]*width:174px;min-height:132px/);
 });
 
 test("Etsy and Printify updates keep the approved two-panel treatment",()=>{
