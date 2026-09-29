@@ -68,6 +68,7 @@ const gapState=(gap:number):AttentionWorld["state"]=>
 export function buildAttentionMap(
   listings: AttentionListing[],
   worlds: Array<{worldId:string;label:string;activeListings:number}>,
+  options:{activeListingsTotal?:number}={},
 ): AttentionMap {
   const recentSales=listings.reduce((sum,row)=>sum+Math.max(0,row.sales90||0),0);
   const lifetimeSales=listings.reduce((sum,row)=>sum+Math.max(0,row.lifetimeSales||0),0);
@@ -96,7 +97,8 @@ export function buildAttentionMap(
       };
     });
 
-  const activeTotal=worlds.reduce((sum,world)=>sum+Math.max(0,world.activeListings),0);
+  const classifiedActiveTotal=worlds.reduce((sum,world)=>sum+Math.max(0,world.activeListings),0);
+  const activeTotal=Math.max(classifiedActiveTotal,options.activeListingsTotal??0);
   const signalByWorld=new Map<string,number>();
   for(const row of listings){
     if(!row.worldId)continue;
