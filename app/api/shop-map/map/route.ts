@@ -181,21 +181,6 @@ async function buildMap(request: Request) {
       sales:totals.get(Number(row.listing_id))?.sales??0,
       revenueMinor:totals.get(Number(row.listing_id))?.revenueMinor??0,
     })).filter(row=>row.sales>0).sort((a,b)=>b.sales-a.sales||b.revenueMinor-a.revenueMinor);
-    const primaryWorldByListing=new Map(assignments.map(row=>[row.listingId,row.worldIds[0]??null] as const));
-  const attention=buildAttentionMap(rows.map(row=>{
-    const id=Number(row.listing_id);
-    return {
-      listingId:id,title:String(row.title||"Listing details unavailable"),
-      imageUrl:String(row.image_url||""),state:String(row.state||""),
-      favorites:row.favorites===null?null:Number(row.favorites),
-      sales90:sales90.get(id)?.sales??0,
-      lifetimeSales:performance.get(id)?.lifetimeUnits??0,
-      worldId:primaryWorldByListing.get(id)??null,
-    };
-  }),worldPerformance.map(world=>({
-    worldId:world.worldId,label:world.label,activeListings:world.activeListings,
-  })));
-
   return NextResponse.json({
       shop:{shopId,shopName:shopRow.shop_name},
       shopTotals:{
@@ -590,6 +575,22 @@ async function buildMap(request: Request) {
     .map(row=>({listingId:Number(row.listing_id),title:String(row.title),imageUrl:row.image_url,
       favorites:row.favorites,sales:sales90.get(Number(row.listing_id))?.sales??0,state:row.state}))
     .sort((a,b)=>b.sales-a.sales||Number(b.state==="active")-Number(a.state==="active"));
+
+  const primaryWorldByListing=new Map(assignments.map(row=>
+    [row.listingId,row.worldIds[0]??null] as const));
+  const attention=buildAttentionMap(rows.map(row=>{
+    const id=Number(row.listing_id);
+    return {
+      listingId:id,title:String(row.title||"Listing details unavailable"),
+      imageUrl:String(row.image_url||""),state:String(row.state||""),
+      favorites:row.favorites===null?null:Number(row.favorites),
+      sales90:sales90.get(id)?.sales??0,
+      lifetimeSales:performance.get(id)?.lifetimeUnits??0,
+      worldId:primaryWorldByListing.get(id)??null,
+    };
+  }),worldPerformance.map(world=>({
+    worldId:world.worldId,label:world.label,activeListings:world.activeListings,
+  })));
 
   return NextResponse.json({
     attention,
