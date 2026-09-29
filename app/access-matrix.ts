@@ -60,6 +60,9 @@ export const ACCESS: Record<string, Rule> = {
   "/api/csp-report": { kind: "public" },
   "/api/client-errors": { kind: "public" },
   "/api/version": { kind: "public" },
+  /* Temporary visual-review route: same Home renderer/CSS with mock data so
+     layout can be browser-inspected without sharing an authenticated session. */
+  "/visual-review/home": { kind: "public" },
   /* Measured, not assumed: /api/trademark answers 401 to a signed-out caller,
      so it is `open` — any signed-in account, no plan — rather than public.
      The matrix has to say what the route does, or it is a second status list
