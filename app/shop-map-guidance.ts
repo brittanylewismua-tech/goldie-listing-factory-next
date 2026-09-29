@@ -68,6 +68,14 @@ export function standout(
   */
   const recentOrders = niches.reduce((sum, niche) => sum + niche.ordersLast90, 0);
   const lifetimeOrders = niches.reduce((sum, niche) => sum + niche.orders, 0);
+  if (coverage && !coverageMet(coverage))
+    return {
+      hasStandout: false,
+      headline: "Your shop is still organizing enough of your catalog to make a reliable focus recommendation.",
+      nextStep: `Classified so far: ${Math.round(coverage.activeListings * 100)}% of active listings, `
+        + `${Math.round(coverage.recentRevenue * 100)}% of recent revenue, `
+        + `${Math.round(coverage.recentOrders * 100)}% of recent orders.`,
+    };
   if (recentOrders < SHOP_MAP_MIN_RECENT_ORDERS) {
     /*
       AN ESTABLISHED SHOP DOES NOT BECOME DIRECTIONLESS BECAUSE ONE 90-DAY
@@ -99,15 +107,6 @@ export function standout(
         + `${DIRECTION_WINDOW_DAYS} days across every niche.`,
     };
   }
-  if (coverage && !coverageMet(coverage))
-    return {
-      hasStandout: false,
-      headline: "Your shop is still organizing enough of your catalog to make a "
-        + "reliable focus recommendation.",
-      nextStep: `Classified so far: ${Math.round(coverage.activeListings * 100)}% of `
-        + `active listings, ${Math.round(coverage.recentRevenue * 100)}% of recent revenue, `
-        + `${Math.round(coverage.recentOrders * 100)}% of recent orders.`,
-    };
   return standoutFrom(niches, advice);
 }
 
