@@ -811,14 +811,14 @@ test("a parked unlock ladder does not still lock the board", () => {
   assert.match(route, /const unlocked = LADDER_PARKED/);
 });
 
-test("clicking a product family lands on that product family", () => {
+test("Hot List preserves a product-family deep link", () => {
   const home = read("home-preview/preview-client.tsx");
   const page = read("hot-list/page.tsx");
-  /* The row linked to a bare /hot-list, which opened on everything and left
-     the reader to find the product they had just clicked. */
-  assert.match(home, /\/hot-list\?product=\$\{encodeURIComponent\(s\.key\)\}/);
+  /* Home is now a suite launcher, so it does not carry the retired overnight
+     product-family rows. Hot List still has to honor deep links from anywhere
+     else in the product. */
+  assert.doesNotMatch(home, /\/hot-list\?product=/);
   assert.match(page, /new URLSearchParams\(window\.location\.search\)\.get\("product"\)/);
-  /* And the first load must not immediately throw that choice away. */
   assert.match(page, /if \(!keepProduct\) setProduct\("all"\);/);
   assert.match(page, /load\(VIEWS\[0\],false,false,true,true\)/);
 });
