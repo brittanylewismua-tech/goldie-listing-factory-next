@@ -27,10 +27,14 @@ test("tab reads do not block on live Etsy display refreshes",()=>{
   assert.match(route,/if\(!view&&\(selectedIds\.some/);
 });
 
-test("the Your Shop rail is centered and no longer an underline strip",()=>{
-  assert.match(css,/\.shop-map-tabs\{[\s\S]*width:max-content!important;[\s\S]*margin:0 auto 42px!important;/);
-  assert.match(css,/border-radius:999px!important/);
-  assert.match(css,/\.shop-map-tabs button\[aria-current=page\]\{[\s\S]*background:#000!important;/);
+test("the Your Shop rail is an unboxed editorial text rail",()=>{
+  const final=css.slice(css.lastIndexOf("FINAL YOUR SHOP RAIL OVERRIDE"));
+  assert.match(final,/\.shop-map-tabs\{[\s\S]*width:100%!important;[\s\S]*border-bottom:1px solid/);
+  assert.match(final,/gap:30px!important/);
+  assert.match(final,/font-size:11px!important/);
+  assert.match(final,/text-transform:uppercase!important/);
+  assert.match(final,/button\[aria-current=page\]\{[\s\S]*background:transparent!important;[\s\S]*box-shadow:none!important;/);
+  assert.match(final,/button\[aria-current=page\]::before\{[\s\S]*background:#ee6fc0!important;/);
 });
 
 test("Overview puts performance and focus before utilities",()=>{
@@ -61,4 +65,17 @@ test("Overview renders its scorecard before deeper insights finish",()=>{
   assert.match(client,/view=overview-insights/);
   assert.match(client,/Loading where to focus/);
   assert.match(client,/setMap\(current=>current\?\{\.\.\.current,\.\.\.detail\}:detail\)/);
+});
+
+
+test("Monthly Numbers exposes the full operating breakdown",()=>{
+  const money=client.slice(client.indexOf('{tab === "money"'));
+  for(const label of ["Product sales","Shipping collected","Transaction fees","Processing fees",
+    "Listing + renewal fees","Advertising fees","Marketplace tax","Production shipping",
+    "Cost coverage","Average order","Profit margin"])
+    assert.ok(money.includes(label), `Monthly Numbers is missing ${label}`);
+  for(const field of ["productRevenueMinor","shippingCollectedMinor","etsyTransactionFeesMinor",
+    "etsyProcessingFeesMinor","etsyListingFeesMinor","etsyAdvertisingFeesMinor",
+    "marketplaceTaxMinor","productionShippingMinor","profitMarginPercent"])
+    assert.ok(route.includes(field), `API does not expose ${field}`);
 });
