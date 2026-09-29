@@ -78,7 +78,9 @@ test("the phone keeps desktop chrome rules and Home has its own responsive launc
   assert.equal(declOf(narrow, ".factory-crumb-root", "display"), "none",
     "a two-level crumb does not fit beside a title on a phone");
   assert.match(read("home-preview/preview.css"), /@media\(max-width:700px\)/);
-  assert.match(read("home-preview/preview.css"), /\.goldie-platform-grid\{grid-template-columns:1fr 1fr/);
+  const homeCss=read("home-preview/preview.css");
+  assert.match(homeCss, /\.goldie-platform-grid\{display:grid;grid-template-columns:1fr 1fr/);
+  assert.match(homeCss, /@media\(max-width:700px\)[\s\S]*\.goldie-platform-grid\{grid-template-columns:1fr;gap:22px/);
 });
 
 test("the rail says there is more below before you scroll it", () => {
