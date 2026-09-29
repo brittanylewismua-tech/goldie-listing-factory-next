@@ -323,3 +323,7 @@
 /* VISUAL SWEEP · one Command Center page-title scale. */
 #suite-workspace .pu-head h1{font-size:40px!important;letter-spacing:-1.6px!important}
 @media(max-width:800px){#suite-workspace .pu-head h1{font-size:34px!important}}
+
+
+/* VISUAL SWEEP · enforce the suite typeface on this route. */
+#suite-workspace .pu-page{font-family:'Manrope Variable',Manrope,sans-serif!important}
