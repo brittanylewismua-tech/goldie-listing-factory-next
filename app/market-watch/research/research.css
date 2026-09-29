@@ -804,3 +804,12 @@
     grid-template-columns:1fr!important;
   }
 }
+
+
+/* VISUAL SWEEP · one Command Center page-title scale. */
+#suite-workspace .nr h1,
+#suite-workspace .nr-library .nr-head h1{font-size:40px!important;letter-spacing:-1.6px!important}
+@media(max-width:700px){
+  #suite-workspace .nr h1,
+  #suite-workspace .nr-library .nr-head h1{font-size:34px!important}
+}
