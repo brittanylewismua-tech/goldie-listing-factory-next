@@ -132,7 +132,6 @@ export default function PreviewClient({firstName,visualReview=false}:{firstName?
       </header>
 
       <section className="goldie-launcher" aria-label="Goldie Suite tools">
-        <div className="goldie-background-g" aria-hidden="true">g</div>
         {layout==="orbit"?<div className="goldie-orbit" ref={orbitRef}>
           <svg className="goldie-orbit-ring" viewBox="0 0 438 438" aria-hidden="true"><circle cx="219" cy="219" r="218"/></svg>
           <div className="goldie-orbit-layer" ref={layerRef}>
@@ -160,7 +159,7 @@ export default function PreviewClient({firstName,visualReview=false}:{firstName?
 
       <section className="goldie-updates">
         <div className="goldie-updates-head">
-          <h2>Etsy + Printify updates</h2>
+          <h2>Your daily Etsy + Printify updates</h2>
           <a href="/platform-updates">See all updates →</a>
         </div>
         <div className="goldie-platform-grid">
