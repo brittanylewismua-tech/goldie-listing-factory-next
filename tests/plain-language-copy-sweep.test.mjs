@@ -9,9 +9,9 @@ const hot=readFileSync("app/hot-list/page.tsx","utf8");
 const watch=readFileSync("app/market-watch/market-watch-client.tsx","utf8");
 
 test("redesigned suite surfaces use literal member-facing copy",()=>{
-  assert.ok(home.includes("started selling since your last check."));
-  assert.ok(home.includes("Observed sales and stock decreases across Etsy"));
-  assert.ok(home.includes("Loading overnight sales and stock changes…"));
+  assert.ok(home.includes("Your command center"));
+  assert.ok(home.includes("Certainty, direction, opportunities."));
+  assert.ok(home.includes("Build and publish at scale."));
   assert.ok(shop.includes("Loading where to focus…"));
   assert.ok(research.includes("See all buyer findings →"));
   assert.ok(hot.includes("Loading sales and stock changes…"));
