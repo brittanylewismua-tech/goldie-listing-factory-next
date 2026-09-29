@@ -37,11 +37,11 @@ test("the group label is not squeezed into the chevron's column", () => {
   assert.match(sheet, /\.app-shell>\.topbar \.suite-nav-toggle\{[^}]*position:absolute/);
 });
 
-test("the home grid column cannot grow past the page", () => {
-  /* An implicit grid column is sized auto and will not shrink below the
-     min-content width of four tiles standing side by side; at 1440 the cards
-     ran roughly 300px off the right edge, clipped and unreachable. */
-  assert.match(read("current-suite.css"), /\.current-home-layout\{[^}]*grid-template-columns:minmax\(0,1.5fr\) minmax\(0,1fr\)/);
+test("the launcher home cannot grow past the page", () => {
+  const homeCss=read("home-preview/preview.css");
+  assert.match(homeCss, /\.goldie-home-grid\{[^}]*overflow:hidden/);
+  assert.match(homeCss, /\.goldie-platform-grid\{display:grid;grid-template-columns:1fr 1fr/);
+  assert.match(homeCss, /@media\(max-width:700px\)[\s\S]*\.goldie-home-grid\{padding:16px 16px 0\}/);
 });
 
 test("the search overlay is not stretched by its own flex container", () => {
