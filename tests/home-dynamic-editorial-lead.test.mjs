@@ -3,30 +3,28 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const home=readFileSync("app/home-preview/preview-client.tsx","utf8");
-const api=readFileSync("app/api/home/route.ts","utf8");
 const css=readFileSync("app/home-preview/preview.css","utf8");
 
-test("Daily Updates ranks stories by strength instead of fixed category order",()=>{
-  assert.match(home,/strength:top30\.sales\/Math\.max\(1,total30Units\)/);
-  assert.match(home,/strength:moved\[0\]\.newly\/12/);
-  assert.match(home,/strength:topHotProduct\.sold\/Math\.max\(1,hot\?\.totalSold\?\?0\)/);
-  assert.match(home,/\.sort\(\(a,b\)=>\(b as DailyStory\)\.strength-\(a as DailyStory\)\.strength\)/);
+test("Home types the time-aware greeting once",()=>{
+  assert.match(home,/hour<12\?"Good morning":hour<17\?"Good afternoon":"Good evening"/);
+  assert.match(home,/setTyped\(greeting\.slice\(0,index\)\)/);
+  assert.match(home,/setTypedDone\(true\)/);
 });
 
-test("Research lead visual comes from Research evidence when fresh",()=>{
-  assert.match(api,/readNiche\(user\.userId,strongest\.terms,strongest\.key,now\)/);
-  assert.match(api,/listing\.startedSince && listing\.displayFresh && listing\.imageUrl/);
-  assert.match(home,/image:moved\[0\]\.imageUrl\|\|null/);
+test("the member's Orbit or Line choice survives leaving Home",()=>{
+  assert.match(home,/localStorage\.getItem\("goldie-home-layout"\)/);
+  assert.match(home,/localStorage\.setItem\("goldie-home-layout",next\)/);
+  assert.match(home,/layout==="orbit"/);
+  assert.match(home,/layout==="line"/);
 });
 
-test("Research has an evidence graphic fallback instead of an unrelated image",()=>{
-  assert.match(home,/graphic:num\(moved\[0\]\.newly\)/);
-  assert.match(home,/graphicLabel:"newly selling listings"/);
-  assert.match(home,/home4-daily-graphic/);
-  assert.match(css,/\.home4-daily-graphic\{/);
+test("Home uses the established suite logo treatment",()=>{
+  assert.match(home,/<SuiteBrand current\/>/);
+  assert.match(css,/\.goldie-home-brand \.suite-brand-mark\.suite-brand-g\.current-wordmark/);
+  assert.match(css,/font-family:Georgia,'Times New Roman',serif!important/);
 });
 
-test("strongest platform item stays the lead story",()=>{
-  assert.match(home,/const leadPlatform=allPlatform\[0\]\?\?null/);
-  assert.match(home,/const otherPlatform=leadPlatform\?allPlatform\.find\(item=>item\.platform!==leadPlatform\.platform\):null/);
+test("the update section header is anchored to the cards",()=>{
+  assert.match(css,/\.goldie-updates-head\{[^}]*border-bottom:2px solid #000[^}]*margin-bottom:18px/);
+  assert.match(css,/\.goldie-updates-head h2\{[^}]*color:#fff!important[^}]*text-shadow:3px 3px 0 #000/);
 });
