@@ -67,14 +67,38 @@ export function standout(
     defensible direction yet - not a weaker version of one.
   */
   const recentOrders = niches.reduce((sum, niche) => sum + niche.ordersLast90, 0);
-  if (recentOrders < SHOP_MAP_MIN_RECENT_ORDERS)
+  const lifetimeOrders = niches.reduce((sum, niche) => sum + niche.orders, 0);
+  if (recentOrders < SHOP_MAP_MIN_RECENT_ORDERS) {
+    /*
+      AN ESTABLISHED SHOP DOES NOT BECOME DIRECTIONLESS BECAUSE ONE 90-DAY
+      WINDOW IS QUIET.
+
+      Recent performance still gets priority. When there is not enough recent
+      volume to support a fresh recommendation, a shop with substantial
+      historical trade gets a clearly labelled historical read instead of the
+      same "No clear direction yet" message used for a brand-new shop.
+    */
+    if (lifetimeOrders >= 50) {
+      const historical = [...niches]
+        .filter(niche => niche.orders > 0)
+        .sort((a,b)=>b.orders-a.orders || b.revenueMinor-a.revenueMinor)[0];
+      if (historical) {
+        const share = lifetimeOrders ? historical.orders / lifetimeOrders : 0;
+        return {
+          hasStandout: true,
+          headline: `${historical.label} is your strongest established niche.`,
+          nextStep: `${historical.label} accounts for ${Math.round(share*100)}% of classified lifetime orders. `
+            + `The last ${DIRECTION_WINDOW_DAYS} days have only ${recentOrders} classified orders, so treat this as historical direction while newer sales build.`,
+        };
+      }
+    }
     return {
       hasStandout: false,
-      headline: "No clear direction yet.",
+      headline: "Not enough sales history yet to name a focus.",
       nextStep: `Only ${recentOrders} order${recentOrders === 1 ? "" : "s"} in the last `
-        + `${DIRECTION_WINDOW_DAYS} days across every niche — too few to say where the `
-        + `shop is pointed. Lifetime figures are shown on each niche as history.`,
+        + `${DIRECTION_WINDOW_DAYS} days across every niche.`,
     };
+  }
   if (coverage && !coverageMet(coverage))
     return {
       hasStandout: false,
