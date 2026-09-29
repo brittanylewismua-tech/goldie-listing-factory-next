@@ -10,7 +10,7 @@ const collector=readFileSync("app/platform-update-collector.ts","utf8");
 test("Home removes the greeting so the launcher owns the first viewport",()=>{
   assert.match(page,/HomeView firstName=\{firstName\}/);
   assert.doesNotMatch(home,/Good morning|Good afternoon|Good evening|Your command center/);
-  assert.match(home,/goldie-background-g/);
+  assert.doesNotMatch(home,/goldie-background-g/);
 });
 
 test("Home is the Goldie Suite launcher, not the retired dashboard",()=>{
@@ -27,9 +27,12 @@ test("Orbit cards stay upright and the enlarged orbit uses the approved pace",()
   assert.match(css,/\.goldie-orbit-ring circle\{[^}]*stroke:var\(--grey\)[^}]*stroke-width:1\.5/);
   assert.match(css,/\.goldie-orbit-ring\{[^}]*width:560px;height:560px/);
   assert.match(css,/\.goldie-feature-card\{[^}]*width:174px;min-height:132px/);
+  assert.match(css,/\.goldie-orbit\{[^}]*min-height:740px/);
+  assert.match(css,/\.goldie-line-card\{[^}]*min-height:238px/);
 });
 
-test("Etsy and Printify updates keep the approved two-panel treatment",()=>{
+test("Daily Etsy and Printify updates keep the approved two-panel treatment",()=>{
+  assert.match(home,/Your daily Etsy \+ Printify updates/);
   assert.match(home,/platform==="Etsy"/);
   assert.match(home,/platform==="Printify"/);
   assert.match(css,/\.goldie-platform-grid\{display:grid;grid-template-columns:1fr 1fr/);
