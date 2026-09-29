@@ -48,16 +48,8 @@ export default function PreviewClient({firstName,visualReview=false}:{firstName?
   const [updates,setUpdates]=useState<Updates|null>(visualReview?REVIEW_UPDATES:null);
   const [updatesLoaded,setUpdatesLoaded]=useState(visualReview);
   const [layout,setLayoutState]=useState<"orbit"|"line">("orbit");
-  const [typed,setTyped]=useState("");
-  const [typedDone,setTypedDone]=useState(false);
   const orbitRef=useRef<HTMLDivElement|null>(null);
   const layerRef=useRef<HTMLDivElement|null>(null);
-
-  const greeting=useMemo(()=>{
-    const hour=new Date().getHours();
-    const salutation=hour<12?"Good morning":hour<17?"Good afternoon":"Good evening";
-    return `${salutation}${firstName?", "+firstName:""}.`;
-  },[firstName]);
 
   useEffect(()=>{
     try{
@@ -73,21 +65,6 @@ export default function PreviewClient({firstName,visualReview=false}:{firstName?
       .then(r=>r.ok?r.json() as Promise<Updates>:null)
       .then(setUpdates).catch(()=>undefined).finally(()=>setUpdatesLoaded(true));
   },[visualReview]);
-
-  useEffect(()=>{
-    setTyped("");
-    setTypedDone(false);
-    let index=0;
-    let timer:number|undefined;
-    const tick=()=>{
-      index+=1;
-      setTyped(greeting.slice(0,index));
-      if(index<greeting.length)timer=window.setTimeout(tick,38);
-      else setTypedDone(true);
-    };
-    timer=window.setTimeout(tick,100);
-    return()=>{if(timer)window.clearTimeout(timer);};
-  },[greeting]);
 
   useEffect(()=>{
     if(layout!=="orbit")return;
@@ -154,15 +131,8 @@ export default function PreviewClient({firstName,visualReview=false}:{firstName?
         </div>
       </header>
 
-      <section className="goldie-welcome">
-        <p>Your command center</p>
-        <h1>{typed}<span className={typedDone?"goldie-cursor done":"goldie-cursor"} aria-hidden/></h1>
-        <div className={typedDone?"goldie-connected visible":"goldie-connected"}>
-          Your shop, <strong>{shopName}</strong>, is connected. Let&apos;s get to work.
-        </div>
-      </section>
-
       <section className="goldie-launcher" aria-label="Goldie Suite tools">
+        <div className="goldie-background-g" aria-hidden="true">g</div>
         {layout==="orbit"?<div className="goldie-orbit" ref={orbitRef}>
           <svg className="goldie-orbit-ring" viewBox="0 0 438 438" aria-hidden="true"><circle cx="219" cy="219" r="218"/></svg>
           <div className="goldie-orbit-layer" ref={layerRef}>
