@@ -262,3 +262,23 @@ test("a listing can never be neither classified nor unclassified", () => {
   const unclassified = assignments.filter(row => row.unclassified).length;
   assert.equal(inNiches.size + unclassified, shop.length);
 });
+
+
+test("an established shop gets historical direction when the recent window is thin", () => {
+  const niches = [
+    { worldId: "a", label: "Bookish", activeListings: 12, orders: 2100, units: 2300,
+      revenueMinor: 5_000_000, verifiedProfitMinor: null, reviews: 1000,
+      ordersLast30: 2, ordersLast90: 6, revenueLast90Minor: 18_000,
+      largestOrderMinor: 12_000, refundedOrders: 5 },
+    { worldId: "b", label: "Dog Mom", activeListings: 10, orders: 900, units: 950,
+      revenueMinor: 2_000_000, verifiedProfitMinor: null, reviews: 400,
+      ordersLast30: 1, ordersLast90: 4, revenueLast90Minor: 12_000,
+      largestOrderMinor: 9_000, refundedOrders: 2 },
+  ];
+  const result = standout(niches, guidance(niches),
+    { activeListings: 1, recentRevenue: 1, recentOrders: 1 });
+  assert.equal(result.hasStandout, true);
+  assert.match(result.headline, /Bookish is your strongest established niche/);
+  assert.match(result.nextStep, /classified lifetime orders/);
+  assert.doesNotMatch(result.headline, /No clear direction/);
+});
