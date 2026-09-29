@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import SuiteBrand from "../suite-brand";
 
 type MapData={shop?:{shopName?:string}};
@@ -157,7 +158,7 @@ export default function PreviewClient({firstName}:{firstName?:string}={}){
           <div className="goldie-orbit-layer" ref={layerRef}>
             {FEATURES.map((feature,index)=>{
               const angle=index*72;
-              return <div className="goldie-slot" style={{"--a":`${angle}deg`} as React.CSSProperties} key={feature.key}>
+              return <div className="goldie-slot" style={{"--a":`${angle}deg`} as CSSProperties} key={feature.key}>
                 <a className="goldie-feature-card" data-angle={angle} href={feature.href}
                   target={feature.external?"_blank":undefined} rel={feature.external?"noreferrer":undefined}>
                   <i>{feature.number}</i><b>{feature.title}</b><span>{feature.copy}</span>
