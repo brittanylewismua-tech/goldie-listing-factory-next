@@ -104,7 +104,7 @@
   .goldie-update-row{grid-template-columns:24px minmax(0,1fr);gap:8px;padding:12px}
   .goldie-update-row>i{width:24px;height:24px;font-size:8px}
   .goldie-update-row>div b{font-size:11px}
-  .goldie-update-row>div span{font-size:8.5px}
+  .goldie-update-row>div span{font-size:9px}
   .goldie-update-row>em{display:none}
 }
 @media(max-width:430px){
