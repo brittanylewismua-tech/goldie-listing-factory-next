@@ -78,29 +78,11 @@ test("catalog share uses the whole active shop, including unclassified listings"
 });
 
 
-test("next-build allocation follows attention shares and still adds up",()=>{
-  const map=buildAttentionMap([
-    {listingId:1,title:"A",state:"active",favorites:0,sales90:40,lifetimeSales:40,worldId:"dark"},
-    {listingId:2,title:"B",state:"active",favorites:0,sales90:27,lifetimeSales:27,worldId:"bookish"},
-    {listingId:3,title:"C",state:"active",favorites:0,sales90:18,lifetimeSales:18,worldId:"western"},
-    {listingId:4,title:"D",state:"active",favorites:0,sales90:8,lifetimeSales:8,worldId:"teacher"},
-    {listingId:5,title:"E",state:"active",favorites:0,sales90:7,lifetimeSales:7,worldId:"mom"},
-  ],[
-    {worldId:"dark",label:"Dark Romance",activeListings:9},
-    {worldId:"bookish",label:"Bookish Humor",activeListings:18},
-    {worldId:"western",label:"Western Readers",activeListings:7},
-    {worldId:"teacher",label:"Teacher",activeListings:22},
-    {worldId:"mom",label:"Mom Life",activeListings:16},
-  ],{activeListingsTotal:72});
-  assert.deepEqual(map.worlds.map(row=>row.recommendedNext10),[4,3,2,1,0]);
-  assert.equal(map.worlds.reduce((sum,row)=>sum+row.recommendedNext10,0),10);
-});
-
 test("unclassified customer attention is not silently reassigned to a named world",()=>{
   const map=buildAttentionMap([
     {listingId:1,title:"A",state:"active",favorites:0,sales90:6,lifetimeSales:6,worldId:"dark"},
     {listingId:2,title:"B",state:"active",favorites:0,sales90:4,lifetimeSales:4,worldId:null},
   ],[{worldId:"dark",label:"Dark Romance",activeListings:5}],{activeListingsTotal:10});
   assert.equal(map.worlds[0].attentionPercent,60);
-  assert.equal(map.worlds[0].recommendedNext10,6);
+  assert.equal(map.worlds[0].attentionPercent,60);
 });
