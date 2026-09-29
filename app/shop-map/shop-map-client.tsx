@@ -22,7 +22,12 @@ type ShopMap = {
   topListings?: Array<{listingId:number;title:string;imageUrl:string;favorites:number|null;sales:number;revenueMinor:number}>;
   shop?: { shopId?:number; shopName: string; imageUrl?: string };
   month?: string;
-  thisMonth?: { revenueMinor: number|null; etsyFeesMinor: number|null; productionCostMinor: number|null; refundsMinor?:number|null;adjustmentsMinor?:number|null;
+  thisMonth?: { revenueMinor: number|null; productRevenueMinor?:number|null; shippingCollectedMinor?:number|null;
+    discountsMinor?:number|null; marketplaceTaxMinor?:number|null; etsyFeesMinor: number|null;
+    etsyTransactionFeesMinor?:number|null; etsyProcessingFeesMinor?:number|null; etsyListingFeesMinor?:number|null;
+    etsyAdvertisingFeesMinor?:number|null; etsyOtherFeesMinor?:number|null;
+    productionCostMinor: number|null; productionProductCostMinor?:number|null; productionShippingMinor?:number|null;
+    refundsMinor?:number|null;adjustmentsMinor?:number|null; profitMarginPercent?:number|null;
     currency?:string; headline: string; profitMinor: number | null; accuracy: string; orders: number;
     salesAsOf?: number; salesStale?: boolean; freshness?: string;
     /* What this month's figures may be called. An estimate must never be
@@ -412,10 +417,35 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         {month?.profitMinor==null&&month?.headline?<p className="shop-map-money-status">{month.headline}</p>:null}
         <p className="shop-map-accuracy">{month?.accuracy}</p>
         {month?.freshness ? <p className="shop-map-freshness" data-stale={month.salesStale ? "yes" : "no"}>{month.freshness}</p> : null}
-        </div><dl className="shop-map-rows">
-          <div><dt>Revenue</dt><dd>{money(month?.revenueMinor,month?.currency)}</dd></div><div><dt>Etsy fees</dt><dd>{money(month?.etsyFeesMinor,month?.currency)}</dd></div>
-          <div><dt>Production</dt><dd>{month?.productionCostMinor == null || month?.coverage?.unavailable ? "Not available" : money(-month.productionCostMinor,month.currency)}</dd></div>
-          <div><dt>Refunds recorded</dt><dd>{money(month?.refundsMinor,month?.currency)}</dd></div><div><dt>Adjustments</dt><dd>{money(month?.adjustmentsMinor,month?.currency)}</dd></div><div><dt>Orders</dt><dd>{month?.orders ?? "—"}</dd></div></dl>
+        </div>
+        <div className="shop-map-money-detail">
+          <section className="shop-map-money-group"><h3>Sales</h3><dl className="shop-map-rows">
+            <div><dt>Product sales</dt><dd>{money(month?.productRevenueMinor,month?.currency)}</dd></div>
+            <div><dt>Shipping collected</dt><dd>{money(month?.shippingCollectedMinor,month?.currency)}</dd></div>
+            <div><dt>Discounts</dt><dd>{money(month?.discountsMinor,month?.currency)}</dd></div>
+            <div><dt>Refunds</dt><dd>{money(month?.refundsMinor,month?.currency)}</dd></div>
+            <div><dt>Revenue</dt><dd>{money(month?.revenueMinor,month?.currency)}</dd></div>
+            <div><dt>Orders</dt><dd>{month?.orders ?? "—"}</dd></div>
+            <div><dt>Average order</dt><dd>{month?.orders&&month.revenueMinor!=null?money(Math.round(month.revenueMinor/month.orders),month.currency):"—"}</dd></div>
+          </dl></section>
+          <section className="shop-map-money-group"><h3>Etsy</h3><dl className="shop-map-rows">
+            <div><dt>Transaction fees</dt><dd>{money(month?.etsyTransactionFeesMinor,month?.currency)}</dd></div>
+            <div><dt>Processing fees</dt><dd>{money(month?.etsyProcessingFeesMinor,month?.currency)}</dd></div>
+            <div><dt>Listing + renewal fees</dt><dd>{money(month?.etsyListingFeesMinor,month?.currency)}</dd></div>
+            <div><dt>Advertising fees</dt><dd>{money(month?.etsyAdvertisingFeesMinor,month?.currency)}</dd></div>
+            <div><dt>Other Etsy fees / credits</dt><dd>{money(month?.etsyOtherFeesMinor,month?.currency)}</dd></div>
+            <div><dt>Total Etsy fees</dt><dd>{money(month?.etsyFeesMinor,month?.currency)}</dd></div>
+            <div><dt>Marketplace tax</dt><dd>{money(month?.marketplaceTaxMinor,month?.currency)}</dd></div>
+          </dl></section>
+          <section className="shop-map-money-group"><h3>Production</h3><dl className="shop-map-rows">
+            <div><dt>Product cost</dt><dd>{month?.productionProductCostMinor==null?"Not available":money(-month.productionProductCostMinor,month.currency)}</dd></div>
+            <div><dt>Production shipping</dt><dd>{month?.productionShippingMinor==null?"Not available":money(-month.productionShippingMinor,month.currency)}</dd></div>
+            <div><dt>Total production</dt><dd>{month?.productionCostMinor == null || month?.coverage?.unavailable ? "Not available" : money(-month.productionCostMinor,month.currency)}</dd></div>
+            <div><dt>Cost coverage</dt><dd>{month?.coverage?String(Math.round(month.coverage.verified*100))+"%":"—"}</dd></div>
+            <div><dt>Adjustments</dt><dd>{money(month?.adjustmentsMinor,month?.currency)}</dd></div>
+            <div><dt>Profit margin</dt><dd>{month?.profitMarginPercent==null?"Not available":month.profitMarginPercent.toFixed(1)+"%"}</dd></div>
+          </dl></section>
+        </div>
         {month?.coverage?.unavailable ? <a className="shop-map-fix p-button p-button-primary" href={`/shop-map/costs?month=${encodeURIComponent(shown.month ?? "")}`}>Add production costs</a> : null}</div>}
     </section>}
     {signedInEmail ? null : null}
