@@ -318,3 +318,8 @@
   }
   #suite-workspace .pu-tabs::-webkit-scrollbar{display:none!important}
 }
+
+
+/* VISUAL SWEEP · one Command Center page-title scale. */
+#suite-workspace .pu-head h1{font-size:40px!important;letter-spacing:-1.6px!important}
+@media(max-width:800px){#suite-workspace .pu-head h1{font-size:34px!important}}
