@@ -16,7 +16,7 @@ type Niche = {
   reviews: { recent: number; lifetimeHeld: number };
 };
 type Focus = { nicheId: string; label: string; headline: string; advice: string; reason: string };
-type AttentionMap = {
+export type AttentionMap = {
   basis:"sales-90"|"sales-lifetime"|"favorites"|"none";
   basisLabel:string;
   totalSignal:number;
@@ -145,7 +145,7 @@ function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}
 }
 
 
-function AttentionEngine({attention}:{attention:AttentionMap}){
+export function AttentionEngine({attention}:{attention:AttentionMap}){
   const worlds=attention.worlds.filter(world=>world.signal>0).slice(0,5);
   const lead=worlds[0];
   const listings=attention.listings.slice(0,5);
