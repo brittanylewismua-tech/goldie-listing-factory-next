@@ -16,7 +16,17 @@ type Niche = {
   reviews: { recent: number; lifetimeHeld: number };
 };
 type Focus = { nicheId: string; label: string; headline: string; advice: string; reason: string };
+type AttentionMap = {
+  basis:"sales-90"|"sales-lifetime"|"favorites"|"none";
+  basisLabel:string;
+  totalSignal:number;
+  listings:Array<{rank:number;listingId:number;title:string;imageUrl?:string;signal:number;attentionShare:number;attentionPercent:number;worldId:string|null}>;
+  worlds:Array<{rank:number;worldId:string;label:string;signal:number;attentionShare:number;attentionPercent:number;
+    activeListings:number;catalogShare:number;catalogPercent:number;buildGap:number;buildGapPoints:number;
+    state:"underbuilt"|"aligned"|"overbuilt"}>;
+};
 type ShopMap = {
+  attention?: AttentionMap;
   catalogActions?: CatalogAction[];
   displayUnavailable?:boolean;
   topListings?: Array<{listingId:number;title:string;imageUrl:string;favorites:number|null;sales:number;revenueMinor:number}>;
@@ -131,6 +141,60 @@ function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}
         </div>
       </details>)}
     </div>)}
+  </section>;
+}
+
+
+function AttentionEngine({attention}:{attention:AttentionMap}){
+  const worlds=attention.worlds.filter(world=>world.signal>0).slice(0,5);
+  const lead=worlds[0];
+  const listings=attention.listings.slice(0,5);
+  if(!lead&&!listings.length)return null;
+  const gapCopy=(world:AttentionMap["worlds"][number])=>world.state==="underbuilt"
+    ? `Customers are giving this theme ${world.attentionPercent}% of your strongest signal, while it is only ${world.catalogPercent}% of your active catalog. That gap is where the leverage is.`
+    :world.state==="overbuilt"
+      ? `This theme gets ${world.attentionPercent}% of customer attention but already occupies ${world.catalogPercent}% of your active catalog. Keep supporting what works without feeding it more than the evidence earns.`
+      :`Customer attention and catalog attention are close here. Keep it in the mix, but do not steal attention from stronger underbuilt winners.`;
+  return <section className="shop-map-attention">
+    <div className="shop-map-attention-head">
+      <div><p className="mini-label">ATTENTION MAP</p><h2>Put your attention where customers already put theirs.</h2>
+        <p>Goldie ranks what is working, then compares that demand with how much of your catalog you have actually built around it.</p></div>
+      <span>Based on {attention.basisLabel}</span>
+    </div>
+    <div className="shop-map-attention-layout">
+      <div className="shop-map-attention-list">
+        {worlds.map(world=><article key={world.worldId} className={world.rank===1?"is-lead":""}>
+          <div className="shop-map-attention-row">
+            <span className="shop-map-attention-rank">0{world.rank}</span>
+            <div className="shop-map-attention-name"><b>{world.label}</b>
+              <small>{world.attentionPercent}% customer attention · {world.catalogPercent}% of active catalog</small></div>
+            <em className={`attention-state ${world.state}`}>{world.state==="underbuilt"
+              ?`+${world.buildGapPoints} pt gap`:world.state==="overbuilt"
+                ?`${world.buildGapPoints} pt gap`:"in line"}</em>
+          </div>
+          <div className="shop-map-attention-track" aria-label={`${world.attentionPercent}% of customer attention`}>
+            <i style={{width:`${Math.max(2,world.attentionPercent)}%`}}/>
+          </div>
+        </article>)}
+      </div>
+      {lead&&<aside className="shop-map-attention-lead">
+        <p className="mini-label">YOUR #1 PRIORITY</p>
+        <h3>{lead.label}</h3>
+        <strong>{lead.attentionPercent}% of customer attention</strong>
+        <p>{gapCopy(lead)}</p>
+        <div><span>Customer attention <b>{lead.attentionPercent}%</b></span>
+          <span>Catalog attention <b>{lead.catalogPercent}%</b></span></div>
+      </aside>}
+    </div>
+    {!!listings.length&&<div className="shop-map-attention-listings">
+      <div><p className="mini-label">WHAT IS FILLING THE BUCKET</p><h3>Your strongest listings, in order</h3></div>
+      <ol>{listings.map(listing=><li key={listing.listingId}>
+        <span>0{listing.rank}</span>
+        {listing.imageUrl?<img src={listing.imageUrl} alt="" width={52} height={52} loading="lazy"/>:<i aria-hidden="true"/>}
+        <b>{shortLabel(listing.title)}</b>
+        <strong>{listing.attentionPercent}%</strong>
+      </li>)}</ol>
+    </div>}
   </section>;
 }
 
@@ -286,7 +350,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         <p>Loading your connected shop and latest performance…</p>
       </div></header>
       <nav className="shop-map-tabs" aria-label="Your shop sections">
-        {([['overview','Overview'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
+        {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
           .map(([key,label])=><button key={key} type="button" aria-current={tab===key?'page':undefined}
             onClick={()=>selectTab(key)}>{label}</button>)}
       </nav>
@@ -316,12 +380,13 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     <nav className="shop-map-tabs" aria-label="Your shop sections">
-      {([['overview','Overview'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
+      {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
         .map(([key,label]) => <button key={key} type="button" aria-current={tab === key ? 'page' : undefined}
           onClick={() => selectTab(key)}>{label}</button>)}
     </nav>
 
     {tab === "overview" && <div className="shop-map-tab-panel">
+      {shown.attention&&shown.attention.basis!=="none"&&<AttentionEngine attention={shown.attention}/>}
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
           <h2>Top sellers</h2></div>
