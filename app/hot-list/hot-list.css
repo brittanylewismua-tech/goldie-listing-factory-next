@@ -294,3 +294,13 @@
   }
   #suite-workspace .sold-page .sold-windows::-webkit-scrollbar{display:none!important}
 }
+
+
+/* VISUAL SWEEP · product filters align with the listing grid they control. */
+#suite-workspace .sold-page .drop-tabs{
+  justify-content:flex-start!important;
+  padding:0!important;
+  gap:7px!important;
+  background:transparent!important;
+  border-radius:0!important;
+}
