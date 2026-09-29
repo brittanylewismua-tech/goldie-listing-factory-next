@@ -16,7 +16,7 @@ test("Opportunity Engine leads with the attention map before sold listings", () 
   assert.match(client, /ATTENTION MAP/);
   assert.match(client, /Put your attention where customers already put theirs/);
   assert.match(client, /YOUR #1 PRIORITY/);
-  assert.match(client, /WHAT IS FILLING THE BUCKET/);
+  assert.match(client, /STRONGEST LISTINGS/);
   assert.ok(client.indexOf("ATTENTION MAP") < client.indexOf("Top sellers"));
   assert.match(client, /shown.topListings\?\?\[\]/);
 });
