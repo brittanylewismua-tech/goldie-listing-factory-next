@@ -590,7 +590,7 @@ async function buildMap(request: Request) {
     };
   }),worldPerformance.map(world=>({
     worldId:world.worldId,label:world.label,activeListings:world.activeListings,
-  })));
+  })),{activeListingsTotal:shopTotals.activeListings});
 
   return NextResponse.json({
     attention,
