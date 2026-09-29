@@ -9,7 +9,7 @@ const hot=readFileSync("app/hot-list/page.tsx","utf8");
 const watch=readFileSync("app/market-watch/market-watch-client.tsx","utf8");
 
 test("redesigned suite surfaces use literal member-facing copy",()=>{
-  assert.ok(home.includes("Your command center"));
+  assert.ok(home.includes("Goldie Suite"));
   assert.ok(home.includes("Certainty, direction, opportunities."));
   assert.ok(home.includes("Build and publish at scale."));
   assert.ok(shop.includes("Loading where to focus…"));
