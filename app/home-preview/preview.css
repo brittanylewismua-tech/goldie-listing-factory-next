@@ -29,7 +29,7 @@
 .goldie-feature-card:hover{box-shadow:7px 7px 0 var(--pink);translate:-2px -2px}
 .goldie-feature-card i,.goldie-line-card i{display:grid;place-items:center;width:29px;height:29px;margin-bottom:11px;border:1.5px solid #000;border-radius:7px;background:var(--pink-soft);font-style:normal;font-size:11px}
 .goldie-feature-card b,.goldie-line-card b{display:block;font-size:15px;margin-bottom:6px}
-.goldie-feature-card span,.goldie-line-card span{display:block;font-size:11px;line-height:1.4;color:var(--muted)}
+.goldie-feature-card span,.goldie-line-card span{display:block;font-size:12px;line-height:1.4;color:var(--muted)}
 .goldie-hub{position:absolute;z-index:5;width:216px;height:216px;border:2px solid #000;border-radius:50%;background:var(--pink);box-shadow:6px 6px 0 #000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
 .goldie-hub-g{font:400 90px/.78 Georgia,'Times New Roman',serif;letter-spacing:-6px}
 .goldie-hub strong{margin-top:24px;font-size:20px;line-height:1;font-weight:850;letter-spacing:-.7px;white-space:nowrap}
@@ -74,7 +74,7 @@
   .goldie-home-brand .current-logo-prefix{font-size:8px!important}
   .goldie-home-shop>strong{font-size:10px;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .goldie-launcher{margin-top:4px}
-  .goldie-background-g{font-size:390px;left:50%;top:46%;transform:translate(-61%,-50%);opacity:.08}
+  .goldie-background-g{font-size:360px;left:50%;top:46%;transform:translate(-61%,-50%);opacity:.06}
   .goldie-orbit-ring{width:336px;height:336px}
   .goldie-slot{transform:rotate(var(--a)) translateY(-168px)}
   .goldie-orbit{min-height:520px;margin-bottom:4px}
