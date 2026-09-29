@@ -796,3 +796,11 @@
 
 /* VISUAL SWEEP · shared Command Center page frame. */
 #suite-workspace .nr{max-width:1160px!important}
+
+
+/* VISUAL SWEEP · evidence cards become readable at narrow phone widths. */
+@media(max-width:520px){
+  #suite-workspace .nr-listings.current-listing-grid{
+    grid-template-columns:1fr!important;
+  }
+}
