@@ -304,3 +304,8 @@
   background:transparent!important;
   border-radius:0!important;
 }
+
+
+/* VISUAL SWEEP · one Command Center page-title scale. */
+#suite-workspace .sold-page .drop-head h1{font-size:40px!important;letter-spacing:-1.6px!important}
+@media(max-width:700px){#suite-workspace .sold-page .drop-head h1{font-size:34px!important}}
