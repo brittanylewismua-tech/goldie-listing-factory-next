@@ -50,9 +50,11 @@
 .goldie-updates-head>a{min-height:42px;padding:0 16px;border:1.5px solid #000;border-radius:9px;background:#fff;box-shadow:3px 3px 0 #000;font-size:11px;font-weight:850;white-space:nowrap;display:inline-flex;align-items:center}
 .goldie-platform-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .goldie-platform-panel{overflow:hidden;border:2px solid #000;border-radius:16px;background:#fff;box-shadow:5px 5px 0 #000}
-.goldie-platform-panel>header{display:flex;align-items:center;gap:9px;padding:17px 18px 15px;border-bottom:2px solid #000}
-.goldie-platform-panel>header span{width:9px;height:9px;border-radius:50%;background:var(--pink);border:1.5px solid #000}
-.goldie-platform-panel>header b{font-size:15px;font-weight:950;letter-spacing:-.02em}
+.goldie-platform-panel>header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 18px 15px;border-bottom:2px solid #000}
+.goldie-platform-name{display:flex;align-items:center;gap:9px;min-width:0}
+.goldie-platform-name span{width:9px;height:9px;flex:0 0 9px;border-radius:50%;background:var(--pink);border:1.5px solid #000}
+.goldie-platform-name b{font-size:15px;font-weight:950;letter-spacing:-.02em}
+.goldie-platform-panel>header>a{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
 .goldie-update-list{display:grid}
 .goldie-update-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:start;padding:16px 18px;border-bottom:1px solid #ddd7d3}
 .goldie-update-row:last-child{border-bottom:0}
@@ -99,8 +101,9 @@
   .goldie-updates-head h2{font-size:30px!important;text-shadow:2px 2px 0 #000}
   .goldie-updates-head>a{min-height:40px;padding:0 11px;font-size:9px}
   .goldie-platform-grid{grid-template-columns:1fr 1fr;gap:10px}
-  .goldie-platform-panel>header{padding:13px 12px}
-  .goldie-platform-panel>header b{font-size:12px}
+  .goldie-platform-panel>header{padding:13px 12px;gap:8px}
+  .goldie-platform-name b{font-size:12px}
+  .goldie-platform-panel>header>a{font-size:7px}
   .goldie-update-row{grid-template-columns:24px minmax(0,1fr);gap:8px;padding:12px}
   .goldie-update-row>i{width:24px;height:24px;font-size:8px}
   .goldie-update-row>div b{font-size:11px}
@@ -109,6 +112,8 @@
 }
 @media(max-width:430px){
   .goldie-platform-grid{grid-template-columns:1fr 1fr;gap:8px}
+  .goldie-platform-panel>header{display:block}
+  .goldie-platform-panel>header>a{display:block;margin-top:6px}
   .goldie-update-row>div span{display:none}
   .goldie-updates-head h2{font-size:26px!important}
   .goldie-orbit-ring{width:278px;height:278px}
