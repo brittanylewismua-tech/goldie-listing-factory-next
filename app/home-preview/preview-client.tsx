@@ -194,7 +194,10 @@ export default function PreviewClient({firstName}:{firstName?:string}={}){
 
 function PlatformPanel({title,rows,loaded}:{title:"Etsy"|"Printify";rows:UpdateItem[];loaded:boolean}){
   return <section className="goldie-platform-panel">
-    <header><span/><b>{title}</b></header>
+    <header>
+      <div className="goldie-platform-name"><span/><b>{title}</b></div>
+      <a href="/platform-updates">{`See all ${title} updates →`}</a>
+    </header>
     <div className="goldie-update-list">
       {!loaded&&[0,1,2].map(index=><div className="goldie-update-row loading" key={index}><i/><div><b/><span/></div></div>)}
       {loaded&&rows.map((item,index)=><a className="goldie-update-row" href={item.sourceUrl} target="_blank" rel="noreferrer" key={item.id||item.title}>
