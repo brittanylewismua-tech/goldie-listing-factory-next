@@ -151,10 +151,10 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
   const listings=attention.listings.slice(0,5);
   if(!lead&&!listings.length)return null;
   const gapCopy=(world:AttentionMap["worlds"][number])=>world.state==="underbuilt"
-    ? `Customers are giving this theme ${world.attentionPercent}% of your strongest signal, while it is only ${world.catalogPercent}% of your active catalog. That gap is where the leverage is.`
+    ? `Customers are giving this theme ${world.attentionPercent}% of your strongest signal, while it is only ${world.catalogPercent}% of your active catalog. You have not built around the demand as deeply as customers have rewarded it.`
     :world.state==="overbuilt"
-      ? `This theme gets ${world.attentionPercent}% of customer attention but already occupies ${world.catalogPercent}% of your active catalog. Keep supporting what works without feeding it more than the evidence earns.`
-      :`Customer attention and catalog attention are close here. Keep it in the mix, but do not steal attention from stronger underbuilt winners.`;
+      ? `This theme gets ${world.attentionPercent}% of customer attention but already occupies ${world.catalogPercent}% of your active catalog. Do not let the size of this category pull more of your time than the response it is earning.`
+      :`Customer attention and catalog attention are close here. Keep giving it its share without stealing time from stronger priorities.`;
   return <section className="shop-map-attention">
     <div className="shop-map-attention-head">
       <div><p className="mini-label">ATTENTION MAP</p><h2>Put your attention where customers already put theirs.</h2>
@@ -181,13 +181,14 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
         <p className="mini-label">YOUR #1 PRIORITY</p>
         <h3>{lead.label}</h3>
         <strong>{lead.attentionPercent}% of customer attention</strong>
+        <p className="shop-map-attention-directive">Give this about <b>{lead.attentionPercent}% of your research and creative attention</b> right now.</p>
         <p>{gapCopy(lead)}</p>
         <div><span>Customer attention <b>{lead.attentionPercent}%</b></span>
           <span>Catalog attention <b>{lead.catalogPercent}%</b></span></div>
       </aside>}
     </div>
     {!!listings.length&&<div className="shop-map-attention-listings">
-      <div><p className="mini-label">WHAT IS FILLING THE BUCKET</p><h3>Your strongest listings, in order</h3></div>
+      <div><p className="mini-label">STRONGEST LISTINGS</p><h3>Where that customer attention is coming from</h3></div>
       <ol>{listings.map(listing=><li key={listing.listingId}>
         <span>0{listing.rank}</span>
         {listing.imageUrl?<img src={listing.imageUrl} alt="" width={52} height={52} loading="lazy"/>:<i aria-hidden="true"/>}
