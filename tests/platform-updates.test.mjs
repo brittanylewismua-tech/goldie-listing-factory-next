@@ -64,7 +64,7 @@ test('source failures preserve old content and never advance its baseline',()=>{
     source looked broken and dragged the brief to 'partial'. */
  assert.match(s,/edited<EDIT_BUDGET/);
  assert.doesNotMatch(s.replace(/\/\*[\s\S]*?\*\//g,''),/Queued for next source check/)});
-test('daily job is scheduled and home card opens the actual update',()=>{assert.match(readFileSync(new URL('../scripts/add-scheduled-handler.mjs',import.meta.url),'utf8'),/run\("\/api\/platform-updates\/tick"\)/);assert.match(readFileSync(new URL('../app/home/home-view.tsx',import.meta.url),'utf8'),/<PlatformUpdate compact/);assert.match(readFileSync(new URL('../app/platform-updates/update-view.tsx',import.meta.url),'utf8'),/href="\/platform-updates"/)});
+test('daily job is scheduled and Home opens the actual update',()=>{assert.match(readFileSync(new URL('../scripts/add-scheduled-handler.mjs',import.meta.url),'utf8'),/run\("\/api\/platform-updates\/tick"\)/);const home=readFileSync(new URL('../app/home-preview/preview-client.tsx',import.meta.url),'utf8');assert.match(home,/fetch\("\/api\/platform-updates"/);assert.match(home,/href=\{item\.sourceUrl\}/);assert.match(readFileSync(new URL('../app/platform-updates/update-view.tsx',import.meta.url),'utf8'),/href="\/platform-updates"/)});
 
 test('tomorrow morning items stay out of the midnight edition while urgent changes appear now',()=>{const before=new Date('2026-09-27T10:00:00Z');assert.equal(editionDay(before),'2026-09-26');assert.equal(publishDay(before,false),'2026-09-27');assert.equal(publishDay(before,true),'2026-09-26');assert.equal(editionDay(new Date('2026-09-27T13:00:00Z')),'2026-09-27')});
 
@@ -95,13 +95,12 @@ test('a new seller-facing feature counts as news',()=>{
  assert.match(collector,/Sweepstakes, award programmes, events, petitions and webinars are not reportable/);
 });
 
-test('the front page does not report zero from a one-day window',()=>{
+test('the front page uses the combined update history, not a one-day window',()=>{
  const home=readFileSync(new URL('../app/home-preview/preview-client.tsx',import.meta.url),'utf8');
- /* It counted today's edition only, so it read "0 changes at Etsy or Printify"
-    on almost every day for sources that publish weekly at best. */
- assert.doesNotMatch(home,/const changes=\(up\?\.items\?\?\[\]\)\.length;/);
- assert.match(home,/const changes=\(up\?\.items\?\?\[\]\)\.length\+\(up\?\.recent\?\?\[\]\)\.length;/);
- assert.match(home,/last 30 days · \{num\(\(up\.sources\?\?\[\]\)\.length\)\} official sources/);
+ assert.match(home,/\.\.\.\(updates\?\.items\?\?\[\]\)/);
+ assert.match(home,/\.\.\.\(updates\?\.recent\?\?\[\]\)/);
+ assert.match(home,/filter\(item=>item\.platform==="Etsy"\)\.slice\(0,3\)/);
+ assert.match(home,/filter\(item=>item\.platform==="Printify"\)\.slice\(0,3\)/);
 });
 
 test('announcement and roundup sources seed their own first read',()=>{
