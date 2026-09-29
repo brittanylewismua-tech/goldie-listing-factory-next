@@ -162,8 +162,8 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
       <span>Based on {attention.basisLabel}</span>
     </div>
     <div className="shop-map-attention-layout">
-      <div className="shop-map-attention-list">
-        {worlds.map(world=><article key={world.worldId} className={world.rank===1?"is-lead":""}>
+      <div className="shop-map-attention-list"><p className="mini-label shop-map-next-priorities">NEXT PRIORITIES</p>
+        {worlds.slice(1).map(world=><article key={world.worldId}>
           <div className="shop-map-attention-row">
             <span className="shop-map-attention-rank">0{world.rank}</span>
             <div className="shop-map-attention-name"><b>{world.label}</b>
