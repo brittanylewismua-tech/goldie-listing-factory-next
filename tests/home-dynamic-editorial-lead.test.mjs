@@ -24,7 +24,7 @@ test("Home uses the established suite logo treatment",()=>{
   assert.match(css,/font-family:Georgia,'Times New Roman',serif!important/);
 });
 
-test("the update section header is anchored to the cards",()=>{
-  assert.match(css,/\.goldie-updates-head\{[^}]*border-bottom:2px solid #000[^}]*margin-bottom:18px/);
-  assert.match(css,/\.goldie-updates-head h2\{[^}]*color:#fff!important[^}]*text-shadow:3px 3px 0 #000/);
+test("the update section header is spacious, bold, and unshadowed",()=>{
+  assert.match(css,/\.goldie-updates-head\{[^}]*border-bottom:2px solid #000[^}]*margin-bottom:30px/);
+  assert.match(css,/\.goldie-updates-head h2\{[^}]*font-size:44px!important[^}]*font-weight:900!important[^}]*color:#000!important[^}]*text-shadow:none!important/);
 });
