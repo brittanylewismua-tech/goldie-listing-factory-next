@@ -71,13 +71,14 @@ test("both rail groups are open on arrival", () => {
   assert.match(nav, /const \[commandOpen, setCommandOpen\] = useState\(true\)/);
 });
 
-test("the phone keeps the page title and loses the desktop-only chrome", () => {
+test("the phone keeps desktop chrome rules and Home has its own responsive launcher", () => {
   const narrow = rulesIn("860px");
   assert.equal(declOf(narrow, ".factory-rail-toggle", "display"), "none",
     "the rail toggle has no rail to toggle on a phone");
   assert.equal(declOf(narrow, ".factory-crumb-root", "display"), "none",
     "a two-level crumb does not fit beside a title on a phone");
-  assert.match(read("current-suite.css"), /\.current-home-layout\{grid-template-columns:1fr\}/);
+  assert.match(read("home-preview/preview.css"), /@media\(max-width:700px\)/);
+  assert.match(read("home-preview/preview.css"), /\.goldie-platform-grid\{grid-template-columns:1fr 1fr/);
 });
 
 test("the rail says there is more below before you scroll it", () => {
@@ -117,10 +118,11 @@ test("the rail keeps the gear mark", () => {
   assert.doesNotMatch(brand, /suite-wordmark/);
 });
 
-test("Current home opens saved research and uses real monthly totals", () => {
-  const home = read("home/home-view.tsx");
-  assert.match(home, /fetch\('\/api\/home'\)/);
-  assert.match(home, /fetch\('\/api\/niche-research'\)/);
-  assert.match(home, /\/market-watch\/research\?id=/);
-  assert.match(home, /month\.revenueMinor\/100/);
+test("Current home is the suite launcher and routes into the real tools", () => {
+  const home = read("home-preview/preview-client.tsx");
+  assert.match(home, /href:"\/shop-map"/);
+  assert.match(home, /href:"\/listing-factory\?step=setup"/);
+  assert.match(home, /href:"\/market-watch"/);
+  assert.match(home, /href:"\/trademark"/);
+  assert.match(home, /api\/platform-updates/);
 });
