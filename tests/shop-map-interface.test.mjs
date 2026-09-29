@@ -7,16 +7,18 @@ const css = readFileSync(new URL("../app/professional-redesign.css", import.meta
 const route = readFileSync(new URL("../app/api/shop-map/map/route.ts", import.meta.url), "utf8");
 
 test("the redesigned map has four clear sections", () => {
-  for (const label of ["Overview", "Product themes", "Sold listings", "Your numbers"])
+  for (const label of ["Opportunity Engine", "Product themes", "Sold listings", "Your numbers"])
     assert.ok(client.includes(label), `${label} is missing`);
   assert.match(client, /aria-current=\{tab === key \? 'page'/);
 });
 
-test("overview leads with sold listings and plain timing", () => {
-  assert.match(client, /Top sellers/);
-  assert.match(client, /LAST 90 DAYS/);
+test("Opportunity Engine leads with the attention map before sold listings", () => {
+  assert.match(client, /ATTENTION MAP/);
+  assert.match(client, /Put your attention where customers already put theirs/);
+  assert.match(client, /YOUR #1 PRIORITY/);
+  assert.match(client, /WHAT IS FILLING THE BUCKET/);
+  assert.ok(client.indexOf("ATTENTION MAP") < client.indexOf("Top sellers"));
   assert.match(client, /shown.topListings\?\?\[\]/);
-  assert.match(client, /listing\.sales\} sold/);
 });
 
 test("sold listings keep every metric within the selected sales period", () => {
@@ -67,4 +69,14 @@ test("the map makes no paid provider call and corrections remain member-scoped",
   const correction = readFileSync(new URL("../app/api/shop-map/correct/route.ts", import.meta.url), "utf8");
   for (const statement of correction.match(/(INSERT INTO|UPDATE|DELETE FROM)[\s\S]{0,400}?`/g) ?? [])
     assert.ok(/user_id/.test(statement), "a correction ran without member scope");
+});
+
+
+test("the attention engine is based on a strict evidence ladder",()=>{
+  const attention=readFileSync(new URL("../app/shop-map-attention.ts",import.meta.url),"utf8");
+  assert.match(attention,/recentSales>0\?"sales-90"/);
+  assert.match(attention,/lifetimeSales>0\?"sales-lifetime"/);
+  assert.match(attention,/favorites>0\?"favorites"/);
+  assert.match(attention,/buildGap=attentionShare-catalogShare/);
+  assert.match(route,/attention,/);
 });
