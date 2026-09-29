@@ -65,3 +65,14 @@ test("no response produces an honest empty attention map",()=>{
   assert.equal(map.totalSignal,0);
   assert.deepEqual(map.listings,[]);
 });
+
+
+test("catalog share uses the whole active shop, including unclassified listings",()=>{
+  const map=buildAttentionMap([
+    {listingId:1,title:"A",state:"active",favorites:0,sales90:10,lifetimeSales:10,worldId:"dark"},
+  ],[{worldId:"dark",label:"Dark Romance",activeListings:5}],{activeListingsTotal:10});
+  const dark=map.worlds[0];
+  assert.equal(dark.catalogPercent,50);
+  assert.equal(dark.attentionPercent,100);
+  assert.equal(dark.buildGapPoints,50);
+});
