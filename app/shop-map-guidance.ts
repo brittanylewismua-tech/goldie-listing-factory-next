@@ -78,7 +78,7 @@ export function standout(
       historical trade gets a clearly labelled historical read instead of the
       same "No clear direction yet" message used for a brand-new shop.
     */
-    if (lifetimeOrders >= 50) {
+    if (lifetimeOrders >= 50 && (!coverage || coverageMet(coverage))) {
       const historical = [...niches]
         .filter(niche => niche.orders > 0)
         .sort((a,b)=>b.orders-a.orders || b.revenueMinor-a.revenueMinor)[0];
