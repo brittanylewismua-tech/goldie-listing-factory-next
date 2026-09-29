@@ -702,3 +702,21 @@
 #suite-workspace .tm-standalone .drop-head p:last-child{
   max-width:720px!important;
 }
+
+
+/* VISUAL SWEEP · watched phrases stack by meaning on phones. */
+@media(max-width:700px){
+  #suite-workspace .tm-watch-list article>div{
+    grid-column:1/-1!important;
+  }
+  #suite-workspace .tm-watch-list article>.tm-watch-risk{
+    grid-column:1/-1!important;
+    width:max-content!important;
+  }
+  #suite-workspace .tm-watch-list article>button:nth-of-type(1){
+    grid-column:1!important;
+  }
+  #suite-workspace .tm-watch-list article>button:nth-of-type(2){
+    grid-column:2!important;
+  }
+}
