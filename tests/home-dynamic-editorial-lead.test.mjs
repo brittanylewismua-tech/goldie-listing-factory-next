@@ -5,10 +5,10 @@ import { readFileSync } from "node:fs";
 const home=readFileSync("app/home-preview/preview-client.tsx","utf8");
 const css=readFileSync("app/home-preview/preview.css","utf8");
 
-test("Home gives the launcher the hero position instead of a greeting",()=>{
+test("Home gives the launcher the hero position without decorative background art",()=>{
   assert.doesNotMatch(home,/Good morning|Good afternoon|Good evening|Your command center/);
-  assert.match(home,/goldie-background-g/);
-  assert.match(css,/\.goldie-background-g\{[^}]*font:400 620px/);
+  assert.doesNotMatch(home,/goldie-background-g/);
+  assert.doesNotMatch(css,/\.goldie-background-g\{/);
 });
 
 test("the member's Orbit or Line choice survives leaving Home",()=>{
