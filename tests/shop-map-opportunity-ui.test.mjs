@@ -32,3 +32,12 @@ test("My Shop turns the attention model into a concrete next-build allocation",(
   assert.match(client,/NextBuildAllocation/);
   assert.match(client,/recommendedListings/);
 });
+
+
+test("tracked market evidence appears only as supporting proof inside recommendations",()=>{
+  assert.match(client,/MARKET RADAR SUPPORT/);
+  assert.match(client,/shown\.marketCorroboration/);
+  assert.match(client,/marketEvidence=\{shown\.marketCorroboration\?\?\[\]\}/);
+  assert.match(client,/Open tracked keyword/);
+  assert.match(client,/row\.state==="underbuilt"\?marketByWorld\.get/);
+});
