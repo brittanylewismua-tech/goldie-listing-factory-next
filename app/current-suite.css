@@ -15,9 +15,9 @@
 #suite-workspace .factory-work :is(.p-card,.cc-tool,.shop-map-card,.tm-watches,.winner-profile,.listing-check,.usage-card,.acc-card,.managementLibrary,.management-create,.bank-library,.goals-history){border:1px solid #e4e1de!important;border-radius:8px!important;box-shadow:none!important;background:#fff!important;padding:24px!important}
 #suite-workspace .factory-work :is(.p-head,.keyword-hero,.shop-map-head,.cc-home-head){margin-bottom:28px!important;padding-bottom:0!important;border:0!important}
 /* One section-navigation treatment; no oversized pill panels. */
-#suite-workspace .factory-work :is(.nr-tabs,.shop-map-tabs,.tabs.p-tabs,.shop-detail-tabs){display:flex!important;flex-wrap:nowrap!important;gap:22px!important;padding:0!important;background:transparent!important;border:0!important;border-bottom:1px solid #ded3dc!important;border-radius:0!important;box-shadow:none!important;overflow-x:auto;margin:0 0 26px!important}
-#suite-workspace .factory-work :is(.nr-tabs,.shop-map-tabs,.tabs.p-tabs,.shop-detail-tabs) button{flex:0 0 auto!important;background:transparent!important;color:#46433f!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;padding:12px 0!important;margin:0!important;white-space:nowrap;font-size:14px!important;box-shadow:none!important}
-#suite-workspace .factory-work :is(.nr-tabs button[aria-current=page],.shop-map-tabs button[aria-current=page],.shop-map-tabs button.active,.p-tab.active,.p-tab[aria-selected=true]){color:#211a20!important;border-bottom-color:#c2277b!important;background:transparent!important;font-weight:750!important}
+#suite-workspace .factory-work :is(.nr-tabs,.tabs.p-tabs,.shop-detail-tabs){display:flex!important;flex-wrap:nowrap!important;gap:22px!important;padding:0!important;background:transparent!important;border:0!important;border-bottom:1px solid #ded3dc!important;border-radius:0!important;box-shadow:none!important;overflow-x:auto;margin:0 0 26px!important}
+#suite-workspace .factory-work :is(.nr-tabs,.tabs.p-tabs,.shop-detail-tabs) button{flex:0 0 auto!important;background:transparent!important;color:#46433f!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;padding:12px 0!important;margin:0!important;white-space:nowrap;font-size:14px!important;box-shadow:none!important}
+#suite-workspace .factory-work :is(.nr-tabs button[aria-current=page],.p-tab.active,.p-tab[aria-selected=true]){color:#211a20!important;border-bottom-color:#c2277b!important;background:transparent!important;font-weight:750!important}
 /* Niche briefing: compact context, one leading finding, expandable evidence. */
 #suite-workspace .nr-head{padding:0!important;margin:0 0 16px!important;border:0!important}
 #suite-workspace .nr section{margin:30px 0}
@@ -257,9 +257,9 @@
 #suite-workspace .factory-work :is(.p-button-primary,.nr-primary,.primary,.keyword-hero>button,.bank-editor button[type=submit]){background:#000000!important;color:#fff!important;border:1px solid #000000!important;font-weight:600!important}
 #suite-workspace .factory-work :is(button,a,input,select,summary):focus-visible{outline:3px solid #b35491!important;outline-offset:3px!important}
 #suite-workspace .factory-work :is(.p-card,.cc-tool,.shop-map-card,.tm-watches,.winner-profile,.listing-check,.usage-card,.acc-card,.managementLibrary,.management-create,.bank-library,.goals-history,.nr-card,.nr-search,.conn .shop){border-color:#e4e1de!important;border-radius:16px!important;box-shadow:0 2px 5px #00000003!important;padding:24px!important;background:#fff!important}
-#suite-workspace .factory-work :is(.nr-tabs,.shop-map-tabs,.tabs.p-tabs,.shop-detail-tabs){gap:26px!important;margin-bottom:28px!important;border-bottom-color:#dedee1!important}
-#suite-workspace .factory-work :is(.nr-tabs,.shop-map-tabs,.tabs.p-tabs,.shop-detail-tabs) button{background:transparent!important;border-radius:0!important;min-height:44px!important;padding:10px 0 14px!important;color:#46433f!important}
-#suite-workspace .factory-work :is(.nr-tabs button[aria-current=page],.shop-map-tabs button[aria-current=page],.shop-map-tabs button.active,.p-tab.active,.p-tab[aria-selected=true]){color:#000000!important;border-bottom:3px solid #ee6fc0!important}
+#suite-workspace .factory-work :is(.nr-tabs,.tabs.p-tabs,.shop-detail-tabs){gap:26px!important;margin-bottom:28px!important;border-bottom-color:#dedee1!important}
+#suite-workspace .factory-work :is(.nr-tabs,.tabs.p-tabs,.shop-detail-tabs) button{background:transparent!important;border-radius:0!important;min-height:44px!important;padding:10px 0 14px!important;color:#46433f!important}
+#suite-workspace .factory-work :is(.nr-tabs button[aria-current=page],.p-tab.active,.p-tab[aria-selected=true]){color:#000000!important;border-bottom:3px solid #ee6fc0!important}
 /* Current's research canvas is backed by the existing, verified research data. */
 #suite-workspace .nr .current-research{margin:0 0 28px!important}
 #suite-workspace .nr-secondary-section summary{display:flex!important;align-items:center;justify-content:space-between;list-style:none!important}
@@ -646,7 +646,6 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
  #suite-workspace .factory-work .shop-map-reach li>img,#suite-workspace .factory-work .shop-map-reach li>span[aria-hidden]{width:64px!important;height:64px!important;grid-row:1 / 3;align-self:start}
  #suite-workspace .factory-work .shop-map-reach-copy b{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.5!important}
  #suite-workspace .factory-work .shop-map-reach li>a{grid-column:2;justify-self:start;min-height:32px;display:flex;align-items:center}
- #suite-workspace .factory-work .shop-map-redesign .shop-map-tabs{display:grid!important;grid-template-columns:1fr 1fr;gap:0 18px!important;overflow:visible}
 }
 
 /* Seller evidence controls, scoped to Command Center. */

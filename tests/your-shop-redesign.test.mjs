@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 const client=readFileSync("app/shop-map/shop-map-client.tsx","utf8");
 const route=readFileSync("app/api/shop-map/map/route.ts","utf8");
 const css=readFileSync("app/shop-map/shop-map.css","utf8");
-const nav=readFileSync("app/shop-map/shop-map-navigation.ts","utf8");
+const nav=readFileSync("app/shop-map/shop-map-navigation.ts","utf8");\nconst commandWorkspace=readFileSync("app/command-workspace.css","utf8");\nconst currentSuite=readFileSync("app/current-suite.css","utf8");
 
 test("Your Shop defaults to Overview and requests only the active tab",()=>{
   assert.match(nav,/return value==='money'\|\|value==='themes'\|\|value==='sold'\?value:'overview'/);
@@ -97,4 +97,15 @@ test("Your Shop reuses same-day cached data while refreshing in the background",
   assert.match(client,/sessionStorage\.setItem/);
   assert.match(client,/const shown = map \?\? lastGood/);
   assert.match(client,/const cached=readShopMapCache\(cacheKey\)/);
+});
+
+
+test("global suite styles do not override the Your Shop tab control",()=>{
+  assert.doesNotMatch(commandWorkspace,/YOUR SHOP PRIMARY NAV · EDITORIAL TEXT RAIL/);
+  assert.doesNotMatch(commandWorkspace,/factory-work \.shop-map-tabs/);
+  assert.doesNotMatch(currentSuite,/factory-work[^\n{]*shop-map-tabs/);
+});
+
+test("Opportunity Engine cache version changes when ranking semantics change",()=>{
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v2:"/);
 });
