@@ -90,3 +90,12 @@ test("Opportunity Engine uses a dedicated core request before optional support",
   assert.ok(core>-1&&reviews>-1&&finance>-1&&core<reviews&&core<finance,
     "Opportunity Engine core must return before reviews and finance");
 });
+
+
+test("Your Shop reuses same-day cached data while refreshing in the background",()=>{
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX/);
+  assert.match(client,/sessionStorage\.getItem/);
+  assert.match(client,/sessionStorage\.setItem/);
+  assert.match(client,/const shown = map \?\? lastGood/);
+  assert.match(client,/const cached=readShopMapCache\(cacheKey\)/);
+});

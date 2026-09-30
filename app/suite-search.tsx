@@ -16,6 +16,8 @@
  * reason. It finds pages, tools and batches, and those are the words on it.
  * ==========================================================================*/
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import type { SuiteNavItem } from "./suite-sidebar-nav";
 import { readBatchHistory } from "./batch-history-read";
@@ -46,6 +48,7 @@ function score(label: string, query: string) {
 }
 
 export default function SuiteSearch({ items }: { items: SuiteNavItem[] }) {
+  const router=useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
@@ -93,7 +96,7 @@ export default function SuiteSearch({ items }: { items: SuiteNavItem[] }) {
     .slice(0, 8)
     .map(entry => entry.hit);
 
-  const go = (hit: Hit | undefined) => { if (hit) window.location.href = hit.href; };
+  const go = (hit: Hit | undefined) => { if (hit) { setOpen(false); router.push(hit.href); } };
 
   /*
     THE PANEL IS PORTALLED, AND IT HAS TO BE.
@@ -128,15 +131,15 @@ export default function SuiteSearch({ items }: { items: SuiteNavItem[] }) {
         <button type="button" className="suite-search-close" aria-label="Close search" onClick={()=>setOpen(false)}>×</button>
       </div>
       <div className="suite-search-hits" role="listbox">
-        {hits.map((hit, index) => <a key={hit.key} role="option" aria-selected={index === cursor}
+        {hits.map((hit, index) => <Link key={hit.key} role="option" aria-selected={index === cursor}
           className={index === cursor ? "current" : undefined} href={hit.href}
           onMouseEnter={() => setCursor(index)}>
-          <b>{hit.label}</b><small>{hit.note}</small></a>)}
+          <b>{hit.label}</b><small>{hit.note}</small></Link>)}
         {hits.length === 0 && !batchLoading && !batchError && <p className="suite-search-empty">
           Nothing here matches that. Search finds pages, tools and your saved batches.</p>}
       </div>
       {batchLoading&&<p className="suite-search-empty" role="status">Searching saved batches…</p>}
-      {batchError&&<p className="suite-search-empty" role="status">Saved batches couldn’t be searched. <a href="/batches">Open Batch History</a>.</p>}
+      {batchError&&<p className="suite-search-empty" role="status">Saved batches couldn’t be searched. <Link href="/batches">Open Batch History</Link>.</p>}
     </div>
   </div> : null;
 

@@ -25,12 +25,13 @@ test("overbuilt themes do not receive a MirrorBot research prompt in the opportu
 });
 
 
-test("My Shop turns the attention model into a concrete next-build allocation",()=>{
-  assert.match(client,/YOUR NEXT BUILD CYCLE/);
-  assert.match(client,/If you make \{plan\.requestedListings\} listings next/);
+test("My Shop turns the attention model into a priority order without prescribing listing counts",()=>{
+  assert.match(client,/WHERE TO BUILD NEXT/);
+  assert.match(client,/Your next design-and-list priorities start here/);
   assert.match(client,/shown\.nextBuild/);
   assert.match(client,/NextBuildAllocation/);
-  assert.match(client,/recommendedListings/);
+  assert.doesNotMatch(client,/If you make \{plan\.requestedListings\} listings next/);
+  assert.doesNotMatch(client,/\{row\.recommendedListings\}/);
 });
 
 

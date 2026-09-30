@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type MouseEvent } from "react";
+import Link from "next/link";
 import { NavIcon, type NavKey as NavIconKey } from "./nav-icons";
 
 export type SuiteNavKey = "home" | "factory" | "batches" | "keywords" | "mockups" | "usage" | "goals" | "command-center"
@@ -89,7 +90,7 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
     const newTab = keywordBankInNewTab && item.key === "keywords";
     const locked = item.group === "command" && commandCenterAccess === false;
     const selected=item.key===active || (current&&item.key==="niche-research"&&active==="market-watch");
-    return <a key={item.key} href={item.href}
+    return <Link key={item.key} href={item.href}
       className={`${selected ? "active" : ""}${child ? " suite-nav-child" : ""}${locked ? " locked" : ""}`.trim()}
       aria-current={selected ? "page" : undefined}
       aria-label={locked ? `${item.label}, Full Suite membership required` : undefined}
@@ -99,7 +100,7 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
       {current&&item.key==='niche-research'?<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>:<NavIcon name={item.icon}/>}<span>{item.label}</span>
       {item.key === "market-watch" && <small>LIVE</small>}
       {locked && <LockIcon/>}
-    </a>;
+    </Link>;
   };
 
   return <>
@@ -108,9 +109,9 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
       <section className="current-nav-group" aria-label="Command Center">
         <span className="current-nav-group-label">Command Center</span>
         {['niche-research','shop-map','trademark','platform-updates'].map(key=>items.find(i=>i.key===key)).filter((i):i is SuiteNavItem=>Boolean(i)).map(i=>link(i))}
-        <a href="/hot-list" className={active==="hotlist"?"active":undefined} aria-current={active==="hotlist"?"page":undefined}><NavIcon name="marketWatch"/><span>Hot List</span></a>
+        <Link href="/hot-list" className={active==="hotlist"?"active":undefined} aria-current={active==="hotlist"?"page":undefined}><NavIcon name="marketWatch"/><span>Hot List</span></Link>
       </section>
-      <section className="current-factory-section" aria-label="Listing Factory">{factory&&link(factory)}{FACTORY_KEYS.has(active)&&<div className="current-factory-children">{factoryChildren.map(i=>link(i))}<a href="/goals" className={active === "goals" ? "active" : undefined} aria-current={active === "goals" ? "page" : undefined}><NavIcon name="goals"/><span>Listing goals</span></a></div>}</section>
+      <section className="current-factory-section" aria-label="Listing Factory">{factory&&link(factory)}{FACTORY_KEYS.has(active)&&<div className="current-factory-children">{factoryChildren.map(i=>link(i))}<Link href="/goals" className={active === "goals" ? "active" : undefined} aria-current={active === "goals" ? "page" : undefined}><NavIcon name="goals"/><span>Listing goals</span></Link></div>}</section>
       <details className="current-more"><summary>Settings<svg className="current-more-chevron" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg></summary><div className="current-nav-group" role="group" aria-label="Shop setup"><span className="current-nav-group-label">Shop setup</span>{connections&&link(connections)}</div></details>
     </nav> : <nav className="top-nav suite-sidebar-nav" aria-label="Product navigation">
       {home && link(home)}
@@ -137,11 +138,11 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
             made four tools read as a menu. It is a page now; the chevron
             beside it still opens and closes the list.
           */}
-          <a className={`suite-nav-heading${active === "command-center" ? " active" : ""}`}
+          <Link className={`suite-nav-heading${active === "command-center" ? " active" : ""}`}
             href="/command-center" aria-current={active === "command-center" ? "page" : undefined}
             onClick={event => onNavigate?.(event, "/command-center")}>
             <NavIcon name="marketWatch"/><span>Command Center</span>
-          </a>
+          </Link>
         </div>
         {commandOpen && <div className="suite-nav-children">{command.map(item => link(item, true))}</div>}
       </div>
@@ -157,7 +158,7 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
         <p>Command Center tools are included with the $47/month membership.</p>
         <div className="suite-access-actions">
           <button type="button" onClick={() => setLockedTool("")}>Not now</button>
-          <a href="/usage">See the membership</a>
+          <Link href="/usage">See the membership</Link>
         </div>
       </section>
     </div>}

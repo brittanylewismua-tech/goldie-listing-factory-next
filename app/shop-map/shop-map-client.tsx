@@ -22,6 +22,22 @@ export type ShopOpportunity = {
   headline:string;explanation:string;action:string;mirrorBotPrompt:string|null;
 };
 const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";
+const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v1:";
+const cacheDay=()=>new Date().toLocaleDateString("en-CA");
+function readShopMapCache(key:string):ShopMap|null{
+  if(typeof window==="undefined")return null;
+  try{
+    const raw=window.sessionStorage.getItem(SHOP_MAP_CACHE_PREFIX+key);
+    if(!raw)return null;
+    const parsed=JSON.parse(raw) as {day?:string;data?:ShopMap};
+    if(parsed.day!==cacheDay()||!parsed.data){window.sessionStorage.removeItem(SHOP_MAP_CACHE_PREFIX+key);return null;}
+    return parsed.data;
+  }catch{return null;}
+}
+function writeShopMapCache(key:string,data:ShopMap){
+  if(typeof window==="undefined")return;
+  try{window.sessionStorage.setItem(SHOP_MAP_CACHE_PREFIX+key,JSON.stringify({day:cacheDay(),data}));}catch{}
+}
 export type AttentionMap = {
   basis:"sales-90"|"sales-lifetime"|"favorites"|"none";
   basisLabel:string;
@@ -183,7 +199,7 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
       ? `This theme gets ${world.attentionPercent}% of customer attention but already occupies ${world.catalogPercent}% of your active catalog. Do not give it more of your time than the response it is earning.`
       :`Customer attention and catalog attention are close here. Keep giving it its share without taking time from stronger priorities.`;
   const moveCopy=(world:AttentionMap["worlds"][number])=>world.state==="underbuilt"
-    ? "Give this the largest share of your next build cycle. Expand what is already working before you move on to weaker ideas."
+    ? "Make this your first design-and-list priority. Build deeper here before moving on to weaker ideas."
     :world.state==="overbuilt"
       ? "Maintain what is already working here, but stop expanding this theme until customer response catches up."
       : "Keep building here in proportion to the response it is earning.";
@@ -248,29 +264,23 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
 
 
 export function NextBuildAllocation({plan}:{plan:NextBuildPlan}){
-  if(!plan.requestedListings)return null;
+  if(!plan.rows.length)return null;
   return <section className="shop-map-next-build">
     <div className="shop-map-section-head">
-      <div><p className="mini-label">YOUR NEXT BUILD CYCLE</p>
-        <h2>If you make {plan.requestedListings} listings next, put them here.</h2>
-        <p>This allocation closes the biggest gaps between customer response and what you have already built.</p></div>
-      <span className="shop-map-next-build-total">{plan.allocatedListings}/{plan.requestedListings} placed</span>
+      <div><p className="mini-label">WHERE TO BUILD NEXT</p>
+        <h2>Your next design-and-list priorities start here.</h2>
+        <p>Customers have already shown you where their attention is going. Follow that signal in this order.</p></div>
     </div>
-    {plan.rows.length?<div className="shop-map-next-build-grid">
-      {plan.rows.map(row=><article key={row.worldId}>
-        <div className="shop-map-next-build-count">{row.recommendedListings}</div>
+    <div className="shop-map-next-build-grid">
+      {plan.rows.map((row,index)=><article key={row.worldId}>
+        <div className="shop-map-next-build-count">{String(index+1).padStart(2,"0")}</div>
         <div className="shop-map-next-build-copy">
-          <div><span>0{row.rank}</span><b>{row.label}</b></div>
+          <div><span>{index===0?"FIRST PRIORITY":"NEXT PRIORITY"}</span><b>{row.label}</b></div>
           <p>{row.attentionPercent}% customer attention · {row.catalogPercent}% of active catalog</p>
         </div>
       </article>)}
-      {plan.heldBackListings>0?<article className="held-back">
-        <div className="shop-map-next-build-count">{plan.heldBackListings}</div>
-        <div className="shop-map-next-build-copy"><div><span>—</span><b>Hold back</b></div>
-          <p>Goldie does not have enough classified evidence to place {plan.heldBackListings===1?"this slot":"these slots"} confidently yet.</p></div>
-      </article>:null}
-    </div>:null}
-    <p className="shop-map-next-build-note">{plan.note}</p>
+    </div>
+    <p className="shop-map-next-build-note">Priority follows the gap between customer attention and how much of your catalog you have already built around it.</p>
   </section>;
 }
 
@@ -358,10 +368,14 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const requestSequence=useRef(0);
   const load = useCallback(async () => {
     const sequence=++requestSequence.current;
-    setRefreshing(true);
     const params=new URLSearchParams({view:tab==="overview"?"overview-insights":tab});
     if(tab==="sold")params.set("days",String(soldDays));
     if(tab==="money"&&selectedMonth)params.set("month",selectedMonth);
+    const cacheKey=params.toString();
+    const cached=readShopMapCache(cacheKey);
+    if(cached){
+      setMap(cached);setLastGood(cached);setFailed(false);setRefreshing(false);
+    }else setRefreshing(true);
     const next = await fetch(`/api/shop-map/map?${params.toString()}`)
       .then(response => response.ok ? response.json() as Promise<ShopMap> : null)
       .catch(() => null);
@@ -371,13 +385,14 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setFailed(false);
     setMap(next);
     setLastGood(next);
+    writeShopMapCache(cacheKey,next);
     if(tab==="overview"){
       setInsightsLoading(true);
       void fetch("/api/shop-map/map?view=overview-support")
         .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
         .then(detail=>{
           if(sequence!==requestSequence.current||!detail||detail.error)return;
-          setMap(current=>current?{...current,...detail}:detail);
+          setMap(current=>{const merged=current?{...current,...detail}:detail;writeShopMapCache("view=overview-insights",merged);return merged;});
           setLastGood(current=>current?{...current,...detail}:detail);
         })
         .catch(()=>undefined)
@@ -467,7 +482,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setBusy("");
   };
 
-  const shown = refreshing ? null : (map ?? lastGood);
+  const shown = map ?? lastGood;
 
   if (!shown && failed)
     return <main className="shop-map"><p className="shop-map-state">

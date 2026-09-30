@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import SuiteBrand from "../suite-brand";
+import Link from "next/link";
 
 type MapData={shop?:{shopName?:string}};
 type UpdateItem={
@@ -138,10 +139,12 @@ export default function PreviewClient({firstName,visualReview=false}:{firstName?
             {FEATURES.map((feature,index)=>{
               const angle=index*72;
               return <div className="goldie-slot" style={{"--a":`${angle}deg`} as CSSProperties} key={feature.key}>
-                <a className="goldie-feature-card" data-angle={angle} href={feature.href}
-                  target={feature.external?"_blank":undefined} rel={feature.external?"noreferrer":undefined}>
+                {feature.external?<a className="goldie-feature-card" data-angle={angle} href={feature.href}
+                  target="_blank" rel="noreferrer">
                   <i>{feature.number}</i><b>{feature.title}</b><span>{feature.copy}</span>
-                </a>
+                </a>:<Link className="goldie-feature-card" data-angle={angle} href={feature.href} prefetch>
+                  <i>{feature.number}</i><b>{feature.title}</b><span>{feature.copy}</span>
+                </Link>}
               </div>;
             })}
           </div>
@@ -150,17 +153,19 @@ export default function PreviewClient({firstName,visualReview=false}:{firstName?
             <strong>Goldie Suite</strong>
           </div>
         </div>:<div className="goldie-line-view">
-          {FEATURES.map(feature=><a className="goldie-line-card" href={feature.href} key={feature.key}
-            target={feature.external?"_blank":undefined} rel={feature.external?"noreferrer":undefined}>
+          {FEATURES.map(feature=>feature.external?<a className="goldie-line-card" href={feature.href} key={feature.key}
+            target="_blank" rel="noreferrer">
             <i>{feature.number}</i><div><b>{feature.title}</b><span>{feature.copy}</span></div>
-          </a>)}
+          </a>:<Link className="goldie-line-card" href={feature.href} key={feature.key} prefetch>
+            <i>{feature.number}</i><div><b>{feature.title}</b><span>{feature.copy}</span></div>
+          </Link>)}
         </div>}
       </section>
 
       <section className="goldie-updates">
         <div className="goldie-updates-head">
           <h2>Your daily Etsy + Printify updates</h2>
-          <a href="/platform-updates">See all updates →</a>
+          <Link href="/platform-updates" prefetch>See all updates →</Link>
         </div>
         <div className="goldie-platform-grid">
           <PlatformPanel title="Etsy" rows={etsy} loaded={updatesLoaded}/>
@@ -175,7 +180,7 @@ function PlatformPanel({title,rows,loaded}:{title:"Etsy"|"Printify";rows:UpdateI
   return <section className="goldie-platform-panel">
     <header>
       <div className="goldie-platform-name"><span/><b>{title}</b></div>
-      <a href="/platform-updates">{`See all ${title} updates →`}</a>
+      <Link href="/platform-updates" prefetch>{`See all ${title} updates →`}</Link>
     </header>
     <div className="goldie-update-list">
       {!loaded&&[0,1,2].map(index=><div className="goldie-update-row loading" key={index}><i/><div><b/><span/></div></div>)}

@@ -23,6 +23,7 @@
  * ==========================================================================*/
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import {readBatchHistory,preparedDaysFromHistory} from "./batch-history-read";
 import SuiteBrand from "./suite-brand";
 import SuiteSidebarNav, { type SuiteNavItem } from "./suite-sidebar-nav";
@@ -195,8 +196,8 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
             batch so the money action keeps its weight. */}
       </div>
       <div className="approved-sidebar-footer">
-        {isFactoryPage && <a className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
-          <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></a>}
+        {isFactoryPage && <Link className="approved-usage" href="/usage"><b>Listings used</b><span>{usageLine}</span>
+          <div className="approved-usage-track" aria-hidden="true"><i style={{ width: usage ? `${Math.min(100, usage.used / Math.max(1, usage.limit) * 100)}%` : "0%" }} /></div></Link>}
         {/*
           A GOAL NOBODY EXPLAINS IS A NUMBER NOBODY TRUSTS.
 
@@ -205,11 +206,11 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
           word, not a seller's — it means drafts built and ready to publish.
           Both are now on the card, in the member's language.
         */}
-        {isFactoryPage && goal && <a className="listing-goal-side" href="/goals">
+        {isFactoryPage && goal && <Link className="listing-goal-side" href="/goals">
           <span className="listing-goal-caption">Your {goal.period}ly goal</span>
           <b>{goalDaysError?"Progress unavailable":goalDaysLoaded?`${goalDone} of ${goal.target} drafts ready`:"Loading progress…"}</b>
           <span className="listing-goal-note">{goalDaysError?"Try again shortly.":"You set this target in Goals."}</span>
-          {goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span>}</a>}
+          {goalDaysLoaded&&<span className="listing-goal-track" aria-hidden="true"><i style={{ width: `${Math.min(100, Math.round((goalDone / Math.max(1, goal.target)) * 100))}%` }} /></span>}</Link>}
         <small>&copy; 2026 Be A Wolf Biz</small>
         {isFactoryPage && <p className="etsy-api-disclosure">The term &apos;Etsy&apos; is a trademark of Etsy, Inc. This application uses the Etsy API but is not endorsed or certified by Etsy, Inc.</p>}
         {/*
@@ -250,9 +251,9 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
                 {shop.shopName}{shop.active ? " ✓" : switching === shop.shopId ? " …" : ""}</button>)}
               {switchError && <small role="alert" className="factory-account-shop-error">{switchError}</small>}
             </div>}
-            <a role="menuitem" href="/account/settings">Account settings</a>
-            <a role="menuitem" href="/usage">Usage and limits</a>
-            <a role="menuitem" href="/connections">Connections</a>
+            <Link role="menuitem" href="/account/settings">Account settings</Link>
+            <Link role="menuitem" href="/usage">Usage and limits</Link>
+            <Link role="menuitem" href="/connections">Connections</Link>
             {account && <a role="menuitem" href={account.signedIn
               ? "/account/sign-out?return_to=%2Flisting-factory"
               : "/account/sign-in?return_to=%2Flisting-factory"}>{account.signedIn ? "Sign out" : "Sign in"}</a>}
@@ -282,7 +283,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15"/></svg>
         </button>
         <div className="factory-breadcrumb">
-          <a className="factory-crumb-root" href="/home">Workspace</a>
+          <Link className="factory-crumb-root" href="/home">Workspace</Link>
           <i aria-hidden="true">&#8250;</i>
           <b className="factory-top-batch">{title}</b>
         </div>
