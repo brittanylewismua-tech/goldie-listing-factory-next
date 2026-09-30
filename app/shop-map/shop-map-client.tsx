@@ -583,7 +583,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       {!shown.patterns?.patterns?.length&&shown.nextBuild&&<NextBuildAllocation plan={shown.nextBuild}/>}
       {!shown.patterns?.patterns?.length&&!!shown.opportunities?.length&&<OpportunityRecommendations rows={shown.opportunities} marketEvidence={shown.marketCorroboration??[]}/>} 
       {!insightsLoading||shown.catalogActions?<section className="shop-map-opportunities">
-        <div className="shop-map-section-head"><div><p className="mini-label">OPPORTUNITIES IN YOUR SHOP</p><h2>Things worth reviewing</h2></div></div>
+        <div className="shop-map-section-head"><div><h2>Review these</h2></div></div>
         <div className="shop-map-opportunity-stack">
           <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
           <DesignReach/>
