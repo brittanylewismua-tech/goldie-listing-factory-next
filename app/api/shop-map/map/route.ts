@@ -597,7 +597,6 @@ async function buildMap(request: Request) {
     worldId:world.worldId,label:world.label,activeListings:world.activeListings,
   })),{activeListingsTotal:shopTotals.activeListings});
 
-  const opportunities=opportunitiesFromAttention(attention);
   const nextBuild=buildPlan(attention,10);
 
   let marketCorroboration:ReturnType<typeof corroborateAttentionWithMarket>=[];
@@ -619,6 +618,8 @@ async function buildMap(request: Request) {
   }catch{
     /* Market Radar evidence is additive. My Shop must still work without it. */
   }
+
+  const opportunities=opportunitiesFromAttention(attention,marketCorroboration);
 
   return NextResponse.json({
     attention,
