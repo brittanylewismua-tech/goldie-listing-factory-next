@@ -1,5 +1,5 @@
 import type { AttentionMap } from "./shop-map-attention";
-import { productFamily } from "./product-type-utils";
+import { productFamily } from "./product-type-utils.ts";
 
 export type TrackedMarketListing = {
   listingId:number;
