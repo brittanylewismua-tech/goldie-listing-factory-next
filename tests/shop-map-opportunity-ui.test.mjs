@@ -67,3 +67,11 @@ test("Opportunity Engine can discover winning patterns without assuming a custom
   assert.doesNotMatch(client,/Common shop-wide wording is discounted/);
   assert.match(client,/It will not manufacture the rest of a top five/);
 });
+
+
+test("Opportunity Engine copy stays short",()=>{
+  assert.doesNotMatch(client,/This pattern appears in/);
+  assert.doesNotMatch(client,/It will not manufacture/);
+  assert.match(client,/Focus here next/);
+  assert.match(client,/Your top listings/);
+});

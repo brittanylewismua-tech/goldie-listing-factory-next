@@ -23,7 +23,7 @@ export type ShopOpportunity = {
   headline:string;explanation:string;action:string;mirrorBotPrompt:string|null;
 };
 const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";
-const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v3:";
+const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v4:";
 const cacheDay=()=>new Date().toLocaleDateString("en-CA");
 function readShopMapCache(key:string):ShopMap|null{
   if(typeof window==="undefined")return null;
@@ -192,10 +192,6 @@ function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}
 export function WinningPatterns({map}:{map:WinningPatternMap}){
   const lead=map.patterns[0];
   if(!lead)return null;
-  const gapCopy=(pattern:WinningPatternMap["patterns"][number])=>
-    pattern.gapPoints>0
-      ? `This pattern appears in ${pattern.customerPercent}% of customer response but only ${pattern.catalogPercent}% of your active catalog. That is a +${pattern.gapPoints} point opportunity gap.`
-      : `This pattern is earning about the share of customer response its catalog presence would predict.`;
   return <section className="shop-map-attention">
     <div className="shop-map-attention-head">
       <div><h2>Let&apos;s build out on what&apos;s already working... here&apos;s the analysis today...</h2></div>
@@ -204,9 +200,8 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
       <div className="shop-map-attention-lead-copy">
         <p className="mini-label">YOUR #1 PRIORITY</p>
         <div className="shop-map-attention-lead-title"><span>01</span><h3>{lead.label}</h3></div>
-        <strong>{lead.customerPercent}% of customer response includes this pattern</strong>
-        <p>{gapCopy(lead)}</p>
-        <p className="shop-map-attention-directive"><b>What to do:</b> Make this your first design-and-list priority. Build deeper around the idea customers are rewarding before spending the same energy on weaker patterns.</p>
+        <strong>{lead.customerPercent}% of customer response</strong>
+        <p className="shop-map-attention-directive"><b>Focus here next.</b></p>
       </div>
       <div className="shop-map-attention-compare" aria-label="Customer response compared with catalog presence">
         <div><span>Customer response</span><b>{lead.customerPercent}%</b><i><em style={{width:`${Math.max(2,lead.customerPercent)}%`}}/></i></div>
@@ -215,8 +210,7 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
       </div>
     </article>
     <div className="shop-map-attention-priorities">
-      <div className="shop-map-attention-priorities-head"><p className="mini-label">THEN FOLLOW THE EVIDENCE</p>
-        <h3>Your next priorities, in order</h3></div>
+      <div className="shop-map-attention-priorities-head"><h3>Your next priorities</h3></div>
       <div className="shop-map-attention-list">
         {map.patterns.slice(1).map(pattern=><article key={pattern.key}>
           <div className="shop-map-attention-row">
@@ -231,7 +225,7 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
           </div>
         </article>)}
       </div>
-      {map.patterns.length<5?<p className="shop-map-next-build-note">Goldie found {map.patterns.length} pattern{map.patterns.length===1?"":"s"} with enough evidence to defend. It will not manufacture the rest of a top five.</p>:null}
+
     </div>
     {!!map.listings.length&&<div className="shop-map-attention-listings">
       <div><h3>Your top listings</h3></div>

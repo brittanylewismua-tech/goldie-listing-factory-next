@@ -46,6 +46,14 @@ const stem=(word:string)=>word.endsWith("ies")?word.slice(0,-3)+"y"
   :word.endsWith("es")&&word.length>5?word.slice(0,-2)
   :word.endsWith("s")&&word.length>4&&!word.endsWith("ss")?word.slice(0,-1):word;
 const meaningful=(words:string[])=>words.some(word=>!STOP.has(word)&&!PRODUCT.has(stem(word))&&word.length>=3);
+const BAD_EDGE=new Set(["t","shirt","tee","tees","top","tops","gift","gifts","women","woman","girl","girls","men","man","unisex"]);
+const cleanCandidate=(words:string[])=>{
+  const held=words.filter(word=>!PRODUCT.has(stem(word)));
+  if(held.length<2||!meaningful(held))return null;
+  if(held.some(word=>word.length===1))return null;
+  if(BAD_EDGE.has(held[held.length-1])||BAD_EDGE.has(held[0]))return null;
+  return held.join(" ");
+};
 const titleCase=(text:string)=>text.split(" ").map(word=>word?word[0].toUpperCase()+word.slice(1):word).join(" ");
 
 function candidates(row:PatternListingInput){
@@ -55,14 +63,16 @@ function candidates(row:PatternListingInput){
     for(let at=0;at+size<=titleWords.length;at+=1){
       const words=titleWords.slice(at,at+size);
       if(!meaningful(words))continue;
-      const trimmed=words.filter(word=>!PRODUCT.has(stem(word)));
-      if(trimmed.length<2||!meaningful(trimmed))continue;
-      found.add(trimmed.join(" "));
+      const candidate=cleanCandidate(words);
+      if(candidate)found.add(candidate);
     }
   }
   for(const raw of row.tags){
-    const words=clean(raw).split(" ").filter(Boolean).filter(word=>!PRODUCT.has(stem(word)));
-    if(words.length>=2&&words.length<=5&&meaningful(words))found.add(words.join(" "));
+    const words=clean(raw).split(" ").filter(Boolean);
+    if(words.length>=2&&words.length<=5){
+      const candidate=cleanCandidate(words);
+      if(candidate)found.add(candidate);
+    }
   }
   const dimensions=dimensionsFor(row);
   const theme=clean(dimensions.messageTheme);
@@ -105,15 +115,17 @@ export function discoverWinningPatterns(rows:PatternListingInput[]):WinningPatte
   */
   const conceptKey=(phrase:string)=>[...new Set(clean(phrase).split(" ")
     .map(stem).filter(Boolean))].sort().join(" ");
-  const byConcept=new Map<string,{ids:Set<number>;variants:Map<string,number>}>();
+  const byConcept=new Map<string,{ids:Set<number>;variants:Map<string,number>;exactTagIds:Set<number>;exactTitleIds:Set<number>}>();
   const rowById=new Map(rows.map(row=>[row.listingId,row]));
   for(const row of rows){
     for(const phrase of candidates(row)){
       const key=conceptKey(phrase);
       if(!key)continue;
-      const held=byConcept.get(key)??{ids:new Set<number>(),variants:new Map<string,number>()};
+      const held=byConcept.get(key)??{ids:new Set<number>(),variants:new Map<string,number>(),exactTagIds:new Set<number>(),exactTitleIds:new Set<number>()};
       held.ids.add(row.listingId);
       held.variants.set(phrase,(held.variants.get(phrase)??0)+1);
+      if(row.tags.some(tag=>clean(tag)===phrase))held.exactTagIds.add(row.listingId);
+      if(clean(row.title).includes(phrase))held.exactTitleIds.add(row.listingId);
       byConcept.set(key,held);
     }
   }
@@ -146,6 +158,7 @@ export function discoverWinningPatterns(rows:PatternListingInput[]):WinningPatte
 
   const scored=[...byConcept.entries()].flatMap(([concept,group])=>{
     if(containsBackground(concept))return [];
+    if(group.exactTagIds.size<2&&group.exactTitleIds.size<2)return [];
     const ids=group.ids;
     const phrase=concept==="girl power"?"girl power":[...group.variants.entries()].sort((a,b)=>b[1]-a[1]
       || b[0].split(" ").length-a[0].split(" ").length
