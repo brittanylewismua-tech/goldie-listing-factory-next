@@ -234,8 +234,7 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
       {map.patterns.length<5?<p className="shop-map-next-build-note">Goldie found {map.patterns.length} pattern{map.patterns.length===1?"":"s"} with enough evidence to defend. It will not manufacture the rest of a top five.</p>:null}
     </div>
     {!!map.listings.length&&<div className="shop-map-attention-listings">
-      <div><p className="mini-label">STRONGEST LISTINGS</p><h3>The individual listings creating the customer signal</h3>
-        <p>These are ranked by the same customer-response basis used above.</p></div>
+      <div><h3>Your top listings</h3></div>
       <ol>{map.listings.map(listing=><li key={listing.listingId}>
         <span>0{listing.rank}</span>
         {listing.imageUrl?<img src={listing.imageUrl} alt="" width={52} height={52} loading="lazy"/>:<i aria-hidden="true"/>}
