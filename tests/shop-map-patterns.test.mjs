@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { discoverWinningPatterns } from "../app/shop-map-patterns.ts";
 
 const row=(id,title,tags,sales90)=>({
