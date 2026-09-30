@@ -27,14 +27,13 @@ test("tab reads do not block on live Etsy display refreshes",()=>{
   assert.match(route,/if\(!view&&\(selectedIds\.some/);
 });
 
-test("the Your Shop rail is an unboxed editorial text rail",()=>{
-  const final=css.slice(css.lastIndexOf("FINAL YOUR SHOP RAIL OVERRIDE"));
-  assert.match(final,/\.shop-map-tabs\{[\s\S]*width:100%!important;[\s\S]*border-bottom:1px solid/);
-  assert.match(final,/gap:30px!important/);
-  assert.match(final,/font-size:11px!important/);
-  assert.match(final,/text-transform:uppercase!important/);
-  assert.match(final,/button\[aria-current=page\]\{[\s\S]*background:transparent!important;[\s\S]*box-shadow:none!important;/);
-  assert.match(final,/button\[aria-current=page\]::before\{[\s\S]*background:#ee6fc0!important;/);
+test("the Your Shop section switcher is a centered pink-and-white tab control",()=>{
+  const final=css.slice(css.lastIndexOf("FINAL YOUR SHOP TABS"));
+  assert.match(final,/\.shop-map-tabs\{[\s\S]*justify-content:center!important;[\s\S]*width:max-content!important;/);
+  assert.match(final,/border:2px solid #000!important/);
+  assert.match(final,/border-radius:14px!important/);
+  assert.match(final,/button\{[\s\S]*background:#fff!important;[\s\S]*border:1\.5px solid #000!important;/);
+  assert.match(final,/button\[aria-current=page\]\{[\s\S]*background:#ee6fc0!important;[\s\S]*box-shadow:2px 2px 0 #000!important;/);
 });
 
 test("Overview puts pattern intelligence before review utilities",()=>{
