@@ -16,6 +16,11 @@ type Niche = {
   reviews: { recent: number; lifetimeHeld: number };
 };
 type Focus = { nicheId: string; label: string; headline: string; advice: string; reason: string };
+export type ShopOpportunity = {
+  worldId:string;label:string;rank:number;state:"underbuilt"|"aligned"|"overbuilt";
+  headline:string;explanation:string;action:string;mirrorBotPrompt:string|null;
+};
+const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";
 export type AttentionMap = {
   basis:"sales-90"|"sales-lifetime"|"favorites"|"none";
   basisLabel:string;
@@ -27,6 +32,7 @@ export type AttentionMap = {
 };
 type ShopMap = {
   attention?: AttentionMap;
+  opportunities?: ShopOpportunity[];
   catalogActions?: CatalogAction[];
   displayUnavailable?:boolean;
   topListings?: Array<{listingId:number;title:string;imageUrl:string;favorites:number|null;sales:number;revenueMinor:number}>;
@@ -219,6 +225,49 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
   </section>;
 }
 
+
+export function OpportunityRecommendations({rows}:{rows:ShopOpportunity[]}){
+  const [copied,setCopied]=useState("");
+  const visible=rows.filter(row=>row.state!=="aligned").slice(0,4);
+  if(!visible.length)return null;
+  const copyPrompt=async(row:ShopOpportunity)=>{
+    if(!row.mirrorBotPrompt)return;
+    try{
+      await navigator.clipboard.writeText(row.mirrorBotPrompt);
+      setCopied(row.worldId);
+      window.setTimeout(()=>setCopied(current=>current===row.worldId?"":current),1600);
+    }catch{}
+  };
+  return <section className="shop-map-recommendations">
+    <div className="shop-map-section-head">
+      <div><p className="mini-label">WHAT TO DO NEXT</p><h2>Turn the ranking into action</h2>
+        <p>These recommendations follow the customer response already happening in your shop.</p></div>
+    </div>
+    <div className="shop-map-recommendation-list">
+      {visible.map(row=><article key={row.worldId} className={`shop-map-recommendation ${row.state}`}>
+        <div className="shop-map-recommendation-rank">0{row.rank}</div>
+        <div className="shop-map-recommendation-copy">
+          <div className="shop-map-recommendation-label"><span>{row.label}</span>
+            <em>{row.state==="underbuilt"?"BUILD DEEPER":"PAUSE EXPANSION"}</em></div>
+          <h3>{row.headline}</h3>
+          <p>{row.explanation}</p>
+          <strong>{row.action}</strong>
+          {row.mirrorBotPrompt&&<details className="shop-map-mirrorbot">
+            <summary>Go deeper with MirrorBot</summary>
+            <div>
+              <p>{row.mirrorBotPrompt}</p>
+              <div className="shop-map-mirrorbot-actions">
+                <button type="button" onClick={()=>void copyPrompt(row)}>{copied===row.worldId?"Copied":"Copy prompt"}</button>
+                <a href={MIRRORBOT_URL} target="_blank" rel="noreferrer">Open MirrorBot ↗</a>
+              </div>
+            </div>
+          </details>}
+        </div>
+      </article>)}
+    </div>
+  </section>;
+}
+
 export default function ShopMapClient({ signedInEmail }: { signedInEmail?: string }) {
   const [map, setMap] = useState<ShopMap | null>(null);
   const [open, setOpen] = useState("");
@@ -408,6 +457,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       {shown.attention&&shown.attention.basis!=="none"&&<AttentionEngine attention={shown.attention}/>}
+      {!!shown.opportunities?.length&&<OpportunityRecommendations rows={shown.opportunities}/>}
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
           <h2>Top sellers</h2></div>
