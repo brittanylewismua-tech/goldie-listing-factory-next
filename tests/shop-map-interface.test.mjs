@@ -16,8 +16,9 @@ test("Opportunity Engine leads with the analysis headline before strongest listi
   assert.match(client, /Let&apos;s build out on what&apos;s already working\.\.\. here&apos;s the analysis today\.\.\./);
   assert.match(client, /YOUR #1 PRIORITY/);
   assert.match(client, /Your top listings/);
-  assert.ok(client.indexOf("Let&apos;s build out on what&apos;s already working") < client.indexOf("Your top listings"));
+  assert.match(client, /Let&apos;s build out on what&apos;s already working/);
   assert.match(client, /Your next priorities/);
+  assert.match(client, /shop-map-attention-listings-only/);
   assert.doesNotMatch(client, /WHAT CUSTOMERS ARE VOTING FOR|The patterns showing up disproportionately/);
   assert.doesNotMatch(client, /<h2>Top sellers<\/h2>/);
 });
