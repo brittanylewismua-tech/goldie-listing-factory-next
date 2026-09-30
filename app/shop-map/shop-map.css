@@ -1494,7 +1494,7 @@
 }
 #suite-workspace .shop-map-redesign .shop-map-mirrorbot-actions button,
 #suite-workspace .shop-map-redesign .shop-map-mirrorbot-actions a{
-  min-height:38px!important;padding:0 12px!important;border:1.5px solid #000!important;border-radius:8px!important;background:#fff!important;color:#000!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:11px!important;font-weight:850!important;text-decoration:none!important;cursor:pointer!important;
+  min-height:40px!important;padding:0 12px!important;border:1.5px solid #000!important;border-radius:8px!important;background:#fff!important;color:#000!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:11px!important;font-weight:850!important;text-decoration:none!important;cursor:pointer!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-mirrorbot-actions a{background:#000!important;color:#fff!important}
 @media(max-width:980px){
