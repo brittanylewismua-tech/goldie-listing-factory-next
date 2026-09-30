@@ -10,7 +10,7 @@ const nav=readFileSync("app/shop-map/shop-map-navigation.ts","utf8");
 test("Your Shop defaults to Overview and requests only the active tab",()=>{
   assert.match(nav,/return value==='money'\|\|value==='themes'\|\|value==='sold'\?value:'overview'/);
   assert.match(client,/useState<"overview" \| "themes" \| "sold" \| "money">\("overview"\)/);
-  assert.match(client,/new URLSearchParams\(\{view:tab\}\)/);
+  assert.match(client,/new URLSearchParams\(\{view:tab==="overview"\?"overview-insights":tab\}\)/);
 });
 
 test("Your Numbers, Sold Listings, and the first Overview render return before world building",()=>{
