@@ -75,3 +75,10 @@ test("Opportunity Engine copy stays short",()=>{
   assert.match(client,/Focus here next/);
   assert.match(client,/Your top listings/);
 });
+
+
+test("Opportunity Engine does not include the generic listing keyword checker",()=>{
+  assert.doesNotMatch(client,/ListingCheckPanel/);
+  assert.doesNotMatch(client,/Compare a listing with search results/);
+  assert.match(client,/Proven designs to expand/);
+});

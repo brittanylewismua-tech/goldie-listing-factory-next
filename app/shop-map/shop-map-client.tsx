@@ -1,6 +1,5 @@
 "use client";
 import {shopMapSection,type ShopMapSection} from "./shop-map-navigation";
-import ListingCheckPanel from "./listing-check-panel";
 import {browseOwnListings} from "@/app/market-listing-browser";
 import {designsOnOneProduct,familyLabel,shortLabel,type Reach,type ReachListing} from "@/app/design-reach";
 import type {CatalogAction} from "@/app/shop-map-actions";
@@ -144,7 +143,7 @@ function DesignReach(){
     .catch(()=>setRead(true))},[]);
   if(!read||!rows.length)return null;
   return <section className="cc-tool shop-map-reach">
-    <h2>Artwork selling on one recorded product type</h2><p>Review these before choosing a design to offer on another product.</p>
+    <h2>Proven designs to expand</h2>
 
     <ul>{rows.map(row=><li key={row.key}>
       {row.imageUrl?<img src={row.imageUrl} alt="" width={72} height={72} loading="lazy"/>:<span aria-hidden="true"/>}
@@ -587,7 +586,6 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         <div className="shop-map-opportunity-stack">
           <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
           <DesignReach/>
-          <ListingCheckPanel/>
         </div>
       </section>:null}
     </div>}
