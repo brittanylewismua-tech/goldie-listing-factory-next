@@ -196,13 +196,16 @@ async function buildMap(request: Request) {
     .bind(user.userId, shopId)
     .all<{ listing_id: number; quantity: number; price_minor: number;
       sold_at: number; refunded: number }>();
+  const yearStart=month&&/^\d{4}-\d{2}$/.test(month)
+    ? Math.floor(Date.parse(`${month.slice(0,4)}-01-01T00:00:00Z`)/1000)
+    : Math.floor(Date.UTC(new Date(now*1000).getUTCFullYear(),0,1)/1000);
   const performance = performanceFrom(
     (saleRows.results ?? []).map(row => ({
       listingId: Number(row.listing_id), quantity: Number(row.quantity),
       priceMinor: Number(row.price_minor), soldAt: Number(row.sold_at),
       refunded: Boolean(row.refunded) })),
     { now, monthFrom: window?.from ?? 0, monthTo: window?.to ?? 0,
-      yearFrom: Math.floor(Date.parse(`${month.slice(0, 4)}-01-01T00:00:00Z`) / 1_000) });
+      yearFrom: yearStart });
 
   /*
     HOME NEEDS THE SHOP'S SCORECARD, NOT THE WHOLE SHOP MAP.
@@ -482,6 +485,68 @@ async function buildMap(request: Request) {
   for (const row of ((labelRows.results ?? []) as Array<{ world_id: string; label: string; merged_into: string }>)) {
     if (row.merged_into) worlds = mergeWorlds(worlds, row.merged_into, row.world_id);
     else if (row.label) worlds = renameWorld(worlds, row.world_id, row.label);
+  }
+
+  /*
+    PRODUCT THEMES IS ITS OWN READ.
+
+    Themes needs classifications, listing state and sales. Reviews and monthly
+    finance are unrelated and must not be able to break or delay this tab.
+  */
+  if(view==="themes"){
+    const sales90=totalsForFast(90);
+    const activeIds=new Set(rows.filter(row=>String(row.state)==="active")
+      .map(row=>Number(row.listing_id)));
+    const rowById=new Map(rows.map(row=>[Number(row.listing_id),row] as const));
+    const unclassifiedIds=assignments.filter(row=>row.unclassified).map(row=>row.listingId);
+    const perfSum=(ids:number[],pick:(value:NonNullable<ReturnType<typeof performance.get>>)=>number)=>
+      ids.reduce((sum,id)=>{const value=performance.get(id);return sum+(value?pick(value):0)},0);
+    const themeListings=(ids:number[])=>ids.map(id=>{
+      const row=rowById.get(id);
+      return {
+        listingId:id,title:String(row?.title||"Listing details unavailable"),
+        imageUrl:String(row?.image_url||""),
+        favorites:row?.favorites===null||row?.favorites===undefined?null:Number(row.favorites),
+        sales:sales90.get(id)?.sales??0,state:String(row?.state||"unknown"),
+      };
+    }).sort((a,b)=>b.sales-a.sales||a.listingId-b.listingId);
+    const toTheme=(world:(typeof worlds)[number])=>{
+      const ids=world.listingIds;
+      return {
+        worldId:world.id,label:world.label,memberListings:themeListings(ids),
+        listings:ids.length,activeListings:ids.filter(id=>activeIds.has(id)).length,
+        period:"Last 90 days",
+        orders:ids.reduce((sum,id)=>sum+Number(performance.get(id)?.last90Orders??0),0),
+        units:ids.reduce((sum,id)=>sum+(sales90.get(id)?.sales??0),0),
+        lifetimeUnits:perfSum(ids,row=>row.lifetimeUnits),
+        revenueMinor:ids.reduce((sum,id)=>sum+(sales90.get(id)?.revenueMinor??0),0),
+        lifetimeOrders:perfSum(ids,row=>row.lifetimeOrders),
+        lifetimeRevenueMinor:perfSum(ids,row=>row.lifetimeRevenueMinor),
+        reviews:{recent:0,lifetimeHeld:0},
+        productFamilies:world.productFamilies??[],
+        evidence:world.evidence??"",
+      };
+    };
+    return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},
+      worldsPeriod:"Last 90 days",
+      worlds:worlds.filter(world=>world.listingIds.length>0).map(toTheme)
+        .sort((a,b)=>b.revenueMinor-a.revenueMinor||b.lifetimeRevenueMinor-a.lifetimeRevenueMinor),
+      unclassifiedCard:{
+        worldId:"unclassified",label:"Unclassified",memberListings:themeListings(unclassifiedIds),
+        listings:unclassifiedIds.length,
+        activeListings:unclassifiedIds.filter(id=>activeIds.has(id)).length,
+        period:"Last 90 days",
+        orders:unclassifiedIds.reduce((sum,id)=>sum+Number(performance.get(id)?.last90Orders??0),0),
+        units:unclassifiedIds.reduce((sum,id)=>sum+(sales90.get(id)?.sales??0),0),
+        lifetimeUnits:perfSum(unclassifiedIds,row=>row.lifetimeUnits),
+        revenueMinor:unclassifiedIds.reduce((sum,id)=>sum+(sales90.get(id)?.revenueMinor??0),0),
+        lifetimeOrders:perfSum(unclassifiedIds,row=>row.lifetimeOrders),
+        lifetimeRevenueMinor:perfSum(unclassifiedIds,row=>row.lifetimeRevenueMinor),
+        reviews:{recent:0,lifetimeHeld:0},productFamilies:[],
+        evidence:"These could not be matched to a theme.",
+      },
+    });
   }
 
   /*

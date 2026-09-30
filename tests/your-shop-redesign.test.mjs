@@ -150,3 +150,16 @@ test("mobile tab panels always have visible loading or empty content",()=>{
   assert.match(client,/shop-map-inline-state/);
   assert.match(css,/shop-map-tab-panel[\s\S]*visibility:visible!important/);
 });
+
+
+test("Product Themes returns before reviews and monthly finance",()=>{
+  const themes=route.indexOf('if(view==="themes")');
+  const reviews=route.indexOf("/* ------------------------------------------------------- review evidence */");
+  const finance=route.indexOf("/* --------------------------------------------------------- this month's money */");
+  assert.ok(themes>-1&&reviews>-1&&finance>-1&&themes<reviews&&themes<finance);
+});
+
+test("non-money tabs use a finite year start without requiring a shop month",()=>{
+  assert.match(route,/const yearStart=month&&\/\^\\d\{4\}-\\d\{2\}\$\//);
+  assert.match(route,/Date\.UTC\(new Date\(now\*1000\)\.getUTCFullYear\(\),0,1\)/);
+});
