@@ -1,4 +1,4 @@
-import {AttentionEngine,OpportunityRecommendations,type AttentionMap,type ShopOpportunity} from "@/app/shop-map/shop-map-client";
+import {AttentionEngine,NextBuildAllocation,OpportunityRecommendations,type AttentionMap,type NextBuildPlan,type ShopOpportunity} from "@/app/shop-map/shop-map-client";
 import "@/app/shop-map/shop-map.css";
 
 export const metadata={title:"My Shop visual review"};
@@ -21,6 +21,15 @@ const fixture:AttentionMap={
     {rank:4,worldId:"teacher",label:"Teacher",signal:8,attentionShare:.08,attentionPercent:8,activeListings:15,catalogShare:.30,catalogPercent:30,buildGap:-.22,buildGapPoints:-22,state:"overbuilt"},
     {rank:5,worldId:"mom",label:"Mom Life",signal:7,attentionShare:.07,attentionPercent:7,activeListings:11,catalogShare:.22,catalogPercent:22,buildGap:-.15,buildGapPoints:-15,state:"overbuilt"},
   ],
+};
+
+const nextBuild:NextBuildPlan={
+  requestedListings:10,allocatedListings:10,heldBackListings:0,
+  rows:[
+    {worldId:"dark",label:"Dark Romance",rank:1,currentActiveListings:6,attentionPercent:40,catalogPercent:12,recommendedListings:7},
+    {worldId:"western",label:"Western Readers",rank:3,currentActiveListings:5,attentionPercent:18,catalogPercent:10,recommendedListings:3},
+  ],
+  note:"This plan puts new catalog where customer response is ahead of current catalog coverage.",
 };
 
 const opportunities:ShopOpportunity[]=[
@@ -53,6 +62,7 @@ export default function MyShopVisualReview(){
         <button>Product themes</button><button>Sold listings</button>
       </nav>
       <AttentionEngine attention={fixture}/>
+      <NextBuildAllocation plan={nextBuild}/>
       <OpportunityRecommendations rows={opportunities}/>
     </div>
   </main>;
