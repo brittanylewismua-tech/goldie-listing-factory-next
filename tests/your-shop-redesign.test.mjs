@@ -63,7 +63,7 @@ test("Sold Listings uses one toolbar and image-led rows",()=>{
 
 test("Overview merges deeper opportunity intelligence without blocking the first render",()=>{
   assert.match(client,/tab==="overview"\?"overview-insights":tab/);
-  assert.match(client,/setMap\(current=>current\?\{\.\.\.current,\.\.\.detail\}:detail\)/);
+  assert.match(client,/setMap\(current=>\{const merged=current\?\{\.\.\.current,\.\.\.detail\}:detail/);
   assert.match(client,/Turn the ranking into action/);
 });
 
