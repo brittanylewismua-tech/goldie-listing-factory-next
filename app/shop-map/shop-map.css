@@ -1348,15 +1348,19 @@
 #suite-workspace .shop-map-redesign .shop-map-attention-lead{
   display:grid!important;
   grid-template-columns:minmax(0,1.25fr) minmax(290px,.75fr)!important;
-  gap:26px!important;
+  gap:30px!important;
   min-width:0!important;
-  padding:26px!important;
-  border:2px solid #000!important;
+  padding:30px!important;
+  border:3px solid #000!important;
   border-radius:14px!important;
   background:#ee6fc0!important;
-  box-shadow:5px 5px 0 #000!important;
+  box-shadow:8px 8px 0 #000!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-attention-lead-copy{min-width:0!important}
+#suite-workspace .shop-map-redesign .shop-map-attention-lead-copy>.mini-label{
+  width:max-content!important;margin-bottom:10px!important;padding:5px 8px!important;border-radius:999px!important;
+  background:#000!important;color:#fff!important;letter-spacing:.09em!important;
+}
 #suite-workspace .shop-map-redesign .shop-map-attention-lead-title{
   display:flex!important;align-items:center!important;gap:12px!important;margin:5px 0 7px!important;
 }
@@ -1366,7 +1370,7 @@
   font-size:11px!important;font-weight:950!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-attention-lead h3{
-  margin:0!important;font-size:32px!important;line-height:1!important;letter-spacing:-.045em!important;font-weight:950!important;
+  margin:0!important;font-size:36px!important;line-height:1!important;letter-spacing:-.045em!important;font-weight:950!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-attention-lead-copy>strong{
   display:block!important;margin:0 0 14px!important;font-size:14px!important;font-weight:900!important;
@@ -1429,12 +1433,22 @@
 #suite-workspace .shop-map-redesign .attention-state.underbuilt{background:#000!important;color:#fff!important}
 #suite-workspace .shop-map-redesign .attention-state.aligned{background:#f0edeb!important;color:#46433f!important}
 #suite-workspace .shop-map-redesign .attention-state.overbuilt{border:1px solid #000!important;background:#fff!important;color:#000!important}
-#suite-workspace .shop-map-redesign .shop-map-attention-track{
-  height:8px!important;margin:9px 0 0 46px!important;overflow:hidden!important;border-radius:999px!important;background:#eeeae7!important;
+#suite-workspace .shop-map-redesign .shop-map-attention-mini-compare{
+  display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important;margin:10px 0 0 46px!important;
 }
-#suite-workspace .shop-map-redesign .shop-map-attention-track i{
+#suite-workspace .shop-map-redesign .shop-map-attention-mini-compare>div{
+  display:grid!important;grid-template-columns:auto minmax(70px,1fr)!important;align-items:center!important;gap:8px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-attention-mini-compare small{
+  color:#6f6a66!important;font-size:8px!important;font-weight:800!important;text-transform:uppercase!important;letter-spacing:.05em!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-attention-mini-compare i{
+  display:block!important;height:7px!important;overflow:hidden!important;border-radius:999px!important;background:#eeeae7!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-attention-mini-compare i em{
   display:block!important;height:100%!important;border-radius:999px!important;background:#ee6fc0!important;
 }
+#suite-workspace .shop-map-redesign .shop-map-attention-mini-compare .catalog i em{background:#000!important}
 #suite-workspace .shop-map-redesign .shop-map-attention-listings{
   margin-top:26px!important;padding-top:22px!important;border-top:1px solid #d9d5d2!important;
 }
@@ -1608,7 +1622,9 @@
     grid-column:2!important;
     width:max-content!important;
   }
-  #suite-workspace .shop-map-redesign .shop-map-attention-track{
+  #suite-workspace .shop-map-redesign .shop-map-attention-mini-compare{
+    grid-template-columns:1fr!important;
+    gap:7px!important;
     margin-left:42px!important;
   }
   #suite-workspace .shop-map-redesign .shop-map-attention-listings ol{

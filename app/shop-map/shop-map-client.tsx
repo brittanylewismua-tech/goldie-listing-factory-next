@@ -224,8 +224,9 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
               ?`+${world.buildGapPoints} pt gap`:world.state==="overbuilt"
                 ?`${world.buildGapPoints} pt gap`:"in line"}</em>
           </div>
-          <div className="shop-map-attention-track" aria-label={`${world.attentionPercent}% of customer attention`}>
-            <i style={{width:`${Math.max(2,world.attentionPercent)}%`}}/>
+          <div className="shop-map-attention-mini-compare" aria-label={`${world.attentionPercent}% customer attention compared with ${world.catalogPercent}% catalog attention`}>
+            <div><small>Customer</small><i><em style={{width:`${Math.max(2,world.attentionPercent)}%`}}/></i></div>
+            <div className="catalog"><small>Catalog</small><i><em style={{width:`${Math.max(2,world.catalogPercent)}%`}}/></i></div>
           </div>
         </article>)}
       </div>

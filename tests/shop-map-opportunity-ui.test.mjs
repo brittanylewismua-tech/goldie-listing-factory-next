@@ -49,3 +49,11 @@ test("Opportunity Engine stays decision-first instead of repeating dashboard sta
   assert.doesNotMatch(client,/WHERE TO FOCUS/);
   assert.match(client,/What is working, where your attention belongs, and what to build out next\./);
 });
+
+
+test("ranked priorities keep customer and catalog attention visually comparable",()=>{
+  assert.match(client,/shop-map-attention-mini-compare/);
+  assert.match(client,/>Customer<\/small>/);
+  assert.match(client,/>Catalog<\/small>/);
+  assert.match(client,/world\.catalogPercent/);
+});
