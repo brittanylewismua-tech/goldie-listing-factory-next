@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 const client=readFileSync("app/shop-map/shop-map-client.tsx","utf8");
 const route=readFileSync("app/api/shop-map/map/route.ts","utf8");
 const css=readFileSync("app/shop-map/shop-map.css","utf8");
-const nav=readFileSync("app/shop-map/shop-map-navigation.ts","utf8");\nconst commandWorkspace=readFileSync("app/command-workspace.css","utf8");\nconst currentSuite=readFileSync("app/current-suite.css","utf8");
+const nav=readFileSync("app/shop-map/shop-map-navigation.ts","utf8");
+const commandWorkspace=readFileSync("app/command-workspace.css","utf8");
+const currentSuite=readFileSync("app/current-suite.css","utf8");
 
 test("Your Shop defaults to Overview and requests only the active tab",()=>{
   assert.match(nav,/return value==='money'\|\|value==='themes'\|\|value==='sold'\?value:'overview'/);
