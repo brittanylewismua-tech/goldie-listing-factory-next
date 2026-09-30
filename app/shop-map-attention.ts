@@ -56,6 +56,9 @@ export type AttentionMap = {
   basis: AttentionBasis;
   basisLabel: string;
   totalSignal: number;
+  activeListingsTotal: number;
+  unclassifiedSignal: number;
+  unclassifiedAttentionShare: number;
   listings: AttentionRank[];
   worlds: AttentionWorld[];
 };
@@ -123,6 +126,9 @@ export function buildAttentionMap(
   const rankedWorlds=worldDrafts
     .map((world,index)=>({...world,rank:index+1}));
 
+  const classifiedSignal=[...signalByWorld.values()].reduce((sum,value)=>sum+value,0);
+  const unclassifiedSignal=Math.max(0,totalSignal-classifiedSignal);
+
   return {
     basis,
     basisLabel:basis==="sales-90"?"units sold in the last 90 days"
@@ -130,6 +136,9 @@ export function buildAttentionMap(
       :basis==="favorites"?"favorites (used because this shop has no recorded sales yet)"
       :"not enough customer response yet",
     totalSignal,
+    activeListingsTotal:activeTotal,
+    unclassifiedSignal,
+    unclassifiedAttentionShare:share(unclassifiedSignal,totalSignal),
     listings:rankedListings,
     worlds:rankedWorlds,
   };
