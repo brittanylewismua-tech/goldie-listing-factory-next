@@ -149,20 +149,46 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
   const worlds=attention.worlds.filter(world=>world.signal>0).slice(0,5);
   const lead=worlds[0];
   const listings=attention.listings.slice(0,5);
+  const worldLabel=new Map(attention.worlds.map(world=>[world.worldId,world.label]));
   if(!lead&&!listings.length)return null;
   const gapCopy=(world:AttentionMap["worlds"][number])=>world.state==="underbuilt"
     ? `Customers are giving this theme ${world.attentionPercent}% of your strongest signal, while it is only ${world.catalogPercent}% of your active catalog. You have not built around the demand as deeply as customers have rewarded it.`
     :world.state==="overbuilt"
-      ? `This theme gets ${world.attentionPercent}% of customer attention but already occupies ${world.catalogPercent}% of your active catalog. Do not let the size of this category pull more of your time than the response it is earning.`
-      :`Customer attention and catalog attention are close here. Keep giving it its share without stealing time from stronger priorities.`;
+      ? `This theme gets ${world.attentionPercent}% of customer attention but already occupies ${world.catalogPercent}% of your active catalog. Do not give it more of your time than the response it is earning.`
+      :`Customer attention and catalog attention are close here. Keep giving it its share without taking time from stronger priorities.`;
+  const moveCopy=(world:AttentionMap["worlds"][number])=>world.state==="underbuilt"
+    ? "Give this the largest share of your next build cycle. Expand what is already working before you move on to weaker ideas."
+    :world.state==="overbuilt"
+      ? "Maintain what is already working here, but stop expanding this theme until customer response catches up."
+      : "Keep building here in proportion to the response it is earning.";
   return <section className="shop-map-attention">
     <div className="shop-map-attention-head">
       <div><p className="mini-label">ATTENTION MAP</p><h2>Put your attention where customers already put theirs.</h2>
-        <p>Goldie ranks what is working, then compares that demand with how much of your catalog you have actually built around it.</p></div>
+        <p>Goldie ranks what is working, then compares that response with how much of your catalog you have actually built around it.</p></div>
       <span>Based on {attention.basisLabel}</span>
     </div>
-    <div className="shop-map-attention-layout">
-      <div className="shop-map-attention-list"><p className="mini-label shop-map-next-priorities">NEXT PRIORITIES</p>
+
+    {lead&&<article className="shop-map-attention-lead">
+      <div className="shop-map-attention-lead-copy">
+        <p className="mini-label">YOUR #1 PRIORITY</p>
+        <div className="shop-map-attention-lead-title"><span>01</span><h3>{lead.label}</h3></div>
+        <strong>{lead.attentionPercent}% of customer attention</strong>
+        <p>{gapCopy(lead)}</p>
+        <p className="shop-map-attention-directive"><b>What to do:</b> {moveCopy(lead)}</p>
+      </div>
+      <div className="shop-map-attention-compare" aria-label="Customer attention compared with catalog attention">
+        <div><span>Customer attention</span><b>{lead.attentionPercent}%</b>
+          <i><em style={{width:`${Math.max(2,lead.attentionPercent)}%`}}/></i></div>
+        <div><span>Catalog attention</span><b>{lead.catalogPercent}%</b>
+          <i><em style={{width:`${Math.max(2,lead.catalogPercent)}%`}}/></i></div>
+        <small>{lead.buildGapPoints>0?`+${lead.buildGapPoints}`:lead.buildGapPoints} point build gap</small>
+      </div>
+    </article>}
+
+    {worlds.length>1&&<div className="shop-map-attention-priorities">
+      <div className="shop-map-attention-priorities-head"><p className="mini-label">THEN FOLLOW THE RANKING</p>
+        <h3>Your next priorities, in order</h3></div>
+      <div className="shop-map-attention-list">
         {worlds.slice(1).map(world=><article key={world.worldId}>
           <div className="shop-map-attention-row">
             <span className="shop-map-attention-rank">0{world.rank}</span>
@@ -177,22 +203,16 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
           </div>
         </article>)}
       </div>
-      {lead&&<aside className="shop-map-attention-lead">
-        <p className="mini-label">YOUR #1 PRIORITY</p>
-        <h3>{lead.label}</h3>
-        <strong>{lead.attentionPercent}% of customer attention</strong>
-        <p className="shop-map-attention-directive">Give this about <b>{lead.attentionPercent}% of your research and creative attention</b> right now.</p>
-        <p>{gapCopy(lead)}</p>
-        <div><span>Customer attention <b>{lead.attentionPercent}%</b></span>
-          <span>Catalog attention <b>{lead.catalogPercent}%</b></span></div>
-      </aside>}
-    </div>
+    </div>}
+
     {!!listings.length&&<div className="shop-map-attention-listings">
-      <div><p className="mini-label">STRONGEST LISTINGS</p><h3>Where that customer attention is coming from</h3></div>
+      <div><p className="mini-label">STRONGEST LISTINGS</p><h3>The listings creating that customer response</h3>
+        <p>These are the individual listings currently filling the ranking above.</p></div>
       <ol>{listings.map(listing=><li key={listing.listingId}>
         <span>0{listing.rank}</span>
         {listing.imageUrl?<img src={listing.imageUrl} alt="" width={52} height={52} loading="lazy"/>:<i aria-hidden="true"/>}
-        <b>{shortLabel(listing.title)}</b>
+        <div><b>{shortLabel(listing.title)}</b>
+          {listing.worldId&&worldLabel.get(listing.worldId)?<small>{worldLabel.get(listing.worldId)}</small>:null}</div>
         <strong>{listing.attentionPercent}%</strong>
       </li>)}</ol>
     </div>}
