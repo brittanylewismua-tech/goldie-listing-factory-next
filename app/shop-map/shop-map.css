@@ -1266,6 +1266,125 @@
 }
 
 
+/* NEXT BUILD CYCLE · turns attention into allocation. */
+#suite-workspace .shop-map-redesign .shop-map-next-build{
+  margin:0 0 36px!important;
+  padding:24px!important;
+  border:2px solid #000!important;
+  border-radius:16px!important;
+  background:#fdeef7!important;
+  box-shadow:5px 5px 0 #000!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build .shop-map-section-head{
+  align-items:flex-start!important;
+  margin-bottom:18px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build .shop-map-section-head h2{
+  margin:0 0 7px!important;
+  max-width:760px!important;
+  font-size:25px!important;
+  line-height:1.08!important;
+  letter-spacing:-.035em!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build .shop-map-section-head p:last-child{
+  margin:0!important;
+  max-width:700px!important;
+  color:#46433f!important;
+  font-size:13px!important;
+  line-height:1.5!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-total{
+  flex:0 0 auto!important;
+  padding:8px 11px!important;
+  border:1.5px solid #000!important;
+  border-radius:999px!important;
+  background:#fff!important;
+  font-size:10px!important;
+  font-weight:900!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:12px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-grid>article{
+  min-width:0!important;
+  min-height:118px!important;
+  display:grid!important;
+  grid-template-columns:58px minmax(0,1fr)!important;
+  gap:14px!important;
+  align-items:center!important;
+  padding:15px!important;
+  border:1.5px solid #000!important;
+  border-radius:12px!important;
+  background:#fff!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-grid>article.held-back{
+  border-style:dashed!important;
+  background:rgba(255,255,255,.6)!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-count{
+  display:grid!important;
+  place-items:center!important;
+  width:58px!important;
+  height:58px!important;
+  border:2px solid #000!important;
+  border-radius:12px!important;
+  background:#ee6fc0!important;
+  font-size:28px!important;
+  line-height:1!important;
+  font-weight:950!important;
+}
+#suite-workspace .shop-map-redesign .held-back .shop-map-next-build-count{
+  background:#fff!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-copy{
+  min-width:0!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-copy>div{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  margin-bottom:6px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-copy>div span{
+  color:#8a8580!important;
+  font-size:9px!important;
+  font-weight:900!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-copy b{
+  min-width:0!important;
+  overflow:hidden!important;
+  font-size:15px!important;
+  font-weight:900!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-copy p{
+  margin:0!important;
+  color:#46433f!important;
+  font-size:11px!important;
+  line-height:1.45!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-next-build-note{
+  margin:15px 0 0!important;
+  color:#6f6a66!important;
+  font-size:11px!important;
+  line-height:1.45!important;
+}
+@media(max-width:850px){
+  #suite-workspace .shop-map-redesign .shop-map-next-build-grid{
+    grid-template-columns:1fr!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-next-build .shop-map-section-head{
+    display:grid!important;
+    gap:12px!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-next-build-total{
+    width:max-content!important;
+  }
+}
+
 /* OPPORTUNITY ENGINE · attention follows evidence. */
 #suite-workspace .shop-map-redesign .shop-map-attention{
   margin:0 0 42px!important;
