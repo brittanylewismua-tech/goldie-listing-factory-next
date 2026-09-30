@@ -30,9 +30,27 @@ export type AttentionMap = {
     activeListings:number;catalogShare:number;catalogPercent:number;buildGap:number;buildGapPoints:number;
     state:"underbuilt"|"aligned"|"overbuilt"}>;
 };
+
+export type NextBuildPlan = {
+  requestedListings:number;
+  allocatedListings:number;
+  heldBackListings:number;
+  rows:Array<{
+    worldId:string;
+    label:string;
+    rank:number;
+    currentActiveListings:number;
+    attentionPercent:number;
+    catalogPercent:number;
+    recommendedListings:number;
+  }>;
+  note:string;
+};
+
 type ShopMap = {
   attention?: AttentionMap;
   opportunities?: ShopOpportunity[];
+  nextBuild?: NextBuildPlan;
   catalogActions?: CatalogAction[];
   displayUnavailable?:boolean;
   topListings?: Array<{listingId:number;title:string;imageUrl:string;favorites:number|null;sales:number;revenueMinor:number}>;
@@ -225,6 +243,33 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
   </section>;
 }
 
+
+export function NextBuildAllocation({plan}:{plan:NextBuildPlan}){
+  if(!plan.requestedListings)return null;
+  return <section className="shop-map-next-build">
+    <div className="shop-map-section-head">
+      <div><p className="mini-label">YOUR NEXT BUILD CYCLE</p>
+        <h2>If you make {plan.requestedListings} listings next, put them here.</h2>
+        <p>This allocation closes the biggest gaps between customer response and what you have already built.</p></div>
+      <span className="shop-map-next-build-total">{plan.allocatedListings}/{plan.requestedListings} placed</span>
+    </div>
+    {plan.rows.length?<div className="shop-map-next-build-grid">
+      {plan.rows.map(row=><article key={row.worldId}>
+        <div className="shop-map-next-build-count">{row.recommendedListings}</div>
+        <div className="shop-map-next-build-copy">
+          <div><span>0{row.rank}</span><b>{row.label}</b></div>
+          <p>{row.attentionPercent}% customer attention · {row.catalogPercent}% of active catalog</p>
+        </div>
+      </article>)}
+      {plan.heldBackListings>0?<article className="held-back">
+        <div className="shop-map-next-build-count">{plan.heldBackListings}</div>
+        <div className="shop-map-next-build-copy"><div><span>—</span><b>Hold back</b></div>
+          <p>Goldie does not have enough classified evidence to place {plan.heldBackListings===1?"this slot":"these slots"} confidently yet.</p></div>
+      </article>:null}
+    </div>:null}
+    <p className="shop-map-next-build-note">{plan.note}</p>
+  </section>;
+}
 
 export function OpportunityRecommendations({rows}:{rows:ShopOpportunity[]}){
   const [copied,setCopied]=useState("");
