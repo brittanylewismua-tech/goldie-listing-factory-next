@@ -1209,15 +1209,6 @@
   font-size:13px!important;
   line-height:1.5!important;
 }
-#suite-workspace .shop-map-redesign .shop-map-next-build-total{
-  flex:0 0 auto!important;
-  padding:8px 11px!important;
-  border:1.5px solid #000!important;
-  border-radius:999px!important;
-  background:#fff!important;
-  font-size:10px!important;
-  font-weight:900!important;
-}
 #suite-workspace .shop-map-redesign .shop-map-next-build-grid{
   display:grid!important;
   grid-template-columns:repeat(3,minmax(0,1fr))!important;
@@ -1235,10 +1226,6 @@
   border-radius:12px!important;
   background:#fff!important;
 }
-#suite-workspace .shop-map-redesign .shop-map-next-build-grid>article.held-back{
-  border-style:dashed!important;
-  background:rgba(255,255,255,.6)!important;
-}
 #suite-workspace .shop-map-redesign .shop-map-next-build-count{
   display:grid!important;
   place-items:center!important;
@@ -1250,9 +1237,6 @@
   font-size:28px!important;
   line-height:1!important;
   font-weight:950!important;
-}
-#suite-workspace .shop-map-redesign .held-back .shop-map-next-build-count{
-  background:#fff!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-next-build-copy{
   min-width:0!important;
@@ -1295,9 +1279,6 @@
   #suite-workspace .shop-map-redesign .shop-map-next-build .shop-map-section-head{
     display:grid!important;
     gap:12px!important;
-  }
-  #suite-workspace .shop-map-redesign .shop-map-next-build-total{
-    width:max-content!important;
   }
 }
 
