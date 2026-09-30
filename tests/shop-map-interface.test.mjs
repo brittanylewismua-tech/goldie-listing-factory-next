@@ -12,13 +12,13 @@ test("the redesigned map has four clear sections", () => {
   assert.match(client, /aria-current=\{tab === key \? 'page'/);
 });
 
-test("Opportunity Engine leads with winning patterns before strongest listings", () => {
-  assert.match(client, /WHAT CUSTOMERS ARE VOTING FOR/);
-  assert.match(client, /The patterns showing up disproportionately in what sells/);
+test("Opportunity Engine leads with the analysis headline before strongest listings", () => {
+  assert.match(client, /Let&apos;s build out on what&apos;s already working\.\.\. here&apos;s the analysis today\.\.\./);
   assert.match(client, /YOUR #1 PRIORITY/);
   assert.match(client, /STRONGEST LISTINGS/);
-  assert.ok(client.indexOf("WHAT CUSTOMERS ARE VOTING FOR") < client.indexOf("STRONGEST LISTINGS"));
+  assert.ok(client.indexOf("Let&apos;s build out on what&apos;s already working") < client.indexOf("STRONGEST LISTINGS"));
   assert.match(client, /THEN FOLLOW THE EVIDENCE/);
+  assert.doesNotMatch(client, /WHAT CUSTOMERS ARE VOTING FOR|The patterns showing up disproportionately/);
   assert.doesNotMatch(client, /<h2>Top sellers<\/h2>/);
 });
 
