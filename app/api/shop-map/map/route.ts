@@ -9,6 +9,7 @@ import { ensureListingTables, performanceFrom } from "@/app/shop-map-listings";
 import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-map-worlds";
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
 import { buildAttentionMap } from "@/app/shop-map-attention";
+import { opportunitiesFromAttention } from "@/app/shop-map-opportunities";
 import { guidance, standout, DIRECTION_BASIS, SHOP_MAP_MIN_RECENT_ORDERS } from "@/app/shop-map-guidance";
 import { collapseFacets } from "@/app/niche-classifier";
 import { rejectAsNiche } from "@/app/shop-map-identity";
@@ -592,8 +593,11 @@ async function buildMap(request: Request) {
     worldId:world.worldId,label:world.label,activeListings:world.activeListings,
   })),{activeListingsTotal:shopTotals.activeListings});
 
+  const opportunities=opportunitiesFromAttention(attention);
+
   return NextResponse.json({
     attention,
+    opportunities,
     catalogActions: catalogActions(rows, saleRows.results ?? [], now),
     shop: { shopId, shopName: shopRow.shop_name, imageUrl: shopRow.image_url, timezone },
     /* The money section is blocked until this shop's own timezone is set. */
