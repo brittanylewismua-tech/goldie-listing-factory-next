@@ -130,7 +130,7 @@ export function discoverWinningPatterns(rows:PatternListingInput[]):WinningPatte
   const background=[...byConcept.entries()].flatMap(([concept,group])=>{
     let activeCount=0;
     for(const id of group.ids)if(rowById.get(id)?.state==="active")activeCount+=1;
-    return activeCount/activeTotal>=.5
+    return activeCount/activeTotal>.5
       ? [{concept,tokens:new Set(concept.split(" ").filter(Boolean))}]
       : [];
   });
