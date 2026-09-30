@@ -17,12 +17,13 @@ test("ubiquitous shop-wide wording does not masquerade as a winning pattern",()=
     row(6,"Women Vote",["voting rights"],5),
     row(7,"Women Make History",["women history"],4),
     row(8,"History Made By Women",["women history"],3),
-    row(9,"Feminist Mama",["feminist mama"],3),
-    row(10,"Feminist Mom",["feminist mama"],2),
+    row(9,"Power Girl Feminist Mama",["feminist mama"],3),
+    row(10,"Power Girl Feminist Mom",["feminist mama"],2),
   ]);
   assert.equal(map.basis,"sales-90");
   assert.ok(map.patterns.length>=1&&map.patterns.length<=5);
-  assert.equal(map.patterns.some(pattern=>pattern.key==="girl power"),false);
+  assert.equal(map.patterns.some(pattern=>/girl power|power girl/i.test(pattern.key)),false);
+  assert.equal(map.patterns.some(pattern=>/girl power|power girl/i.test(pattern.label)),false);
   assert.ok(map.patterns[0].customerPercent>map.patterns[0].catalogPercent);
 });
 

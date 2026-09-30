@@ -95,16 +95,34 @@ export function discoverWinningPatterns(rows:PatternListingInput[]):WinningPatte
 
   if(!totalSignal)return {basis,basisLabel:"not enough customer response yet",totalSignal:0,patterns:[],listings:[]};
 
-  const byPhrase=new Map<string,Set<number>>();
+  /*
+    PHRASE ORDER IS NOT A NEW IDEA.
+
+    "girl power" and "power girl" used to become separate candidates. That let
+    a broad shop-wide phrase be correctly suppressed while a reordered variant
+    slipped back in as a fake opportunity. Patterns are therefore grouped by
+    their normalized token set before any lift math happens.
+  */
+  const conceptKey=(phrase:string)=>[...new Set(clean(phrase).split(" ")
+    .map(stem).filter(Boolean))].sort().join(" ");
+  const byConcept=new Map<string,{ids:Set<number>;variants:Map<string,number>}>();
   const rowById=new Map(rows.map(row=>[row.listingId,row]));
   for(const row of rows){
     for(const phrase of candidates(row)){
-      const set=byPhrase.get(phrase)??new Set<number>();
-      set.add(row.listingId);byPhrase.set(phrase,set);
+      const key=conceptKey(phrase);
+      if(!key)continue;
+      const held=byConcept.get(key)??{ids:new Set<number>(),variants:new Map<string,number>()};
+      held.ids.add(row.listingId);
+      held.variants.set(phrase,(held.variants.get(phrase)??0)+1);
+      byConcept.set(key,held);
     }
   }
 
-  const scored=[...byPhrase.entries()].flatMap(([phrase,ids])=>{
+  const scored=[...byConcept.entries()].flatMap(([concept,group])=>{
+    const ids=group.ids;
+    const phrase=[...group.variants.entries()].sort((a,b)=>b[1]-a[1]
+      || b[0].split(" ").length-a[0].split(" ").length
+      || a[0].localeCompare(b[0]))[0]?.[0]??concept;
     if(ids.size<2)return [];
     let signal=0,sellingListings=0,catalogListings=0;
     for(const id of ids){
@@ -130,9 +148,9 @@ export function discoverWinningPatterns(rows:PatternListingInput[]):WinningPatte
 
   const chosen:typeof scored=[];
   for(const candidate of scored){
-    const tokens=new Set(candidate.phrase.split(" ").map(stem));
+    const tokens=new Set(conceptKey(candidate.phrase).split(" ").filter(Boolean));
     const duplicate=chosen.some(existing=>{
-      const other=new Set(existing.phrase.split(" ").map(stem));
+      const other=new Set(conceptKey(existing.phrase).split(" ").filter(Boolean));
       const common=[...tokens].filter(token=>other.has(token)).length;
       const tokenOverlap=common/Math.max(1,Math.min(tokens.size,other.size));
       return overlap(candidate.ids,existing.ids)>=.75&&(tokenOverlap>=.5||candidate.phrase.includes(existing.phrase)||existing.phrase.includes(candidate.phrase));

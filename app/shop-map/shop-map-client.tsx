@@ -198,10 +198,7 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
       : `This pattern is earning about the share of customer response its catalog presence would predict.`;
   return <section className="shop-map-attention">
     <div className="shop-map-attention-head">
-      <div><p className="mini-label">WHAT CUSTOMERS ARE VOTING FOR</p>
-        <h2>The patterns showing up disproportionately in what sells.</h2>
-        <p>Goldie compares repeated concepts across titles and tags with the response those listings actually earn. Common shop-wide wording is discounted when it performs like background noise.</p></div>
-      <span>Based on {map.basisLabel}</span>
+      <div><h2>Let&apos;s build out on what&apos;s already working... here&apos;s the analysis today...</h2></div>
     </div>
     <article className="shop-map-attention-lead">
       <div className="shop-map-attention-lead-copy">
