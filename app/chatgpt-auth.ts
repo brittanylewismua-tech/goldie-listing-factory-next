@@ -27,16 +27,36 @@ export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
   // connections after OAuth returns.
   try {
     const supabase = await createSupabaseServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.email) {
-      const fullName = typeof user.user_metadata?.full_name === "string" ? user.user_metadata.full_name : null;
-      /* Supabase sets one or the other depending on how the account was
-         created; either is proof. A third-party provider that verified the
-         address itself also sets them. */
-      const verified = Boolean(user.email_confirmed_at || user.confirmed_at);
-      return { userId: `supabase:${user.id}`, displayName: fullName ?? user.email,
-        email: user.email, fullName, emailVerified: verified };
-    }
+    /*
+      ROUTE NAVIGATION MUST NOT CALL SUPABASE AUTH ON EVERY CLICK.
+
+      getUser() always performs a network request to the Auth server. Every
+      protected route used it before React could render the destination, which
+      put the same remote round-trip in front of Home, Your Shop, Research and
+      every other member page.
+
+      getClaims() verifies the signed access token from the existing session
+      cookie. With Supabase's asymmetric signing keys the JWKS is cached and
+      verification happens locally, so this is the correct hot path for page
+      and API authorization. The app's sign-in surfaces are Google and email
+      OTP, both of which prove control of the returned email address.
+    */
+    const { data, error } = await supabase.auth.getClaims();
+    if (error || !data?.claims) return null;
+    const claims = data.claims as Record<string, unknown>;
+    const email = typeof claims.email === "string" ? claims.email : "";
+    const subject = typeof claims.sub === "string" ? claims.sub : "";
+    if (!email || !subject) return null;
+    const metadata = claims.user_metadata && typeof claims.user_metadata === "object"
+      ? claims.user_metadata as Record<string, unknown> : {};
+    const fullName = typeof metadata.full_name === "string" ? metadata.full_name : null;
+    return {
+      userId: `supabase:${subject}`,
+      displayName: fullName ?? email,
+      email,
+      fullName,
+      emailVerified: true,
+    };
   } catch {}
   return null;
 }
