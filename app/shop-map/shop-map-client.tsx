@@ -22,7 +22,7 @@ export type ShopOpportunity = {
   headline:string;explanation:string;action:string;mirrorBotPrompt:string|null;
 };
 const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";
-const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v4:";
+const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v5:";
 const cacheDay=()=>new Date().toLocaleDateString("en-CA");
 function readShopMapCache(key:string):ShopMap|null{
   if(typeof window==="undefined")return null;
@@ -403,6 +403,7 @@ export function OpportunityRecommendations(
 
 export default function ShopMapClient({ signedInEmail }: { signedInEmail?: string }) {
   const [map, setMap] = useState<ShopMap | null>(null);
+  const [mapKey,setMapKey]=useState("");
   const [open, setOpen] = useState("");
   const [themeQuery,setThemeQuery]=useState("");
   const [themeState,setThemeState]=useState("all");
@@ -417,7 +418,14 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
   const [soldDays,setSoldDays]=useState(90);
   const [selectedMonth,setSelectedMonth]=useState("");
+  const viewKey=()=>{
+    const params=new URLSearchParams({view:tab==="overview"?"overview-insights":tab});
+    if(tab==="sold")params.set("days",String(soldDays));
+    if(tab==="money"&&selectedMonth)params.set("month",selectedMonth);
+    return params.toString();
+  };
   const selectTab=(next:ShopMapSection)=>{
+    setFailed(false);
     setTab(next);
     const url=new URL(window.location.href);url.searchParams.set("tab",next);
     window.history.replaceState(window.history.state,"",url);
@@ -435,9 +443,13 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     if(tab==="money"&&selectedMonth)params.set("month",selectedMonth);
     const cacheKey=params.toString();
     const cached=readShopMapCache(cacheKey);
+    setMapKey(cacheKey);
     if(cached){
       setMap(cached);setLastGood(cached);setFailed(false);setRefreshing(false);
-    }else setRefreshing(true);
+    }else{
+      setMap(null);
+      setRefreshing(true);
+    }
     const next = await fetch(`/api/shop-map/map?${params.toString()}`)
       .then(response => response.ok ? response.json() as Promise<ShopMap> : null)
       .catch(() => null);
@@ -445,6 +457,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setRefreshing(false);
     if (!next || next.error) { setFailed(true); return; }
     setFailed(false);
+    setMapKey(cacheKey);
     setMap(next);
     setLastGood(next);
     writeShopMapCache(cacheKey,next);
@@ -544,12 +557,24 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setBusy("");
   };
 
-  const shown = map ?? lastGood;
+  const currentKey=viewKey();
+  const shown = mapKey===currentKey ? map : null;
 
   if (!shown && failed)
-    return <main className="shop-map"><p className="shop-map-state">
-      Your shop data could not load. Try again.
-    </p></main>;
+    return <main className="shop-map shop-map-redesign">
+      <header className="shop-map-head current-page-heading"><div>
+        <p className="current-kicker">YOUR SHOP</p><h1>Your shop</h1>
+      </div></header>
+      <nav className="shop-map-tabs" aria-label="Your shop sections">
+        {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
+          .map(([key,label])=><button key={key} type="button" aria-current={tab===key?'page':undefined}
+            onClick={()=>selectTab(key)}>{label}</button>)}
+      </nav>
+      <section className="shop-map-state" role="alert">
+        <p>This section could not load.</p>
+        <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button>
+      </section>
+    </main>;
   if (!shown)
     return <main className="shop-map shop-map-redesign">
       <header className="shop-map-head current-page-heading"><div>
@@ -574,6 +599,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     </main>;
 
   const month = shown.thisMonth;
+  const sold = shown.soldListings?.listings ?? [];
   const themes = [...(shown.worlds ?? [])];
   const unclassifiedTheme = shown.unclassifiedCard?.listings ? shown.unclassifiedCard : null;
   const niches = unclassifiedTheme ? [...themes,unclassifiedTheme] : themes;
@@ -628,7 +654,9 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       <div className="shop-map-sold-toolbar"><label>Period<select value={soldDays} onChange={event=>setSoldDays(Number(event.target.value))}><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option><option value={365}>Last 365 days</option></select></label><label className="search">Search<input type="search" value={soldQuery} onChange={e=>setSoldQuery(e.target.value)} placeholder="Find a listing"/></label><label>Sort<select value={soldSort} onChange={e=>setSoldSort(e.target.value as "sales"|"revenue")}><option value="sales">Most units sold</option><option value="revenue">Highest revenue</option></select></label></div>
       {!refreshing&&browseOwnListings(sold,soldSort,soldQuery).length!==sold.length
         &&<p role="status">{browseOwnListings(sold,soldSort,soldQuery).length} of {sold.length} sold listings match your search</p>}
-      {refreshing?<p role="status">Loading sold listings for this period…</p>:<div className="shop-map-sold-grid shop-map-sold-table" aria-label="Listings">
+      {refreshing?<p role="status">Loading sold listings for this period…</p>
+        :!sold.length?<p className="shop-map-state">No sold listings in this period.</p>
+        :<div className="shop-map-sold-grid shop-map-sold-table" aria-label="Listings">
         {browseOwnListings(sold,soldSort,soldQuery).map(listing => <article key={listing.listingId}>{listing.imageUrl ? <img src={listing.imageUrl} alt="" width={84} height={84} loading="lazy"/> : <i>G</i>}
           <div><strong><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{shortLabel(listing.title)}</a></strong><small>{listing.sales} unit{listing.sales===1?"":"s"} sold</small></div><b>{money(listing.revenueMinor)}</b></article>)}</div>}
     </section>}

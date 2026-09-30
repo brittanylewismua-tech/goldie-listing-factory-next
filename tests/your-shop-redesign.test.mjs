@@ -119,3 +119,20 @@ test("mobile Your Shop tabs fill the width without horizontal scrolling",()=>{
   assert.match(final,/overflow:visible!important/);
   assert.match(final,/button\{[\s\S]*width:100%!important;[\s\S]*white-space:normal!important/);
 });
+
+
+test("each Your Shop tab renders only its own response shape",()=>{
+  assert.match(client,/const \[mapKey,setMapKey\]=useState\(""/);
+  assert.match(client,/const currentKey=viewKey\(\)/);
+  assert.match(client,/const shown = mapKey===currentKey \? map : null/);
+  assert.match(client,/setMap\(null\)/);
+});
+
+test("Sold Listings cannot crash on an undefined sold collection",()=>{
+  assert.match(client,/const sold = shown\.soldListings\?\.listings \?\? \[\]/);
+  assert.match(client,/No sold listings in this period/);
+});
+
+test("artwork-led Opportunity Engine invalidates older cached responses",()=>{
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v5:"/);
+});
