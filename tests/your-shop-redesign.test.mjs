@@ -93,11 +93,11 @@ test("Opportunity Engine uses a dedicated core request before optional support",
 });
 
 
-test("Your Shop reuses same-day cached data while refreshing in the background",()=>{
+test("Your Shop reuses same-day cached data without leaking data between tabs",()=>{
   assert.match(client,/SHOP_MAP_CACHE_PREFIX/);
   assert.match(client,/sessionStorage\.getItem/);
   assert.match(client,/sessionStorage\.setItem/);
-  assert.match(client,/const shown = map \?\? lastGood/);
+  assert.match(client,/const shown = mapKey===currentKey \? map : null/);
   assert.match(client,/const cached=readShopMapCache\(cacheKey\)/);
 });
 
@@ -109,7 +109,7 @@ test("global suite styles do not override the Your Shop tab control",()=>{
 });
 
 test("Opportunity Engine cache version changes when ranking semantics change",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v4:"/);
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v5:"/);
 });
 
 
