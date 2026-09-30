@@ -4,6 +4,7 @@ import ListingCheckPanel from "./listing-check-panel";
 import {browseOwnListings} from "@/app/market-listing-browser";
 import {designsOnOneProduct,familyLabel,shortLabel,type Reach,type ReachListing} from "@/app/design-reach";
 import type {CatalogAction} from "@/app/shop-map-actions";
+import type {MarketCorroboration} from "@/app/shop-map-market-corroboration";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
@@ -51,6 +52,7 @@ type ShopMap = {
   attention?: AttentionMap;
   opportunities?: ShopOpportunity[];
   nextBuild?: NextBuildPlan;
+  marketCorroboration?: MarketCorroboration[];
   catalogActions?: CatalogAction[];
   displayUnavailable?:boolean;
   topListings?: Array<{listingId:number;title:string;imageUrl:string;favorites:number|null;sales:number;revenueMinor:number}>;
@@ -271,9 +273,12 @@ export function NextBuildAllocation({plan}:{plan:NextBuildPlan}){
   </section>;
 }
 
-export function OpportunityRecommendations({rows}:{rows:ShopOpportunity[]}){
+export function OpportunityRecommendations(
+  {rows,marketEvidence=[]}:{rows:ShopOpportunity[];marketEvidence?:MarketCorroboration[]},
+){
   const [copied,setCopied]=useState("");
   const visible=rows.filter(row=>row.state!=="aligned").slice(0,4);
+  const marketByWorld=new Map(marketEvidence.map(row=>[row.worldId,row]));
   if(!visible.length)return null;
   const copyPrompt=async(row:ShopOpportunity)=>{
     if(!row.mirrorBotPrompt)return;
@@ -289,7 +294,7 @@ export function OpportunityRecommendations({rows}:{rows:ShopOpportunity[]}){
         <p>These recommendations follow the customer response already happening in your shop.</p></div>
     </div>
     <div className="shop-map-recommendation-list">
-      {visible.map(row=><article key={row.worldId} className={`shop-map-recommendation ${row.state}`}>
+      {visible.map(row=>{const proof=row.state==="underbuilt"?marketByWorld.get(row.worldId):undefined;return <article key={row.worldId} className={`shop-map-recommendation ${row.state}`}>
         <div className="shop-map-recommendation-rank">0{row.rank}</div>
         <div className="shop-map-recommendation-copy">
           <div className="shop-map-recommendation-label"><span>{row.label}</span>
@@ -297,6 +302,16 @@ export function OpportunityRecommendations({rows}:{rows:ShopOpportunity[]}){
           <h3>{row.headline}</h3>
           <p>{row.explanation}</p>
           <strong>{row.action}</strong>
+          {proof&&<div className="shop-map-market-proof">
+            <div><span>MARKET RADAR SUPPORT</span>
+              <a href={`/market-watch?tab=niches&keyword=${encodeURIComponent(proof.phrase)}`}>Open tracked keyword →</a></div>
+            <p>{proof.sellingListings>0
+              ? `Across “${proof.phrase},” ${proof.sellingListings} tracked listings recorded ${proof.observedSold30} observed units sold in the last 30 days.`
+              : `Across “${proof.phrase},” ${proof.moving} tracked listings are showing selling movement.`}</p>
+            {!!proof.missingProductFamilies.length&&<p><b>Product expansion to look at:</b>{" "}
+              {proof.missingProductFamilies.slice(0,2).map(item=>familyLabel(item.family)).join(" and ")}
+              {" "}are showing observed sales in this tracked market but are not currently represented in your {row.label} catalog.</p>}
+          </div>}
           {row.mirrorBotPrompt&&<details className="shop-map-mirrorbot">
             <summary>Go deeper with MirrorBot</summary>
             <div>
@@ -308,7 +323,7 @@ export function OpportunityRecommendations({rows}:{rows:ShopOpportunity[]}){
             </div>
           </details>}
         </div>
-      </article>)}
+      </article>})}
     </div>
   </section>;
 }
