@@ -502,6 +502,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       {shown.attention&&shown.attention.basis!=="none"&&<AttentionEngine attention={shown.attention}/>}
+      {shown.nextBuild&&<NextBuildAllocation plan={shown.nextBuild}/>}
       {!!shown.opportunities?.length&&<OpportunityRecommendations rows={shown.opportunities}/>}
       <section className="shop-map-leaders">
         <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
