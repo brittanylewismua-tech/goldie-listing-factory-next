@@ -38,3 +38,17 @@ test("favorites are named honestly when a pre-sale shop uses favorites as its si
   assert.match(rows[0].explanation,/favorites/);
   assert.match(rows[0].mirrorBotPrompt,/favorites/);
 });
+
+
+test("Market Radar context is carried into the MirrorBot handoff",()=>{
+  const market=[{
+    worldId:"dark",keywordKey:"dark+romance",phrase:"dark romance shirt",
+    moving:9,repeated:4,shops:7,sellingListings:8,observedSold30:23,
+    productFamilies:[],missingProductFamilies:[],listingIds:[101,102],
+  }];
+  const dark=opportunitiesFromAttention(base,market)[0];
+  assert.match(dark.mirrorBotPrompt,/Market Radar/);
+  assert.match(dark.mirrorBotPrompt,/dark romance shirt/);
+  assert.match(dark.mirrorBotPrompt,/8 listings/);
+  assert.match(dark.mirrorBotPrompt,/23 observed units/);
+});
