@@ -23,3 +23,12 @@ test("overbuilt themes do not receive a MirrorBot research prompt in the opportu
   assert.match(source,/state==="overbuilt"/);
   assert.match(source,/mirrorBotPrompt:null/);
 });
+
+
+test("My Shop turns the attention model into a concrete next-build allocation",()=>{
+  assert.match(client,/YOUR NEXT BUILD CYCLE/);
+  assert.match(client,/If you make \{plan\.requestedListings\} listings next/);
+  assert.match(client,/shown\.nextBuild/);
+  assert.match(client,/NextBuildAllocation/);
+  assert.match(client,/recommendedListings/);
+});
