@@ -1092,18 +1092,27 @@
 }
 @media(max-width:650px){
   #suite-workspace .shop-map-redesign .shop-map-tabs{
-    justify-content:flex-start!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    justify-content:stretch!important;
     width:100%!important;
     max-width:100%!important;
-    margin:0 0 32px!important;
+    margin:0 0 28px!important;
     padding:6px!important;
     gap:6px!important;
+    overflow:visible!important;
     border-radius:12px!important;
+    box-sizing:border-box!important;
   }
   #suite-workspace .shop-map-redesign .shop-map-tabs button{
-    min-height:40px!important;
-    padding:0 13px!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:42px!important;
+    padding:8px 10px!important;
     border-radius:8px!important;
+    white-space:normal!important;
+    text-align:center!important;
+    line-height:1.2!important;
   }
 }
 
@@ -1602,4 +1611,19 @@
   #suite-workspace .shop-map-redesign .shop-map-recommendation{grid-template-columns:34px minmax(0,1fr)!important;padding:14px!important;gap:11px!important}
   #suite-workspace .shop-map-redesign .shop-map-recommendation-rank{width:32px!important;height:32px!important}
   #suite-workspace .shop-map-redesign .shop-map-recommendation-label{align-items:flex-start!important}
+}
+
+
+/* MOBILE YOUR SHOP · no blank panel, no clipped section navigation. */
+@media(max-width:650px){
+  #suite-workspace .shop-map-redesign,
+  #suite-workspace .shop-map-redesign .shop-map-tab-panel{
+    width:100%!important;
+    min-width:0!important;
+    overflow:visible!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-attention-listings-only{
+    display:block!important;
+    margin:0 0 28px!important;
+  }
 }

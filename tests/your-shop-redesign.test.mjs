@@ -111,3 +111,11 @@ test("global suite styles do not override the Your Shop tab control",()=>{
 test("Opportunity Engine cache version changes when ranking semantics change",()=>{
   assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v4:"/);
 });
+
+
+test("mobile Your Shop tabs fill the width without horizontal scrolling",()=>{
+  const final=css.slice(css.lastIndexOf("FINAL YOUR SHOP TABS"));
+  assert.match(final,/@media\(max-width:650px\)[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
+  assert.match(final,/overflow:visible!important/);
+  assert.match(final,/button\{[\s\S]*width:100%!important;[\s\S]*white-space:normal!important/);
+});

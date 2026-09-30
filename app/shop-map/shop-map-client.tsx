@@ -190,6 +190,17 @@ function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}
 
 export function WinningPatterns({map}:{map:WinningPatternMap}){
   const lead=map.patterns[0];
+  if(!lead&&map.listings.length)return <section className="shop-map-attention shop-map-attention-listings-only">
+    <div className="shop-map-attention-listings">
+      <div><h3>Your top listings</h3></div>
+      <ol>{map.listings.map(listing=><li key={listing.listingId}>
+        <span>0{listing.rank}</span>
+        {listing.imageUrl?<img src={listing.imageUrl} alt="" width={52} height={52} loading="lazy"/>:<i aria-hidden="true"/>}
+        <div><b>{shortLabel(listing.title)}</b><small>{listing.signal} {map.basis==="favorites"?"favorites":"units"}</small></div>
+        <strong>{listing.attentionPercent}%</strong>
+      </li>)}</ol>
+    </div>
+  </section>;
   if(!lead)return null;
   return <section className="shop-map-attention">
     <div className="shop-map-attention-head">
@@ -578,7 +589,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     </nav>
 
     {tab === "overview" && <div className="shop-map-tab-panel">
-      {shown.patterns?.patterns?.length?<WinningPatterns map={shown.patterns}/>:shown.attention&&shown.attention.basis!=="none"?<AttentionEngine attention={shown.attention}/>:null}
+      {shown.patterns?<WinningPatterns map={shown.patterns}/>:shown.attention&&shown.attention.basis!=="none"?<AttentionEngine attention={shown.attention}/>:null}
       {!shown.patterns?.patterns?.length&&shown.nextBuild&&<NextBuildAllocation plan={shown.nextBuild}/>}
       {!shown.patterns?.patterns?.length&&!!shown.opportunities?.length&&<OpportunityRecommendations rows={shown.opportunities} marketEvidence={shown.marketCorroboration??[]}/>} 
       {!insightsLoading||shown.catalogActions?<section className="shop-map-opportunities">

@@ -82,3 +82,10 @@ test("Opportunity Engine does not include the generic listing keyword checker",(
   assert.doesNotMatch(client,/Compare a listing with search results/);
   assert.match(client,/Proven designs to expand/);
 });
+
+
+test("top listings still render when visual priority evidence is incomplete",()=>{
+  assert.match(client,/if\(!lead&&map\.listings\.length\)/);
+  assert.match(client,/shop-map-attention-listings-only/);
+  assert.match(client,/shown\.patterns\?<WinningPatterns map=\{shown\.patterns\}/);
+});
