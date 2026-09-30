@@ -1,4 +1,5 @@
 import {AttentionEngine,NextBuildAllocation,OpportunityRecommendations,type AttentionMap,type NextBuildPlan,type ShopOpportunity} from "@/app/shop-map/shop-map-client";
+import type {MarketCorroboration} from "@/app/shop-map-market-corroboration";
 import "@/app/shop-map/shop-map.css";
 
 export const metadata={title:"My Shop visual review"};
@@ -32,6 +33,21 @@ const nextBuild:NextBuildPlan={
   note:"This plan puts new catalog where customer response is ahead of current catalog coverage.",
 };
 
+const marketEvidence:MarketCorroboration[]=[
+  {worldId:"dark",keywordKey:"dark+romance",phrase:"dark romance shirt",
+    moving:9,repeated:4,shops:7,sellingListings:8,observedSold30:23,
+    productFamilies:[
+      {family:"mug",listings:3,sold30:10},
+      {family:"tee",listings:3,sold30:8},
+      {family:"crewneck",listings:2,sold30:5},
+    ],
+    missingProductFamilies:[
+      {family:"mug",listings:3,sold30:10},
+      {family:"tee",listings:3,sold30:8},
+    ],
+    listingIds:[101,102,103,104,105,106]},
+];
+
 const opportunities:ShopOpportunity[]=[
   {worldId:"dark",label:"Dark Romance",rank:1,state:"underbuilt",
     headline:"Dark Romance deserves more of your next build cycle.",
@@ -63,7 +79,7 @@ export default function MyShopVisualReview(){
       </nav>
       <AttentionEngine attention={fixture}/>
       <NextBuildAllocation plan={nextBuild}/>
-      <OpportunityRecommendations rows={opportunities}/>
+      <OpportunityRecommendations rows={opportunities} marketEvidence={marketEvidence}/>
     </div>
   </main>;
 }
