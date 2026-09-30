@@ -1,4 +1,4 @@
-import { dimensionsFor } from "./shop-map-identity";
+import { dimensionsFor } from "./shop-map-identity.ts";
 
 export type PatternListingInput = {
   listingId:number;

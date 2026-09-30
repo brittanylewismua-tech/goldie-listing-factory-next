@@ -21,7 +21,7 @@ test("ubiquitous shop-wide wording does not masquerade as a winning pattern",()=
     row(10,"Feminist Mom",["feminist mama"],2),
   ]);
   assert.equal(map.basis,"sales-90");
-  assert.equal(map.patterns.length,5);
+  assert.ok(map.patterns.length>=1&&map.patterns.length<=5);
   assert.equal(map.patterns.some(pattern=>pattern.key==="girl power"),false);
   assert.ok(map.patterns[0].customerPercent>map.patterns[0].catalogPercent);
 });

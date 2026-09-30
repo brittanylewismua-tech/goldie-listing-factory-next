@@ -37,11 +37,11 @@ test("the Your Shop rail is an unboxed editorial text rail",()=>{
   assert.match(final,/button\[aria-current=page\]::before\{[\s\S]*background:#ee6fc0!important;/);
 });
 
-test("Overview puts decision intelligence before review utilities",()=>{
+test("Overview puts pattern intelligence before review utilities",()=>{
   const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
-  assert.ok(overview.indexOf("AttentionEngine")<overview.indexOf("shop-map-opportunities"));
-  assert.match(overview,/NextBuildAllocation/);
-  assert.match(overview,/OpportunityRecommendations/);
+  assert.ok(overview.indexOf("WinningPatterns")<overview.indexOf("shop-map-opportunities"));
+  assert.match(overview,/shown\.patterns/);
+  assert.match(overview,/AttentionEngine/);
   assert.doesNotMatch(overview,/shop-map-focus-panel|Revenue · 90 days|Units sold · 90 days/);
 });
 
@@ -84,7 +84,7 @@ test("Monthly Numbers exposes the full operating breakdown",()=>{
 test("Opportunity Engine uses a dedicated core request before optional support",()=>{
   assert.match(client,/tab==="overview"\?"overview-insights":tab/);
   assert.match(client,/view=overview-support/);
-  const core=route.indexOf('if(view==="overview-insights"||view==="overview-support")');
+  const core=route.indexOf('if(view==="overview-insights")');
   const reviews=route.indexOf("/* ------------------------------------------------------- review evidence */");
   const finance=route.indexOf("/* --------------------------------------------------------- this month's money */");
   assert.ok(core>-1&&reviews>-1&&finance>-1&&core<reviews&&core<finance,

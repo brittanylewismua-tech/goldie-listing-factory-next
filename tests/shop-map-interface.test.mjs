@@ -12,13 +12,13 @@ test("the redesigned map has four clear sections", () => {
   assert.match(client, /aria-current=\{tab === key \? 'page'/);
 });
 
-test("Opportunity Engine leads with the attention map before sold listings", () => {
-  assert.match(client, /ATTENTION MAP/);
-  assert.match(client, /Put your attention where customers already put theirs/);
+test("Opportunity Engine leads with winning patterns before strongest listings", () => {
+  assert.match(client, /WHAT CUSTOMERS ARE VOTING FOR/);
+  assert.match(client, /The patterns showing up disproportionately in what sells/);
   assert.match(client, /YOUR #1 PRIORITY/);
   assert.match(client, /STRONGEST LISTINGS/);
-  assert.ok(client.indexOf("ATTENTION MAP") < client.indexOf("STRONGEST LISTINGS"));
-  assert.match(client, /THEN FOLLOW THE RANKING/);
+  assert.ok(client.indexOf("WHAT CUSTOMERS ARE VOTING FOR") < client.indexOf("STRONGEST LISTINGS"));
+  assert.match(client, /THEN FOLLOW THE EVIDENCE/);
   assert.doesNotMatch(client, /<h2>Top sellers<\/h2>/);
 });
 
