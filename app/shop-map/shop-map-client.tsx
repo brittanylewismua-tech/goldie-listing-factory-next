@@ -500,13 +500,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const unclassifiedTheme = shown.unclassifiedCard?.listings ? shown.unclassifiedCard : null;
   const niches = unclassifiedTheme ? [...themes,unclassifiedTheme] : themes;
   const recentTotal = niches.reduce((sum, niche) => sum + niche.revenueMinor, 0);
-  const noSalesYet = (shown.shopTotals?.orders ?? 0) === 0;
-
-  const sold = shown.soldListings?.listings ?? [];
-  const units90=sold.reduce((sum,row)=>sum+row.sales,0);
-  const leaders=shown.topListings??[];
   return <main className="shop-map shop-map-redesign">
-    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">YOUR SHOP</p><h1>{shown.shop?.shopName ?? "Your shop"}</h1><p>What is selling, where your revenue is coming from, and what deserves your attention.</p></div></header>
+    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">YOUR SHOP</p><h1>{shown.shop?.shopName ?? "Your shop"}</h1><p>What is working, where your attention belongs, and what to build out next.</p></div></header>
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     <nav className="shop-map-tabs" aria-label="Your shop sections">
@@ -519,36 +514,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       {shown.attention&&shown.attention.basis!=="none"&&<AttentionEngine attention={shown.attention}/>}
       {shown.nextBuild&&<NextBuildAllocation plan={shown.nextBuild}/>}
       {!!shown.opportunities?.length&&<OpportunityRecommendations rows={shown.opportunities} marketEvidence={shown.marketCorroboration??[]}/>}
-      <section className="shop-map-leaders">
-        <div className="shop-map-section-head"><div><p className="mini-label">LAST 90 DAYS</p>
-          <h2>Top sellers</h2></div>
-          <button type="button" className="p-button p-button-primary" onClick={() => selectTab("sold")}>View sold listings →</button></div>
-        {leaders.length ? <div className="shop-map-leader-grid">{leaders.map((listing,index) =>
-          <article key={listing.listingId} className={index === 0 ? "lead" : ""}>
-            <div className="shop-map-listing-image">{listing.imageUrl
-              ? <img src={listing.imageUrl} alt="" loading="lazy" width={570} height={570} />
-              : <span aria-hidden="true">G</span>}<b>0{index + 1}</b></div>
-            <div>{index === 0 ? <p className="mini-label">TOP SELLER</p> : null}<h3><a href={`https://www.etsy.com/listing/${listing.listingId}`} target="_blank" rel="noopener noreferrer">{shortLabel(listing.title)}</a></h3>
-              <p><strong>{listing.sales} sold</strong><span>{money(listing.revenueMinor)}</span></p></div>
-          </article>)}</div> : <div className="shop-map-empty"><b>No sales in the last 90 days.</b>
-            <p>Your sold listings will appear here after the next Etsy sales import.</p></div>}
-      </section>
-
-      <section className="shop-map-summary-grid" aria-label="Last 90 days summary">
-        <article><span>Revenue · 90 days</span><strong>{money(shown.shopTotals?.revenueLast90Minor)}</strong><small>across your shop</small></article>
-        <article><span>Units sold · 90 days</span><strong>{units90}</strong><small>from sold listings</small></article>
-        <article><span>Top product theme</span><strong>{themes[0]?.label ?? "Not enough data"}</strong><small>{themes[0] ? `${themes[0].units??"—"} units sold in 90 days` : "Sales will reveal this"}</small></article>
-      </section>
-
-      {insightsLoading&&!shown.whereToFocus?.length?<section className="shop-map-insights-loading" role="status"><span className="shop-map-loader-dot"/><span>Loading where to focus…</span></section>:null}
-      {!!shown.whereToFocus?.length&&<section className="shop-map-focus-panel">
-        <div className="shop-map-section-head"><div><p className="mini-label">WHERE TO FOCUS</p><h2>{shown.standout?.headline||"What deserves your attention"}</h2></div></div>
-        <div className="shop-map-focus-list">{shown.whereToFocus.slice(0,3).map(focus=><article key={focus.nicheId||focus.label}>
-          <span>{focus.label}</span><strong>{focus.headline}</strong><p>{focus.advice}</p>
-        </article>)}</div>
-      </section>}
-
-      {!insightsLoading||shown.catalogActions||shown.whereToFocus?<section className="shop-map-opportunities">
+      {!insightsLoading||shown.catalogActions?<section className="shop-map-opportunities">
         <div className="shop-map-section-head"><div><p className="mini-label">OPPORTUNITIES IN YOUR SHOP</p><h2>Things worth reviewing</h2></div></div>
         <div className="shop-map-opportunity-stack">
           <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
