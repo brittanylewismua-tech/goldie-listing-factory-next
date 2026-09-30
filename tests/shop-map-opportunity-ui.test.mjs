@@ -58,3 +58,11 @@ test("ranked priorities keep customer and catalog attention visually comparable"
   assert.match(client,/>Catalog<\/small>/);
   assert.match(client,/world\.catalogPercent/);
 });
+
+
+test("Opportunity Engine can discover winning patterns without assuming a customer world exists",()=>{
+  assert.match(client,/WinningPatterns/);
+  assert.match(client,/WHAT CUSTOMERS ARE VOTING FOR/);
+  assert.match(client,/Common shop-wide wording is discounted/);
+  assert.match(client,/It will not manufacture the rest of a top five/);
+});

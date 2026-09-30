@@ -9,6 +9,7 @@ import { ensureListingTables, performanceFrom } from "@/app/shop-map-listings";
 import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-map-worlds";
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
 import { buildAttentionMap } from "@/app/shop-map-attention";
+import { discoverWinningPatterns } from "@/app/shop-map-patterns";
 import { opportunitiesFromAttention } from "@/app/shop-map-opportunities";
 import { buildPlan } from "@/app/shop-map-build-plan";
 import { corroborateAttentionWithMarket, marketWatchKeysForAttention } from "@/app/shop-map-market-corroboration";
@@ -214,6 +215,25 @@ async function buildMap(request: Request) {
     revenueMinor:totals.get(Number(row.listing_id))?.revenueMinor??0,
   })).filter(row=>row.sales>0).sort((a,b)=>b.sales-a.sales||b.revenueMinor-a.revenueMinor);
 
+  const patternInput=()=>{
+    const sales90=totalsForFast(90);
+    return rows.map(row=>{
+      const id=Number(row.listing_id);
+      return {
+        listingId:id,title:String(row.title||""),imageUrl:String(row.image_url||""),
+        tags:(()=>{try{return JSON.parse(row.tags||"[]") as string[]}catch{return []}})(),
+        shopSection:String(row.shop_section||""),productFamily:String(row.product_family||""),
+        state:String(row.state||""),favorites:row.favorites===null?null:Number(row.favorites),
+        sales90:sales90.get(id)?.sales??0,lifetimeSales:performance.get(id)?.lifetimeUnits??0,
+      };
+    });
+  };
+
+  if(view==="overview-insights"){
+    const patterns=discoverWinningPatterns(patternInput());
+    return NextResponse.json({shop:{shopId,shopName:shopRow.shop_name},patterns});
+  }
+
   if(view==="sold"){
     const selectedSales=totalsForFast(soldDays);
     return NextResponse.json({
@@ -384,7 +404,7 @@ async function buildMap(request: Request) {
     world assignments. Reviews, monthly finance, Etsy display refreshes and
     Market Radar corroboration are supporting layers and must not block it.
   */
-  if(view==="overview-insights"||view==="overview-support"){
+  if(view==="overview-support"){
     const sales90=totalsForFast(90);
     const activeIds=new Set(rows.filter(row=>String(row.state)==="active")
       .map(row=>Number(row.listing_id)));
@@ -405,14 +425,6 @@ async function buildMap(request: Request) {
       activeListings:world.listingIds.filter(id=>activeIds.has(id)).length,
     })),{activeListingsTotal:activeIds.size});
     const nextBuild=buildPlan(attention,10);
-
-    if(view==="overview-insights"){
-      return NextResponse.json({
-        shop:{shopId,shopName:shopRow.shop_name},
-        attention,nextBuild,
-        opportunities:opportunitiesFromAttention(attention,[]),
-      });
-    }
 
     let marketCorroboration:ReturnType<typeof corroborateAttentionWithMarket>=[];
     try{

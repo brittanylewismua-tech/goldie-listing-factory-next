@@ -1,0 +1,37 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { discoverWinningPatterns } from "../app/shop-map-patterns.ts";
+
+const row=(id,title,tags,sales90)=>({
+  listingId:id,title,tags:[...tags,"girl power"],shopSection:"",productFamily:"tee",
+  state:"active",favorites:0,sales90,lifetimeSales:sales90,imageUrl:"",
+});
+
+test("ubiquitous shop-wide wording does not masquerade as a winning pattern",()=>{
+  const map=discoverWinningPatterns([
+    row(1,"My Body My Choice",["reproductive rights"],12),
+    row(2,"Bans Off Our Bodies",["reproductive rights"],10),
+    row(3,"Smash The Patriarchy",["smash patriarchy"],8),
+    row(4,"Down With The Patriarchy",["smash patriarchy"],7),
+    row(5,"Votes For Women",["voting rights"],6),
+    row(6,"Women Vote",["voting rights"],5),
+    row(7,"Women Make History",["women history"],4),
+    row(8,"History Made By Women",["women history"],3),
+    row(9,"Feminist Mama",["feminist mama"],3),
+    row(10,"Feminist Mom",["feminist mama"],2),
+  ]);
+  assert.equal(map.basis,"sales-90");
+  assert.equal(map.patterns.length,5);
+  assert.equal(map.patterns.some(pattern=>pattern.key==="girl power"),false);
+  assert.ok(map.patterns[0].customerPercent>map.patterns[0].catalogPercent);
+});
+
+test("patterns do not require pre-existing world assignments",()=>{
+  const map=discoverWinningPatterns([
+    row(1,"Book Club After Dark",["dark romance"],8),
+    row(2,"Morally Gray Book Club",["dark romance"],6),
+    row(3,"Generic Reader",["book lover"],0),
+    row(4,"Another Reader",["book lover"],0),
+  ]);
+  assert.ok(map.patterns.some(pattern=>pattern.key==="dark romance"));
+});

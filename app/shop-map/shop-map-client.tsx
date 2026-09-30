@@ -5,6 +5,7 @@ import {browseOwnListings} from "@/app/market-listing-browser";
 import {designsOnOneProduct,familyLabel,shortLabel,type Reach,type ReachListing} from "@/app/design-reach";
 import type {CatalogAction} from "@/app/shop-map-actions";
 import type {MarketCorroboration} from "@/app/shop-map-market-corroboration";
+import type {WinningPatternMap} from "@/app/shop-map-patterns";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
@@ -66,6 +67,7 @@ export type NextBuildPlan = {
 
 type ShopMap = {
   attention?: AttentionMap;
+  patterns?: WinningPatternMap;
   opportunities?: ShopOpportunity[];
   nextBuild?: NextBuildPlan;
   marketCorroboration?: MarketCorroboration[];
@@ -186,6 +188,66 @@ function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}
   </section>;
 }
 
+
+export function WinningPatterns({map}:{map:WinningPatternMap}){
+  const lead=map.patterns[0];
+  if(!lead)return null;
+  const gapCopy=(pattern:WinningPatternMap["patterns"][number])=>
+    pattern.gapPoints>0
+      ? `This pattern appears in ${pattern.customerPercent}% of customer response but only ${pattern.catalogPercent}% of your active catalog. That is a +${pattern.gapPoints} point opportunity gap.`
+      : `This pattern is earning about the share of customer response its catalog presence would predict.`;
+  return <section className="shop-map-attention">
+    <div className="shop-map-attention-head">
+      <div><p className="mini-label">WHAT CUSTOMERS ARE VOTING FOR</p>
+        <h2>The patterns showing up disproportionately in what sells.</h2>
+        <p>Goldie compares repeated concepts across titles and tags with the response those listings actually earn. Common shop-wide wording is discounted when it performs like background noise.</p></div>
+      <span>Based on {map.basisLabel}</span>
+    </div>
+    <article className="shop-map-attention-lead">
+      <div className="shop-map-attention-lead-copy">
+        <p className="mini-label">YOUR #1 PRIORITY</p>
+        <div className="shop-map-attention-lead-title"><span>01</span><h3>{lead.label}</h3></div>
+        <strong>{lead.customerPercent}% of customer response includes this pattern</strong>
+        <p>{gapCopy(lead)}</p>
+        <p className="shop-map-attention-directive"><b>What to do:</b> Make this your first design-and-list priority. Build deeper around the idea customers are rewarding before spending the same energy on weaker patterns.</p>
+      </div>
+      <div className="shop-map-attention-compare" aria-label="Customer response compared with catalog presence">
+        <div><span>Customer response</span><b>{lead.customerPercent}%</b><i><em style={{width:`${Math.max(2,lead.customerPercent)}%`}}/></i></div>
+        <div><span>Active catalog</span><b>{lead.catalogPercent}%</b><i><em style={{width:`${Math.max(2,lead.catalogPercent)}%`}}/></i></div>
+        <small>{lead.lift}× response lift · {lead.sellingListings} selling listing{lead.sellingListings===1?"":"s"}</small>
+      </div>
+    </article>
+    <div className="shop-map-attention-priorities">
+      <div className="shop-map-attention-priorities-head"><p className="mini-label">THEN FOLLOW THE EVIDENCE</p>
+        <h3>Your next priorities, in order</h3></div>
+      <div className="shop-map-attention-list">
+        {map.patterns.slice(1).map(pattern=><article key={pattern.key}>
+          <div className="shop-map-attention-row">
+            <span className="shop-map-attention-rank">0{pattern.rank}</span>
+            <div className="shop-map-attention-name"><b>{pattern.label}</b>
+              <small>{pattern.customerPercent}% of customer response · {pattern.catalogPercent}% of active catalog</small></div>
+            <em className="attention-state underbuilt">+{pattern.gapPoints} pt gap</em>
+          </div>
+          <div className="shop-map-attention-mini-compare" aria-label={`${pattern.customerPercent}% customer response compared with ${pattern.catalogPercent}% catalog presence`}>
+            <div><small>Customer</small><i><em style={{width:`${Math.max(2,pattern.customerPercent)}%`}}/></i></div>
+            <div className="catalog"><small>Catalog</small><i><em style={{width:`${Math.max(2,pattern.catalogPercent)}%`}}/></i></div>
+          </div>
+        </article>)}
+      </div>
+      {map.patterns.length<5?<p className="shop-map-next-build-note">Goldie found {map.patterns.length} pattern{map.patterns.length===1?"":"s"} with enough evidence to defend. It will not manufacture the rest of a top five.</p>:null}
+    </div>
+    {!!map.listings.length&&<div className="shop-map-attention-listings">
+      <div><p className="mini-label">STRONGEST LISTINGS</p><h3>The individual listings creating the customer signal</h3>
+        <p>These are ranked by the same customer-response basis used above.</p></div>
+      <ol>{map.listings.map(listing=><li key={listing.listingId}>
+        <span>0{listing.rank}</span>
+        {listing.imageUrl?<img src={listing.imageUrl} alt="" width={52} height={52} loading="lazy"/>:<i aria-hidden="true"/>}
+        <div><b>{shortLabel(listing.title)}</b><small>{listing.signal} {map.basis==="favorites"?"favorites":"units"}</small></div>
+        <strong>{listing.attentionPercent}%</strong>
+      </li>)}</ol>
+    </div>}
+  </section>;
+}
 
 export function AttentionEngine({attention}:{attention:AttentionMap}){
   const worlds=attention.worlds.filter(world=>world.signal>0).slice(0,5);
@@ -527,9 +589,9 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     </nav>
 
     {tab === "overview" && <div className="shop-map-tab-panel">
-      {shown.attention&&shown.attention.basis!=="none"&&<AttentionEngine attention={shown.attention}/>}
-      {shown.nextBuild&&<NextBuildAllocation plan={shown.nextBuild}/>}
-      {!!shown.opportunities?.length&&<OpportunityRecommendations rows={shown.opportunities} marketEvidence={shown.marketCorroboration??[]}/>}
+      {shown.patterns?.patterns?.length?<WinningPatterns map={shown.patterns}/>:shown.attention&&shown.attention.basis!=="none"?<AttentionEngine attention={shown.attention}/>:null}
+      {!shown.patterns?.patterns?.length&&shown.nextBuild&&<NextBuildAllocation plan={shown.nextBuild}/>}
+      {!shown.patterns?.patterns?.length&&!!shown.opportunities?.length&&<OpportunityRecommendations rows={shown.opportunities} marketEvidence={shown.marketCorroboration??[]}/>} 
       {!insightsLoading||shown.catalogActions?<section className="shop-map-opportunities">
         <div className="shop-map-section-head"><div><p className="mini-label">OPPORTUNITIES IN YOUR SHOP</p><h2>Things worth reviewing</h2></div></div>
         <div className="shop-map-opportunity-stack">
