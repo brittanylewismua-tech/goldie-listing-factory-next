@@ -70,6 +70,53 @@ async function buildMap(request: Request) {
     .bind(user.userId).first<{ shop_id: number; shop_name: string; image_url: string; profile_updated_at:number }>();
   if (!shopRow) return NextResponse.json({ error: "No connected shop." }, { status: 400 });
   const shopId = Number(shopRow.shop_id);
+
+  /*
+    SOLD LISTINGS IS A SALES READ, NOT A SHOP-MAP BUILD.
+
+    This used to pass through timezone/month/performance setup before reaching
+    its own return branch. A failure in unrelated monthly setup could therefore
+    break Sold Listings. Read only the two tables this tab needs and return.
+  */
+  if(view==="sold"){
+    const [soldListingRows,soldSaleRows]=await Promise.all([
+      db.prepare(
+        `SELECT listing_id,title,image_url,favorites
+           FROM shop_map_listings WHERE user_id=? AND shop_id=?`)
+        .bind(user.userId,shopId)
+        .all<{listing_id:number;title:string;image_url:string;favorites:number|null}>(),
+      db.prepare(
+        `SELECT listing_id,quantity,price_minor,sold_at,refunded
+           FROM shop_map_listing_sales WHERE user_id=? AND shop_id=?`)
+        .bind(user.userId,shopId)
+        .all<{listing_id:number;quantity:number;price_minor:number;sold_at:number;refunded:number}>(),
+    ]);
+    const cutoff=now-soldDays*86400;
+    const totals=new Map<number,{sales:number;revenueMinor:number}>();
+    for(const sale of soldSaleRows.results??[]){
+      if(Number(sale.refunded)||Number(sale.sold_at)<cutoff||Number(sale.sold_at)>now)continue;
+      const id=Number(sale.listing_id);
+      const held=totals.get(id)??{sales:0,revenueMinor:0};
+      held.sales+=Math.max(0,Number(sale.quantity??0));
+      held.revenueMinor+=Math.max(0,Number(sale.quantity??0))*Math.max(0,Number(sale.price_minor??0));
+      totals.set(id,held);
+    }
+    const listings=(soldListingRows.results??[]).map(row=>{
+      const held=totals.get(Number(row.listing_id))??{sales:0,revenueMinor:0};
+      return {
+        listingId:Number(row.listing_id),
+        title:String(row.title||"Listing details unavailable"),
+        imageUrl:String(row.image_url||""),
+        favorites:row.favorites===null?null:Number(row.favorites),
+        sales:held.sales,revenueMinor:held.revenueMinor,
+      };
+    }).filter(row=>row.sales>0)
+      .sort((a,b)=>b.sales-a.sales||b.revenueMinor-a.revenueMinor);
+    return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},
+      soldListings:{period:`Last ${soldDays} days`,days:soldDays,listings},
+    });
+  }
   /*
     NO FALLBACK TIMEZONE, EVER.
 
@@ -285,15 +332,6 @@ async function buildMap(request: Request) {
         listings:topListings,
       },
       visualCoverage:{analysedListings:visualInput.length,totalListings:rows.length},
-    });
-  }
-
-  if(view==="sold"){
-    const selectedSales=totalsForFast(soldDays);
-    return NextResponse.json({
-      shop:{shopId,shopName:shopRow.shop_name},
-      month,
-      soldListings:{period:`Last ${soldDays} days`,days:soldDays,listings:soldRowsFast(selectedSales)},
     });
   }
 

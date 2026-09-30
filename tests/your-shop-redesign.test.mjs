@@ -136,3 +136,17 @@ test("Sold Listings cannot crash on an undefined sold collection",()=>{
 test("artwork-led Opportunity Engine invalidates older cached responses",()=>{
   assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v5:"/);
 });
+
+
+test("Sold Listings returns before timezone and full performance setup",()=>{
+  const sold=route.indexOf('if(view==="sold")');
+  const timezone=route.indexOf('const timezone = await shopTimezone');
+  const performance=route.indexOf('const performance = performanceFrom');
+  assert.ok(sold>-1&&timezone>-1&&performance>-1&&sold<timezone&&sold<performance);
+});
+
+test("mobile tab panels always have visible loading or empty content",()=>{
+  assert.match(client,/panelLoading/);
+  assert.match(client,/shop-map-inline-state/);
+  assert.match(css,/shop-map-tab-panel[\s\S]*visibility:visible!important/);
+});

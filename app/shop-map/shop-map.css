@@ -1627,3 +1627,26 @@
     margin:0 0 28px!important;
   }
 }
+
+
+/* YOUR SHOP MOBILE PANELS · a tab must never resolve to invisible whitespace. */
+#suite-workspace .shop-map-redesign .shop-map-inline-state{
+  display:block!important;
+  width:100%!important;
+  box-sizing:border-box!important;
+  margin:0 0 20px!important;
+  padding:18px!important;
+  border:1px solid #e4e1de!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  color:#000!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-inline-state p{margin:6px 0 0!important}
+@media(max-width:650px){
+  #suite-workspace .shop-map-redesign .shop-map-tab-panel{
+    display:block!important;
+    min-height:120px!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+}
