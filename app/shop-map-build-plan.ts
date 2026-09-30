@@ -90,7 +90,7 @@ export function buildPlan(attention:AttentionMap,requestedListings=10):BuildPlan
     heldBackListings:count-used,
     rows,
     note:used<count
-      ? \`\${count-used} build \${count-used===1?"slot is":"slots are"} held back because part of the shop's customer response is not classified into a customer world yet.\`
+      ? String(count-used)+" build "+(count-used===1?"slot is":"slots are")+" held back because part of the shop's customer response is not classified into a customer world yet."
       :"This plan puts new catalog where customer response is ahead of current catalog coverage.",
   };
 }
