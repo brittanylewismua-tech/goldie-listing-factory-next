@@ -1,4 +1,5 @@
 import type { AttentionMap } from "./shop-map-attention";
+import type { MarketCorroboration } from "./shop-map-market-corroboration";
 
 export type ShopOpportunity = {
   worldId: string;
@@ -15,16 +16,26 @@ const signalName=(basis:AttentionMap["basis"])=>basis==="favorites"?"favorites"
   :basis==="sales-90"?"recent sales"
   :basis==="sales-lifetime"?"sales":"customer response";
 
-export function opportunitiesFromAttention(attention:AttentionMap):ShopOpportunity[]{
+export function opportunitiesFromAttention(
+  attention:AttentionMap,
+  market:MarketCorroboration[]=[],
+):ShopOpportunity[]{
   const signal=signalName(attention.basis);
+  const marketByWorld=new Map(market.map(row=>[row.worldId,row]));
   return attention.worlds.filter(world=>world.signal>0).slice(0,5).map(world=>{
+    const proof=marketByWorld.get(world.worldId);
+    const marketPrompt=proof
+      ? proof.sellingListings>0
+        ? ` Market Radar also shows ${proof.sellingListings} listings with observed sales in the last 30 days across my tracked keyword "${proof.phrase}", totaling ${proof.observedSold30} observed units.`
+        : ` Market Radar also shows ${proof.moving} listings with selling movement across my tracked keyword "${proof.phrase}".`
+      : "";
     if(world.state==="underbuilt"){
       return {
         worldId:world.worldId,label:world.label,rank:world.rank,state:world.state,
         headline:`${world.label} deserves more of your next build cycle.`,
         explanation:`${world.label} is earning ${world.attentionPercent}% of your ${signal}, but only ${world.catalogPercent}% of your active catalog is built around it.`,
         action:"Build deeper into this customer world before spending the same energy on weaker ideas.",
-        mirrorBotPrompt:`Research the ${world.label} customer world for me. It currently accounts for ${world.attentionPercent}% of my ${signal}, but only ${world.catalogPercent}% of my active Etsy catalog, so I want to build deeper into what is already working. Identify the strongest audience identities, recurring language, emotional themes, rituals, inside jokes, adjacent sub-niches, and fresh design territories I can explore next. Stay close to the proven customer instead of sending me into unrelated niches.`,
+        mirrorBotPrompt:`Research the ${world.label} customer world for me. It currently accounts for ${world.attentionPercent}% of my ${signal}, but only ${world.catalogPercent}% of my active Etsy catalog, so I want to build deeper into what is already working.${marketPrompt} Identify the strongest audience identities, recurring language, emotional themes, rituals, inside jokes, adjacent sub-niches, and fresh design territories I can explore next. Stay close to the proven customer instead of sending me into unrelated niches.`,
       };
     }
     if(world.state==="overbuilt"){
@@ -41,7 +52,7 @@ export function opportunitiesFromAttention(attention:AttentionMap):ShopOpportuni
       headline:`${world.label} is roughly in proportion.`,
       explanation:`${world.label} is earning ${world.attentionPercent}% of your ${signal} and represents ${world.catalogPercent}% of your active catalog.`,
       action:"Keep it in the mix at about its current share, without taking attention away from stronger underbuilt priorities.",
-      mirrorBotPrompt:`Help me go deeper on the ${world.label} customer world without drifting away from what is already working. My Etsy shop currently gives this theme about the same share of catalog attention as the customer response it earns. Identify deeper sub-niches, language, identities, rituals, and fresh design directions that would expand this world rather than broaden me into unrelated audiences.`,
+      mirrorBotPrompt:`Help me go deeper on the ${world.label} customer world without drifting away from what is already working. My Etsy shop currently gives this theme about the same share of catalog attention as the customer response it earns.${marketPrompt} Identify deeper sub-niches, language, identities, rituals, and fresh design directions that would expand this world rather than broaden me into unrelated audiences.`,
     };
   });
 }
