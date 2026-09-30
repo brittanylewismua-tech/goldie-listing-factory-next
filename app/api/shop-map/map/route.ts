@@ -604,13 +604,15 @@ async function buildMap(request: Request) {
     const savedWatches=await watchesFor(user.userId);
     const relevantKeys=new Set(marketWatchKeysForAttention(attention,savedWatches));
     const relevant=savedWatches.filter(watch=>relevantKeys.has(watch.key));
-    const marketViews=(await Promise.all(relevant.map(async watch=>{
+    const marketViewRows=await Promise.all(relevant.map(async watch=>{
       try{
         const view=await readNiche(user.userId,watch.terms,watch.key,now);
         return {key:watch.key,phrase:watch.phrase,terms:watch.terms,
           summary:view.summary,listings:view.listings};
       }catch{return null;}
-    }))).filter((row):row is NonNullable<typeof row>=>Boolean(row));
+    }));
+    const marketViews=marketViewRows.filter(
+      (row):row is Exclude<(typeof marketViewRows)[number],null>=>row!==null);
     const ownFamiliesByWorld=new Map(worlds.map(world=>
       [world.id,world.productFamilies.map(row=>row.family)] as const));
     marketCorroboration=corroborateAttentionWithMarket(
