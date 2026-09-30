@@ -22,7 +22,7 @@
  * rules and neither needs an override of the other.
  * ==========================================================================*/
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {readBatchHistory,preparedDaysFromHistory} from "./batch-history-read";
 import SuiteBrand from "./suite-brand";
@@ -30,8 +30,6 @@ import SuiteSidebarNav, { type SuiteNavItem } from "./suite-sidebar-nav";
 import SuiteSearch from "./suite-search";
 import MobileGate from "./mobile-gate";
 import { publishedDaysThisPeriod, type ListingGoal, type PublishedDay } from "./listing-goal";
-
-const warmedSuiteRoutes=new Set<string>();
 
 export type NavKey = "home" | "hotlist" | "trademark" | "factory" | "batches" | "keywords" | "mockups" | "usage" | "command-center"
   | "connections" | "platform-updates" | "niche-research" | "market-watch" | "shop-map" | "design-scanner" | "more";
@@ -103,7 +101,6 @@ export const NAV: SuiteNavItem[] = [
 */
 export default function FactoryShell({ active, title, desktopOnly = false, children }:
   { active: NavKey; title: string; desktopOnly?: boolean; children: React.ReactNode }) {
-  const router=useRouter();
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
   const [goal, setGoal] = useState<ListingGoal | null>(null);
   const [goalDays, setGoalDays] = useState<PublishedDay[]>([]);
@@ -123,30 +120,6 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
   const [switching, setSwitching] = useState(0);
   /* Whether the allowance could not be read, as distinct from not yet read. */
   const [usageFailed, setUsageFailed] = useState(false);
-  /*
-    WARM THE PRODUCT, ONCE.
-
-    Internal route changes were client-side but still felt like opening a new
-    website because dynamic destinations were first requested only after the
-    click. Prefetch the suite's real destinations while the member is already
-    using the current page. Staggering avoids a request burst, and the
-    module-level set means a remounted shell never warms the same route twice.
-  */
-  useEffect(()=>{
-    const hrefs=[...new Set(NAV.map(item=>item.href).concat([
-      "/market-watch/research","/hot-list","/goals","/account/settings",
-    ]))].filter(href=>href.startsWith("/")&&!href.startsWith("/account/sign-"));
-    const timers:number[]=[];
-    let offset=250;
-    for(const href of hrefs){
-      if(warmedSuiteRoutes.has(href))continue;
-      warmedSuiteRoutes.add(href);
-      timers.push(window.setTimeout(()=>router.prefetch(href),offset));
-      offset+=180;
-    }
-    return()=>timers.forEach(timer=>window.clearTimeout(timer));
-  },[router]);
-
 
   useEffect(() => {
     /*

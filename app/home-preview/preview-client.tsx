@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import SuiteBrand from "../suite-brand";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 type MapData={shop?:{shopName?:string}};
 type UpdateItem={
@@ -45,31 +44,13 @@ const REVIEW_UPDATES:Updates={items:[
   {id:"printify-3",platform:"Printify",title:"Provider or catalog expansion",impact:"The strongest additional Printify change.",sourceUrl:"#",publishedAt:Math.floor(Date.now()/1000)-10800},
 ]};
 
-const warmedHomeRoutes=new Set<string>();
-
 export default function PreviewClient({firstName,visualReview=false}:{firstName?:string;visualReview?:boolean}={}){
-  const router=useRouter();
   const [shopName,setShopName]=useState(visualReview?"She's A Wolf Clothing":"Your shop");
   const [updates,setUpdates]=useState<Updates|null>(visualReview?REVIEW_UPDATES:null);
   const [updatesLoaded,setUpdatesLoaded]=useState(visualReview);
   const [layout,setLayoutState]=useState<"orbit"|"line">("orbit");
   const orbitRef=useRef<HTMLDivElement|null>(null);
   const layerRef=useRef<HTMLDivElement|null>(null);
-  useEffect(()=>{
-    if(visualReview)return;
-    const hrefs=FEATURES.filter(feature=>!feature.external).map(feature=>feature.href)
-      .concat(["/platform-updates"]);
-    const timers:number[]=[];
-    let offset=180;
-    for(const href of hrefs){
-      if(warmedHomeRoutes.has(href))continue;
-      warmedHomeRoutes.add(href);
-      timers.push(window.setTimeout(()=>router.prefetch(href),offset));
-      offset+=180;
-    }
-    return()=>timers.forEach(timer=>window.clearTimeout(timer));
-  },[router,visualReview]);
-
 
   useEffect(()=>{
     try{
