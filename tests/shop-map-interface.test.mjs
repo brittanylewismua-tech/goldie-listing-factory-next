@@ -15,9 +15,9 @@ test("the redesigned map has four clear sections", () => {
 test("Opportunity Engine leads with the analysis headline before strongest listings", () => {
   assert.match(client, /Let&apos;s build out on what&apos;s already working\.\.\. here&apos;s the analysis today\.\.\./);
   assert.match(client, /YOUR #1 PRIORITY/);
-  assert.match(client, /STRONGEST LISTINGS/);
-  assert.ok(client.indexOf("Let&apos;s build out on what&apos;s already working") < client.indexOf("STRONGEST LISTINGS"));
-  assert.match(client, /THEN FOLLOW THE EVIDENCE/);
+  assert.match(client, /Your top listings/);
+  assert.ok(client.indexOf("Let&apos;s build out on what&apos;s already working") < client.indexOf("Your top listings"));
+  assert.match(client, /Your next priorities/);
   assert.doesNotMatch(client, /WHAT CUSTOMERS ARE VOTING FOR|The patterns showing up disproportionately/);
   assert.doesNotMatch(client, /<h2>Top sellers<\/h2>/);
 });
