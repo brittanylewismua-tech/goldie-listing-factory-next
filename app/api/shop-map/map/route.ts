@@ -11,6 +11,9 @@ import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-dire
 import { buildAttentionMap } from "@/app/shop-map-attention";
 import { opportunitiesFromAttention } from "@/app/shop-map-opportunities";
 import { buildPlan } from "@/app/shop-map-build-plan";
+import { corroborateAttentionWithMarket, marketWatchKeysForAttention } from "@/app/shop-map-market-corroboration";
+import { watchesFor } from "@/app/niche-watch-store";
+import { readNiche } from "@/app/niche-brief";
 import { guidance, standout, DIRECTION_BASIS, SHOP_MAP_MIN_RECENT_ORDERS } from "@/app/shop-map-guidance";
 import { collapseFacets } from "@/app/niche-classifier";
 import { rejectAsNiche } from "@/app/shop-map-identity";
@@ -597,10 +600,31 @@ async function buildMap(request: Request) {
   const opportunities=opportunitiesFromAttention(attention);
   const nextBuild=buildPlan(attention,10);
 
+  let marketCorroboration:ReturnType<typeof corroborateAttentionWithMarket>=[];
+  try{
+    const savedWatches=await watchesFor(user.userId);
+    const relevantKeys=new Set(marketWatchKeysForAttention(attention,savedWatches));
+    const relevant=savedWatches.filter(watch=>relevantKeys.has(watch.key));
+    const marketViews=(await Promise.all(relevant.map(async watch=>{
+      try{
+        const view=await readNiche(user.userId,watch.terms,watch.key,now);
+        return {key:watch.key,phrase:watch.phrase,terms:watch.terms,
+          summary:view.summary,listings:view.listings};
+      }catch{return null;}
+    }))).filter((row):row is NonNullable<typeof row>=>Boolean(row));
+    const ownFamiliesByWorld=new Map(worlds.map(world=>
+      [world.id,world.productFamilies.map(row=>row.family)] as const));
+    marketCorroboration=corroborateAttentionWithMarket(
+      attention,marketViews,ownFamiliesByWorld);
+  }catch{
+    /* Market Radar evidence is additive. My Shop must still work without it. */
+  }
+
   return NextResponse.json({
     attention,
     opportunities,
     nextBuild,
+    marketCorroboration,
     catalogActions: catalogActions(rows, saleRows.results ?? [], now),
     shop: { shopId, shopName: shopRow.shop_name, imageUrl: shopRow.image_url, timezone },
     /* The money section is blocked until this shop's own timezone is set. */
