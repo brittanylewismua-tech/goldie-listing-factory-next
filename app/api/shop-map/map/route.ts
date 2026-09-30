@@ -9,7 +9,7 @@ import { ensureListingTables, performanceFrom } from "@/app/shop-map-listings";
 import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-map-worlds";
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
 import { buildAttentionMap } from "@/app/shop-map-attention";
-import { discoverWinningPatterns } from "@/app/shop-map-patterns";
+import { discoverVisualWinningPatterns } from "@/app/shop-map-visual-patterns";
 import { opportunitiesFromAttention } from "@/app/shop-map-opportunities";
 import { buildPlan } from "@/app/shop-map-build-plan";
 import { corroborateAttentionWithMarket, marketWatchKeysForAttention } from "@/app/shop-map-market-corroboration";
@@ -230,8 +230,62 @@ async function buildMap(request: Request) {
   };
 
   if(view==="overview-insights"){
-    const patterns=discoverWinningPatterns(patternInput());
-    return NextResponse.json({shop:{shopId,shopName:shopRow.shop_name},patterns});
+    const sales90=totalsForFast(90);
+    const visualRows=await db.prepare(
+      `SELECT l.listing_id AS listingId, p.artwork_hash AS artworkHash,
+              d.payload_json AS payload
+         FROM shop_map_listings l
+         JOIN artwork_provenance p
+           ON p.user_id=l.user_id AND p.etsy_listing_id=l.listing_id
+         JOIN design_intelligence d
+           ON d.user_id=l.user_id
+          AND (d.artwork_hash=p.artwork_hash OR d.artwork_hash=('a1-' || p.artwork_hash))
+        WHERE l.user_id=? AND l.shop_id=?
+          AND d.schema_version=1 AND d.model_version='google/gemini-2.5-flash'
+          AND d.prompt_version=1`)
+      .bind(user.userId,shopId)
+      .all<{listingId:number;artworkHash:string;payload:string}>()
+      .catch(()=>({results:[] as Array<{listingId:number;artworkHash:string;payload:string}>}));
+    const seen=new Set<number>();
+    const visualInput=(visualRows.results??[]).flatMap(row=>{
+      const listingId=Number(row.listingId);
+      if(seen.has(listingId))return [];
+      seen.add(listingId);
+      let design:any;
+      try{design=JSON.parse(String(row.payload||"{}"))}catch{return []}
+      return [{
+        listingId,artworkHash:String(row.artworkHash||""),
+        sales90:sales90.get(listingId)?.sales??0,
+        lifetimeSales:performance.get(listingId)?.lifetimeUnits??0,
+        favorites:rows.find(item=>Number(item.listing_id)===listingId)?.favorites??null,
+        design:{
+          wording:Array.isArray(design.wording)?design.wording.map(String):[],
+          illustrationCategory:String(design.illustrationCategory||""),
+          audienceCues:Array.isArray(design.audienceCues)?design.audienceCues.map(String):[],
+          recipientCues:Array.isArray(design.recipientCues)?design.recipientCues.map(String):[],
+          occasionCues:Array.isArray(design.occasionCues)?design.occasionCues.map(String):[],
+          tone:String(design.tone||""),composition:String(design.composition||""),
+        },
+      }];
+    });
+    const visual=discoverVisualWinningPatterns(visualInput);
+    const topListings=soldRowsFast(sales90).slice(0,5).map((row,index)=>({
+      rank:index+1,listingId:row.listingId,title:row.title,imageUrl:row.imageUrl,
+      signal:row.sales,attentionPercent:visual.totalSignal?Math.round(row.sales/Math.max(1,visual.totalSignal)*100):0,
+    }));
+    return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},
+      patterns:{
+        basis:visual.basis,
+        basisLabel:visual.basis==="sales-90"?"units sold in the last 90 days"
+          :visual.basis==="sales-lifetime"?"lifetime units sold"
+          :visual.basis==="favorites"?"favorites":"not enough customer response yet",
+        totalSignal:visual.totalSignal,
+        patterns:visual.patterns.map(row=>({...row,sellingListings:row.artworkCount,catalogListings:row.artworkCount})),
+        listings:topListings,
+      },
+      visualCoverage:{analysedListings:visualInput.length,totalListings:rows.length},
+    });
   }
 
   if(view==="sold"){

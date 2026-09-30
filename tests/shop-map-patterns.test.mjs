@@ -70,3 +70,14 @@ test("Power Girl can never be the displayed canonical label",()=>{
   ]);
   assert.equal(map.patterns.some(pattern=>/^Power Girl$/i.test(pattern.label)),false);
 });
+
+
+test("SEO title wording cannot create a priority without visual design evidence",()=>{
+  // Legacy text pattern engine may still be tested independently, but the
+  // Opportunity Engine route must no longer call it.
+  const routeSource=readFileSync("app/api/shop-map/map/route.ts","utf8");
+  assert.doesNotMatch(routeSource,/discoverWinningPatterns\(patternInput\(\)\)/);
+  assert.match(routeSource,/discoverVisualWinningPatterns/);
+  assert.match(routeSource,/design_intelligence/);
+  assert.match(routeSource,/artwork_provenance/);
+});
