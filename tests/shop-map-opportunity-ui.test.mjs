@@ -65,7 +65,7 @@ test("Opportunity Engine can discover winning patterns without assuming a custom
   assert.match(client,/Let&apos;s build out on what&apos;s already working\.\.\. here&apos;s the analysis today\.\.\./);
   assert.doesNotMatch(client,/WHAT CUSTOMERS ARE VOTING FOR/);
   assert.doesNotMatch(client,/Common shop-wide wording is discounted/);
-  assert.match(client,/It will not manufacture the rest of a top five/);
+  assert.doesNotMatch(client,/It will not manufacture the rest of a top five/);
 });
 
 
