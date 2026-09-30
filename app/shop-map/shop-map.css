@@ -584,47 +584,6 @@
   box-shadow:none!important;
 }
 
-#suite-workspace .shop-map-redesign .shop-map-focus-panel{
-  margin:0 0 44px!important;
-  padding:24px!important;
-  border:2px solid #000!important;
-  border-radius:14px!important;
-  background:var(--g-pink-soft)!important;
-  box-shadow:4px 4px 0 #000!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-focus-list{
-  display:grid!important;
-  grid-template-columns:repeat(3,minmax(0,1fr))!important;
-  gap:12px!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-focus-list article{
-  min-height:150px!important;
-  padding:16px!important;
-  border:1.5px solid #000!important;
-  border-radius:10px!important;
-  background:#fff!important;
-  display:flex!important;
-  flex-direction:column!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-focus-list article>span{
-  font-size:9px!important;
-  font-weight:800!important;
-  letter-spacing:.12em!important;
-  text-transform:uppercase!important;
-  color:var(--g-ink-3)!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-focus-list article>strong{
-  margin-top:12px!important;
-  font-size:15px!important;
-  line-height:1.3!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-focus-list article>p{
-  margin-top:8px!important;
-  font-size:12px!important;
-  line-height:1.55!important;
-  color:var(--g-ink-2)!important;
-}
-
 #suite-workspace .shop-map-redesign .shop-map-opportunities{
   margin-top:8px!important;
   padding-top:36px!important;
@@ -771,7 +730,6 @@
 }
 
 @media(max-width:900px){
-  #suite-workspace .shop-map-redesign .shop-map-focus-list{grid-template-columns:1fr!important}
   #suite-workspace .shop-map-redesign .shop-map-world{grid-template-columns:1fr auto!important}
   #suite-workspace .shop-map-redesign .shop-map-world-thumbs{grid-column:1/-1!important;justify-content:flex-start!important}
   #suite-workspace .shop-map-redesign .shop-map-theme-toolbar{grid-template-columns:1fr 1fr!important}
@@ -795,19 +753,6 @@
   #suite-workspace .shop-map-redesign .shop-map-sold-grid img,
   #suite-workspace .shop-map-redesign .shop-map-sold-grid i{width:70px!important;height:70px!important}
   #suite-workspace .shop-map-redesign .shop-map-sold-grid article>b{grid-column:2!important}
-}
-
-#suite-workspace .shop-map-redesign .shop-map-insights-loading{
-  min-height:72px!important;
-  margin:4px 0 30px!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:10px!important;
-  border:1px dashed var(--g-line)!important;
-  border-radius:10px!important;
-  color:var(--g-ink-3)!important;
-  font-size:12px!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-world{
   grid-template-columns:minmax(160px,1fr) 110px minmax(180px,1fr) auto!important;
@@ -929,35 +874,6 @@
     flex:0 0 auto!important;
     padding-inline:13px!important;
   }
-}
-
-
-/* VISUAL SWEEP · reduce dashboard nesting on Your Shop overview. */
-#suite-workspace .shop-map-redesign .shop-map-focus-panel{
-  margin:0 0 46px!important;
-  padding:30px 0 0!important;
-  border:0!important;
-  border-top:2px solid #000!important;
-  border-radius:0!important;
-  background:transparent!important;
-  box-shadow:none!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-focus-panel .shop-map-section-head{
-  margin-bottom:20px!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-focus-list{
-  gap:16px!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-focus-list article{
-  min-height:150px!important;
-  padding:18px!important;
-  border:1.5px solid #000!important;
-  border-radius:12px!important;
-  background:#fff!important;
-  box-shadow:3px 3px 0 var(--g-pink)!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-focus-list article>span{
-  color:#000!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-opportunities{
   margin-top:0!important;
