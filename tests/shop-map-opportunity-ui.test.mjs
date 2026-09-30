@@ -41,3 +41,11 @@ test("tracked market evidence appears only as supporting proof inside recommenda
   assert.match(client,/Open tracked keyword/);
   assert.match(client,/row\.state==="underbuilt"\?marketByWorld\.get/);
 });
+
+
+test("Opportunity Engine stays decision-first instead of repeating dashboard stats",()=>{
+  assert.doesNotMatch(client,/LAST 90 DAYS[^\n]*Top sellers/);
+  assert.doesNotMatch(client,/Revenue · 90 days/);
+  assert.doesNotMatch(client,/WHERE TO FOCUS/);
+  assert.match(client,/What is working, where your attention belongs, and what to build out next\./);
+});
