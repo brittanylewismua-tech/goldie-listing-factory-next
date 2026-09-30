@@ -6328,7 +6328,7 @@ test("the connection screen stays reachable after connecting — D639", async ()
   /* D834 · Connections moved into the account menu. What D639 guards is that
      the way back to the connection screen exists at all, and that it still
      points at ?step=connect - not which list it sits in. */
-  assert.match(management, /role="menuitem" href="\/connections">Connections<\/a>/,
+  assert.match(management, /<Link role="menuitem" href="\/connections">Connections<\/Link>/,
     "D203's rule: both navigations list the same destinations or they drift");
   assert.match(icons, /case "connections":/);
   assert.match(icons, /\| "connections"/);
