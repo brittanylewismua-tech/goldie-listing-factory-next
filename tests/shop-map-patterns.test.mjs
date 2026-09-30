@@ -40,3 +40,33 @@ test("patterns do not require pre-existing world assignments",()=>{
   ]);
   assert.ok(map.patterns.some(pattern=>pattern.key==="dark romance"));
 });
+
+
+test("shop-wide language stays background even when many matching listings are inactive",()=>{
+  const base=(id,title,tags,sales90,state="active")=>({
+    listingId:id,title,tags,shopSection:"",productFamily:"tee",state,
+    favorites:0,sales90,lifetimeSales:sales90,imageUrl:"",
+  });
+  const rows=[
+    base(1,"My Body My Choice",["girl power","reproductive rights"],12),
+    base(2,"Bans Off Our Bodies",["girl power","reproductive rights"],10),
+    base(3,"Smash Patriarchy",["girl power","smash patriarchy"],8),
+    base(4,"Women Vote",["girl power","voting rights"],7,"inactive"),
+    base(5,"Votes For Women",["girl power","voting rights"],6,"inactive"),
+    base(6,"Feminist Mama",["girl power","feminist mama"],0,"inactive"),
+    base(7,"Book Lover",["book lover"],0),
+    base(8,"Teacher Life",["teacher life"],0),
+  ];
+  const map=discoverWinningPatterns(rows);
+  assert.equal(map.patterns.some(pattern=>/girl power|power girl/i.test(pattern.label)),false);
+});
+
+test("Power Girl can never be the displayed canonical label",()=>{
+  const map=discoverWinningPatterns([
+    row(1,"Power Girl Rebel",["power girl rebel"],10),
+    row(2,"Power Girl Rebel Again",["power girl rebel"],8),
+    row(3,"Another Theme",["other theme"],0),
+    row(4,"Different Theme",["different theme"],0),
+  ]);
+  assert.equal(map.patterns.some(pattern=>/^Power Girl$/i.test(pattern.label)),false);
+});

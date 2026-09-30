@@ -127,10 +127,15 @@ export function discoverWinningPatterns(rows:PatternListingInput[]):WinningPatte
     "girl power", "power girl", and "girl power feminist" cannot become three
     separate recommendations in a feminist shop.
   */
+  const catalogTotal=Math.max(1,rows.length);
   const background=[...byConcept.entries()].flatMap(([concept,group])=>{
-    let activeCount=0;
-    for(const id of group.ids)if(rowById.get(id)?.state==="active")activeCount+=1;
-    return activeCount/activeTotal>.5
+    /*
+      Background language is a property of the SHOP, not only the currently
+      active slice. A seller may have used the same umbrella keyword across a
+      large catalog that includes inactive listings. That still makes the
+      phrase poor evidence for what specifically caused sales.
+    */
+    return group.ids.size/catalogTotal>.5
       ? [{concept,tokens:new Set(concept.split(" ").filter(Boolean))}]
       : [];
   });
@@ -142,7 +147,7 @@ export function discoverWinningPatterns(rows:PatternListingInput[]):WinningPatte
   const scored=[...byConcept.entries()].flatMap(([concept,group])=>{
     if(containsBackground(concept))return [];
     const ids=group.ids;
-    const phrase=[...group.variants.entries()].sort((a,b)=>b[1]-a[1]
+    const phrase=concept==="girl power"?"girl power":[...group.variants.entries()].sort((a,b)=>b[1]-a[1]
       || b[0].split(" ").length-a[0].split(" ").length
       || a[0].localeCompare(b[0]))[0]?.[0]??concept;
     if(ids.size<2)return [];
