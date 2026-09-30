@@ -359,11 +359,11 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const load = useCallback(async () => {
     const sequence=++requestSequence.current;
     setRefreshing(true);
-    const params=new URLSearchParams({view:tab});
+    const params=new URLSearchParams({view:tab==="overview"?"overview-insights":tab});
     if(tab==="sold")params.set("days",String(soldDays));
     if(tab==="money"&&selectedMonth)params.set("month",selectedMonth);
     const next = await fetch(`/api/shop-map/map?${params.toString()}`)
-      .then(response => response.json() as Promise<ShopMap>)
+      .then(response => response.ok ? response.json() as Promise<ShopMap> : null)
       .catch(() => null);
     if(sequence!==requestSequence.current)return;
     setRefreshing(false);
@@ -373,7 +373,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setLastGood(next);
     if(tab==="overview"){
       setInsightsLoading(true);
-      void fetch("/api/shop-map/map?view=overview-insights")
+      void fetch("/api/shop-map/map?view=overview-support")
         .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
         .then(detail=>{
           if(sequence!==requestSequence.current||!detail||detail.error)return;

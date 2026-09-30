@@ -79,3 +79,14 @@ test("Monthly Numbers exposes the full operating breakdown",()=>{
     "marketplaceTaxMinor","productionShippingMinor","profitMarginPercent"])
     assert.ok(route.includes(field), `API does not expose ${field}`);
 });
+
+
+test("Opportunity Engine uses a dedicated core request before optional support",()=>{
+  assert.match(client,/tab==="overview"\?"overview-insights":tab/);
+  assert.match(client,/view=overview-support/);
+  const core=route.indexOf('if(view==="overview-insights"||view==="overview-support")');
+  const reviews=route.indexOf("/* ------------------------------------------------------- review evidence */");
+  const finance=route.indexOf("/* --------------------------------------------------------- this month's money */");
+  assert.ok(core>-1&&reviews>-1&&finance>-1&&core<reviews&&core<finance,
+    "Opportunity Engine core must return before reviews and finance");
+});

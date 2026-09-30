@@ -372,6 +372,76 @@ async function buildMap(request: Request) {
     else if (row.label) worlds = renameWorld(worlds, row.world_id, row.label);
   }
 
+  /*
+    OPPORTUNITY ENGINE GETS ITS OWN READ PATH.
+
+    The overview used to return a fast scorecard that the redesigned page no
+    longer renders, dismiss the loading state, and then start a second request
+    that fell through the entire Shop Map pipeline. That produced the exact
+    failure mode a member sees as "loading, then nothing".
+
+    The core engine only needs stored listings, stored sales and the current
+    world assignments. Reviews, monthly finance, Etsy display refreshes and
+    Market Radar corroboration are supporting layers and must not block it.
+  */
+  if(view==="overview-insights"||view==="overview-support"){
+    const sales90=totalsForFast(90);
+    const activeIds=new Set(rows.filter(row=>String(row.state)==="active")
+      .map(row=>Number(row.listing_id)));
+    const primaryWorldByListing=new Map(assignments.map(row=>
+      [row.listingId,row.worldIds[0]??null] as const));
+    const attention=buildAttentionMap(rows.map(row=>{
+      const id=Number(row.listing_id);
+      return {
+        listingId:id,title:String(row.title||"Listing details unavailable"),
+        imageUrl:String(row.image_url||""),state:String(row.state||""),
+        favorites:row.favorites===null?null:Number(row.favorites),
+        sales90:sales90.get(id)?.sales??0,
+        lifetimeSales:performance.get(id)?.lifetimeUnits??0,
+        worldId:primaryWorldByListing.get(id)??null,
+      };
+    }),worlds.map(world=>({
+      worldId:world.id,label:world.label,
+      activeListings:world.listingIds.filter(id=>activeIds.has(id)).length,
+    })),{activeListingsTotal:activeIds.size});
+    const nextBuild=buildPlan(attention,10);
+
+    if(view==="overview-insights"){
+      return NextResponse.json({
+        shop:{shopId,shopName:shopRow.shop_name},
+        attention,nextBuild,
+        opportunities:opportunitiesFromAttention(attention,[]),
+      });
+    }
+
+    let marketCorroboration:ReturnType<typeof corroborateAttentionWithMarket>=[];
+    try{
+      const savedWatches=await watchesFor(user.userId);
+      const relevantKeys=new Set(marketWatchKeysForAttention(attention,savedWatches));
+      const relevant=savedWatches.filter(watch=>relevantKeys.has(watch.key));
+      const marketViewRows=await Promise.all(relevant.map(async watch=>{
+        try{
+          const niche=await readNiche(user.userId,watch.terms,watch.key,now);
+          return {key:watch.key,phrase:watch.phrase,terms:watch.terms,
+            summary:niche.summary,listings:niche.listings};
+        }catch{return null;}
+      }));
+      const marketViews=marketViewRows.filter(
+        (row):row is Exclude<(typeof marketViewRows)[number],null>=>row!==null);
+      const ownFamiliesByWorld=new Map(worlds.map(world=>
+        [world.id,world.productFamilies.map(row=>row.family)] as const));
+      marketCorroboration=corroborateAttentionWithMarket(
+        attention,marketViews,ownFamiliesByWorld);
+    }catch{
+      /* Supporting market evidence must never block the shop's own evidence. */
+    }
+    return NextResponse.json({
+      marketCorroboration,
+      opportunities:opportunitiesFromAttention(attention,marketCorroboration),
+      catalogActions:catalogActions(rows,saleRows.results??[],now),
+    });
+  }
+
   /* --------------------------------------------- one listing, if asked for */
   const askedRaw = new URL(request.url).searchParams.get("listingId") ?? "";
   const asked = /^[0-9]{1,15}$/.test(askedRaw) ? Number(askedRaw) : 0;
