@@ -12,7 +12,7 @@ test("redesigned suite surfaces use literal member-facing copy",()=>{
   assert.ok(home.includes("Goldie Suite"));
   assert.ok(home.includes("Certainty, direction, opportunities."));
   assert.ok(home.includes("Build and publish at scale."));
-  assert.ok(shop.includes("Loading where to focus…"));
+  assert.ok(shop.includes("Turn the ranking into action"));
   assert.ok(research.includes("See all buyer findings →"));
   assert.ok(hot.includes("Loading sales and stock changes…"));
   assert.ok(hot.includes("RESULTS IN THIS PERIOD FOR"));

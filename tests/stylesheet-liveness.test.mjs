@@ -14,6 +14,10 @@ const REDESIGN_TRANSITION = new Set([
   "shop-map-caveat", "shop-map-families", "shop-map-grouping", "shop-map-grouping-chevron",
   "shop-map-grouping-notes", "shop-map-period", "shop-map-thin", "listing-panel",
   "section-kicker", "suite-nav-label-library", "workflow-card",
+  // D1921 · Removed from markup in the decision-first My Shop pass. Keep these
+  // legacy selectors tolerated for one release while the stylesheet layers are
+  // consolidated; no new dead My Shop selectors may be added.
+  "shop-map-leader-grid", "shop-map-leaders", "shop-map-listing-image", "shop-map-summary-grid",
 ]);
 
 /* WHY THIS FILE EXISTS

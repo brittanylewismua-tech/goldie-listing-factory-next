@@ -17,8 +17,9 @@ test("Opportunity Engine leads with the attention map before sold listings", () 
   assert.match(client, /Put your attention where customers already put theirs/);
   assert.match(client, /YOUR #1 PRIORITY/);
   assert.match(client, /STRONGEST LISTINGS/);
-  assert.ok(client.indexOf("ATTENTION MAP") < client.indexOf("Top sellers"));
-  assert.match(client, /shown.topListings\?\?\[\]/);
+  assert.ok(client.indexOf("ATTENTION MAP") < client.indexOf("STRONGEST LISTINGS"));
+  assert.match(client, /THEN FOLLOW THE RANKING/);
+  assert.doesNotMatch(client, /<h2>Top sellers<\/h2>/);
 });
 
 test("sold listings keep every metric within the selected sales period", () => {
@@ -51,13 +52,13 @@ test("money keeps unknown costs unknown and marks estimates", () => {
 test("the page handles loading, failure, empty sales and timezone setup", () => {
   assert.match(client, /Loading your shop/);
   assert.match(client, /Showing your last saved results/);
-  assert.match(client, /No sales in the last 90 days/);
+  assert.match(client, /Sold listings · last/);
   assert.match(client, /My shop runs on \$\{detected\}/);
 });
 
 test("the map remains responsive without a desktop-only table", () => {
   const routeCss=readFileSync(new URL("../app/shop-map/shop-map.css", import.meta.url), "utf8");
-  assert.match(routeCss, /\.shop-map-leader-grid/);
+  assert.match(routeCss, /\.shop-map-attention/);
   assert.match(routeCss, /@media\(max-width:650px\)/);
   assert.match(routeCss, /\.shop-map-sold-grid article/);
   assert.doesNotMatch(client, /<table|<thead|<tbody/);

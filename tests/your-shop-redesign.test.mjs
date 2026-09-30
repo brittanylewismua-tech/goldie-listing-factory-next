@@ -37,12 +37,12 @@ test("the Your Shop rail is an unboxed editorial text rail",()=>{
   assert.match(final,/button\[aria-current=page\]::before\{[\s\S]*background:#ee6fc0!important;/);
 });
 
-test("Overview puts performance and focus before utilities",()=>{
+test("Overview puts decision intelligence before review utilities",()=>{
   const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
-  assert.ok(overview.indexOf("shop-map-leaders")<overview.indexOf("shop-map-opportunities"));
-  assert.match(overview,/shop-map-focus-panel/);
-  assert.match(overview,/Revenue · 90 days/);
-  assert.match(overview,/Units sold · 90 days/);
+  assert.ok(overview.indexOf("AttentionEngine")<overview.indexOf("shop-map-opportunities"));
+  assert.match(overview,/NextBuildAllocation/);
+  assert.match(overview,/OpportunityRecommendations/);
+  assert.doesNotMatch(overview,/shop-map-focus-panel|Revenue · 90 days|Units sold · 90 days/);
 });
 
 test("Product Themes is visual and keeps Unclassified separate",()=>{
@@ -61,10 +61,10 @@ test("Sold Listings uses one toolbar and image-led rows",()=>{
 });
 
 
-test("Overview renders its scorecard before deeper insights finish",()=>{
+test("Overview merges deeper opportunity intelligence without blocking the first render",()=>{
   assert.match(client,/view=overview-insights/);
-  assert.match(client,/Loading where to focus/);
   assert.match(client,/setMap\(current=>current\?\{\.\.\.current,\.\.\.detail\}:detail\)/);
+  assert.match(client,/Turn the ranking into action/);
 });
 
 
