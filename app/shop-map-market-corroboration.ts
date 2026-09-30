@@ -67,6 +67,25 @@ function watchMatchesWorld(
   return listingTitles.some(title=>overlap(words(title),watchWords)>=2);
 }
 
+export function marketWatchKeysForAttention(
+  attention:AttentionMap,
+  watches:Array<{key:string;phrase:string;terms?:string[]}>,
+):string[]{
+  const titlesByWorld=new Map<string,string[]>();
+  for(const listing of attention.listings){
+    if(!listing.worldId)continue;
+    titlesByWorld.set(listing.worldId,[...(titlesByWorld.get(listing.worldId)??[]),listing.title]);
+  }
+  const keys=new Set<string>();
+  for(const world of attention.worlds.filter(row=>row.signal>0)){
+    for(const watch of watches){
+      if(watchMatchesWorld(world,{...watch,listings:[]},titlesByWorld.get(world.worldId)??[]))
+        keys.add(watch.key);
+    }
+  }
+  return [...keys];
+}
+
 export function corroborateAttentionWithMarket(
   attention:AttentionMap,
   watches:TrackedMarketWatch[],
