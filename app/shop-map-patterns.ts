@@ -118,7 +118,29 @@ export function discoverWinningPatterns(rows:PatternListingInput[]):WinningPatte
     }
   }
 
+  /*
+    BACKGROUND LANGUAGE CANNOT GROW A MUSTACHE AND COME BACK.
+
+    If a concept already appears on at least half the active catalog, it is
+    shop-wide context rather than a useful differentiator. Suppress that
+    concept AND longer candidates built on top of the same core words. So
+    "girl power", "power girl", and "girl power feminist" cannot become three
+    separate recommendations in a feminist shop.
+  */
+  const background=[...byConcept.entries()].flatMap(([concept,group])=>{
+    let activeCount=0;
+    for(const id of group.ids)if(rowById.get(id)?.state==="active")activeCount+=1;
+    return activeCount/activeTotal>=.5
+      ? [{concept,tokens:new Set(concept.split(" ").filter(Boolean))}]
+      : [];
+  });
+  const containsBackground=(concept:string)=>{
+    const tokens=new Set(concept.split(" ").filter(Boolean));
+    return background.some(base=>base.tokens.size>=2&&[...base.tokens].every(token=>tokens.has(token)));
+  };
+
   const scored=[...byConcept.entries()].flatMap(([concept,group])=>{
+    if(containsBackground(concept))return [];
     const ids=group.ids;
     const phrase=[...group.variants.entries()].sort((a,b)=>b[1]-a[1]
       || b[0].split(" ").length-a[0].split(" ").length

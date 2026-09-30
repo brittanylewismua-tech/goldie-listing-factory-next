@@ -24,6 +24,10 @@ test("ubiquitous shop-wide wording does not masquerade as a winning pattern",()=
   assert.ok(map.patterns.length>=1&&map.patterns.length<=5);
   assert.equal(map.patterns.some(pattern=>/girl power|power girl/i.test(pattern.key)),false);
   assert.equal(map.patterns.some(pattern=>/girl power|power girl/i.test(pattern.label)),false);
+  assert.equal(map.patterns.some(pattern=>{
+    const words=new Set(pattern.key.toLowerCase().split(/\s+/));
+    return words.has("girl")&&words.has("power");
+  }),false,"shop-wide Girl Power language leaked back through a longer phrase variant");
   assert.ok(map.patterns[0].customerPercent>map.patterns[0].catalogPercent);
 });
 
