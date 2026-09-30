@@ -1593,6 +1593,49 @@
 #suite-workspace .shop-map-redesign .shop-map-recommendation-copy>strong{
   display:block!important;margin:0!important;font-size:13px!important;line-height:1.5!important;font-weight:850!important;
 }
+#suite-workspace .shop-map-redesign .shop-map-market-proof{
+  margin-top:14px!important;
+  padding:13px 14px!important;
+  border:1px solid #d9d5d2!important;
+  border-left:4px solid #ee6fc0!important;
+  border-radius:10px!important;
+  background:#fffafa!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-market-proof>div{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:12px!important;
+  margin-bottom:7px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-market-proof>div>span{
+  font-size:9px!important;
+  font-weight:950!important;
+  letter-spacing:.07em!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-market-proof>div>a{
+  color:#000!important;
+  font-size:10px!important;
+  font-weight:850!important;
+  text-decoration:underline!important;
+  text-underline-offset:3px!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-market-proof>p{
+  margin:0!important;
+  max-width:880px!important;
+  color:#46433f!important;
+  font-size:11px!important;
+  line-height:1.55!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-market-proof>p+p{margin-top:7px!important}
+#suite-workspace .shop-map-redesign .shop-map-market-proof b{color:#000!important;font-weight:900!important}
+@media(max-width:620px){
+  #suite-workspace .shop-map-redesign .shop-map-market-proof>div{
+    display:grid!important;
+    gap:5px!important;
+  }
+}
+
 #suite-workspace .shop-map-redesign .shop-map-mirrorbot{
   margin-top:14px!important;border-top:1px solid #ddd7d3!important;padding-top:12px!important;
 }
