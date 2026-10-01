@@ -140,7 +140,7 @@ test("artwork-led Opportunity Engine invalidates older cached responses",()=>{
 
 test("Sold Listings returns before timezone and full performance setup",()=>{
   const sold=route.indexOf('if(view==="sold")');
-  const timezone=route.indexOf('const timezone = await shopTimezone');
+  const timezone=route.indexOf('timezone = await shopTimezone');
   const performance=route.indexOf('const performance = performanceFrom');
   assert.ok(sold>-1&&timezone>-1&&performance>-1&&sold<timezone&&sold<performance);
 });
