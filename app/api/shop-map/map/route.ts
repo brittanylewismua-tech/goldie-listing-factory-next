@@ -1,4 +1,6 @@
 import { catalogActions } from "@/app/shop-map-actions";
+import { isQaReviewer } from "@/app/qa-reviewer";
+import { qaMapFixture } from "@/app/qa-shop-map-fixture";
 import { crossSiteWrite, CROSS_SITE_REFUSAL } from "@/app/same-site-only";
 import { NextResponse } from "next/server";
 import { withErrorLog } from "@/app/error-log";
@@ -53,6 +55,8 @@ export const GET = withErrorLog("shop-map-map", async (request: Request) => {
 });
 
 async function buildMap(request: Request) {
+  if (await isQaReviewer()) return NextResponse.json(qaMapFixture(new URL(request.url)),
+    { headers: { "Cache-Control": "private, no-store" } });
   const access = await requireFeatureApi("shopMap");
   if (!access.ok) return access.response;
   const user = access.user;

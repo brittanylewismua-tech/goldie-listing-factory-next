@@ -1,4 +1,5 @@
 import { requireFeaturePage } from "@/app/require-feature";
+import { isQaReviewer, QA_REVIEWER_EMAIL } from "@/app/qa-reviewer";
 import FactoryShell from "@/app/factory-shell";
 import ShopMapClient from "./shop-map-client";
 import "./shop-map.css";
@@ -15,11 +16,12 @@ export const metadata = { title: "Your shop" };
   pointed, and what is it made of.
 */
 export default async function ShopMapPage() {
-  const user = await requireFeaturePage("shopMap", "/shop-map");
+  const reviewer = await isQaReviewer();
+  const user = reviewer ? { email: QA_REVIEWER_EMAIL } : await requireFeaturePage("shopMap", "/shop-map");
   return (
     /* D1575 · the same rail, topbar, wordmark and footer as the Listing
        Factory. This page rendered as a bare column on white before. */
-    <FactoryShell active="shop-map" title="Your shop" desktopOnly={false}>
+    <FactoryShell active="shop-map" title="Your shop" desktopOnly={false} reviewer={reviewer}>
       <ShopMapClient signedInEmail={user.email} />
     </FactoryShell>
   );

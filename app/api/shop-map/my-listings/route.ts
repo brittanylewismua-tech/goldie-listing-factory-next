@@ -1,4 +1,6 @@
 import {NextResponse} from 'next/server';
+import {isQaReviewer} from '@/app/qa-reviewer';
+import {qaListings} from '@/app/qa-shop-map-fixture';
 import {withErrorLog} from '@/app/error-log';
 import {requireFeatureApi} from '@/app/require-feature';
 import {env} from 'cloudflare:workers';
@@ -7,6 +9,8 @@ import {ensureProvenanceTables} from '@/app/artwork-provenance';
 
 // Member-scoped catalog and actual non-refunded sales.
 export const GET = withErrorLog('shop-map-my-listings', async () => {
+  if (await isQaReviewer()) return NextResponse.json({shop:{shopId:900001,shopName:'Goldie Reviewer Shop'},listings:qaListings},
+    {headers:{'Cache-Control':'private, no-store'}});
   const access = await requireFeatureApi('shopMap');
   if (!access.ok) return access.response;
   const user = access.user;

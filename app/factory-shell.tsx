@@ -99,8 +99,8 @@ export const NAV: SuiteNavItem[] = [
   the shell entirely rather than have the shell tell the truth about which
   half was which. So the shell says it now.
 */
-export default function FactoryShell({ active, title, desktopOnly = false, children }:
-  { active: NavKey; title: string; desktopOnly?: boolean; children: React.ReactNode }) {
+export default function FactoryShell({ active, title, desktopOnly = false, reviewer = false, children }:
+  { active: NavKey; title: string; desktopOnly?: boolean; reviewer?: boolean; children: React.ReactNode }) {
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
   const [goal, setGoal] = useState<ListingGoal | null>(null);
   const [goalDays, setGoalDays] = useState<PublishedDay[]>([]);
@@ -122,6 +122,12 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
   const [usageFailed, setUsageFailed] = useState(false);
 
   useEffect(() => {
+    if (reviewer) {
+      setAccount({signedIn:true,name:"QA Reviewer",initials:"QA",owner:false});
+      setUsageFailed(true);
+      setGoalDaysLoaded(true);
+      return;
+    }
     /*
       D1659 · "LOADING USAGE…" FOREVER.
 
@@ -153,7 +159,7 @@ export default function FactoryShell({ active, title, desktopOnly = false, child
     void (fetch("/api/account").then(response => response.json()) as Promise<{ signedIn?: boolean; name?: string; initials?: string; owner?: boolean }>).then((result: { signedIn?: boolean; name?: string; initials?: string; owner?: boolean }) => {
       setAccount({ signedIn: Boolean(result.signedIn), name: result.name || "", initials: result.initials || "", owner: Boolean(result.owner) });
     }).catch(() => undefined);
-  }, []);
+  }, [reviewer]);
 
   useEffect(()=>{const loaded=(event:Event)=>{const days=(event as CustomEvent<PublishedDay[]>).detail;if(Array.isArray(days)){setGoalDays(days);setGoalDaysLoaded(true);setGoalDaysError(false)}};window.addEventListener("goldie-history-loaded",loaded);return()=>window.removeEventListener("goldie-history-loaded",loaded)},[]);
 
