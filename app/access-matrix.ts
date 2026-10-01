@@ -62,8 +62,6 @@ export const ACCESS: Record<string, Rule> = {
   "/api/version": { kind: "public" },
   /* Public entry point with its own expiring high-entropy reviewer token check. */
   "/qa/reviewer": { kind: "public" },
-  /* Same token-gated reviewer session; embeds the real Shop Map at phone width. */
-  "/qa/mobile": { kind: "public" },
   /* Short-lived GitHub Actions OIDC proof is verified inside the route. */
   "/qa/oidc": { kind: "public" },
   /* Temporary visual-review route: same Home renderer/CSS with mock data so

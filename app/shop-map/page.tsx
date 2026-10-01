@@ -1,5 +1,6 @@
 import { requireFeaturePage } from "@/app/require-feature";
 import { isQaReviewer, QA_REVIEWER_EMAIL } from "@/app/qa-reviewer";
+import QaMobileMetrics from "@/app/qa/mobile-metrics";
 import FactoryShell from "@/app/factory-shell";
 import ShopMapClient from "./shop-map-client";
 import "./shop-map.css";
@@ -22,6 +23,7 @@ export default async function ShopMapPage() {
     /* D1575 · the same rail, topbar, wordmark and footer as the Listing
        Factory. This page rendered as a bare column on white before. */
     <FactoryShell active="shop-map" title="Your shop" desktopOnly={false} reviewer={reviewer}>
+      {reviewer && <QaMobileMetrics />}
       <ShopMapClient signedInEmail={user.email} />
     </FactoryShell>
   );
