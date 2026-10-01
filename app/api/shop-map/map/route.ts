@@ -119,6 +119,41 @@ async function buildMap(request: Request) {
     });
   }
   /*
+    Tracked market evidence is optional corroboration for concepts identified
+    from artwork. Exact phrase matching prevents SEO words from selecting a
+    different priority. This branch does not read finance or classify worlds.
+  */
+  if(view==="overview-market"){
+    const normalize=(value:string)=>String(value||"").toLowerCase()
+      .replace(/[^a-z0-9' ]+/g," ").replace(/\s+/g," ").trim();
+    const wanted=[...new Set(parameters.getAll("pattern").slice(0,5)
+      .map(normalize).filter(value=>value.length>=4&&value.length<=80))];
+    if(!wanted.length)return NextResponse.json({marketProof:[]});
+    try{
+      const watches=await watchesFor(user.userId);
+      const marketProof=await Promise.all(wanted.map(async patternKey=>{
+        const exact=watches.filter(watch=>normalize(watch.phrase)===patternKey
+          ||(watch.terms??[]).some(term=>normalize(term)===patternKey)).slice(0,2);
+        const candidates=await Promise.all(exact.map(async watch=>{
+          try{
+            const niche=await readNiche(user.userId,watch.terms,watch.key,now);
+            const selling=(niche.listings??[]).filter(row=>Number(row.sold30??0)>0);
+            const observedSold30=selling.reduce((sum,row)=>sum+Math.max(0,Number(row.sold30??0)),0);
+            const moving=Math.max(0,Number(niche.summary?.moving??0));
+            return selling.length||moving?{
+              patternKey,phrase:watch.phrase,
+              sellingListings:selling.length,observedSold30,moving,
+            }:null;
+          }catch{return null}
+        }));
+        return candidates.filter((row):row is NonNullable<typeof row>=>row!==null)
+          .sort((a,b)=>b.observedSold30-a.observedSold30||b.moving-a.moving)[0]??null;
+      }));
+      return NextResponse.json({marketProof:marketProof.filter(row=>row!==null)});
+    }catch{return NextResponse.json({marketProof:[]})}
+  }
+
+  /*
     NO FALLBACK TIMEZONE, EVER.
 
     A borrowed default silently moves another member's revenue between months

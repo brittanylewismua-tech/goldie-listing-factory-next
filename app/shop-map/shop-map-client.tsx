@@ -5,6 +5,7 @@ import {designsOnOneProduct,familyLabel,shortLabel,type Reach,type ReachListing}
 import type {CatalogAction} from "@/app/shop-map-actions";
 import type {MarketCorroboration} from "@/app/shop-map-market-corroboration";
 import type {WinningPatternMap} from "@/app/shop-map-patterns";
+import {ArtworkNextBuild,ArtworkRecommendations,type ArtworkMarketProof} from "@/app/shop-map-artwork-actions";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
@@ -22,7 +23,7 @@ export type ShopOpportunity = {
   headline:string;explanation:string;action:string;mirrorBotPrompt:string|null;
 };
 const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";
-const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v8:";
+const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v9:";
 const cacheDay=()=>new Date().toLocaleDateString("en-CA");
 function readShopMapCache(key:string):ShopMap|null{
   if(typeof window==="undefined")return null;
@@ -70,6 +71,7 @@ type ShopMap = {
   opportunities?: ShopOpportunity[];
   nextBuild?: NextBuildPlan;
   marketCorroboration?: MarketCorroboration[];
+  marketProof?:ArtworkMarketProof[];
   catalogActions?: CatalogAction[];
   displayUnavailable?:boolean;
   topListings?: Array<{listingId:number;title:string;imageUrl:string;favorites:number|null;sales:number;revenueMinor:number}>;
@@ -486,6 +488,22 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         })
         .catch(()=>undefined)
         .finally(()=>{if(sequence===requestSequence.current)setInsightsLoading(false);});
+      const artworkPatterns=next.patterns?.patterns??[];
+      if(artworkPatterns.length){
+        const marketParams=new URLSearchParams({view:"overview-market"});
+        for(const pattern of artworkPatterns.slice(0,5))marketParams.append("pattern",pattern.key);
+        void fetch(`/api/shop-map/map?${marketParams.toString()}`)
+          .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
+          .then(detail=>{
+            if(sequence!==requestSequence.current||!detail||!Array.isArray(detail.marketProof))return;
+            setMap(current=>{if(!current)return current;
+              const merged={...current,marketProof:detail.marketProof};
+              writeShopMapCache("view=overview-insights",merged);
+              return merged;
+            });
+          })
+          .catch(()=>undefined);
+      }
     } else setInsightsLoading(false);
   },[tab,soldDays,selectedMonth]);
   useEffect(() => { void load(); }, [load]);
@@ -633,6 +651,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
       {!panelLoading&&!shown.patterns?<section className="shop-map-inline-state"><strong>Your shop is connected.</strong><p>Goldie is still building enough design evidence to rank priorities.</p></section>:null}
       {shown.patterns?<WinningPatterns map={shown.patterns}/>:null}
+      {!!shown.patterns?.patterns?.length&&<ArtworkNextBuild map={shown.patterns}/>}
+      {!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} marketProof={shown.marketProof??[]}/>}
       {!insightsLoading||shown.catalogActions?<div className="shop-map-opportunity-stack">
         <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
         <DesignReach/>

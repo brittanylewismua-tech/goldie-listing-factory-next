@@ -4,21 +4,24 @@ import { readFileSync } from "node:fs";
 
 const client=readFileSync("app/shop-map/shop-map-client.tsx","utf8");
 const route=readFileSync("app/api/shop-map/map/route.ts","utf8");
+const actions=readFileSync("app/shop-map-artwork-actions.tsx","utf8");
 const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
 
-test("Opportunity Engine renders artwork-led priorities only",()=>{
+test("Opportunity Engine restores action sections from artwork patterns",()=>{
   assert.match(overview,/WinningPatterns/);
-  assert.doesNotMatch(overview,/AttentionEngine/);
-  assert.doesNotMatch(overview,/NextBuildAllocation/);
-  assert.doesNotMatch(overview,/OpportunityRecommendations/);
-  assert.doesNotMatch(overview,/shown\.attention|shown\.nextBuild|shown\.opportunities|shown\.marketCorroboration/);
+  assert.match(overview,/ArtworkNextBuild/);
+  assert.match(overview,/ArtworkRecommendations/);
+  assert.match(overview,/shown\.patterns\?\.patterns\?\.length/);
+  assert.doesNotMatch(overview,/<AttentionEngine|<NextBuildAllocation|<OpportunityRecommendations/);
+  assert.doesNotMatch(overview,/shown\.attention|shown\.nextBuild|shown\.opportunities/);
 });
 
-test("incomplete artwork evidence cannot fall back to world or market priorities",()=>{
+test("incomplete artwork evidence cannot generate action recommendations",()=>{
   assert.match(route,/const completeVisualSignal=/);
   assert.match(route,/patterns:completeVisualSignal/);
-  assert.doesNotMatch(overview,/marketEvidence=/);
-  assert.doesNotMatch(overview,/WHERE TO BUILD NEXT|WHAT TO DO NEXT|MARKET RADAR SUPPORT/);
+  assert.match(overview,/!!shown\.patterns\?\.patterns\?\.length&&<ArtworkRecommendations/);
+  assert.match(actions,/map\.patterns\.slice\(0,4\)/);
+  assert.doesNotMatch(overview,/shown\.attention|shown\.nextBuild|shown\.opportunities/);
 });
 
 test("Opportunity support returns before world classification and only supplies sales review actions",()=>{
@@ -69,4 +72,19 @@ test("top listings still render when visual priority evidence is incomplete",()=
   assert.match(client,/if\(!lead&&map\.listings\.length\)/);
   assert.match(client,/shop-map-attention-listings-only/);
   assert.match(overview,/shown\.patterns\?<WinningPatterns map=\{shown\.patterns\}/);
+});
+
+test("MirrorBot handoffs use artwork concepts and never SEO titles",()=>{
+  assert.match(actions,/actual artwork concept|proven artwork concept/);
+  assert.match(actions,/Do not infer the artwork from SEO titles or tags/);
+  assert.match(actions,/navigator\.clipboard\.writeText\(prompt\)/);
+  assert.match(actions,/Open MirrorBot/);
+});
+
+test("tracked market proof must match the artwork phrase exactly and remains optional",()=>{
+  const market=route.slice(route.indexOf('if(view==="overview-market")'),route.indexOf("NO FALLBACK TIMEZONE"));
+  assert.match(market,/normalize\(watch\.phrase\)===patternKey/);
+  assert.match(market,/normalize\(term\)===patternKey/);
+  assert.doesNotMatch(market,/listingTitles|watchMatchesWorld|buildAttentionMap/);
+  assert.match(actions,/proofByKey\.get\(row\.key\)/);
 });
