@@ -10,6 +10,7 @@ import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
 import { buildAttentionMap } from "@/app/shop-map-attention";
 import { discoverVisualWinningPatterns } from "@/app/shop-map-visual-patterns";
+import { EXTRACTION_SCHEMA_VERSION, DESIGN_MODEL_VERSION, DESIGN_PROMPT_VERSION } from "@/app/design-intelligence";
 import { opportunitiesFromAttention } from "@/app/shop-map-opportunities";
 import { buildPlan } from "@/app/shop-map-build-plan";
 import { corroborateAttentionWithMarket, marketWatchKeysForAttention } from "@/app/shop-map-market-corroboration";
@@ -293,9 +294,9 @@ async function buildMap(request: Request) {
            ON d.user_id=l.user_id
           AND (d.artwork_hash=p.artwork_hash OR d.artwork_hash=('a1-' || p.artwork_hash))
         WHERE l.user_id=? AND l.shop_id=?
-          AND d.schema_version=1 AND d.model_version='google/gemini-2.5-flash'
-          AND d.prompt_version=1`)
-      .bind(user.userId,shopId)
+          AND d.schema_version=? AND d.model_version=?
+          AND d.prompt_version=?`)
+      .bind(user.userId,shopId,EXTRACTION_SCHEMA_VERSION,DESIGN_MODEL_VERSION,DESIGN_PROMPT_VERSION)
       .all<{listingId:number;artworkHash:string;payload:string}>()
       .catch(()=>({results:[] as Array<{listingId:number;artworkHash:string;payload:string}>}));
     const seen=new Set<number>();
