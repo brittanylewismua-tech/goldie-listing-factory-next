@@ -25,7 +25,13 @@ try {
     ]){
       await page.locator(".shop-map-tabs button").filter({hasText:label}).click();
       await page.waitForTimeout(2200);
-      if(key==="overview")await page.getByText("Next specific test").first().waitFor({timeout:30000});
+      if(key==="overview"){
+        await page.getByText("Next specific test").first().waitFor({timeout:30000});
+        const hero=page.locator(".shop-map-purchases-leadline");
+        if(!(await hero.innerText()).includes("Next test:"))throw new Error("First-screen product direction missing");
+        const box=await hero.boundingBox();
+        console.log("QA_HERO "+JSON.stringify({width,top:box?.y,height:box?.height,text:(await hero.innerText()).slice(0,180)}));
+      }
       const measured=(await output.innerText()).trim();
       const match=measured.match(/QA viewport: (\d+)px; document: (\d+)px; body: (\d+)px; tab rows: ([\d+]+); active: ([^;]+); loading: (YES|NO); alert: ([^;]+); text: (\d+)/);
       if(!match)throw new Error("Mobile metrics unavailable: "+measured);

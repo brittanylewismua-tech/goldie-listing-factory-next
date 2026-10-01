@@ -7,6 +7,8 @@ const percent=(share:number)=>share>0&&share<.005?"<1%":`${Math.round(share*100)
 
 export default function PurchasePriorities({map,directions=[]}:{map:PurchasePriorityMap;directions?:ProductDirection[]}){
   const byListing=new Map(directions.map(row=>[row.listingId,row]));
+  const lead=map.priorities[0];
+  const leadDirection=lead?byListing.get(lead.listingId):null;
   const period=`last ${map.days} days`;
   const sharePhrase=map.shareLabel==="Share of shop purchases"?"your shop’s purchases":"matched purchases";
   const refreshed=map.refreshedAt
@@ -16,8 +18,9 @@ export default function PurchasePriorities({map,directions=[]}:{map:PurchasePrio
     <div className="shop-map-purchases-head">
       <div><p className="mini-label">PURCHASE-LED PRIORITIES</p>
         <h2 id="shop-map-purchases-title">Where to focus next</h2>
-        <p>Build out what your customers are already buying.</p></div>
-      <small>{refreshed?`Last successful sales refresh: ${refreshed}`:"Sales refresh time unavailable"}</small>
+        {lead?<p className="shop-map-purchases-leadline"><b>{lead.title}</b> · {lead.unitsPurchased} purchased units ({percent(lead.share)} {map.shareLabel.toLowerCase()}).
+          {leadDirection?.kind==="test"?<span> Next test: {leadDirection.proposedChange}</span>:null}
+        </p>:<p>Build out what your customers are already buying.</p>}</div>
     </div>
     {map.totalUnits===0
       ? <div className="shop-map-purchases-empty">
@@ -62,5 +65,6 @@ export default function PurchasePriorities({map,directions=[]}:{map:PurchasePrio
     {!map.receiptsComplete&&<p className="shop-map-purchases-caveat">Receipt import is incomplete. Shares use recorded matched purchases and may change after the next successful sales refresh.</p>}
     {map.unmatchedUnits>0&&<p className="shop-map-purchases-caveat">{map.unmatchedUnits} purchased unit{map.unmatchedUnits===1?"":"s"} could not be matched to a listing and are shown separately.</p>}
     {map.excludedRefundUnits>0&&<p className="shop-map-purchases-caveat">Some receipt-level refunds cannot be assigned to individual items. {map.excludedRefundUnits} affected unit{map.excludedRefundUnits===1?" is":"s are"} excluded from this ranking until their attribution is clear.</p>}
+    <small className="shop-map-purchases-refresh">{refreshed?`Last successful sales refresh: ${refreshed}`:"Sales refresh time unavailable"}</small>
   </section>;
 }

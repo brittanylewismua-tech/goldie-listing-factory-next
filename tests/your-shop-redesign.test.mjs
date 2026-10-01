@@ -100,6 +100,7 @@ test("each purchase-led winner can receive a product-specific direction independ
   assert.match(client,/productDirections/);
   assert.match(client,/view=overview-insights&days=\$\{selectedDays\}/);
   assert.match(card,/Next specific test/);
+  assert.match(card,/shop-map-purchases-leadline/);
   assert.match(card,/Catalog check:/);
   assert.match(card,/Why now:/);
   assert.ok(card.indexOf("row.unitsPurchased")<card.indexOf("Next specific test"));
