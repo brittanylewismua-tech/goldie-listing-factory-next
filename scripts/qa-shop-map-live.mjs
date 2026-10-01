@@ -45,7 +45,7 @@ try {
       if(row.active.toLowerCase()!==label.toLowerCase())throw new Error("Wrong active tab in "+key);
       if(row.alert!=="none")throw new Error("Alert in "+key+": "+row.alert);
       if(row.loading!=="NO"||row.textLength<200)throw new Error("Blank or incomplete "+key+" panel");
-      if(width===320){
+      if(width===390){
         await page.mouse.move(width/2,560);
         const scrollSteps=key==="overview"?9:3;
         for(let step=1;step<=scrollSteps;step++){
