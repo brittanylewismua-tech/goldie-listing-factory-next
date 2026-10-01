@@ -96,45 +96,43 @@ test("Opportunity Engine uses a dedicated core request before optional support",
 });
 
 
-test("each purchase-led winner can receive a product-specific direction independently of visual patterns",()=>{
+test("each purchased product keeps a direction and source evidence behind concise presentation",()=>{
   const card=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
   assert.match(client,/productDirections/);
   assert.match(client,/view=overview-insights&days=\$\{selectedDays\}/);
-  assert.match(card,/Next specific test/);
-  assert.match(card,/shop-map-purchases-photo/);
-  assert.match(card,/fetchPriority=\{row\.rank===1\?"high":"auto"\}/);
-  assert.match(card,/shop-map-purchases-analysis/);
+  assert.match(card,/NEXT PRODUCT TEST/);
+  assert.match(card,/oe-lead-art/);
+  assert.match(card,/fetchPriority="high"/);
+  assert.match(card,/oe-detail/);
   assert.match(card,/Catalog check:/);
   assert.match(card,/Why now:/);
-  assert.ok(card.indexOf("row.unitsPurchased")<card.indexOf("Next specific test"));
+  assert.match(card,/oe-top-grid/);
+  assert.doesNotMatch(card,/units purchased across.*recorded transactions in the/);
 });
-
-test("ties crossing the compact cutoff remain reachable at equal rank and emphasis",()=>{
+test("ties crossing the compact cutoff remain reachable at equal rank",()=>{
   const card=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
   assert.match(card,/tiedBeyondCutoff/);
-  assert.match(card,/View all tied priorities/);
-  assert.match(card,/leaders\.map\(card\)/);
-  assert.match(card,/companions\.map\(card\)/);
-  assert.match(card,/row\.rank===1\?"purchase-lead"/);
+  assert.match(card,/visiblePriorities\.map\(card\)/);
   assert.match(card,/aria-expanded=\{showTies\}/);
+  assert.match(card,/row\.rank/);
+  assert.match(card,/oe-top-card/);
 });
-
-test("Winner DNA labels its subset denominator and supporting listing identities",()=>{
+test("Winner DNA keeps its exact subset denominator and source listings in detail",()=>{
   const review=readFileSync("app/shop-map-evidence-review.tsx","utf8");
-  assert.match(review,/purchased units among these/);
+  assert.match(review,/Purchased units among/);
   assert.match(review,/leading analyzed selling artworks/);
   assert.match(review,/row\.listingIds/);
+  assert.match(review,/See trait sources and scope/);
   assert.doesNotMatch(review,/% of winning response/);
 });
-
-test("a tied listing without a direction cannot remain in perpetual loading",()=>{
+test("a selected product without a direction has an honest local state",()=>{
   const card=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
   assert.match(card,/analysisFailed/);
-  assert.match(card,/No supported product-specific direction is available yet/);
+  assert.match(card,/Review this purchased product before choosing a new test/);
   assert.match(card,/Product analysis could not load/);
+  assert.match(card,/Checking product imagery/);
   assert.match(client,/analysisFailed=\{insightsFailed\}/);
 });
-
 test("Your Shop reuses same-day cached data without leaking data between tabs",()=>{
   assert.match(client,/SHOP_MAP_CACHE_PREFIX/);
   assert.match(client,/sessionStorage\.getItem/);

@@ -19,17 +19,12 @@ export default function PurchasePriorities({map,directions,analysisFailed=false,
   const cutoffUnits=map.priorities.at(-1)?.unitsPurchased??0;
   const tiedBeyondCutoff=map.listings.slice(map.priorities.length).filter(row=>row.unitsPurchased===cutoffUnits);
   const visiblePriorities=showTies?[...map.priorities,...tiedBeyondCutoff]:map.priorities;
-  const leaders=visiblePriorities.filter(row=>row.rank===1);
-  const companions=visiblePriorities.filter(row=>row.rank!==1);
   const chosen=map.listings.find(row=>row.listingId===selectedId)??visiblePriorities[0];
   const visibleIds=new Set(visiblePriorities.map(row=>row.listingId));
   const additional=map.listings.filter(row=>!visibleIds.has(row.listingId));
   const displayedAdditional=showAllPurchased?additional:additional.slice(0,6);
   const direction=chosen?byListing.get(chosen.listingId):null;
-  const hiddenUnits=Math.max(0,map.totalUnits-visiblePriorities.reduce((sum,row)=>sum+row.unitsPurchased,0));
   const period="last "+map.days+" days";
-  const refreshed=map.refreshedAt
-    ?new Date(map.refreshedAt*1000).toLocaleString(undefined,{dateStyle:"medium",timeStyle:"short"}):null;
   const researchPrompt=chosen&&direction
     ?["Research one feasible original next test for purchased listing #"+chosen.listingId+" ("+chosen.title+").",
       "It received "+chosen.unitsPurchased+" purchased units across "+chosen.orders+" recorded transactions in the "+period+
@@ -45,101 +40,81 @@ export default function PurchasePriorities({map,directions,analysisFailed=false,
     try{await navigator.clipboard.writeText(researchPrompt);setCopyState("Copied the full product context. Opening MirrorBot does not transfer it automatically.")}
     catch{setCopyState("Copy the full context below, then paste it into MirrorBot.");}
   };
-  const card=(row:PurchasePriority)=>{
-    const dominant=row.rank===1&&leaders.length===1;
-    return <article key={row.listingId} className={row.rank===1?"purchase-lead":""}
-      data-dominant={dominant?"yes":"no"} data-selected={chosen?.listingId===row.listingId?"yes":"no"}>
-      <button type="button" className="shop-map-purchases-select" aria-pressed={chosen?.listingId===row.listingId}
-        aria-label={"Review priority "+row.rank+": "+row.title} onClick={()=>{setSelectedId(row.listingId);setCopyState("");}}>
-        <span className="shop-map-purchases-photo">
-          {row.imageUrl?<img src={row.imageUrl} alt={row.title} width={320} height={320}
-            loading={row.rank===1?"eager":"lazy"} fetchPriority={row.rank===1?"high":"auto"}/>:
-            <span className="shop-map-purchases-image-missing" aria-label="Listing image unavailable">Image unavailable</span>}
-        </span>
-        <span className="shop-map-purchases-card-copy">
-          <span className="shop-map-purchases-rank">Priority {row.rank}</span>
-          <strong className="shop-map-purchases-title" title={row.title}>{shortLabel(row.title)}</strong>
-          <span className="shop-map-purchases-votes"><strong>{row.unitsPurchased}</strong> units purchased</span>
-          <span className="shop-map-purchases-share">{percent(row.share)} {map.shareLabel.toLowerCase()}</span>
-          <span className="shop-map-purchases-bar" aria-hidden="true"><span style={{width:Math.max(1,row.share*100)+"%"}}/></span>
-          {row.state==="sold_out"||row.state==="inactive"
-            ?<small>{row.state==="sold_out"?"Sold out":"Inactive"} · historical purchases</small>:null}
-        </span>
-      </button>
-    </article>;
-  };
-  return <section className="shop-map-purchases" aria-labelledby="shop-map-purchases-title">
-    <div className="shop-map-purchases-head">
-      <div><p className="mini-label">PURCHASE-LED PRIORITIES</p>
-        <h2 id="shop-map-purchases-title">Where to focus next</h2>
-        <p>Build out what your customers are already buying.</p></div>
-      <small>{refreshed?"Sales updated "+refreshed:"Sales refresh time unavailable"}</small>
-    </div>
-    {map.totalUnits===0
-      ?<div className="shop-map-purchases-empty"><strong>No purchases in this period.</strong>
-        <p>Try the other period. Favorites are separate early response, not purchases.</p></div>
-      :<>
-        <div className="shop-map-purchases-grid">
-          {leaders.map(card)}
-          {chosen?<section className="shop-map-purchases-analysis" aria-live="polite" id="shop-map-selected-direction">
-            <p className="mini-label">SELECTED PRODUCT</p>
-            <h3>What to build next</h3>
-            {chosen.listingId!==map.priorities[0]?.listingId?<p className="shop-map-purchases-selected-name">{shortLabel(chosen.title)}</p>:null}
-            {direction
-              ?<>
-                <strong>{direction.kind==="test"?"Next specific test":direction.kind==="check-first"?"Candidate · check existing versions first":"Product review"}</strong>
-                <p className="shop-map-purchases-next">{direction.proposedChange??direction.researchQuestion??"Review this exact purchased product before choosing a new test."}</p>
-                {direction.retainedCharacteristic?<p>Keep {direction.retainedCharacteristic}.</p>:null}
-                <details><summary>Product evidence and catalog check</summary>
-                  <p>Catalog check: {direction.catalogCoverage}</p>
-                  <p>Why now: {direction.whyNow}.</p>
-                  {direction.researchQuestion?<p>Next step: {direction.researchQuestion}</p>:null}
-                  <p>{chosen.orders} recorded transaction{chosen.orders===1?"":"s"} · Product revenue: {chosen.productRevenueMinor!==null&&chosen.currency?money(chosen.productRevenueMinor,chosen.currency):"Unavailable across currencies"}</p>
-                  <a href={"https://www.etsy.com/listing/"+chosen.listingId} target="_blank" rel="noopener noreferrer">View source listing ↗</a>
-                  {direction.relatedListingId?<a href={"https://www.etsy.com/listing/"+direction.relatedListingId} target="_blank" rel="noopener noreferrer">See existing version ↗</a>:null}
-                </details>
-                <div className="shop-map-purchases-next-actions">
-                  <button type="button" onClick={()=>void copy()}>Copy next steps</button>
-                  <a href={MIRRORBOT_URL} target="_blank" rel="noopener noreferrer" onClick={()=>void copy()}>Research this direction ↗</a>
-                </div>
-                {copyState?<p role="status">{copyState}</p>:null}
-                {copyState.startsWith("Copy the full")?<textarea readOnly value={researchPrompt} aria-label="Full research context" onFocus={event=>event.currentTarget.select()}/>:null}
-              </>
-              :<div className="shop-map-purchases-pending">
-                <p>{analysisFailed?"Product analysis could not load.":directions?"No supported product-specific direction is available yet.":"Checking this product image and related catalog…"}</p>
-                <p>{analysisFailed?"Purchase priorities remain available.":directions?"Review this purchased product and its existing versions before choosing a build.":"Purchase evidence stays visible while product analysis loads."}</p>
-                {analysisFailed&&onRetry?<button type="button" onClick={onRetry}>Retry product analysis</button>:null}
-              </div>}
-          </section>:null}
-          {companions.map(card)}
+  const choiceLabel=direction?.kind==="test"?"NEXT PRODUCT TEST"
+    :direction?.kind==="check-first"?"CANDIDATE · CHECK FIRST":"PRODUCT REVIEW";
+  const choiceAction=direction?.proposedChange??direction?.researchQuestion
+    ??(analysisFailed?"Product analysis could not load.":directions?"Review this purchased product before choosing a new test.":"Checking product imagery…");
+  const card=(row:PurchasePriority)=><button key={row.listingId} type="button"
+    className="oe-top-card" aria-pressed={chosen?.listingId===row.listingId}
+    aria-label={"Review "+row.title+": "+row.unitsPurchased+" units purchased"}
+    onClick={()=>{setSelectedId(row.listingId);setCopyState("");}}>
+    <span className="oe-top-photo">{row.imageUrl
+      ?<img src={row.imageUrl} alt="" width={96} height={96} loading="lazy"/>
+      :<span>Image unavailable</span>}</span>
+    <span className="oe-top-name">{shortLabel(row.title)}
+      {row.state==="sold_out"||row.state==="inactive"
+        ?<small>{row.state==="sold_out"?"Sold out":"Inactive"}</small>:null}
+    </span>
+    <span className="oe-top-units"><b>{row.unitsPurchased}</b><small>sold</small></span>
+  </button>;
+  return <section className="oe-engine" aria-labelledby="oe-title">
+    <div className="oe-lead">
+      <div className="oe-lead-art">
+        <span>{chosen?.rank===1?"01 / LEADING PRODUCT":"PURCHASED PRODUCT"}</span>
+        {chosen?.imageUrl?<img src={chosen.imageUrl} alt={chosen.title} width={320} height={320}
+          loading="eager" fetchPriority="high"/>:
+          <div className="oe-image-missing">Listing image unavailable</div>}
+      </div>
+      <div className="oe-lead-copy" id="shop-map-selected-direction">
+        <p className="oe-eyebrow">{direction?choiceLabel:"PURCHASED PRODUCT"}</p>
+        <h2 id="oe-title">{map.totalUnits===0?"No purchases in this period.":choiceAction}</h2>
+        {chosen?<><div className="oe-lead-stats">
+          <div><b>{chosen.unitsPurchased}</b><span>units sold</span></div>
+          <div><b>{percent(chosen.share)}</b><span>{map.shareLabel.toLowerCase()}</span></div>
         </div>
-        {tiedBeyondCutoff.length>0?<button type="button" className="shop-map-purchases-ties" aria-expanded={showTies}
-          onClick={()=>setShowTies(value=>!value)}>{showTies?"Hide tied priorities":"View all tied priorities ("+tiedBeyondCutoff.length+" more)"}</button>:null}
-        <p className="shop-map-purchases-remaining">{map.totalUnits} units purchased across {map.totalOrders} recorded transactions in the {period}.
-          {hiddenUnits>0?" "+hiddenUnits+" other purchased unit"+(hiddenUnits===1?"":"s")+" remain beyond these priorities.":""}</p>
-        {additional.length>0?<section className="shop-map-purchases-more">
-          <h3>More purchased products to review</h3>
-          <p>The leading cards are a summary. These products also have recorded purchases in the {period}; a useful direction can come from any of them.</p>
-          <ul>{displayedAdditional.map(row=>{
-            const item=byListing.get(row.listingId);
-            return <li key={row.listingId}>
-              {row.imageUrl?<img src={row.imageUrl} alt="" width={66} height={66} loading="lazy"/>:
-                <span className="shop-map-purchases-more-missing" aria-hidden="true">G</span>}
-              <span><b>{shortLabel(row.title)}</b><small>{row.unitsPurchased} units · {percent(row.share)} {map.shareLabel.toLowerCase()}</small>
-                <small>{item?.proposedChange??item?.researchQuestion??item?.catalogCoverage??"Product analysis pending."}</small></span>
-              <button type="button" aria-pressed={chosen?.listingId===row.listingId}
-                onClick={()=>{setSelectedId(row.listingId);setCopyState("");
-                  document.getElementById("shop-map-selected-direction")?.scrollIntoView({block:"center"});}}>
-                Review direction
-              </button>
-            </li>;
-          })}</ul>
-          {additional.length>displayedAdditional.length?<button type="button" className="shop-map-purchases-show-all"
-            onClick={()=>setShowAllPurchased(true)}>Show all {additional.length} purchased products</button>:null}
-        </section>:null}
-      </>}
-    {!map.receiptsComplete&&<p className="shop-map-purchases-caveat">Receipt import is incomplete. Shares use recorded matched purchases and may change after the next successful sales refresh.</p>}
-    {map.unmatchedUnits>0&&<p className="shop-map-purchases-caveat">{map.unmatchedUnits} purchased unit{map.unmatchedUnits===1?"":"s"} could not be matched to a listing and are shown separately.</p>}
-    {map.excludedRefundUnits>0&&<p className="shop-map-purchases-caveat">Some receipt-level refunds cannot be assigned to individual items. {map.excludedRefundUnits} affected unit{map.excludedRefundUnits===1?" is":"s are"} excluded from this ranking until their attribution is clear.</p>}
+        <p className="oe-lead-product">{shortLabel(chosen.title)}</p>
+        {direction?.kind==="check-first"?<p className="oe-lead-note">Check existing versions and production fit before building.</p>:null}
+        {!direction&&analysisFailed&&onRetry?<button className="oe-retry" type="button" onClick={onRetry}>Retry product analysis</button>:null}
+        {!direction&&!analysisFailed&&!directions?<p className="oe-lead-note" role="status">Checking product imagery and related catalog…</p>:null}
+        <details className="oe-detail"><summary>Product evidence and next steps</summary>
+          {direction?.retainedCharacteristic?<p>Keep {direction.retainedCharacteristic}.</p>:null}
+          {direction?.catalogCoverage?<p>Catalog check: {direction.catalogCoverage}</p>:null}
+          {direction?.whyNow?<p>Why now: {direction.whyNow}.</p>:null}
+          {direction?.researchQuestion?<p>Next step: {direction.researchQuestion}</p>:null}
+          <p>{chosen.orders} recorded transaction{chosen.orders===1?"":"s"} · Product revenue: {chosen.productRevenueMinor!==null&&chosen.currency?money(chosen.productRevenueMinor,chosen.currency):"Unavailable across currencies"}</p>
+          <a href={"https://www.etsy.com/listing/"+chosen.listingId} target="_blank" rel="noopener noreferrer">View source listing</a>
+          {direction?.relatedListingId?<a href={"https://www.etsy.com/listing/"+direction.relatedListingId} target="_blank" rel="noopener noreferrer">See existing version</a>:null}
+          {researchPrompt?<div className="oe-detail-actions">
+            <button type="button" onClick={()=>void copy()}>Copy research context</button>
+            <a href={MIRRORBOT_URL} target="_blank" rel="noopener noreferrer" onClick={()=>void copy()}>Open MirrorBot</a>
+          </div>:null}
+          {copyState?<p role="status">{copyState}</p>:null}
+          {copyState.startsWith("Copy the full")?<textarea readOnly value={researchPrompt} aria-label="Full research context" onFocus={event=>event.currentTarget.select()}/>:null}
+        </details></>:<p className="oe-lead-note">Try another period to see purchased products. Favorites remain a separate early signal.</p>}
+      </div>
+    </div>
+    {map.totalUnits>0?<><div className="oe-section-heading"><h3>Top listings</h3><small>Last {map.days} days</small></div>
+      <div className="oe-top-grid">{visiblePriorities.map(card)}</div>
+      {tiedBeyondCutoff.length>0?<button type="button" className="oe-ties" aria-expanded={showTies}
+        onClick={()=>setShowTies(value=>!value)}>{showTies?"Hide tied listings":"View "+tiedBeyondCutoff.length+" tied listing"+(tiedBeyondCutoff.length===1?"":"s")}</button>:null}
+      {additional.length>0?<details className="oe-more">
+        <summary>More purchased products</summary>
+        <div className="oe-more-list">{displayedAdditional.map(row=><button type="button" key={row.listingId}
+          aria-pressed={chosen?.listingId===row.listingId}
+          onClick={()=>{setSelectedId(row.listingId);setCopyState("");
+            document.getElementById("shop-map-selected-direction")?.scrollIntoView({block:"center"});}}>
+          {row.imageUrl?<img src={row.imageUrl} alt="" width={44} height={44} loading="lazy"/>:
+            <span className="oe-more-missing">G</span>}
+          <span>{shortLabel(row.title)}</span><b>{row.unitsPurchased} sold</b>
+        </button>)}</div>
+        {additional.length>displayedAdditional.length?<button type="button" className="oe-show-all"
+          onClick={()=>setShowAllPurchased(true)}>Show all {additional.length} purchased products</button>:null}
+      </details>:null}</>:null}
+    {!map.receiptsComplete||map.unmatchedUnits>0||map.excludedRefundUnits>0?<details className="oe-data-note">
+      <summary>About these purchase figures</summary>
+      {!map.receiptsComplete?<p>Receipt import is incomplete. Shares may change after the next successful refresh.</p>:null}
+      {map.unmatchedUnits>0?<p>{map.unmatchedUnits} purchased units could not be matched to a listing.</p>:null}
+      {map.excludedRefundUnits>0?<p>{map.excludedRefundUnits} refund-affected units are excluded until attribution is clear.</p>:null}
+    </details>:null}
   </section>;
 }

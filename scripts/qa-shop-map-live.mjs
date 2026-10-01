@@ -26,19 +26,22 @@ try {
       await page.locator(".shop-map-tabs button").filter({hasText:label}).click();
       await page.waitForTimeout(2200);
       if(key==="overview"){
-        await page.getByText("Candidate · check existing versions first").first().waitFor({timeout:30000});
-        await page.getByText("Trait comparison among 4 leading analyzed selling artworks (last 90 days):").waitFor({timeout:30000});
-        if(!(await page.locator(".shop-map-review-group").first().innerText()).includes("purchased units among these 4 artworks"))
+        await page.getByText(/CANDIDATE.*CHECK FIRST/i).first().waitFor({timeout:30000});
+        const dna=page.locator(".oe-dna");
+        await dna.getByText("Winner DNA").waitFor({timeout:30000});
+        await dna.locator("summary").click();
+        if(!(await dna.innerText()).includes("Purchased units among 4 leading analyzed selling artworks"))
           throw new Error("Winner DNA denominator is not labeled");
-        const hero=page.locator(".shop-map-purchases-grid article.purchase-lead").first();
-        const heroImage=hero.locator("img").first();
+        await dna.locator("summary").click();
+        const hero=page.locator(".oe-lead").first();
+        const heroImage=hero.locator(".oe-lead-art img").first();
         const imageBox=await heroImage.boundingBox();
         if(!(await heroImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
           throw new Error("Winning product image did not load in the live browser");
-        const votesBox=await hero.locator(".shop-map-purchases-votes").boundingBox();
+        const votesBox=await hero.locator(".oe-lead-stats").boundingBox();
         if(!imageBox||!votesBox||imageBox.y>660||votesBox.y+votesBox.height>784)
-          throw new Error("Winning product image and vote evidence are below the initial phone viewport");
-        if(!(await page.locator(".shop-map-purchases-analysis").innerText()).includes("Candidate"))
+          throw new Error("Winning product image and purchase evidence are below the initial phone viewport");
+        if(!(await hero.innerText()).includes("sweatshirt"))
           throw new Error("Selected product direction missing");
         console.log("QA_HERO "+JSON.stringify({width,imageTop:imageBox.y,imageHeight:imageBox.height,
           votesBottom:votesBox.y+votesBox.height,text:(await hero.innerText()).slice(0,180)}));
@@ -66,13 +69,13 @@ try {
       if(key==="money" && !(await page.locator(".shop-map-money-detail").innerText()).includes("100%"))
         throw new Error("Reviewer cost coverage is not 100%");
       if(key==="overview"){
-        const votes=page.locator(".shop-map-purchases-votes").first();
+        const votes=page.locator(".oe-lead-stats").first();
         if(!(await votes.innerText()).includes("22"))throw new Error("90-day purchase leader missing");
         await page.locator(".shop-map-analysis-period select").selectOption("30");
         await page.waitForTimeout(1800);
         if(!(await votes.innerText()).includes("8"))throw new Error("30-day purchase leader missing");
-        await page.getByText("Candidate · check existing versions first").first().waitFor({timeout:30000});
-        if(!(await page.locator(".shop-map-purchases-analysis").first().innerText()).includes("exact artwork"))
+        await page.getByText(/CANDIDATE.*CHECK FIRST/i).first().waitFor({timeout:30000});
+        if(!(await page.locator(".oe-lead-copy").first().innerText()).includes("exact artwork"))
           throw new Error("Specific purchased-product direction missing");
         await page.screenshot({path:`qa-artifacts/shop-map-${width}-overview-30.png`,fullPage:true});
         const day30=(await page.screenshot({type:"jpeg",quality:35,fullPage:true})).toString("base64");
@@ -121,15 +124,15 @@ try {
         console.log(`QA_IMAGE_BEGIN ${width} purchased_research`);
         for(let offset=0;offset<researchImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+researchImage.slice(offset,offset+16000));
         console.log(`QA_IMAGE_END ${width} purchased_research`);
-        const more=page.locator(".shop-map-purchases-more");
-        await more.getByText("More purchased products to review").waitFor({timeout:15000});
-        const extra=more.locator("li").first();
+        const more=page.locator(".oe-more");
+        await more.locator("summary").click();
+        const extra=more.locator(".oe-more-list button").first();
         if(await extra.count()===0)throw new Error("Purchased products outside the first three are missing");
-        const extraTitle=(await extra.locator("b").innerText()).trim();
-        await extra.getByRole("button",{name:"Review direction"}).click();
-        if(!(await page.locator(".shop-map-purchases-selected-name").innerText()).includes(extraTitle))
+        const extraTitle=(await extra.locator("span").nth(0).innerText()).trim();
+        await extra.click();
+        if(!(await page.locator(".oe-lead-product").innerText()).includes(extraTitle))
           throw new Error("An additional purchased product cannot open its direction");
-        console.log("QA_FULL_SHOP "+JSON.stringify({width,additionalVisible:await more.locator("li").count(),selected:extraTitle}));
+        console.log("QA_FULL_SHOP "+JSON.stringify({width,additionalVisible:await more.locator(".oe-more-list button").count(),selected:extraTitle}));
       }
     }
     await context.close();
@@ -188,15 +191,15 @@ try {
     })});
   });
   await tiePage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
-  const ties=tiePage.getByRole("button",{name:"View all tied priorities (1 more)"});
+  const ties=tiePage.getByRole("button",{name:"View 1 tied listing"});
   await ties.waitFor({timeout:15000});
   await ties.click();
-  const tieCards=tiePage.locator(".shop-map-purchases-grid article");
+  const tieCards=tiePage.locator(".oe-top-grid .oe-top-card");
   if(await tieCards.count()!==4)throw new Error("The fourth tied product is hidden");
-  if(await tiePage.locator(".shop-map-purchases-grid article.purchase-lead").count()!==4)
-    throw new Error("Equal winners have unequal visual emphasis");
-  await tieCards.last().getByRole("button",{name:/Review priority 1:/}).click();
-  await tiePage.locator(".shop-map-purchases-analysis").getByText("No supported product-specific direction is available yet.").waitFor({timeout:15000});
+  await tieCards.last().click();
+  await tiePage.locator(".oe-lead-copy").getByText("Review this purchased product before choosing a new test.").waitFor({timeout:15000});
+  if(!(await tiePage.locator(".oe-lead-art").innerText()).includes("LEADING PRODUCT"))
+    throw new Error("Equal-rank product lost its leading status");
   await tieCards.last().scrollIntoViewIfNeeded();
   const tieImage=(await tiePage.screenshot({type:"jpeg",quality:35})).toString("base64");
   console.log("QA_IMAGE_BEGIN 320 tied_priorities");
@@ -223,19 +226,19 @@ try {
     })});
   });
   await sourcePage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
-  const sourceBanner=sourcePage.getByText("Comparison sources need a retry");
+  const sourceBanner=sourcePage.getByText("Comparison needs a retry");
   await sourceBanner.waitFor({timeout:25000});
-  await sourcePage.getByText("Purchase observations loaded, but catalog coverage failed.").waitFor();
+  await sourcePage.getByText("Catalog coverage could not load.").waitFor();
   await sourceBanner.scrollIntoViewIfNeeded();
   let sourceImage=(await sourcePage.screenshot({type:"jpeg",quality:35})).toString("base64");
   console.log("QA_IMAGE_BEGIN 320 catalog_failure");
   for(let offset=0;offset<sourceImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+sourceImage.slice(offset,offset+16000));
   console.log("QA_IMAGE_END 320 catalog_failure");
   await sourcePage.getByRole("button",{name:"Retry comparison"}).click();
-  await sourcePage.getByText("Catalog loaded, but purchase history failed.").waitFor();
+  await sourcePage.getByText("Purchase history could not load.").waitFor();
   await sourcePage.getByRole("button",{name:"Retry comparison"}).click();
   await sourceBanner.waitFor({state:"hidden",timeout:25000});
-  await sourcePage.getByText("Proven designs to expand").waitFor({timeout:25000});
+  await sourcePage.locator(".oe-review-grid").waitFor({timeout:25000});
   console.log("QA_SOURCE_RECOVERY "+JSON.stringify({catalogFailure:true,salesFailure:true,recovered:true,width:320}));
   await sourceContext.close();
   await writeFile("qa-artifacts/results.json",JSON.stringify(results,null,2));

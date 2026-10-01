@@ -42,13 +42,14 @@ test("Opportunity Engine stays decision-first instead of repeating dashboard sta
   assert.doesNotMatch(overview,/Revenue · 90 days/);
   assert.doesNotMatch(overview,/WHERE TO FOCUS/);
   assert.match(client,/<h1>My Shop<\/h1>/);
-  assert.match(purchase,/Build out what your customers are already buying/);
+  assert.match(purchase,/className="oe-lead"/);
+  assert.match(purchase,/className="oe-top-grid"/);
+  assert.doesNotMatch(purchase,/other purchased unit.*remain beyond/i);
 });
 
 test("ranked priorities keep customer and active-design attention visually comparable",()=>{
-  assert.match(client,/shop-map-attention-mini-compare/);
-  assert.match(client,/>Customer<\/small>/);
-  assert.match(client,/>Catalog<\/small>/);
+  assert.match(client,/className="oe-pattern"/);
+  assert.match(client,/customer response/);
   assert.match(client,/active analyzed designs/);
 });
 
@@ -63,19 +64,19 @@ test("Opportunity Engine can discover winning patterns without assuming a custom
 test("Opportunity Engine copy stays short",()=>{
   assert.doesNotMatch(overview,/This pattern appears in/);
   assert.doesNotMatch(overview,/It will not manufacture/);
-  assert.match(purchase,/Where to focus next/);
+  assert.match(purchase,/NEXT PRODUCT TEST/);
   assert.match(client,/What customers are choosing/);
 });
 
 test("Opportunity Engine does not include the generic listing keyword checker",()=>{
   assert.doesNotMatch(overview,/ListingCheckPanel/);
   assert.doesNotMatch(overview,/Compare a listing with search results/);
-  assert.match(review,/Proven designs to expand/);
+  assert.match(review,/className="oe-review-card oe-expansion"/);
 });
 
 test("top listings still render when visual priority evidence is incomplete",()=>{
   assert.match(client,/No shared visual pattern is supported by the available analysis/);
-  assert.match(client,/shop-map-choosing-gallery/);
+  assert.match(client,/oe-source-gallery/);
   assert.match(overview,/shown\.patterns\?<WinningPatterns map=\{shown\.patterns\}/);
 });
 

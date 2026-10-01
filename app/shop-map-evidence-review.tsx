@@ -62,57 +62,54 @@ export function ReviewThese({map,actions,dna,marketProof=[]}:{
     ?expansionReviews(listings,map,marketProof):[];
   const overbuilt=map.overbuilt??[];
   if(!dna&&!overbuilt.length&&!actions.length&&!expansion.length&&!sourceIssue)return null;
-  return <section className="cc-tool shop-map-review shop-map-review-all">
-    <div className="shop-map-section-head"><h2>Review these</h2></div>
-    {sourceIssue?<div className="shop-map-review-group" role="status">
-      <h3>Comparison sources need a retry</h3>
-      <p>{sources?.shop==="failed"
-        ?"Shop connection could not be checked. Catalog and purchase comparisons are unavailable."
-        :sources?.catalog==="failed"&&sources?.sales==="failed"
-          ?"Catalog and purchase reads failed. No comparison conclusion is available."
-          :sources?.catalog==="failed"
-            ?"Purchase observations loaded, but catalog coverage failed. No related-product conclusion is available."
-            :"Catalog loaded, but purchase history failed. No sales-based comparison conclusion is available."}</p>
-      <button type="button" onClick={()=>setRetry(value=>value+1)} disabled={loading}>
-        {loading?"Retrying…":"Retry comparison"}
-      </button>
-    </div>:null}
-    {dna?<div className="shop-map-review-group">
-      <h3>Winner DNA</h3>
-      <p>Trait comparison among {dna.sellingArtworks} leading analyzed selling artworks ({dna.basis==="sales-90"?"last 90 days":"recorded lifetime"}):</p>
-      <ul>{dna.traits.map(row=><li key={row.label}>
-        <b>{row.label}</b> · {row.customerPercent}% of purchased units among these {dna.sellingArtworks} artworks; {row.catalogPercent}% of active analyzed artworks.
-        {!!row.listingIds?.length&&<span className="shop-map-review-trait-sources"> Supporting listings: {row.listingIds.map((id,index)=><span key={id}>{index>0?", ":null}<a href={`https://www.etsy.com/listing/${id}`} target="_blank" rel="noopener noreferrer">{shortLabel(map.listings.find(item=>item.listingId===id)?.title??`Listing ${id}`)}</a></span>)}</span>}
-      </li>)}</ul>
-      <p>Use those traits to guide a distinct variation. Let the next test prove itself.</p>
-    </div>:null}
-    {overbuilt.map(row=><div key={row.key} className="shop-map-review-group">
-      <h3>Review coverage: {row.label}</h3>
-      <p>{row.catalogPercent}% of active designs, but {row.customerPercent}% of recent customer response.</p>
-      <p>Keep proven listings active. Compare availability, selling time, and exposure before deciding whether to build another variation.</p>
-    </div>)}
-    {!!actions.length&&<div className="shop-map-review-group">
-      {actions.map(row=><details key={row.listingId} className="shop-map-review-row">
-        <summary><b>{shortLabel(row.title)}</b><span>{row.fact}</span></summary>
-        <div className="shop-map-review-body">
-          <h3>{row.headline}</h3><p>{row.evidence}</p><p>{row.nextStep}</p>
-          <a href={`https://www.etsy.com/listing/${row.listingId}`} target="_blank" rel="noopener noreferrer">Check this listing on Etsy ↗</a>
-        </div>
-      </details>)}
-    </div>}
-    {!!expansion.length&&<div className="shop-map-review-group shop-map-reach">
-      <h3>Proven designs to expand</h3>
-      <ul>{expansion.map(row=><li key={row.listingId}>
-        {row.imageUrl?<img src={row.imageUrl} alt="" width={72} height={72} loading="lazy"/>:<span aria-hidden="true"/>}
-        <span className="shop-map-reach-copy">
-          <b>{shortLabel(row.title)}</b>
-          <small>This exact artwork sold {row.sold90} on {familyLabel(row.family)}.
-            {row.source==="shop"
-              ?` Another artwork in ${row.pattern} sold ${row.peerSold90} on ${familyLabel(row.peerFamily)}.`
-              :` In the matching saved watch, ${familyLabel(row.peerFamily)} listings showed ${row.peerSold90} observed stock decreases in 30 days; inspect source observations before treating these as purchases.`}</small>
-        </span>
-        <a href={`https://www.etsy.com/listing/${row.listingId}`} target="_blank" rel="noopener noreferrer">See it on Etsy ↗</a>
-      </li>)}</ul>
-    </div>}
+  return <section className="oe-review" aria-labelledby="oe-review-title">
+    <div className="oe-section-heading"><h2 id="oe-review-title">Review these</h2></div>
+    <div className="oe-review-grid">
+      {sourceIssue?<div className="oe-review-card oe-source-issue" role="status">
+        <span className="oe-card-tag">COMPARISON DATA</span><h3>Comparison needs a retry</h3>
+        <p>{sources?.shop==="failed"?"Shop connection could not be checked."
+          :sources?.catalog==="failed"&&sources?.sales==="failed"?"Catalog and purchase reads failed."
+          :sources?.catalog==="failed"?"Catalog coverage could not load."
+          :"Purchase history could not load."}</p>
+        <button type="button" onClick={()=>setRetry(value=>value+1)} disabled={loading}>
+          {loading?"Retrying…":"Retry comparison"}</button>
+      </div>:null}
+      {dna?<div className="oe-review-card oe-dna">
+        <span className="oe-card-tag">DESIGN EVIDENCE</span><h3>Winner DNA</h3>
+        <div className="oe-dna-traits">{dna.traits.slice(0,2).map(row=><div key={row.label}>
+          <span>{row.label}</span><b>{row.customerPercent}%</b>
+        </div>)}</div>
+        <details><summary>See trait sources and scope</summary>
+          <p>Purchased units among {dna.sellingArtworks} leading analyzed selling artworks ({dna.basis==="sales-90"?"last 90 days":"recorded lifetime"}); catalog shares use active analyzed artworks.</p>
+          {dna.traits.map(row=><p key={row.label}><b>{row.label}</b>: {row.customerPercent}% of this artwork purchase set; {row.catalogPercent}% of active analyzed artworks.
+            {!!row.listingIds?.length?<span> Sources: {row.listingIds.map((id,index)=><span key={id}>{index?", ":null}<a href={"https://www.etsy.com/listing/"+id} target="_blank" rel="noopener noreferrer">{shortLabel(map.listings.find(item=>item.listingId===id)?.title??"Listing "+id)}</a></span>)}</span>:null}
+          </p>)}
+        </details>
+      </div>:null}
+      {overbuilt.map(row=><div key={row.key} className="oe-review-card">
+        <span className="oe-card-tag">CATALOG BALANCE</span><h3>{row.label}</h3>
+        <p className="oe-review-figure"><b>{row.catalogPercent}%</b> of active designs <span>/</span> <b>{row.customerPercent}%</b> of recent response</p>
+        <details><summary>What to check</summary><p>Compare availability, selling time and exposure before deciding whether to build another variation. Keep proven listings active.</p></details>
+      </div>)}
+      {actions.map(row=><div key={row.listingId} className="oe-review-card">
+        <span className="oe-card-tag">{row.headline}</span><h3>{shortLabel(row.title)}</h3>
+        <p>{row.fact}</p>
+        <details><summary>Review this finding</summary><p>{row.evidence}</p><p>{row.nextStep}</p>
+          <a href={"https://www.etsy.com/listing/"+row.listingId} target="_blank" rel="noopener noreferrer">View source listing</a>
+        </details>
+      </div>)}
+      {expansion.map(row=><div key={row.listingId} className="oe-review-card oe-expansion">
+        <span className="oe-card-tag">PROVEN DESIGN</span>
+        {row.imageUrl?<img src={row.imageUrl} alt="" width={64} height={64} loading="lazy"/>:null}
+        <h3>{shortLabel(row.title)}</h3>
+        <p>{row.sold90} sold on {familyLabel(row.family)}. Review {familyLabel(row.peerFamily)} as a possible adjacent format.</p>
+        <details><summary>See supporting evidence</summary>
+          <p>{row.source==="shop"
+            ?"Another artwork in "+row.pattern+" sold "+row.peerSold90+" on "+familyLabel(row.peerFamily)+"."
+            :"The matching saved watch recorded "+row.peerSold90+" observed stock decreases for "+familyLabel(row.peerFamily)+" listings. Inspect those observations before treating them as purchases."}</p>
+          <a href={"https://www.etsy.com/listing/"+row.listingId} target="_blank" rel="noopener noreferrer">View source listing</a>
+        </details>
+      </div>)}
+    </div>
   </section>;
 }

@@ -211,28 +211,21 @@ function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}
 export function WinningPatterns({map}:{map:WinningPatternMap}){
   const patterns=map.patterns.slice(0,4);
   const products=map.listings.slice(0,5);
-  return <section className="shop-map-choosing">
-    <div className="shop-map-section-head">
-      <div><p className="mini-label">SUPPORTING PRODUCT EVIDENCE</p>
-        <h2>What customers are choosing</h2>
-        <p>{map.basis==="sales-90"?"Last 90 days":map.basisLabel}. These analyzed visual observations support the purchased products above; they do not reorder them.</p>
-      </div>
-    </div>
-    {patterns.length?<div className="shop-map-choosing-patterns">
-      {patterns.map(pattern=><div key={pattern.key}>
-        <b>{pattern.label}</b>
-        <span>{pattern.customerPercent}% of the stated customer response · {pattern.catalogPercent}% of active analyzed designs</span>
-      </div>)}
-    </div>:<p className="shop-map-choosing-state">No shared visual pattern is supported by the available analysis. Individual purchased products remain useful above.</p>}
-    {products.length?<div className="shop-map-choosing-gallery" aria-label="Sample supporting listings">
-      {products.map(listing=><a key={listing.listingId} href={"https://www.etsy.com/listing/"+listing.listingId}
+  return <section className="oe-support">
+    <div className="oe-section-heading"><h2>What customers are choosing</h2><small>{map.basis==="sales-90"?"Last 90 days":map.basisLabel}</small></div>
+    {patterns.length?<div className="oe-pattern-list">{patterns.map(pattern=><div key={pattern.key} className="oe-pattern">
+      <b>{pattern.label}</b>
+      <span><strong>{pattern.customerPercent}%</strong> customer response <em>/</em> {pattern.catalogPercent}% active analyzed designs</span>
+    </div>)}</div>:<p className="oe-quiet-state">No shared visual pattern is supported by the available analysis.</p>}
+    {products.length?<details className="oe-source-gallery"><summary>See supporting listings</summary>
+      <div>{products.map(listing=><a key={listing.listingId} href={"https://www.etsy.com/listing/"+listing.listingId}
         target="_blank" rel="noopener noreferrer">
-        {listing.imageUrl?<img src={listing.imageUrl} alt="" width={96} height={96} loading="lazy"/>:
-          <span aria-hidden="true">Image unavailable</span>}
+        {listing.imageUrl?<img src={listing.imageUrl} alt="" width={88} height={88} loading="lazy"/>:
+          <span>Image unavailable</span>}
         <b>{shortLabel(listing.title)}</b>
-        <small>{listing.signal} {map.basis==="favorites"?"favorites":"units"} · {listing.attentionPercent}% of stated response</small>
-      </a>)}
-    </div>:<p className="shop-map-choosing-state">Supporting listing images are unavailable; check the source products before interpreting a shared design.</p>}
+        <small>{listing.signal} {map.basis==="favorites"?"favorites":"units"}</small>
+      </a>)}</div>
+    </details>:null}
   </section>;
 }
 
@@ -657,7 +650,6 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
       {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} directions={shown.productDirections} analysisFailed={insightsFailed} onRetry={()=>void load()}/>:null}
       {insightsLoading?<section className="shop-map-inline-state" role="status">Checking product imagery and catalog coverage…</section>:null}
       {insightsFailed?<section className="shop-map-inline-state"><strong>Product analysis could not load.</strong><p>Your purchase priorities remain available. Retry this section by reopening the tab.</p></section>:null}
-      {selectedDays===30?<p className="shop-map-inline-state">Visual pattern analysis is a separate last-90-day view. Select Last 90 days to inspect it.</p>:null}
       {selectedDays===90&&shown.patterns?<WinningPatterns map={shown.patterns}/>:null}
       {selectedDays===90&&shown.patterns?<ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]}/>:null}
       {selectedDays===90&&!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} purchasePriorities={shown.purchasePriorities} marketProof={shown.marketProof??[]}/>}
