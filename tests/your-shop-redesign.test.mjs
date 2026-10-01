@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const client=readFileSync("app/shop-map/shop-map-client.tsx","utf8");
 const route=readFileSync("app/api/shop-map/map/route.ts","utf8");
+const shopPage=readFileSync("app/shop-map/page.tsx","utf8");
 const css=readFileSync("app/shop-map/shop-map.css","utf8");
 const nav=readFileSync("app/shop-map/shop-map-navigation.ts","utf8");
 const commandWorkspace=readFileSync("app/command-workspace.css","utf8");
@@ -136,7 +137,10 @@ test("Your Shop reuses same-day cached data without leaking data between tabs",(
   assert.match(client,/sessionStorage\.getItem/);
   assert.match(client,/sessionStorage\.setItem/);
   assert.match(client,/const shown = mapKey===currentKey \? map : null/);
-  assert.match(client,/const cached=readShopMapCache\(cacheKey\)/);
+  assert.match(shopPage,/cacheScope = activeShop \? `\$\{user\.userId\}:\$\{activeShop\}` : null/);
+  assert.match(client,/const storageKey=cacheScope\?`\$\{cacheScope\}:\$\{cacheKey\}`:null/);
+  assert.match(client,/const cached=readShopMapCache\(storageKey\)/);
+  assert.match(client,/cached\.shop\?\.shopId===activeShopId/);
 });
 
 
@@ -147,7 +151,7 @@ test("global suite styles do not override the Your Shop tab control",()=>{
 });
 
 test("Opportunity Engine cache version changes when ranking semantics change",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v12:"/);
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v13:"/);
 });
 
 
@@ -172,7 +176,7 @@ test("Sold Listings cannot crash on an undefined sold collection",()=>{
 });
 
 test("purchase-led Opportunity Engine invalidates older cached responses",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v12:"/);
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v13:"/);
 });
 
 
@@ -208,7 +212,8 @@ test("each Your Shop tab validates its response before rendering",()=>{
   assert.match(client,/tab==="sold".*soldListings/s);
   assert.match(client,/tab==="themes".*Array\.isArray\(data\.worlds\)/s);
   assert.match(client,/tab==="overview".*data\.purchasePriorities/s);
-  assert.match(client,/if\s*\(\s*!validShopMapForTab\(next,tab\)\s*\)/);
+  assert.match(client,/!validShopMapForTab\(next,tab\)/);
+  assert.match(client,/next\.shop\.shopId!==activeShopId/);
 });
 
 test("Product Themes has a visible empty state",()=>{
@@ -238,8 +243,8 @@ test("Opportunity Engine top listings follow the same fallback evidence ladder a
 
 
 test("a failed refresh keeps a valid cached tab visible",()=>{
-  assert.match(client,/const hasCached=Boolean\(cached&&validShopMapForTab\(cached,tab\)\)/);
-  assert.match(client,/if \(!validShopMapForTab\(next,tab\)\)/);
+  assert.match(client,/const hasCached=Boolean\(cached&&cached\.shop\?\.shopId===activeShopId&&validShopMapForTab\(cached,tab\)\)/);
+  assert.match(client,/!validShopMapForTab\(next,tab\)/);
   assert.match(client,/if\(!hasCached\)setMap\(null\)/);
   assert.match(client,/setFailed\(true\)/);
 });
