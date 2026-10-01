@@ -4,7 +4,7 @@ export const QA_REVIEWER_ID = "qa:goldie-shop-map-reviewer";
 export const QA_REVIEWER_EMAIL = "qa-reviewer@goldie.invalid";
 export const QA_COOKIE = "goldie_qa_review";
 export const QA_EXPIRES_AT = Date.UTC(2026, 10, 1);
-const QA_TOKEN_SHA256 = "ac538e5e53e5a2388a7310768af1b71cba888ce1d766ebb17a95f6a8d1f52e6d";
+const QA_TOKEN_SHA256 = "17f9ed073c5879394aa0a2dc9cfadb0bc14549352edf7a833c0bc97393e2f0d4";
 
 export async function validQaToken(token: string): Promise<boolean> {
   if (Date.now() >= QA_EXPIRES_AT || token.length < 40 || token.length > 128) return false;
