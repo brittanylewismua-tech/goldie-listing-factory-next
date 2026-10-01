@@ -198,3 +198,9 @@ test("Opportunity Engine top listings follow the same fallback evidence ladder a
   assert.match(route,/shopBasis==="favorites"\?Math\.max\(0,Number\(row\.favorites\?\?0\)\):0/);
   assert.match(route,/\.sort\(\(a,b\)=>b\.signal-a\.signal/);
 });
+
+
+test("a failed refresh keeps a valid cached tab visible",()=>{
+  assert.match(client,/const hasCached=Boolean\(cached&&validShopMapForTab\(cached,tab\)\)/);
+  assert.match(client,/if\(!validShopMapForTab\(next,tab\)\)[\s\S]*if\(!hasCached\)setMap\(null\);[\s\S]*setFailed\(true\)/);
+});
