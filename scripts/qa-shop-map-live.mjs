@@ -54,12 +54,16 @@ try {
         await page.waitForTimeout(1800);
         if(!(await votes.innerText()).includes("8"))throw new Error("30-day purchase leader missing");
         await page.screenshot({path:`qa-artifacts/shop-map-${width}-overview-30.png`,fullPage:true});
+        const day30=(await page.screenshot({type:"jpeg",quality:35,fullPage:true})).toString("base64");
+        console.log(`QA_IMAGE_BEGIN ${width} overview_30`);
+        for(let offset=0;offset<day30.length;offset+=16000) console.log("QA_IMAGE_CHUNK "+day30.slice(offset,offset+16000));
+        console.log(`QA_IMAGE_END ${width} overview_30`);
         await page.locator(".shop-map-analysis-period select").selectOption("90");
         await page.waitForTimeout(1800);
       }
-      if(width===390){
+      const scrollSteps=key==="overview"?(width===390?9:7):(width===390?3:0);
+      if(scrollSteps){
         await page.mouse.move(width/2,560);
-        const scrollSteps=key==="overview"?9:3;
         for(let step=1;step<=scrollSteps;step++){
           await page.mouse.wheel(0,600);
           await page.waitForTimeout(350);
@@ -72,6 +76,38 @@ try {
     }
     await context.close();
   }
+  // Authenticate a separate browser context and hold the Overview response long
+  // enough to observe loading. Then render an empty purchase response on the
+  // real production page without modifying a member's shop data.
+  const emptyContext=await browser.newContext({viewport:{width:320,height:844},deviceScaleFactor:1});
+  const emptyLogin=await emptyContext.request.post("https://thegoldiesuite.com/qa/oidc",{
+    headers:{authorization:"Bearer "+identity},timeout:30000,
+  });
+  if(!emptyLogin.ok())throw new Error("Empty-state reviewer identity rejected: "+emptyLogin.status());
+  const emptyPage=await emptyContext.newPage();
+  await emptyPage.route(url=>url.pathname==="/api/shop-map/map"&&url.searchParams.get("view")==="overview-purchases",async route=>{
+    await new Promise(resolve=>setTimeout(resolve,1800));
+    const empty={shop:{shopId:1,shopName:"Goldie Reviewer Shop"},purchasePriorities:{
+      days:90,totalUnits:0,totalOrders:0,unmatchedUnits:0,excludedRefundUnits:0,
+      receiptsComplete:true,refreshedAt:null,shareLabel:"Share of shop purchases",
+      remainingUnits:0,priorities:[],listings:[],
+    }};
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(empty)});
+  });
+  await emptyPage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
+  const loading=emptyPage.locator(".shop-map-progressive-loading");
+  await loading.waitFor({state:"visible",timeout:5000});
+  const loadingImage=(await emptyPage.screenshot({type:"jpeg",quality:35})).toString("base64");
+  console.log("QA_IMAGE_BEGIN 320 loading");
+  for(let offset=0;offset<loadingImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+loadingImage.slice(offset,offset+16000));
+  console.log("QA_IMAGE_END 320 loading");
+  await emptyPage.getByText("No purchases in this period.").waitFor({timeout:15000});
+  const emptyImage=(await emptyPage.screenshot({type:"jpeg",quality:35})).toString("base64");
+  console.log("QA_IMAGE_BEGIN 320 empty_purchases");
+  for(let offset=0;offset<emptyImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+emptyImage.slice(offset,offset+16000));
+  console.log("QA_IMAGE_END 320 empty_purchases");
+  console.log("QA_VARIANTS "+JSON.stringify({loading:true,emptyPurchases:true,width:320}));
+  await emptyContext.close();
   await writeFile("qa-artifacts/results.json",JSON.stringify(results,null,2));
 } finally {
   await browser.close();
