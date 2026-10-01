@@ -34,6 +34,10 @@ try {
       results.push(row);
       console.log("QA_METRICS "+JSON.stringify(row));
       await page.screenshot({path:`qa-artifacts/shop-map-${width}-${key}.png`,fullPage:true});
+      const qaImage=(await page.screenshot({type:"jpeg",quality:35,fullPage:true})).toString("base64");
+      console.log(`QA_IMAGE_BEGIN ${width} ${key}`);
+      for(let offset=0;offset<qaImage.length;offset+=16000) console.log("QA_IMAGE_CHUNK "+qaImage.slice(offset,offset+16000));
+      console.log(`QA_IMAGE_END ${width} ${key}`);
       if(row.viewport!==width)throw new Error("Wrong viewport in "+key);
       if(row.documentWidth>width+1||row.bodyWidth>width+1)
         throw new Error("Horizontal overflow in "+key+" at "+width+"px");
