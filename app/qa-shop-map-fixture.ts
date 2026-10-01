@@ -61,7 +61,7 @@ export function qaMapFixture(url: URL) {
       productionShippingMinor:40000,refundsMinor:0,adjustmentsMinor:0,profitMarginPercent:46.3,
       currency:"USD",headline:"Verified profit",label:"verified",profitMinor:390300,
       accuracy:"Includes recorded sales, fees and production costs.",orders:41,
-      coverage:{verified:41,estimated:0,unavailable:0}},
+      coverage:{verified:1,estimated:0,unavailable:0}},
   };
   if (view === "themes") return {
     shop,worldsPeriod:"last 90 days",worlds:[
