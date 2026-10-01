@@ -95,6 +95,16 @@ test("Opportunity Engine uses a dedicated core request before optional support",
 });
 
 
+test("each purchase-led winner can receive a product-specific direction independently of visual patterns",()=>{
+  const card=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
+  assert.match(client,/productDirections/);
+  assert.match(client,/view=overview-insights&days=\$\{selectedDays\}/);
+  assert.match(card,/Next specific test/);
+  assert.match(card,/Catalog check:/);
+  assert.match(card,/Why now:/);
+  assert.ok(card.indexOf("row.unitsPurchased")<card.indexOf("Next specific test"));
+});
+
 test("Your Shop reuses same-day cached data without leaking data between tabs",()=>{
   assert.match(client,/SHOP_MAP_CACHE_PREFIX/);
   assert.match(client,/sessionStorage\.getItem/);
@@ -111,7 +121,7 @@ test("global suite styles do not override the Your Shop tab control",()=>{
 });
 
 test("Opportunity Engine cache version changes when ranking semantics change",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v11:"/);
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v12:"/);
 });
 
 
@@ -136,7 +146,7 @@ test("Sold Listings cannot crash on an undefined sold collection",()=>{
 });
 
 test("purchase-led Opportunity Engine invalidates older cached responses",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v11:"/);
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v12:"/);
 });
 
 

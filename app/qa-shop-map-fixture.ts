@@ -56,13 +56,30 @@ export function qaMapFixture(url: URL) {
       titles.map((title,index)=>({listingId:index+1,title,imageUrl:images[index],state:"active"})),
       {days,now,receiptsComplete:true,refreshedAt:now-3600})};
   }
-  if (view === "overview-insights") return {
-    shop,patterns,analysedListingIds:[1,2,3,4,5],visualCoverage:{analysedListings:20,totalListings:20},
+  if (view === "overview-insights") {
+    const days=Number(url.searchParams.get("days"))===30?30:90;
+    const ranked=days===30?[1,4,2]:[1,2,3];
+    const direction=(listingId:number)=>({
+      listingId,kind:listingId===4?"research":"test",
+      retainedCharacteristic:listingId===1?"the visible wording “MY BODY MY CHOICE” and its artwork":
+        listingId===2?"the visible wording “MOTHERHOOD IS POLITICAL” and its artwork":
+        listingId===3?"the visible wording “SMASH THE PATRIARCHY” and its artwork":
+        "the visible bodily autonomy message and its artwork",
+      proposedChange:listingId===4?null:
+        `Test this exact artwork on a ${listingId===2?"tee":"sweatshirt"}, a format already active in your shop.`,
+      catalogCoverage:listingId===4?"No compatible additional format is established in the active catalog.":
+        `We have not found this exact artwork on a ${listingId===2?"tee":"sweatshirt"} in the artwork-linked catalog.`,
+      whyNow:`${days===30?[8,5,3,6,1][listingId-1]:sold[listingId-1]} purchased units in the last ${days} days`,
+      relatedListingId:null,researchQuestion:listingId===4?"Review same-format variations and confirm feasible changes.":null,
+    });
+    return {
+    shop,patterns,productDirections:ranked.map(direction),analysedListingIds:[1,2,3,4,5],visualCoverage:{analysedListings:20,totalListings:20},
     winnerDna:{basis:"sales-90",sellingArtworks:4,traits:[
       {label:"Typography: stacked bold",sellingArtworks:3,customerPercent:78,catalogPercent:25},
       {label:"Short visible wording",sellingArtworks:3,customerPercent:73,catalogPercent:30},
     ]},
   };
+  }
   if (view === "overview-support") return {catalogActions,opportunities:[],marketCorroboration:[]};
   if (view === "overview-market") return {marketProof};
   if (view === "money") return {

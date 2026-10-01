@@ -1,11 +1,12 @@
 "use client";
 import type { PurchasePriorityMap } from "@/app/shop-map-purchase-priorities";
+import type { ProductDirection } from "@/app/shop-map-product-expansion";
 
 const money=(minor:number,currency:string)=>new Intl.NumberFormat(undefined,{style:"currency",currency}).format(minor/100);
 const percent=(share:number)=>share>0&&share<.005?"<1%":`${Math.round(share*100)}%`;
 
-export default function PurchasePriorities({map,analysedListingIds=[]}:{map:PurchasePriorityMap;analysedListingIds?:number[]}){
-  const analysed=new Set(analysedListingIds);
+export default function PurchasePriorities({map,directions=[]}:{map:PurchasePriorityMap;directions?:ProductDirection[]}){
+  const byListing=new Map(directions.map(row=>[row.listingId,row]));
   const period=`last ${map.days} days`;
   const sharePhrase=map.shareLabel==="Share of shop purchases"?"your shop’s purchases":"matched purchases";
   const refreshed=map.refreshedAt
@@ -42,9 +43,18 @@ export default function PurchasePriorities({map,analysedListingIds=[]}:{map:Purc
             <p className="shop-map-purchases-guidance">{row.rank===1
               ? `This product accounts for ${percent(row.share)} of ${sharePhrase} in the ${period}. Give this product direction the most attention in your next build.`
               : `Keep this purchased product visible at its actual strength while building from the leader.`}</p>
-            <p className="shop-map-purchases-analysis">{analysed.has(row.listingId)
-              ?"Visual analysis is available below; a specific related buildout still needs product review."
-              :"Product details need review before suggesting a specific related product."}</p>
+            {byListing.has(row.listingId)?(()=>{
+              const direction=byListing.get(row.listingId)!;
+              return <div className="shop-map-purchases-analysis">
+                <strong>{direction.kind==="test"?"Next specific test":"Product review"}</strong>
+                {direction.retainedCharacteristic?<p>Keep: {direction.retainedCharacteristic}.</p>:null}
+                {direction.proposedChange?<p>Change: {direction.proposedChange}</p>:null}
+                <p>Catalog check: {direction.catalogCoverage}</p>
+                <p>Why now: {direction.whyNow}.</p>
+                {direction.researchQuestion?<p>Next step: {direction.researchQuestion}</p>:null}
+                {direction.relatedListingId?<a href={`https://www.etsy.com/listing/${direction.relatedListingId}`} target="_blank" rel="noopener noreferrer">See existing listing ↗</a>:null}
+              </div>;
+            })():<p className="shop-map-purchases-analysis">Checking this product image and related catalog before suggesting a next test.</p>}
           </article>)}
         </div>
         <p className="shop-map-purchases-remaining">{map.remainingUnits} other purchased unit{map.remainingUnits===1?"":"s"} in the {period} remain outside these leading cards.</p>

@@ -9,6 +9,7 @@ import {ArtworkRecommendations,type ArtworkMarketProof} from "@/app/shop-map-art
 import {ReviewThese} from "@/app/shop-map-evidence-review";
 import type {WinnerDna} from "@/app/shop-map-winner-dna";
 import type {PurchasePriorityMap} from "@/app/shop-map-purchase-priorities";
+import type {ProductDirection} from "@/app/shop-map-product-expansion";
 import PurchasePriorities from "./purchase-priorities";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
@@ -27,7 +28,7 @@ export type ShopOpportunity = {
   headline:string;explanation:string;action:string;mirrorBotPrompt:string|null;
 };
 const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";
-const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v11:";
+const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v12:";
 const cacheDay=()=>new Date().toLocaleDateString("en-CA");
 function readShopMapCache(key:string):ShopMap|null{
   if(typeof window==="undefined")return null;
@@ -73,6 +74,7 @@ type ShopMap = {
   attention?: AttentionMap;
   patterns?: WinningPatternMap;
   purchasePriorities?:PurchasePriorityMap;
+  productDirections?:ProductDirection[];
   analysedListingIds?:number[];
   opportunities?: ShopOpportunity[];
   nextBuild?: NextBuildPlan;
@@ -489,7 +491,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setLastGood(next);
     writeShopMapCache(cacheKey,next);
     if(tab==="overview"){
-      setInsightsLoading(selectedDays===90);
+      setInsightsLoading(true);
       setInsightsFailed(false);
       void fetch("/api/shop-map/map?view=overview-support")
         .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
@@ -499,16 +501,16 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
             const merged={...current,...detail};writeShopMapCache(cacheKey,merged);return merged;});
           setLastGood(current=>current?{...current,...detail}:detail);
         }).catch(()=>undefined);
-      if(selectedDays===90){
-        void fetch("/api/shop-map/map?view=overview-insights")
+      {
+        void fetch(`/api/shop-map/map?view=overview-insights&days=${selectedDays}`)
           .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
           .then(detail=>{
             if(sequence!==requestSequence.current)return;
-            if(!detail||detail.error||!detail.patterns){setInsightsFailed(true);return}
+            if(!detail||detail.error||!Array.isArray(detail.productDirections)){setInsightsFailed(true);return}
             setMap(current=>{if(!current)return current;
               const merged={...current,...detail};writeShopMapCache(cacheKey,merged);return merged;});
             setLastGood(current=>current?{...current,...detail}:detail);
-            const artworkPatterns=detail.patterns.patterns??[];
+            const artworkPatterns=selectedDays===90?(detail.patterns?.patterns??[]):[];
             if(!artworkPatterns.length)return;
             const marketParams=new URLSearchParams({view:"overview-market"});
             for(const pattern of artworkPatterns.slice(0,5))marketParams.append("pattern",pattern.key);
@@ -678,9 +680,9 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
-      {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} analysedListingIds={shown.analysedListingIds}/>:null}
-      {selectedDays===90&&insightsLoading?<section className="shop-map-inline-state" role="status">Checking product imagery and related patterns…</section>:null}
-      {selectedDays===90&&insightsFailed?<section className="shop-map-inline-state"><strong>Visual analysis could not load.</strong><p>Your purchase priorities remain available. Retry this section by reopening the tab.</p></section>:null}
+      {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} directions={shown.productDirections}/>:null}
+      {insightsLoading?<section className="shop-map-inline-state" role="status">Checking product imagery and catalog coverage…</section>:null}
+      {insightsFailed?<section className="shop-map-inline-state"><strong>Product analysis could not load.</strong><p>Your purchase priorities remain available. Retry this section by reopening the tab.</p></section>:null}
       {selectedDays===30?<p className="shop-map-inline-state">Visual pattern analysis is a separate last-90-day view. Select Last 90 days to inspect it.</p>:null}
       {selectedDays===90&&shown.patterns?<WinningPatterns map={shown.patterns}/>:null}
       {selectedDays===90&&shown.patterns?<ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]}/>:null}

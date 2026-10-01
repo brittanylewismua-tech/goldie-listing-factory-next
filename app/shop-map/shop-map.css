@@ -1726,6 +1726,8 @@
   margin:9px 0 0;font-size:12px;line-height:1.45}
 #suite-workspace .shop-map-redesign .shop-map-purchases-analysis{
   padding-top:9px;border-top:1px solid #d9c9d3;color:#514950}
+#suite-workspace .shop-map-redesign .shop-map-purchases-analysis strong{display:block;color:#111;font-size:12px}
+#suite-workspace .shop-map-redesign .shop-map-purchases-analysis p{margin:6px 0 0}
 #suite-workspace .shop-map-redesign .shop-map-purchases-empty{
   padding:16px;border:1px solid #ddd;border-radius:10px}
 #suite-workspace .shop-map-redesign .shop-map-purchases-empty p{margin:6px 0 0}

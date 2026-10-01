@@ -13,6 +13,7 @@ import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-dire
 import { buildAttentionMap } from "@/app/shop-map-attention";
 import { discoverVisualWinningPatterns } from "@/app/shop-map-visual-patterns";
 import { buildPurchasePriorities } from "@/app/shop-map-purchase-priorities";
+import { buildProductDirections } from "@/app/shop-map-product-expansion";
 import { winnerDnaFrom } from "@/app/shop-map-winner-dna";
 import { EXTRACTION_SCHEMA_VERSION, DESIGN_MODEL_VERSION, DESIGN_PROMPT_VERSION } from "@/app/design-intelligence";
 import { opportunitiesFromAttention } from "@/app/shop-map-opportunities";
@@ -275,7 +276,7 @@ async function buildMap(request: Request) {
   /*
     SUPPORTING REVIEW EVIDENCE MUST STAY SALES-BASED.
 
-    Artwork intelligence owns prioritization. This request only supplies
+    Purchase units own prioritization. This request only supplies
     lifecycle review actions such as a recent seller going inactive or a real
     sales drop. It returns before performance calculation, world classification
     and Market Radar work.
@@ -410,6 +411,26 @@ async function buildMap(request: Request) {
         },
       }];
     });
+    const visualById=new Map(visualInput.map(item=>[item.listingId,item]));
+    const selectedPurchases=buildPurchasePriorities(
+      (saleRows.results??[]).map(sale=>({
+        listingId:Number(sale.listing_id),quantity:Number(sale.quantity),
+        priceMinor:Number(sale.price_minor),currency:String(sale.currency||""),
+        soldAt:Number(sale.sold_at),refunded:Boolean(sale.refunded),
+      })),
+      rows.map(row=>({
+        listingId:Number(row.listing_id),title:String(row.title||"Listing details unavailable"),
+        imageUrl:String(row.image_url||""),state:String(row.state||"unknown"),
+      })),
+      {days:soldDays===30?30:90,now,receiptsComplete:false},
+    );
+    const productDirections=buildProductDirections(selectedPurchases,rows.map(row=>{
+      const listingId=Number(row.listing_id);
+      const analysed=visualById.get(listingId);
+      return {listingId,productFamily:String(row.product_family||""),
+        state:String(row.state||"unknown"),artworkHash:analysed?.artworkHash??null,
+        design:analysed?.design??null};
+    }));
     const visual=discoverVisualWinningPatterns(visualInput);
     const shopRecentSignal=rows.reduce((sum,row)=>sum+(sales90.get(Number(row.listing_id))?.sales??0),0);
     const shopLifetimeSignal=rows.reduce((sum,row)=>sum+Math.max(0,Number(performance.get(Number(row.listing_id))?.lifetimeUnits??0)),0);
@@ -459,6 +480,7 @@ async function buildMap(request: Request) {
         listings:topListings,
       },
       winnerDna:completeVisualSignal?winnerDnaFrom(visualInput):null,
+      productDirections,
       analysedListingIds:[...seen],
       visualCoverage:{
         analysedListings:visualInput.length,totalListings:rows.length,

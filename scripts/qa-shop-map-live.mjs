@@ -25,6 +25,7 @@ try {
     ]){
       await page.locator(".shop-map-tabs button").filter({hasText:label}).click();
       await page.waitForTimeout(2200);
+      if(key==="overview")await page.getByText("Next specific test").first().waitFor({timeout:30000});
       const measured=(await output.innerText()).trim();
       const match=measured.match(/QA viewport: (\d+)px; document: (\d+)px; body: (\d+)px; tab rows: ([\d+]+); active: ([^;]+); loading: (YES|NO); alert: ([^;]+); text: (\d+)/);
       if(!match)throw new Error("Mobile metrics unavailable: "+measured);
@@ -53,11 +54,22 @@ try {
         await page.locator(".shop-map-analysis-period select").selectOption("30");
         await page.waitForTimeout(1800);
         if(!(await votes.innerText()).includes("8"))throw new Error("30-day purchase leader missing");
+        await page.getByText("Next specific test").first().waitFor({timeout:30000});
+        if(!(await page.locator(".shop-map-purchases-analysis").first().innerText()).includes("exact artwork"))
+          throw new Error("Specific purchased-product direction missing");
         await page.screenshot({path:`qa-artifacts/shop-map-${width}-overview-30.png`,fullPage:true});
         const day30=(await page.screenshot({type:"jpeg",quality:35,fullPage:true})).toString("base64");
         console.log(`QA_IMAGE_BEGIN ${width} overview_30`);
         for(let offset=0;offset<day30.length;offset+=16000) console.log("QA_IMAGE_CHUNK "+day30.slice(offset,offset+16000));
         console.log(`QA_IMAGE_END ${width} overview_30`);
+        await page.mouse.move(width/2,560);
+        await page.mouse.wheel(0,600);
+        await page.waitForTimeout(300);
+        const day30Card=(await page.screenshot({type:"jpeg",quality:35})).toString("base64");
+        console.log(`QA_IMAGE_BEGIN ${width} overview_30_card`);
+        for(let offset=0;offset<day30Card.length;offset+=16000) console.log("QA_IMAGE_CHUNK "+day30Card.slice(offset,offset+16000));
+        console.log(`QA_IMAGE_END ${width} overview_30_card`);
+        await page.mouse.wheel(0,-1000);
         await page.locator(".shop-map-analysis-period select").selectOption("90");
         await page.waitForTimeout(1800);
       }
