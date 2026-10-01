@@ -10,6 +10,7 @@ import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
 import { buildAttentionMap } from "@/app/shop-map-attention";
 import { discoverVisualWinningPatterns } from "@/app/shop-map-visual-patterns";
+import { winnerDnaFrom } from "@/app/shop-map-winner-dna";
 import { EXTRACTION_SCHEMA_VERSION, DESIGN_MODEL_VERSION, DESIGN_PROMPT_VERSION } from "@/app/design-intelligence";
 import { opportunitiesFromAttention } from "@/app/shop-map-opportunities";
 import { buildPlan } from "@/app/shop-map-build-plan";
@@ -366,6 +367,9 @@ async function buildMap(request: Request) {
         state:String(rows.find(item=>Number(item.listing_id)===listingId)?.state||""),
         design:{
           wording:Array.isArray(design.wording)?design.wording.map(String):[],
+          typography:Array.isArray(design.typography)?design.typography.map(String):[],
+          dominantColors:Array.isArray(design.dominantColors)?design.dominantColors.map(String):[],
+          textToArtRatio:Number(design.textToArtRatio),
           illustrationCategory:String(design.illustrationCategory||""),
           audienceCues:Array.isArray(design.audienceCues)?design.audienceCues.map(String):[],
           recipientCues:Array.isArray(design.recipientCues)?design.recipientCues.map(String):[],
@@ -416,11 +420,13 @@ async function buildMap(request: Request) {
           :shopBasis==="sales-lifetime"?"lifetime units sold"
           :shopBasis==="favorites"?"favorites":"not enough customer response yet",
         totalSignal:shopSignalTotal,
+        overbuilt:completeVisualSignal?visual.overbuilt:[],
         patterns:completeVisualSignal
           ? visual.patterns.map(row=>({...row,sellingListings:row.sellingArtworkCount,catalogListings:row.activeArtworkCount}))
           : [],
         listings:topListings,
       },
+      winnerDna:completeVisualSignal?winnerDnaFrom(visualInput):null,
       visualCoverage:{
         analysedListings:visualInput.length,totalListings:rows.length,
         analysedActiveListings:analysedActiveIds.size,activeListings:activeListingIds.length,

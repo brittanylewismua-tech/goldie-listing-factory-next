@@ -16,6 +16,10 @@ export function catalogActions(listings:Array<{listing_id:number;title:string;st
   const base={listingId:row.listing_id,title:row.title};
   if(row.state!=='active'&&n.ninety>0)return [{...base,headline:'Previously sold, now inactive',fact:`${n.ninety} sold in 90 days · now ${row.state}`,evidence:`${n.ninety} non-refunded units recorded in the last 90 days; last recorded listing state: ${row.state}.`,nextStep:'Check why this listing is inactive. Before renewing, check stock and current production costs.',priority:1}];
   if(row.state==='active'&&n.previous>=5&&n.recent<n.previous/2)return [{...base,headline:'Sales have dropped',fact:`${n.recent} sold in 30 days, down from ${n.previous}`,evidence:`${n.recent} non-refunded units in the last 30 days versus ${n.previous} in the preceding 30 days.`,nextStep:'Check Etsy Stats for changes in visits and orders. Review stock, prices, shipping, and any promotions during these dates.',priority:2}];
+  if(row.state==='active'&&n.recent>=5&&n.previous<=1&&n.ninety<=n.recent+1)
+    return [{...base,headline:'Emerging winner',fact:`${n.recent} sold in 30 days after ${n.previous} in the previous 30`,
+      evidence:`${n.recent} non-refunded units in the last 30 days versus ${n.previous} in the preceding 30 days.`,
+      nextStep:'Keep this listing active. If the next sales window confirms the rise, test a distinct variation of its artwork.',priority:3}];
   return [];
  }).sort((a,b)=>a.priority-b.priority||a.listingId-b.listingId).slice(0,6);
 }

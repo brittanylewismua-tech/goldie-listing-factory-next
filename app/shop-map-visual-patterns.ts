@@ -7,6 +7,9 @@ export type VisualPatternSource = {
   state:string;
   design:{
     wording:string[];
+    typography?:string[];
+    dominantColors?:string[];
+    textToArtRatio?:number;
     illustrationCategory:string;
     audienceCues:string[];
     recipientCues:string[];
@@ -28,6 +31,11 @@ export type VisualWinningPattern={
   sellingArtworkCount:number;
   activeArtworkCount:number;
   listingIds:number[];
+};
+
+export type OverbuiltVisualPattern={
+  key:string;label:string;customerPercent:number;catalogPercent:number;
+  activeArtworkCount:number;
 };
 
 const clean=(value:string)=>String(value||"").toLowerCase()
@@ -53,6 +61,19 @@ function concepts(source:VisualPatternSource){
   }
   const illustration=clean(d.illustrationCategory);
   if(illustration&&illustration!=="none"&&illustration!=="text"&&illustration!=="typography")add(illustration,1);
+  const tone=clean(d.tone);
+  if(tone&&tone!=="none"&&tone!=="unknown")add(`${tone} tone`,1);
+  const composition=clean(d.composition);
+  if(composition&&composition!=="none"&&composition!=="unknown")add(`${composition} composition`,1);
+  for(const typography of (d.typography??[]).slice(0,2)){
+    const value=clean(typography);
+    if(value&&value!=="none"&&value!=="unknown")add(`${value} typography`,1);
+  }
+  const ratio=Number(d.textToArtRatio);
+  if(Number.isFinite(ratio)&&ratio>=0&&ratio<=1){
+    if(ratio>=.7)add("text led design",1);
+    else if(ratio<=.3)add("illustration led design",1);
+  }
   return out;
 }
 
@@ -77,7 +98,7 @@ export function discoverVisualWinningPatterns(rows:VisualPatternSource[]){
   }
   const totalSignal=[...artwork.values()].reduce((sum,row)=>sum+row.signal,0);
   const activeArtworkTotal=Math.max(1,[...artwork.values()].filter(row=>row.active).length);
-  if(!totalSignal)return {basis,totalSignal:0,patterns:[],coverageArtworks:artwork.size};
+  if(!totalSignal)return {basis,totalSignal:0,patterns:[],overbuilt:[],coverageArtworks:artwork.size};
 
   const byConcept=new Map<string,{artworks:Set<string>;activeArtworks:Set<string>;sellingArtworks:Set<string>;signal:number;listingIds:Set<number>;quality:number}>();
   for(const [hash,row] of artwork){
@@ -92,6 +113,16 @@ export function discoverVisualWinningPatterns(rows:VisualPatternSource[]){
       byConcept.set(concept,held);
     }
   }
+
+  const overbuilt=basis==="sales-90"?[...byConcept.entries()].flatMap(([key,row])=>{
+    const customer=row.signal/totalSignal;
+    const catalog=row.activeArtworks.size/activeArtworkTotal;
+    if(row.activeArtworks.size<3||catalog<.2||catalog-customer<.12||customer>catalog*.4)return [];
+    return [{key,label:title(key),customerPercent:Math.round(customer*100),
+      catalogPercent:Math.round(catalog*100),activeArtworkCount:row.activeArtworks.size,
+      gap:catalog-customer}];
+  }).sort((a,b)=>b.gap-a.gap||b.activeArtworkCount-a.activeArtworkCount)
+    .slice(0,2).map(({gap,...row})=>row):[];
 
   const scored=[...byConcept.entries()].flatMap(([key,row])=>{
     const customer=row.signal/totalSignal;
@@ -125,7 +156,7 @@ export function discoverVisualWinningPatterns(rows:VisualPatternSource[]){
   }
 
   return {
-    basis,totalSignal,coverageArtworks:artwork.size,
+    basis,totalSignal,coverageArtworks:artwork.size,overbuilt,
     patterns:chosen.map((x,index):VisualWinningPattern=>({
       rank:index+1,key:x.key,label:title(x.key),
       customerPercent:Math.round(x.customer*100),

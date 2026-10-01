@@ -5,12 +5,15 @@ import { readFileSync } from "node:fs";
 const client=readFileSync("app/shop-map/shop-map-client.tsx","utf8");
 const route=readFileSync("app/api/shop-map/map/route.ts","utf8");
 const actions=readFileSync("app/shop-map-artwork-actions.tsx","utf8");
+const review=readFileSync("app/shop-map-evidence-review.tsx","utf8");
 const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
 
-test("Opportunity Engine restores action sections from artwork patterns",()=>{
+test("Opportunity Engine keeps analysis, reviews and deeper actions in order",()=>{
   assert.match(overview,/WinningPatterns/);
-  assert.match(overview,/ArtworkNextBuild/);
+  assert.match(overview,/ReviewThese/);
   assert.match(overview,/ArtworkRecommendations/);
+  assert.ok(overview.indexOf("WinningPatterns")<overview.indexOf("ReviewThese"));
+  assert.ok(overview.indexOf("ReviewThese")<overview.indexOf("ArtworkRecommendations"));
   assert.match(overview,/shown\.patterns\?\.patterns\?\.length/);
   assert.doesNotMatch(overview,/<AttentionEngine|<NextBuildAllocation|<OpportunityRecommendations/);
   assert.doesNotMatch(overview,/shown\.attention|shown\.nextBuild|shown\.opportunities/);
@@ -65,7 +68,7 @@ test("Opportunity Engine copy stays short",()=>{
 test("Opportunity Engine does not include the generic listing keyword checker",()=>{
   assert.doesNotMatch(overview,/ListingCheckPanel/);
   assert.doesNotMatch(overview,/Compare a listing with search results/);
-  assert.match(client,/Proven designs to expand/);
+  assert.match(review,/Proven designs to expand/);
 });
 
 test("top listings still render when visual priority evidence is incomplete",()=>{
@@ -76,7 +79,7 @@ test("top listings still render when visual priority evidence is incomplete",()=
 
 test("MirrorBot handoffs use artwork concepts and never SEO titles",()=>{
   assert.match(actions,/actual artwork concept|proven artwork concept/);
-  assert.match(actions,/Do not infer the artwork from SEO titles or tags/);
+  assert.match(actions,/Do not infer artwork from SEO titles or tags/);
   assert.match(actions,/navigator\.clipboard\.writeText\(prompt\)/);
   assert.match(actions,/Open MirrorBot/);
   assert.match(actions,/PAUSE EXPANSION/);
@@ -90,4 +93,13 @@ test("tracked market proof must match the artwork phrase exactly and remains opt
   assert.match(actions,/proofByKey\.get\(row\.key\)/);
   assert.match(market,/productFamily\(String\(listing\.title\|\|""\)\)/);
   assert.match(actions,/Observed product types/);
+});
+
+test("Review these uses shared artwork traits, portfolio imbalance and proven product peers",()=>{
+  assert.match(review,/Winner DNA/);
+  assert.match(review,/map\.overbuilt/);
+  assert.match(review,/designsOnOneProduct/);
+  assert.match(review,/pattern\.listingIds\.includes/);
+  assert.match(review,/peer\?\.sold90\?\?market!/);
+  assert.doesNotMatch(review,/missing prints|missing stickers|keyword stuffing/i);
 });

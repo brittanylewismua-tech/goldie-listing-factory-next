@@ -54,42 +54,30 @@ export function ArtworkRecommendations({map,marketProof=[]}:{
     }catch{}
   };
   return <section className="shop-map-recommendations">
-    <div className="shop-map-section-head"><div>
-      <p className="mini-label">WHAT TO DO NEXT</p><h2>Turn the ranking into action</h2>
-      <p>Each move starts with artwork Goldie has analyzed and response your shop has earned.</p>
-    </div></div>
+    <div className="shop-map-section-head"><h2>Go deeper</h2></div>
     <div className="shop-map-recommendation-list">
       {rows.map(row=>{
-        const buildDeeper=row.gapPoints>0;
-        const pauseExpansion=row.gapPoints<0;
+        const move=row.gapPoints>0?"BUILD DEEPER":row.gapPoints<0?"PAUSE EXPANSION":"MAINTAIN";
         const proof=proofByKey.get(row.key);
-        const prompt=`My Etsy print-on-demand shop has a proven artwork concept: "${row.label}". It accounts for ${row.customerPercent}% of ${map.basisLabel}, while ${row.catalogPercent}% of active designs carry it. ${buildDeeper?"Suggest distinct product or message variations to test within this demonstrated demand.":pauseExpansion?"Assess how to maintain the proven listings while pausing expansion until response catches up with active design share.":"Suggest ways to maintain this winner and only test a variation with a clear buyer reason."} Ground every idea in the actual artwork concept, emotional resonance, and Etsy organic demand. Do not infer the artwork from SEO titles or tags. Do not prescribe an arbitrary number of listings.`;
-        return <article key={row.key} className={`shop-map-recommendation ${buildDeeper?"underbuilt":pauseExpansion?"overbuilt":"aligned"}`}>
-          <div className="shop-map-recommendation-rank">{String(row.rank).padStart(2,"0")}</div>
-          <div className="shop-map-recommendation-copy">
-            <div className="shop-map-recommendation-label"><span>{row.label}</span>
-              <em>{buildDeeper?"BUILD DEEPER":pauseExpansion?"PAUSE EXPANSION":"PROTECT THE WINNER"}</em></div>
-            <h3>{buildDeeper?"Test a variation of this proven concept":pauseExpansion?"Let response catch up":"Keep this concept working"}</h3>
-            <p>{row.customerPercent}% of customer response comes from this artwork concept, compared with {row.catalogPercent}% of active designs.</p>
-            <strong>{buildDeeper
-              ?"Create a distinct variation that keeps the same buyer meaning, then let Etsy response decide whether to expand it."
-              :pauseExpansion?"Maintain the proven listings. Hold further expansion until customer response justifies more active designs.":"Maintain the proven listings and test a new variation only when it has a clear buyer reason."}</strong>
+        const prompt=`My Etsy print-on-demand shop has a proven artwork concept: "${row.label}". It accounts for ${row.customerPercent}% of ${map.basisLabel}, while ${row.catalogPercent}% of active designs carry it. Research the buyer identity, emotional tensions, language, occasions, and visual mechanisms behind this actual artwork concept. ${row.gapPoints>0?"Suggest distinct variations worth testing within demonstrated demand.":row.gapPoints<0?"Help me protect the winner while pausing more expansion until response catches up.":"Suggest how to maintain the winner and test only a variation with a clear buyer reason."} Ground every idea in Etsy organic demand. Do not infer artwork from SEO titles or tags, copy existing Etsy phrases, or prescribe an arbitrary listing count.`;
+        return <details key={row.key} className="shop-map-mirrorbot">
+          <summary>{row.label} · {move}</summary>
+          <div>
+            <p>{prompt}</p>
+            <div className="shop-map-mirrorbot-actions">
+              <button type="button" onClick={()=>void copyPrompt(row.key,prompt)}>{copied===row.key?"Copied":"Copy MirrorBot prompt"}</button>
+              <a href={MIRRORBOT_URL} target="_blank" rel="noreferrer">Open MirrorBot ↗</a>
+            </div>
             {proof?<div className="shop-map-market-proof">
               <div><span>MARKET RADAR SUPPORT</span>
-                <a href={`/market-watch?tab=niches&keyword=${encodeURIComponent(proof.phrase)}`}>Open tracked keyword →</a></div>
+                <a href={`/market-watch?tab=niches&keyword=${encodeURIComponent(proof.phrase)}`}>See market evidence →</a></div>
               <p>{proof.sellingListings>0
-                ?`In the saved Market Radar watch for “${proof.phrase}”, there are ${proof.sellingListings} selling listings and ${proof.observedSold30} observed units sold in the last 30 days.`
-                :`In the saved Market Radar watch for “${proof.phrase}”, ${proof.moving} listings show selling movement.`}</p>
+                ?`In the matching saved watch, ${proof.sellingListings} listings sold ${proof.observedSold30} observed units in 30 days.`
+                :`${proof.moving} listings show selling movement in the matching saved watch.`}</p>
               {!!proof.productFamilies?.length&&<p>Observed product types: {proof.productFamilies.slice(0,2).map(item=>`${familyLabel(item.family)} (${item.sold30} units)`).join(" · ")}.</p>}
             </div>:null}
-            <details className="shop-map-mirrorbot"><summary>Go deeper with MirrorBot</summary>
-              <div><p>{prompt}</p><div className="shop-map-mirrorbot-actions">
-                <button type="button" onClick={()=>void copyPrompt(row.key,prompt)}>{copied===row.key?"Copied":"Copy prompt"}</button>
-                <a href={MIRRORBOT_URL} target="_blank" rel="noreferrer">Open MirrorBot ↗</a>
-              </div></div>
-            </details>
           </div>
-        </article>;
+        </details>;
       })}
     </div>
   </section>;

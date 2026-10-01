@@ -40,8 +40,8 @@ test("the Your Shop section switcher is a centered pink-and-white tab control",(
 
 test("Overview puts artwork patterns before review utilities",()=>{
   const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
-  assert.ok(overview.indexOf("WinningPatterns")<overview.indexOf("CatalogReview"));
-  assert.ok(overview.indexOf("WinningPatterns")<overview.indexOf("DesignReach"));
+  assert.ok(overview.indexOf("WinningPatterns")<overview.indexOf("ReviewThese"));
+  assert.ok(overview.indexOf("WinningPatterns")<overview.indexOf("ArtworkRecommendations"));
   assert.match(overview,/shown\.patterns/);
   assert.doesNotMatch(overview,/AttentionEngine/);
   assert.doesNotMatch(overview,/shop-map-focus-panel|Revenue · 90 days|Units sold · 90 days/);
@@ -66,7 +66,7 @@ test("Sold Listings uses one toolbar and image-led rows",()=>{
 test("Overview merges deeper opportunity intelligence without blocking the first render",()=>{
   assert.match(client,/tab==="overview"\?"overview-insights":tab/);
   assert.match(client,/setMap\(current=>\{const merged=current\?\{\.\.\.current,\.\.\.detail\}:detail/);
-  assert.match(client,/Turn the ranking into action/);
+  assert.match(client,/view=overview-support/);
 });
 
 
@@ -110,7 +110,7 @@ test("global suite styles do not override the Your Shop tab control",()=>{
 });
 
 test("Opportunity Engine cache version changes when ranking semantics change",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v9:"/);
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v10:"/);
 });
 
 
@@ -135,7 +135,7 @@ test("Sold Listings cannot crash on an undefined sold collection",()=>{
 });
 
 test("artwork-led Opportunity Engine invalidates older cached responses",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v9:"/);
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v10:"/);
 });
 
 
