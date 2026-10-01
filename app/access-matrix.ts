@@ -62,6 +62,8 @@ export const ACCESS: Record<string, Rule> = {
   "/api/version": { kind: "public" },
   /* Public entry point with its own expiring high-entropy reviewer token check. */
   "/qa/reviewer": { kind: "public" },
+  /* Same token-gated reviewer session; embeds the real Shop Map at phone width. */
+  "/qa/mobile": { kind: "public" },
   /* Temporary visual-review route: same Home renderer/CSS with mock data so
      layout can be browser-inspected without sharing an authenticated session. */
   "/visual-review/home": { kind: "public" },
