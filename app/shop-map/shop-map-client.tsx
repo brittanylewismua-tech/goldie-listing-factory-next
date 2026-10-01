@@ -115,6 +115,15 @@ type ShopMap = {
   error?: string;
 };
 
+function validShopMapForTab(data:ShopMap|null,tab:"overview"|"themes"|"sold"|"money"){
+  if(!data||data.error)return false;
+  if(tab==="overview")return Boolean(data.patterns)
+    &&Array.isArray(data.patterns.patterns)&&Array.isArray(data.patterns.listings);
+  if(tab==="sold")return Boolean(data.soldListings)&&Array.isArray(data.soldListings?.listings);
+  if(tab==="themes")return Array.isArray(data.worlds);
+  return Boolean(data.thisMonth)||data.timezoneNeeded===true;
+}
+
 // Cached estimates must never be presented as a complete profit figure.
 function monthBasis(month: { label?: string;
   coverage?: { estimated: number; unavailable: number } } | undefined) {
@@ -444,7 +453,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     const cacheKey=params.toString();
     const cached=readShopMapCache(cacheKey);
     setMapKey(cacheKey);
-    if(cached){
+    if(cached&&validShopMapForTab(cached,tab)){
       setMap(cached);setLastGood(cached);setFailed(false);setRefreshing(false);
     }else{
       setMap(null);
@@ -455,7 +464,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       .catch(() => null);
     if(sequence!==requestSequence.current)return;
     setRefreshing(false);
-    if (!next || next.error) { setFailed(true); return; }
+    if (!validShopMapForTab(next,tab)) { setMap(null); setFailed(true); return; }
     setFailed(false);
     setMapKey(cacheKey);
     setMap(next);
@@ -633,6 +642,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     {tab === "themes" && <section className="shop-map-card shop-map-themes">
       <div className="shop-map-section-head"><div><p className="mini-label">PRODUCT THEMES</p><h2>Sales by product theme</h2>
         <p>{shown.worldsPeriod?.replace(/^./,letter=>letter.toUpperCase())}. Open a theme to see what is included.</p></div></div>
+      {!themes.length&&!unclassifiedTheme?<p className="shop-map-state">No product themes are available yet.</p>:null}
       <ul className="shop-map-worlds">{themes.map(niche => { const share = recentTotal ? niche.revenueMinor / recentTotal : 0; const members=browseOwnListings(niche.memberListings??[],themeSort,themeQuery,themeState);
         return <li key={niche.worldId} className={open === niche.worldId ? "theme-expanded" : undefined}><button type="button" className="shop-map-world"
           aria-expanded={open === niche.worldId} onClick={() => {setOpen(open === niche.worldId ? "" : niche.worldId);setThemeQuery("");setThemeState("all")}}>

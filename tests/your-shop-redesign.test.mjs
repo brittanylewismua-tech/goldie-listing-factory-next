@@ -163,3 +163,16 @@ test("non-money tabs use a finite year start without requiring a shop month",()=
   assert.match(route,/const yearStart=month&&\/\^\\d\{4\}-\\d\{2\}\$\//);
   assert.match(route,/Date\.UTC\(new Date\(now\*1000\)\.getUTCFullYear\(\),0,1\)/);
 });
+
+
+test("each Your Shop tab validates its response before rendering",()=>{
+  assert.match(client,/function validShopMapForTab/);
+  assert.match(client,/tab==="sold".*soldListings/s);
+  assert.match(client,/tab==="themes".*Array\.isArray\(data\.worlds\)/s);
+  assert.match(client,/tab==="overview".*data\.patterns/s);
+  assert.match(client,/if\(!validShopMapForTab\(next,tab\)\)/);
+});
+
+test("Product Themes has a visible empty state",()=>{
+  assert.match(client,/No product themes are available yet/);
+});
