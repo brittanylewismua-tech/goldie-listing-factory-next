@@ -60,6 +60,8 @@ export const ACCESS: Record<string, Rule> = {
   "/api/csp-report": { kind: "public" },
   "/api/client-errors": { kind: "public" },
   "/api/version": { kind: "public" },
+  /* Public entry point with its own expiring high-entropy reviewer token check. */
+  "/qa/reviewer": { kind: "public" },
   /* Temporary visual-review route: same Home renderer/CSS with mock data so
      layout can be browser-inspected without sharing an authenticated session. */
   "/visual-review/home": { kind: "public" },
