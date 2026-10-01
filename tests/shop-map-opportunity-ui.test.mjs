@@ -41,7 +41,8 @@ test("Opportunity Engine stays decision-first instead of repeating dashboard sta
   assert.doesNotMatch(overview,/LAST 90 DAYS[^\n]*Top sellers/);
   assert.doesNotMatch(overview,/Revenue · 90 days/);
   assert.doesNotMatch(overview,/WHERE TO FOCUS/);
-  assert.match(client,/What is working, where your attention belongs, and what to build out next\./);
+  assert.match(client,/<h1>My Shop<\/h1>/);
+  assert.match(purchase,/Build out what your customers are already buying/);
 });
 
 test("ranked priorities keep customer and active-design attention visually comparable",()=>{
