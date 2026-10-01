@@ -49,7 +49,7 @@ test("ranked priorities keep customer and active-design attention visually compa
   assert.match(client,/shop-map-attention-mini-compare/);
   assert.match(client,/>Customer<\/small>/);
   assert.match(client,/>Catalog<\/small>/);
-  assert.match(client,/Active designs/);
+  assert.match(client,/active analyzed designs/);
 });
 
 test("Opportunity Engine can discover winning patterns without assuming a customer world exists",()=>{
