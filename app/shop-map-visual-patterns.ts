@@ -25,6 +25,8 @@ export type VisualWinningPattern={
   gapPoints:number;
   lift:number;
   artworkCount:number;
+  sellingArtworkCount:number;
+  activeArtworkCount:number;
   listingIds:number[];
 };
 
@@ -77,12 +79,13 @@ export function discoverVisualWinningPatterns(rows:VisualPatternSource[]){
   const activeArtworkTotal=Math.max(1,[...artwork.values()].filter(row=>row.active).length);
   if(!totalSignal)return {basis,totalSignal:0,patterns:[],coverageArtworks:artwork.size};
 
-  const byConcept=new Map<string,{artworks:Set<string>;activeArtworks:Set<string>;signal:number;listingIds:Set<number>;quality:number}>();
+  const byConcept=new Map<string,{artworks:Set<string>;activeArtworks:Set<string>;sellingArtworks:Set<string>;signal:number;listingIds:Set<number>;quality:number}>();
   for(const [hash,row] of artwork){
     for(const [concept,quality] of row.concepts){
-      const held=byConcept.get(concept)??{artworks:new Set<string>(),activeArtworks:new Set<string>(),signal:0,listingIds:new Set<number>(),quality:0};
+      const held=byConcept.get(concept)??{artworks:new Set<string>(),activeArtworks:new Set<string>(),sellingArtworks:new Set<string>(),signal:0,listingIds:new Set<number>(),quality:0};
       held.artworks.add(hash);
       if(row.active)held.activeArtworks.add(hash);
+      if(row.signal>0)held.sellingArtworks.add(hash);
       held.signal+=row.signal;
       held.quality=Math.max(held.quality,quality);
       for(const id of row.listingIds)held.listingIds.add(id);
@@ -130,6 +133,8 @@ export function discoverVisualWinningPatterns(rows:VisualPatternSource[]){
       gapPoints:Math.round(x.gap*100),
       lift:Number(x.lift.toFixed(1)),
       artworkCount:x.row.artworks.size,
+      sellingArtworkCount:x.row.sellingArtworks.size,
+      activeArtworkCount:x.row.activeArtworks.size,
       listingIds:[...x.row.listingIds],
     })),
   };
