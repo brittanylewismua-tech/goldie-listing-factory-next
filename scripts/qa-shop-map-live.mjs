@@ -33,13 +33,19 @@ try {
         if(!(await dna.innerText()).includes("Purchased units among 4 leading analyzed selling artworks"))
           throw new Error("Winner DNA denominator is not labeled");
         await dna.locator("summary").click();
+        await page.evaluate(()=>window.scrollTo(0,0));
+        await page.waitForTimeout(150);
+        const firstViewport=(await page.screenshot({type:"jpeg",quality:45,fullPage:false})).toString("base64");
+        console.log(`QA_IMAGE_BEGIN ${width} overview_first_viewport`);
+        for(let offset=0;offset<firstViewport.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+firstViewport.slice(offset,offset+16000));
+        console.log(`QA_IMAGE_END ${width} overview_first_viewport`);
         const hero=page.locator(".oe-lead").first();
         const heroImage=hero.locator(".oe-lead-art img").first();
         const imageBox=await heroImage.boundingBox();
         if(!(await heroImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
           throw new Error("Winning product image did not load in the live browser");
         const votesBox=await hero.locator(".oe-lead-stats").boundingBox();
-        if(!imageBox||!votesBox||imageBox.y>660||votesBox.y+votesBox.height>784)
+        if(!imageBox||!votesBox||imageBox.y<0||votesBox.y<0||imageBox.y>660||votesBox.y+votesBox.height>784)
           throw new Error("Winning product image and purchase evidence are below the initial phone viewport");
         if(!(await hero.innerText()).includes("sweatshirt"))
           throw new Error("Selected product direction missing");
