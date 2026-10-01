@@ -181,7 +181,7 @@ function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}
     if(last&&last.headline===action.headline)last.rows.push(action);
     else groups.push({headline:action.headline,rows:[action]});
   }
-  return <section className="cc-tool shop-map-review"><h2>Listings to review</h2>
+  return <section className="cc-tool shop-map-review"><h2>Review these</h2>
     {groups.map(group=><div key={group.headline} className="shop-map-review-group">
       <h3>{group.headline}</h3>
       {group.rows.map(action=><details key={action.listingId} className="shop-map-review-row">
@@ -630,13 +630,10 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       {shown.patterns?<WinningPatterns map={shown.patterns}/>:shown.attention&&shown.attention.basis!=="none"?<AttentionEngine attention={shown.attention}/>:null}
       {!shown.patterns?.patterns?.length&&shown.nextBuild&&<NextBuildAllocation plan={shown.nextBuild}/>}
       {!shown.patterns?.patterns?.length&&!!shown.opportunities?.length&&<OpportunityRecommendations rows={shown.opportunities} marketEvidence={shown.marketCorroboration??[]}/>} 
-      {!insightsLoading||shown.catalogActions?<section className="shop-map-opportunities">
-        <div className="shop-map-section-head"><div><h2>Review these</h2></div></div>
-        <div className="shop-map-opportunity-stack">
-          <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
-          <DesignReach/>
-        </div>
-      </section>:null}
+      {!insightsLoading||shown.catalogActions?<div className="shop-map-opportunity-stack">
+        <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
+        <DesignReach/>
+      </div>:null}
     </div>}
 
     {tab === "themes" && <section className="shop-map-card shop-map-themes">
