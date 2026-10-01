@@ -125,11 +125,14 @@ async function buildMap(request: Request) {
     Without a confirmed timezone for THIS shop, the money section says so and
     the rest of the map - which has no month boundary in it - still works.
   */
-  const timezone = await shopTimezone(user.userId, shopId);
-  const month = parameters.get("month") ?? (timezone ? monthOf(now, timezone) ?? "" : "");
-  const window = timezone ? monthWindow(month, timezone) : null;
+  let timezone: string | null = null;
+  let month = "";
+  let window: ReturnType<typeof monthWindow> | null = null;
 
   if(view==="money"){
+    timezone = await shopTimezone(user.userId, shopId);
+    month = parameters.get("month") ?? (timezone ? monthOf(now, timezone) ?? "" : "");
+    window = timezone ? monthWindow(month, timezone) : null;
     const financial=timezone?await readFinancialMonth(user.userId,shopId,month,timezone):null;
     const productionCoverage=financial?.coverage.productionCoverage??0;
     const profit=financial?.knownOperatingProfitMinor??null;
@@ -247,8 +250,7 @@ async function buildMap(request: Request) {
     });
   }
 
-  const totalsForFast=(days:number)=>{
-    const totals=new Map<number,{sales:number;revenueMinor:number}>();
+  const totalsForFast=(days:number)=>{    const totals=new Map<number,{sales:number;revenueMinor:number}>();
     for(const sale of saleRows.results??[]){
       if(Number(sale.refunded)||Number(sale.sold_at)<now-days*86400||Number(sale.sold_at)>now)continue;
       const id=Number(sale.listing_id),previous=totals.get(id)??{sales:0,revenueMinor:0};
@@ -319,22 +321,41 @@ async function buildMap(request: Request) {
       }];
     });
     const visual=discoverVisualWinningPatterns(visualInput);
+    const shopRecentSignal=rows.reduce((sum,row)=>sum+(sales90.get(Number(row.listing_id))?.sales??0),0);
+    const shopLifetimeSignal=rows.reduce((sum,row)=>sum+Math.max(0,Number(performance.get(Number(row.listing_id))?.lifetimeUnits??0)),0);
+    const shopFavoriteSignal=rows.reduce((sum,row)=>sum+Math.max(0,Number(row.favorites??0)),0);
+    const shopBasis=shopRecentSignal>0?"sales-90":shopLifetimeSignal>0?"sales-lifetime":shopFavoriteSignal>0?"favorites":"none";
+    const shopSignalTotal=shopBasis==="sales-90"?shopRecentSignal
+      :shopBasis==="sales-lifetime"?shopLifetimeSignal
+      :shopBasis==="favorites"?shopFavoriteSignal:0;
+    /*
+      A partial artwork sample is not allowed to become a whole-shop priority.
+      If any customer-response signal is attached to a listing whose artwork
+      has not been analysed, show the proven listings but withhold the pattern
+      ranking until that visual evidence exists.
+    */
+    const completeVisualSignal=visual.basis===shopBasis&&visual.totalSignal===shopSignalTotal;
     const topListings=soldRowsFast(sales90).slice(0,5).map((row,index)=>({
       rank:index+1,listingId:row.listingId,title:row.title,imageUrl:row.imageUrl,
-      signal:row.sales,attentionPercent:visual.totalSignal?Math.round(row.sales/Math.max(1,visual.totalSignal)*100):0,
+      signal:row.sales,attentionPercent:shopSignalTotal?Math.round(row.sales/Math.max(1,shopSignalTotal)*100):0,
     }));
     return NextResponse.json({
       shop:{shopId,shopName:shopRow.shop_name},
       patterns:{
-        basis:visual.basis,
-        basisLabel:visual.basis==="sales-90"?"units sold in the last 90 days"
-          :visual.basis==="sales-lifetime"?"lifetime units sold"
-          :visual.basis==="favorites"?"favorites":"not enough customer response yet",
-        totalSignal:visual.totalSignal,
-        patterns:visual.patterns.map(row=>({...row,sellingListings:row.artworkCount,catalogListings:row.artworkCount})),
+        basis:shopBasis,
+        basisLabel:shopBasis==="sales-90"?"units sold in the last 90 days"
+          :shopBasis==="sales-lifetime"?"lifetime units sold"
+          :shopBasis==="favorites"?"favorites":"not enough customer response yet",
+        totalSignal:shopSignalTotal,
+        patterns:completeVisualSignal
+          ? visual.patterns.map(row=>({...row,sellingListings:row.artworkCount,catalogListings:row.artworkCount}))
+          : [],
         listings:topListings,
       },
-      visualCoverage:{analysedListings:visualInput.length,totalListings:rows.length},
+      visualCoverage:{
+        analysedListings:visualInput.length,totalListings:rows.length,
+        completeSignal:completeVisualSignal,
+      },
     });
   }
 
@@ -497,8 +518,7 @@ async function buildMap(request: Request) {
     const sales90=totalsForFast(90);
     const activeIds=new Set(rows.filter(row=>String(row.state)==="active")
       .map(row=>Number(row.listing_id)));
-    const rowById=new Map(rows.map(row=>[Number(row.listing_id),row] as const));
-    const unclassifiedIds=assignments.filter(row=>row.unclassified).map(row=>row.listingId);
+    const rowById=new Map(rows.map(row=>[Number(row.listing_id),row] as const));    const unclassifiedIds=assignments.filter(row=>row.unclassified).map(row=>row.listingId);
     const perfSum=(ids:number[],pick:(value:NonNullable<ReturnType<typeof performance.get>>)=>number)=>
       ids.reduce((sum,id)=>{const value=performance.get(id);return sum+(value?pick(value):0)},0);
     const themeListings=(ids:number[])=>ids.map(id=>{
@@ -610,6 +630,16 @@ async function buildMap(request: Request) {
       catalogActions:catalogActions(rows,saleRows.results??[],now),
     });
   }
+
+  /*
+    ONLY THE FULL LEGACY MAP BELOW THIS POINT NEEDS MONTH BOUNDARIES.
+
+    Opportunity Engine, Product Themes and Sold Listings are shop-performance
+    reads. A timezone lookup must never be able to delay or break those tabs.
+  */
+  timezone = await shopTimezone(user.userId, shopId);
+  month = parameters.get("month") ?? (timezone ? monthOf(now, timezone) ?? "" : "");
+  window = timezone ? monthWindow(month, timezone) : null;
 
   /* --------------------------------------------- one listing, if asked for */
   const askedRaw = new URL(request.url).searchParams.get("listingId") ?? "";
@@ -747,8 +777,7 @@ async function buildMap(request: Request) {
       ? 1 - unclassified.ordersLast90 / shopTotals.ordersLast90 : 1,
   };
 
-  /*
-    HOW CURRENT THE MONEY IS, SAID OUT LOUD.
+  /*    HOW CURRENT THE MONEY IS, SAID OUT LOUD.
 
     The financial view already refused profit with staleness as its FIRST
     reason while the member's own card said only that production costs were
@@ -997,8 +1026,7 @@ async function buildMap(request: Request) {
     /*
       ONE LISTING, AND WHY IT SITS WHERE IT SITS.
 
-      Deliberately answered by the map itself rather than by an endpoint of
-      its own. A second pipeline that resolved placement separately could
+      Deliberately answered by the map itself rather than by an endpoint of      its own. A second pipeline that resolved placement separately could
       disagree with the map it is explaining — a member told a listing is in
       one niche while the niche beside it counts the listing somewhere else —
       and that is a worse failure than the extra work of recomputing. The
