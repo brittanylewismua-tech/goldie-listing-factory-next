@@ -4,6 +4,7 @@ export type VisualPatternSource = {
   sales90:number;
   lifetimeSales:number;
   favorites:number|null;
+  state:string;
   design:{
     wording:string[];
     illustrationCategory:string;
@@ -62,24 +63,26 @@ export function discoverVisualWinningPatterns(rows:VisualPatternSource[]){
     :basis==="sales-lifetime"?Math.max(0,row.lifetimeSales)
     :basis==="favorites"?Math.max(0,row.favorites??0):0;
 
-  const artwork=new Map<string,{signal:number;listingIds:Set<number>;concepts:Map<string,number>}>();
+  const artwork=new Map<string,{signal:number;listingIds:Set<number>;concepts:Map<string,number>;active:boolean}>();
   for(const row of rows){
-    const held=artwork.get(row.artworkHash)??{signal:0,listingIds:new Set<number>(),concepts:new Map<string,number>()};
+    const held=artwork.get(row.artworkHash)??{signal:0,listingIds:new Set<number>(),concepts:new Map<string,number>(),active:false};
     held.signal+=signalOf(row);
     held.listingIds.add(row.listingId);
+    held.active=held.active||row.state==="active";
     for(const [concept,quality] of concepts(row))
       held.concepts.set(concept,Math.max(quality,held.concepts.get(concept)??0));
     artwork.set(row.artworkHash,held);
   }
   const totalSignal=[...artwork.values()].reduce((sum,row)=>sum+row.signal,0);
-  const artworkTotal=Math.max(1,artwork.size);
+  const activeArtworkTotal=Math.max(1,[...artwork.values()].filter(row=>row.active).length);
   if(!totalSignal)return {basis,totalSignal:0,patterns:[],coverageArtworks:artwork.size};
 
-  const byConcept=new Map<string,{artworks:Set<string>;signal:number;listingIds:Set<number>;quality:number}>();
+  const byConcept=new Map<string,{artworks:Set<string>;activeArtworks:Set<string>;signal:number;listingIds:Set<number>;quality:number}>();
   for(const [hash,row] of artwork){
     for(const [concept,quality] of row.concepts){
-      const held=byConcept.get(concept)??{artworks:new Set<string>(),signal:0,listingIds:new Set<number>(),quality:0};
+      const held=byConcept.get(concept)??{artworks:new Set<string>(),activeArtworks:new Set<string>(),signal:0,listingIds:new Set<number>(),quality:0};
       held.artworks.add(hash);
+      if(row.active)held.activeArtworks.add(hash);
       held.signal+=row.signal;
       held.quality=Math.max(held.quality,quality);
       for(const id of row.listingIds)held.listingIds.add(id);
@@ -89,7 +92,7 @@ export function discoverVisualWinningPatterns(rows:VisualPatternSource[]){
 
   const scored=[...byConcept.entries()].flatMap(([key,row])=>{
     const customer=row.signal/totalSignal;
-    const catalog=row.artworks.size/artworkTotal;
+    const catalog=row.activeArtworks.size/activeArtworkTotal;
     const lift=customer/Math.max(.01,catalog);
     const gap=customer-catalog;
     /*
@@ -98,7 +101,7 @@ export function discoverVisualWinningPatterns(rows:VisualPatternSource[]){
       at least a third of customer response, hiding it because no second design
       repeats the concept would understate exactly what customers are rewarding.
     */
-    const megaWinner=row.artworks.size===1&&artworkTotal>1&&customer>=.33;
+    const megaWinner=row.artworks.size===1&&artwork.size>1&&customer>=.33;
     if(row.artworks.size<2&&!megaWinner)return [];
     if(customer<.08)return [];
     if(!megaWinner&&lift<1.15&&gap<.04)return [];
