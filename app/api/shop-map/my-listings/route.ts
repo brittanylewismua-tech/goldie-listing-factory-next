@@ -9,18 +9,21 @@ import {ensureProvenanceTables} from '@/app/artwork-provenance';
 
 // Member-scoped catalog and actual non-refunded sales.
 export const GET = withErrorLog('shop-map-my-listings', async () => {
-  if (await isQaReviewer()) return NextResponse.json({shop:{shopId:900001,shopName:'Goldie Reviewer Shop'},listings:qaListings},
+  if (await isQaReviewer()) return NextResponse.json({shop:{shopId:900001,shopName:'Goldie Reviewer Shop'},listings:qaListings,sources:{shop:'available',catalog:'available',sales:'available'}},
     {headers:{'Cache-Control':'private, no-store'}});
   const access = await requireFeatureApi('shopMap');
   if (!access.ok) return access.response;
   const user = access.user;
   const db = (env as unknown as {DB: D1Database}).DB;
+  let shopReadFailed = false;
   const shopRow = await db.prepare(
     `SELECT shop_id, shop_name FROM etsy_connections WHERE user_id = ? AND is_active = 1 LIMIT 1`)
-    .bind(user.userId).first<{shop_id: number; shop_name: string}>().catch(() => null);
+    .bind(user.userId).first<{shop_id: number; shop_name: string}>().catch(() => { shopReadFailed = true; return null; });
   /* No connected shop is a state, not an error: the picker simply has nothing
      to offer and says so where it is shown. */
-  if (!shopRow) return NextResponse.json({listings: [], shop: null});
+  if (!shopRow) return NextResponse.json({listings: [], shop: null,
+    sources:{shop:shopReadFailed?'failed':'missing',catalog:'unavailable',sales:'unavailable'}},
+    {status:shopReadFailed?503:200,headers:{'Cache-Control':'private, no-store'}});
   const shop = {shopId: Number(shopRow.shop_id), shopName: String(shopRow.shop_name ?? '')};
 
   await ensureProvenanceTables();
@@ -60,10 +63,15 @@ export const GET = withErrorLog('shop-map-my-listings', async () => {
     favorites: row.favorites ?? null,
     views: row.views ?? null,
     imageUrl: String(row.image_url ?? ''),
-    sold90: sold.get(Number(row.listing_id))?.units ?? 0,
+    sold90: sales === null ? null : (sold.get(Number(row.listing_id))?.units ?? 0),
 
   }));
 
-  return NextResponse.json({shop: {shopId: shop.shopId, shopName: shop.shopName}, listings},
+  const salesObservations = (sales?.results ?? []).map((row: SaleRow) => ({
+    listingId:Number(row.listing_id),units:Number(row.units)||0,
+  }));
+  return NextResponse.json({shop: {shopId: shop.shopId, shopName: shop.shopName}, listings,
+    salesObservations,
+    sources:{shop:'available',catalog:rows===null?'failed':'available',sales:sales===null?'failed':'available'}},
     {headers: {'Cache-Control': 'private, no-store'}});
 });

@@ -178,6 +178,40 @@ try {
   console.log("QA_IMAGE_END 320 tied_priorities");
   console.log("QA_TIES "+JSON.stringify({width:320,cards:4,rank:1,expanded:true}));
   await tieContext.close();
+  // Distinguish failed catalog and purchase reads on the authenticated page.
+  const sourceContext=await browser.newContext({viewport:{width:320,height:844},deviceScaleFactor:1});
+  const sourceLogin=await sourceContext.request.post("https://thegoldiesuite.com/qa/oidc",{
+    headers:{authorization:"Bearer "+identity},timeout:30000,
+  });
+  if(!sourceLogin.ok())throw new Error("Source-state reviewer identity rejected: "+sourceLogin.status());
+  const sourcePage=await sourceContext.newPage();
+  let sourceRequests=0;
+  await sourcePage.route(url=>url.pathname==="/api/shop-map/my-listings",async route=>{
+    sourceRequests++;
+    if(sourceRequests>2){await route.continue();return;}
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+      shop:{shopId:900001,shopName:"Goldie Reviewer Shop"},listings:[],
+      salesObservations:sourceRequests===1?[{listingId:1,units:22}]:[],
+      sources:{shop:"available",catalog:sourceRequests===1?"failed":"available",
+        sales:sourceRequests===1?"available":"failed"},
+    })});
+  });
+  await sourcePage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
+  const sourceBanner=sourcePage.getByText("Comparison sources need a retry");
+  await sourceBanner.waitFor({timeout:25000});
+  await sourcePage.getByText("Purchase observations loaded, but catalog coverage failed.").waitFor();
+  await sourceBanner.scrollIntoViewIfNeeded();
+  let sourceImage=(await sourcePage.screenshot({type:"jpeg",quality:35})).toString("base64");
+  console.log("QA_IMAGE_BEGIN 320 catalog_failure");
+  for(let offset=0;offset<sourceImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+sourceImage.slice(offset,offset+16000));
+  console.log("QA_IMAGE_END 320 catalog_failure");
+  await sourcePage.getByRole("button",{name:"Retry comparison"}).click();
+  await sourcePage.getByText("Catalog loaded, but purchase history failed.").waitFor();
+  await sourcePage.getByRole("button",{name:"Retry comparison"}).click();
+  await sourceBanner.waitFor({state:"hidden",timeout:25000});
+  await sourcePage.getByText("Proven designs to expand").waitFor({timeout:25000});
+  console.log("QA_SOURCE_RECOVERY "+JSON.stringify({catalogFailure:true,salesFailure:true,recovered:true,width:320}));
+  await sourceContext.close();
   await writeFile("qa-artifacts/results.json",JSON.stringify(results,null,2));
 } finally {
   await browser.close();

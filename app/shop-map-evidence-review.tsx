@@ -38,14 +38,45 @@ export function ReviewThese({map,actions,dna,marketProof=[]}:{
   marketProof?:ArtworkMarketProof[];
 }){
   const [listings,setListings]=useState<ReachListing[]>([]);
-  useEffect(()=>{void fetch("/api/shop-map/my-listings")
-    .then(response=>response.ok?response.json() as Promise<{listings?:ReachListing[]}>:null)
-    .then(body=>setListings(body?.listings??[])).catch(()=>undefined)},[]);
-  const expansion=expansionReviews(listings,map,marketProof);
+  const [sources,setSources]=useState<{shop:string;catalog:string;sales:string}|null>(null);
+  const [retry,setRetry]=useState(0);
+  const [loading,setLoading]=useState(false);
+  useEffect(()=>{
+    let cancelled=false;
+    setLoading(true);
+    void fetch("/api/shop-map/my-listings",{cache:"no-store"})
+      .then(async response=>{
+        const body=await response.json().catch(()=>null) as {
+          listings?:ReachListing[];sources?:{shop:string;catalog:string;sales:string}
+        }|null;
+        if(!body?.sources)throw new Error("Comparison sources unavailable");
+        return body;
+      })
+      .then(body=>{if(!cancelled){setListings(body.listings??[]);setSources(body.sources!);}})
+      .catch(()=>{if(!cancelled)setSources({shop:"failed",catalog:"unavailable",sales:"unavailable"});})
+      .finally(()=>{if(!cancelled)setLoading(false);});
+    return ()=>{cancelled=true;};
+  },[retry]);
+  const sourceIssue=sources?.shop==="failed"||sources?.catalog==="failed"||sources?.sales==="failed";
+  const expansion=sources?.catalog==="available"&&sources?.sales==="available"
+    ?expansionReviews(listings,map,marketProof):[];
   const overbuilt=map.overbuilt??[];
-  if(!dna&&!overbuilt.length&&!actions.length&&!expansion.length)return null;
+  if(!dna&&!overbuilt.length&&!actions.length&&!expansion.length&&!sourceIssue)return null;
   return <section className="cc-tool shop-map-review shop-map-review-all">
     <div className="shop-map-section-head"><h2>Review these</h2></div>
+    {sourceIssue?<div className="shop-map-review-group" role="status">
+      <h3>Comparison sources need a retry</h3>
+      <p>{sources?.shop==="failed"
+        ?"Shop connection could not be checked. Catalog and purchase comparisons are unavailable."
+        :sources?.catalog==="failed"&&sources?.sales==="failed"
+          ?"Catalog and purchase reads failed. No comparison conclusion is available."
+          :sources?.catalog==="failed"
+            ?"Purchase observations loaded, but catalog coverage failed. No related-product conclusion is available."
+            :"Catalog loaded, but purchase history failed. No sales-based comparison conclusion is available."}</p>
+      <button type="button" onClick={()=>setRetry(value=>value+1)} disabled={loading}>
+        {loading?"Retrying…":"Retry comparison"}
+      </button>
+    </div>:null}
     {dna?<div className="shop-map-review-group">
       <h3>Winner DNA</h3>
       <p>Trait comparison among {dna.sellingArtworks} leading analyzed selling artworks ({dna.basis==="sales-90"?"last 90 days":"recorded lifetime"}):</p>
