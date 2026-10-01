@@ -222,9 +222,9 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
         <strong>{lead.customerPercent}% of customer response</strong>
         <p className="shop-map-attention-directive"><b>Focus here next.</b></p>
       </div>
-      <div className="shop-map-attention-compare" aria-label="Customer response compared with catalog presence">
+      <div className="shop-map-attention-compare" aria-label="Customer response compared with active design presence">
         <div><span>Customer response</span><b>{lead.customerPercent}%</b><i><em style={{width:`${Math.max(2,lead.customerPercent)}%`}}/></i></div>
-        <div><span>Active catalog</span><b>{lead.catalogPercent}%</b><i><em style={{width:`${Math.max(2,lead.catalogPercent)}%`}}/></i></div>
+        <div><span>Active designs</span><b>{lead.catalogPercent}%</b><i><em style={{width:`${Math.max(2,lead.catalogPercent)}%`}}/></i></div>
         <small>{lead.lift}× response lift · {lead.sellingListings} selling listing{lead.sellingListings===1?"":"s"}</small>
       </div>
     </article>
@@ -235,10 +235,10 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
           <div className="shop-map-attention-row">
             <span className="shop-map-attention-rank">0{pattern.rank}</span>
             <div className="shop-map-attention-name"><b>{pattern.label}</b>
-              <small>{pattern.customerPercent}% of customer response · {pattern.catalogPercent}% of active catalog</small></div>
+              <small>{pattern.customerPercent}% of customer response · {pattern.catalogPercent}% of active designs</small></div>
             <em className="attention-state underbuilt">+{pattern.gapPoints} pt gap</em>
           </div>
-          <div className="shop-map-attention-mini-compare" aria-label={`${pattern.customerPercent}% customer response compared with ${pattern.catalogPercent}% catalog presence`}>
+          <div className="shop-map-attention-mini-compare" aria-label={`${pattern.customerPercent}% customer response compared with ${pattern.catalogPercent}% active design presence`}>
             <div><small>Customer</small><i><em style={{width:`${Math.max(2,pattern.customerPercent)}%`}}/></i></div>
             <div className="catalog"><small>Catalog</small><i><em style={{width:`${Math.max(2,pattern.catalogPercent)}%`}}/></i></div>
           </div>
@@ -306,7 +306,7 @@ export function AttentionEngine({attention}:{attention:AttentionMap}){
           <div className="shop-map-attention-row">
             <span className="shop-map-attention-rank">0{world.rank}</span>
             <div className="shop-map-attention-name"><b>{world.label}</b>
-              <small>{world.attentionPercent}% customer attention · {world.catalogPercent}% of active catalog</small></div>
+              <small>{world.attentionPercent}% customer attention · {world.catalogPercent}% of active designs</small></div>
             <em className={`attention-state ${world.state}`}>{world.state==="underbuilt"
               ?`+${world.buildGapPoints} pt gap`:world.state==="overbuilt"
                 ?`${world.buildGapPoints} pt gap`:"in line"}</em>
@@ -347,7 +347,7 @@ export function NextBuildAllocation({plan}:{plan:NextBuildPlan}){
         <div className="shop-map-next-build-count">{String(index+1).padStart(2,"0")}</div>
         <div className="shop-map-next-build-copy">
           <div><span>{index===0?"FIRST PRIORITY":"NEXT PRIORITY"}</span><b>{row.label}</b></div>
-          <p>{row.attentionPercent}% customer attention · {row.catalogPercent}% of active catalog</p>
+          <p>{row.attentionPercent}% customer attention · {row.catalogPercent}% of active designs</p>
         </div>
       </article>)}
     </div>
