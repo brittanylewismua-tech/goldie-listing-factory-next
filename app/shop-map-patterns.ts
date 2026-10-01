@@ -54,3 +54,168 @@ const cleanCandidate=(words:string[])=>{
   if(held.some(word=>word.length===1))return null;
   if(BAD_EDGE.has(held[held.length-1])||BAD_EDGE.has(held[0]))return null;
   return held.join(" ");
+};
+const titleCase=(text:string)=>text.split(" ").map(word=>word?word[0].toUpperCase()+word.slice(1):word).join(" ");
+
+function candidates(row:PatternListingInput){
+  const found=new Set<string>();
+  const titleWords=clean(row.title).split(" ").filter(Boolean);
+  for(let size=2;size<=3;size+=1){
+    for(let at=0;at+size<=titleWords.length;at+=1){
+      const words=titleWords.slice(at,at+size);
+      if(!meaningful(words))continue;
+      const candidate=cleanCandidate(words);
+      if(candidate)found.add(candidate);
+    }
+  }
+  for(const raw of row.tags){
+    const words=clean(raw).split(" ").filter(Boolean);
+    if(words.length>=2&&words.length<=5){
+      const candidate=cleanCandidate(words);
+      if(candidate)found.add(candidate);
+    }
+  }
+  const dimensions=dimensionsFor(row);
+  const theme=clean(dimensions.messageTheme);
+  if(theme&&theme.split(" ").length>=2)found.add(theme);
+  return found;
+}
+
+const overlap=(a:Set<number>,b:Set<number>)=>{
+  let both=0;
+  for(const id of a)if(b.has(id))both+=1;
+  return both/Math.max(1,Math.min(a.size,b.size));
+};
+
+export function discoverWinningPatterns(rows:PatternListingInput[]):WinningPatternMap{
+  const recent=rows.reduce((sum,row)=>sum+Math.max(0,row.sales90),0);
+  const lifetime=rows.reduce((sum,row)=>sum+Math.max(0,row.lifetimeSales),0);
+  const favorites=rows.reduce((sum,row)=>sum+Math.max(0,row.favorites??0),0);
+  const basis=recent>0?"sales-90":lifetime>0?"sales-lifetime":favorites>0?"favorites":"none";
+  const signalOf=(row:PatternListingInput)=>basis==="sales-90"?Math.max(0,row.sales90)
+    :basis==="sales-lifetime"?Math.max(0,row.lifetimeSales)
+    :basis==="favorites"?Math.max(0,row.favorites??0):0;
+  const totalSignal=rows.reduce((sum,row)=>sum+signalOf(row),0);
+  const active=rows.filter(row=>row.state==="active");
+  const activeTotal=Math.max(1,active.length);
+
+  const rankedListings=rows.map(row=>({row,signal:signalOf(row)})).filter(x=>x.signal>0)
+    .sort((a,b)=>b.signal-a.signal||a.row.listingId-b.row.listingId)
+    .slice(0,5).map((x,index)=>({rank:index+1,listingId:x.row.listingId,title:x.row.title,
+      imageUrl:x.row.imageUrl,signal:x.signal,attentionPercent:totalSignal?Math.round(x.signal/totalSignal*100):0}));
+
+  if(!totalSignal)return {basis,basisLabel:"not enough customer response yet",totalSignal:0,patterns:[],listings:[]};
+
+  /*
+    PHRASE ORDER IS NOT A NEW IDEA.
+
+    "girl power" and "power girl" used to become separate candidates. That let
+    a broad shop-wide phrase be correctly suppressed while a reordered variant
+    slipped back in as a fake opportunity. Patterns are therefore grouped by
+    their normalized token set before any lift math happens.
+  */
+  const conceptKey=(phrase:string)=>[...new Set(clean(phrase).split(" ")
+    .map(stem).filter(Boolean))].sort().join(" ");
+  const byConcept=new Map<string,{ids:Set<number>;variants:Map<string,number>;exactTagIds:Set<number>;exactTitleIds:Set<number>}>();
+  const rowById=new Map(rows.map(row=>[row.listingId,row]));
+  for(const row of rows){
+    for(const phrase of candidates(row)){
+      const key=conceptKey(phrase);
+      if(!key)continue;
+      const held=byConcept.get(key)??{ids:new Set<number>(),variants:new Map<string,number>(),exactTagIds:new Set<number>(),exactTitleIds:new Set<number>()};
+      held.ids.add(row.listingId);
+      held.variants.set(phrase,(held.variants.get(phrase)??0)+1);
+      if(row.tags.some(tag=>clean(tag)===phrase))held.exactTagIds.add(row.listingId);
+      if(clean(row.title).includes(phrase))held.exactTitleIds.add(row.listingId);
+      byConcept.set(key,held);
+    }
+  }
+
+  /*
+    BACKGROUND LANGUAGE CANNOT GROW A MUSTACHE AND COME BACK.
+
+    If a concept already appears on at least half the active catalog, it is
+    shop-wide context rather than a useful differentiator. Suppress that
+    concept AND longer candidates built on top of the same core words. So
+    "girl power", "power girl", and "girl power feminist" cannot become three
+    separate recommendations in a feminist shop.
+  */
+  const catalogTotal=Math.max(1,rows.length);
+  const background=[...byConcept.entries()].flatMap(([concept,group])=>{
+    /*
+      Background language is a property of the SHOP, not only the currently
+      active slice. A seller may have used the same umbrella keyword across a
+      large catalog that includes inactive listings. That still makes the
+      phrase poor evidence for what specifically caused sales.
+    */
+    return group.ids.size/catalogTotal>.5
+      ? [{concept,tokens:new Set(concept.split(" ").filter(Boolean))}]
+      : [];
+  });
+  const containsBackground=(concept:string)=>{
+    const tokens=new Set(concept.split(" ").filter(Boolean));
+    return background.some(base=>base.tokens.size>=2&&[...base.tokens].every(token=>tokens.has(token)));
+  };
+
+  const scored=[...byConcept.entries()].flatMap(([concept,group])=>{
+    if(containsBackground(concept))return [];
+    if(group.exactTagIds.size<2&&group.exactTitleIds.size<2)return [];
+    const ids=group.ids;
+    const phrase=concept==="girl power"?"girl power":[...group.variants.entries()].sort((a,b)=>b[1]-a[1]
+      || b[0].split(" ").length-a[0].split(" ").length
+      || a[0].localeCompare(b[0]))[0]?.[0]??concept;
+    if(ids.size<2)return [];
+    let signal=0,sellingListings=0,catalogListings=0;
+    for(const id of ids){
+      const row=rowById.get(id);if(!row)continue;
+      const value=signalOf(row);
+      signal+=value;if(value>0)sellingListings+=1;
+      if(row.state==="active")catalogListings+=1;
+    }
+    if(signal<=0||sellingListings<1||catalogListings<1)return [];
+    const customerShare=signal/totalSignal;
+    const catalogShare=catalogListings/activeTotal;
+    const lift=customerShare/Math.max(.01,catalogShare);
+    const gap=customerShare-catalogShare;
+    // Shop-wide wallpaper is not an opportunity. It has to outperform how
+    // common it already is in the catalog.
+    if(lift<1.12&&gap<.04)return [];
+    if(catalogShare>.55&&lift<1.4)return [];
+    const specificity=Math.max(.2,1-catalogShare);
+    const support=Math.min(1,Math.log2(sellingListings+1)/2);
+    const score=(customerShare*Math.max(1,lift))*specificity*(.65+.35*support);
+    return [{phrase,ids,signal,sellingListings,catalogListings,customerShare,catalogShare,lift,gap,score}];
+  }).sort((a,b)=>b.score-a.score||b.customerShare-a.customerShare||b.phrase.length-a.phrase.length);
+
+  const chosen:typeof scored=[];
+  for(const candidate of scored){
+    const tokens=new Set(conceptKey(candidate.phrase).split(" ").filter(Boolean));
+    const duplicate=chosen.some(existing=>{
+      const other=new Set(conceptKey(existing.phrase).split(" ").filter(Boolean));
+      const common=[...tokens].filter(token=>other.has(token)).length;
+      const tokenOverlap=common/Math.max(1,Math.min(tokens.size,other.size));
+      return overlap(candidate.ids,existing.ids)>=.75&&(tokenOverlap>=.5||candidate.phrase.includes(existing.phrase)||existing.phrase.includes(candidate.phrase));
+    });
+    if(duplicate)continue;
+    chosen.push(candidate);
+    if(chosen.length>=5)break;
+  }
+
+  return {
+    basis,
+    basisLabel:basis==="sales-90"?"units sold in the last 90 days"
+      :basis==="sales-lifetime"?"lifetime units sold"
+      :"favorites (used because this shop has no recorded sales yet)",
+    totalSignal,
+    patterns:chosen.map((row,index)=>({
+      rank:index+1,key:row.phrase,label:titleCase(row.phrase),
+      customerPercent:Math.round(row.customerShare*100),
+      catalogPercent:Math.round(row.catalogShare*100),
+      gapPoints:Math.round(row.gap*100),
+      lift:Number(row.lift.toFixed(1)),
+      sellingListings:row.sellingListings,catalogListings:row.catalogListings,
+      listingIds:[...row.ids],
+    })),
+    listings:rankedListings,
+  };
+}

@@ -589,14 +589,6 @@
   padding-top:36px!important;
   border-top:1px solid var(--g-line)!important;
 }
-#suite-workspace .shop-map-redesign .shop-map-opportunity-stack{
-  display:grid!important;
-  gap:14px!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-opportunity-stack>.cc-tool,
-#suite-workspace .shop-map-redesign .shop-map-opportunity-stack>.listing-check{
-  margin:0!important;
-}
 
 #suite-workspace .shop-map-redesign .shop-map-themes{
   border:0!important;
@@ -879,14 +871,6 @@
   margin-top:0!important;
   padding-top:30px!important;
   border-top:2px solid #000!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-opportunity-stack{
-  gap:18px!important;
-}
-#suite-workspace .shop-map-redesign .shop-map-opportunity-stack>.cc-tool,
-#suite-workspace .shop-map-redesign .shop-map-opportunity-stack>.listing-check{
-  border:1px solid var(--g-line)!important;
-  box-shadow:none!important;
 }
 
 
