@@ -85,7 +85,7 @@ test("SEO title wording cannot create a priority without visual design evidence"
 
 
 const visualRow=(id,hash,wording,sales90)=>({
-  listingId:id,artworkHash:hash,sales90,lifetimeSales:sales90,favorites:0,
+  listingId:id,artworkHash:hash,sales90,lifetimeSales:sales90,favorites:0,state:"active",
   design:{wording:[wording],illustrationCategory:"typography",audienceCues:[],
     recipientCues:[],occasionCues:[],tone:"bold",composition:"centered"},
 });
