@@ -81,6 +81,13 @@ try {
         await page.mouse.wheel(0,-1000);
         await page.locator(".shop-map-analysis-period select").selectOption("90");
         await page.waitForTimeout(1800);
+        const cacheKeys=await page.evaluate(()=>Object.keys(sessionStorage)
+          .filter(key=>key.startsWith("goldie:shop-map:v13:")));
+        if(!cacheKeys.some(key=>key.includes("qa-reviewer:900001:view=overview-purchases&days=30"))
+          ||!cacheKeys.some(key=>key.includes("qa-reviewer:900001:view=overview-purchases&days=90"))
+          ||cacheKeys.some(key=>!key.includes("qa-reviewer:900001:")))
+          throw new Error("Shop Map cache scope or period key is wrong: "+cacheKeys.join(","));
+        console.log("QA_CACHE_SCOPE "+JSON.stringify({width,member:"reviewer",shop:900001,periods:[30,90]}));
       }
       const scrollSteps=key==="overview"?(width===390?11:14):(width===390?3:2);
       if(scrollSteps){
@@ -121,7 +128,7 @@ try {
   const emptyPage=await emptyContext.newPage();
   await emptyPage.route(url=>url.pathname==="/api/shop-map/map"&&url.searchParams.get("view")==="overview-purchases",async route=>{
     await new Promise(resolve=>setTimeout(resolve,1800));
-    const empty={shop:{shopId:1,shopName:"Goldie Reviewer Shop"},purchasePriorities:{
+    const empty={shop:{shopId:900001,shopName:"Goldie Reviewer Shop"},purchasePriorities:{
       days:90,totalUnits:0,totalOrders:0,unmatchedUnits:0,excludedRefundUnits:0,
       receiptsComplete:true,refreshedAt:null,shareLabel:"Share of shop purchases",
       remainingUnits:0,priorities:[],listings:[],
@@ -156,7 +163,7 @@ try {
       share:.25,lastPurchasedAt:Math.floor(Date.now()/1000),
     }));
     await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
-      shop:{shopId:1,shopName:"Goldie Reviewer Shop"},
+      shop:{shopId:900001,shopName:"Goldie Reviewer Shop"},
       purchasePriorities:{days:90,totalUnits:20,totalOrders:4,unmatchedUnits:0,
         excludedRefundUnits:0,receiptsComplete:true,refreshedAt:null,
         shareLabel:"Share of shop purchases",remainingUnits:5,

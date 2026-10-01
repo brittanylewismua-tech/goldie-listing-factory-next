@@ -28,10 +28,10 @@ export type ShopOpportunity = {
   headline:string;explanation:string;action:string;mirrorBotPrompt:string|null;
 };
 const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";
-const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v12:";
+const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v13:";
 const cacheDay=()=>new Date().toLocaleDateString("en-CA");
-function readShopMapCache(key:string):ShopMap|null{
-  if(typeof window==="undefined")return null;
+function readShopMapCache(key:string|null):ShopMap|null{
+  if(typeof window==="undefined"||!key)return null;
   try{
     const raw=window.sessionStorage.getItem(SHOP_MAP_CACHE_PREFIX+key);
     if(!raw)return null;
@@ -40,8 +40,8 @@ function readShopMapCache(key:string):ShopMap|null{
     return parsed.data;
   }catch{return null;}
 }
-function writeShopMapCache(key:string,data:ShopMap){
-  if(typeof window==="undefined")return;
+function writeShopMapCache(key:string|null,data:ShopMap){
+  if(typeof window==="undefined"||!key)return;
   try{window.sessionStorage.setItem(SHOP_MAP_CACHE_PREFIX+key,JSON.stringify({day:cacheDay(),data}));}catch{}
 }
 export type AttentionMap = {
@@ -421,7 +421,9 @@ export function OpportunityRecommendations(
   </section>;
 }
 
-export default function ShopMapClient({ signedInEmail }: { signedInEmail?: string }) {
+export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }: {
+  signedInEmail?: string;cacheScope:string|null;activeShopId:number|null;
+}) {
   const [map, setMap] = useState<ShopMap | null>(null);
   const [mapKey,setMapKey]=useState("");
   const [open, setOpen] = useState("");
@@ -466,8 +468,9 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     if(tab==="sold")params.set("days",String(soldDays));
     if(tab==="money"&&selectedMonth)params.set("month",selectedMonth);
     const cacheKey=params.toString();
-    const cached=readShopMapCache(cacheKey);
-    const hasCached=Boolean(cached&&validShopMapForTab(cached,tab));
+    const storageKey=cacheScope?`${cacheScope}:${cacheKey}`:null;
+    const cached=readShopMapCache(storageKey);
+    const hasCached=Boolean(cached&&cached.shop?.shopId===activeShopId&&validShopMapForTab(cached,tab));
     setMapKey(cacheKey);
     if(hasCached){
       setMap(cached);setLastGood(cached);setFailed(false);setRefreshing(false);
@@ -480,7 +483,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       .catch(() => null);
     if(sequence!==requestSequence.current)return;
     setRefreshing(false);
-    if (!validShopMapForTab(next,tab)) {
+    if (!validShopMapForTab(next,tab)
+      ||(activeShopId&&next?.shop?.shopId&&next.shop.shopId!==activeShopId)) {
       if(!hasCached)setMap(null);
       setFailed(true);
       return;
@@ -489,16 +493,17 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setMapKey(cacheKey);
     setMap(next);
     setLastGood(next);
-    writeShopMapCache(cacheKey,next);
+    writeShopMapCache(storageKey,next);
     if(tab==="overview"){
       setInsightsLoading(true);
       setInsightsFailed(false);
       void fetch("/api/shop-map/map?view=overview-support")
         .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
         .then(detail=>{
-          if(sequence!==requestSequence.current||!detail||detail.error)return;
+          if(sequence!==requestSequence.current||!detail||detail.error
+            ||(activeShopId&&detail.shop?.shopId&&detail.shop.shopId!==activeShopId))return;
           setMap(current=>{if(!current)return current;
-            const merged={...current,...detail};writeShopMapCache(cacheKey,merged);return merged;});
+            const merged={...current,...detail};writeShopMapCache(storageKey,merged);return merged;});
           setLastGood(current=>current?{...current,...detail}:detail);
         }).catch(()=>undefined);
       {
@@ -506,9 +511,10 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
           .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
           .then(detail=>{
             if(sequence!==requestSequence.current)return;
-            if(!detail||detail.error||!Array.isArray(detail.productDirections)){setInsightsFailed(true);return}
+            if(!detail||detail.error||!Array.isArray(detail.productDirections)
+              ||(activeShopId&&detail.shop?.shopId&&detail.shop.shopId!==activeShopId)){setInsightsFailed(true);return}
             setMap(current=>{if(!current)return current;
-              const merged={...current,...detail};writeShopMapCache(cacheKey,merged);return merged;});
+              const merged={...current,...detail};writeShopMapCache(storageKey,merged);return merged;});
             setLastGood(current=>current?{...current,...detail}:detail);
             const artworkPatterns=selectedDays===90?(detail.patterns?.patterns??[]):[];
             if(!artworkPatterns.length)return;
@@ -517,17 +523,18 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
             void fetch(`/api/shop-map/map?${marketParams.toString()}`)
               .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
               .then(market=>{
-                if(sequence!==requestSequence.current||!market||!Array.isArray(market.marketProof))return;
+                if(sequence!==requestSequence.current||!market||!Array.isArray(market.marketProof)
+                  ||(activeShopId&&market.shop?.shopId&&market.shop.shopId!==activeShopId))return;
                 setMap(current=>{if(!current)return current;
                   const merged={...current,marketProof:market.marketProof};
-                  writeShopMapCache(cacheKey,merged);return merged;
+                  writeShopMapCache(storageKey,merged);return merged;
                 });
               }).catch(()=>undefined);
           }).catch(()=>{if(sequence===requestSequence.current)setInsightsFailed(true)})
           .finally(()=>{if(sequence===requestSequence.current)setInsightsLoading(false)});
       }
     } else setInsightsLoading(false);
-  },[tab,soldDays,selectedDays,selectedMonth]);
+  },[tab,soldDays,selectedDays,selectedMonth,cacheScope,activeShopId]);
   useEffect(() => { void load(); }, [load]);
 
   const refreshMoney = async () => {

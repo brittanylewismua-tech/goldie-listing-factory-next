@@ -4,6 +4,7 @@ import QaMobileMetrics from "@/app/qa/mobile-metrics";
 import FactoryShell from "@/app/factory-shell";
 import ShopMapClient from "./shop-map-client";
 import "./shop-map.css";
+import {env} from "cloudflare:workers";
 
 /* The tab says what this page is. There is no product name to append, and
    a placeholder in a tab title is how a stand-in becomes permanent. */
@@ -18,13 +19,17 @@ export const metadata = { title: "Your shop" };
 */
 export default async function ShopMapPage() {
   const reviewer = await isQaReviewer();
-  const user = reviewer ? { email: QA_REVIEWER_EMAIL } : await requireFeaturePage("shopMap", "/shop-map");
+  const user = reviewer ? { email: QA_REVIEWER_EMAIL, userId:"qa-reviewer" } : await requireFeaturePage("shopMap", "/shop-map");
+  const activeShop = reviewer ? 900001 : await ((env as unknown as {DB:D1Database}).DB.prepare(
+    "SELECT shop_id FROM etsy_connections WHERE user_id=? AND is_active=1 LIMIT 1"
+  ).bind(user.userId).first<{shop_id:number}>().then(row=>Number(row?.shop_id)||null).catch(()=>null));
+  const cacheScope = activeShop ? `${user.userId}:${activeShop}` : null;
   return (
     /* D1575 · the same rail, topbar, wordmark and footer as the Listing
        Factory. This page rendered as a bare column on white before. */
     <FactoryShell active="shop-map" title="Your shop" desktopOnly={false} reviewer={reviewer}>
       {reviewer && <QaMobileMetrics />}
-      <ShopMapClient signedInEmail={user.email} />
+      <ShopMapClient key={cacheScope??"no-shop"} signedInEmail={user.email} cacheScope={cacheScope} activeShopId={activeShop} />
     </FactoryShell>
   );
 }

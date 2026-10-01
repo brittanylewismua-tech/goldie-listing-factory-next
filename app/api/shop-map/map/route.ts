@@ -136,7 +136,7 @@ async function buildMap(request: Request) {
       .replace(/[^a-z0-9' ]+/g," ").replace(/\s+/g," ").trim();
     const wanted=[...new Set(parameters.getAll("pattern").slice(0,5)
       .map(normalize).filter(value=>value.length>=4&&value.length<=80))];
-    if(!wanted.length)return NextResponse.json({marketProof:[]});
+    if(!wanted.length)return NextResponse.json({shop:{shopId,shopName:shopRow.shop_name},marketProof:[]});
     try{
       const watches=await watchesFor(user.userId);
       const marketProof=await Promise.all(wanted.map(async patternKey=>{
@@ -165,8 +165,8 @@ async function buildMap(request: Request) {
         return candidates.filter((row):row is NonNullable<typeof row>=>row!==null)
           .sort((a,b)=>b.observedSold30-a.observedSold30||b.moving-a.moving)[0]??null;
       }));
-      return NextResponse.json({marketProof:marketProof.filter(row=>row!==null)});
-    }catch{return NextResponse.json({marketProof:[]})}
+      return NextResponse.json({shop:{shopId,shopName:shopRow.shop_name},marketProof:marketProof.filter(row=>row!==null)});
+    }catch{return NextResponse.json({shop:{shopId,shopName:shopRow.shop_name},marketProof:[]})}
   }
 
   /*
@@ -283,6 +283,7 @@ async function buildMap(request: Request) {
   */
   if(view==="overview-support"){
     return NextResponse.json({
+      shop:{shopId,shopName:shopRow.shop_name},
       catalogActions:catalogActions(rows,saleRows.results??[],now),
     });
   }
