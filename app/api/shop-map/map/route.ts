@@ -187,12 +187,6 @@ async function buildMap(request: Request) {
       favorites: number | null; image_url: string; product_family: string }>();
   const rows = listingRows.results ?? [];
 
-  const listings: Listing[] = rows.map(row => ({
-    listingId: Number(row.listing_id), title: String(row.title ?? ""),
-    tags: (() => { try { return JSON.parse(row.tags || "[]") as string[]; } catch { return []; } })(),
-    shopSection: String(row.shop_section ?? ""), productFamily: String(row.product_family ?? ""),
-  }));
-
   /* ---------------------------------------------------------------- sales */
   const saleRows = await db.prepare(
     `SELECT listing_id, quantity, price_minor, sold_at, refunded
@@ -200,6 +194,20 @@ async function buildMap(request: Request) {
     .bind(user.userId, shopId)
     .all<{ listing_id: number; quantity: number; price_minor: number;
       sold_at: number; refunded: number }>();
+
+  /*
+    SUPPORTING REVIEW EVIDENCE MUST STAY SALES-BASED.
+
+    Artwork intelligence owns prioritization. This request only supplies
+    lifecycle review actions such as a recent seller going inactive or a real
+    sales drop. It returns before performance calculation, world classification
+    and Market Radar work.
+  */
+  if(view==="overview-support"){
+    return NextResponse.json({
+      catalogActions:catalogActions(rows,saleRows.results??[],now),
+    });
+  }
   const yearStart=month&&/^\d{4}-\d{2}$/.test(month)
     ? Math.floor(Date.parse(`${month.slice(0,4)}-01-01T00:00:00Z`)/1000)
     : Math.floor(Date.UTC(new Date(now*1000).getUTCFullYear(),0,1)/1000);
@@ -377,19 +385,6 @@ async function buildMap(request: Request) {
     });
   }
 
-  /*
-    SUPPORTING REVIEW EVIDENCE MUST STAY SALES-BASED.
-
-    Artwork intelligence owns prioritization. This request only supplies
-    lifecycle review actions such as a recent seller going inactive or a real
-    sales drop. It returns before world classification and Market Radar work.
-  */
-  if(view==="overview-support"){
-    return NextResponse.json({
-      catalogActions:catalogActions(rows,saleRows.results??[],now),
-    });
-  }
-
   if(view==="overview"){
     const sales90=totalsForFast(90);
     const everyId=rows.map(row=>Number(row.listing_id));
@@ -409,6 +404,12 @@ async function buildMap(request: Request) {
       topListings:sold.slice(0,3),
     });
   }
+
+  const listings: Listing[] = rows.map(row => ({
+    listingId: Number(row.listing_id), title: String(row.title ?? ""),
+    tags: (() => { try { return JSON.parse(row.tags || "[]") as string[]; } catch { return []; } })(),
+    shopSection: String(row.shop_section ?? ""), productFamily: String(row.product_family ?? ""),
+  }));
 
   /* --------------------------------------------------------------- worlds */
   const overrideRows = await db.prepare(
