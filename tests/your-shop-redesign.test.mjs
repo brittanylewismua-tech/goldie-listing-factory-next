@@ -114,7 +114,7 @@ test("ties crossing the compact cutoff remain reachable at equal rank",()=>{
   assert.match(card,/tiedBeyondCutoff/);
   assert.match(card,/visiblePriorities\.map\(card\)/);
   assert.match(card,/aria-expanded=\{showTies\}/);
-  assert.match(card,/row\.rank/);
+  assert.match(card,/chosen\?\.rank===1/);
   assert.match(card,/oe-top-card/);
 });
 test("Winner DNA keeps its exact subset denominator and source listings in detail",()=>{
