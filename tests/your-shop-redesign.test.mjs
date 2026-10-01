@@ -106,6 +106,15 @@ test("each purchase-led winner can receive a product-specific direction independ
   assert.ok(card.indexOf("row.unitsPurchased")<card.indexOf("Next specific test"));
 });
 
+test("ties crossing the compact cutoff remain reachable at equal rank and emphasis",()=>{
+  const card=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
+  assert.match(card,/tiedBeyondCutoff/);
+  assert.match(card,/View all tied priorities/);
+  assert.match(card,/visiblePriorities\.map/);
+  assert.match(card,/row\.rank===1\?"purchase-lead"/);
+  assert.match(card,/aria-expanded=\{showTies\}/);
+});
+
 test("Your Shop reuses same-day cached data without leaking data between tabs",()=>{
   assert.match(client,/SHOP_MAP_CACHE_PREFIX/);
   assert.match(client,/sessionStorage\.getItem/);

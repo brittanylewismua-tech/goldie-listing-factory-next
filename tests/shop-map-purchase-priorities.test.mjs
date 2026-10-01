@@ -39,6 +39,14 @@ test("equal unit votes keep equal rank and latest purchase only stabilizes displ
   assert.equal(map.priorities[0].share,map.priorities[1].share);
 });
 
+test("all equal-unit identities remain available beyond the compact three-card cutoff",()=>{
+  const map=build([sale(1,5),sale(2,5),sale(3,5),sale(4,5)]);
+  assert.equal(map.priorities.length,3);
+  assert.deepEqual(map.listings.map(row=>row.rank),[1,1,1,1]);
+  assert.equal(map.listings[3].unitsPurchased,5);
+  assert.equal(map.remainingUnits,5);
+});
+
 test("30 and 90 day windows use purchase dates without a lifetime fallback",()=>{
   const sales=[sale(1,5,70),sale(2,2,6)];
   assert.deepEqual(build(sales,30).priorities.map(row=>row.listingId),[2]);

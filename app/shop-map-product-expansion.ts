@@ -3,9 +3,10 @@ import type {PurchasePriorityMap} from "./shop-map-purchase-priorities";
 export type ExpansionListing = {
   listingId:number; productFamily:string; state:string; artworkHash:string|null;
   design?:{wording:string[];illustrationCategory:string}|null;
+  verifiedCompatibleFormats?:string[];
 };
 export type ProductDirection = {
-  listingId:number; kind:"test"|"already-offered"|"availability-review"|"research";
+  listingId:number; kind:"test"|"check-first"|"already-offered"|"availability-review"|"research";
   retainedCharacteristic:string|null; proposedChange:string|null;
   catalogCoverage:string; whyNow:string; relatedListingId:number|null;
   researchQuestion:string|null;
@@ -51,6 +52,7 @@ export function buildProductDirections(
   const activeFormats=new Set(listings.filter(row=>row.state==="active").map(row=>family(row.productFamily)));
   return purchase.priorities.map(winner=>{
     const source=byId.get(winner.listingId);
+    const unlinkedActive=listings.filter(row=>row.state==="active"&&!row.artworkHash).length;
     const base={listingId:winner.listingId,relatedListingId:null,retainedCharacteristic:null,
       proposedChange:null,researchQuestion:null};
     const evidence=`${winner.unitsPurchased} purchased unit${winner.unitsPurchased===1?"":"s"} across ${winner.orders} recorded transaction${winner.orders===1?"":"s"} in the last ${purchase.days} days`;
@@ -72,7 +74,7 @@ export function buildProductDirections(
     const supported=(peers[sourceFamily]??[]).find(target=>activeFormats.has(target));
     if(!supported){
       return {...base,kind:"research" as const,retainedCharacteristic:retained,
-        catalogCoverage:"No compatible additional format is established in the active catalog.",
+        catalogCoverage:"No supported format suggestion is available yet from the verified active catalog.",
         whyNow:evidence,researchQuestion:"Review same-format variations and confirm which changes are feasible before testing a new material or format."};
     }
     const existing=listings.find(row=>row.listingId!==source.listingId
@@ -86,9 +88,17 @@ export function buildProductDirections(
           ?"Review that listing's dated sales and visibility before making another version."
           :"Check whether the existing listing can be returned to sale before creating a duplicate."};
     }
-    return {...base,kind:"test" as const,retainedCharacteristic:retained,
+    const productionVerified=(source.verifiedCompatibleFormats??[]).map(family).includes(supported);
+    const checkFirst=unlinkedActive>0||!productionVerified;
+    return {...base,kind:checkFirst?"check-first" as const:"test" as const,
+      retainedCharacteristic:retained,
       proposedChange:`Test this exact artwork on a ${label}, a format already active in your shop.`,
-      catalogCoverage:`We have not found this exact artwork on a ${label} in the artwork-linked catalog.`,
-      whyNow:evidence, researchQuestion:null};
+      catalogCoverage:unlinkedActive>0
+        ?`${unlinkedActive} active listing${unlinkedActive===1?" has":"s have"} no linked artwork identity. Check existing versions before building.`
+        :`No exact-artwork ${label} was found in the artwork-linked catalog.`,
+      whyNow:evidence,
+      researchQuestion:checkFirst
+        ?"Check existing versions and confirm the target production method, print area, and artwork fit before building."
+        :null};
   });
 }

@@ -26,9 +26,9 @@ try {
       await page.locator(".shop-map-tabs button").filter({hasText:label}).click();
       await page.waitForTimeout(2200);
       if(key==="overview"){
-        await page.getByText("Next specific test").first().waitFor({timeout:30000});
+        await page.getByText("Candidate · check existing versions first").first().waitFor({timeout:30000});
         const hero=page.locator(".shop-map-purchases-leadline");
-        if(!(await hero.innerText()).includes("Next test:"))throw new Error("First-screen product direction missing");
+        if(!(await hero.innerText()).includes("Candidate to check:"))throw new Error("First-screen product direction missing");
         const box=await hero.boundingBox();
         console.log("QA_HERO "+JSON.stringify({width,top:box?.y,height:box?.height,text:(await hero.innerText()).slice(0,180)}));
       }
@@ -60,7 +60,7 @@ try {
         await page.locator(".shop-map-analysis-period select").selectOption("30");
         await page.waitForTimeout(1800);
         if(!(await votes.innerText()).includes("8"))throw new Error("30-day purchase leader missing");
-        await page.getByText("Next specific test").first().waitFor({timeout:30000});
+        await page.getByText("Candidate · check existing versions first").first().waitFor({timeout:30000});
         if(!(await page.locator(".shop-map-purchases-analysis").first().innerText()).includes("exact artwork"))
           throw new Error("Specific purchased-product direction missing");
         await page.screenshot({path:`qa-artifacts/shop-map-${width}-overview-30.png`,fullPage:true});
@@ -126,6 +126,41 @@ try {
   console.log("QA_IMAGE_END 320 empty_purchases");
   console.log("QA_VARIANTS "+JSON.stringify({loading:true,emptyPurchases:true,width:320}));
   await emptyContext.close();
+  // A fourth product tied at the cutoff must remain reachable with the same rank.
+  const tieContext=await browser.newContext({viewport:{width:320,height:844},deviceScaleFactor:1});
+  const tieLogin=await tieContext.request.post("https://thegoldiesuite.com/qa/oidc",{
+    headers:{authorization:"Bearer "+identity},timeout:30000,
+  });
+  if(!tieLogin.ok())throw new Error("Tie reviewer identity rejected: "+tieLogin.status());
+  const tiePage=await tieContext.newPage();
+  await tiePage.route(url=>url.pathname==="/api/shop-map/map"&&url.searchParams.get("view")==="overview-purchases",async route=>{
+    const listings=[1,2,3,4].map(listingId=>({
+      listingId,title:`Tied product ${listingId}`,imageUrl:"",state:"active",rank:1,
+      unitsPurchased:5,orders:1,productRevenueMinor:10000,currency:"USD",
+      share:.25,lastPurchasedAt:Math.floor(Date.now()/1000),
+    }));
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+      shop:{shopId:1,shopName:"Goldie Reviewer Shop"},
+      purchasePriorities:{days:90,totalUnits:20,totalOrders:4,unmatchedUnits:0,
+        excludedRefundUnits:0,receiptsComplete:true,refreshedAt:null,
+        shareLabel:"Share of shop purchases",remainingUnits:5,
+        priorities:listings.slice(0,3),listings},
+    })});
+  });
+  await tiePage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
+  const ties=tiePage.getByRole("button",{name:"View all tied priorities (1 more)"});
+  await ties.waitFor({timeout:15000});
+  await ties.click();
+  const tieCards=tiePage.locator(".shop-map-purchases-grid article");
+  if(await tieCards.count()!==4)throw new Error("The fourth tied product is hidden");
+  if(await tiePage.locator(".shop-map-purchases-grid article.purchase-lead").count()!==4)
+    throw new Error("Equal winners have unequal visual emphasis");
+  const tieImage=(await tiePage.screenshot({type:"jpeg",quality:35})).toString("base64");
+  console.log("QA_IMAGE_BEGIN 320 tied_priorities");
+  for(let offset=0;offset<tieImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+tieImage.slice(offset,offset+16000));
+  console.log("QA_IMAGE_END 320 tied_priorities");
+  console.log("QA_TIES "+JSON.stringify({width:320,cards:4,rank:1,expanded:true}));
+  await tieContext.close();
   await writeFile("qa-artifacts/results.json",JSON.stringify(results,null,2));
 } finally {
   await browser.close();

@@ -10,7 +10,8 @@ const purchase=(id=1)=>buildPurchasePriorities([sales(id,12)],[listing(id,"SEO t
   days:90,now,receiptsComplete:true,
 });
 const tee={listingId:1,productFamily:"tee",state:"active",artworkHash:"a1",
-  design:{wording:["My body my choice"],illustrationCategory:"text"}};
+  design:{wording:["My body my choice"],illustrationCategory:"text"},
+  verifiedCompatibleFormats:["sweatshirt"]};
 const sweater={listingId:2,productFamily:"sweatshirt",state:"active",artworkHash:"a2",
   design:{wording:["Different visible message"],illustrationCategory:"text"}};
 
@@ -19,7 +20,7 @@ test("a purchased winner gets an exact-artwork format test only in an establishe
   assert.equal(row.kind,"test");
   assert.match(row.retainedCharacteristic,/My body my choice/);
   assert.match(row.proposedChange,/exact artwork on a sweatshirt/);
-  assert.match(row.catalogCoverage,/not found this exact artwork/);
+  assert.match(row.catalogCoverage,/No exact-artwork sweatshirt was found/);
   assert.match(row.whyNow,/12 purchased units across 1 recorded transaction/);
   assert.doesNotMatch(JSON.stringify(row),/SEO title/);
 });
@@ -29,6 +30,17 @@ test("an existing active exact-artwork format is surfaced instead of a duplicate
   assert.equal(row.kind,"already-offered");
   assert.equal(row.proposedChange,null);
   assert.equal(row.relatedListingId,2);
+});
+
+test("partial catalog identities and unconfirmed production make the format idea check-first",()=>{
+  const [unconfirmed]=buildProductDirections(purchase(),[{...tee,verifiedCompatibleFormats:[]},sweater]);
+  assert.equal(unconfirmed.kind,"check-first");
+  assert.match(unconfirmed.researchQuestion,/confirm the target production method/);
+  const [partial]=buildProductDirections(purchase(),[tee,sweater,{
+    listingId:9,productFamily:"tee",state:"active",artworkHash:null,design:null,
+  }]);
+  assert.equal(partial.kind,"check-first");
+  assert.match(partial.catalogCoverage,/1 active listing has no linked artwork identity/);
 });
 
 test("missing imagery and unsupported format do not produce invented suggestions",()=>{

@@ -1,12 +1,19 @@
 "use client";
 import type { PurchasePriorityMap } from "@/app/shop-map-purchase-priorities";
 import type { ProductDirection } from "@/app/shop-map-product-expansion";
+import {useState} from "react";
 
 const money=(minor:number,currency:string)=>new Intl.NumberFormat(undefined,{style:"currency",currency}).format(minor/100);
 const percent=(share:number)=>share>0&&share<.005?"<1%":`${Math.round(share*100)}%`;
 
 export default function PurchasePriorities({map,directions=[]}:{map:PurchasePriorityMap;directions?:ProductDirection[]}){
+  const [showTies,setShowTies]=useState(false);
   const byListing=new Map(directions.map(row=>[row.listingId,row]));
+  const cutoffUnits=map.priorities.at(-1)?.unitsPurchased??0;
+  const tiedBeyondCutoff=map.listings.slice(map.priorities.length).filter(row=>row.unitsPurchased===cutoffUnits);
+  const visiblePriorities=showTies?[...map.priorities,...tiedBeyondCutoff]:map.priorities;
+  const hiddenUnits=Math.max(0,map.totalUnits-visiblePriorities.reduce((sum,row)=>sum+row.unitsPurchased,0));
+  const tiedLeaders=map.listings.filter(row=>row.rank===1).length;
   const lead=map.priorities[0];
   const leadDirection=lead?byListing.get(lead.listingId):null;
   const period=`last ${map.days} days`;
@@ -18,8 +25,8 @@ export default function PurchasePriorities({map,directions=[]}:{map:PurchasePrio
     <div className="shop-map-purchases-head">
       <div><p className="mini-label">PURCHASE-LED PRIORITIES</p>
         <h2 id="shop-map-purchases-title">Where to focus next</h2>
-        {lead?<p className="shop-map-purchases-leadline"><b>{lead.title}</b> · {lead.unitsPurchased} purchased units ({percent(lead.share)} {map.shareLabel.toLowerCase()}).
-          {leadDirection?.kind==="test"?<span> Next test: {leadDirection.proposedChange}</span>:null}
+        {lead?<p className="shop-map-purchases-leadline">{tiedLeaders>1?<><b>{tiedLeaders} products tied for first</b> · {lead.unitsPurchased} purchased units each. <span>Open the tied priorities to review each product direction.</span></>:<><b>{lead.title}</b> · {lead.unitsPurchased} purchased units ({percent(lead.share)} {map.shareLabel.toLowerCase()}).
+          {leadDirection?.kind==="test"?<span> Next test: {leadDirection.proposedChange}</span>:leadDirection?.kind==="check-first"?<span> Candidate to check: {leadDirection.proposedChange}</span>:null}</>}
         </p>:<p>Build out what your customers are already buying.</p>}</div>
     </div>
     {map.totalUnits===0
@@ -32,8 +39,9 @@ export default function PurchasePriorities({map,directions=[]}:{map:PurchasePrio
           {map.totalUnits} units purchased across {map.totalOrders} recorded transaction{map.totalOrders===1?"":"s"} in the {period}.
           The product with the most unit votes leads the next build decision.
         </p>
+        {tiedBeyondCutoff.length>0?<button type="button" className="shop-map-purchases-ties" aria-expanded={showTies} onClick={()=>setShowTies(value=>!value)}>{showTies?"Hide tied priorities":`View all tied priorities (${tiedBeyondCutoff.length} more)`}</button>:null}
         <div className="shop-map-purchases-grid">
-          {map.priorities.map((row,index)=><article key={row.listingId} className={row.rank===1?"purchase-lead":""}>
+          {visiblePriorities.map(row=><article key={row.listingId} className={row.rank===1?"purchase-lead":""}>
             <span className="shop-map-purchases-rank">Priority {row.rank}</span>
             <div className="shop-map-purchases-product">
               {row.imageUrl?<img src={row.imageUrl} alt="" width={82} height={82} loading="lazy"/>:
@@ -49,7 +57,7 @@ export default function PurchasePriorities({map,directions=[]}:{map:PurchasePrio
             {byListing.has(row.listingId)?(()=>{
               const direction=byListing.get(row.listingId)!;
               return <div className="shop-map-purchases-analysis">
-                <strong>{direction.kind==="test"?"Next specific test":"Product review"}</strong>
+                <strong>{direction.kind==="test"?"Next specific test":direction.kind==="check-first"?"Candidate · check existing versions first":"Product review"}</strong>
                 {direction.retainedCharacteristic?<p>Keep: {direction.retainedCharacteristic}.</p>:null}
                 {direction.proposedChange?<p>Change: {direction.proposedChange}</p>:null}
                 <p>Catalog check: {direction.catalogCoverage}</p>
@@ -60,7 +68,7 @@ export default function PurchasePriorities({map,directions=[]}:{map:PurchasePrio
             })():<p className="shop-map-purchases-analysis">Checking this product image and related catalog before suggesting a next test.</p>}
           </article>)}
         </div>
-        <p className="shop-map-purchases-remaining">{map.remainingUnits} other purchased unit{map.remainingUnits===1?"":"s"} in the {period} remain outside these leading cards.</p>
+        {hiddenUnits>0?<p className="shop-map-purchases-remaining">{hiddenUnits} other purchased unit{hiddenUnits===1?"":"s"} in the {period} remain outside these leading cards.</p>:null}
       </>}
     {!map.receiptsComplete&&<p className="shop-map-purchases-caveat">Receipt import is incomplete. Shares use recorded matched purchases and may change after the next successful sales refresh.</p>}
     {map.unmatchedUnits>0&&<p className="shop-map-purchases-caveat">{map.unmatchedUnits} purchased unit{map.unmatchedUnits===1?"":"s"} could not be matched to a listing and are shown separately.</p>}

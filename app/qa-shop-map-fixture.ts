@@ -60,17 +60,17 @@ export function qaMapFixture(url: URL) {
     const days=Number(url.searchParams.get("days"))===30?30:90;
     const ranked=days===30?[1,4,2]:[1,2,3];
     const direction=(listingId:number)=>({
-      listingId,kind:listingId===4?"research":"test",
+      listingId,kind:listingId===4?"research":"check-first",
       retainedCharacteristic:listingId===1?"the visible wording “MY BODY MY CHOICE” and its artwork":
         listingId===2?"the visible wording “MOTHERHOOD IS POLITICAL” and its artwork":
         listingId===3?"the visible wording “SMASH THE PATRIARCHY” and its artwork":
         "the visible bodily autonomy message and its artwork",
       proposedChange:listingId===4?null:
         `Test this exact artwork on a ${listingId===2?"tee":"sweatshirt"}, a format already active in your shop.`,
-      catalogCoverage:listingId===4?"No compatible additional format is established in the active catalog.":
-        `We have not found this exact artwork on a ${listingId===2?"tee":"sweatshirt"} in the artwork-linked catalog.`,
+      catalogCoverage:listingId===4?"No supported format suggestion is available yet from the verified active catalog.":
+        `No exact-artwork ${listingId===2?"tee":"sweatshirt"} was found in the artwork-linked catalog. Check existing versions and production fit.`,
       whyNow:`${days===30?[8,5,3,6,1][listingId-1]:sold[listingId-1]} purchased units in the last ${days} days`,
-      relatedListingId:null,researchQuestion:listingId===4?"Review same-format variations and confirm feasible changes.":null,
+      relatedListingId:null,researchQuestion:listingId===4?"Review same-format variations and confirm feasible changes.":"Check existing versions and confirm artwork fit before building.",
     });
     return {
     shop,patterns,productDirections:ranked.map(direction),analysedListingIds:[1,2,3,4,5],visualCoverage:{analysedListings:20,totalListings:20},
