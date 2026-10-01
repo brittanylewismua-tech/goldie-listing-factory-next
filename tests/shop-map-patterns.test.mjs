@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { discoverWinningPatterns } from "../app/shop-map-patterns.ts";
+import { discoverVisualWinningPatterns } from "../app/shop-map-visual-patterns.ts";
 
 const row=(id,title,tags,sales90)=>({
   listingId:id,title,tags:[...tags,"girl power"],shopSection:"",productFamily:"tee",
