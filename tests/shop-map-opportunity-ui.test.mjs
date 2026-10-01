@@ -79,6 +79,7 @@ test("MirrorBot handoffs use artwork concepts and never SEO titles",()=>{
   assert.match(actions,/Do not infer the artwork from SEO titles or tags/);
   assert.match(actions,/navigator\.clipboard\.writeText\(prompt\)/);
   assert.match(actions,/Open MirrorBot/);
+  assert.match(actions,/PAUSE EXPANSION/);
 });
 
 test("tracked market proof must match the artwork phrase exactly and remains optional",()=>{
@@ -87,4 +88,6 @@ test("tracked market proof must match the artwork phrase exactly and remains opt
   assert.match(market,/normalize\(term\)===patternKey/);
   assert.doesNotMatch(market,/listingTitles|watchMatchesWorld|buildAttentionMap/);
   assert.match(actions,/proofByKey\.get\(row\.key\)/);
+  assert.match(market,/productFamily\(String\(listing\.title\|\|""\)\)/);
+  assert.match(actions,/Observed product types/);
 });

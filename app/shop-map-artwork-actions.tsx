@@ -1,6 +1,7 @@
 "use client";
 import {useState} from "react";
 import type {WinningPatternMap} from "./shop-map-patterns";
+import {familyLabel} from "./design-reach";
 
 export type ArtworkMarketProof={
   patternKey:string;
@@ -8,6 +9,7 @@ export type ArtworkMarketProof={
   sellingListings:number;
   observedSold30:number;
   moving:number;
+  productFamilies:Array<{family:string;sold30:number}>;
 };
 
 const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";
@@ -59,24 +61,26 @@ export function ArtworkRecommendations({map,marketProof=[]}:{
     <div className="shop-map-recommendation-list">
       {rows.map(row=>{
         const buildDeeper=row.gapPoints>0;
+        const pauseExpansion=row.gapPoints<0;
         const proof=proofByKey.get(row.key);
-        const prompt=`My Etsy print-on-demand shop has a proven artwork concept: "${row.label}". It accounts for ${row.customerPercent}% of ${map.basisLabel}, while ${row.catalogPercent}% of active designs carry it. Suggest distinct product or message variations to test within this demonstrated demand. Ground every idea in the actual artwork concept, emotional resonance, and Etsy organic demand. Do not infer the artwork from SEO titles or tags. Do not prescribe an arbitrary number of listings.`;
-        return <article key={row.key} className={`shop-map-recommendation ${buildDeeper?"underbuilt":"aligned"}`}>
+        const prompt=`My Etsy print-on-demand shop has a proven artwork concept: "${row.label}". It accounts for ${row.customerPercent}% of ${map.basisLabel}, while ${row.catalogPercent}% of active designs carry it. ${buildDeeper?"Suggest distinct product or message variations to test within this demonstrated demand.":pauseExpansion?"Assess how to maintain the proven listings while pausing expansion until response catches up with active design share.":"Suggest ways to maintain this winner and only test a variation with a clear buyer reason."} Ground every idea in the actual artwork concept, emotional resonance, and Etsy organic demand. Do not infer the artwork from SEO titles or tags. Do not prescribe an arbitrary number of listings.`;
+        return <article key={row.key} className={`shop-map-recommendation ${buildDeeper?"underbuilt":pauseExpansion?"overbuilt":"aligned"}`}>
           <div className="shop-map-recommendation-rank">{String(row.rank).padStart(2,"0")}</div>
           <div className="shop-map-recommendation-copy">
             <div className="shop-map-recommendation-label"><span>{row.label}</span>
-              <em>{buildDeeper?"BUILD DEEPER":"PROTECT THE WINNER"}</em></div>
-            <h3>{buildDeeper?"Test a variation of this proven concept":"Keep this concept working"}</h3>
+              <em>{buildDeeper?"BUILD DEEPER":pauseExpansion?"PAUSE EXPANSION":"PROTECT THE WINNER"}</em></div>
+            <h3>{buildDeeper?"Test a variation of this proven concept":pauseExpansion?"Let response catch up":"Keep this concept working"}</h3>
             <p>{row.customerPercent}% of customer response comes from this artwork concept, compared with {row.catalogPercent}% of active designs.</p>
             <strong>{buildDeeper
               ?"Create a distinct variation that keeps the same buyer meaning, then let Etsy response decide whether to expand it."
-              :"Maintain the proven listings and test a new variation only when it has a clear buyer reason."}</strong>
+              :pauseExpansion?"Maintain the proven listings. Hold further expansion until customer response justifies more active designs.":"Maintain the proven listings and test a new variation only when it has a clear buyer reason."}</strong>
             {proof?<div className="shop-map-market-proof">
               <div><span>MARKET RADAR SUPPORT</span>
                 <a href={`/market-watch?tab=niches&keyword=${encodeURIComponent(proof.phrase)}`}>Open tracked keyword →</a></div>
               <p>{proof.sellingListings>0
-                ?`The exact tracked phrase “${proof.phrase}” has ${proof.sellingListings} selling listings and ${proof.observedSold30} observed units sold in the last 30 days.`
-                :`The exact tracked phrase “${proof.phrase}” has ${proof.moving} listings showing selling movement.`}</p>
+                ?`In the saved Market Radar watch for “${proof.phrase}”, there are ${proof.sellingListings} selling listings and ${proof.observedSold30} observed units sold in the last 30 days.`
+                :`In the saved Market Radar watch for “${proof.phrase}”, ${proof.moving} listings show selling movement.`}</p>
+              {!!proof.productFamilies?.length&&<p>Observed product types: {proof.productFamilies.slice(0,2).map(item=>`${familyLabel(item.family)} (${item.sold30} units)`).join(" · ")}.</p>}
             </div>:null}
             <details className="shop-map-mirrorbot"><summary>Go deeper with MirrorBot</summary>
               <div><p>{prompt}</p><div className="shop-map-mirrorbot-actions">

@@ -16,6 +16,7 @@ import { buildPlan } from "@/app/shop-map-build-plan";
 import { corroborateAttentionWithMarket, marketWatchKeysForAttention } from "@/app/shop-map-market-corroboration";
 import { watchesFor } from "@/app/niche-watch-store";
 import { readNiche } from "@/app/niche-brief";
+import { productFamily } from "@/app/product-type-utils";
 import { guidance, standout, DIRECTION_BASIS, SHOP_MAP_MIN_RECENT_ORDERS } from "@/app/shop-map-guidance";
 import { collapseFacets } from "@/app/niche-classifier";
 import { rejectAsNiche } from "@/app/shop-map-identity";
@@ -138,11 +139,19 @@ async function buildMap(request: Request) {
           try{
             const niche=await readNiche(user.userId,watch.terms,watch.key,now);
             const selling=(niche.listings??[]).filter(row=>Number(row.sold30??0)>0);
+            const byFamily=new Map<string,number>();
+            for(const listing of selling){
+              const family=productFamily(String(listing.title||""));
+              if(family)byFamily.set(family,(byFamily.get(family)??0)+Math.max(0,Number(listing.sold30??0)));
+            }
+            const productFamilies=[...byFamily.entries()]
+              .map(([family,sold30])=>({family,sold30}))
+              .sort((a,b)=>b.sold30-a.sold30||a.family.localeCompare(b.family));
             const observedSold30=selling.reduce((sum,row)=>sum+Math.max(0,Number(row.sold30??0)),0);
             const moving=Math.max(0,Number(niche.summary?.moving??0));
             return selling.length||moving?{
               patternKey,phrase:watch.phrase,
-              sellingListings:selling.length,observedSold30,moving,
+              sellingListings:selling.length,observedSold30,moving,productFamilies,
             }:null;
           }catch{return null}
         }));
