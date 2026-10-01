@@ -27,6 +27,9 @@ try {
       await page.waitForTimeout(2200);
       if(key==="overview"){
         await page.getByText("Candidate · check existing versions first").first().waitFor({timeout:30000});
+        await page.getByText("Trait comparison among 4 leading analyzed selling artworks (last 90 days):").waitFor({timeout:30000});
+        if(!(await page.locator(".shop-map-review-group").first().innerText()).includes("purchased units among these 4 artworks"))
+          throw new Error("Winner DNA denominator is not labeled");
         const hero=page.locator(".shop-map-purchases-leadline");
         if(!(await hero.innerText()).includes("Candidate to check:"))throw new Error("First-screen product direction missing");
         const box=await hero.boundingBox();

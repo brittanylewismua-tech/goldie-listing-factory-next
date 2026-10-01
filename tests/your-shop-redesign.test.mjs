@@ -115,6 +115,14 @@ test("ties crossing the compact cutoff remain reachable at equal rank and emphas
   assert.match(card,/aria-expanded=\{showTies\}/);
 });
 
+test("Winner DNA labels its subset denominator and supporting listing identities",()=>{
+  const review=readFileSync("app/shop-map-evidence-review.tsx","utf8");
+  assert.match(review,/purchased units among these/);
+  assert.match(review,/leading analyzed selling artworks/);
+  assert.match(review,/row\.listingIds/);
+  assert.doesNotMatch(review,/% of winning response/);
+});
+
 test("Your Shop reuses same-day cached data without leaking data between tabs",()=>{
   assert.match(client,/SHOP_MAP_CACHE_PREFIX/);
   assert.match(client,/sessionStorage\.getItem/);

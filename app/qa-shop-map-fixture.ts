@@ -75,8 +75,8 @@ export function qaMapFixture(url: URL) {
     return {
     shop,patterns,productDirections:ranked.map(direction),analysedListingIds:[1,2,3,4,5],visualCoverage:{analysedListings:20,totalListings:20},
     winnerDna:{basis:"sales-90",sellingArtworks:4,traits:[
-      {label:"Typography: stacked bold",sellingArtworks:3,customerPercent:78,catalogPercent:25},
-      {label:"Short visible wording",sellingArtworks:3,customerPercent:73,catalogPercent:30},
+      {label:"Typography: stacked bold",sellingArtworks:3,customerPercent:78,catalogPercent:25,listingIds:[1,2,3]},
+      {label:"Short visible wording",sellingArtworks:3,customerPercent:73,catalogPercent:30,listingIds:[1,2,3]},
     ]},
   };
   }

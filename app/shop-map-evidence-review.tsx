@@ -48,8 +48,11 @@ export function ReviewThese({map,actions,dna,marketProof=[]}:{
     <div className="shop-map-section-head"><h2>Review these</h2></div>
     {dna?<div className="shop-map-review-group">
       <h3>Winner DNA</h3>
-      <p>{dna.sellingArtworks} selling artworks share these stronger-than-catalog traits:</p>
-      <ul>{dna.traits.map(row=><li key={row.label}>{row.label} · {row.customerPercent}% of winning response vs {row.catalogPercent}% of active designs</li>)}</ul>
+      <p>Trait comparison among {dna.sellingArtworks} leading analyzed selling artworks ({dna.basis==="sales-90"?"last 90 days":"recorded lifetime"}):</p>
+      <ul>{dna.traits.map(row=><li key={row.label}>
+        <b>{row.label}</b> · {row.customerPercent}% of purchased units among these {dna.sellingArtworks} artworks; {row.catalogPercent}% of active analyzed artworks.
+        {!!row.listingIds?.length&&<span className="shop-map-review-trait-sources"> Supporting listings: {row.listingIds.map((id,index)=><span key={id}>{index>0?", ":null}<a href={`https://www.etsy.com/listing/${id}`} target="_blank" rel="noopener noreferrer">{shortLabel(map.listings.find(item=>item.listingId===id)?.title??`Listing ${id}`)}</a></span>)}</span>}
+      </li>)}</ul>
       <p>Use those traits to guide a distinct variation. Let the next test prove itself.</p>
     </div>:null}
     {overbuilt.map(row=><div key={row.key} className="shop-map-review-group">

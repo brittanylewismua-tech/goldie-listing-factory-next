@@ -23,6 +23,18 @@ test("Winner DNA names repeated visual traits that over-index among sellers",()=
   assert.equal(dna?.basis,"sales-90");
   assert.ok(dna?.traits.some(trait=>trait.label==="Tone: Direct"));
   assert.ok(dna?.traits.every(trait=>trait.sellingArtworks>=2));
+  assert.deepEqual(dna?.traits.find(trait=>trait.label==="Tone: Direct")?.listingIds,[1,2]);
+});
+
+test("trait share uses the top analyzed selling artworks and retains contributing identities",()=>{
+  const rows=[row(1,"Strong Message",3),row(2,"Another Message",3),
+    ...Array.from({length:12},(_,index)=>row(index+3,`Gentle ${index+1}`,1,"Gentle"))];
+  const dna=winnerDnaFrom(rows);
+  const direct=dna?.traits.find(trait=>trait.label==="Tone: Direct");
+  assert.equal(dna?.sellingArtworks,5);
+  assert.equal(direct?.customerPercent,67);
+  assert.deepEqual(direct?.listingIds,[1,2]);
+  assert.equal(rows.reduce((sum,item)=>sum+item.sales90,0),18);
 });
 
 test("Winner DNA withholds a shared formula when only one artwork sold",()=>{

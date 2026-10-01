@@ -3,7 +3,7 @@ import type {VisualPatternSource} from "./shop-map-visual-patterns";
 export type WinnerDna={
   basis:"sales-90"|"sales-lifetime";
   sellingArtworks:number;
-  traits:Array<{label:string;sellingArtworks:number;customerPercent:number;catalogPercent:number}>;
+  traits:Array<{label:string;sellingArtworks:number;customerPercent:number;catalogPercent:number;listingIds:number[]}>;
 };
 
 const clean=(value:string)=>String(value||"").trim().replace(/\s+/g," ");
@@ -34,11 +34,12 @@ export function winnerDnaFrom(rows:VisualPatternSource[]):WinnerDna|null{
   const lifetime=rows.reduce((sum,row)=>sum+Math.max(0,row.lifetimeSales),0);
   const basis=recent>0?"sales-90":lifetime>0?"sales-lifetime":null;
   if(!basis)return null;
-  const byArtwork=new Map<string,{signal:number;active:boolean;design:VisualPatternSource["design"]}>();
+  const byArtwork=new Map<string,{signal:number;active:boolean;design:VisualPatternSource["design"];listingIds:Set<number>}>();
   for(const row of rows){
-    const held=byArtwork.get(row.artworkHash)??{signal:0,active:false,design:row.design};
+    const held=byArtwork.get(row.artworkHash)??{signal:0,active:false,design:row.design,listingIds:new Set<number>()};
     held.signal+=Math.max(0,basis==="sales-90"?row.sales90:row.lifetimeSales);
     held.active=held.active||row.state==="active";
+    held.listingIds.add(row.listingId);
     byArtwork.set(row.artworkHash,held);
   }
   const ranked=[...byArtwork.values()].filter(row=>row.signal>0)
@@ -47,17 +48,19 @@ export function winnerDnaFrom(rows:VisualPatternSource[]):WinnerDna|null{
   const winnerSignal=ranked.reduce((sum,row)=>sum+row.signal,0);
   const active=[...byArtwork.values()].filter(row=>row.active);
   const catalogTotal=Math.max(1,active.length);
-  const candidate=new Map<string,{signal:number;count:number;activeCount:number}>();
+  const candidate=new Map<string,{signal:number;count:number;activeCount:number;listingIds:Set<number>}>();
   for(const row of active){
     for(const label of traitsOf(row.design)){
-      const held=candidate.get(label)??{signal:0,count:0,activeCount:0};
+      const held=candidate.get(label)??{signal:0,count:0,activeCount:0,listingIds:new Set<number>()};
       held.activeCount+=1;candidate.set(label,held);
     }
   }
   for(const row of ranked){
     for(const label of traitsOf(row.design)){
-      const held=candidate.get(label)??{signal:0,count:0,activeCount:0};
-      held.signal+=row.signal;held.count+=1;candidate.set(label,held);
+      const held=candidate.get(label)??{signal:0,count:0,activeCount:0,listingIds:new Set<number>()};
+      held.signal+=row.signal;held.count+=1;
+      for(const id of row.listingIds)held.listingIds.add(id);
+      candidate.set(label,held);
     }
   }
   const traits=[...candidate.entries()].flatMap(([label,row])=>{
@@ -65,7 +68,7 @@ export function winnerDnaFrom(rows:VisualPatternSource[]):WinnerDna|null{
     const catalog=row.activeCount/catalogTotal;
     if(row.count<2||customer<.6||customer-catalog<.08)return [];
     return [{label,sellingArtworks:row.count,customerPercent:Math.round(customer*100),
-      catalogPercent:Math.round(catalog*100),signal:row.signal}];
+      catalogPercent:Math.round(catalog*100),listingIds:[...row.listingIds].sort((a,b)=>a-b),signal:row.signal}];
   }).sort((a,b)=>b.signal-a.signal||b.sellingArtworks-a.sellingArtworks)
     .slice(0,3).map(({signal,...rest})=>rest);
   return traits.length?{basis,sellingArtworks:ranked.length,traits}:null;
