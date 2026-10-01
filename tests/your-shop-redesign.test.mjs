@@ -170,7 +170,7 @@ test("each Your Shop tab validates its response before rendering",()=>{
   assert.match(client,/tab==="sold".*soldListings/s);
   assert.match(client,/tab==="themes".*Array\.isArray\(data\.worlds\)/s);
   assert.match(client,/tab==="overview".*data\.patterns/s);
-  assert.match(client,/if\(!validShopMapForTab\(next,tab\)\)/);
+  assert.match(client,/if\s*\(\s*!validShopMapForTab\(next,tab\)\s*\)/);
 });
 
 test("Product Themes has a visible empty state",()=>{
