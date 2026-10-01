@@ -1656,3 +1656,14 @@
     overflow-wrap:anywhere!important;
   }
 }
+
+/* Keep long Go deeper disclosure labels and arrows inside mobile cards. */
+@media(max-width:650px){
+  #suite-workspace .shop-map-redesign .shop-map-mirrorbot>summary{
+    width:100%!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+}
