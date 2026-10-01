@@ -109,7 +109,7 @@ test("global suite styles do not override the Your Shop tab control",()=>{
 });
 
 test("Opportunity Engine cache version changes when ranking semantics change",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v7:"/);
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v8:"/);
 });
 
 
@@ -134,7 +134,7 @@ test("Sold Listings cannot crash on an undefined sold collection",()=>{
 });
 
 test("artwork-led Opportunity Engine invalidates older cached responses",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v7:"/);
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v8:"/);
 });
 
 
