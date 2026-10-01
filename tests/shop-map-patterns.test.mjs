@@ -99,6 +99,8 @@ test("a single artwork mega-winner can lead when customer response is concentrat
   assert.equal(map.patterns[0]?.label,"Sometimes The King Is A Woman");
   assert.equal(map.patterns[0]?.customerPercent,70);
   assert.equal(map.patterns[0]?.artworkCount,1);
+  assert.equal(map.patterns[0]?.sellingArtworkCount,1);
+  assert.equal(map.patterns[0]?.activeArtworkCount,1);
 });
 
 test("a one-off design does not become a priority without mega-winner response",()=>{
