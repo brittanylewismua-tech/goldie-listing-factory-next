@@ -3,89 +3,70 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const client=readFileSync("app/shop-map/shop-map-client.tsx","utf8");
+const route=readFileSync("app/api/shop-map/map/route.ts","utf8");
+const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
 
-test("My Shop turns attention rankings into visible recommendations",()=>{
-  assert.match(client,/WHAT TO DO NEXT/);
-  assert.match(client,/Turn the ranking into action/);
-  assert.match(client,/shown\.opportunities/);
-  assert.match(client,/OpportunityRecommendations/);
+test("Opportunity Engine renders artwork-led priorities only",()=>{
+  assert.match(overview,/WinningPatterns/);
+  assert.doesNotMatch(overview,/AttentionEngine/);
+  assert.doesNotMatch(overview,/NextBuildAllocation/);
+  assert.doesNotMatch(overview,/OpportunityRecommendations/);
+  assert.doesNotMatch(overview,/shown\.attention|shown\.nextBuild|shown\.opportunities|shown\.marketCorroboration/);
 });
 
-test("MirrorBot handoffs carry the generated prompt instead of sending a blank research task",()=>{
-  assert.match(client,/row\.mirrorBotPrompt/);
-  assert.match(client,/navigator\.clipboard\.writeText\(row\.mirrorBotPrompt\)/);
-  assert.match(client,/Go deeper with MirrorBot/);
-  assert.match(client,/Open MirrorBot/);
+test("incomplete artwork evidence cannot fall back to world or market priorities",()=>{
+  assert.match(route,/const completeVisualSignal=/);
+  assert.match(route,/patterns:completeVisualSignal/);
+  assert.doesNotMatch(overview,/marketEvidence=/);
+  assert.doesNotMatch(overview,/WHERE TO BUILD NEXT|WHAT TO DO NEXT|MARKET RADAR SUPPORT/);
 });
 
-test("overbuilt themes do not receive a MirrorBot research prompt in the opportunity model",()=>{
-  const source=readFileSync("app/shop-map-opportunities.ts","utf8");
-  assert.match(source,/state==="overbuilt"/);
-  assert.match(source,/mirrorBotPrompt:null/);
+test("Opportunity support returns before world classification and only supplies sales review actions",()=>{
+  const support=route.indexOf('if(view==="overview-support")');
+  const worlds=route.indexOf("/* --------------------------------------------------------------- worlds */");
+  assert.ok(support>-1&&worlds>-1&&support<worlds);
+  const supportBlock=route.slice(support,worlds);
+  assert.match(supportBlock,/catalogActions\(rows,saleRows\.results\?\?\[\],now\)/);
+  assert.doesNotMatch(supportBlock,/buildAttentionMap|buildPlan|watchesFor|readNiche|opportunitiesFromAttention/);
 });
-
-
-test("My Shop turns the attention model into a priority order without prescribing listing counts",()=>{
-  assert.match(client,/WHERE TO BUILD NEXT/);
-  assert.match(client,/Your next design-and-list priorities start here/);
-  assert.match(client,/shown\.nextBuild/);
-  assert.match(client,/NextBuildAllocation/);
-  assert.doesNotMatch(client,/If you make \{plan\.requestedListings\} listings next/);
-  assert.doesNotMatch(client,/\{row\.recommendedListings\}/);
-});
-
-
-test("tracked market evidence appears only as supporting proof inside recommendations",()=>{
-  assert.match(client,/MARKET RADAR SUPPORT/);
-  assert.match(client,/shown\.marketCorroboration/);
-  assert.match(client,/marketEvidence=\{shown\.marketCorroboration\?\?\[\]\}/);
-  assert.match(client,/Open tracked keyword/);
-  assert.match(client,/row\.state==="underbuilt"\?marketByWorld\.get/);
-});
-
 
 test("Opportunity Engine stays decision-first instead of repeating dashboard stats",()=>{
-  assert.doesNotMatch(client,/LAST 90 DAYS[^\n]*Top sellers/);
-  assert.doesNotMatch(client,/Revenue · 90 days/);
-  assert.doesNotMatch(client,/WHERE TO FOCUS/);
+  assert.doesNotMatch(overview,/LAST 90 DAYS[^\n]*Top sellers/);
+  assert.doesNotMatch(overview,/Revenue · 90 days/);
+  assert.doesNotMatch(overview,/WHERE TO FOCUS/);
   assert.match(client,/What is working, where your attention belongs, and what to build out next\./);
 });
 
-
-test("ranked priorities keep customer and catalog attention visually comparable",()=>{
+test("ranked priorities keep customer and active-design attention visually comparable",()=>{
   assert.match(client,/shop-map-attention-mini-compare/);
   assert.match(client,/>Customer<\/small>/);
   assert.match(client,/>Catalog<\/small>/);
-  assert.match(client,/world\.catalogPercent/);
+  assert.match(client,/Active designs/);
 });
-
 
 test("Opportunity Engine can discover winning patterns without assuming a customer world exists",()=>{
   assert.match(client,/WinningPatterns/);
   assert.match(client,/Let&apos;s build out on what&apos;s already working\.\.\. here&apos;s the analysis today\.\.\./);
-  assert.doesNotMatch(client,/WHAT CUSTOMERS ARE VOTING FOR/);
-  assert.doesNotMatch(client,/Common shop-wide wording is discounted/);
-  assert.doesNotMatch(client,/It will not manufacture the rest of a top five/);
+  assert.doesNotMatch(overview,/WHAT CUSTOMERS ARE VOTING FOR/);
+  assert.doesNotMatch(overview,/Common shop-wide wording is discounted/);
+  assert.doesNotMatch(overview,/It will not manufacture the rest of a top five/);
 });
 
-
 test("Opportunity Engine copy stays short",()=>{
-  assert.doesNotMatch(client,/This pattern appears in/);
-  assert.doesNotMatch(client,/It will not manufacture/);
+  assert.doesNotMatch(overview,/This pattern appears in/);
+  assert.doesNotMatch(overview,/It will not manufacture/);
   assert.match(client,/Focus here next/);
   assert.match(client,/Your top listings/);
 });
 
-
 test("Opportunity Engine does not include the generic listing keyword checker",()=>{
-  assert.doesNotMatch(client,/ListingCheckPanel/);
-  assert.doesNotMatch(client,/Compare a listing with search results/);
+  assert.doesNotMatch(overview,/ListingCheckPanel/);
+  assert.doesNotMatch(overview,/Compare a listing with search results/);
   assert.match(client,/Proven designs to expand/);
 });
-
 
 test("top listings still render when visual priority evidence is incomplete",()=>{
   assert.match(client,/if\(!lead&&map\.listings\.length\)/);
   assert.match(client,/shop-map-attention-listings-only/);
-  assert.match(client,/shown\.patterns\?<WinningPatterns map=\{shown\.patterns\}/);
+  assert.match(overview,/shown\.patterns\?<WinningPatterns map=\{shown\.patterns\}/);
 });
