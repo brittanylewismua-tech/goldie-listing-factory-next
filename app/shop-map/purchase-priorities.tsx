@@ -12,6 +12,7 @@ export default function PurchasePriorities({map,directions,analysisFailed=false,
   map:PurchasePriorityMap;directions?:ProductDirection[];analysisFailed?:boolean;onRetry?:()=>void;
 }){
   const [showTies,setShowTies]=useState(false);
+  const [showAllPurchased,setShowAllPurchased]=useState(false);
   const [selectedId,setSelectedId]=useState<number|null>(null);
   const [copyState,setCopyState]=useState("");
   const byListing=new Map((directions??[]).map(row=>[row.listingId,row]));
@@ -20,7 +21,10 @@ export default function PurchasePriorities({map,directions,analysisFailed=false,
   const visiblePriorities=showTies?[...map.priorities,...tiedBeyondCutoff]:map.priorities;
   const leaders=visiblePriorities.filter(row=>row.rank===1);
   const companions=visiblePriorities.filter(row=>row.rank!==1);
-  const chosen=visiblePriorities.find(row=>row.listingId===selectedId)??visiblePriorities[0];
+  const chosen=map.listings.find(row=>row.listingId===selectedId)??visiblePriorities[0];
+  const visibleIds=new Set(visiblePriorities.map(row=>row.listingId));
+  const additional=map.listings.filter(row=>!visibleIds.has(row.listingId));
+  const displayedAdditional=showAllPurchased?additional:additional.slice(0,6);
   const direction=chosen?byListing.get(chosen.listingId):null;
   const hiddenUnits=Math.max(0,map.totalUnits-visiblePriorities.reduce((sum,row)=>sum+row.unitsPurchased,0));
   const period="last "+map.days+" days";
@@ -80,6 +84,7 @@ export default function PurchasePriorities({map,directions,analysisFailed=false,
           {chosen?<section className="shop-map-purchases-analysis" aria-live="polite" id="shop-map-selected-direction">
             <p className="mini-label">SELECTED PRODUCT</p>
             <h3>What to build next</h3>
+            {chosen.listingId!==map.priorities[0]?.listingId?<p className="shop-map-purchases-selected-name">{shortLabel(chosen.title)}</p>:null}
             {direction
               ?<>
                 <strong>{direction.kind==="test"?"Next specific test":direction.kind==="check-first"?"Candidate · check existing versions first":"Product review"}</strong>
@@ -112,6 +117,26 @@ export default function PurchasePriorities({map,directions,analysisFailed=false,
           onClick={()=>setShowTies(value=>!value)}>{showTies?"Hide tied priorities":"View all tied priorities ("+tiedBeyondCutoff.length+" more)"}</button>:null}
         <p className="shop-map-purchases-remaining">{map.totalUnits} units purchased across {map.totalOrders} recorded transactions in the {period}.
           {hiddenUnits>0?" "+hiddenUnits+" other purchased unit"+(hiddenUnits===1?"":"s")+" remain beyond these priorities.":""}</p>
+        {additional.length>0?<section className="shop-map-purchases-more">
+          <h3>More purchased products to review</h3>
+          <p>The leading cards are a summary. These products also have recorded purchases in the {period}; a useful direction can come from any of them.</p>
+          <ul>{displayedAdditional.map(row=>{
+            const item=byListing.get(row.listingId);
+            return <li key={row.listingId}>
+              {row.imageUrl?<img src={row.imageUrl} alt="" width={66} height={66} loading="lazy"/>:
+                <span className="shop-map-purchases-more-missing" aria-hidden="true">G</span>}
+              <span><b>{shortLabel(row.title)}</b><small>{row.unitsPurchased} units · {percent(row.share)} {map.shareLabel.toLowerCase()}</small>
+                <small>{item?.proposedChange??item?.researchQuestion??item?.catalogCoverage??"Product analysis pending."}</small></span>
+              <button type="button" aria-pressed={chosen?.listingId===row.listingId}
+                onClick={()=>{setSelectedId(row.listingId);setCopyState("");
+                  document.getElementById("shop-map-selected-direction")?.scrollIntoView({block:"center"});}}>
+                Review direction
+              </button>
+            </li>;
+          })}</ul>
+          {additional.length>displayedAdditional.length?<button type="button" className="shop-map-purchases-show-all"
+            onClick={()=>setShowAllPurchased(true)}>Show all {additional.length} purchased products</button>:null}
+        </section>:null}
       </>}
     {!map.receiptsComplete&&<p className="shop-map-purchases-caveat">Receipt import is incomplete. Shares use recorded matched purchases and may change after the next successful sales refresh.</p>}
     {map.unmatchedUnits>0&&<p className="shop-map-purchases-caveat">{map.unmatchedUnits} purchased unit{map.unmatchedUnits===1?"":"s"} could not be matched to a listing and are shown separately.</p>}

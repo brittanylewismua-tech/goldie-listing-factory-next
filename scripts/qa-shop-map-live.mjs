@@ -33,6 +33,8 @@ try {
         const hero=page.locator(".shop-map-purchases-grid article.purchase-lead").first();
         const heroImage=hero.locator("img").first();
         const imageBox=await heroImage.boundingBox();
+        if(!(await heroImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
+          throw new Error("Winning product image did not load in the live browser");
         const votesBox=await hero.locator(".shop-map-purchases-votes").boundingBox();
         if(!imageBox||!votesBox||imageBox.y>660||votesBox.y+votesBox.height>784)
           throw new Error("Winning product image and vote evidence are below the initial phone viewport");
@@ -119,6 +121,15 @@ try {
         console.log(`QA_IMAGE_BEGIN ${width} purchased_research`);
         for(let offset=0;offset<researchImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+researchImage.slice(offset,offset+16000));
         console.log(`QA_IMAGE_END ${width} purchased_research`);
+        const more=page.locator(".shop-map-purchases-more");
+        await more.getByText("More purchased products to review").waitFor({timeout:15000});
+        const extra=more.locator("li").first();
+        if(await extra.count()===0)throw new Error("Purchased products outside the first three are missing");
+        const extraTitle=(await extra.locator("b").innerText()).trim();
+        await extra.getByRole("button",{name:"Review direction"}).click();
+        if(!(await page.locator(".shop-map-purchases-selected-name").innerText()).includes(extraTitle))
+          throw new Error("An additional purchased product cannot open its direction");
+        console.log("QA_FULL_SHOP "+JSON.stringify({width,additionalVisible:await more.locator("li").count(),selected:extraTitle}));
       }
     }
     await context.close();

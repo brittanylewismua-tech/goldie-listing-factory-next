@@ -209,63 +209,30 @@ function CatalogReview({actions,shopId}:{actions:CatalogAction[];shopId?:number}
 
 
 export function WinningPatterns({map}:{map:WinningPatternMap}){
-  const lead=map.patterns[0];
-  if(!lead&&map.listings.length)return <section className="shop-map-attention shop-map-attention-listings-only">
-    <div className="shop-map-attention-listings">
-      <div><h3>Visual pattern supporting listings</h3></div>
-      <ol>{map.listings.map(listing=><li key={listing.listingId}>
-        <span>0{listing.rank}</span>
-        {listing.imageUrl?<img src={listing.imageUrl} alt="" width={52} height={52} loading="lazy"/>:<i aria-hidden="true"/>}
-        <div><b>{shortLabel(listing.title)}</b><small>{listing.signal} {map.basis==="favorites"?"favorites":"units"}</small></div>
-        <strong>{listing.attentionPercent}%</strong>
-      </li>)}</ol>
-    </div>
-  </section>;
-  if(!lead)return null;
-  return <section className="shop-map-attention">
-    <div className="shop-map-attention-head">
-      <div><h2>Visual evidence to investigate</h2><p>Use these observations to shape a purchased winner’s next test when one exists. They do not set build order.</p></div>
-    </div>
-    <article className="shop-map-attention-lead">
-      <div className="shop-map-attention-lead-copy">
-        <p className="mini-label">SHARED VISUAL EVIDENCE</p>
-        <div className="shop-map-attention-lead-title"><span aria-hidden="true">V</span><h3>{lead.label}</h3></div>
-        <strong>{lead.customerPercent}% of customer response</strong>
-        <p className="shop-map-attention-directive"><b>Investigate this shared characteristic after the purchase-led priorities.</b></p>
+  const patterns=map.patterns.slice(0,4);
+  const products=map.listings.slice(0,5);
+  return <section className="shop-map-choosing">
+    <div className="shop-map-section-head">
+      <div><p className="mini-label">SUPPORTING PRODUCT EVIDENCE</p>
+        <h2>What customers are choosing</h2>
+        <p>{map.basis==="sales-90"?"Last 90 days":map.basisLabel}. These analyzed visual observations support the purchased products above; they do not reorder them.</p>
       </div>
-      <div className="shop-map-attention-compare" aria-label="Customer response compared with active design presence">
-        <div><span>Customer response</span><b>{lead.customerPercent}%</b><i><em style={{width:`${Math.max(2,lead.customerPercent)}%`}}/></i></div>
-        <div><span>Active designs</span><b>{lead.catalogPercent}%</b><i><em style={{width:`${Math.max(2,lead.catalogPercent)}%`}}/></i></div>
-        <small>{lead.lift}× response lift · {lead.sellingListings} selling listing{lead.sellingListings===1?"":"s"}</small>
-      </div>
-    </article>
-    <div className="shop-map-attention-priorities">
-      <div className="shop-map-attention-priorities-head"><h3>More visual observations</h3></div>
-      <div className="shop-map-attention-list">
-        {map.patterns.slice(1).map(pattern=><article key={pattern.key}>
-          <div className="shop-map-attention-row">
-            <span className="shop-map-attention-rank" aria-hidden="true">•</span>
-            <div className="shop-map-attention-name"><b>{pattern.label}</b>
-              <small>{pattern.customerPercent}% of customer response · {pattern.catalogPercent}% of active designs</small></div>
-            <em className="attention-state underbuilt">+{pattern.gapPoints} pt gap</em>
-          </div>
-          <div className="shop-map-attention-mini-compare" aria-label={`${pattern.customerPercent}% customer response compared with ${pattern.catalogPercent}% active design presence`}>
-            <div><small>Customer</small><i><em style={{width:`${Math.max(2,pattern.customerPercent)}%`}}/></i></div>
-            <div className="catalog"><small>Catalog</small><i><em style={{width:`${Math.max(2,pattern.catalogPercent)}%`}}/></i></div>
-          </div>
-        </article>)}
-      </div>
-
     </div>
-    {!!map.listings.length&&<div className="shop-map-attention-listings">
-      <div><h3>Listings in this visual analysis</h3></div>
-      <ol>{map.listings.map(listing=><li key={listing.listingId}>
-        <span>0{listing.rank}</span>
-        {listing.imageUrl?<img src={listing.imageUrl} alt="" width={52} height={52} loading="lazy"/>:<i aria-hidden="true"/>}
-        <div><b>{shortLabel(listing.title)}</b><small>{listing.signal} {map.basis==="favorites"?"favorites":"units"}</small></div>
-        <strong>{listing.attentionPercent}%</strong>
-      </li>)}</ol>
-    </div>}
+    {patterns.length?<div className="shop-map-choosing-patterns">
+      {patterns.map(pattern=><div key={pattern.key}>
+        <b>{pattern.label}</b>
+        <span>{pattern.customerPercent}% of the stated customer response · {pattern.catalogPercent}% of active analyzed designs</span>
+      </div>)}
+    </div>:<p className="shop-map-choosing-state">No shared visual pattern is supported by the available analysis. Individual purchased products remain useful above.</p>}
+    {products.length?<div className="shop-map-choosing-gallery" aria-label="Sample supporting listings">
+      {products.map(listing=><a key={listing.listingId} href={"https://www.etsy.com/listing/"+listing.listingId}
+        target="_blank" rel="noopener noreferrer">
+        {listing.imageUrl?<img src={listing.imageUrl} alt="" width={96} height={96} loading="lazy"/>:
+          <span aria-hidden="true">Image unavailable</span>}
+        <b>{shortLabel(listing.title)}</b>
+        <small>{listing.signal} {map.basis==="favorites"?"favorites":"units"} · {listing.attentionPercent}% of stated response</small>
+      </a>)}
+    </div>:<p className="shop-map-choosing-state">Supporting listing images are unavailable; check the source products before interpreting a shared design.</p>}
   </section>;
 }
 

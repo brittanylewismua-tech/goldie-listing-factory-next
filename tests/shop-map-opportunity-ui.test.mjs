@@ -64,7 +64,7 @@ test("Opportunity Engine copy stays short",()=>{
   assert.doesNotMatch(overview,/This pattern appears in/);
   assert.doesNotMatch(overview,/It will not manufacture/);
   assert.match(purchase,/Where to focus next/);
-  assert.match(client,/Listings in this visual analysis/);
+  assert.match(client,/What customers are choosing/);
 });
 
 test("Opportunity Engine does not include the generic listing keyword checker",()=>{
@@ -74,8 +74,8 @@ test("Opportunity Engine does not include the generic listing keyword checker",(
 });
 
 test("top listings still render when visual priority evidence is incomplete",()=>{
-  assert.match(client,/if\(!lead&&map\.listings\.length\)/);
-  assert.match(client,/shop-map-attention-listings-only/);
+  assert.match(client,/No shared visual pattern is supported by the available analysis/);
+  assert.match(client,/shop-map-choosing-gallery/);
   assert.match(overview,/shown\.patterns\?<WinningPatterns map=\{shown\.patterns\}/);
 });
 

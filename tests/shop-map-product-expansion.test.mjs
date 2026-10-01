@@ -47,10 +47,10 @@ test("every tied leader beyond the compact cutoff receives a direction or review
   const map=buildPurchasePriorities([sales(1,5),sales(2,5),sales(3,5),sales(4,5)],
     [1,2,3,4].map(id=>listing(id,`Winner ${id}`)),{days:90,now,receiptsComplete:true});
   const analyzed=[1,2,3,4].map(id=>({...tee,listingId:id,artworkHash:`art-${id}`}));
-  assert.deepEqual(buildProductDirections(map,[...analyzed,{...sweater,listingId:9}]).map(row=>row.listingId),[1,2,3,4]);
+  assert.deepEqual(buildProductDirections(map,[...analyzed,{...sweater,listingId:9}]).map(row=>row.listingId),[1,2,3,4,5]);
 });
 
-test("a tie for third expands directions through the tie but not into weaker products",()=>{
+test("a tie for third keeps equal access while directions include weaker purchased products",()=>{
   const map=buildPurchasePriorities([sales(1,10),sales(2,8),sales(3,5),sales(4,5),sales(5,1)],
     [1,2,3,4,5].map(id=>listing(id,`Winner ${id}`)),{days:90,now,receiptsComplete:true});
   const analyzed=[1,2,3,4,5].map(id=>({...tee,listingId:id,artworkHash:`art-${id}`}));
@@ -79,4 +79,19 @@ test("the selected purchase period remains in the reason while artwork cannot re
   const rows=buildProductDirections(map,[tee,sweater,{...tee,listingId:3,artworkHash:"a3"}]);
   assert.equal(rows[0].listingId,3);
   assert.match(rows[0].whyNow,/last 30 days/);
+});
+
+test("a sixth purchased product can produce a checked format direction",()=>{
+  const counts=[32,24,19,15,11,8];
+  const map=buildPurchasePriorities(counts.map((count,index)=>sales(index+1,count)),
+    counts.map((_,index)=>listing(index+1,"Product "+(index+1))),
+    {days:90,now,receiptsComplete:true});
+  const analyzed=counts.map((_,index)=>({
+    ...tee,listingId:index+1,artworkHash:"art-"+(index+1),
+  }));
+  const directions=buildProductDirections(map,[...analyzed,{...sweater,listingId:20}]);
+  assert.equal(directions.length,6);
+  assert.equal(directions[5].listingId,6);
+  assert.equal(directions[5].kind,"test");
+  assert.match(directions[5].whyNow,/8 purchased units/);
 });
