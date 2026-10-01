@@ -1746,4 +1746,5 @@
   #suite-workspace .shop-map-redesign .shop-map-purchases-head small{display:block;margin-top:10px}
 }
 
-#suite-workspace .shop-map-redesign .shop-map-review-trait-sources{display:block;margin-top:4px;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+#suite-workspace .shop-map-redesign .shop-map-review-trait-sources{display:block;margin-top:6px;font-size:12px;line-height:1.45;color:#333;overflow-wrap:anywhere}
+#suite-workspace .shop-map-redesign .shop-map-review-trait-sources a{color:#222;text-decoration:underline;text-underline-offset:2px}

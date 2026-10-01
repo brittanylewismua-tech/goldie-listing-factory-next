@@ -82,7 +82,7 @@ try {
         await page.locator(".shop-map-analysis-period select").selectOption("90");
         await page.waitForTimeout(1800);
       }
-      const scrollSteps=key==="overview"?(width===390?9:7):(width===390?3:0);
+      const scrollSteps=key==="overview"?(width===390?11:14):(width===390?3:2);
       if(scrollSteps){
         await page.mouse.move(width/2,560);
         for(let step=1;step<=scrollSteps;step++){
