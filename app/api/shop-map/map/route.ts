@@ -310,6 +310,7 @@ async function buildMap(request: Request) {
         sales90:sales90.get(listingId)?.sales??0,
         lifetimeSales:performance.get(listingId)?.lifetimeUnits??0,
         favorites:rows.find(item=>Number(item.listing_id)===listingId)?.favorites??null,
+        state:String(rows.find(item=>Number(item.listing_id)===listingId)?.state||""),
         design:{
           wording:Array.isArray(design.wording)?design.wording.map(String):[],
           illustrationCategory:String(design.illustrationCategory||""),
@@ -334,7 +335,10 @@ async function buildMap(request: Request) {
       has not been analysed, show the proven listings but withhold the pattern
       ranking until that visual evidence exists.
     */
-    const completeVisualSignal=visual.basis===shopBasis&&visual.totalSignal===shopSignalTotal;
+    const activeListingIds=rows.filter(row=>String(row.state)==="active").map(row=>Number(row.listing_id));
+    const analysedActiveIds=new Set(visualInput.filter(row=>row.state==="active").map(row=>row.listingId));
+    const completeActiveCatalog=activeListingIds.every(id=>analysedActiveIds.has(id));
+    const completeVisualSignal=visual.basis===shopBasis&&visual.totalSignal===shopSignalTotal&&completeActiveCatalog;
     const topListings=rows.map(row=>{
       const listingId=Number(row.listing_id);
       const signal=shopBasis==="sales-90"?(sales90.get(listingId)?.sales??0)
@@ -366,6 +370,7 @@ async function buildMap(request: Request) {
       },
       visualCoverage:{
         analysedListings:visualInput.length,totalListings:rows.length,
+        analysedActiveListings:analysedActiveIds.size,activeListings:activeListingIds.length,
         completeSignal:completeVisualSignal,
       },
     });
