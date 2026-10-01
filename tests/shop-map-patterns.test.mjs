@@ -82,3 +82,32 @@ test("SEO title wording cannot create a priority without visual design evidence"
   assert.match(routeSource,/design_intelligence/);
   assert.match(routeSource,/artwork_provenance/);
 });
+
+
+const visualRow=(id,hash,wording,sales90)=>({
+  listingId:id,artworkHash:hash,sales90,lifetimeSales:sales90,favorites:0,
+  design:{wording:[wording],illustrationCategory:"typography",audienceCues:[],
+    recipientCues:[],occasionCues:[],tone:"bold",composition:"centered"},
+});
+
+test("a single artwork mega-winner can lead when customer response is concentrated",()=>{
+  const map=discoverVisualWinningPatterns([
+    visualRow(1,"a","sometimes the king is a woman",70),
+    visualRow(2,"b","another design",20),
+    visualRow(3,"c","third design",10),
+  ]);
+  assert.equal(map.patterns[0]?.label,"Sometimes The King Is A Woman");
+  assert.equal(map.patterns[0]?.customerPercent,70);
+  assert.equal(map.patterns[0]?.artworkCount,1);
+});
+
+test("a one-off design does not become a priority without mega-winner response",()=>{
+  const map=discoverVisualWinningPatterns([
+    visualRow(1,"a","first one off",20),
+    visualRow(2,"b","second one off",20),
+    visualRow(3,"c","third one off",20),
+    visualRow(4,"d","fourth one off",20),
+    visualRow(5,"e","fifth one off",20),
+  ]);
+  assert.equal(map.patterns.length,0);
+});
