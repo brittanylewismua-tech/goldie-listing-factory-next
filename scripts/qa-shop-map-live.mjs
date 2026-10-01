@@ -30,10 +30,16 @@ try {
         await page.getByText("Trait comparison among 4 leading analyzed selling artworks (last 90 days):").waitFor({timeout:30000});
         if(!(await page.locator(".shop-map-review-group").first().innerText()).includes("purchased units among these 4 artworks"))
           throw new Error("Winner DNA denominator is not labeled");
-        const hero=page.locator(".shop-map-purchases-leadline");
-        if(!(await hero.innerText()).includes("Candidate to check:"))throw new Error("First-screen product direction missing");
-        const box=await hero.boundingBox();
-        console.log("QA_HERO "+JSON.stringify({width,top:box?.y,height:box?.height,text:(await hero.innerText()).slice(0,180)}));
+        const hero=page.locator(".shop-map-purchases-grid article.purchase-lead").first();
+        const heroImage=hero.locator("img").first();
+        const imageBox=await heroImage.boundingBox();
+        const votesBox=await hero.locator(".shop-map-purchases-votes").boundingBox();
+        if(!imageBox||!votesBox||imageBox.y>660||votesBox.y+votesBox.height>784)
+          throw new Error("Winning product image and vote evidence are below the initial phone viewport");
+        if(!(await page.locator(".shop-map-purchases-analysis").innerText()).includes("Candidate"))
+          throw new Error("Selected product direction missing");
+        console.log("QA_HERO "+JSON.stringify({width,imageTop:imageBox.y,imageHeight:imageBox.height,
+          votesBottom:votesBox.y+votesBox.height,text:(await hero.innerText()).slice(0,180)}));
       }
       const measured=(await output.innerText()).trim();
       const match=measured.match(/QA viewport: (\d+)px; document: (\d+)px; body: (\d+)px; tab rows: ([\d+]+); active: ([^;]+); loading: (YES|NO); alert: ([^;]+); text: (\d+)/);
@@ -178,7 +184,9 @@ try {
   if(await tieCards.count()!==4)throw new Error("The fourth tied product is hidden");
   if(await tiePage.locator(".shop-map-purchases-grid article.purchase-lead").count()!==4)
     throw new Error("Equal winners have unequal visual emphasis");
-  await tieCards.last().getByText("No supported product-specific direction is available yet.").waitFor({timeout:15000});
+  await tieCards.last().getByRole("button",{name:/Review priority 1:/}).click();
+  await tiePage.locator(".shop-map-purchases-analysis").getByText("No supported product-specific direction is available yet.").waitFor({timeout:15000});
+  await tieCards.last().scrollIntoViewIfNeeded();
   const tieImage=(await tiePage.screenshot({type:"jpeg",quality:35})).toString("base64");
   console.log("QA_IMAGE_BEGIN 320 tied_priorities");
   for(let offset=0;offset<tieImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+tieImage.slice(offset,offset+16000));

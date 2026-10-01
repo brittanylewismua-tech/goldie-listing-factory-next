@@ -631,7 +631,7 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
   if (!shown && failed)
     return <main className="shop-map shop-map-redesign">
       <header className="shop-map-head current-page-heading"><div>
-        <p className="current-kicker">YOUR SHOP</p><h1>Your shop</h1>
+        <p className="current-kicker">YOUR SHOP</p><h1>My Shop</h1>
       </div></header>
       {periodControl}
       <nav className="shop-map-tabs" aria-label="Your shop sections">
@@ -648,7 +648,7 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
     return <main className="shop-map shop-map-redesign">
       <header className="shop-map-head current-page-heading"><div>
         <p className="current-kicker">YOUR SHOP</p>
-        <h1>Your shop</h1>
+        <h1>My Shop</h1>
         <p>Loading your connected shop and latest performance…</p>
       </div></header>
       {periodControl}
@@ -675,7 +675,7 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
   const niches = unclassifiedTheme ? [...themes,unclassifiedTheme] : themes;
   const recentTotal = niches.reduce((sum, niche) => sum + niche.revenueMinor, 0);
   return <main className="shop-map shop-map-redesign">
-    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">YOUR SHOP</p><h1>{shown.shop?.shopName ?? "Your shop"}</h1><p>What is working, where your attention belongs, and what to build out next.</p></div></header>
+    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">YOUR SHOP</p><h1>My Shop</h1><p className="shop-map-shop-identity">{shown.shop?.shopName ?? "Connected shop"}</p></div></header>
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
     {periodControl}
@@ -687,7 +687,7 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
-      {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} directions={shown.productDirections} analysisFailed={insightsFailed}/>:null}
+      {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} directions={shown.productDirections} analysisFailed={insightsFailed} onRetry={()=>void load()}/>:null}
       {insightsLoading?<section className="shop-map-inline-state" role="status">Checking product imagery and catalog coverage…</section>:null}
       {insightsFailed?<section className="shop-map-inline-state"><strong>Product analysis could not load.</strong><p>Your purchase priorities remain available. Retry this section by reopening the tab.</p></section>:null}
       {selectedDays===30?<p className="shop-map-inline-state">Visual pattern analysis is a separate last-90-day view. Select Last 90 days to inspect it.</p>:null}

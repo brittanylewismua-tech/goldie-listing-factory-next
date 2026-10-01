@@ -101,7 +101,9 @@ test("each purchase-led winner can receive a product-specific direction independ
   assert.match(client,/productDirections/);
   assert.match(client,/view=overview-insights&days=\$\{selectedDays\}/);
   assert.match(card,/Next specific test/);
-  assert.match(card,/shop-map-purchases-leadline/);
+  assert.match(card,/shop-map-purchases-photo/);
+  assert.match(card,/fetchPriority=\{row\.rank===1\?"high":"auto"\}/);
+  assert.match(card,/shop-map-purchases-analysis/);
   assert.match(card,/Catalog check:/);
   assert.match(card,/Why now:/);
   assert.ok(card.indexOf("row.unitsPurchased")<card.indexOf("Next specific test"));
@@ -111,7 +113,8 @@ test("ties crossing the compact cutoff remain reachable at equal rank and emphas
   const card=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
   assert.match(card,/tiedBeyondCutoff/);
   assert.match(card,/View all tied priorities/);
-  assert.match(card,/visiblePriorities\.map/);
+  assert.match(card,/leaders\.map\(card\)/);
+  assert.match(card,/companions\.map\(card\)/);
   assert.match(card,/row\.rank===1\?"purchase-lead"/);
   assert.match(card,/aria-expanded=\{showTies\}/);
 });
