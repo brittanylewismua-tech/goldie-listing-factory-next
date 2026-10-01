@@ -78,7 +78,7 @@ export function ReviewThese({map,actions,dna,marketProof=[]}:{
           <small>This exact artwork sold {row.sold90} on {familyLabel(row.family)}.
             {row.source==="shop"
               ?` Another artwork in ${row.pattern} sold ${row.peerSold90} on ${familyLabel(row.peerFamily)}.`
-              :` In the matching tracked market, ${familyLabel(row.peerFamily)} had ${row.peerSold90} observed units sold.`}</small>
+              :` In the matching saved watch, ${familyLabel(row.peerFamily)} listings showed ${row.peerSold90} observed stock decreases in 30 days; inspect source observations before treating these as purchases.`}</small>
         </span>
         <a href={`https://www.etsy.com/listing/${row.listingId}`} target="_blank" rel="noopener noreferrer">See it on Etsy ↗</a>
       </li>)}</ul>

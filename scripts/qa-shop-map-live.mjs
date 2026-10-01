@@ -94,6 +94,19 @@ try {
           console.log(`QA_IMAGE_END ${width} ${key}_${step}`);
         }
       }
+      if(key==="overview"){
+        const research=page.locator(".shop-map-mirrorbot").first();
+        await research.locator("summary").click();
+        const researchText=await research.innerText();
+        if(!researchText.includes("Purchased listing #1")||!researchText.includes("22 units"))
+          throw new Error("Deep research lost the purchased winner context");
+        if(!researchText.includes("Opening it does not transfer this context"))
+          throw new Error("MirrorBot transfer status is unclear");
+        const researchImage=(await page.screenshot({type:"jpeg",quality:35})).toString("base64");
+        console.log(`QA_IMAGE_BEGIN ${width} purchased_research`);
+        for(let offset=0;offset<researchImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+researchImage.slice(offset,offset+16000));
+        console.log(`QA_IMAGE_END ${width} purchased_research`);
+      }
     }
     await context.close();
   }

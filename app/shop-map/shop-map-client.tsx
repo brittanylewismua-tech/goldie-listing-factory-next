@@ -224,12 +224,12 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
   if(!lead)return null;
   return <section className="shop-map-attention">
     <div className="shop-map-attention-head">
-      <div><h2>Visual patterns to investigate</h2></div>
+      <div><h2>Visual evidence to investigate</h2><p>Use these observations to shape a purchased winner’s next test when one exists. They do not set build order.</p></div>
     </div>
     <article className="shop-map-attention-lead">
       <div className="shop-map-attention-lead-copy">
-        <p className="mini-label">STRONGEST SHARED VISUAL PATTERN</p>
-        <div className="shop-map-attention-lead-title"><span>01</span><h3>{lead.label}</h3></div>
+        <p className="mini-label">SHARED VISUAL EVIDENCE</p>
+        <div className="shop-map-attention-lead-title"><span aria-hidden="true">V</span><h3>{lead.label}</h3></div>
         <strong>{lead.customerPercent}% of customer response</strong>
         <p className="shop-map-attention-directive"><b>Investigate this shared characteristic after the purchase-led priorities.</b></p>
       </div>
@@ -240,11 +240,11 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
       </div>
     </article>
     <div className="shop-map-attention-priorities">
-      <div className="shop-map-attention-priorities-head"><h3>Other visual patterns</h3></div>
+      <div className="shop-map-attention-priorities-head"><h3>More visual observations</h3></div>
       <div className="shop-map-attention-list">
         {map.patterns.slice(1).map(pattern=><article key={pattern.key}>
           <div className="shop-map-attention-row">
-            <span className="shop-map-attention-rank">0{pattern.rank}</span>
+            <span className="shop-map-attention-rank" aria-hidden="true">•</span>
             <div className="shop-map-attention-name"><b>{pattern.label}</b>
               <small>{pattern.customerPercent}% of customer response · {pattern.catalogPercent}% of active designs</small></div>
             <em className="attention-state underbuilt">+{pattern.gapPoints} pt gap</em>
@@ -258,7 +258,7 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
 
     </div>
     {!!map.listings.length&&<div className="shop-map-attention-listings">
-      <div><h3>Your top listings</h3></div>
+      <div><h3>Listings in this visual analysis</h3></div>
       <ol>{map.listings.map(listing=><li key={listing.listingId}>
         <span>0{listing.rank}</span>
         {listing.imageUrl?<img src={listing.imageUrl} alt="" width={52} height={52} loading="lazy"/>:<i aria-hidden="true"/>}
@@ -686,7 +686,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       {selectedDays===30?<p className="shop-map-inline-state">Visual pattern analysis is a separate last-90-day view. Select Last 90 days to inspect it.</p>:null}
       {selectedDays===90&&shown.patterns?<WinningPatterns map={shown.patterns}/>:null}
       {selectedDays===90&&shown.patterns?<ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]}/>:null}
-      {selectedDays===90&&!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} marketProof={shown.marketProof??[]}/>}
+      {selectedDays===90&&!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} purchasePriorities={shown.purchasePriorities} marketProof={shown.marketProof??[]}/>}
 
     </div>}
 

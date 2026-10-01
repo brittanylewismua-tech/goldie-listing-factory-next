@@ -24,7 +24,7 @@ test("incomplete artwork evidence cannot generate action recommendations",()=>{
   assert.match(route,/const completeVisualSignal=/);
   assert.match(route,/patterns:completeVisualSignal/);
   assert.match(overview,/!!shown\.patterns\?\.patterns\?\.length&&<ArtworkRecommendations/);
-  assert.match(actions,/map\.patterns\.slice\(0,4\)/);
+  assert.match(actions,/purchasedPatternSupport\(map,purchasePriorities\)/);
   assert.doesNotMatch(overview,/shown\.attention|shown\.nextBuild|shown\.opportunities/);
 });
 
@@ -63,7 +63,7 @@ test("Opportunity Engine copy stays short",()=>{
   assert.doesNotMatch(overview,/This pattern appears in/);
   assert.doesNotMatch(overview,/It will not manufacture/);
   assert.match(purchase,/Where to focus next/);
-  assert.match(client,/Your top listings/);
+  assert.match(client,/Listings in this visual analysis/);
 });
 
 test("Opportunity Engine does not include the generic listing keyword checker",()=>{
@@ -79,11 +79,13 @@ test("top listings still render when visual priority evidence is incomplete",()=
 });
 
 test("MirrorBot handoffs use artwork concepts and never SEO titles",()=>{
-  assert.match(actions,/actual artwork concept|proven artwork concept/);
+  assert.match(actions,/Purchased listing #/);
   assert.match(actions,/Do not infer artwork from SEO titles or tags/);
   assert.match(actions,/navigator\.clipboard\.writeText\(prompt\)/);
   assert.match(actions,/Open MirrorBot/);
-  assert.match(actions,/REVIEW COVERAGE/);
+  assert.match(actions,/Opening it does not transfer this context/);
+  assert.match(actions,/Copy failed/);
+  assert.match(actions,/WINNER RESEARCH/);
 });
 
 test("tracked market proof must match the artwork phrase exactly and remains optional",()=>{
@@ -94,6 +96,7 @@ test("tracked market proof must match the artwork phrase exactly and remains opt
   assert.match(actions,/proofByKey\.get\(row\.key\)/);
   assert.match(market,/productFamily\(String\(listing\.title\|\|""\)\)/);
   assert.match(actions,/Observed product types/);
+  assert.match(actions,/observed stock decreases/);
 });
 
 test("Review these uses shared artwork traits, portfolio imbalance and proven product peers",()=>{
