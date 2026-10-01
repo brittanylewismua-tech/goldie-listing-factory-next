@@ -335,10 +335,22 @@ async function buildMap(request: Request) {
       ranking until that visual evidence exists.
     */
     const completeVisualSignal=visual.basis===shopBasis&&visual.totalSignal===shopSignalTotal;
-    const topListings=soldRowsFast(sales90).slice(0,5).map((row,index)=>({
-      rank:index+1,listingId:row.listingId,title:row.title,imageUrl:row.imageUrl,
-      signal:row.sales,attentionPercent:shopSignalTotal?Math.round(row.sales/Math.max(1,shopSignalTotal)*100):0,
-    }));
+    const topListings=rows.map(row=>{
+      const listingId=Number(row.listing_id);
+      const signal=shopBasis==="sales-90"?(sales90.get(listingId)?.sales??0)
+        :shopBasis==="sales-lifetime"?Math.max(0,Number(performance.get(listingId)?.lifetimeUnits??0))
+        :shopBasis==="favorites"?Math.max(0,Number(row.favorites??0)):0;
+      return {
+        listingId,title:String(row.title||"Listing details unavailable"),
+        imageUrl:String(row.image_url||""),signal,
+      };
+    }).filter(row=>row.signal>0)
+      .sort((a,b)=>b.signal-a.signal||a.listingId-b.listingId)
+      .slice(0,5)
+      .map((row,index)=>({
+        rank:index+1,...row,
+        attentionPercent:shopSignalTotal?Math.round(row.signal/Math.max(1,shopSignalTotal)*100):0,
+      }));
     return NextResponse.json({
       shop:{shopId,shopName:shopRow.shop_name},
       patterns:{
