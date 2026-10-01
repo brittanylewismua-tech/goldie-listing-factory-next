@@ -8,6 +8,8 @@ import type {WinningPatternMap} from "@/app/shop-map-patterns";
 import {ArtworkRecommendations,type ArtworkMarketProof} from "@/app/shop-map-artwork-actions";
 import {ReviewThese} from "@/app/shop-map-evidence-review";
 import type {WinnerDna} from "@/app/shop-map-winner-dna";
+import type {PurchasePriorityMap} from "@/app/shop-map-purchase-priorities";
+import PurchasePriorities from "./purchase-priorities";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
@@ -25,7 +27,7 @@ export type ShopOpportunity = {
   headline:string;explanation:string;action:string;mirrorBotPrompt:string|null;
 };
 const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";
-const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v10:";
+const SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v11:";
 const cacheDay=()=>new Date().toLocaleDateString("en-CA");
 function readShopMapCache(key:string):ShopMap|null{
   if(typeof window==="undefined")return null;
@@ -70,6 +72,8 @@ export type NextBuildPlan = {
 type ShopMap = {
   attention?: AttentionMap;
   patterns?: WinningPatternMap;
+  purchasePriorities?:PurchasePriorityMap;
+  analysedListingIds?:number[];
   opportunities?: ShopOpportunity[];
   nextBuild?: NextBuildPlan;
   marketCorroboration?: MarketCorroboration[];
@@ -122,8 +126,8 @@ type ShopMap = {
 
 function validShopMapForTab(data:ShopMap|null,tab:"overview"|"themes"|"sold"|"money"){
   if(!data||data.error)return false;
-  if(tab==="overview")return Boolean(data.patterns)
-    &&Array.isArray(data.patterns.patterns)&&Array.isArray(data.patterns.listings);
+  if(tab==="overview")return Boolean(data.purchasePriorities)
+    &&Array.isArray(data.purchasePriorities.priorities);
   if(tab==="sold")return Boolean(data.soldListings)&&Array.isArray(data.soldListings?.listings);
   if(tab==="themes")return Array.isArray(data.worlds);
   return Boolean(data.thisMonth)||data.timezoneNeeded===true;
@@ -206,7 +210,7 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
   const lead=map.patterns[0];
   if(!lead&&map.listings.length)return <section className="shop-map-attention shop-map-attention-listings-only">
     <div className="shop-map-attention-listings">
-      <div><h3>Your top listings</h3></div>
+      <div><h3>Visual pattern supporting listings</h3></div>
       <ol>{map.listings.map(listing=><li key={listing.listingId}>
         <span>0{listing.rank}</span>
         {listing.imageUrl?<img src={listing.imageUrl} alt="" width={52} height={52} loading="lazy"/>:<i aria-hidden="true"/>}
@@ -218,14 +222,14 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
   if(!lead)return null;
   return <section className="shop-map-attention">
     <div className="shop-map-attention-head">
-      <div><h2>Let&apos;s build out on what&apos;s already working... here&apos;s the analysis today...</h2></div>
+      <div><h2>Visual patterns to investigate</h2></div>
     </div>
     <article className="shop-map-attention-lead">
       <div className="shop-map-attention-lead-copy">
-        <p className="mini-label">YOUR #1 PRIORITY</p>
+        <p className="mini-label">STRONGEST SHARED VISUAL PATTERN</p>
         <div className="shop-map-attention-lead-title"><span>01</span><h3>{lead.label}</h3></div>
         <strong>{lead.customerPercent}% of customer response</strong>
-        <p className="shop-map-attention-directive"><b>Focus here next.</b></p>
+        <p className="shop-map-attention-directive"><b>Investigate this shared characteristic after the purchase-led priorities.</b></p>
       </div>
       <div className="shop-map-attention-compare" aria-label="Customer response compared with active design presence">
         <div><span>Customer response</span><b>{lead.customerPercent}%</b><i><em style={{width:`${Math.max(2,lead.customerPercent)}%`}}/></i></div>
@@ -234,7 +238,7 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
       </div>
     </article>
     <div className="shop-map-attention-priorities">
-      <div className="shop-map-attention-priorities-head"><h3>Your next priorities</h3></div>
+      <div className="shop-map-attention-priorities-head"><h3>Other visual patterns</h3></div>
       <div className="shop-map-attention-list">
         {map.patterns.slice(1).map(pattern=><article key={pattern.key}>
           <div className="shop-map-attention-row">
@@ -431,9 +435,11 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const [tab, setTab] = useState<"overview" | "themes" | "sold" | "money">("overview");
 
   const [soldDays,setSoldDays]=useState(90);
+  const [selectedDays,setSelectedDays]=useState<30|90>(90);
   const [selectedMonth,setSelectedMonth]=useState("");
   const viewKey=()=>{
-    const params=new URLSearchParams({view:tab==="overview"?"overview-insights":tab});
+    const params=new URLSearchParams({view:tab==="overview"?"overview-purchases":tab});
+    if(tab==="overview")params.set("days",String(selectedDays));
     if(tab==="sold")params.set("days",String(soldDays));
     if(tab==="money"&&selectedMonth)params.set("month",selectedMonth);
     return params.toString();
@@ -449,10 +455,12 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const [syncingMoney,setSyncingMoney]=useState(false);
   const [moneyRefreshError,setMoneyRefreshError]=useState("");
   const [insightsLoading,setInsightsLoading]=useState(false);
+  const [insightsFailed,setInsightsFailed]=useState(false);
   const requestSequence=useRef(0);
   const load = useCallback(async () => {
     const sequence=++requestSequence.current;
-    const params=new URLSearchParams({view:tab==="overview"?"overview-insights":tab});
+    const params=new URLSearchParams({view:tab==="overview"?"overview-purchases":tab});
+    if(tab==="overview")params.set("days",String(selectedDays));
     if(tab==="sold")params.set("days",String(soldDays));
     if(tab==="money"&&selectedMonth)params.set("month",selectedMonth);
     const cacheKey=params.toString();
@@ -481,34 +489,43 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     setLastGood(next);
     writeShopMapCache(cacheKey,next);
     if(tab==="overview"){
-      setInsightsLoading(true);
+      setInsightsLoading(selectedDays===90);
+      setInsightsFailed(false);
       void fetch("/api/shop-map/map?view=overview-support")
         .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
         .then(detail=>{
           if(sequence!==requestSequence.current||!detail||detail.error)return;
-          setMap(current=>{const merged=current?{...current,...detail}:detail;writeShopMapCache("view=overview-insights",merged);return merged;});
+          setMap(current=>{if(!current)return current;
+            const merged={...current,...detail};writeShopMapCache(cacheKey,merged);return merged;});
           setLastGood(current=>current?{...current,...detail}:detail);
-        })
-        .catch(()=>undefined)
-        .finally(()=>{if(sequence===requestSequence.current)setInsightsLoading(false);});
-      const artworkPatterns=next.patterns?.patterns??[];
-      if(artworkPatterns.length){
-        const marketParams=new URLSearchParams({view:"overview-market"});
-        for(const pattern of artworkPatterns.slice(0,5))marketParams.append("pattern",pattern.key);
-        void fetch(`/api/shop-map/map?${marketParams.toString()}`)
+        }).catch(()=>undefined);
+      if(selectedDays===90){
+        void fetch("/api/shop-map/map?view=overview-insights")
           .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
           .then(detail=>{
-            if(sequence!==requestSequence.current||!detail||!Array.isArray(detail.marketProof))return;
+            if(sequence!==requestSequence.current)return;
+            if(!detail||detail.error||!detail.patterns){setInsightsFailed(true);return}
             setMap(current=>{if(!current)return current;
-              const merged={...current,marketProof:detail.marketProof};
-              writeShopMapCache("view=overview-insights",merged);
-              return merged;
-            });
-          })
-          .catch(()=>undefined);
+              const merged={...current,...detail};writeShopMapCache(cacheKey,merged);return merged;});
+            setLastGood(current=>current?{...current,...detail}:detail);
+            const artworkPatterns=detail.patterns.patterns??[];
+            if(!artworkPatterns.length)return;
+            const marketParams=new URLSearchParams({view:"overview-market"});
+            for(const pattern of artworkPatterns.slice(0,5))marketParams.append("pattern",pattern.key);
+            void fetch(`/api/shop-map/map?${marketParams.toString()}`)
+              .then(response=>response.ok?response.json() as Promise<ShopMap>:null)
+              .then(market=>{
+                if(sequence!==requestSequence.current||!market||!Array.isArray(market.marketProof))return;
+                setMap(current=>{if(!current)return current;
+                  const merged={...current,marketProof:market.marketProof};
+                  writeShopMapCache(cacheKey,merged);return merged;
+                });
+              }).catch(()=>undefined);
+          }).catch(()=>{if(sequence===requestSequence.current)setInsightsFailed(true)})
+          .finally(()=>{if(sequence===requestSequence.current)setInsightsLoading(false)});
       }
     } else setInsightsLoading(false);
-  },[tab,soldDays,selectedMonth]);
+  },[tab,soldDays,selectedDays,selectedMonth]);
   useEffect(() => { void load(); }, [load]);
 
   const refreshMoney = async () => {
@@ -595,12 +612,19 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
   const currentKey=viewKey();
   const shown = mapKey===currentKey ? map : null;
   const panelLoading=!shown&&!failed;
+  const periodControl=tab==="overview"?<div className="shop-map-analysis-period">
+    <label>Analysis period <select value={selectedDays}
+      onChange={event=>setSelectedDays(Number(event.target.value)===30?30:90)}>
+      <option value={90}>Last 90 days</option><option value={30}>Last 30 days</option>
+    </select></label>
+  </div>:null;
 
   if (!shown && failed)
     return <main className="shop-map shop-map-redesign">
       <header className="shop-map-head current-page-heading"><div>
         <p className="current-kicker">YOUR SHOP</p><h1>Your shop</h1>
       </div></header>
+      {periodControl}
       <nav className="shop-map-tabs" aria-label="Your shop sections">
         {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
           .map(([key,label])=><button key={key} type="button" aria-current={tab===key?'page':undefined}
@@ -618,6 +642,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
         <h1>Your shop</h1>
         <p>Loading your connected shop and latest performance…</p>
       </div></header>
+      {periodControl}
       <nav className="shop-map-tabs" aria-label="Your shop sections">
         {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
           .map(([key,label])=><button key={key} type="button" aria-current={tab===key?'page':undefined}
@@ -644,7 +669,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     <header className="shop-map-head current-page-heading"><div><p className="current-kicker">YOUR SHOP</p><h1>{shown.shop?.shopName ?? "Your shop"}</h1><p>What is working, where your attention belongs, and what to build out next.</p></div></header>
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
-    <nav className="shop-map-tabs" aria-label="Your shop sections">
+    {periodControl}
+      <nav className="shop-map-tabs" aria-label="Your shop sections">
       {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
         .map(([key,label]) => <button key={key} type="button" aria-current={tab === key ? 'page' : undefined}
           onClick={() => selectTab(key)}>{label}</button>)}
@@ -652,10 +678,14 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
-      {!panelLoading&&!shown.patterns?<section className="shop-map-inline-state"><strong>Your shop is connected.</strong><p>Goldie is still building enough design evidence to rank priorities.</p></section>:null}
-      {shown.patterns?<WinningPatterns map={shown.patterns}/>:null}
-      {shown.patterns?<ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]}/>:null}
-      {!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} marketProof={shown.marketProof??[]}/>}
+      {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} analysedListingIds={shown.analysedListingIds}/>:null}
+      {selectedDays===90&&insightsLoading?<section className="shop-map-inline-state" role="status">Checking product imagery and related patterns…</section>:null}
+      {selectedDays===90&&insightsFailed?<section className="shop-map-inline-state"><strong>Visual analysis could not load.</strong><p>Your purchase priorities remain available. Retry this section by reopening the tab.</p></section>:null}
+      {selectedDays===30?<p className="shop-map-inline-state">Visual pattern analysis is a separate last-90-day view. Select Last 90 days to inspect it.</p>:null}
+      {selectedDays===90&&shown.patterns?<WinningPatterns map={shown.patterns}/>:null}
+      {selectedDays===90&&shown.patterns?<ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]}/>:null}
+      {selectedDays===90&&!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} marketProof={shown.marketProof??[]}/>}
+
     </div>}
 
     {tab === "themes" && <section className="shop-map-card shop-map-themes">

@@ -1667,3 +1667,76 @@
     overflow-wrap:anywhere!important;
   }
 }
+
+/* I01 · Purchase evidence is the priority; artwork patterns remain supporting analysis. */
+#suite-workspace .shop-map-redesign .shop-map-analysis-period{margin:0 0 18px}
+#suite-workspace .shop-map-redesign .shop-map-analysis-period label{
+  display:inline-grid;gap:5px;color:#242024;font-size:12px;font-weight:800}
+#suite-workspace .shop-map-redesign .shop-map-analysis-period select{
+  min-height:44px;padding:8px 32px 8px 12px;border:1.5px solid #000;border-radius:9px;
+  background:#fff;color:#111;font-size:14px;font-weight:700}
+#suite-workspace .shop-map-redesign .shop-map-purchases{
+  min-width:0;margin:0 0 32px;padding:24px;border:2px solid #000;border-radius:16px;
+  background:#fff;box-shadow:5px 5px 0 #000}
+#suite-workspace .shop-map-redesign .shop-map-purchases-head{
+  display:flex;align-items:end;justify-content:space-between;gap:16px;margin:0 0 18px;
+  padding:0 0 18px;border-bottom:2px solid #000}
+#suite-workspace .shop-map-redesign .shop-map-purchases-head h2{
+  margin:0 0 6px;font-size:30px;line-height:1.1;letter-spacing:-.04em}
+#suite-workspace .shop-map-redesign .shop-map-purchases-head p:last-child{
+  margin:0;font-size:15px;line-height:1.4}
+#suite-workspace .shop-map-redesign .shop-map-purchases-head small{
+  max-width:220px;font-size:11px;line-height:1.4;color:#555}
+#suite-workspace .shop-map-redesign .shop-map-purchases-summary,
+#suite-workspace .shop-map-redesign .shop-map-purchases-remaining,
+#suite-workspace .shop-map-redesign .shop-map-purchases-caveat{
+  font-size:13px;line-height:1.5}
+#suite-workspace .shop-map-redesign .shop-map-purchases-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#suite-workspace .shop-map-redesign .shop-map-purchases-grid article{
+  min-width:0;padding:16px;border:1.5px solid #000;border-radius:12px;background:#fff;
+  overflow-wrap:anywhere}
+#suite-workspace .shop-map-redesign .shop-map-purchases-grid article.purchase-lead{
+  border-width:2px;background:#f9d8ed;box-shadow:4px 4px 0 #000}
+#suite-workspace .shop-map-redesign .shop-map-purchases-rank{
+  display:inline-block;margin:0 0 12px;padding:4px 8px;border-radius:99px;
+  background:#000;color:#fff;font-size:10px;font-weight:900;text-transform:uppercase}
+#suite-workspace .shop-map-redesign .shop-map-purchases-product{
+  display:flex;align-items:start;gap:10px;min-width:0}
+#suite-workspace .shop-map-redesign .shop-map-purchases-product img,
+#suite-workspace .shop-map-redesign .shop-map-purchases-image-missing{
+  width:64px;height:64px;flex:0 0 64px;object-fit:cover;border-radius:8px;background:#f2e6ed}
+#suite-workspace .shop-map-redesign .shop-map-purchases-image-missing{
+  display:grid;place-items:center;font-weight:900}
+#suite-workspace .shop-map-redesign .shop-map-purchases-product div{min-width:0}
+#suite-workspace .shop-map-redesign .shop-map-purchases-product h3{
+  margin:0;font-size:16px;line-height:1.2}
+#suite-workspace .shop-map-redesign .shop-map-purchases-product small{
+  display:block;margin-top:3px;font-size:11px}
+#suite-workspace .shop-map-redesign .shop-map-purchases-votes{
+  margin:14px 0 2px;font-size:13px;font-weight:750}
+#suite-workspace .shop-map-redesign .shop-map-purchases-votes strong{
+  font-size:28px;line-height:1;font-weight:950}
+#suite-workspace .shop-map-redesign .shop-map-purchases-share{
+  margin:0 0 6px;font-size:12px;font-weight:800}
+#suite-workspace .shop-map-redesign .shop-map-purchases-revenue{
+  margin:0 0 10px;font-size:12px}
+#suite-workspace .shop-map-redesign .shop-map-purchases-guidance,
+#suite-workspace .shop-map-redesign .shop-map-purchases-analysis{
+  margin:9px 0 0;font-size:12px;line-height:1.45}
+#suite-workspace .shop-map-redesign .shop-map-purchases-analysis{
+  padding-top:9px;border-top:1px solid #d9c9d3;color:#514950}
+#suite-workspace .shop-map-redesign .shop-map-purchases-empty{
+  padding:16px;border:1px solid #ddd;border-radius:10px}
+#suite-workspace .shop-map-redesign .shop-map-purchases-empty p{margin:6px 0 0}
+#suite-workspace .shop-map-redesign .shop-map-purchases-caveat{
+  margin:8px 0 0;color:#514950}
+@media(max-width:900px){
+  #suite-workspace .shop-map-redesign .shop-map-purchases-grid{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+  #suite-workspace .shop-map-redesign .shop-map-purchases{padding:18px}
+  #suite-workspace .shop-map-redesign .shop-map-purchases-head{display:block}
+  #suite-workspace .shop-map-redesign .shop-map-purchases-head h2{font-size:26px}
+  #suite-workspace .shop-map-redesign .shop-map-purchases-head small{display:block;margin-top:10px}
+}

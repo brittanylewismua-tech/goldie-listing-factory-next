@@ -1,4 +1,5 @@
 /* Isolated, read-only reviewer data. No Etsy or member account is used. */
+import { buildPurchasePriorities } from "./shop-map-purchase-priorities";
 const shop = { shopId: 900001, shopName: "Goldie Reviewer Shop", imageUrl: "" };
 const images = [1,2,3,4,5].map(id => `/qa-artwork-${id}.svg`);
 const titles = [
@@ -43,8 +44,20 @@ export const qaListings = titles.map((title,index) => ({
 
 export function qaMapFixture(url: URL) {
   const view = url.searchParams.get("view") ?? "overview-insights";
+  if (view === "overview-purchases") {
+    const now=Math.floor(Date.now()/1000);
+    const recent=[8,5,3,6,1];
+    const sales=titles.flatMap((_,index)=>[
+      {listingId:index+1,quantity:recent[index],priceMinor:2800,currency:"USD",soldAt:now-10*86400,refunded:false},
+      {listingId:index+1,quantity:sold[index]-recent[index],priceMinor:2800,currency:"USD",soldAt:now-45*86400,refunded:false},
+    ]);
+    const days=Number(url.searchParams.get("days"))===30?30:90;
+    return {shop,purchasePriorities:buildPurchasePriorities(sales,
+      titles.map((title,index)=>({listingId:index+1,title,imageUrl:images[index],state:"active"})),
+      {days,now,receiptsComplete:true,refreshedAt:now-3600})};
+  }
   if (view === "overview-insights") return {
-    shop,patterns,visualCoverage:{analysedListings:20,totalListings:20},
+    shop,patterns,analysedListingIds:[1,2,3,4,5],visualCoverage:{analysedListings:20,totalListings:20},
     winnerDna:{basis:"sales-90",sellingArtworks:4,traits:[
       {label:"Typography: stacked bold",sellingArtworks:3,customerPercent:78,catalogPercent:25},
       {label:"Short visible wording",sellingArtworks:3,customerPercent:73,catalogPercent:30},

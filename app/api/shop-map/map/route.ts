@@ -12,6 +12,7 @@ import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
 import { buildAttentionMap } from "@/app/shop-map-attention";
 import { discoverVisualWinningPatterns } from "@/app/shop-map-visual-patterns";
+import { buildPurchasePriorities } from "@/app/shop-map-purchase-priorities";
 import { winnerDnaFrom } from "@/app/shop-map-winner-dna";
 import { EXTRACTION_SCHEMA_VERSION, DESIGN_MODEL_VERSION, DESIGN_PROMPT_VERSION } from "@/app/design-intelligence";
 import { opportunitiesFromAttention } from "@/app/shop-map-opportunities";
@@ -238,11 +239,38 @@ async function buildMap(request: Request) {
 
   /* ---------------------------------------------------------------- sales */
   const saleRows = await db.prepare(
-    `SELECT listing_id, quantity, price_minor, sold_at, refunded
+    `SELECT listing_id, quantity, price_minor, currency, sold_at, refunded
        FROM shop_map_listing_sales WHERE user_id = ? AND shop_id = ?`)
     .bind(user.userId, shopId)
-    .all<{ listing_id: number; quantity: number; price_minor: number;
+    .all<{ listing_id: number; quantity: number; price_minor: number; currency:string;
       sold_at: number; refunded: number }>();
+
+  /*
+    Purchase evidence returns before artwork, classification, monthly finance,
+    and market reads. An unfinished image analysis cannot hide a sold product.
+  */
+  if(view==="overview-purchases"){
+    const receiptState=await db.prepare(
+      `SELECT refreshed_at,last_error FROM finance_sources
+         WHERE user_id=? AND shop_id=? AND source='receipts-complete'`)
+      .bind(user.userId,shopId)
+      .first<{refreshed_at:number;last_error:string}>()
+      .catch(()=>null);
+    const purchasePriorities=buildPurchasePriorities(
+      (saleRows.results??[]).map(sale=>({
+        listingId:Number(sale.listing_id),quantity:Number(sale.quantity),
+        priceMinor:Number(sale.price_minor),currency:String(sale.currency||""),soldAt:Number(sale.sold_at),
+        refunded:Boolean(sale.refunded),
+      })),
+      rows.map(row=>({
+        listingId:Number(row.listing_id),title:String(row.title||"Listing details unavailable"),
+        imageUrl:String(row.image_url||""),state:String(row.state||"unknown"),
+      })),
+      {days:soldDays===30?30:90,now,receiptsComplete:Boolean(receiptState?.refreshed_at&&!receiptState.last_error),
+        refreshedAt:Number(receiptState?.refreshed_at)||null},
+    );
+    return NextResponse.json({shop:{shopId,shopName:shopRow.shop_name},purchasePriorities});
+  }
 
   /*
     SUPPORTING REVIEW EVIDENCE MUST STAY SALES-BASED.
@@ -431,6 +459,7 @@ async function buildMap(request: Request) {
         listings:topListings,
       },
       winnerDna:completeVisualSignal?winnerDnaFrom(visualInput):null,
+      analysedListingIds:[...seen],
       visualCoverage:{
         analysedListings:visualInput.length,totalListings:rows.length,
         analysedActiveListings:analysedActiveIds.size,activeListings:activeListingIds.length,

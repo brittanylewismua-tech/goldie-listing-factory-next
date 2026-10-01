@@ -53,9 +53,9 @@ export function ReviewThese({map,actions,dna,marketProof=[]}:{
       <p>Use those traits to guide a distinct variation. Let the next test prove itself.</p>
     </div>:null}
     {overbuilt.map(row=><div key={row.key} className="shop-map-review-group">
-      <h3>Pause expansion: {row.label}</h3>
+      <h3>Review coverage: {row.label}</h3>
       <p>{row.catalogPercent}% of active designs, but {row.customerPercent}% of recent customer response.</p>
-      <p>Keep proven listings active. Put new design effort where response is stronger.</p>
+      <p>Keep proven listings active. Compare availability, selling time, and exposure before deciding whether to build another variation.</p>
     </div>)}
     {!!actions.length&&<div className="shop-map-review-group">
       {actions.map(row=><details key={row.listingId} className="shop-map-review-row">

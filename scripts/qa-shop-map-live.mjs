@@ -47,6 +47,16 @@ try {
       if(row.loading!=="NO"||row.textLength<200)throw new Error("Blank or incomplete "+key+" panel");
       if(key==="money" && !(await page.locator(".shop-map-money-detail").innerText()).includes("100%"))
         throw new Error("Reviewer cost coverage is not 100%");
+      if(key==="overview"){
+        const votes=page.locator(".shop-map-purchases-votes").first();
+        if(!(await votes.innerText()).includes("22"))throw new Error("90-day purchase leader missing");
+        await page.locator(".shop-map-analysis-period select").selectOption("30");
+        await page.waitForTimeout(1800);
+        if(!(await votes.innerText()).includes("8"))throw new Error("30-day purchase leader missing");
+        await page.screenshot({path:`qa-artifacts/shop-map-${width}-overview-30.png`,fullPage:true});
+        await page.locator(".shop-map-analysis-period select").selectOption("90");
+        await page.waitForTimeout(1800);
+      }
       if(width===390){
         await page.mouse.move(width/2,560);
         const scrollSteps=key==="overview"?9:3;
