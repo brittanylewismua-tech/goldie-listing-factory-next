@@ -452,8 +452,9 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
     if(tab==="money"&&selectedMonth)params.set("month",selectedMonth);
     const cacheKey=params.toString();
     const cached=readShopMapCache(cacheKey);
+    const hasCached=Boolean(cached&&validShopMapForTab(cached,tab));
     setMapKey(cacheKey);
-    if(cached&&validShopMapForTab(cached,tab)){
+    if(hasCached){
       setMap(cached);setLastGood(cached);setFailed(false);setRefreshing(false);
     }else{
       setMap(null);
@@ -464,7 +465,11 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
       .catch(() => null);
     if(sequence!==requestSequence.current)return;
     setRefreshing(false);
-    if (!validShopMapForTab(next,tab)) { setMap(null); setFailed(true); return; }
+    if (!validShopMapForTab(next,tab)) {
+      if(!hasCached)setMap(null);
+      setFailed(true);
+      return;
+    }
     setFailed(false);
     setMapKey(cacheKey);
     setMap(next);
