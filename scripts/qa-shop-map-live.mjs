@@ -45,6 +45,18 @@ try {
       if(row.active.toLowerCase()!==label.toLowerCase())throw new Error("Wrong active tab in "+key);
       if(row.alert!=="none")throw new Error("Alert in "+key+": "+row.alert);
       if(row.loading!=="NO"||row.textLength<200)throw new Error("Blank or incomplete "+key+" panel");
+      if(width===320){
+        await page.mouse.move(width/2,560);
+        const scrollSteps=key==="overview"?5:3;
+        for(let step=1;step<=scrollSteps;step++){
+          await page.mouse.wheel(0,600);
+          await page.waitForTimeout(350);
+          const scrolled=(await page.screenshot({type:"jpeg",quality:35,fullPage:false})).toString("base64");
+          console.log(`QA_IMAGE_BEGIN ${width} ${key}_${step}`);
+          for(let offset=0;offset<scrolled.length;offset+=16000) console.log("QA_IMAGE_CHUNK "+scrolled.slice(offset,offset+16000));
+          console.log(`QA_IMAGE_END ${width} ${key}_${step}`);
+        }
+      }
     }
     await context.close();
   }

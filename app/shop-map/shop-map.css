@@ -1634,3 +1634,16 @@
     opacity:1!important;
   }
 }
+
+/* Keep the priority title inside its card on narrow phones. */
+@media(max-width:360px){
+  #suite-workspace .shop-map-redesign .shop-map-attention-lead-title{
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    gap:8px!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-attention-lead h3{
+    font-size:30px!important;
+    overflow-wrap:anywhere!important;
+  }
+}
