@@ -631,10 +631,8 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
-      {!panelLoading&&!shown.patterns&&(!shown.attention||shown.attention.basis==="none")?<section className="shop-map-inline-state"><strong>Your shop is connected.</strong><p>Goldie is still building enough design evidence to rank priorities.</p></section>:null}
-      {shown.patterns?<WinningPatterns map={shown.patterns}/>:shown.attention&&shown.attention.basis!=="none"?<AttentionEngine attention={shown.attention}/>:null}
-      {!shown.patterns?.patterns?.length&&shown.nextBuild&&<NextBuildAllocation plan={shown.nextBuild}/>}
-      {!shown.patterns?.patterns?.length&&!!shown.opportunities?.length&&<OpportunityRecommendations rows={shown.opportunities} marketEvidence={shown.marketCorroboration??[]}/>} 
+      {!panelLoading&&!shown.patterns?<section className="shop-map-inline-state"><strong>Your shop is connected.</strong><p>Goldie is still building enough design evidence to rank priorities.</p></section>:null}
+      {shown.patterns?<WinningPatterns map={shown.patterns}/>:null}
       {!insightsLoading||shown.catalogActions?<div className="shop-map-opportunity-stack">
         <CatalogReview actions={shown.catalogActions ?? []} shopId={shown.shop?.shopId}/>
         <DesignReach/>
