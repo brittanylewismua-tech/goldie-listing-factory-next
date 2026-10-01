@@ -54,7 +54,7 @@ test("changing it forces affected rollups to be recomputed", () => {
 
 test("monthly money is blocked without this shop's own timezone", () => {
   assert.match(map, /timezoneNeeded: !timezone/);
-  assert.match(map, /const window = timezone \? monthWindow\(month, timezone\) : null/);
+  assert.match(map, /window = timezone \? monthWindow\(month, timezone\) : null/);
 });
 
 test("daylight saving still comes from IANA rules", () => {
