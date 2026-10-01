@@ -18,7 +18,18 @@ const db = () => (env as unknown as { DB: D1Database }).DB;
 
 export type ListingState = "active" | "inactive" | "sold_out" | "expired" | "draft" | "unknown";
 
+let listingTablesReady: Promise<void> | null = null;
+
 export async function ensureListingTables() {
+  if (!listingTablesReady)
+    listingTablesReady = prepareListingTables().catch(error => {
+      listingTablesReady = null;
+      throw error;
+    });
+  return listingTablesReady;
+}
+
+async function prepareListingTables() {
   await db().batch([
     db().prepare(`CREATE TABLE IF NOT EXISTS shop_map_listings (
       user_id TEXT NOT NULL,
