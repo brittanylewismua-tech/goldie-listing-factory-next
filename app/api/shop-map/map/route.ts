@@ -364,7 +364,7 @@ async function buildMap(request: Request) {
           :shopBasis==="favorites"?"favorites":"not enough customer response yet",
         totalSignal:shopSignalTotal,
         patterns:completeVisualSignal
-          ? visual.patterns.map(row=>({...row,sellingListings:row.artworkCount,catalogListings:row.artworkCount}))
+          ? visual.patterns.map(row=>({...row,sellingListings:row.sellingArtworkCount,catalogListings:row.activeArtworkCount}))
           : [],
         listings:topListings,
       },
