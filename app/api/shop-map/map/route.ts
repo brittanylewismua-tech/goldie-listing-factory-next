@@ -377,6 +377,19 @@ async function buildMap(request: Request) {
     });
   }
 
+  /*
+    SUPPORTING REVIEW EVIDENCE MUST STAY SALES-BASED.
+
+    Artwork intelligence owns prioritization. This request only supplies
+    lifecycle review actions such as a recent seller going inactive or a real
+    sales drop. It returns before world classification and Market Radar work.
+  */
+  if(view==="overview-support"){
+    return NextResponse.json({
+      catalogActions:catalogActions(rows,saleRows.results??[],now),
+    });
+  }
+
   if(view==="overview"){
     const sales90=totalsForFast(90);
     const everyId=rows.map(row=>Number(row.listing_id));
@@ -554,56 +567,6 @@ async function buildMap(request: Request) {
     world assignments. Reviews, monthly finance, Etsy display refreshes and
     Market Radar corroboration are supporting layers and must not block it.
   */
-  if(view==="overview-support"){
-    const sales90=totalsForFast(90);
-    const activeIds=new Set(rows.filter(row=>String(row.state)==="active")
-      .map(row=>Number(row.listing_id)));
-    const primaryWorldByListing=new Map(assignments.map(row=>
-      [row.listingId,row.worldIds[0]??null] as const));
-    const attention=buildAttentionMap(rows.map(row=>{
-      const id=Number(row.listing_id);
-      return {
-        listingId:id,title:String(row.title||"Listing details unavailable"),
-        imageUrl:String(row.image_url||""),state:String(row.state||""),
-        favorites:row.favorites===null?null:Number(row.favorites),
-        sales90:sales90.get(id)?.sales??0,
-        lifetimeSales:performance.get(id)?.lifetimeUnits??0,
-        worldId:primaryWorldByListing.get(id)??null,
-      };
-    }),worlds.map(world=>({
-      worldId:world.id,label:world.label,
-      activeListings:world.listingIds.filter(id=>activeIds.has(id)).length,
-    })),{activeListingsTotal:activeIds.size});
-    const nextBuild=buildPlan(attention,10);
-
-    let marketCorroboration:ReturnType<typeof corroborateAttentionWithMarket>=[];
-    try{
-      const savedWatches=await watchesFor(user.userId);
-      const relevantKeys=new Set(marketWatchKeysForAttention(attention,savedWatches));
-      const relevant=savedWatches.filter(watch=>relevantKeys.has(watch.key));
-      const marketViewRows=await Promise.all(relevant.map(async watch=>{
-        try{
-          const niche=await readNiche(user.userId,watch.terms,watch.key,now);
-          return {key:watch.key,phrase:watch.phrase,terms:watch.terms,
-            summary:niche.summary,listings:niche.listings};
-        }catch{return null;}
-      }));
-      const marketViews=marketViewRows.filter(
-        (row):row is Exclude<(typeof marketViewRows)[number],null>=>row!==null);
-      const ownFamiliesByWorld=new Map(worlds.map(world=>
-        [world.id,world.productFamilies.map(row=>row.family)] as const));
-      marketCorroboration=corroborateAttentionWithMarket(
-        attention,marketViews,ownFamiliesByWorld);
-    }catch{
-      /* Supporting market evidence must never block the shop's own evidence. */
-    }
-    return NextResponse.json({
-      marketCorroboration,
-      opportunities:opportunitiesFromAttention(attention,marketCorroboration),
-      catalogActions:catalogActions(rows,saleRows.results??[],now),
-    });
-  }
-
   /*
     ONLY THE FULL LEGACY MAP BELOW THIS POINT NEEDS MONTH BOUNDARIES.
 
