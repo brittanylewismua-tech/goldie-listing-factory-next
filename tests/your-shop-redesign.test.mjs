@@ -12,7 +12,7 @@ const currentSuite=readFileSync("app/current-suite.css","utf8");
 test("Your Shop defaults to Overview and requests only the active tab",()=>{
   assert.match(nav,/return value==='money'\|\|value==='themes'\|\|value==='sold'\?value:'overview'/);
   assert.match(client,/useState<"overview" \| "themes" \| "sold" \| "money">\("overview"\)/);
-  assert.match(client,/new URLSearchParams\(\{view:tab==="overview"\?"overview-insights":tab\}\)/);
+  assert.match(client,/new URLSearchParams\(\{view:tab==="overview"\?"overview-purchases":tab\}\)/);
 });
 
 test("Your Numbers, Sold Listings, and the first Overview render return before world building",()=>{
@@ -38,8 +38,9 @@ test("the Your Shop section switcher is a centered pink-and-white tab control",(
   assert.match(final,/button\[aria-current=page\]\{[\s\S]*background:#ee6fc0!important;[\s\S]*box-shadow:2px 2px 0 #000!important;/);
 });
 
-test("Overview puts artwork patterns before review utilities",()=>{
+test("Overview puts purchased products first and artwork patterns before review utilities",()=>{
   const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
+  assert.ok(overview.indexOf("PurchasePriorities")<overview.indexOf("WinningPatterns"));
   assert.ok(overview.indexOf("WinningPatterns")<overview.indexOf("ReviewThese"));
   assert.ok(overview.indexOf("WinningPatterns")<overview.indexOf("ArtworkRecommendations"));
   assert.match(overview,/shown\.patterns/);
@@ -64,7 +65,7 @@ test("Sold Listings uses one toolbar and image-led rows",()=>{
 
 
 test("Overview merges deeper opportunity intelligence without blocking the first render",()=>{
-  assert.match(client,/tab==="overview"\?"overview-insights":tab/);
+  assert.match(client,/tab==="overview"\?"overview-purchases":tab/);
   assert.match(client,/setMap\(current=>\{const merged=current\?\{\.\.\.current,\.\.\.detail\}:detail/);
   assert.match(client,/view=overview-support/);
 });
@@ -84,9 +85,9 @@ test("Monthly Numbers exposes the full operating breakdown",()=>{
 
 
 test("Opportunity Engine uses a dedicated core request before optional support",()=>{
-  assert.match(client,/tab==="overview"\?"overview-insights":tab/);
+  assert.match(client,/tab==="overview"\?"overview-purchases":tab/);
   assert.match(client,/view=overview-support/);
-  const core=route.indexOf('if(view==="overview-insights")');
+  const core=route.indexOf('if(view==="overview-purchases")');
   const reviews=route.indexOf("/* ------------------------------------------------------- review evidence */");
   const finance=route.indexOf("/* --------------------------------------------------------- this month's money */");
   assert.ok(core>-1&&reviews>-1&&finance>-1&&core<reviews&&core<finance,
@@ -110,7 +111,7 @@ test("global suite styles do not override the Your Shop tab control",()=>{
 });
 
 test("Opportunity Engine cache version changes when ranking semantics change",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v10:"/);
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v11:"/);
 });
 
 
@@ -134,8 +135,8 @@ test("Sold Listings cannot crash on an undefined sold collection",()=>{
   assert.match(client,/No sold listings in this period/);
 });
 
-test("artwork-led Opportunity Engine invalidates older cached responses",()=>{
-  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v10:"/);
+test("purchase-led Opportunity Engine invalidates older cached responses",()=>{
+  assert.match(client,/SHOP_MAP_CACHE_PREFIX="goldie:shop-map:v11:"/);
 });
 
 
@@ -170,7 +171,7 @@ test("each Your Shop tab validates its response before rendering",()=>{
   assert.match(client,/function validShopMapForTab/);
   assert.match(client,/tab==="sold".*soldListings/s);
   assert.match(client,/tab==="themes".*Array\.isArray\(data\.worlds\)/s);
-  assert.match(client,/tab==="overview".*data\.patterns/s);
+  assert.match(client,/tab==="overview".*data\.purchasePriorities/s);
   assert.match(client,/if\s*\(\s*!validShopMapForTab\(next,tab\)\s*\)/);
 });
 

@@ -1699,7 +1699,7 @@
 #suite-workspace .shop-map-redesign .shop-map-purchases-grid article.purchase-lead{
   border-width:2px;background:#f9d8ed;box-shadow:4px 4px 0 #000}
 #suite-workspace .shop-map-redesign .shop-map-purchases-rank{
-  display:inline-block;margin:0 0 12px;padding:4px 8px;border-radius:99px;
+  display:inline-block;margin:0 0 12px;padding:4px 8px;border-radius:999px;
   background:#000;color:#fff;font-size:10px;font-weight:900;text-transform:uppercase}
 #suite-workspace .shop-map-redesign .shop-map-purchases-product{
   display:flex;align-items:start;gap:10px;min-width:0}

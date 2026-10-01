@@ -12,15 +12,13 @@ test("the redesigned map has four clear sections", () => {
   assert.match(client, /aria-current=\{tab === key \? 'page'/);
 });
 
-test("Opportunity Engine leads with the analysis headline before strongest listings", () => {
-  assert.match(client, /Let&apos;s build out on what&apos;s already working\.\.\. here&apos;s the analysis today\.\.\./);
-  assert.match(client, /YOUR #1 PRIORITY/);
-  assert.match(client, /Your top listings/);
-  assert.match(client, /Let&apos;s build out on what&apos;s already working/);
-  assert.match(client, /Your next priorities/);
-  assert.match(client, /shop-map-attention-listings-only/);
-  assert.doesNotMatch(client, /WHAT CUSTOMERS ARE VOTING FOR|The patterns showing up disproportionately/);
-  assert.doesNotMatch(client, /<h2>Top sellers<\/h2>/);
+test("Opportunity Engine leads with purchased products before visual patterns", () => {
+  const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
+  assert.match(overview, /PurchasePriorities map=\{shown\.purchasePriorities\}/);
+  assert.match(overview, /WinningPatterns map=\{shown\.patterns\}/);
+  assert.ok(overview.indexOf("PurchasePriorities") < overview.indexOf("WinningPatterns"));
+  assert.match(client, /view:tab==="overview"\?"overview-purchases":tab/);
+  assert.doesNotMatch(overview, /<h2>Top sellers<\/h2>/);
 });
 
 test("sold listings keep every metric within the selected sales period", () => {

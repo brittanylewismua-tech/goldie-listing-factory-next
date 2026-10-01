@@ -6,6 +6,7 @@ const client=readFileSync("app/shop-map/shop-map-client.tsx","utf8");
 const route=readFileSync("app/api/shop-map/map/route.ts","utf8");
 const actions=readFileSync("app/shop-map-artwork-actions.tsx","utf8");
 const review=readFileSync("app/shop-map-evidence-review.tsx","utf8");
+const purchase=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
 const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
 
 test("Opportunity Engine keeps analysis, reviews and deeper actions in order",()=>{
@@ -52,7 +53,7 @@ test("ranked priorities keep customer and active-design attention visually compa
 
 test("Opportunity Engine can discover winning patterns without assuming a customer world exists",()=>{
   assert.match(client,/WinningPatterns/);
-  assert.match(client,/Let&apos;s build out on what&apos;s already working\.\.\. here&apos;s the analysis today\.\.\./);
+  assert.match(client,/PurchasePriorities map=\{shown\.purchasePriorities\}/);
   assert.doesNotMatch(overview,/WHAT CUSTOMERS ARE VOTING FOR/);
   assert.doesNotMatch(overview,/Common shop-wide wording is discounted/);
   assert.doesNotMatch(overview,/It will not manufacture the rest of a top five/);
@@ -61,7 +62,7 @@ test("Opportunity Engine can discover winning patterns without assuming a custom
 test("Opportunity Engine copy stays short",()=>{
   assert.doesNotMatch(overview,/This pattern appears in/);
   assert.doesNotMatch(overview,/It will not manufacture/);
-  assert.match(client,/Focus here next/);
+  assert.match(purchase,/Where to focus next/);
   assert.match(client,/Your top listings/);
 });
 
@@ -82,7 +83,7 @@ test("MirrorBot handoffs use artwork concepts and never SEO titles",()=>{
   assert.match(actions,/Do not infer artwork from SEO titles or tags/);
   assert.match(actions,/navigator\.clipboard\.writeText\(prompt\)/);
   assert.match(actions,/Open MirrorBot/);
-  assert.match(actions,/PAUSE EXPANSION/);
+  assert.match(actions,/REVIEW COVERAGE/);
 });
 
 test("tracked market proof must match the artwork phrase exactly and remains optional",()=>{

@@ -29,7 +29,7 @@ export default function PurchasePriorities({map,analysedListingIds=[]}:{map:Purc
           The product with the most unit votes leads the next build decision.
         </p>
         <div className="shop-map-purchases-grid">
-          {map.priorities.map((row,index)=><article key={row.listingId} className={index===0?"purchase-lead":""}>
+          {map.priorities.map((row,index)=><article key={row.listingId} className={row.rank===1?"purchase-lead":""}>
             <span className="shop-map-purchases-rank">Priority {row.rank}</span>
             <div className="shop-map-purchases-product">
               {row.imageUrl?<img src={row.imageUrl} alt="" width={82} height={82} loading="lazy"/>:
@@ -39,7 +39,7 @@ export default function PurchasePriorities({map,analysedListingIds=[]}:{map:Purc
             <p className="shop-map-purchases-votes"><strong>{row.unitsPurchased}</strong> units purchased</p>
             <p className="shop-map-purchases-share">{percent(row.share)} {map.shareLabel.toLowerCase()} · {row.orders} recorded transaction{row.orders===1?"":"s"}</p>
             <p className="shop-map-purchases-revenue">Product revenue: {row.productRevenueMinor!==null&&row.currency?money(row.productRevenueMinor,row.currency):"Unavailable across currencies"}</p>
-            <p className="shop-map-purchases-guidance">{index===0
+            <p className="shop-map-purchases-guidance">{row.rank===1
               ? `This product accounts for ${percent(row.share)} of ${sharePhrase} in the ${period}. Give this product direction the most attention in your next build.`
               : `Keep this purchased product visible at its actual strength while building from the leader.`}</p>
             <p className="shop-map-purchases-analysis">{analysed.has(row.listingId)
