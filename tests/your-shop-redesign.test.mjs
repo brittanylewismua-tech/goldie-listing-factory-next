@@ -190,3 +190,10 @@ test("Opportunity Engine withholds priorities when artwork evidence misses custo
   assert.match(route,/patterns:completeVisualSignal[\s\S]*\? visual\.patterns\.map/);
   assert.match(route,/attentionPercent:shopSignalTotal\?Math\.round/);
 });
+
+test("Opportunity Engine top listings follow the same fallback evidence ladder as priorities",()=>{
+  assert.match(route,/shopBasis==="sales-90"\?\(sales90\.get\(listingId\)\?\.sales\?\?0\)/);
+  assert.match(route,/shopBasis==="sales-lifetime"\?Math\.max\(0,Number\(performance\.get\(listingId\)\?\.lifetimeUnits\?\?0\)\)/);
+  assert.match(route,/shopBasis==="favorites"\?Math\.max\(0,Number\(row\.favorites\?\?0\)\):0/);
+  assert.match(route,/\.sort\(\(a,b\)=>b\.signal-a\.signal/);
+});
