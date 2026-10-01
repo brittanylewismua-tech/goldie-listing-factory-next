@@ -47,7 +47,7 @@ try {
       if(row.loading!=="NO"||row.textLength<200)throw new Error("Blank or incomplete "+key+" panel");
       if(width===320){
         await page.mouse.move(width/2,560);
-        const scrollSteps=key==="overview"?5:3;
+        const scrollSteps=key==="overview"?9:3;
         for(let step=1;step<=scrollSteps;step++){
           await page.mouse.wheel(0,600);
           await page.waitForTimeout(350);

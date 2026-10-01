@@ -1647,3 +1647,12 @@
     overflow-wrap:anywhere!important;
   }
 }
+
+/* Review-row figures must wrap within a narrow mobile card. */
+@media(max-width:360px){
+  #suite-workspace .shop-map-redesign .shop-map-review-row>summary span{
+    max-width:100%!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+  }
+}
