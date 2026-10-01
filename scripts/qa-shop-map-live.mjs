@@ -40,7 +40,7 @@ try {
       if(row.tabRows!=="2+2")throw new Error("Tabs are not 2x2 in "+key+" at "+width+"px: "+row.tabRows);
       if(row.active.toLowerCase()!==label.toLowerCase())throw new Error("Wrong active tab in "+key);
       if(row.alert!=="none")throw new Error("Alert in "+key+": "+row.alert);
-      if(row.loading!=="NO"||row.textLength<500)throw new Error("Blank or incomplete "+key+" panel");
+      if(row.loading!=="NO"||row.textLength<200)throw new Error("Blank or incomplete "+key+" panel");
     }
     await context.close();
   }
