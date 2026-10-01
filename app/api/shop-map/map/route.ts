@@ -377,51 +377,6 @@ async function buildMap(request: Request) {
     });
   }
 
-  if(view==="money"){
-    const financial=timezone?await readFinancialMonth(user.userId,shopId,month,timezone):null;
-    const productionCoverage=financial?.coverage.productionCoverage??0;
-    const profit=financial?.knownOperatingProfitMinor??null;
-    const missingCosts=financial?Math.round((1-productionCoverage)*(financial.coverage.receipts??0)):0;
-    const sourceRows=await db.prepare(
-      `SELECT source, refreshed_at, last_error FROM finance_sources WHERE user_id = ? AND shop_id = ?`)
-      .bind(user.userId,shopId).all<{source:string;refreshed_at:number;last_error:string}>();
-    const asOf=financialAsOf((sourceRows.results??[]).map(row=>({
-      source:row.source,refreshedAt:Number(row.refreshed_at),lastError:row.last_error})));
-    const nowSeconds=Math.floor(Date.now()/1000);
-    return NextResponse.json({
-      shop:{shopId,shopName:shopRow.shop_name},
-      timezoneNeeded:!timezone,month,
-      thisMonth:{
-        revenueMinor:financial?.grossSellerRevenueMinor??null,
-        productRevenueMinor:financial?.productRevenueMinor??null,
-        shippingCollectedMinor:financial?.shippingCollectedMinor??null,
-        discountsMinor:financial?.discountsMinor??null,
-        marketplaceTaxMinor:financial?.marketplaceTaxMinor??null,
-        etsyFeesMinor:financial?financial.etsyTransactionFeesMinor+financial.etsyProcessingFeesMinor+financial.etsyListingFeesMinor+financial.etsyAdvertisingFeesMinor+financial.etsyOtherFeesMinor:null,
-        etsyTransactionFeesMinor:financial?.etsyTransactionFeesMinor??null,
-        etsyProcessingFeesMinor:financial?.etsyProcessingFeesMinor??null,
-        etsyListingFeesMinor:financial?.etsyListingFeesMinor??null,
-        etsyAdvertisingFeesMinor:financial?.etsyAdvertisingFeesMinor??null,
-        etsyOtherFeesMinor:financial?.etsyOtherFeesMinor??null,
-        productionCostMinor:financial&&productionCoverage===1?financial.productionCostMinor+financial.productionShippingMinor:null,
-        productionProductCostMinor:financial?.productionCostMinor??null,
-        productionShippingMinor:financial?.productionShippingMinor??null,
-        refundsMinor:financial?.refundsMinor??null,adjustmentsMinor:financial?.adjustmentsMinor??null,
-        profitMarginPercent:financial?.profitMarginPercent??null,
-        currency:financial?.currency??"USD",
-        headline:profit===null?(missingCosts===1?"One order's cost is missing":missingCosts>1?`${missingCosts} order costs are missing`:"Profit not available yet"):financial?.manualCostCount?"Profit with your entered costs":"Verified profit",
-        label:profit===null?"unavailable":"verified",
-        salesAsOf:asOf,salesStale:isStale(asOf,nowSeconds),
-        freshness:asOf?freshnessNote({asOf,nowSeconds,timezone:timezone||"UTC"}):"The financial refresh is incomplete. Refresh your numbers to try again.",
-        profitMinor:profit,
-        accuracy:profit===null?(missingCosts>0?`Add production costs for ${missingCosts} ${missingCosts===1?"order":"orders"} to calculate profit.`:"Profit is unavailable while sales, fees, refunds, or production costs are missing."):`Includes sales, Etsy fees, refunds, adjustments, and production costs.${financial?.manualCostCount?` ${financial.manualCostCount} order costs were entered by you.`:""}`,
-        coverage:{verified:productionCoverage,estimated:0,unavailable:1-productionCoverage},
-        orders:financial?.coverage.receipts??0,
-      },
-    });
-  }
-
-
   if(view==="overview"){
     const sales90=totalsForFast(90);
     const everyId=rows.map(row=>Number(row.listing_id));
