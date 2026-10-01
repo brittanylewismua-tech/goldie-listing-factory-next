@@ -33,18 +33,23 @@ const title=(value:string)=>value.split(" ").map(word=>word?word[0].toUpperCase(
 const GENERIC=new Set(["feminist","feminism","girl power","women's rights","womens rights","political","politics"]);
 
 function concepts(source:VisualPatternSource){
-  const out=new Set<string>();
+  const out=new Map<string,number>();
+  const add=(value:string,quality:number)=>{
+    const key=clean(value);
+    if(!key||GENERIC.has(key))return;
+    out.set(key,Math.max(quality,out.get(key)??0));
+  };
   const d=source.design;
   for(const line of d.wording){
     const value=clean(line);
-    if(value.split(" ").length>=2&&!GENERIC.has(value))out.add(value);
+    if(value.split(" ").length>=2)add(value,3);
   }
   for(const value of [...d.audienceCues,...d.recipientCues,...d.occasionCues]){
     const normalized=clean(value);
-    if(normalized&&normalized.length>=4&&!GENERIC.has(normalized))out.add(normalized);
+    if(normalized.length>=4)add(normalized,2);
   }
   const illustration=clean(d.illustrationCategory);
-  if(illustration&&illustration!=="none"&&illustration!=="text"&&illustration!=="typography")out.add(illustration);
+  if(illustration&&illustration!=="none"&&illustration!=="text"&&illustration!=="typography")add(illustration,1);
   return out;
 }
 
@@ -57,40 +62,49 @@ export function discoverVisualWinningPatterns(rows:VisualPatternSource[]){
     :basis==="sales-lifetime"?Math.max(0,row.lifetimeSales)
     :basis==="favorites"?Math.max(0,row.favorites??0):0;
 
-  const artwork=new Map<string,{signal:number;listingIds:Set<number>;concepts:Set<string>}>();
+  const artwork=new Map<string,{signal:number;listingIds:Set<number>;concepts:Map<string,number>}>();
   for(const row of rows){
-    const held=artwork.get(row.artworkHash)??{signal:0,listingIds:new Set<number>(),concepts:new Set<string>()};
+    const held=artwork.get(row.artworkHash)??{signal:0,listingIds:new Set<number>(),concepts:new Map<string,number>()};
     held.signal+=signalOf(row);
     held.listingIds.add(row.listingId);
-    for(const concept of concepts(row))held.concepts.add(concept);
+    for(const [concept,quality] of concepts(row))
+      held.concepts.set(concept,Math.max(quality,held.concepts.get(concept)??0));
     artwork.set(row.artworkHash,held);
   }
   const totalSignal=[...artwork.values()].reduce((sum,row)=>sum+row.signal,0);
   const artworkTotal=Math.max(1,artwork.size);
   if(!totalSignal)return {basis,totalSignal:0,patterns:[],coverageArtworks:artwork.size};
 
-  const byConcept=new Map<string,{artworks:Set<string>;signal:number;listingIds:Set<number>}>();
+  const byConcept=new Map<string,{artworks:Set<string>;signal:number;listingIds:Set<number>;quality:number}>();
   for(const [hash,row] of artwork){
-    for(const concept of row.concepts){
-      const held=byConcept.get(concept)??{artworks:new Set<string>(),signal:0,listingIds:new Set<number>()};
+    for(const [concept,quality] of row.concepts){
+      const held=byConcept.get(concept)??{artworks:new Set<string>(),signal:0,listingIds:new Set<number>(),quality:0};
       held.artworks.add(hash);
       held.signal+=row.signal;
+      held.quality=Math.max(held.quality,quality);
       for(const id of row.listingIds)held.listingIds.add(id);
       byConcept.set(concept,held);
     }
   }
 
   const scored=[...byConcept.entries()].flatMap(([key,row])=>{
-    if(row.artworks.size<2)return [];
     const customer=row.signal/totalSignal;
     const catalog=row.artworks.size/artworkTotal;
     const lift=customer/Math.max(.01,catalog);
     const gap=customer-catalog;
+    /*
+      Repeated visual concepts are normal pattern evidence. One artwork may
+      also be enough when it is a genuine mega-winner: if a single design owns
+      at least a third of customer response, hiding it because no second design
+      repeats the concept would understate exactly what customers are rewarding.
+    */
+    const megaWinner=row.artworks.size===1&&artworkTotal>1&&customer>=.33;
+    if(row.artworks.size<2&&!megaWinner)return [];
     if(customer<.08)return [];
-    if(lift<1.15&&gap<.04)return [];
-    const score=customer*Math.max(1,lift)*(1-catalog*.45);
+    if(!megaWinner&&lift<1.15&&gap<.04)return [];
+    const score=customer*Math.max(1,lift)*(1-catalog*.45)*(1+row.quality*.04);
     return [{key,row,customer,catalog,lift,gap,score}];
-  }).sort((a,b)=>b.score-a.score||b.customer-a.customer||a.key.localeCompare(b.key));
+  }).sort((a,b)=>b.score-a.score||b.customer-a.customer||b.row.quality-a.row.quality||a.key.localeCompare(b.key));
 
   const chosen:typeof scored=[];
   for(const candidate of scored){
