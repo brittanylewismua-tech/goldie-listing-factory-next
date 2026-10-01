@@ -158,6 +158,7 @@ try {
   if(await tieCards.count()!==4)throw new Error("The fourth tied product is hidden");
   if(await tiePage.locator(".shop-map-purchases-grid article.purchase-lead").count()!==4)
     throw new Error("Equal winners have unequal visual emphasis");
+  await tieCards.last().getByText("No supported product-specific direction is available yet.").waitFor({timeout:15000});
   const tieImage=(await tiePage.screenshot({type:"jpeg",quality:35})).toString("base64");
   console.log("QA_IMAGE_BEGIN 320 tied_priorities");
   for(let offset=0;offset<tieImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+tieImage.slice(offset,offset+16000));

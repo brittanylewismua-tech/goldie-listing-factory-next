@@ -680,7 +680,7 @@ export default function ShopMapClient({ signedInEmail }: { signedInEmail?: strin
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
-      {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} directions={shown.productDirections}/>:null}
+      {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} directions={shown.productDirections} analysisFailed={insightsFailed}/>:null}
       {insightsLoading?<section className="shop-map-inline-state" role="status">Checking product imagery and catalog coverage…</section>:null}
       {insightsFailed?<section className="shop-map-inline-state"><strong>Product analysis could not load.</strong><p>Your purchase priorities remain available. Retry this section by reopening the tab.</p></section>:null}
       {selectedDays===30?<p className="shop-map-inline-state">Visual pattern analysis is a separate last-90-day view. Select Last 90 days to inspect it.</p>:null}

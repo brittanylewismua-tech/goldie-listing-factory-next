@@ -43,6 +43,20 @@ test("partial catalog identities and unconfirmed production make the format idea
   assert.match(partial.catalogCoverage,/1 active listing has no linked artwork identity/);
 });
 
+test("every tied leader beyond the compact cutoff receives a direction or review state",()=>{
+  const map=buildPurchasePriorities([sales(1,5),sales(2,5),sales(3,5),sales(4,5)],
+    [1,2,3,4].map(id=>listing(id,`Winner ${id}`)),{days:90,now,receiptsComplete:true});
+  const analyzed=[1,2,3,4].map(id=>({...tee,listingId:id,artworkHash:`art-${id}`}));
+  assert.deepEqual(buildProductDirections(map,[...analyzed,{...sweater,listingId:9}]).map(row=>row.listingId),[1,2,3,4]);
+});
+
+test("a tie for third expands directions through the tie but not into weaker products",()=>{
+  const map=buildPurchasePriorities([sales(1,10),sales(2,8),sales(3,5),sales(4,5),sales(5,1)],
+    [1,2,3,4,5].map(id=>listing(id,`Winner ${id}`)),{days:90,now,receiptsComplete:true});
+  const analyzed=[1,2,3,4,5].map(id=>({...tee,listingId:id,artworkHash:`art-${id}`}));
+  assert.deepEqual(buildProductDirections(map,[...analyzed,{...sweater,listingId:9}]).map(row=>row.listingId),[1,2,3,4]);
+});
+
 test("missing imagery and unsupported format do not produce invented suggestions",()=>{
   const [missing]=buildProductDirections(purchase(),[{...tee,design:null},sweater]);
   assert.equal(missing.kind,"research");

@@ -123,6 +123,14 @@ test("Winner DNA labels its subset denominator and supporting listing identities
   assert.doesNotMatch(review,/% of winning response/);
 });
 
+test("a tied listing without a direction cannot remain in perpetual loading",()=>{
+  const card=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
+  assert.match(card,/analysisFailed/);
+  assert.match(card,/No supported product-specific direction is available yet/);
+  assert.match(card,/Product analysis could not load/);
+  assert.match(client,/analysisFailed=\{insightsFailed\}/);
+});
+
 test("Your Shop reuses same-day cached data without leaking data between tabs",()=>{
   assert.match(client,/SHOP_MAP_CACHE_PREFIX/);
   assert.match(client,/sessionStorage\.getItem/);

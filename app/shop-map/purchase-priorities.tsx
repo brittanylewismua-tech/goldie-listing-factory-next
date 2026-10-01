@@ -6,9 +6,9 @@ import {useState} from "react";
 const money=(minor:number,currency:string)=>new Intl.NumberFormat(undefined,{style:"currency",currency}).format(minor/100);
 const percent=(share:number)=>share>0&&share<.005?"<1%":`${Math.round(share*100)}%`;
 
-export default function PurchasePriorities({map,directions=[]}:{map:PurchasePriorityMap;directions?:ProductDirection[]}){
+export default function PurchasePriorities({map,directions,analysisFailed=false}:{map:PurchasePriorityMap;directions?:ProductDirection[];analysisFailed?:boolean}){
   const [showTies,setShowTies]=useState(false);
-  const byListing=new Map(directions.map(row=>[row.listingId,row]));
+  const byListing=new Map((directions??[]).map(row=>[row.listingId,row]));
   const cutoffUnits=map.priorities.at(-1)?.unitsPurchased??0;
   const tiedBeyondCutoff=map.listings.slice(map.priorities.length).filter(row=>row.unitsPurchased===cutoffUnits);
   const visiblePriorities=showTies?[...map.priorities,...tiedBeyondCutoff]:map.priorities;
@@ -65,7 +65,7 @@ export default function PurchasePriorities({map,directions=[]}:{map:PurchasePrio
                 {direction.researchQuestion?<p>Next step: {direction.researchQuestion}</p>:null}
                 {direction.relatedListingId?<a href={`https://www.etsy.com/listing/${direction.relatedListingId}`} target="_blank" rel="noopener noreferrer">See existing listing ↗</a>:null}
               </div>;
-            })():<p className="shop-map-purchases-analysis">Checking this product image and related catalog before suggesting a next test.</p>}
+            })():<p className="shop-map-purchases-analysis">{analysisFailed?"Product analysis could not load. Reopen this section to retry.":directions?"No supported product-specific direction is available yet. Review this purchased product and its existing versions before choosing a build.":"Checking this product image and related catalog before suggesting a next test."}</p>}
           </article>)}
         </div>
         {hiddenUnits>0?<p className="shop-map-purchases-remaining">{hiddenUnits} other purchased unit{hiddenUnits===1?"":"s"} in the {period} remain outside these leading cards.</p>:null}

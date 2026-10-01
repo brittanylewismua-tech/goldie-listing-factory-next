@@ -50,7 +50,10 @@ export function buildProductDirections(
 ):ProductDirection[]{
   const byId=new Map(listings.map(row=>[row.listingId,row]));
   const activeFormats=new Set(listings.filter(row=>row.state==="active").map(row=>family(row.productFamily)));
-  return purchase.priorities.map(winner=>{
+  const cutoffUnits=purchase.priorities.at(-1)?.unitsPurchased??0;
+  const leadingWithTies=purchase.listings.filter((row,index)=>
+    index<purchase.priorities.length||row.unitsPurchased===cutoffUnits);
+  return leadingWithTies.map(winner=>{
     const source=byId.get(winner.listingId);
     const unlinkedActive=listings.filter(row=>row.state==="active"&&!row.artworkHash).length;
     const base={listingId:winner.listingId,relatedListingId:null,retainedCharacteristic:null,
