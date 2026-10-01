@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 
 export const QA_OIDC_COOKIE = "goldie_qa_oidc";
 const ISSUER = "https://token.actions.githubusercontent.com";
-const JWKS = ISSUER + "/.well-known/jwks";
 const AUDIENCE = "goldie-shop-map-qa";
 const REPOSITORY = "brittanylewismua-tech/goldie-listing-factory-next";
 const WORKFLOW = REPOSITORY + "/.github/workflows/deploy.yml@refs/heads/main";
@@ -31,7 +30,7 @@ export async function verifiedQaOidc(token: string): Promise<number|null> {
       || claims.runner_environment !== "github-hosted") return null;
     const exp = Number(claims.exp), nbf = Number(claims.nbf ?? claims.iat);
     if (!Number.isFinite(exp) || !Number.isFinite(nbf) || exp <= now || exp > now + 600 || nbf > now + 30) return null;
-    const response = await fetch(JWKS, {signal:AbortSignal.timeout(6000)});
+    const response = await fetch("https://token.actions.githubusercontent.com/.well-known/jwks", {signal:AbortSignal.timeout(6000)});
     if (!response.ok) return null;
     const body = await response.json() as {keys?:Array<JsonWebKey & {kid?:string}>};
     const jwk = body.keys?.find(key => key.kid === header.kid && key.kty === "RSA");
