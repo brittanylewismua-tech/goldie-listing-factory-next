@@ -31,3 +31,33 @@ jobs:
           sleep 20
           echo "expected $GITHUB_SHA"
           curl -sS https://thegoldiesuite.com/api/version
+
+  mobile_qa_once:
+    if: contains(github.event.head_commit.message, '[run mobile qa]')
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+      - name: Get short-lived repository identity
+        run: |
+          TOKEN_RESPONSE=$(curl -fsSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=goldie-shop-map-qa")
+          QA_REVIEWER_JWT=$(node -e 'let s="";process.stdin.on("data",x=>s+=x).on("end",()=>process.stdout.write(JSON.parse(s).value))' <<< "$TOKEN_RESPONSE")
+          echo "::add-mask::$QA_REVIEWER_JWT"
+          echo "QA_REVIEWER_JWT=$QA_REVIEWER_JWT" >> "$GITHUB_ENV"
+      - name: Measure live Shop Map at mobile widths
+        run: node scripts/qa-shop-map-live.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shop-map-mobile-qa
+          path: qa-artifacts/
+          if-no-files-found: ignore

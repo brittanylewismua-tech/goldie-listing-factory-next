@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { isQaOidcReviewer } from "@/app/qa-reviewer-oidc";
 
 export const QA_REVIEWER_ID = "qa:goldie-shop-map-reviewer";
 export const QA_REVIEWER_EMAIL = "qa-reviewer@goldie.invalid";
@@ -17,5 +18,5 @@ export async function validQaToken(token: string): Promise<boolean> {
 
 export async function isQaReviewer(): Promise<boolean> {
   const value = (await cookies()).get(QA_COOKIE)?.value ?? "";
-  return validQaToken(value);
+  return (await validQaToken(value)) || isQaOidcReviewer();
 }
