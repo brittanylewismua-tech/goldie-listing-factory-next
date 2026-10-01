@@ -33,8 +33,24 @@ try {
         if(!(await dna.innerText()).includes("Purchased units among 4 leading analyzed selling artworks"))
           throw new Error("Winner DNA denominator is not labeled");
         await dna.locator("summary").click();
-        await page.evaluate(()=>window.scrollTo(0,0));
-        await page.waitForTimeout(150);
+        await page.evaluate(()=>{
+          const hero=document.querySelector(".oe-lead");
+          for(let el=hero?.parentElement;el;el=el.parentElement){
+            if(el.scrollTop){
+              el.style.scrollBehavior="auto";
+              el.scrollTop=0;
+            }
+          }
+          document.documentElement.style.scrollBehavior="auto";
+          document.body.style.scrollBehavior="auto";
+          window.scrollTo({top:0,left:0,behavior:"instant"});
+        });
+        await page.waitForTimeout(350);
+        console.log("QA_SCROLL "+JSON.stringify(await page.evaluate(()=>({
+          y:window.scrollY,
+          root:document.scrollingElement?.scrollTop,
+          heroTop:document.querySelector(".oe-lead")?.getBoundingClientRect().top,
+        }))));
         const firstViewport=(await page.screenshot({type:"jpeg",quality:45,fullPage:false})).toString("base64");
         console.log(`QA_IMAGE_BEGIN ${width} overview_first_viewport`);
         for(let offset=0;offset<firstViewport.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+firstViewport.slice(offset,offset+16000));
