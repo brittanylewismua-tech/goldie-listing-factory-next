@@ -176,3 +176,17 @@ test("each Your Shop tab validates its response before rendering",()=>{
 test("Product Themes has a visible empty state",()=>{
   assert.match(client,/No product themes are available yet/);
 });
+
+test("non-money Your Shop tabs do not depend on timezone reads",()=>{
+  const themes=route.indexOf('if(view==="themes")');
+  const support=route.indexOf('if(view==="overview-support")');
+  const lastTimezoneRead=route.lastIndexOf('timezone = await shopTimezone');
+  assert.ok(themes>-1&&support>-1&&lastTimezoneRead>themes&&lastTimezoneRead>support,
+    "Timezone work must happen after Product Themes and Opportunity Engine support return");
+});
+
+test("Opportunity Engine withholds priorities when artwork evidence misses customer signal",()=>{
+  assert.match(route,/const completeVisualSignal=visual\.basis===shopBasis&&visual\.totalSignal===shopSignalTotal/);
+  assert.match(route,/patterns:completeVisualSignal[\s\S]*\? visual\.patterns\.map/);
+  assert.match(route,/attentionPercent:shopSignalTotal\?Math\.round/);
+});
