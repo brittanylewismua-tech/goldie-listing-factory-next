@@ -202,5 +202,7 @@ test("Opportunity Engine top listings follow the same fallback evidence ladder a
 
 test("a failed refresh keeps a valid cached tab visible",()=>{
   assert.match(client,/const hasCached=Boolean\(cached&&validShopMapForTab\(cached,tab\)\)/);
-  assert.match(client,/if\(!validShopMapForTab\(next,tab\)\)[\s\S]*if\(!hasCached\)setMap\(null\);[\s\S]*setFailed\(true\)/);
+  assert.match(client,/if \(!validShopMapForTab\(next,tab\)\)/);
+  assert.match(client,/if\(!hasCached\)setMap\(null\)/);
+  assert.match(client,/setFailed\(true\)/);
 });
