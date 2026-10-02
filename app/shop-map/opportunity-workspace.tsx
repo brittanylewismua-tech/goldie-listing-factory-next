@@ -16,7 +16,7 @@ export type OwnReviewInsight={listingId:number;review:string;rating:number|null;
 type PublicComparison={listingId:number;title:string;url:string;imageUrl:string;price:string|null;reviewCount:number;latestReviewAt:number;difference:string;reviewExcerpt:string|null;observedAt:number};
 type PublicComparisonResult={status:string;query?:string;comparisons:PublicComparison[];checkedAt?:number};
 type Kind="build"|"improve"|"restore";
-type Detail={id:string;kind:Kind;title:string;brief:string;sourceId?:number;imageUrl?:string;comparisonImageUrl?:string;buildBrief?:string;
+type Detail={id:string;kind:Kind;tag?:string;title:string;brief:string;sourceId?:number;imageUrl?:string;comparisonImageUrl?:string;buildBrief?:string;
   sources:Array<{label:string;url?:string}>;checks:string[];relatedId?:number};
 const listingUrl=(id:number)=>`https://www.etsy.com/listing/${id}`;
 const pct=(n:number)=>n>0&&n<.005?"<1%":`${Math.round(n*100)}%`;
@@ -47,16 +47,23 @@ function directionDetail(row:PurchasePriority,direction:ProductDirection):Detail
   return null;
 }
 function findingDetail(finding:ShopFinding):Detail{
-  const kind:Kind=finding.kind==="restore"?"restore":finding.kind==="emerging"?"build":"improve";
-  return {id:finding.id,kind,title:finding.direction,brief:finding.evidence,
+  const kind:Kind=finding.kind==="restore"?"restore":"improve";
+  const tag=finding.kind==="emerging"?"RISING":finding.kind==="cooling"?"SLOWING":
+    finding.kind==="restore"?"AVAILABILITY":finding.kind==="catalog-review"?"CATALOG BALANCE":"COMPARE";
+  const title=finding.kind==="compare"?`Compare ${shortLabel(finding.title)} with its existing version`:
+    finding.kind==="catalog-review"?`Review ${finding.title} coverage`:shortLabel(finding.title);
+  return {id:finding.id,kind,tag,title,brief:finding.evidence,
     sourceId:finding.listingIds[0],imageUrl:finding.imageUrl,
     relatedId:finding.kind==="compare"?finding.listingIds[1]:undefined,
     sources:finding.listingIds.slice(0,6).map((id,index)=>({label:index?"Related product":"Source product",url:listingUrl(id)})),
-    checks:[finding.detail]};
+    checks:[finding.direction,finding.detail]};
 }
 function actionDetail(action:CatalogAction,imageUrl?:string):Detail{
   const kind:Kind=/inactive|unavailable|sold out/i.test(action.headline)?"restore":/emerging/i.test(action.headline)?"build":"improve";
-  return {id:`action-${action.listingId}`,kind,title:`${action.headline}: ${shortLabel(action.title)}`,brief:action.fact,
+  return {id:`action-${action.listingId}`,kind,
+    tag:/sales have dropped|cooling|slowed/i.test(action.headline)?"SLOWING":
+      /emerging|rising/i.test(action.headline)?"RISING":kind==="restore"?"AVAILABILITY":"SHOP SIGNAL",
+    title:shortLabel(action.title),brief:action.fact,
     sourceId:action.listingId,imageUrl,sources:[{label:"Source product",url:listingUrl(action.listingId)}],
     checks:[action.evidence,action.nextStep]};
 }
@@ -74,7 +81,7 @@ function peerDetail(row:PurchasePriority,peer:CatalogListing):Detail{
 }
 function relatedDetail(source:PurchasePriority,own:CatalogListing,peer:CatalogListing,patternLabel:string):Detail{
   return {id:`related-${own.listingId}-${peer.listingId}`,kind:"improve",
-    title:`Compare related ${own.family||"product"} and ${peer.family||"product"} offers`,
+    tag:"RELATED OFFERS",title:`Compare ${shortLabel(own.title)} and ${shortLabel(peer.title)}`,
     brief:`Both appear in the “${patternLabel}” catalog context; ${own.sold90} and ${peer.sold90} purchased in 90 days.`,
     sourceId:source.listingId,imageUrl:own.imageUrl,comparisonImageUrl:peer.imageUrl,relatedId:peer.listingId,
     sources:[{label:"Your product",url:listingUrl(own.listingId)},{label:"Related product",url:listingUrl(peer.listingId)}],
@@ -272,7 +279,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
       <div className={styles.sectionHead}><h2>Review these</h2><span>{reviewItems.length} shop finding{reviewItems.length===1?"":"s"}</span></div>
       <div className={styles.reviewGrid}>{reviewItems.slice(0,3).map(item=><button type="button" key={item.id} className={styles.reviewCard} onClick={()=>open(item)}>
         {item.imageUrl?<img src={item.imageUrl} alt="" width={64} height={64}/>:null}
-        <span><small>{item.kind==="build"?"BUILD":item.kind==="restore"?"RECOVER":"COMPARE"}</small>
+        <span><small>{item.tag??(item.kind==="build"?"BUILD":item.kind==="restore"?"RECOVER":"COMPARE")}</small>
           <strong>{item.title}</strong><em>{item.brief}</em></span>
       </button>)}</div>
     </section>:null}
