@@ -193,3 +193,203 @@ export function shopMoves(catalog:CatalogListing[],year:YearSale[],reviews:OwnRe
   }
   return moves;
 }
+
+/* ───────────── Design reads: what is printed on each listing photo ───────────── */
+
+export type DesignRead = {
+  listingId:number;
+  name:string;              // short name a seller would use for the design
+  wording:string;           // exact printed text, "" when none
+  credit:string|null;       // a person or source credited in the design
+  lettering:"typewriter"|"serif"|"sans"|"script"|"handwritten"|"display"|"none";
+  art:"none"|"floral"|"animal"|"figure"|"symbol"|"pattern"|"other";
+  textLed:boolean;
+  garment:string;           // garment colour as seen
+  ink:string[];             // main print colours
+};
+
+const LETTERING=["typewriter","serif","sans","script","handwritten","display","none"] as const;
+const ART=["none","floral","animal","figure","symbol","pattern","other"] as const;
+
+export const DESIGN_READ_PROMPT=`You are looking at the main photo of an Etsy listing for a printed product.
+Describe ONLY the printed design, not the model, background or garment cut.
+Return one JSON object and nothing else:
+{"name":"","wording":"","credit":null,"lettering":"","art":"","textLed":true,"garment":"","ink":[]}
+name: 2 to 6 words a seller would call this design. Use the main printed words if there are any, else the main image.
+wording: the exact printed text, line breaks as spaces. "" if no text.
+credit: the person or source the design credits (for example "Cher" from "- Cher"), else null.
+lettering: one of typewriter, serif, sans, script, handwritten, display, none.
+art: one of none, floral, animal, figure, symbol, pattern, other.
+textLed: true when the words carry the design and any art is small.
+garment: the product colour in one word.
+ink: up to 3 main print colours, one word each.`;
+
+/** Accept only a complete read; a half-read design must not be shown as measured. */
+export function parseDesignRead(listingId:number,text:string):DesignRead|null{
+  const start=text.indexOf("{"),end=text.lastIndexOf("}");
+  if(start<0||end<=start)return null;
+  let raw:Record<string,unknown>;
+  try{raw=JSON.parse(text.slice(start,end+1)) as Record<string,unknown>}catch{return null}
+  const name=String(raw.name??"").trim();
+  const lettering=String(raw.lettering??"").toLowerCase() as DesignRead["lettering"];
+  const art=String(raw.art??"").toLowerCase() as DesignRead["art"];
+  if(!name||!LETTERING.includes(lettering)||!ART.includes(art)||typeof raw.textLed!=="boolean")return null;
+  const credit=raw.credit==null||String(raw.credit).trim()===""||/^null$/i.test(String(raw.credit))?null:String(raw.credit).trim().slice(0,60);
+  return {listingId,name:name.slice(0,60),wording:String(raw.wording??"").trim().slice(0,240),credit,lettering,art,
+    textLed:raw.textLed,garment:String(raw.garment??"").toLowerCase().slice(0,20),
+    ink:Array.isArray(raw.ink)?raw.ink.slice(0,3).map(value=>String(value).toLowerCase().slice(0,20)):[]};
+}
+
+export type StyleTrait={key:string;label:string;units:number;designs:number;listingIds:number[]};
+export type StyleBreakdown={analysedUnits:number;totalUnits:number;analysedListings:number;traits:StyleTrait[]};
+
+const LETTER_LABEL:Record<string,string>={typewriter:"Typewriter lettering",serif:"Serif lettering",sans:"Plain sans lettering",
+  script:"Script lettering",handwritten:"Handwritten lettering",display:"Bold display lettering"};
+const ART_LABEL:Record<string,string>={floral:"Floral art",animal:"Animal art",figure:"Figure or face art",symbol:"Symbol art",pattern:"Pattern art",other:"Other art"};
+
+function traitsOf(read:DesignRead):Array<[string,string]>{
+  const out:Array<[string,string]>=[];
+  if(read.credit)out.push(["credit","Quote credited to a named person"]);
+  if(read.lettering!=="none")out.push(["letter:"+read.lettering,LETTER_LABEL[read.lettering]]);
+  out.push(read.textLed?["textLed","Words lead the design"]:["artLed","Art leads the design"]);
+  if(read.art!=="none")out.push(["art:"+read.art,ART_LABEL[read.art]]);
+  if(read.garment)out.push(["garment:"+read.garment,`On a ${read.garment} product`]);
+  return out;
+}
+
+/** Units sold in 12 months by design trait, over the listings that have been read. */
+export function styleBreakdown(year:YearSale[],reads:Map<number,DesignRead>):StyleBreakdown{
+  const traits=new Map<string,StyleTrait>();
+  let analysedUnits=0,totalUnits=0,analysedListings=0;
+  for(const sale of year){
+    const units=Number(sale.sales||0);totalUnits+=units;
+    const read=reads.get(sale.listingId);if(!read||!units)continue;
+    analysedUnits+=units;analysedListings++;
+    for(const [key,label] of traitsOf(read)){
+      const row=traits.get(key)??{key,label,units:0,designs:0,listingIds:[]};
+      row.units+=units;row.designs++;row.listingIds.push(sale.listingId);traits.set(key,row);
+    }
+  }
+  return {analysedUnits,totalUnits,analysedListings,
+    traits:[...traits.values()].filter(row=>row.designs>=1).sort((a,b)=>b.units-a.units||b.designs-a.designs).slice(0,6)};
+}
+
+/* ───────────── Ranked next moves for the whole shop ───────────── */
+
+export type NextMove={id:string;group:"quick"|"new"|"hold";tag:string;title:string;why:string;
+  evidence:Array<[string,string]>;listingIds:number[];proof:{left:{h:string;lines:string[];quote?:string};right:{h:string;steps:string[];caution?:string}};
+  action:{label:string;href:string}};
+
+const fmt=(value:number)=>value.toLocaleString("en-US");
+
+export function reviewThemes(reviews:OwnReview[]){
+  const count=(re:RegExp)=>reviews.filter(review=>re.test(review.review));
+  const quality=count(/quality|soft|material|fabric|thick/i),shipping=count(/fast|quick|arriv|ship/i),fit=count(SIZE),
+    print=count(/print|vibrant|fade|crack|wash/i),gift=count(GIFT),low=reviews.filter(review=>review.rating<=3);
+  const average=reviews.length?reviews.reduce((a,b)=>a+b.rating,0)/reviews.length:null;
+  const quote=(rows:OwnReview[])=>{const pick=rows.filter(row=>row.rating>=4).map(row=>decode(row.review)).find(text=>text.length>=20&&text.length<=140);return pick??null};
+  return {count:reviews.length,average,five:reviews.filter(review=>review.rating===5).length,
+    themes:[{label:"Quality and fabric",n:quality.length,quote:quote(quality)},{label:"Shipping speed",n:shipping.length,quote:quote(shipping)},
+      {label:"Size and fit",n:fit.length,quote:quote(fit)},{label:"Print look",n:print.length,quote:quote(print)},
+      {label:"Bought as a gift",n:gift.length,quote:quote(gift)}].filter(row=>row.n>0).sort((a,b)=>b.n-a.n),
+    low:low.length,fitRows:fit,giftRows:gift};
+}
+
+export function buildNextMoves(input:{top:TopRow[];catalog:CatalogListing[];year:YearSale[];reviews:OwnReview[];
+  reads:Map<number,DesignRead>;days:number;month:number}):NextMove[]{
+  const {top,catalog,year,reviews,reads,days,month}=input;
+  const sold=new Map<number,number>();
+  for(const sale of year)sold.set(sale.listingId,(sold.get(sale.listingId)??0)+Number(sale.sales||0));
+  const total=[...sold.values()].reduce((a,b)=>a+b,0);
+  const name=(id:number,title:string)=>reads.get(id)?.name??shortName(title);
+  const moves:NextMove[]=[];
+  const factory="/listing-factory?step=setup";
+
+  const rising=top.filter(row=>row.basis==="sales"&&row.unitsPeriod>=2&&row.unitsYear-row.unitsPeriod<=1&&(row.views??0)>0&&(row.views??0)<2000)[0];
+  if(rising)moves.push({id:"rising",group:"quick",tag:"Rising",title:`Give ${name(rising.listingId,rising.title)} more exposure`,
+    why:`It is speeding up. ${rising.unitsPeriod} of its ${rising.unitsYear} sales this year came in the last ${days} days, from a listing few shoppers see.`,
+    evidence:[[String(rising.unitsPeriod),`sales in ${days} days`],[fmt(rising.views??0),"views, all time"],[fmt(rising.favorites??0),"favorites"]],
+    listingIds:[rising.listingId],
+    proof:{left:{h:"What we see",lines:[`It sells from very little traffic: ${rising.unitsYear} ${rising.unitsYear===1?"sale":"sales"} from ${fmt(rising.views??0)} views.`,
+      reads.get(rising.listingId)?`The design: ${describe(reads.get(rising.listingId)!)}.`:"The design has not been read yet."]},
+      right:{h:"Do this",steps:["Move it into your first shop section.","Add a second photo on a different product colour.","Check back in 30 days to see whether views and sales rose."]}},
+    action:{label:"Open on Etsy",href:`https://www.etsy.com/listing/${rising.listingId}`}});
+
+  const wanted=catalog.filter(row=>row.state==="active"&&!sold.get(row.listingId)&&(row.favorites??0)>=150)
+    .sort((a,b)=>(b.favorites??0)-(a.favorites??0)).slice(0,4);
+  if(wanted.length){const lead=wanted[0];
+    moves.push({id:"wake",group:"quick",tag:"Wake up",title:wanted.length>1?"Your most-favorited listings stopped selling":`${name(lead.listingId,lead.title)} stopped selling`,
+      why:`${name(lead.listingId,lead.title)} has ${fmt(lead.favorites??0)} favorites${lead.views?` and ${fmt(lead.views)} views`:""}, and no sales in 12 months.`,
+      evidence:[[fmt(lead.favorites??0),"favorites"],[lead.views?fmt(lead.views):"—","views"],["0","sales in 12 months"],[String(wanted.length),"listings like this"]],
+      listingIds:wanted.map(row=>row.listingId),
+      proof:{left:{h:"Favorited, not bought",lines:wanted.map(row=>`${name(row.listingId,row.title)}: ${fmt(row.favorites??0)} favorites, 0 sold`)},
+        right:{h:"Check in this order",steps:["Is the price above what your current sellers sell at?","Are all sizes and colours in stock and turned on?","Is the first photo several years old?","Send an Etsy offer to the shoppers who favorited it."]}},
+      action:{label:"Open on Etsy",href:`https://www.etsy.com/listing/${lead.listingId}`}});}
+
+  // Make more: the design trait with the strongest buyer response.
+  const style=styleBreakdown(year,reads);
+  const credit=style.traits.find(row=>row.key==="credit");
+  const best=credit&&credit.designs>=2&&credit.units/Math.max(1,style.analysedUnits)>=0.3?credit
+    :style.traits.find(row=>row.key.startsWith("letter:")&&row.designs>=2&&row.units/Math.max(1,style.analysedUnits)>=0.4);
+  if(best){
+    const sameButUnsold=catalog.filter(row=>row.state==="active"&&!sold.get(row.listingId)&&(row.favorites??0)>=100)
+      .filter(row=>{const read=reads.get(row.listingId);return read&&traitsOf(read).some(([key])=>key===best.key)});
+    const lines=best.listingIds.slice(0,4).map(id=>{const read=reads.get(id)!;return `${read.name}${read.credit?`, credited to ${read.credit}`:""}: ${sold.get(id)} sold`});
+    const unsoldLine=sameButUnsold.length?[`${sameButUnsold.length} other ${sameButUnsold.length===1?"design":"designs"} with this trait sold nothing this year, so look at what else the sellers share.`]:[];
+    moves.push({id:"make",group:"new",tag:"Make more",title:best.key==="credit"?"Write more quotes credited to a named person":`Make more designs in ${best.label.toLowerCase()}`,
+      why:`${best.label}: ${best.units} of the ${style.analysedUnits} units your read designs sold this year, across ${best.designs} designs.`,
+      evidence:[[`${best.units} of ${style.analysedUnits}`,"units this year"],[String(best.designs),"designs"]],
+      listingIds:[...best.listingIds.slice(0,3),...sameButUnsold.slice(0,2).map(row=>row.listingId)],
+      proof:{left:{h:"Designs with this trait",lines:[...lines,...unsoldLine]},
+        right:{h:"Before you make them",caution:best.key==="credit"?"Quotes from real people can carry rights. Run each line through Trademark Check and prefer public-domain or original lines.":undefined,
+          steps:["Write 5 new designs that keep this trait and change the message.","Use the same product and colours as your best seller for the first photo.","Publish them as one batch so you can compare them in 30 days."]}},
+      action:{label:"Start a batch in Listing Factory",href:factory}});
+  }
+
+  const themes=reviewThemes(reviews);
+  if(themes.fitRows.length>=3){
+    const leaders=top.filter(row=>row.basis==="sales").slice(0,3);
+    moves.push({id:"fit",group:"quick",tag:"Fix",title:`Add a size guide to your top ${leaders.length} listings`,
+      why:`Fit comes up in ${themes.fitRows.length} of your ${themes.count} recent reviews. Clear size information stops wrong-size orders before they happen.`,
+      evidence:[[`${themes.fitRows.length} of ${themes.count}`,"reviews mention size or fit"],[String(leaders.length),"listings to update"]],
+      listingIds:leaders.map(row=>row.listingId),
+      proof:{left:{h:"What buyers wrote",lines:themes.fitRows.slice(0,3).map(row=>`“${decode(row.review).slice(0,120)}”`)},
+        right:{h:"Do this",steps:["Add a size chart as the third photo.","Add one line on fit to the description.","Watch new reviews for fewer fit mentions."]}},
+      action:{label:"Open Listing Factory",href:factory}});
+  }
+  if(themes.giftRows.length>=3&&month>=9&&month<=12){
+    const leaders=top.filter(row=>row.basis==="sales").slice(0,3);
+    moves.push({id:"gift",group:"quick",tag:"Season",title:"Get your best sellers ready for gift season",
+      why:`${themes.giftRows.length} buyers say they bought as a gift, and the holiday rush is starting. Small changes to your top listings reach most of your buyers.`,
+      evidence:[[String(themes.giftRows.length),"reviews mention a gift"],[String(leaders.length),"listings to update"]],
+      listingIds:leaders.map(row=>row.listingId),
+      proof:{left:{h:"What buyers wrote",lines:themes.giftRows.slice(0,3).map(row=>`“${decode(row.review).slice(0,120)}”`)},
+        right:{h:"Do this",steps:["Add a gift or packaging photo.","Use gift wording in titles where it fits the design.","Post your last order date for holiday delivery."]}},
+      action:{label:"Open Listing Factory",href:factory}});
+  }
+
+  const off=catalog.filter(row=>row.state!=="active"&&row.state!=="draft"&&(row.favorites??0)>=150)
+    .sort((a,b)=>(b.favorites??0)-(a.favorites??0)).slice(0,4);
+  if(off.length){const lead=off[0];
+    moves.push({id:"off",group:"hold",tag:"Check first",title:"Turned off, but shoppers still want them",
+      why:`${shortName(lead.title)} is ${lead.state.replace("_"," ")} with ${fmt(lead.favorites??0)} favorites. Some listings are turned off on purpose, so check the reason before restoring one.`,
+      evidence:[[fmt(lead.favorites??0),"favorites"],[String(off.length),"listings like this"]],listingIds:off.map(row=>row.listingId),
+      proof:{left:{h:"Not for sale right now",lines:off.map(row=>`${shortName(row.title)}: ${row.state.replace("_"," ")}, ${fmt(row.favorites??0)} favorites`)},
+        right:{h:"Do this",steps:["Check why it was turned off.","Run the phrase through Trademark Check.","If it is clear, restore one as a 30-day test."]}},
+      action:{label:"Open Trademark Check",href:"/trademark"}});}
+
+  const weak=familyStats(catalog,year).filter(row=>row.active>=5&&total>=10&&row.unitsYear/total<0.06);
+  if(weak.length){const strong=familyStats(catalog,year)[0];
+    moves.push({id:"hold",group:"hold",tag:"Hold off",title:`Hold off on new ${weak.map(row=>familyName(row.family)).join(" and ")}`,
+      why:`${weak.map(row=>`${familyName(row.family)}: ${row.active} active, ${row.unitsYear} sold`).join(". ")} in 12 months.${strong?` ${familyName(strong.family)[0].toUpperCase()+familyName(strong.family).slice(1)} sold ${strong.unitsYear} of ${total}.`:""}`,
+      evidence:weak.map(row=>[`${row.unitsYear} of ${total}`,`units were ${familyName(row.family)}`] as [string,string]),listingIds:[],
+      proof:{left:{h:"Sales by product type, 12 months",lines:familyStats(catalog,year).filter(row=>row.active>0).slice(0,5).map(row=>`${familyName(row.family)}: ${row.active} active, ${row.unitsYear} units`)},
+        right:{h:"Do this",steps:["Put new design time where buyers already buy.","Leave the existing listings up; they cost nothing to keep.","Recheck after the holidays."]}},
+      action:{label:"See sold listings",href:"/shop-map?tab=sold"}});}
+  return moves;
+}
+
+export function describe(read:DesignRead){
+  const parts=[read.lettering!=="none"?`${read.lettering} lettering`:"",read.art!=="none"?`${read.art} art`:"",read.ink.length?`${read.ink.join(" and ")} ink`:"",read.garment?`on ${read.garment}`:""].filter(Boolean);
+  return parts.join(", ");
+}

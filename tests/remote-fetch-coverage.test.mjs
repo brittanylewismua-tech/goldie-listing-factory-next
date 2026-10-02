@@ -129,6 +129,8 @@ const DELEGATED = {
     "validImage: a data: image under 18MB, checked before any provider call",
   "api/design-scanner/analyze-references/route.ts":
     "provider-derived: the address is an Etsy image URL already stored in our own table",
+  "api/shop-map/listing-designs/route.ts":
+    "provider-derived: the member's own synced Etsy listing photo from shop_map_listings, https on i.etsystatic.com only",
   "listing-flow.ts":
     "internal: imageUrl is a parameter, validated by the entry point that passes it",
 };

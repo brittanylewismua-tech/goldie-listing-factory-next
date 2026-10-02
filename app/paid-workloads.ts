@@ -78,6 +78,7 @@ export const PAID_WORKLOADS: Workload[] = [
     first and the spend cannot run away.
   */
   {key:"platformUpdateBrief",what:"Compare changed official platform sources and write a shared daily seller brief.",provider:"fal / openrouter",model:"google/gemini-2.5-flash",unitCost:0.03,costBasis:"estimated",customerFacing:true,memberDailyLimit:null,memberDailyAttempts:60,globalDailyCeiling:1.00,globalDailyRequests:60,limitStatus:"temporary",retries:1,cachePolicy:"Only changed source content is sent; one shared digest for all members. First reads establish a baseline.",priority:5,expectedBehaviour:"Bounded to six source comparisons per tick and 60 provider attempts per day, including one evidence repair per comparison. The shared daily spending ceiling is $1.00. No calls for unchanged sources.",},
+  {key:"shopListingDesignRead",what:"Read the design on a member's own Etsy listing photo once: wording, credited speaker, lettering and art style.",provider:"fal / openrouter",model:"google/gemini-2.5-flash",unitCost:0.004,costBasis:"estimated",customerFacing:true,memberDailyLimit:null,memberDailyAttempts:80,globalDailyCeiling:1.50,globalDailyRequests:400,limitStatus:"temporary",retries:0,cachePolicy:"Stored per member, shop, listing and photo URL. A listing is read again only when its main photo changes.",priority:2,expectedBehaviour:"About 30 reads the first time a shop opens the Opportunity Engine, then only listings whose main photo changed.",},
   {
     key: "designScannerVision",
     what: "One structured extraction per uploaded design.",
