@@ -21,7 +21,7 @@ const workspace=page=>page.locator('section[aria-labelledby="oe-workspace-title"
 const focus=page=>workspace(page).locator("article").first();
 const choices=page=>workspace(page).getByRole("group",{name:"Choose a purchased product"}).getByRole("button");
 const waitReady=async(page)=>{
-  await page.getByRole("heading",{name:"Products leading your shop"}).waitFor({timeout:45000});
+  await page.getByRole("heading",{name:"Top listings in your shop"}).waitFor({timeout:45000});
   await focus(page).waitFor({timeout:45000});
   await page.getByRole("heading",{name:"Across your shop"}).waitFor({timeout:45000});
 };
@@ -49,16 +49,21 @@ try{
     await page.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
     await waitReady(page);
     await page.getByRole("heading",{name:"Opportunity Engine",exact:true}).waitFor();
-    if(await choices(page).count()<5)throw new Error("Five-product selector did not render");
+    if(await choices(page).count()!==10)throw new Error("Ten-listing selector did not render");
+    for(let index=0;index<10;index++){
+      const label=(await choices(page).nth(index).innerText()).trim();
+      if(!label.startsWith(`${index+1}. `))throw new Error("Displayed listing numbers are not sequential: "+label);
+    }
     const firstImage=focus(page).locator("img").first();
     if(!(await firstImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
       throw new Error("Selected product image failed to load");
     const firstText=await focus(page).innerText();
-    if(!/units purchased/.test(firstText)||!/Paths from this product/.test(firstText))
+    if(!/units purchased/.test(firstText)||!/Ideas and checks for this listing/.test(firstText)
+      ||!/Listing 1 of 10/.test(firstText)||/Product details need review/.test(firstText))
       throw new Error("Focused product lacks purchase breakdown or connected paths");
     const layout=await measurements(page);
     if(layout.heading!=="Opportunity Engine"||layout.documentWidth>width+1||layout.bodyWidth>width+1
-      ||layout.selectorCount<5||layout.groupCount!==3||layout.oldLayoutVisible||layout.clippedPurchaseLabels>0)
+      ||layout.selectorCount!==10||layout.selectorRows!==1||layout.groupCount!==3||layout.oldLayoutVisible||layout.clippedPurchaseLabels>0)
       throw new Error("Opportunity workspace layout failed: "+JSON.stringify(layout));
     if(width<600&&layout.tabRows!==2)throw new Error("Tabs are not 2×2");
     if(width===1280&&layout.tabRows!==1)throw new Error("Desktop tabs do not share one row");
@@ -66,6 +71,15 @@ try{
     await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
     await emit(page,width,width===1280?"desktop_first_viewport":"overview_first_viewport");
     await emit(page,width,"overview",true);
+    await focus(page).getByRole("button",{name:"Next top listing"}).click();
+    if(!/Listing 2 of 10/.test(await focus(page).innerText()))throw new Error("Next listing arrow failed");
+    await focus(page).getByRole("button",{name:"Previous top listing"}).click();
+    if(!/Listing 1 of 10/.test(await focus(page).innerText()))throw new Error("Previous listing arrow failed");
+    await choices(page).nth(9).click();
+    if(!/Listing 10 of 10/.test(await focus(page).innerText())
+      ||!(await focus(page).getByRole("button",{name:"Next top listing"}).isDisabled()))
+      throw new Error("Tenth listing navigation failed");
+    await emit(page,width,"tenth_product");
     await choices(page).nth(1).click();
     const secondText=await focus(page).innerText();
     if(secondText===firstText)throw new Error("Product selector did not change the analysis");
