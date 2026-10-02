@@ -1916,6 +1916,10 @@
 #suite-workspace .shop-map-redesign .oe-source-gallery small{font-size:11px!important;color:#625760!important}
 #suite-workspace .shop-map-redesign .oe-quiet-state{padding:15px!important;border-radius:10px!important;background:#fff!important;font-size:13px!important}
 #suite-workspace .shop-map-redesign .oe-review-grid{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;
+}
+#suite-workspace .shop-map-redesign .oe-comparisons{margin-top:26px!important}
+#suite-workspace .shop-map-redesign .oe-comparison-grid{
   display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;
 }
 #suite-workspace .shop-map-redesign .oe-review-card{
@@ -2008,7 +2012,8 @@
   #suite-workspace .shop-map-redesign .oe-top-grid{gap:8px!important}
   #suite-workspace .shop-map-redesign .oe-top-card{padding:9px!important;gap:7px!important}
   #suite-workspace .shop-map-redesign .oe-top-photo,#suite-workspace .shop-map-redesign .oe-top-photo img,#suite-workspace .shop-map-redesign .oe-top-photo>span{width:54px!important;height:54px!important;flex-basis:54px!important}
-  #suite-workspace .shop-map-redesign .oe-review-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #suite-workspace .shop-map-redesign .oe-review-grid,
+  #suite-workspace .shop-map-redesign .oe-comparison-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
 @media(max-width:650px){
   #suite-workspace .shop-map-redesign .oe-lead{grid-template-columns:minmax(0,1fr)!important}
@@ -2042,7 +2047,8 @@
   #suite-workspace .shop-map-redesign .oe-more-list{grid-template-columns:1fr!important}
   #suite-workspace .shop-map-redesign .oe-pattern-list{grid-template-columns:1fr!important}
   #suite-workspace .shop-map-redesign .oe-source-gallery>div{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  #suite-workspace .shop-map-redesign .oe-review-grid{grid-template-columns:1fr!important}
+  #suite-workspace .shop-map-redesign .oe-review-grid,
+  #suite-workspace .shop-map-redesign .oe-comparison-grid{grid-template-columns:1fr!important}
   #suite-workspace .shop-map-redesign .oe-review-card{padding:18px!important}
 }
 @media(max-width:340px){

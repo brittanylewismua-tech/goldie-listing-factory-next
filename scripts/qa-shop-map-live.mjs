@@ -73,7 +73,7 @@ try {
         let paired=0;
         for(let index=0;index<comparisonCount;index++){
           const card=comparisons.nth(index);
-          if((await card.locator(".oe-card-tag").innerText()).includes("SHOP COMPARISON")){
+          if((await card.getAttribute("data-source"))==="shop"){
             await card.scrollIntoViewIfNeeded();
             await page.waitForTimeout(250);
             const links=await card.locator(".oe-expansion-pair a").count();
@@ -206,15 +206,21 @@ try {
     const rect=(selector)=>document.querySelector(selector)?.getBoundingClientRect();
     const tabs=[...document.querySelectorAll(".shop-map-tabs button")].map(node=>node.getBoundingClientRect());
     const cards=[...document.querySelectorAll(".oe-top-grid .oe-top-card")].slice(0,3).map(node=>node.getBoundingClientRect());
+    const review=[...document.querySelectorAll(".oe-review-grid .oe-review-card")].map(node=>node.getBoundingClientRect());
+    const comparisons=[...document.querySelectorAll(".oe-comparison-grid .oe-expansion")].map(node=>node.getBoundingClientRect());
     const image=rect(".oe-lead-art img"),copy=rect(".oe-lead-copy");
     return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,
       image:{x:image?.x,y:image?.y,width:image?.width},copy:{x:copy?.x,y:copy?.y},
       tabRows:new Set(tabs.map(box=>Math.round(box.top))).size,
       cardRows:new Set(cards.map(box=>Math.round(box.top))).size,
-      cardCount:cards.length};
+      cardCount:cards.length,reviewRows:new Set(review.map(box=>Math.round(box.top))).size,
+      reviewCount:review.length,comparisonRows:new Set(comparisons.map(box=>Math.round(box.top))).size,
+      comparisonCount:comparisons.length};
   });
   if(desktopLayout.viewport!==1280||desktopLayout.documentWidth>1281
     ||desktopLayout.tabRows!==1||desktopLayout.cardRows!==1||desktopLayout.cardCount!==3
+    ||desktopLayout.reviewCount!==4||desktopLayout.reviewRows!==2
+    ||desktopLayout.comparisonCount!==3||desktopLayout.comparisonRows!==1
     ||!desktopLayout.image.width||desktopLayout.image.x>=desktopLayout.copy.x)
     throw new Error("Desktop Opportunity Engine layout failed: "+JSON.stringify(desktopLayout));
   console.log("QA_DESKTOP "+JSON.stringify(desktopLayout));

@@ -107,29 +107,34 @@ export function ReviewThese({map,actions,dna,marketProof=[],priorityIds=[]}:{
           <a href={"https://www.etsy.com/listing/"+row.listingId} target="_blank" rel="noopener noreferrer">View source listing</a>
         </details>
       </div>)}
-      {expansion.map(row=><div key={row.listingId} className="oe-review-card oe-expansion">
-        <span className="oe-card-tag">{row.source==="shop"?"SHOP COMPARISON":"SAVED WATCH"}</span>
-        <div className="oe-expansion-pair">
-          <a href={"https://www.etsy.com/listing/"+row.listingId} target="_blank" rel="noopener noreferrer"
-            aria-label={"View "+row.title}>
-            {row.imageUrl?<img src={row.imageUrl} alt="" width={64} height={64} loading="lazy"/>:<span>No photo</span>}
-            <small>{row.sold90} sold · {compactFamily(row.family)}</small>
-          </a>
-          {row.peerListingId?<a href={"https://www.etsy.com/listing/"+row.peerListingId} target="_blank" rel="noopener noreferrer"
-            aria-label={"View "+row.peerTitle}>
-            {row.peerImageUrl?<img src={row.peerImageUrl} alt="" width={64} height={64} loading="lazy"/>:<span>No photo</span>}
-            <small>{row.peerSold90} sold · {compactFamily(row.peerFamily)}</small>
-          </a>:null}
-        </div>
-        <h3>{shortLabel(row.title)}</h3>
-        {row.source==="market"?<p>{row.peerSold90} observed stock decreases on {familyLabel(row.peerFamily)} listings. These are not verified purchases.</p>:null}
-        <details><summary>{row.source==="shop"?"Why compare these":"View watch evidence"}</summary>
-          {row.source==="shop"
-            ?<p>Different artworks share the {row.pattern} pattern. Compare their imagery and exposure before making a new version.</p>
-            :<p>Check the dated stock observations before treating this as demand.</p>}
-          {row.marketPhrase?<a href={`/market-watch?tab=niches&keyword=${encodeURIComponent(row.marketPhrase)}`}>Open saved watch</a>:null}
-        </details>
-      </div>)}
     </div>
+    {expansion.length?<div className="oe-comparisons">
+      <div className="oe-section-heading"><h3>Compare related products</h3></div>
+      <div className="oe-comparison-grid">
+        {expansion.map(row=><div key={row.listingId} className="oe-review-card oe-expansion" data-source={row.source}>
+          <span className="oe-card-tag">{row.source==="shop"?row.pattern:"SAVED WATCH"}</span>
+          <div className="oe-expansion-pair">
+            <a href={"https://www.etsy.com/listing/"+row.listingId} target="_blank" rel="noopener noreferrer"
+              aria-label={"View "+row.title}>
+              {row.imageUrl?<img src={row.imageUrl} alt="" width={64} height={64} loading="lazy"/>:<span>No photo</span>}
+              <small>{row.sold90} sold · {compactFamily(row.family)}</small>
+            </a>
+            {row.peerListingId?<a href={"https://www.etsy.com/listing/"+row.peerListingId} target="_blank" rel="noopener noreferrer"
+              aria-label={"View "+row.peerTitle}>
+              {row.peerImageUrl?<img src={row.peerImageUrl} alt="" width={64} height={64} loading="lazy"/>:<span>No photo</span>}
+              <small>{row.peerSold90} sold · {compactFamily(row.peerFamily)}</small>
+            </a>:null}
+          </div>
+          <h3>{shortLabel(row.title)}</h3>
+          {row.source==="market"?<>
+            <p>{row.peerSold90} observed stock decreases on {familyLabel(row.peerFamily)} listings. These are not verified purchases.</p>
+            <details><summary>View watch evidence</summary>
+              <p>Check the dated stock observations before treating this as demand.</p>
+              {row.marketPhrase?<a href={`/market-watch?tab=niches&keyword=${encodeURIComponent(row.marketPhrase)}`}>Open saved watch</a>:null}
+            </details>
+          </>:null}
+        </div>)}
+      </div>
+    </div>:null}
   </section>;
 }

@@ -75,6 +75,9 @@ test("Opportunity Engine does not include the generic listing keyword checker",(
   assert.match(review,/className="oe-review-card oe-expansion"/);
   assert.match(review,/oe-expansion-pair/);
   assert.match(review,/peerListingId/);
+  assert.match(review,/oe-comparison-grid/);
+  assert.match(review,/Compare related products/);
+  assert.doesNotMatch(review,/Why compare these/);
 });
 
 test("top listings still render when visual priority evidence is incomplete",()=>{
