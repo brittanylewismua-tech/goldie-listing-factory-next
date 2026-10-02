@@ -133,9 +133,9 @@ try{
     await emit(page,width,"choosing_section");
     await review.scrollIntoViewIfNeeded();
     await emit(page,width,"review_section");
-    const previewStyles=await page.evaluate(()=>({rows:[...document.querySelectorAll("[data-preview-row]")].map(el=>({kind:el.getAttribute("data-preview-row"),radius:getComputedStyle(el).borderRadius,shadow:getComputedStyle(el).boxShadow})),marker:getComputedStyle(document.querySelector("[data-preview-deeper]"),"::after").content,patternBars:[...document.querySelectorAll('section[aria-labelledby="oe-workspace-title"] [class*="patternBar"]')].filter(el=>el.getClientRects().length).map(el=>Math.round(el.getBoundingClientRect().height))}));
+    const previewStyles=await page.evaluate(()=>({rows:[...document.querySelectorAll("[data-preview-row]")].map(el=>({kind:el.getAttribute("data-preview-row"),radius:getComputedStyle(el).borderRadius,shadow:getComputedStyle(el).boxShadow})),marker:getComputedStyle(document.querySelector("[data-preview-deeper]"),"::after").content,otherMarkers:[...document.querySelectorAll("[data-preview-summary]")].map(el=>getComputedStyle(el,"::after").content),patternBars:[...document.querySelectorAll('section[aria-labelledby="oe-workspace-title"] [class*="patternBar"]')].filter(el=>el.getClientRects().length).map(el=>Math.round(el.getBoundingClientRect().height))}));
     console.log("QA_PREVIEW_STYLES "+JSON.stringify({width,...previewStyles}));
-    if(previewStyles.rows.some(row=>row.radius!=="0px"||row.shadow!=="none")||!["none","normal"].includes(previewStyles.marker)||previewStyles.patternBars.some(height=>height>6))throw new Error("Preview row, bar, or disclosure styling differs");
+    if(previewStyles.rows.some(row=>row.radius!=="0px"||row.shadow!=="none")||!["none","normal"].includes(previewStyles.marker)||previewStyles.otherMarkers.some(marker=>!["none","normal"].includes(marker))||previewStyles.patternBars.some(height=>height>6))throw new Error("Preview row, bar, or disclosure styling differs");
     const deeper=page.locator("summary[data-preview-deeper]");
     await deeper.click();
     await deeper.locator("..").evaluate(el=>{if(!el.open)throw new Error("Go deeper did not open")});

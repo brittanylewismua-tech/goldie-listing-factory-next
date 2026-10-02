@@ -232,7 +232,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
             <div className={styles.pathHead}><h4>Ideas and checks</h4></div>
             <div className={styles.paths}>{selectedPaths.slice(0,3).map(item=><button type="button" key={item.id} className={styles.path} data-preview-row="path"
               onClick={()=>open(item)}><span><strong>{item.title}</strong></span><span aria-hidden="true">›</span></button>)}</div>
-            {selectedPaths.length>3?<details className={styles.morePaths}><summary>More for this listing ({selectedPaths.length-3})</summary>
+            {selectedPaths.length>3?<details className={styles.morePaths}><summary data-preview-summary>More for this listing ({selectedPaths.length-3})</summary>
               <div className={styles.paths}>{selectedPaths.slice(3).map(item=><button type="button" key={item.id} className={styles.path} data-preview-row="path"
                 onClick={()=>open(item)}><span><strong>{item.title}</strong></span><span aria-hidden="true">›</span></button>)}</div>
             </details>:null}
@@ -251,7 +251,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
       </article>
       <div className={styles.listingChoices} role="group" aria-label="Top purchased listings">
         <div className={styles.selector}>{featured.slice(0,3).map(choice)}</div>
-        {featured.length>3?<details className={styles.more}><summary>View listings 4–{featured.length}</summary>
+        {featured.length>3?<details className={styles.more}><summary data-preview-summary>View listings 4–{featured.length}</summary>
           <div className={styles.moreChoices}>{featured.slice(3).map((row,index)=>choice(row,index+3))}</div>
         </details>:null}
       </div>
@@ -295,7 +295,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
             <span><strong>{item.title}</strong><small>{item.brief}</small></span><b aria-hidden="true">›</b>
           </button>)}</div>
         </section>})}
-        {sourceAnalysis?<details className={styles.sourceDetails} data-preview-source-details><summary>Source analysis <span aria-hidden="true">⌄</span></summary><div className={styles.sourceAnalysis}>{sourceAnalysis}</div></details>:null}
+        {sourceAnalysis?<details className={styles.sourceDetails} data-preview-source-details><summary data-preview-summary>Source analysis <span aria-hidden="true">⌄</span></summary><div className={styles.sourceAnalysis}>{sourceAnalysis}</div></details>:null}
       </div>
     </details>:null}
     <dialog ref={dialog} className={styles.dialog} aria-label={detail?.title||"Opportunity evidence"}
