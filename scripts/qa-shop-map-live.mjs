@@ -42,6 +42,21 @@ const measurements=async(page)=>page.evaluate(()=>{
       .filter(node=>node.scrollWidth>node.clientWidth+1).length};
 });
 try{
+  {
+    const context=await browser.newContext({viewport:{width:1200,height:750},deviceScaleFactor:1});
+    await login(context);
+    const page=await context.newPage();
+    await page.goto("https://thegoldiesuite.com/shop-map?designPreview=1",{waitUntil:"domcontentloaded",timeout:60000});
+    const preview=page.frameLocator('iframe[title="Approved Opportunity Engine design review"]');
+    await preview.getByRole("heading",{name:"Opportunity Engine",exact:true}).waitFor({timeout:30000});
+    await preview.getByText("Listing 1 of 5").waitFor({timeout:30000});
+    await page.waitForFunction(async()=>{const frame=document.querySelector('iframe[title="Approved Opportunity Engine design review"]');if(!frame?.contentDocument)return false;await frame.contentDocument.fonts.ready;return [...frame.contentDocument.images].every(image=>image.complete&&image.naturalWidth>0)},{},{timeout:30000});
+    const previewLayout=await preview.locator("body").evaluate(body=>({width:body.ownerDocument.documentElement.scrollWidth,paths:body.querySelectorAll("#focus .path-row").length,choices:body.querySelectorAll("#listing-strip button").length,heading:body.querySelector(".lead h2")?.textContent?.trim()}));
+    if(previewLayout.width>1200||previewLayout.paths!==3||previewLayout.choices!==3||previewLayout.heading!=="Top listings in your shop")throw new Error("Approved design preview differs: "+JSON.stringify(previewLayout));
+    console.log("QA_APPROVED_PREVIEW "+JSON.stringify(previewLayout));
+    await emit(page,1200,"approved_preview_first_viewport");
+    await context.close();
+  }
   for(const width of [390,320,1280]){
     const context=await browser.newContext({viewport:{width,height:width===1280?900:844},deviceScaleFactor:1});
     await login(context);
