@@ -142,6 +142,7 @@ export const ACCESS: Record<string, Rule> = {
   "/api/command-center/summary": { kind: "feature", feature: "marketWatch" },
   "/api/market-watch/shelves": { kind: "feature", feature: "marketWatch" },
   "/api/shop-map/my-listings": { kind: "feature", feature: "shopMap" },
+  "/api/shop-map/market-comparisons": { kind: "feature", feature: "shopMap" },
   "/api/unlocks": { kind: "feature", feature: "listingFactory" },
   "/api/drop": { kind: "feature", feature: "listingFactory" },
 

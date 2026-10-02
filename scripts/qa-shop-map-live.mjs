@@ -86,6 +86,15 @@ try{
       }
       await dialog.getByRole("button",{name:"Close details"}).click();
     }
+    const publicPath=focus(page).getByRole("button",{name:/Compare My Body My Choice Tee/i});
+    await publicPath.waitFor({state:"visible",timeout:30000});
+    await publicPath.click();
+    const comparisonDialog=page.getByRole("dialog");await comparisonDialog.waitFor({state:"visible"});
+    if(!(await comparisonDialog.getByRole("link",{name:"Etsy comparison"}).count())
+      ||!(await comparisonDialog.getByText(/public listing reviews/).count()))
+      throw new Error("Public comparison lacks source or exact review signal");
+    await emit(page,width,"public_comparison");
+    await comparisonDialog.getByRole("button",{name:"Close details"}).click();
     const groups=workspace(page).locator("details");
     for(const group of await groups.all()){
       if((await group.getAttribute("open"))===null)await group.locator("summary").click();
