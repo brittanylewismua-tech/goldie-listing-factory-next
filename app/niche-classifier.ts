@@ -63,7 +63,10 @@ export function collapseFacets(
   const merged: Array<{ from: string; into: string; because: string }> = [];
   const byRoot = new Map<string, string[]>();
   for (const niche of niches) {
-    const root = niche.split(/\s+/)[0].toLowerCase();
+    // Model facets can put the real subject last ("Power Feminist").
+    // They remain one Feminist category, not three invented markets.
+    const root = /\bfeminists?\b/i.test(niche) && !/\banti[ -]?feminist\b/i.test(niche)
+      ? "feminist" : niche.split(/\s+/)[0].toLowerCase();
     byRoot.set(root, [...(byRoot.get(root) ?? []), niche]);
   }
 
