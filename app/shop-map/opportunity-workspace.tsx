@@ -121,7 +121,6 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   const [catalogState,setCatalogState]=useState<"loading"|"available"|"unavailable">("loading");
   const [retry,setRetry]=useState(0);
   const [detail,setDetail]=useState<Detail|null>(null);
-  const [expanded,setExpanded]=useState<Kind[]>(["build"]);
   const dialog=useRef<HTMLDialogElement>(null);
   useEffect(()=>{setSelectedId(null)},[map.days]);
   useEffect(()=>{let cancelled=false;setCatalogState("loading");
@@ -265,12 +264,12 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
       <div className={styles.sectionHead}><h2>What customers are choosing</h2><span>Last {map.days} days</span></div>
       <div className={styles.patterns}>
         {productMix.map(row=><div key={row.label} className={styles.pattern}>
-          <strong>{row.label}</strong><span><b>{pct(row.share)}</b> of purchased units</span>
+          <strong>{row.label}</strong><span className={styles.percent}>{pct(row.share)}</span>
           <span className={styles.patternBar} aria-hidden="true"><i style={{width:Math.round(row.share*100)+"%"}}/></span>
-          <small>{row.listingCount} purchased listing{row.listingCount===1?"":"s"}</small>
+          <small>{row.listingCount} purchased listing{row.listingCount===1?"":"s"} · share of purchased units</small>
         </div>)}
         {productMix.length<3?<div className={styles.pattern}><strong>Top three listings</strong>
-          <span><b>{pct(topThreeShare)}</b> of purchased units</span>
+          <span className={styles.percent}>{pct(topThreeShare)}</span>
           <span className={styles.patternBar} aria-hidden="true"><i style={{width:Math.round(topThreeShare*100)+"%"}}/></span>
           <small>Share of your recorded purchases in this period</small></div>:null}
       </div>
@@ -281,24 +280,21 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     {reviewItems.length>0?<section className={styles.reviewSection}>
       <div className={styles.sectionHead}><h2>Review these</h2><span>Product-level findings</span></div>
       <div className={styles.reviewGrid}>{reviewItems.slice(0,3).map(item=><button type="button" key={item.id} className={styles.reviewCard} onClick={()=>open(item)}>
-        {item.imageUrl?<img src={item.imageUrl} alt="" width={64} height={64}/>:null}
+        {item.imageUrl?<img src={item.imageUrl} alt="" width={56} height={56}/>:<span className={styles.noThumb} aria-hidden="true"/>}
         <span><small>{item.tag??(item.kind==="build"?"BUILD":item.kind==="restore"?"RECOVER":"COMPARE")}</small>
-          <strong>{item.title}</strong><em>{item.brief}</em></span>
+          <strong>{item.title}</strong><em>{item.brief}</em></span><b aria-hidden="true">›</b>
       </button>)}</div>
     </section>:null}
-    {reviewItems.length>3?<details className={styles.deeper}><summary>Go deeper <span>{reviewItems.length-3} more findings</span></summary>
+    {reviewItems.length>3?<details className={styles.deeper}><summary><strong>Go deeper</strong><span>{reviewItems.length-3} more findings <b aria-hidden="true">⌄</b></span></summary>
       <div className={styles.groups}>{groups.map(([kind,label])=>{
         const items=reviewItems.slice(3).filter(item=>item.kind===kind);
         if(!items.length)return null;
-        return <details key={kind} className={styles.group} open={expanded.includes(kind)}
-          onToggle={event=>{const isOpen=event.currentTarget.open;setExpanded(previous=>
-            isOpen?previous.includes(kind)?previous:[...previous,kind]:previous.filter(item=>item!==kind))}}>
-          <summary><span>{label}<small>{items.length} finding{items.length===1?"":"s"}</small></span><span aria-hidden="true">⌄</span></summary>
+        return <section key={kind} className={styles.group}><h3>{label}</h3>
           <div>{items.map(item=><button type="button" key={item.id} className={styles.finding} onClick={()=>open(item)}>
             {item.imageUrl?<img src={item.imageUrl} alt="" width={53} height={53}/>:<span className={styles.noThumb} aria-hidden="true"/>}
-            <span><strong>{item.title}</strong><small>{item.brief}</small></span><span aria-hidden="true">›</span>
+            <span><strong>{item.title}</strong><small>{item.brief}</small></span><b aria-hidden="true">›</b>
           </button>)}</div>
-        </details>})}</div>
+        </section>})}</div>
     </details>:null}
     <dialog ref={dialog} className={styles.dialog} aria-label={detail?.title||"Opportunity evidence"}
       onClose={()=>setDetail(null)} onClick={event=>{if(event.target===dialog.current)close()}}>
