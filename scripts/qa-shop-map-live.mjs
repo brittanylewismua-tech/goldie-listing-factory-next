@@ -34,7 +34,7 @@ const measurements=async(page)=>page.evaluate(()=>{
   return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,
     bodyWidth:document.body.scrollWidth,tabRows:[...new Set(tabBoxes.map(box=>Math.round(box.top)))].length,
     selectorCount:selectors.length,selectorRows:[...new Set(selectors.map(box=>Math.round(box.top)))].length,
-    focusTop:focused?.top??null,photoHeight:focused?.firstElementChild?.getBoundingClientRect().height??null,heading:document.querySelector(".shop-map-head h1")?.textContent?.trim()??"",
+    focusTop:focused?.top??null,photoHeight:document.querySelector('section[aria-labelledby="oe-workspace-title"] article')?.firstElementChild?.getBoundingClientRect().height??null,heading:document.querySelector(".shop-map-head h1")?.textContent?.trim()??"",
     oldLayoutVisible:[...document.querySelectorAll(".oe-priority-grid,.oe-site-grid,.oe-site-evidence-band")]
       .some(node=>node.getClientRects().length>0),
     groupCount:document.querySelectorAll('section[aria-labelledby="oe-workspace-title"] details').length,
