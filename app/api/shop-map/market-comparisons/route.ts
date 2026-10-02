@@ -66,11 +66,10 @@ export const POST=withErrorLog("shop-map-market-comparisons",async(request:Reque
         const latest=(reviews.results||[]).map(row=>Number(row.created_timestamp||row.create_timestamp||0)).sort((a,b)=>b-a)[0]||0;
         const image=listing.images?.[0]?.url_570xN||listing.images?.[0]?.url_fullxfull||"";
         if(!image||!latest||!reviews.count)continue;
-        const distinct=words(listing.title).find(word=>!ownWords.has(word));
         const material=listing.materials?.find(value=>value&&!own.title.toLowerCase().includes(value.toLowerCase()));
-        const difference=material?"The comparison lists "+material+" as a material; check how its options and buyer use compare with yours.":
-          distinct?"The comparison emphasizes “"+distinct+"” in its title; inspect whether that buyer angle fits an original test.":
-          "Compare the visible wording, product options, materials and buyer use before testing a distinct version.";
+        const difference=material
+          ?"The comparison lists "+material+" as a material; check how its options and buyer use compare with yours."
+          :"No specific product difference is verified from the available listing fields. Inspect both products and their options before choosing a test.";
         const price=listing.price&&listing.price.divisor>0
           ?listing.price.currency_code+" "+(listing.price.amount/listing.price.divisor).toFixed(2):null;
         const review=(reviews.results||[]).find(row=>row.review?.trim());
