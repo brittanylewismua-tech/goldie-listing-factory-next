@@ -1,6 +1,5 @@
 import { requireFeaturePage } from "@/app/require-feature";
 import { isQaReviewer, QA_REVIEWER_EMAIL } from "@/app/qa-reviewer";
-import { isOwner } from "@/app/owner-allowlist";
 import QaMobileMetrics from "@/app/qa/mobile-metrics";
 import FactoryShell from "@/app/factory-shell";
 import ShopMapClient from "./shop-map-client";
@@ -23,10 +22,11 @@ export default async function ShopMapPage({searchParams}:{searchParams:Promise<{
   const reviewer = await isQaReviewer();
   const user = reviewer ? { email: QA_REVIEWER_EMAIL, userId:"qa-reviewer" } : await requireFeaturePage("shopMap", "/shop-map");
   const params = await searchParams;
-  const ownerPreview = "emailVerified" in user && isOwner(user);
-  /* The owner now sees the rebuilt Opportunity Engine on her own shop data.
-     ?live=1 still opens the previous engine. The reviewer keeps the approved
-     design document for the existing mobile QA. */
+  /* Every account sees the rebuilt Opportunity Engine on its own shop data
+     (the suite is pre-launch). ?live=1 still opens the previous engine. The
+     reviewer stays on the previous engine and the approved design document,
+     because scripts/qa-shop-map-live.mjs asserts that layout. Move the QA to
+     the new engine before switching the reviewer. */
   if (reviewer && params.designPreview === "1") {
     return <div data-opportunity-design-preview style={{position:"fixed",inset:0,zIndex:2147483647,background:"#fff"}}>
       <iframe title="Approved Opportunity Engine design review" srcDoc={approvedPreviewDocument}
@@ -43,7 +43,7 @@ export default async function ShopMapPage({searchParams}:{searchParams:Promise<{
     <FactoryShell active="shop-map" title="Your shop" desktopOnly={false} reviewer={reviewer}>
       {reviewer && <QaMobileMetrics />}
       <ShopMapClient key={cacheScope??"no-shop"} signedInEmail={user.email} cacheScope={cacheScope} activeShopId={activeShop}
-        engine={ownerPreview && params.live !== "1" ? "top-ten" : "workspace"} />
+        engine={params.live === "1" || reviewer ? "workspace" : "top-ten"} />
     </FactoryShell>
   );
 }
