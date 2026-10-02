@@ -2022,3 +2022,208 @@
 #suite-workspace .shop-map-redesign .oe-market-images a{display:flex!important;flex-direction:column!important;gap:5px!important;min-width:0!important;color:#76254f!important;text-decoration:none!important}
 #suite-workspace .shop-map-redesign .oe-market-images img{width:70px!important;height:70px!important;border-radius:9px!important;object-fit:cover!important;background:#faedf4!important}
 #suite-workspace .shop-map-redesign .oe-market-images small{font-size:10px!important;font-weight:750!important;color:#716771!important}
+
+/* Approved Opportunity Engine review layout. */
+#suite-workspace .shop-map-redesign{
+  --g-ink:#201c21;--g-ink-2:#625861;--g-ink-3:#726971;--g-line:#e9e0e6;
+  max-width:1220px!important;color:#201c21!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-head{
+  display:flex!important;align-items:flex-end!important;justify-content:space-between!important;
+  gap:20px!important;margin:0!important;padding:25px 0 0!important;border:0!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-head h1{
+  margin:4px 0 0!important;font-size:clamp(31px,3.6vw,45px)!important;
+  line-height:1.1!important;letter-spacing:-.055em!important;color:#201c21!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-head .current-kicker{
+  color:#8d1d5a!important;font-size:11px!important;letter-spacing:.13em!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-shop-identity{
+  margin-top:7px!important;color:#796f78!important;font-size:12px!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-period{
+  display:inline-flex!important;flex:none!important;gap:2px!important;margin:0!important;
+  padding:4px!important;border:1px solid #e6dce2!important;border-radius:10px!important;
+  background:#fff!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-period button{
+  min-height:34px!important;padding:8px 13px!important;border:0!important;border-radius:7px!important;
+  background:transparent!important;color:#756a73!important;font-size:12px!important;font-weight:800!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-period button[aria-pressed=true]{
+  background:#8d1d5a!important;color:#fff!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-tabs{
+  display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:7px!important;margin:25px 0 29px!important;padding:5px!important;
+  border:1px solid #e4dbe1!important;border-radius:12px!important;background:#fff!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-tabs button{
+  min-width:0!important;min-height:37px!important;padding:7px 10px!important;
+  border:0!important;border-radius:8px!important;background:transparent!important;
+  color:#70666e!important;font-size:12px!important;font-weight:800!important;text-align:center!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-tabs button[aria-current=page]{
+  background:#ee6fc0!important;color:#181218!important;
+}
+#suite-workspace .shop-map-redesign .oe-engine>.oe-section-heading{
+  display:flex!important;align-items:baseline!important;justify-content:space-between!important;margin:0 0 16px!important;
+}
+#suite-workspace .shop-map-redesign .oe-engine>.oe-section-heading h2{
+  font-size:25px!important;line-height:1.2!important;letter-spacing:-.04em!important;color:#201c21!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-grid{gap:15px!important}
+#suite-workspace .shop-map-redesign .oe-priority-card{border-radius:17px!important}
+#suite-workspace .shop-map-redesign .oe-priority-art{height:172px!important;background:#faedf4!important}
+#suite-workspace .shop-map-redesign .oe-priority-art img{width:138px!important;height:138px!important}
+#suite-workspace .shop-map-redesign .oe-priority-diagnosis{
+  display:-webkit-box!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important;overflow:hidden!important;
+  color:#4d454b!important;font-size:13px!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-direction{
+  margin-top:auto!important;padding-top:12px!important;border-top:1px solid #eee6eb!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-section{margin-top:42px!important}
+#suite-workspace .shop-map-redesign .oe-site-opportunity-intro{
+  display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:20px!important;margin-bottom:15px!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-opportunity-intro h2{
+  margin:0!important;font-size:26px!important;line-height:1.15!important;letter-spacing:-.04em!important;
+  color:#201c21!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-opportunity-intro p{
+  margin:5px 0 0!important;max-width:580px!important;color:#766c74!important;font-size:13px!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-filter{display:flex!important;gap:6px!important;flex-wrap:wrap!important}
+#suite-workspace .shop-map-redesign .oe-site-filter button{
+  min-height:34px!important;padding:7px 11px!important;border:1px solid #e4d8e0!important;
+  border-radius:999px!important;background:#fff!important;color:#6f626b!important;font-size:11px!important;font-weight:800!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-filter button[aria-pressed=true]{
+  border-color:#8d1d5a!important;background:#8d1d5a!important;color:#fff!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-grid{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:13px!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-card{
+  display:grid!important;grid-template-columns:87px minmax(0,1fr)!important;gap:16px!important;
+  min-width:0!important;min-height:181px!important;padding:18px!important;
+  border:1px solid #e9e0e6!important;border-radius:15px!important;background:#fff!important;
+  box-shadow:none!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-card-art{
+  display:flex!important;align-items:flex-start!important;justify-content:center!important;min-width:0!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-card-art>img,
+#suite-workspace .shop-map-redesign .oe-site-no-image{
+  width:87px!important;height:87px!important;border-radius:9px!important;background:#faedf4!important;
+  object-fit:contain!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-no-image{
+  display:grid!important;place-items:center!important;color:#8f7c88!important;font-size:11px!important;font-weight:700!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-pair{
+  display:flex!important;gap:4px!important;width:87px!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-pair a{min-width:0!important;flex:1!important}
+#suite-workspace .shop-map-redesign .oe-site-pair img{
+  width:100%!important;height:87px!important;border-radius:7px!important;object-fit:cover!important;background:#faedf4!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-card-body{display:flex!important;flex-direction:column!important;min-width:0!important}
+#suite-workspace .shop-map-redesign .oe-site-card-tag{
+  display:block!important;color:#8d1d5a!important;font-size:10px!important;font-weight:800!important;
+  letter-spacing:.1em!important;text-transform:uppercase!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-card h3{
+  margin:4px 0 7px!important;font-size:16px!important;line-height:1.25!important;letter-spacing:-.02em!important;
+  overflow-wrap:anywhere!important;color:#201c21!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-card p{
+  display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;
+  overflow:hidden!important;margin:0 0 9px!important;color:#625861!important;font-size:12px!important;line-height:1.5!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-card strong{
+  display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;
+  color:#76254f!important;font-size:12px!important;line-height:1.45!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-link{
+  align-self:flex-start!important;margin-top:auto!important;padding:10px 0 0!important;border:0!important;
+  background:transparent!important;color:#8d1d5a!important;font-size:12px!important;font-weight:800!important;
+  text-decoration:underline!important;text-underline-offset:3px!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-empty{
+  grid-column:1/-1!important;margin:0!important;padding:24px!important;border:1px solid #e9e0e6!important;
+  border-radius:12px!important;background:#fff!important;color:#716770!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-evidence-band{
+  display:grid!important;grid-template-columns:1fr auto!important;align-items:center!important;gap:18px!important;
+  margin:40px 0 30px!important;padding:23px 26px!important;border:1px solid #eadce5!important;
+  border-radius:15px!important;background:#fff!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-evidence-band h2{
+  margin:0 0 4px!important;font-size:17px!important;letter-spacing:-.025em!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-evidence-band p{
+  margin:0!important;max-width:670px!important;color:#716770!important;font-size:12px!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-evidence-band button{
+  padding:9px 13px!important;border:1px solid #c994b1!important;border-radius:9px!important;
+  background:#fff!important;color:#8d1d5a!important;font-size:12px!important;font-weight:800!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-deep{margin:0 0 30px!important}
+#suite-workspace .shop-map-redesign .oe-site-deep>summary{
+  width:max-content!important;color:#8d1d5a!important;font-size:12px!important;font-weight:800!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-dialog{
+  width:min(650px,calc(100% - 30px))!important;max-width:650px!important;max-height:calc(100vh - 30px)!important;
+  overflow:auto!important;padding:0!important;border:1px solid #e7dbe3!important;border-radius:17px!important;
+  box-shadow:0 25px 75px #2d182541!important;color:#201c21!important;background:#fff!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-dialog::backdrop{background:#2c1d2977!important}
+#suite-workspace .shop-map-redesign .oe-site-dialog-inner{padding:27px!important}
+#suite-workspace .shop-map-redesign .oe-site-dialog h2{margin:0 0 7px!important;font-size:25px!important;letter-spacing:-.04em!important}
+#suite-workspace .shop-map-redesign .oe-site-dialog p{color:#5e545c!important;font-size:14px!important;line-height:1.6!important}
+#suite-workspace .shop-map-redesign .oe-site-dialog ul{margin:14px 0 20px!important;padding-left:21px!important;color:#4e464d!important;font-size:13px!important;line-height:1.6!important}
+#suite-workspace .shop-map-redesign .oe-site-dialog li+li{margin-top:8px!important}
+#suite-workspace .shop-map-redesign .oe-site-dialog button{
+  margin-top:16px!important;padding:9px 15px!important;border:0!important;border-radius:8px!important;
+  background:#8d1d5a!important;color:#fff!important;font-size:12px!important;font-weight:800!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-source-links{display:flex!important;gap:9px!important;flex-wrap:wrap!important}
+#suite-workspace .shop-map-redesign .oe-site-source-links a{
+  padding:7px 9px!important;border:1px solid #eadce5!important;border-radius:7px!important;
+  background:#fcf7fa!important;color:#6e5d68!important;font-size:11px!important;
+}
+@media(max-width:850px){
+  #suite-workspace .shop-map-redesign .oe-priority-grid{grid-template-columns:minmax(0,1fr)!important}
+  #suite-workspace .shop-map-redesign .oe-site-opportunity-intro{display:block!important}
+  #suite-workspace .shop-map-redesign .oe-site-filter{margin-top:13px!important}
+}
+@media(max-width:600px){
+  #suite-workspace .shop-map-redesign .shop-map-head{
+    display:block!important;padding-top:19px!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-head h1{font-size:34px!important}
+  #suite-workspace .shop-map-redesign .oe-site-period{display:flex!important;width:100%!important;margin-top:15px!important}
+  #suite-workspace .shop-map-redesign .oe-site-period button{flex:1!important}
+  #suite-workspace .shop-map-redesign .shop-map-tabs{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:19px 0 24px!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-tabs button{font-size:11px!important}
+  #suite-workspace .shop-map-redesign .oe-engine>.oe-section-heading h2,
+  #suite-workspace .shop-map-redesign .oe-site-opportunity-intro h2{font-size:23px!important}
+  #suite-workspace .shop-map-redesign .oe-priority-art{height:139px!important;padding:11px!important}
+  #suite-workspace .shop-map-redesign .oe-priority-art img{width:107px!important;height:107px!important}
+  #suite-workspace .shop-map-redesign .oe-priority-body{padding:15px 16px!important}
+  #suite-workspace .shop-map-redesign .oe-site-grid{grid-template-columns:minmax(0,1fr)!important}
+  #suite-workspace .shop-map-redesign .oe-site-card{min-height:0!important}
+  #suite-workspace .shop-map-redesign .oe-site-evidence-band{display:block!important;margin-top:28px!important;padding:18px!important}
+  #suite-workspace .shop-map-redesign .oe-site-evidence-band button{margin-top:13px!important}
+}
+@media(max-width:350px){
+  #suite-workspace .shop-map-redesign .oe-site-card{grid-template-columns:65px minmax(0,1fr)!important;gap:12px!important}
+  #suite-workspace .shop-map-redesign .oe-site-card-art>img,
+  #suite-workspace .shop-map-redesign .oe-site-no-image{width:65px!important;height:65px!important}
+  #suite-workspace .shop-map-redesign .oe-site-pair{width:65px!important}
+}
