@@ -81,7 +81,6 @@
 .dialogInner li+li{margin-top:7px}
 .sources{display:flex;flex-wrap:wrap;gap:6px}
 .sources span{padding:6px 8px;background:#f2f2f2;font-size:11px}
-.dialog-note{margin-top:20px;font-size:11px;color:#555}
 @media(max-width:900px){
   .focus{grid-template-columns:33% 67%}.body{padding:23px}.art{min-height:320px}
 }
