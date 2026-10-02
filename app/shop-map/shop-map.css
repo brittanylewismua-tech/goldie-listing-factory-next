@@ -2297,8 +2297,8 @@
 }
 
 /* Keep the approved preview rows flat despite suite-wide interactive styles. */
-#suite-workspace .shop-map-redesign [data-preview-row="path"],
-#suite-workspace .shop-map-redesign [data-preview-row="finding"]{border-radius:0!important;box-shadow:none!important;background:transparent!important}
-#suite-workspace .shop-map-redesign [data-preview-row="review"]{border-radius:0!important;box-shadow:none!important;background:#fff!important}
+#suite-workspace .shop-map-redesign section[aria-labelledby="oe-workspace-title"] button[data-preview-row="path"],
+#suite-workspace .shop-map-redesign section[aria-labelledby="oe-workspace-title"] button[data-preview-row="finding"]{border-radius:0!important;box-shadow:none!important;background:transparent!important}
+#suite-workspace .shop-map-redesign section[aria-labelledby="oe-workspace-title"] button[data-preview-row="review"]{border-radius:0!important;box-shadow:none!important;background:#fff!important}
 #suite-workspace .shop-map-redesign [data-preview-deeper]::after{content:none!important;display:none!important}
 #suite-workspace .shop-map-redesign [data-preview-deeper]::-webkit-details-marker{display:none!important}
