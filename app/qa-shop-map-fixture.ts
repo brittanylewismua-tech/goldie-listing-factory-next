@@ -35,6 +35,9 @@ const catalogActions = [
 const marketProof = [{
   patternKey:"bodily autonomy",phrase:"bodily autonomy",sellingListings:8,
   observedSold30:21,moving:8,productFamilies:[{family:"sweatshirt",sold30:12},{family:"tee",sold30:9}],
+  listings:[{listingId:900007,title:"My Body My Choice Tee",imageUrl:images[0],
+    etsyUrl:"https://www.etsy.com/listing/900007",priceCents:3200,currency:"USD",
+    observedUnits30:3,confirmedAt:Math.floor(Date.now()/1000)-86400,reviewsOnThisListing:2}],
 }];
 export const qaListings = [...titles.map((title,index) => ({
   listingId:index+1,title,tags:[],state:"active",family:["tee","sweatshirt","tee","poster","mug"][index],

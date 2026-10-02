@@ -96,6 +96,17 @@ try {
           throw new Error("Reviewer comparison from outside the top three is missing");
         console.log("QA_COMPARISONS "+JSON.stringify({width,cards:comparisonCount,paired,
           first:(await comparisons.first().innerText()).slice(0,130)}));
+        const marketPair=page.locator(".oe-market-pair").first();
+        await marketPair.waitFor({timeout:15000});
+        if(await marketPair.locator(".oe-market-images a").count()!==2)
+          throw new Error("External candidate does not link both products");
+        const marketImages=await marketPair.locator(".oe-market-images img").evaluateAll(nodes=>
+          nodes.map(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0));
+        if(marketImages.length!==2||marketImages.some(loaded=>!loaded))
+          throw new Error("External candidate images did not load");
+        if(!(await marketPair.innerText()).includes("observed activity"))
+          throw new Error("External candidate is not honestly labeled");
+        console.log("QA_MARKET_PAIR "+JSON.stringify({width,images:marketImages.length}));
         const patternMetrics=page.locator(".oe-pattern-metrics").first();
         await patternMetrics.waitFor({timeout:10000});
         if(await patternMetrics.locator("span").count()!==2
