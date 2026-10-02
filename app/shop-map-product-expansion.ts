@@ -92,7 +92,7 @@ export function buildProductDirections(
     const checkFirst=unlinkedActive>0||!productionVerified;
     return {...base,kind:checkFirst?"check-first" as const:"test" as const,
       retainedCharacteristic:retained,
-      proposedChange:`Test this exact artwork on a ${label}, a format already active in your shop.`,
+      proposedChange:`Test this artwork on a ${label}.`,
       catalogCoverage:unlinkedActive>0
         ?`${unlinkedActive} active listing${unlinkedActive===1?" has":"s have"} no linked artwork identity. Check existing versions before building.`
         :`No exact-artwork ${label} was found in the artwork-linked catalog.`,

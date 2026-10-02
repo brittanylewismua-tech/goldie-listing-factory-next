@@ -26,7 +26,7 @@ try {
       await page.locator(".shop-map-tabs button").filter({hasText:label}).click();
       await page.waitForTimeout(2200);
       if(key==="overview"){
-        await page.getByText(/CANDIDATE.*CHECK FIRST/i).first().waitFor({timeout:30000});
+        await page.getByText(/CHECK FIRST/i).first().waitFor({timeout:30000});
         const dna=page.locator(".oe-dna");
         await dna.getByText("Winner DNA").waitFor({timeout:30000});
         await dna.locator("summary").click();
@@ -67,6 +67,28 @@ try {
           throw new Error("Selected product direction missing");
         console.log("QA_HERO "+JSON.stringify({width,imageTop:imageBox.y,imageHeight:imageBox.height,
           votesBottom:votesBox.y+votesBox.height,text:(await hero.innerText()).slice(0,180)}));
+        const comparisons=page.locator(".oe-expansion");
+        await comparisons.first().waitFor({timeout:10000});
+        const comparisonCount=await comparisons.count();
+        let paired=0;
+        for(let index=0;index<comparisonCount;index++){
+          const card=comparisons.nth(index);
+          if((await card.locator(".oe-card-tag").innerText()).includes("SHOP COMPARISON")){
+            await card.scrollIntoViewIfNeeded();
+            await page.waitForTimeout(250);
+            const links=await card.locator(".oe-expansion-pair a").count();
+            if(links!==2)throw new Error("Shop comparison does not link both real listings");
+            const images=await card.locator(".oe-expansion-pair img").evaluateAll(nodes=>
+              nodes.map(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0));
+            if(images.length!==2||images.some(loaded=>!loaded))
+              throw new Error("Shop comparison images did not load");
+            paired++;
+          }
+        }
+        if(!paired||!(await comparisons.first().innerText()).includes("Bodily Autonomy"))
+          throw new Error("Reviewer comparison from outside the top three is missing");
+        console.log("QA_COMPARISONS "+JSON.stringify({width,cards:comparisonCount,paired,
+          first:(await comparisons.first().innerText()).slice(0,130)}));
       }
       const measured=(await output.innerText()).trim();
       const match=measured.match(/QA viewport: (\d+)px; document: (\d+)px; body: (\d+)px; tab rows: ([\d+]+); active: ([^;]+); loading: (YES|NO); alert: ([^;]+); text: (\d+)/);
@@ -96,8 +118,8 @@ try {
         await page.locator(".shop-map-analysis-period select").selectOption("30");
         await page.waitForTimeout(1800);
         if(!(await votes.innerText()).includes("8"))throw new Error("30-day purchase leader missing");
-        await page.getByText(/CANDIDATE.*CHECK FIRST/i).first().waitFor({timeout:30000});
-        if(!(await page.locator(".oe-lead-copy").first().innerText()).includes("exact artwork"))
+        await page.getByText(/CHECK FIRST/i).first().waitFor({timeout:30000});
+        if(!(await page.locator(".oe-lead-copy").first().innerText()).includes("this artwork"))
           throw new Error("Specific purchased-product direction missing");
         await page.screenshot({path:`qa-artifacts/shop-map-${width}-overview-30.png`,fullPage:true});
         const day30=(await page.screenshot({type:"jpeg",quality:35,fullPage:true})).toString("base64");
@@ -138,9 +160,11 @@ try {
         const research=page.locator(".shop-map-mirrorbot").first();
         await research.locator("summary").click();
         const researchText=await research.innerText();
-        if(!researchText.includes("Purchased listing #1")||!researchText.includes("22 units"))
+        await research.locator(".shop-map-mirrorbot-prompt summary").click();
+        const prompt=await research.locator(".shop-map-mirrorbot-prompt textarea").inputValue();
+        if(!prompt.includes("Purchased listing #1")||!prompt.includes("22 units"))
           throw new Error("Deep research lost the purchased winner context");
-        if(!researchText.includes("Opening it does not transfer this context"))
+        if(!researchText.includes("Opening MirrorBot does not transfer this context"))
           throw new Error("MirrorBot transfer status is unclear");
         const researchImage=(await page.screenshot({type:"jpeg",quality:35})).toString("base64");
         console.log(`QA_IMAGE_BEGIN ${width} purchased_research`);
@@ -219,7 +243,7 @@ try {
   const tieCards=tiePage.locator(".oe-top-grid .oe-top-card");
   if(await tieCards.count()!==4)throw new Error("The fourth tied product is hidden");
   await tieCards.last().click();
-  await tiePage.locator(".oe-lead-copy").getByText("Review this purchased product before choosing a new test.").waitFor({timeout:15000});
+  await tiePage.locator(".oe-lead-copy").getByText("Review this product.").waitFor({timeout:15000});
   if(!(await tiePage.locator(".oe-lead-art").innerText()).includes("LEADING PRODUCT"))
     throw new Error("Equal-rank product lost its leading status");
   await tieCards.last().scrollIntoViewIfNeeded();

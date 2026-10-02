@@ -19,7 +19,7 @@ test("a purchased winner gets an exact-artwork format test only in an establishe
   const [row]=buildProductDirections(purchase(),[tee,sweater]);
   assert.equal(row.kind,"test");
   assert.match(row.retainedCharacteristic,/My body my choice/);
-  assert.match(row.proposedChange,/exact artwork on a sweatshirt/);
+  assert.equal(row.proposedChange,"Test this artwork on a sweatshirt.");
   assert.match(row.catalogCoverage,/No exact-artwork sweatshirt was found/);
   assert.match(row.whyNow,/12 purchased units across 1 recorded transaction/);
   assert.doesNotMatch(JSON.stringify(row),/SEO title/);

@@ -49,7 +49,7 @@ test("Opportunity Engine stays decision-first instead of repeating dashboard sta
 
 test("ranked priorities keep customer and active-design attention visually comparable",()=>{
   assert.match(client,/className="oe-pattern"/);
-  assert.match(client,/customer response/);
+  assert.match(client,/of 90-day sales/);
   assert.match(client,/active analyzed designs/);
 });
 
@@ -64,7 +64,7 @@ test("Opportunity Engine can discover winning patterns without assuming a custom
 test("Opportunity Engine copy stays short",()=>{
   assert.doesNotMatch(overview,/This pattern appears in/);
   assert.doesNotMatch(overview,/It will not manufacture/);
-  assert.match(purchase,/NEXT PRODUCT TEST/);
+  assert.match(purchase,/NEXT TEST/);
   assert.match(client,/What customers are choosing/);
 });
 
@@ -72,10 +72,12 @@ test("Opportunity Engine does not include the generic listing keyword checker",(
   assert.doesNotMatch(overview,/ListingCheckPanel/);
   assert.doesNotMatch(overview,/Compare a listing with search results/);
   assert.match(review,/className="oe-review-card oe-expansion"/);
+  assert.match(review,/oe-expansion-pair/);
+  assert.match(review,/peerListingId/);
 });
 
 test("top listings still render when visual priority evidence is incomplete",()=>{
-  assert.match(client,/No shared visual pattern is supported by the available analysis/);
+  assert.match(client,/No shared pattern in the available analysis/);
   assert.match(client,/oe-source-gallery/);
   assert.match(overview,/shown\.patterns\?<WinningPatterns map=\{shown\.patterns\}/);
 });
@@ -85,9 +87,9 @@ test("MirrorBot handoffs use artwork concepts and never SEO titles",()=>{
   assert.match(actions,/Do not infer artwork from SEO titles or tags/);
   assert.match(actions,/navigator\.clipboard\.writeText\(prompt\)/);
   assert.match(actions,/Open MirrorBot/);
-  assert.match(actions,/Opening it does not transfer this context/);
+  assert.match(actions,/Opening MirrorBot does not transfer this context/);
   assert.match(actions,/Copy failed/);
-  assert.match(actions,/WINNER RESEARCH/);
+  assert.match(actions,/View full prompt/);
 });
 
 test("tracked market proof must match the artwork phrase exactly and remains optional",()=>{

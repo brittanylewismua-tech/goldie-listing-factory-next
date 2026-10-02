@@ -5,7 +5,6 @@ import {shortLabel} from "@/app/design-reach";
 import {useState} from "react";
 
 const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";
-const money=(minor:number,currency:string)=>new Intl.NumberFormat(undefined,{style:"currency",currency}).format(minor/100);
 const percent=(share:number)=>share>0&&share<.005?"<1%":String(Math.round(share*100))+"%";
 
 export default function PurchasePriorities({map,directions,analysisFailed=false,onRetry}:{
@@ -37,13 +36,13 @@ export default function PurchasePriorities({map,directions,analysisFailed=false,
     :"";
   const copy=async()=>{
     if(!researchPrompt)return;
-    try{await navigator.clipboard.writeText(researchPrompt);setCopyState("Copied the full product context. Opening MirrorBot does not transfer it automatically.")}
-    catch{setCopyState("Copy the full context below, then paste it into MirrorBot.");}
+    try{await navigator.clipboard.writeText(researchPrompt);setCopyState("Prompt copied. Paste it into MirrorBot.")}
+    catch{setCopyState("Copy the prompt below and paste it into MirrorBot.");}
   };
-  const choiceLabel=direction?.kind==="test"?"NEXT PRODUCT TEST"
-    :direction?.kind==="check-first"?"CANDIDATE · CHECK FIRST":"PRODUCT REVIEW";
+  const choiceLabel=direction?.kind==="test"?"NEXT TEST"
+    :direction?.kind==="check-first"?"CHECK FIRST":"PRODUCT REVIEW";
   const choiceAction=direction?.proposedChange??direction?.researchQuestion
-    ??(analysisFailed?"Product analysis could not load.":directions?"Review this purchased product before choosing a new test.":"Checking product imagery…");
+    ??(analysisFailed?"Product analysis unavailable.":directions?"Review this product.":"Checking product imagery…");
   const card=(row:PurchasePriority)=><button key={row.listingId} type="button"
     className="oe-top-card" aria-pressed={chosen?.listingId===row.listingId}
     aria-label={"Review "+row.title+": "+row.unitsPurchased+" units purchased"}
@@ -73,15 +72,13 @@ export default function PurchasePriorities({map,directions,analysisFailed=false,
           <div><b>{percent(chosen.share)}</b><span>{map.shareLabel.toLowerCase()}</span></div>
         </div>
         <p className="oe-lead-product">{shortLabel(chosen.title)}</p>
-        {direction?.kind==="check-first"?<p className="oe-lead-note">Check existing versions and production fit before building.</p>:null}
+        {direction?.kind==="check-first"?<p className="oe-lead-note">Confirm production fit before making it.</p>:null}
         {!direction&&analysisFailed&&onRetry?<button className="oe-retry" type="button" onClick={onRetry}>Retry product analysis</button>:null}
         {!direction&&!analysisFailed&&!directions?<p className="oe-lead-note" role="status">Checking product imagery and related catalog…</p>:null}
-        <details className="oe-detail"><summary>Product evidence and next steps</summary>
+        <details className="oe-detail"><summary>Why this direction</summary>
           {direction?.retainedCharacteristic?<p>Keep {direction.retainedCharacteristic}.</p>:null}
-          {direction?.catalogCoverage?<p>Catalog check: {direction.catalogCoverage}</p>:null}
-          {direction?.whyNow?<p>Why now: {direction.whyNow}.</p>:null}
-          {direction?.researchQuestion?<p>Next step: {direction.researchQuestion}</p>:null}
-          <p>{chosen.orders} recorded transaction{chosen.orders===1?"":"s"} · Product revenue: {chosen.productRevenueMinor!==null&&chosen.currency?money(chosen.productRevenueMinor,chosen.currency):"Unavailable across currencies"}</p>
+          {direction?.catalogCoverage?<p>{direction.catalogCoverage}</p>:null}
+          {direction?.researchQuestion?<p>{direction.researchQuestion}</p>:null}
           <a href={"https://www.etsy.com/listing/"+chosen.listingId} target="_blank" rel="noopener noreferrer">View source listing</a>
           {direction?.relatedListingId?<a href={"https://www.etsy.com/listing/"+direction.relatedListingId} target="_blank" rel="noopener noreferrer">See existing version</a>:null}
           {researchPrompt?<div className="oe-detail-actions">
@@ -89,11 +86,11 @@ export default function PurchasePriorities({map,directions,analysisFailed=false,
             <a href={MIRRORBOT_URL} target="_blank" rel="noopener noreferrer" onClick={()=>void copy()}>Open MirrorBot</a>
           </div>:null}
           {copyState?<p role="status">{copyState}</p>:null}
-          {copyState.startsWith("Copy the full")?<textarea readOnly value={researchPrompt} aria-label="Full research context" onFocus={event=>event.currentTarget.select()}/>:null}
+          {copyState.startsWith("Copy the prompt")?<textarea readOnly value={researchPrompt} aria-label="Full research context" onFocus={event=>event.currentTarget.select()}/>:null}
         </details></>:<p className="oe-lead-note">Try another period to see purchased products. Favorites remain a separate early signal.</p>}
       </div>
     </div>
-    {map.totalUnits>0?<><div className="oe-section-heading"><h3>Top listings</h3><small>Last {map.days} days</small></div>
+    {map.totalUnits>0?<><div className="oe-section-heading"><h3>Your top listings</h3><small>Last {map.days} days</small></div>
       <div className="oe-top-grid">{visiblePriorities.map(card)}</div>
       {tiedBeyondCutoff.length>0?<button type="button" className="oe-ties" aria-expanded={showTies}
         onClick={()=>setShowTies(value=>!value)}>{showTies?"Hide tied listings":"View "+tiedBeyondCutoff.length+" tied listing"+(tiedBeyondCutoff.length===1?"":"s")}</button>:null}

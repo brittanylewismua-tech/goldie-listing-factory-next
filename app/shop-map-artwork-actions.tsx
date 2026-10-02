@@ -57,24 +57,25 @@ export function ArtworkRecommendations({map,purchasePriorities=null,marketProof=
     }catch{setCopyFailed(key)}
   };
   return <section className="shop-map-recommendations">
-    <div className="shop-map-section-head"><h2>Go deeper</h2></div>
+    <div className="shop-map-section-head"><h2>Research</h2></div>
     <div className="shop-map-recommendation-list">
       {rows.map(({pattern:row,source})=>{
         const proof=proofByKey.get(row.key);
-        const sourceSentence=source&&purchasePriorities
-          ?`Purchased listing #${source.listingId} ("${source.title}") received ${source.unitsPurchased} units across ${source.orders} recorded transactions in the last ${purchasePriorities.days} days (${Math.round(source.share*100)}% ${purchasePriorities.shareLabel.toLowerCase()}). Its title identifies the record; inspect its actual imagery for creative meaning.`
-          :`No purchased product in the selected period is linked to this visual observation. Treat it as background research, not a build priority.`;
-        const prompt=`${sourceSentence} Its analyzed artwork contributes to the shared visual observation "${row.label}" (${row.customerPercent}% of ${map.basisLabel}; ${row.catalogPercent}% of active analyzed artworks). That catalog comparison is supporting context and must not rerank the purchased products. Research the exact source product's visible characteristics and one distinct original variation in an already supported production format. Check existing versions, product feasibility, and relevant Etsy organic-demand evidence before recommending a test. If the needed evidence is missing, name the focused question instead. Do not infer artwork from SEO titles or tags, invent a buyer identity, claim stock decreases are purchases, copy Etsy phrases, or prescribe a listing quota.`;
+        const prompt=source&&purchasePriorities
+          ?`Purchased listing #${source.listingId} ("${source.title}"): ${source.unitsPurchased} units in the last ${purchasePriorities.days} days (${Math.round(source.share*100)}% ${purchasePriorities.shareLabel.toLowerCase()}). Its analyzed artwork shares the "${row.label}" visual pattern (${row.customerPercent}% of ${map.basisLabel}; ${row.catalogPercent}% of active analyzed artworks). Inspect the product image and suggest one original, feasible test. Check existing versions, production fit and Etsy organic demand. Name any missing evidence. Saved-watch stock decreases are observations, not purchases. Do not infer artwork from SEO titles or tags.`
+          :`Research the "${row.label}" visual pattern (${row.customerPercent}% of ${map.basisLabel}; ${row.catalogPercent}% of active analyzed artworks). No purchased product is linked to it in the selected period, so treat this as background research. Inspect actual images and relevant Etsy demand before suggesting a test. Name any missing evidence; do not infer artwork from SEO titles or tags.`;
         return <details key={row.key} className="shop-map-mirrorbot">
-          <summary>{row.label} · {source?"WINNER RESEARCH":"VISUAL RESEARCH"}</summary>
+          <summary>{row.label}</summary>
           <div>
-            {source?<p>Start with purchased listing #{source.listingId}: {source.unitsPurchased} units in the last {purchasePriorities?.days??90} days.</p>:null}
-            <p>{prompt}</p>
             <div className="shop-map-mirrorbot-actions">
               <button type="button" onClick={()=>void copyPrompt(row.key,prompt)}>{copied===row.key?"Copied":copyFailed===row.key?"Copy failed — select the prompt text":"Copy MirrorBot prompt"}</button>
               <a href={MIRRORBOT_URL} target="_blank" rel="noreferrer">Open MirrorBot ↗</a>
             </div>
-            <p>Copy the prompt, then paste it into MirrorBot. Opening it does not transfer this context.</p>
+            <p>Opening MirrorBot does not transfer this context.</p>
+            <details className="shop-map-mirrorbot-prompt"><summary>View full prompt</summary>
+              <textarea readOnly value={prompt} aria-label={"Research prompt for "+row.label}
+                onFocus={event=>event.currentTarget.select()}/>
+            </details>
             {proof?<div className="shop-map-market-proof">
               <div><span>SAVED-WATCH STOCK MOVEMENT</span>
                 <a href={`/market-watch?tab=niches&keyword=${encodeURIComponent(proof.phrase)}`}>See watch observations →</a></div>

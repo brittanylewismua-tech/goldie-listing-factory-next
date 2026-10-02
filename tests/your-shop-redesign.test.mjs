@@ -100,12 +100,11 @@ test("each purchased product keeps a direction and source evidence behind concis
   const card=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
   assert.match(client,/productDirections/);
   assert.match(client,/view=overview-insights&days=\$\{selectedDays\}/);
-  assert.match(card,/NEXT PRODUCT TEST/);
+  assert.match(card,/NEXT TEST/);
   assert.match(card,/oe-lead-art/);
   assert.match(card,/fetchPriority="high"/);
   assert.match(card,/oe-detail/);
-  assert.match(card,/Catalog check:/);
-  assert.match(card,/Why now:/);
+  assert.doesNotMatch(card,/<p>Catalog check:|<p>Why now:/);
   assert.match(card,/oe-top-grid/);
   assert.doesNotMatch(card,/units purchased across.*recorded transactions in the/);
 });
@@ -122,14 +121,14 @@ test("Winner DNA keeps its exact subset denominator and source listings in detai
   assert.match(review,/Purchased units among/);
   assert.match(review,/leading analyzed selling artworks/);
   assert.match(review,/row\.listingIds/);
-  assert.match(review,/See trait sources and scope/);
+  assert.match(review,/See the evidence/);
   assert.doesNotMatch(review,/% of winning response/);
 });
 test("a selected product without a direction has an honest local state",()=>{
   const card=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
   assert.match(card,/analysisFailed/);
-  assert.match(card,/Review this purchased product before choosing a new test/);
-  assert.match(card,/Product analysis could not load/);
+  assert.match(card,/Review this product/);
+  assert.match(card,/Product analysis unavailable/);
   assert.match(card,/Checking product imagery/);
   assert.match(client,/analysisFailed=\{insightsFailed\}/);
 });
