@@ -52,3 +52,32 @@ test("shop moves only appear with evidence",()=>{
   assert.equal(moves[0].id,"wanted");
   assert.match(moves[0].evidence[0],/4,000 favorites, 0 sold in 12 months/);
 });
+
+import {parseDesignRead,styleBreakdown,buildNextMoves} from "../app/shop-map/opportunity-engine-model.ts";
+
+/* A half-read design must never be shown as measured. */
+test("design reads are accepted only when complete",()=>{
+  assert.equal(parseDesignRead(1,'{"name":"Rich Man","lettering":"typewriter","art":"none"}'),null);
+  const read=parseDesignRead(1,'```json\n{"name":"Mom, I Am A Rich Man","wording":"Mom, I am a rich man","credit":"Cher","lettering":"typewriter","art":"floral","textLed":true,"garment":"white","ink":["red"]}\n```');
+  assert.equal(read.credit,"Cher");
+  assert.equal(parseDesignRead(2,'{"name":"X","credit":"null","lettering":"sans","art":"none","textLed":false}').credit,null);
+});
+
+test("style breakdown counts only read designs and keeps the denominator honest",()=>{
+  const reads=new Map([[1,{listingId:1,name:"A",wording:"",credit:"Cher",lettering:"typewriter",art:"none",textLed:true,garment:"white",ink:[]}]]);
+  const style=styleBreakdown([{listingId:1,sales:14},{listingId:2,sales:6}],reads);
+  assert.equal(style.analysedUnits,14);
+  assert.equal(style.totalUnits,20);
+  assert.equal(style.traits.find(row=>row.key==="credit").units,14);
+});
+
+test("make more appears only when two or more read designs share the winning trait",()=>{
+  const read=(id,credit)=>({listingId:id,name:`D${id}`,wording:"",credit,lettering:"typewriter",art:"none",textLed:true,garment:"white",ink:[]});
+  const year=[{listingId:1,sales:14},{listingId:2,sales:7},{listingId:3,sales:3}];
+  const catalog=[1,2,3].map(id=>listing(id,100));
+  const base={top:[],catalog,year,reviews:[],days:90,month:3};
+  const one=buildNextMoves({...base,reads:new Map([[1,read(1,"Cher")],[3,read(3,null)]])});
+  assert.ok(!one.some(move=>move.id==="make"&&/named person/.test(move.title)));
+  const two=buildNextMoves({...base,reads:new Map([[1,read(1,"Cher")],[2,read(2,"De La Vega")],[3,read(3,null)]])});
+  assert.ok(two.some(move=>move.id==="make"&&/named person/.test(move.title)));
+});

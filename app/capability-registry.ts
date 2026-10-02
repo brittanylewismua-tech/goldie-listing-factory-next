@@ -183,7 +183,7 @@ export const CAPABILITIES: Capability[] = [
     etsyScopes: ["listings_r", "shops_r", "transactions_r"],
     needsPrintify: true,
     providers: ["etsy", "printify", "fal"],
-    paidWorkloads: ["nicheClassifier"],
+    paidWorkloads: ["nicheClassifier", "shopListingDesignRead"],
     tables: ["shop_map_listings", "shop_map_listing_sales", "finance_receipts",
       "finance_ledger", "finance_rollups", "shop_map_own_reviews"],
     bindings: ["DB"],
