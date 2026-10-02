@@ -49,21 +49,12 @@ const SECURITY_HEADERS = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
-// The illustrative owner design review is embedded by the authenticated Shop Map page.
-// Only its static files may be framed by this same origin; member pages retain DENY.
-const PREVIEW_HEADERS = SECURITY_HEADERS.map(header => header.key === "Content-Security-Policy"
-  ? {...header,value:header.value.replace("frame-ancestors 'none'","frame-ancestors 'self'")}
-  : header.key === "X-Frame-Options" ? {...header,value:"SAMEORIGIN"} : header);
-
 const nextConfig: NextConfig = {
   pageExtensions: devOnlyRoutes
     ? ["dev.tsx", "tsx", "ts", "jsx", "js"]
     : ["tsx", "ts", "jsx", "js"],
   async headers() {
-    return [
-      { source: "/:path*", headers: SECURITY_HEADERS },
-      { source: "/opportunity-preview-v5/:path*", headers: PREVIEW_HEADERS },
-    ];
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
   },
 };
 
