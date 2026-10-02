@@ -34,7 +34,6 @@ export function discoverShopFindings(
   const prior=units(sales,now-60*86400,now-30*86400);
   const period=units(sales,now-purchase.days*86400,end);
   const byId=new Map(listings.map(row=>[row.listingId,row]));
-  const priorityIds=new Set(purchase.priorities.map(row=>row.listingId));
   const groups=new Map<string,DiscoveryListing[]>();
   for(const row of listings)if(row.artworkHash){
     const held=groups.get(row.artworkHash)??[];
@@ -71,9 +70,12 @@ export function discoverShopFindings(
     });
   }
 
+  // A recent winner still needs its own dated finding even when it is already
+  // in the top purchase list. The overall rank and the equal-window change
+  // answer different seller questions.
   for(const [listingId,count] of recent){
     const row=byId.get(listingId);
-    if(!row||priorityIds.has(listingId)||count<3)continue;
+    if(!row||count<3)continue;
     const before=prior.get(listingId)??0;
     if(count<before+3)continue;
     out.push({
