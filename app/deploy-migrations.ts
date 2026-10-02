@@ -37,6 +37,7 @@ import { ensureCleanupQueue } from "@/app/connection-cleanup";
 import { ensureRequestLimits } from "@/app/request-limits";
 import { ensureBriefRunTable } from "@/app/niche-brief-refresh";
 import { env } from "cloudflare:workers";
+import { ensureMarketComparisonCache } from "@/app/shop-map-market-comparison-cache";
 import { ensureErrorLog } from "@/app/error-log";
 import { ensureBillingTables } from "@/app/billing";
 import { ensureSpendTables } from "@/app/spend-guard";
@@ -138,6 +139,7 @@ export const MIGRATIONS: Step[] = [
   { name: "etsy_connection_scopes", run: ensureScopeColumn },
   { name: "shop_map_targets", run: ensureTargetTable },
   { name: "shop_map_listings", run: ensureListingTables },
+  { name: "shop_map_market_comparison_cache", run: () => ensureMarketComparisonCache(database()) },
   { name: "finance", run: ensureFinanceTables },
 
   { name: "trademark_register", run: () => ensureRegisterTables(database()) },
