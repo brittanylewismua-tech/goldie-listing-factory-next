@@ -653,14 +653,14 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
-      {shown.purchasePriorities?<OpportunityWorkspace map={shown.purchasePriorities} directions={shown.productDirections} findings={shown.opportunityFindings??[]} actions={shown.catalogActions??[]} patterns={shown.patterns} catalogPatterns={shown.catalogPatterns} marketProof={shown.marketProof??[]} reviews={shown.ownReviews??[]} analysisFailed={insightsFailed} onRetry={()=>void load()}/>:null}
+      {shown.purchasePriorities?<OpportunityWorkspace map={shown.purchasePriorities} directions={shown.productDirections} findings={shown.opportunityFindings??[]} actions={shown.catalogActions??[]} patterns={shown.patterns} catalogPatterns={shown.catalogPatterns} marketProof={shown.marketProof??[]} reviews={shown.ownReviews??[]} analysisFailed={insightsFailed} onRetry={()=>void load()}
+        sourceAnalysis={shown.patterns?<>
+          {selectedDays===90?<WinningPatterns map={shown.patterns}/>:null}
+          <ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]} priorityIds={shown.purchasePriorities?.priorities.map(row=>row.listingId)??[]} findings={shown.opportunityFindings??[]} days={selectedDays}/>
+          {selectedDays===90&&!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} purchasePriorities={shown.purchasePriorities} marketProof={shown.marketProof??[]}/>}
+        </>:null}/>:null}
       {insightsLoading?<section className="shop-map-inline-state" role="status">Checking other shop signals…</section>:null}
       {insightsFailed?<section className="shop-map-inline-state"><strong>Some analysis could not load.</strong> <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Retry</button></section>:null}
-      {shown.patterns?<details className="oe-site-deep"><summary>Explore source analysis</summary>
-        {selectedDays===90?<WinningPatterns map={shown.patterns}/>:null}
-        <ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]} priorityIds={shown.purchasePriorities?.priorities.map(row=>row.listingId)??[]} findings={shown.opportunityFindings??[]} days={selectedDays}/>
-        {selectedDays===90&&!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} purchasePriorities={shown.purchasePriorities} marketProof={shown.marketProof??[]}/>}
-      </details>:null}
 
     </div>}
 
