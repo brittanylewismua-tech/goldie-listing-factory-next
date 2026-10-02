@@ -192,6 +192,24 @@ test("one subject split by design format collapses to the subject", () => {
   assert.ok(merged.some(row => /design format/.test(row.because)));
 });
 
+test("new classifier vocabulary cannot split Feminist into arbitrary modifiers", () => {
+  const result = parseCanonical(JSON.stringify({niches:[
+    "Trump Feminist", "Rich Man Feminist", "Power Feminist", "Horses",
+  ]}));
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.niches, ["Feminist", "Horses"]);
+});
+
+test("generated Feminist modifiers do not become separate themes", () => {
+  const labels = ["Trump Feminist", "Rich Man Feminist", "Power Feminist"];
+  const counts = new Map(labels.map(label => [label, 5]));
+  const result = collapseFacets(labels, counts);
+  assert.deepEqual(result.kept, ["Feminist"]);
+  assert.deepEqual(result.merged.map(row => row.from).sort(), labels.sort());
+  assert.deepEqual(collapseFacets(["Power Feminist"], new Map([["Power Feminist", 5]])).kept,
+    ["Feminist"]);
+});
+
 test("a recipient split collapses too", () => {
   const { kept } = collapseFacets(["Feminist", "Feminist for Men"],
     new Map([["Feminist", 70], ["Feminist for Men", 6]]));

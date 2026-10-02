@@ -63,13 +63,23 @@ export function collapseFacets(
   const merged: Array<{ from: string; into: string; because: string }> = [];
   const byRoot = new Map<string, string[]>();
   for (const niche of niches) {
-    const root = niche.split(/\s+/)[0].toLowerCase();
+    // Model facets can put the real subject last ("Power Feminist").
+    // They remain one Feminist category, not three invented markets.
+    const root = /\bfeminists?\b/i.test(niche) && !/\banti[ -]?feminist\b/i.test(niche)
+      ? "feminist" : niche.split(/\s+/)[0].toLowerCase();
     byRoot.set(root, [...(byRoot.get(root) ?? []), niche]);
   }
 
   const kept: string[] = [];
   for (const [root, group] of byRoot) {
-    if (group.length === 1) { kept.push(group[0]); continue; }
+    if (group.length === 1) {
+      const only = group[0];
+      if (root === "feminist" && only !== "Feminist") {
+        kept.push("Feminist");
+        merged.push({ from: only, into: "Feminist", because: "the same subject, narrowed" });
+      } else kept.push(only);
+      continue;
+    }
     /* Prefer a label that is already just the subject; otherwise shorten to it. */
     const bare = group.find(niche => niche.split(/\s+/).length === 1);
     const target = bare ?? root.charAt(0).toUpperCase() + root.slice(1);
@@ -145,8 +155,10 @@ export function parseCanonical(text: string): CanonicalResult {
   const rejected: Array<{ label: string; because: string }> = [];
   const seen = new Set<string>();
   for (const raw of parsed.niches) {
-    const label = String(raw ?? "").trim();
-    if (!label) continue;
+    const proposed = String(raw ?? "").trim();
+    if (!proposed) continue;
+    const label = /\bfeminists?\b/i.test(proposed) && !/\banti[ -]?feminist\b/i.test(proposed)
+      ? "Feminist" : proposed;
     const because = rejectAsNiche(label);
     if (because) { rejected.push({ label, because }); continue; }
     const key = label.toLowerCase();
