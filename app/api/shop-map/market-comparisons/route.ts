@@ -44,14 +44,14 @@ export const GET=withErrorLog("shop-map-market-comparisons",async(request:Reques
   if(cached&&cached.source_title===own.title&&now-cached.checked_at<12*3600)
     return NextResponse.json(JSON.parse(cached.payload),{headers:cacheControl});
   const budget=await etsyBudget();
-  if(budget.remaining<8)return NextResponse.json({status:"unavailable",reason:"Etsy request capacity is reserved for shop operations.",comparisons:[]},{headers:cacheControl});
+  if(budget.remaining<7)return NextResponse.json({status:"unavailable",reason:"Etsy request capacity is reserved for shop operations.",comparisons:[]},{headers:cacheControl});
   try{
     const connection=await etsyConnection(access.user.userId);
     // Only the concise, derived search phrase leaves Goldie. Purchase, revenue and review data do not.
     const search=await etsyFetch<{results:EtsyListing[]}>("/listings/active?keywords="+encodeURIComponent(query)+"&limit=25&sort_on=score",connection.token,"search");
     const ownWords=new Set(words(own.title));
     const candidates=(search.results||[]).filter(row=>row.shop_id!==shop.shop_id&&row.listing_id!==listingId
-      &&familyOf(row.title)===family&&words(row.title).filter(word=>ownWords.has(word)).length>=2).slice(0,4);
+      &&familyOf(row.title)===family&&words(row.title).filter(word=>ownWords.has(word)).length>=2).slice(0,3);
     const comparisons:Comparison[]=[];
     for(const candidate of candidates){
       const id=Number(candidate.listing_id);
