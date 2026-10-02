@@ -55,6 +55,7 @@ try{
       if(!label.startsWith(`${index+1}. `))throw new Error("Displayed listing numbers are not sequential: "+label);
     }
     const firstImage=focus(page).locator("img").first();
+    await page.waitForFunction(()=>{const img=document.querySelector('section[aria-labelledby="oe-workspace-title"] article img');return img instanceof HTMLImageElement&&img.complete},{},{timeout:20000});
     if(!(await firstImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
       throw new Error("Selected product image failed to load");
     const firstText=await focus(page).innerText();
@@ -95,6 +96,7 @@ try{
     await choices(page).first().click();
     const path=focus(page).getByRole("button",{name:/Compare|Review|Test|Check|Explore/i}).first();
     await path.waitFor({state:"visible",timeout:30000});
+    if(width<600){await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));await emit(page,width,"overview_loaded");}
     {
       await path.click();
       const dialog=page.getByRole("dialog");await dialog.waitFor({state:"visible"});
@@ -130,6 +132,15 @@ try{
     await emit(page,width,"choosing_section");
     await review.scrollIntoViewIfNeeded();
     await emit(page,width,"review_section");
+    const previewStyles=await page.evaluate(()=>({rows:[...document.querySelectorAll("[data-preview-row]")].map(el=>({kind:el.getAttribute("data-preview-row"),radius:getComputedStyle(el).borderRadius,shadow:getComputedStyle(el).boxShadow})),marker:getComputedStyle(document.querySelector("[data-preview-deeper]"),"::after").content}));
+    console.log("QA_PREVIEW_STYLES "+JSON.stringify({width,...previewStyles}));
+    if(previewStyles.rows.some(row=>row.radius!=="0px"||row.shadow!=="none")||!["none","normal"].includes(previewStyles.marker))throw new Error("Preview row or disclosure styling differs");
+    const deeper=page.locator("summary[data-preview-deeper]");
+    await deeper.click();
+    await deeper.locator("..").evaluate(el=>{if(!el.open)throw new Error("Go deeper did not open")});
+    await deeper.scrollIntoViewIfNeeded();
+    await emit(page,width,"deeper_open");
+    await deeper.click();
     await emit(page,width,"whole_shop",true);
     const reviewSection=page.getByRole("heading",{name:"Review these"}).locator("..").locator("..");
     if(await reviewSection.getByRole("button").count()<1)throw new Error("Whole-shop review is blank in reviewer fixture");
