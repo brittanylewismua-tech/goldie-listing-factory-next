@@ -42,8 +42,8 @@ test("Opportunity Engine stays decision-first instead of repeating dashboard sta
   assert.doesNotMatch(overview,/Revenue · 90 days/);
   assert.doesNotMatch(overview,/WHERE TO FOCUS/);
   assert.match(client,/<h1>My Shop<\/h1>/);
-  assert.match(purchase,/className="oe-lead"/);
-  assert.match(purchase,/className="oe-top-grid"/);
+  assert.match(purchase,/className="oe-priority-card"/);
+  assert.match(purchase,/className="oe-priority-grid"/);
   assert.doesNotMatch(purchase,/other purchased unit.*remain beyond/i);
 });
 
@@ -65,7 +65,7 @@ test("Opportunity Engine can discover winning patterns without assuming a custom
 test("Opportunity Engine copy stays short",()=>{
   assert.doesNotMatch(overview,/This pattern appears in/);
   assert.doesNotMatch(overview,/It will not manufacture/);
-  assert.match(purchase,/NEXT TEST/);
+  assert.match(purchase,/POSSIBLE TEST/);
   assert.match(client,/What customers are choosing/);
 });
 

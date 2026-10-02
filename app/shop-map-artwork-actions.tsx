@@ -12,6 +12,9 @@ export type ArtworkMarketProof={
   observedSold30:number;
   moving:number;
   productFamilies:Array<{family:string;sold30:number}>;
+  listings?:Array<{listingId:number;title:string;imageUrl:string;etsyUrl:string;
+    priceCents:number|null;currency:string;observedUnits30:number;
+    confirmedAt:number;reviewsOnThisListing:number}>;
 };
 
 const MIRRORBOT_URL="https://chatgpt.com/plugins/plugin_f6fc4d7acee88191aaef800f927b9aaa";

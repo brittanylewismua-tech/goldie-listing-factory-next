@@ -10,6 +10,7 @@ import {ReviewThese} from "@/app/shop-map-evidence-review";
 import type {WinnerDna} from "@/app/shop-map-winner-dna";
 import type {PurchasePriorityMap} from "@/app/shop-map-purchase-priorities";
 import type {ProductDirection} from "@/app/shop-map-product-expansion";
+import type {ShopFinding} from "@/app/shop-map-opportunity-discovery";
 import PurchasePriorities from "./purchase-priorities";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
@@ -75,6 +76,7 @@ type ShopMap = {
   patterns?: WinningPatternMap;
   purchasePriorities?:PurchasePriorityMap;
   productDirections?:ProductDirection[];
+  opportunityFindings?:ShopFinding[];
   analysedListingIds?:number[];
   opportunities?: ShopOpportunity[];
   nextBuild?: NextBuildPlan;
@@ -654,11 +656,11 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
-      {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} directions={shown.productDirections} analysisFailed={insightsFailed} onRetry={()=>void load()}/>:null}
+      {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} directions={shown.productDirections} findings={shown.opportunityFindings??[]} analysisFailed={insightsFailed} onRetry={()=>void load()}/>:null}
       {insightsLoading?<section className="shop-map-inline-state" role="status">Checking other shop signals…</section>:null}
       {insightsFailed?<section className="shop-map-inline-state"><strong>Some analysis could not load.</strong> <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Retry</button></section>:null}
       {selectedDays===90&&shown.patterns?<WinningPatterns map={shown.patterns}/>:null}
-      {selectedDays===90&&shown.patterns?<ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]} priorityIds={shown.purchasePriorities?.priorities.map(row=>row.listingId)??[]}/>:null}
+      {shown.patterns?<ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]} priorityIds={shown.purchasePriorities?.priorities.map(row=>row.listingId)??[]} findings={shown.opportunityFindings??[]} days={selectedDays}/>:null}
       {selectedDays===90&&!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} purchasePriorities={shown.purchasePriorities} marketProof={shown.marketProof??[]}/>}
 
     </div>}

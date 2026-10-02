@@ -16,7 +16,7 @@ const sweater={listingId:2,productFamily:"sweatshirt",state:"active",artworkHash
   design:{wording:["Different visible message"],illustrationCategory:"text"}};
 
 test("a purchased winner gets an exact-artwork format test only in an established compatible format",()=>{
-  const [row]=buildProductDirections(purchase(),[tee,sweater]);
+  const [row]=buildProductDirections(purchase(),[tee,sweater],{catalogComplete:true});
   assert.equal(row.kind,"test");
   assert.match(row.retainedCharacteristic,/My body my choice/);
   assert.equal(row.proposedChange,"Test this artwork on a sweatshirt.");
@@ -35,11 +35,13 @@ test("an existing active exact-artwork format is surfaced instead of a duplicate
 test("partial catalog identities and unconfirmed production make the format idea check-first",()=>{
   const [unconfirmed]=buildProductDirections(purchase(),[{...tee,verifiedCompatibleFormats:[]},sweater]);
   assert.equal(unconfirmed.kind,"check-first");
+  assert.equal(unconfirmed.proposedChange,null);
   assert.match(unconfirmed.researchQuestion,/confirm the target production method/);
   const [partial]=buildProductDirections(purchase(),[tee,sweater,{
     listingId:9,productFamily:"tee",state:"active",artworkHash:null,design:null,
   }]);
   assert.equal(partial.kind,"check-first");
+  assert.equal(partial.proposedChange,null);
   assert.match(partial.catalogCoverage,/1 active listing has no linked artwork identity/);
 });
 
@@ -89,9 +91,16 @@ test("a sixth purchased product can produce a checked format direction",()=>{
   const analyzed=counts.map((_,index)=>({
     ...tee,listingId:index+1,artworkHash:"art-"+(index+1),
   }));
-  const directions=buildProductDirections(map,[...analyzed,{...sweater,listingId:20}]);
+  const directions=buildProductDirections(map,[...analyzed,{...sweater,listingId:20}],{catalogComplete:true});
   assert.equal(directions.length,6);
   assert.equal(directions[5].listingId,6);
   assert.equal(directions[5].kind,"test");
   assert.match(directions[5].whyNow,/8 purchased units/);
+});
+
+test("a stored catalog without confirmed coverage cannot announce a new product test",()=>{
+  const [row]=buildProductDirections(purchase(),[tee,sweater]);
+  assert.equal(row.kind,"check-first");
+  assert.equal(row.proposedChange,null);
+  assert.equal(row.targetFormat,"sweatshirt");
 });

@@ -100,12 +100,12 @@ test("each purchased product keeps a direction and source evidence behind concis
   const card=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
   assert.match(client,/productDirections/);
   assert.match(client,/view=overview-insights&days=\$\{selectedDays\}/);
-  assert.match(card,/NEXT TEST/);
-  assert.match(card,/oe-lead-art/);
-  assert.match(card,/fetchPriority="high"/);
+  assert.match(card,/EXISTING VERSION/);
+  assert.match(card,/oe-priority-art/);
+  assert.match(card,/fetchPriority=\{row\.rank===1\?"high":undefined\}/);
   assert.match(card,/oe-detail/);
   assert.doesNotMatch(card,/<p>Catalog check:|<p>Why now:/);
-  assert.match(card,/oe-top-grid/);
+  assert.match(card,/oe-priority-grid/);
   assert.doesNotMatch(card,/units purchased across.*recorded transactions in the/);
 });
 test("ties crossing the compact cutoff remain reachable at equal rank",()=>{
@@ -113,8 +113,8 @@ test("ties crossing the compact cutoff remain reachable at equal rank",()=>{
   assert.match(card,/tiedBeyondCutoff/);
   assert.match(card,/visiblePriorities\.map\(card\)/);
   assert.match(card,/aria-expanded=\{showTies\}/);
-  assert.match(card,/chosen\?\.rank===1/);
-  assert.match(card,/oe-top-card/);
+  assert.match(card,/row\.rank/);
+  assert.match(card,/oe-priority-card/);
 });
 test("Winner DNA keeps its exact subset denominator and source listings in detail",()=>{
   const review=readFileSync("app/shop-map-evidence-review.tsx","utf8");
@@ -129,7 +129,7 @@ test("a selected product without a direction has an honest local state",()=>{
   assert.match(card,/analysisFailed/);
   assert.match(card,/Review this product/);
   assert.match(card,/Product analysis unavailable/);
-  assert.match(card,/Checking product imagery/);
+  assert.match(card,/Checking product evidence/);
   assert.match(client,/analysisFailed=\{insightsFailed\}/);
 });
 test("Your Shop reuses same-day cached data without leaking data between tabs",()=>{
