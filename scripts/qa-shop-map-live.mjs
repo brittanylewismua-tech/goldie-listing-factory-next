@@ -53,7 +53,13 @@ try{
     const preview=page.frameLocator('iframe[title="Approved Opportunity Engine design review"]');
     await preview.getByRole("heading",{name:"Opportunity Engine",exact:true}).waitFor({timeout:30000});
     await preview.getByText("Listing 1 of 5").waitFor({timeout:30000});
-    await page.waitForFunction(()=>{const doc=document.querySelector('iframe[title="Approved Opportunity Engine design review"]')?.contentDocument;return doc&&[...doc.images].every(image=>image.complete)},{},{timeout:20000});
+    let previewImagesSettled=false;
+    for(let attempt=0;attempt<80;attempt++){
+      previewImagesSettled=await preview.locator("body").evaluate(body=>[...body.ownerDocument.images].every(image=>image.complete));
+      if(previewImagesSettled)break;
+      await page.waitForTimeout(250);
+    }
+    if(!previewImagesSettled)throw new Error("Preview images did not finish loading");
     const layout=await preview.locator("body").evaluate(async body=>{
       const doc=body.ownerDocument;
       await doc.fonts.load("800 30px Manrope");
