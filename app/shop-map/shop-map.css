@@ -2283,19 +2283,19 @@
 #suite-workspace .shop-map-redesign .shop-map-head{gap:24px!important;padding:0!important;align-items:flex-end!important}
 #suite-workspace .shop-map-redesign .shop-map-head>div:first-child{display:flex!important;flex-direction:column!important}
 #suite-workspace .shop-map-redesign .shop-map-head .current-kicker{display:none!important}
-#suite-workspace .shop-map-redesign .shop-map-shop-identity{order:-1!important;margin:0 0 5px!important;color:#343434!important;font-size:11px!important;letter-spacing:.12em!important;font-weight:800!important;text-transform:uppercase!important}
+#suite-workspace .shop-map-redesign .shop-map-head>div:first-child>.shop-map-shop-identity{order:-1!important;margin:0 0 5px!important;color:#343434!important;font-size:11px!important;letter-spacing:.12em!important;font-weight:800!important;text-transform:uppercase!important}
 #suite-workspace .shop-map-redesign .shop-map-head h1{margin:0!important;color:#151515!important;font-size:clamp(29px,3.2vw,43px)!important;line-height:1.1!important;letter-spacing:-.065em!important;font-weight:800!important}
 #suite-workspace .shop-map-redesign .oe-site-period{gap:3px!important;padding:3px!important;border:1px solid #dedede!important;border-radius:8px!important;background:#fff!important}
-#suite-workspace .shop-map-redesign .oe-site-period button{min-height:38px!important;padding:7px 13px!important;border-radius:6px!important}
+#suite-workspace .shop-map-redesign .oe-site-period button{min-height:40px!important;padding:7px 13px!important;border-radius:6px!important}
 #suite-workspace .shop-map-redesign .shop-map-tabs{gap:3px!important;margin:25px 0 33px!important;padding:3px!important;border:1px solid #dedede!important;border-radius:9px!important}
-#suite-workspace .shop-map-redesign .shop-map-tabs button{min-height:38px!important;padding:5px 8px!important;border-radius:6px!important;color:#252525!important}
+#suite-workspace .shop-map-redesign .shop-map-tabs button{min-height:40px!important;padding:5px 8px!important;border-radius:6px!important;color:#252525!important}
 #suite-workspace .shop-map-redesign .shop-map-tabs button[aria-current=page]{background:#ee6fc0!important;color:#151515!important}
 @media(max-width:600px){
   #suite-workspace .shop-map-redesign .shop-map-head{display:block!important}
   #suite-workspace .shop-map-redesign .shop-map-shop-identity{margin-bottom:1px!important;font-size:9px!important}
   #suite-workspace .shop-map-redesign .shop-map-head h1{font-size:clamp(22px,7vw,27px)!important;white-space:nowrap!important}
   #suite-workspace .shop-map-redesign .oe-site-period{width:100%!important;margin-top:9px!important}
-  #suite-workspace .shop-map-redesign .oe-site-period button{min-height:36px!important}
+  #suite-workspace .shop-map-redesign .oe-site-period button{min-height:40px!important}
   #suite-workspace .shop-map-redesign .shop-map-tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:12px 0 17px!important}
-  #suite-workspace .shop-map-redesign .shop-map-tabs button{min-height:36px!important;padding:4px 5px!important;font-size:11px!important}
+  #suite-workspace .shop-map-redesign .shop-map-tabs button{min-height:40px!important;padding:4px 5px!important;font-size:11px!important}
 }
