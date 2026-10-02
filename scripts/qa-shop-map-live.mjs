@@ -78,6 +78,12 @@ try{
       const dialog=page.getByRole("dialog");await dialog.waitFor({state:"visible"});
       if(!(await dialog.locator("li").count()))throw new Error("Product detail lacks evidence checks");
       await emit(page,width,"product_evidence");
+      if(width<600){
+        await dialog.evaluate(node=>{node.scrollTop=node.scrollHeight});
+        const scroll=await dialog.evaluate(node=>({top:node.scrollTop,remaining:node.scrollHeight-node.clientHeight-node.scrollTop}));
+        if(scroll.remaining>2)throw new Error("Evidence dialog cannot scroll to its end: "+JSON.stringify(scroll));
+        await emit(page,width,"product_evidence_bottom");
+      }
       await dialog.getByRole("button",{name:"Close details"}).click();
     }
     const groups=workspace(page).locator("details");
