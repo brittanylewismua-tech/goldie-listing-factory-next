@@ -38,6 +38,16 @@ test("an outside-top-three product with a real rise remains discoverable",()=>{
   assert.equal(emerging.evidence,"5 purchased in the last 30 days; 1 in the prior 30.");
 });
 
+test("a leading 30-day product keeps its dated rise alongside purchase rank",()=>{
+  const listings=[row(1,"Recent winner"),row(2,"Prior winner")];
+  const sales=[sale(1,8,10),sale(2,4,45)];
+  const result=discoverShopFindings(priority(sales,listings,30),listings,sales,now);
+  const emerging=result.find(x=>x.id==="emerging-1");
+  assert.ok(emerging);
+  assert.equal(emerging.kind,"emerging");
+  assert.equal(emerging.evidence,"8 purchased in the last 30 days; 0 in the prior 30.");
+});
+
 test("an inactive purchased product remains a recovery finding",()=>{
   const listings=[row(1,"Historical winner",{state:"sold_out"})];
   const sales=[sale(1,4,10)];
