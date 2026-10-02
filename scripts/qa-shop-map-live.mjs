@@ -58,6 +58,8 @@ try{
     if(!(await firstImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
       throw new Error("Selected product image failed to load");
     const firstText=await focus(page).innerText();
+    console.log("QA_FIRST_FOCUS "+JSON.stringify({width,choices:await choices(page).count(),text:firstText.slice(0,1800)}));
+    if(width===390)await emit(page,width,"top_ten_debug");
     if(!/units purchased/.test(firstText)||!/Ideas and checks for this listing/.test(firstText)
       ||!/Listing 1 of 10/.test(firstText)||/Product details need review/.test(firstText))
       throw new Error("Focused product lacks purchase breakdown or connected paths");
