@@ -86,6 +86,9 @@ try{
       }
       await dialog.getByRole("button",{name:"Close details"}).click();
     }
+    const directComparison=await page.request.post("https://thegoldiesuite.com/api/shop-map/market-comparisons?listingId=1");
+    console.log("QA_COMPARISON_API "+JSON.stringify({status:directComparison.status(),body:(await directComparison.text()).slice(0,700)}));
+    console.log("QA_COMPARISON_PATHS "+JSON.stringify(await focus(page).getByRole("button").allTextContents()));
     const publicPath=focus(page).getByRole("button",{name:/Compare My Body My Choice Tee/i});
     await publicPath.waitFor({state:"visible",timeout:30000});
     await publicPath.click();
