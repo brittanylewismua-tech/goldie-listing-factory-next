@@ -154,12 +154,11 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   }
   if(patternContext?.basis==="sales-90"&&map.days===90&&catalogState==="available")for(const pattern of patternContext.patterns.slice(0,5)){
     const matched=catalog.filter(row=>pattern.listingIds.includes(row.listingId)
-      &&row.artworkHash&&row.imageUrl&&(row.sold90??0)>0);
+      &&row.imageUrl&&(row.sold90??0)>0);
     for(const own of matched.slice(0,5)){
       const source=map.listings.find(row=>row.listingId===own.listingId);
       if(!source||source.unitsPurchased<2)continue;
       const peer=matched.filter(row=>row.listingId!==own.listingId
-        &&row.artworkHash!==own.artworkHash
         &&row.family.toLowerCase()!==own.family.toLowerCase())
         .sort((a,b)=>(b.sold90??0)-(a.sold90??0))[0];
       if(peer)allDetails.push(relatedDetail(source,own,peer,pattern.label));
