@@ -17,7 +17,7 @@ export type PurchasePriorityMap = {
   days:30|90; totalUnits:number; totalOrders:number; unmatchedUnits:number;
   excludedRefundUnits:number; receiptsComplete:boolean; refreshedAt:number|null;
   shareLabel:string; remainingUnits:number; priorities:PurchasePriority[];
-  listings:PurchasePriority[];
+  listings:PurchasePriority[]; productMix?:PurchasedProductMix[];
 };
 
 export type PurchasedProductMix = {
