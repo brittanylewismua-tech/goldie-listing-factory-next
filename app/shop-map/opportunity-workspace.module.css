@@ -133,6 +133,11 @@
 .morePaths>summary{width:max-content;padding:9px 0;list-style:none;font-size:13px;font-weight:800;text-decoration:underline;text-decoration-color:var(--pink);text-underline-offset:3px;cursor:pointer}
 .morePaths>summary::-webkit-details-marker{display:none}
 .reviewCard .noThumb{flex:none}
+.finding{display:grid;grid-template-columns:53px minmax(0,1fr) auto;align-items:center;gap:15px;width:100%;padding:10px 0;border:0;border-bottom:1px solid var(--line);background:#fff;text-align:left;color:#151515}
+.finding span{min-width:0}
+.finding strong{display:block;font-size:14px;line-height:1.25}
+.finding small{display:block;margin-top:3px;color:#505050;font-size:12px}
+.finding:hover strong{color:#aa0067}
 .group .finding{min-height:64px}
 .group .finding img,.group .finding .noThumb{width:53px;height:53px;object-fit:cover}
 .sources a,.sources span{display:inline-block;padding:6px 8px;background:#f2f2f2;color:#151515;font-size:11px}
