@@ -154,3 +154,8 @@
   .reviewCard .noThumb{width:49px;height:49px}
   .dialog{max-height:calc(100dvh - 76px);margin:12px auto 64px}
 }
+
+/* Suite-wide button treatments must not turn preview rows into raised cards. */
+.workspace .path,.workspace .finding{border-radius:0!important;box-shadow:none!important;background:transparent!important}
+.workspace .reviewCard{border-radius:0!important;box-shadow:none!important;background:#fff!important}
+.sourceAnalysis{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
