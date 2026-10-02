@@ -58,9 +58,9 @@ try{
     if(!(await firstImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
       throw new Error("Selected product image failed to load");
     const firstText=await focus(page).innerText();
-    if(!/units purchased/.test(firstText)||!/Ideas and checks for this listing/.test(firstText)
-      ||!/Listing 1 of 10/i.test(firstText)||/Product details need review/.test(firstText))
-      throw new Error("Focused product lacks purchase breakdown or connected paths");
+    if(!/units purchased/.test(firstText)||!/Listing 1 of 10/i.test(firstText)
+      ||/Product details need review/.test(firstText))
+      throw new Error("Focused product lacks purchase breakdown or navigation");
     const layout=await measurements(page);
     if(layout.heading!=="Opportunity Engine"||layout.documentWidth>width+1||layout.bodyWidth>width+1
       ||layout.selectorCount!==10||layout.selectorRows!==1||layout.groupCount!==3||layout.oldLayoutVisible||layout.clippedPurchaseLabels>0)
@@ -79,6 +79,9 @@ try{
     if(!/Listing 10 of 10/i.test(await focus(page).innerText())
       ||!(await focus(page).getByRole("button",{name:"Next top listing"}).isDisabled()))
       throw new Error("Tenth listing navigation failed");
+    if(await focus(page).getByRole("status").count()!==1
+      ||/No checked ideas yet|Goldie has no checked recommendation/.test(await focus(page).innerText()))
+      throw new Error("Tenth listing shows overlapping or outdated empty states");
     await emit(page,width,"tenth_product");
     await choices(page).nth(1).click();
     const secondText=await focus(page).innerText();
