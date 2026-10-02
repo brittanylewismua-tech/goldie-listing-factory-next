@@ -127,11 +127,9 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
       .catch(()=>{if(!cancelled)setCatalogState("unavailable")});
     return()=>{cancelled=true};
   },[retry]);
-  const featured=useMemo(()=>{
-    const first=map.listings.slice(0,5),cutoff=first.at(-1)?.unitsPurchased;
-    return cutoff===undefined?first:[...first,...map.listings.slice(5).filter(row=>row.unitsPurchased===cutoff)];
-  },[map.listings]);
+  const featured=useMemo(()=>map.listings.slice(0,10),[map.listings]);
   const selected=featured.find(row=>row.listingId===selectedId)??featured[0];
+  const selectedIndex=selected?featured.findIndex(row=>row.listingId===selected.listingId):-1;
   useEffect(()=>{if(!selected?.listingId||requestedComparisons.current.has(selected.listingId))return;
     const id=selected.listingId;requestedComparisons.current.add(id);
     setPublicComparisons(previous=>({...previous,[id]:{status:"loading",comparisons:[]}}));
@@ -205,40 +203,44 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   }
   const details=[...unique.values()];
   const selectedPaths=selected?details.filter(item=>item.sourceId===selected.listingId).slice(0,6):[];
-  const selectedDirection=selected?directionById.get(selected.listingId):undefined;
-  const diagnosis=selectedPaths.some(item=>item.comparisonImageUrl&&item.relatedId)
+  const diagnosis=selectedPaths.some(item=>item.id.startsWith("peer-")||item.id.startsWith("existing-"))
     ?"This artwork already has another version in your shop. Compare that offer before building more."
-    :selectedPaths[0]?.brief
-    ||(selectedDirection?.retainedCharacteristic?`Customers purchased ${shortLabel(selected?.title||"")}. ${selectedDirection.retainedCharacteristic} is visible in its product analysis.`:null);
+    :selectedPaths[0]?.brief||null;
   const groups:[Kind,string][]=[["build","Build on proven demand"],["improve","Improve an existing offer"],["restore","Recover or prepare"]];
   const open=(item:Detail)=>{setDetail(item);requestAnimationFrame(()=>dialog.current?.showModal())};
   const close=()=>{dialog.current?.close();setDetail(null)};
   return <section className={styles.workspace} aria-labelledby="oe-workspace-title">
-    <div className={styles.heading}><h2 id="oe-workspace-title">Products leading your shop</h2><span>Last {map.days} days</span></div>
+    <div className={styles.heading}><div><h2 id="oe-workspace-title">Top listings in your shop</h2><p>These are the listings your customers are voting the most on.</p></div><span>Last {map.days} days</span></div>
     {selected?<>
       <div className={styles.selector} role="group" aria-label="Choose a purchased product">
         {featured.map((row,index)=><button key={row.listingId} type="button" className={styles.choice}
           aria-pressed={selected.listingId===row.listingId} onClick={()=>setSelectedId(row.listingId)}>
           {row.imageUrl?<img src={row.imageUrl} alt="" width={43} height={43}/>:<span className={styles.noThumb} aria-hidden="true"/>}
-          <span><b>{row.rank}. {shortLabel(row.title)}</b><small>{row.unitsPurchased} purchased</small></span>
+          <span><b>{index+1}. {shortLabel(row.title)}</b><small>{row.unitsPurchased} purchased</small></span>
         </button>)}
       </div>
       <article className={styles.focus} aria-live="polite">
         <div className={styles.art}>{selected.imageUrl?<img src={selected.imageUrl} alt={selected.title} width={300} height={300}
           fetchPriority={selected.rank===1?"high":undefined}/>:<span>Listing image unavailable</span>}</div>
-        <div className={styles.body}><span className={styles.kicker}>Product {featured.findIndex(row=>row.listingId===selected.listingId)+1} of {featured.length}</span>
+        <div className={styles.body}><div className={styles.pager} aria-label="Top listing navigation">
+          <button type="button" aria-label="Previous top listing" disabled={selectedIndex===0}
+            onClick={()=>setSelectedId(featured[selectedIndex-1].listingId)}>‹</button>
+          <span>Listing {selectedIndex+1} of {featured.length}</span>
+          <button type="button" aria-label="Next top listing" disabled={selectedIndex===featured.length-1}
+            onClick={()=>setSelectedId(featured[selectedIndex+1].listingId)}>›</button>
+        </div>
           <h3>{shortLabel(selected.title)}</h3>
           <div className={styles.vote}><strong>{selected.unitsPurchased}</strong><span>units purchased</span><i>·</i>
             <strong>{pct(selected.share)}</strong><span>{map.shareLabel.toLowerCase()}</span></div>
-          <p className={styles.interpret}>{diagnosis||"Product details need review before Goldie can suggest a specific build."}</p>
-          <div className={styles.pathHead}><h4>Paths from this product</h4><span>{selectedPaths.length?`${selectedPaths.length} to explore`:"Analysis pending"}</span></div>
+          {diagnosis?<p className={styles.interpret}>{diagnosis}</p>:null}
+          <div className={styles.pathHead}><h4>Ideas and checks for this listing</h4><span>{selectedPaths.length?`${selectedPaths.length} to explore`:"No checked ideas yet"}</span></div>
           <div className={styles.paths}>{selectedPaths.map(item=><button type="button" key={item.id} className={styles.path}
             onClick={()=>open(item)}><span><strong>{item.title}</strong><small>{item.brief}</small></span><span aria-hidden="true">›</span></button>)}</div>
           {publicComparisons[selected.listingId]?.status==="loading"?<p className={styles.localState} role="status">Checking public Etsy comparisons…</p>:null}
           {["unavailable","no-reviewed-match","insufficient-context"].includes(publicComparisons[selected.listingId]?.status||"")?<p className={styles.localState} role="status">No reviewed public comparison is available for this product. Your shop findings remain above.</p>:null}
           {!selectedPaths.length&&<div className={styles.localState} role="status">
             {analysisFailed?"Product analysis could not load.":catalogState==="loading"?"Checking related products…":
-              catalogState==="unavailable"?"Catalog comparison is unavailable right now.":"No checked direction is ready for this product yet."}
+              catalogState==="unavailable"?"Catalog comparison is unavailable right now.":"Goldie has no checked recommendation for this listing yet."
             {analysisFailed&&onRetry?<button type="button" onClick={onRetry}>Retry analysis</button>:null}
             {catalogState==="unavailable"?<button type="button" onClick={()=>setRetry(value=>value+1)}>Retry catalog</button>:null}
           </div>}
