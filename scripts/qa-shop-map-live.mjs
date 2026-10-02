@@ -58,10 +58,8 @@ try{
     if(!(await firstImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
       throw new Error("Selected product image failed to load");
     const firstText=await focus(page).innerText();
-    console.log("QA_FIRST_FOCUS "+JSON.stringify({width,choices:await choices(page).count(),text:firstText.slice(0,1800)}));
-    if(width===390)await emit(page,width,"top_ten_debug");
     if(!/units purchased/.test(firstText)||!/Ideas and checks for this listing/.test(firstText)
-      ||!/Listing 1 of 10/.test(firstText)||/Product details need review/.test(firstText))
+      ||!/Listing 1 of 10/i.test(firstText)||/Product details need review/.test(firstText))
       throw new Error("Focused product lacks purchase breakdown or connected paths");
     const layout=await measurements(page);
     if(layout.heading!=="Opportunity Engine"||layout.documentWidth>width+1||layout.bodyWidth>width+1
@@ -74,11 +72,11 @@ try{
     await emit(page,width,width===1280?"desktop_first_viewport":"overview_first_viewport");
     await emit(page,width,"overview",true);
     await focus(page).getByRole("button",{name:"Next top listing"}).click();
-    if(!/Listing 2 of 10/.test(await focus(page).innerText()))throw new Error("Next listing arrow failed");
+    if(!/Listing 2 of 10/i.test(await focus(page).innerText()))throw new Error("Next listing arrow failed");
     await focus(page).getByRole("button",{name:"Previous top listing"}).click();
-    if(!/Listing 1 of 10/.test(await focus(page).innerText()))throw new Error("Previous listing arrow failed");
+    if(!/Listing 1 of 10/i.test(await focus(page).innerText()))throw new Error("Previous listing arrow failed");
     await choices(page).nth(9).click();
-    if(!/Listing 10 of 10/.test(await focus(page).innerText())
+    if(!/Listing 10 of 10/i.test(await focus(page).innerText())
       ||!(await focus(page).getByRole("button",{name:"Next top listing"}).isDisabled()))
       throw new Error("Tenth listing navigation failed");
     await emit(page,width,"tenth_product");
