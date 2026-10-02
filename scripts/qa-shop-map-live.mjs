@@ -136,7 +136,8 @@ try{
     for(const [label,key] of [["Your numbers","money"],["Product themes","themes"],["Sold listings","sold"]]){
       await page.locator(".shop-map-tabs").getByRole("button",{name:label}).click();
       await page.locator(".shop-map-tabs button[aria-current=page]").filter({hasText:label}).waitFor({timeout:20000});
-      await page.waitForTimeout(800);
+      await page.waitForFunction(()=>[...document.querySelectorAll(".shop-map-tab-panel,.shop-map-money,.shop-map-themes,.shop-map-sold")]
+        .map(node=>node.textContent||"").join(" ").trim().length>=50,null,{timeout:20000});
       const panelText=(await page.locator(".shop-map-tab-panel,.shop-map-money,.shop-map-themes,.shop-map-sold").allInnerTexts()).join(" ");
       const tabLayout=await measurements(page);
       if(tabLayout.documentWidth>width+1||tabLayout.bodyWidth>width+1||panelText.trim().length<50)
