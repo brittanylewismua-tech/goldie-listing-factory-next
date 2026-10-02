@@ -1,25 +1,30 @@
 /* Isolated, read-only reviewer data. No Etsy or member account is used. */
 import { buildPurchasePriorities } from "./shop-map-purchase-priorities";
 const shop = { shopId: 900001, shopName: "Goldie Reviewer Shop", imageUrl: "" };
-const images = [1,2,3,4,5].map(id => `/qa-artwork-${id}.svg`);
+const images = [1,2,3,4,5,1,2,3,4,5].map(id => `/qa-artwork-${id}.svg`);
 const titles = [
   "My Body My Choice Statement Tee",
   "Motherhood Is Political Sweatshirt",
   "Smash The Patriarchy Tee",
   "Bodily Autonomy Is For Everyone Poster",
   "I Raise Daughters Who Resist Mug",
+  "Choice Is Power Canvas Tote",
+  "Raise Brave Daughters Sticker",
+  "Rights Are Not Negotiable Tee",
+  "The Future Is Ours Poster",
+  "Vote With Your Voice Mug",
 ];
-const sold = [22,16,9,6,3];
+const sold = [22,16,9,6,3,2,2,1,1,1];
 const topListings = titles.map((title,index) => ({
   rank:index+1,listingId:index+1,title,imageUrl:images[index],
-  signal:sold[index],attentionPercent:Math.round(sold[index]/56*100),
+  signal:sold[index],attentionPercent:Math.round(sold[index]/63*100),
 }));
 const patterns = {
-  basis:"sales-90",basisLabel:"units sold in the last 90 days",totalSignal:56,
+  basis:"sales-90",basisLabel:"units sold in the last 90 days",totalSignal:63,
   patterns:[
-    {rank:1,key:"bodily autonomy",label:"Bodily Autonomy",customerPercent:50,catalogPercent:15,gapPoints:35,lift:3.3,sellingListings:3,catalogListings:3,listingIds:[1,2,4]},
-    {rank:2,key:"feminist motherhood",label:"Feminist Motherhood",customerPercent:34,catalogPercent:10,gapPoints:24,lift:3.4,sellingListings:2,catalogListings:2,listingIds:[2,5]},
-    {rank:3,key:"anti patriarchy humor",label:"Anti Patriarchy Humor",customerPercent:16,catalogPercent:8,gapPoints:8,lift:2,sellingListings:1,catalogListings:2,listingIds:[3]},
+    {rank:1,key:"bodily autonomy",label:"Bodily Autonomy",customerPercent:44,catalogPercent:15,gapPoints:29,lift:2.9,sellingListings:3,catalogListings:3,listingIds:[1,2,4]},
+    {rank:2,key:"feminist motherhood",label:"Feminist Motherhood",customerPercent:30,catalogPercent:10,gapPoints:20,lift:3,sellingListings:2,catalogListings:2,listingIds:[2,5]},
+    {rank:3,key:"anti patriarchy humor",label:"Anti Patriarchy Humor",customerPercent:14,catalogPercent:8,gapPoints:6,lift:1.8,sellingListings:1,catalogListings:2,listingIds:[3]},
   ],
   overbuilt:[{key:"generic floral",label:"Generic Floral",customerPercent:4,catalogPercent:26,activeArtworkCount:5}],
   listings:topListings,
@@ -40,17 +45,17 @@ const marketProof = [{
     observedUnits30:3,confirmedAt:0,reviewsOnThisListing:2}],
 }];
 export const qaListings = [...titles.map((title,index) => ({
-  listingId:index+1,title,tags:[],state:"active",family:["tee","sweatshirt","tee","poster","mug"][index],
-  artworkHash:`qa-art-${index+1}`,favorites:[38,24,15,10,8][index],views:[310,250,150,90,70][index],
+  listingId:index+1,title,tags:[],state:"active",family:["tee","sweatshirt","tee","poster","mug","tote","sticker","tee","poster","mug"][index],
+  artworkHash:`qa-art-${index+1}`,favorites:[38,24,15,10,8,6,5,4,3,2][index],views:[310,250,150,90,70,55,45,38,30,24][index],
   imageUrl:images[index],sold90:sold[index],
-})),{listingId:6,title:"My Body My Choice Sweatshirt",tags:[],state:"active",family:"sweatshirt",
+})),{listingId:16,title:"My Body My Choice Sweatshirt",tags:[],state:"active",family:"sweatshirt",
   artworkHash:"qa-art-1",favorites:2,views:35,imageUrl:images[0],sold90:0}];
 
 export function qaMapFixture(url: URL) {
   const view = url.searchParams.get("view") ?? "overview-insights";
   if (view === "overview-purchases") {
     const now=Math.floor(Date.now()/1000);
-    const recent=[8,5,3,6,1];
+    const recent=[8,5,3,6,1,1,1,1,1,1];
     const sales=titles.flatMap((_,index)=>[
       {listingId:index+1,quantity:recent[index],priceMinor:2800,currency:"USD",soldAt:now-10*86400,refunded:false},
       {listingId:index+1,quantity:sold[index]-recent[index],priceMinor:2800,currency:"USD",soldAt:now-45*86400,refunded:false},
@@ -62,26 +67,27 @@ export function qaMapFixture(url: URL) {
   }
   if (view === "overview-insights") {
     const days=Number(url.searchParams.get("days"))===30?30:90;
-    const ranked=days===30?[1,4,2,3,5]:[1,2,3,4,5];
+    const ranked=days===30?[1,4,2,3,5,6,7,8,9,10]:[1,2,3,4,5,6,7,8,9,10];
     const direction=(listingId:number)=>({
       listingId,kind:listingId===1?"already-offered":listingId>=4?"research":"check-first",
-      retainedCharacteristic:listingId===1?"the visible wording “MY BODY MY CHOICE” and its artwork":
+      retainedCharacteristic:listingId>=6?null:listingId===1?"the visible wording “MY BODY MY CHOICE” and its artwork":
         listingId===2?"the visible wording “MOTHERHOOD IS POLITICAL” and its artwork":
         listingId===3?"the visible wording “SMASH THE PATRIARCHY” and its artwork":
         listingId===5?"the visible wording “I RAISE DAUGHTERS WHO RESIST” and its artwork":
         "the visible bodily autonomy message and its artwork",
       proposedChange:null,targetFormat:listingId>=4?null:listingId===2?"tee":"sweatshirt",
       catalogCoverage:listingId===1?"This exact artwork is already listed on a sweatshirt (active).":
+        listingId>=6?"No checked variation is available from the analyzed catalog.":
         listingId>=4?"No supported format suggestion is available yet from the verified active catalog.":
         `No exact-artwork ${listingId===2?"tee":"sweatshirt"} was found in the current artwork-linked catalog.`,
-      whyNow:`${days===30?[8,5,3,6,1][listingId-1]:sold[listingId-1]} purchased units in the last ${days} days`,
-      relatedListingId:listingId===1?6:null,researchQuestion:listingId===1
+      whyNow:`${days===30?[8,5,3,6,1,1,1,1,1,1][listingId-1]:sold[listingId-1]} purchased units in the last ${days} days`,
+      relatedListingId:listingId===1?16:null,researchQuestion:listingId===1
         ?"Compare the existing sweatshirt with the tee before creating another version.":
         listingId>=4?"Review same-format variations and confirm feasible changes.":"Check existing versions and confirm artwork fit before building.",
     });
     return {
     shop,patterns,productDirections:ranked.map(direction),opportunityFindings:[
-      {id:"existing-qa-art-1",kind:"compare",listingIds:[1,6],title:titles[0],imageUrl:images[0],label:"EXISTING FORMAT",
+      {id:"existing-qa-art-1",kind:"compare",listingIds:[1,16],title:titles[0],imageUrl:images[0],label:"EXISTING FORMAT",
         evidence:`${days===30?8:22} purchased on tee; 0 on the existing sweatshirt in the last ${days} days.`,
         direction:"Compare the existing version before creating another.",detail:"Compare listing dates, visits, availability, imagery, price and options."},
       {id:"emerging-4",kind:"emerging",listingIds:[4],title:titles[3],imageUrl:images[3],label:"EMERGING",
@@ -89,8 +95,8 @@ export function qaMapFixture(url: URL) {
         detail:"Check listing age, visits, availability and related products."},
     ],analysedListingIds:[1,2,3,4,5],visualCoverage:{analysedListings:20,totalListings:20},
     winnerDna:{basis:"sales-90",sellingArtworks:4,traits:[
-      {label:"Typography: stacked bold",sellingArtworks:3,customerPercent:78,catalogPercent:25,listingIds:[1,2,3]},
-      {label:"Short visible wording",sellingArtworks:3,customerPercent:73,catalogPercent:30,listingIds:[1,2,3]},
+      {label:"Typography: stacked bold",sellingArtworks:3,customerPercent:70,catalogPercent:25,listingIds:[1,2,3]},
+      {label:"Short visible wording",sellingArtworks:3,customerPercent:65,catalogPercent:30,listingIds:[1,2,3]},
     ]},
   };
   }
