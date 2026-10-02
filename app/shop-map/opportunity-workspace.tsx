@@ -230,10 +230,10 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
           {diagnosis?<p className={styles.interpret}>{diagnosis}</p>:null}
           {selectedPaths.length>0?<>
             <div className={styles.pathHead}><h4>Ideas and checks</h4></div>
-            <div className={styles.paths}>{selectedPaths.slice(0,3).map(item=><button type="button" key={item.id} className={styles.path}
+            <div className={styles.paths}>{selectedPaths.slice(0,3).map(item=><button type="button" key={item.id} className={styles.path} data-preview-row="path"
               onClick={()=>open(item)}><span><strong>{item.title}</strong></span><span aria-hidden="true">›</span></button>)}</div>
             {selectedPaths.length>3?<details className={styles.morePaths}><summary>More for this listing ({selectedPaths.length-3})</summary>
-              <div className={styles.paths}>{selectedPaths.slice(3).map(item=><button type="button" key={item.id} className={styles.path}
+              <div className={styles.paths}>{selectedPaths.slice(3).map(item=><button type="button" key={item.id} className={styles.path} data-preview-row="path"
                 onClick={()=>open(item)}><span><strong>{item.title}</strong></span><span aria-hidden="true">›</span></button>)}</div>
             </details>:null}
             {publicComparisons[selected.listingId]?.status==="loading"?<p className={styles.localState} role="status">Checking related Etsy listings…</p>:null}
@@ -279,18 +279,18 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     </section>:null}
     {reviewItems.length>0?<section className={styles.reviewSection}>
       <div className={styles.sectionHead}><h2>Review these</h2><span>Product-level findings</span></div>
-      <div className={styles.reviewGrid}>{reviewItems.slice(0,3).map(item=><button type="button" key={item.id} className={styles.reviewCard} onClick={()=>open(item)}>
+      <div className={styles.reviewGrid}>{reviewItems.slice(0,3).map(item=><button type="button" key={item.id} className={styles.reviewCard} data-preview-row="review" onClick={()=>open(item)}>
         {item.imageUrl?<img src={item.imageUrl} alt="" width={56} height={56}/>:<span className={styles.noThumb} aria-hidden="true"/>}
         <span><small>{item.tag??(item.kind==="build"?"BUILD":item.kind==="restore"?"RECOVER":"COMPARE")}</small>
           <strong>{item.title}</strong><em>{item.brief}</em></span><b aria-hidden="true">›</b>
       </button>)}</div>
     </section>:null}
-    {reviewItems.length>3||sourceAnalysis?<details className={styles.deeper}><summary><strong>Go deeper</strong><span>More findings <b aria-hidden="true">⌄</b></span></summary>
+    {reviewItems.length>3||sourceAnalysis?<details className={styles.deeper}><summary data-preview-deeper><strong>Go deeper</strong><span>More findings <b aria-hidden="true">⌄</b></span></summary>
       <div className={styles.groups}>{groups.map(([kind,label])=>{
         const items=reviewItems.slice(3).filter(item=>item.kind===kind);
         if(!items.length)return null;
         return <section key={kind} className={styles.group}><h3>{label}</h3>
-          <div>{items.map(item=><button type="button" key={item.id} className={styles.finding} onClick={()=>open(item)}>
+          <div>{items.map(item=><button type="button" key={item.id} className={styles.finding} data-preview-row="finding" onClick={()=>open(item)}>
             {item.imageUrl?<img src={item.imageUrl} alt="" width={53} height={53}/>:<span className={styles.noThumb} aria-hidden="true"/>}
             <span><strong>{item.title}</strong><small>{item.brief}</small></span><b aria-hidden="true">›</b>
           </button>)}</div>
