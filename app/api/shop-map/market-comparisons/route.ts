@@ -5,6 +5,7 @@ import {requireFeatureApi} from "@/app/require-feature";
 import {isQaReviewer} from "@/app/qa-reviewer";
 import {etsyConnection,etsyFetch,etsyBudget} from "@/app/api/etsy/client";
 import {productFamily} from "@/app/product-type-utils";
+import {crossSiteWrite,CROSS_SITE_REFUSAL} from "@/app/same-site-only";
 
 type EtsyListing={listing_id:number;shop_id:number;title:string;url?:string;images?:Array<{url_570xN?:string;url_fullxfull?:string}>;materials?:string[];price?:{amount:number;divisor:number;currency_code:string}};
 type EtsyReview={created_timestamp?:number;create_timestamp?:number;review?:string;rating?:number};
@@ -18,7 +19,8 @@ const queryFor=(title:string,family:string)=>{
 };
 const familyOf=(title:string)=>productFamily(title).toLowerCase();
 const cacheControl={"Cache-Control":"private, no-store"};
-export const GET=withErrorLog("shop-map-market-comparisons",async(request:Request)=>{
+export const POST=withErrorLog("shop-map-market-comparisons",async(request:Request)=>{
+  if(crossSiteWrite(request))return NextResponse.json(CROSS_SITE_REFUSAL,{status:403,headers:cacheControl});
   const listingId=Number(new URL(request.url).searchParams.get("listingId"));
   if(!Number.isSafeInteger(listingId)||listingId<1)return NextResponse.json({error:"Choose a product."},{status:400,headers:cacheControl});
   if(await isQaReviewer())return NextResponse.json({status:"available",query:"synthetic reviewer example",comparisons:listingId===1?[{
