@@ -70,6 +70,16 @@ function peerDetail(row:PurchasePriority,peer:CatalogListing):Detail{
       "Compare product photos, options, price, age and availability before choosing a test.",
       "The shown purchase counts do not establish a conversion difference without comparable traffic."]};
 }
+function relatedDetail(source:PurchasePriority,own:CatalogListing,peer:CatalogListing,patternLabel:string):Detail{
+  return {id:`related-${own.listingId}-${peer.listingId}`,kind:"improve",
+    title:`Compare related ${own.family||"product"} and ${peer.family||"product"} offers`,
+    brief:`Both appear in the “${patternLabel}” catalog context; ${own.sold90} and ${peer.sold90} purchased in 90 days.`,
+    sourceId:source.listingId,imageUrl:own.imageUrl,comparisonImageUrl:peer.imageUrl,relatedId:peer.listingId,
+    sources:[{label:"Your product",url:listingUrl(own.listingId)},{label:"Related product",url:listingUrl(peer.listingId)}],
+    checks:["This relationship comes from shared catalog wording, not confirmed visual similarity.",
+      "Compare the actual artwork, buyer purpose, options, age, price, photos and availability.",
+      "Purchase totals alone cannot explain which difference caused the response. Choose one observable difference to test."]};
+}
 function marketDetail(row:PurchasePriority,proof:ArtworkMarketProof,peer:NonNullable<ArtworkMarketProof["listings"]>[number]):Detail{
   return {id:`market-${row.listingId}-${peer.listingId}`,kind:"improve",title:"Compare a related Etsy product",
     brief:`A product in the saved “${proof.phrase}” watch has dated public activity. Inspect the actual products before choosing an original test.`,
@@ -120,6 +130,19 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     const own=catalog.find(item=>item.listingId===row.listingId);
     if(own?.artworkHash)for(const peer of catalog.filter(item=>item.listingId!==row.listingId&&item.artworkHash===own.artworkHash))
       allDetails.push(peerDetail(row,peer));
+  }
+  if(patterns&&map.days===90&&catalogState==="available")for(const pattern of patterns.patterns.slice(0,5)){
+    const matched=catalog.filter(row=>pattern.listingIds.includes(row.listingId)
+      &&row.artworkHash&&row.imageUrl&&(row.sold90??0)>0);
+    for(const own of matched.slice(0,5)){
+      const source=map.listings.find(row=>row.listingId===own.listingId);
+      if(!source||source.unitsPurchased<2)continue;
+      const peer=matched.filter(row=>row.listingId!==own.listingId
+        &&row.artworkHash!==own.artworkHash
+        &&row.family.toLowerCase()!==own.family.toLowerCase())
+        .sort((a,b)=>(b.sold90??0)-(a.sold90??0))[0];
+      if(peer)allDetails.push(relatedDetail(source,own,peer,pattern.label));
+    }
   }
   if(patterns&&map.days===90)for(const proof of marketProof){
     const pattern=patterns.patterns.find(row=>row.key===proof.patternKey);if(!pattern)continue;
