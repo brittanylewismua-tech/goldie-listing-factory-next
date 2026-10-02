@@ -24,7 +24,10 @@ export default async function ShopMapPage({searchParams}:{searchParams:Promise<{
   const user = reviewer ? { email: QA_REVIEWER_EMAIL, userId:"qa-reviewer" } : await requireFeaturePage("shopMap", "/shop-map");
   const params = await searchParams;
   const ownerPreview = "emailVerified" in user && isOwner(user);
-  if ((ownerPreview && params.live !== "1") || (reviewer && params.designPreview === "1")) {
+  /* The owner now sees the rebuilt Opportunity Engine on her own shop data.
+     ?live=1 still opens the previous engine. The reviewer keeps the approved
+     design document for the existing mobile QA. */
+  if (reviewer && params.designPreview === "1") {
     return <div data-opportunity-design-preview style={{position:"fixed",inset:0,zIndex:2147483647,background:"#fff"}}>
       <iframe title="Approved Opportunity Engine design review" srcDoc={approvedPreviewDocument}
         style={{display:"block",width:"100%",height:"100%",border:0}} />
@@ -39,7 +42,8 @@ export default async function ShopMapPage({searchParams}:{searchParams:Promise<{
        Factory. This page rendered as a bare column on white before. */
     <FactoryShell active="shop-map" title="Your shop" desktopOnly={false} reviewer={reviewer}>
       {reviewer && <QaMobileMetrics />}
-      <ShopMapClient key={cacheScope??"no-shop"} signedInEmail={user.email} cacheScope={cacheScope} activeShopId={activeShop} />
+      <ShopMapClient key={cacheScope??"no-shop"} signedInEmail={user.email} cacheScope={cacheScope} activeShopId={activeShop}
+        engine={ownerPreview && params.live !== "1" ? "top-ten" : "workspace"} />
     </FactoryShell>
   );
 }

@@ -12,6 +12,7 @@ import type {PurchasePriorityMap} from "@/app/shop-map-purchase-priorities";
 import type {ProductDirection} from "@/app/shop-map-product-expansion";
 import type {ShopFinding} from "@/app/shop-map-opportunity-discovery";
 import {OpportunityWorkspace,type OwnReviewInsight} from "./opportunity-workspace";
+import OpportunityEngine from "./opportunity-engine";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
@@ -392,8 +393,10 @@ export function OpportunityRecommendations(
   </section>;
 }
 
-export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }: {
+export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId,engine="workspace" }: {
   signedInEmail?: string;cacheScope:string|null;activeShopId:number|null;
+  /* "top-ten" is the rebuilt Opportunity Engine, shown to the owner first. */
+  engine?:"workspace"|"top-ten";
 }) {
   const [map, setMap] = useState<ShopMap | null>(null);
   const [mapKey,setMapKey]=useState("");
@@ -651,7 +654,8 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
           onClick={() => selectTab(key)}>{label}</button>)}
     </nav>
 
-    {tab === "overview" && <div className="shop-map-tab-panel">
+    {tab === "overview" && engine==="top-ten" && <OpportunityEngine days={selectedDays}/>}
+    {tab === "overview" && engine!=="top-ten" && <div className="shop-map-tab-panel">
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
       {shown.purchasePriorities?<OpportunityWorkspace map={shown.purchasePriorities} directions={shown.productDirections} findings={shown.opportunityFindings??[]} actions={shown.catalogActions??[]} patterns={shown.patterns} catalogPatterns={shown.catalogPatterns} marketProof={shown.marketProof??[]} reviews={shown.ownReviews??[]} analysisFailed={insightsFailed} onRetry={()=>void load()}
         sourceAnalysis={shown.patterns&&((shown.patterns.patterns?.length??0)>0||(shown.catalogActions?.length??0)>0||(shown.opportunityFindings?.length??0)>0||Boolean(shown.winnerDna))?<>
