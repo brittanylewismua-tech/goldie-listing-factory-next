@@ -158,7 +158,7 @@ try {
       }
       if(key==="overview"){
         const research=page.locator(".shop-map-mirrorbot").first();
-        await research.locator("summary").click();
+        await research.locator(":scope > summary").click();
         const researchText=await research.innerText();
         await research.locator(".shop-map-mirrorbot-prompt summary").click();
         const prompt=await research.locator(".shop-map-mirrorbot-prompt textarea").inputValue();
