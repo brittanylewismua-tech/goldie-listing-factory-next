@@ -89,12 +89,14 @@ try{
     const directComparison=await page.request.post("https://thegoldiesuite.com/api/shop-map/market-comparisons?listingId=1");
     console.log("QA_COMPARISON_API "+JSON.stringify({status:directComparison.status(),body:(await directComparison.text()).slice(0,700)}));
     console.log("QA_COMPARISON_PATHS "+JSON.stringify(await focus(page).getByRole("button").allTextContents()));
-    const publicPath=focus(page).getByRole("button",{name:/Compare My Body My Choice Tee/i});
+    const publicPath=focus(page).getByRole("button",{name:/sample comparison/i});
     await publicPath.waitFor({state:"visible",timeout:30000});
     await publicPath.click();
     const comparisonDialog=page.getByRole("dialog");await comparisonDialog.waitFor({state:"visible"});
     if(!(await comparisonDialog.getByRole("link",{name:"Etsy comparison"}).count())
-      ||!(await comparisonDialog.getByText(/public listing reviews/).count()))
+      ||!(await comparisonDialog.getByText(/public listing reviews/).count())
+      ||!(await comparisonDialog.getByText(/public title emphasizes a statement tee/).count())
+      ||(await comparisonDialog.getByText(/saved.*watch has dated public activity/).count()))
       throw new Error("Public comparison lacks source or exact review signal");
     await emit(page,width,"public_comparison");
     await comparisonDialog.getByRole("button",{name:"Close details"}).click();

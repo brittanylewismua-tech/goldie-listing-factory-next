@@ -199,6 +199,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     const key=item.sourceId+":"+item.kind+":"+(item.relatedId||item.title.toLowerCase());
     const existing=unique.get(key);
     if(!existing){unique.set(key,item);continue}
+    if(item.id.startsWith("public-")){unique.set(key,item);continue}
     if(item.comparisonImageUrl)unique.set(key,{...item,brief:existing.brief,
       checks:item.checks});
   }
