@@ -63,7 +63,7 @@ try{
       throw new Error("Focused product lacks purchase breakdown or navigation");
     const layout=await measurements(page);
     if(layout.heading!=="Opportunity Engine"||layout.documentWidth>width+1||layout.bodyWidth>width+1
-      ||layout.selectorCount!==3||layout.selectorRows!==1||layout.oldLayoutVisible||layout.clippedPurchaseLabels>0)
+      ||layout.selectorCount!==3||layout.selectorRows!==(width<600?3:1)||layout.oldLayoutVisible||layout.clippedPurchaseLabels>0)
       throw new Error("Opportunity workspace layout failed: "+JSON.stringify(layout));
     if(width<600&&layout.tabRows!==2)throw new Error("Tabs are not 2×2");
     if(width===1280&&layout.tabRows!==1)throw new Error("Desktop tabs do not share one row");
@@ -118,8 +118,14 @@ try{
       throw new Error("Public comparison lacks source or exact review signal");
     await emit(page,width,"public_comparison");
     await comparisonDialog.getByRole("button",{name:"Close details"}).click();
-    await page.getByRole("heading",{name:"What customers are choosing"}).waitFor({timeout:30000});
-    await page.getByRole("heading",{name:"Review these"}).waitFor({timeout:30000});
+    const choosing=page.getByRole("heading",{name:"What customers are choosing"});
+    const review=page.getByRole("heading",{name:"Review these"});
+    await choosing.waitFor({timeout:30000});
+    await review.waitFor({timeout:30000});
+    await choosing.scrollIntoViewIfNeeded();
+    await emit(page,width,"choosing_section");
+    await review.scrollIntoViewIfNeeded();
+    await emit(page,width,"review_section");
     await emit(page,width,"whole_shop",true);
     const reviewSection=page.getByRole("heading",{name:"Review these"}).locator("..").locator("..");
     if(await reviewSection.getByRole("button").count()<1)throw new Error("Whole-shop review is blank in reviewer fixture");
