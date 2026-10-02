@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
 import s from "./opportunity-engine.module.css";
-import {buildTopTen,readListing,shopMoves,shortName,familyStats,
+import {buildTopTen,readListing,shopMoves,shortName,familyStats,decode,
   type PeriodListing,type CatalogListing,type YearSale,type OwnReview,type Direction} from "./opportunity-engine-model";
 
 type Comparison={listingId:number;title:string;url:string;imageUrl:string;price:string|null;reviewCount:number;latestReviewAt:number;difference:string;reviewExcerpt:string|null};
@@ -91,7 +91,7 @@ export default function OpportunityEngine({days}:{days:30|90}){
           <button type="button" aria-label="Next listing" disabled={row.rank===top.length} onClick={()=>setIndex(row.rank)}>›</button>
           <span className={row.basis==="sales"?s.chipSales:s.chipFav}>{row.basis==="sales"?"Ranked by sales":"Ranked by favorites"}</span>
         </div>
-        <div><h3 className={s.name}>{shortName(row.title)}</h3><p className={s.full}>{row.title}</p></div>
+        <h3 className={s.name}>{decode(row.title)}</h3>
         <dl className={s.stats}>
           {row.basis==="sales"?<>
             <div><dt>sold in {days} days</dt><dd>{row.unitsPeriod}</dd></div>
