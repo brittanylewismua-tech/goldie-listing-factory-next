@@ -138,6 +138,8 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   const selected=featured.find(row=>row.listingId===selectedId)??featured[0];
   const selectedIndex=selected?featured.findIndex(row=>row.listingId===selected.listingId):-1;
   const patternContext=map.days===90&&patterns?.patterns.length?patterns:catalogPatterns;
+  const hasPhrasePatterns=patternContext?.basis==="sales-90"&&patternContext.patterns.length>0;
+  const topThreeShare=map.totalUnits>0?map.priorities.reduce((sum,row)=>sum+row.unitsPurchased,0)/map.totalUnits:0;
   useEffect(()=>{if(!selected?.listingId||requestedComparisons.current.has(selected.listingId))return;
     const id=selected.listingId;requestedComparisons.current.add(id);
     setPublicComparisons(previous=>({...previous,[id]:{status:"loading",comparisons:[]}}));
@@ -266,14 +268,28 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
           <div className={styles.moreChoices}>{featured.slice(3).map((row,index)=>choice(row,index+3))}</div>
         </details>:null}
       </div>
-    </>:<p className={styles.localState}>No purchases in this period. Try the other period to see purchased products.</p>}
-    {patternContext?.basis==="sales-90"&&patternContext.patterns.length>0?<section className={styles.customer}>
+    </>:<div className={styles.localState} role="status">{map.receiptsComplete
+      ?"No recorded purchases in this period. Try the other period."
+      :"Purchase history is still being checked. Try again shortly."}
+      {!map.receiptsComplete&&onRetry?<button type="button" onClick={onRetry}>Retry</button>:null}
+    </div>}
+    {map.totalUnits>0?<section className={styles.customer}>
       <div className={styles.sectionHead}><h2>What customers are choosing</h2><span>Last {map.days} days</span></div>
-      <div className={styles.patterns}>{patternContext.patterns.slice(0,3).map(row=><div key={row.key} className={styles.pattern}>
+      {hasPhrasePatterns?<div className={styles.patterns}>{patternContext!.patterns.slice(0,3).map(row=><div key={row.key} className={styles.pattern}>
         <strong>{row.label}</strong><span><b>{row.customerPercent}%</b> of purchased units</span>
         <small>{row.catalogListings} related listing{row.catalogListings===1?"":"s"} in your shop</small>
-      </div>)}</div>
-      <p className={styles.patternNote}>{map.days===90&&patterns?.patterns.length?"Based on analyzed product images.":"Based on listing titles and tags."} Themes may overlap.</p>
+      </div>)}</div>:<div className={styles.patterns}>
+        {(map.productMix??[]).slice(0,2).map(row=><div key={row.label} className={styles.pattern}>
+          <strong>{row.label}</strong><span><b>{pct(row.share)}</b> of purchased units</span>
+          <small>{row.listingCount} purchased listing{row.listingCount===1?"":"s"}</small>
+        </div>)}
+        <div className={styles.pattern}><strong>Top three listings</strong>
+          <span><b>{pct(topThreeShare)}</b> of purchased units</span>
+          <small>Share of your recorded purchases in this period</small></div>
+      </div>}
+      <p className={styles.patternNote}>{hasPhrasePatterns
+        ?map.days===90&&patterns?.patterns.length?"Based on analyzed product images. Themes may overlap.":"Based on listing titles and tags. Themes may overlap."
+        :(map.productMix?.length?"Product types from your catalog; shares use all recorded purchases.":"Based on recorded purchases in this period.")}</p>
     </section>:null}
     {reviewItems.length>0?<section className={styles.reviewSection}>
       <div className={styles.sectionHead}><h2>Review these</h2><span>{reviewItems.length} shop finding{reviewItems.length===1?"":"s"}</span></div>
