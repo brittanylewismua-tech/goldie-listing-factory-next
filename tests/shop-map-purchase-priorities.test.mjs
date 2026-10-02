@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildPurchasePriorities } from "../app/shop-map-purchase-priorities.ts";
+import { buildPurchasePriorities, buildPurchasedProductMix } from "../app/shop-map-purchase-priorities.ts";
 
 const now=1_780_000_000;
 const listings=[
@@ -69,4 +69,14 @@ test("receipt-level refund uncertainty and incomplete import change the share cl
   assert.equal(map.excludedRefundUnits,3);
   assert.equal(map.shareLabel,"Share of matched purchases");
   assert.equal(map.refreshedAt,null);
+});
+
+test("customer-choice product mix uses every purchased unit as its denominator",()=>{
+  const map=build([sale(1,6),sale(2,3),sale(3,1)]);
+  const mix=buildPurchasedProductMix(map,[
+    {listingId:1,label:"T-shirts"},{listingId:2,label:"T-shirts"},
+    {listingId:3,label:""},
+  ]);
+  assert.deepEqual(mix,[{label:"T-shirts",units:9,share:.9,listingCount:2}]);
+  assert.deepEqual(buildPurchasedProductMix(build([]),[{listingId:1,label:"T-shirts"}]),[]);
 });
