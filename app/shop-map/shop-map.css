@@ -2017,4 +2017,8 @@
 #suite-workspace .shop-map-redesign .oe-finding-main h3{margin:0!important;min-width:0!important;overflow-wrap:anywhere!important}
 #suite-workspace .shop-map-redesign .oe-finding-card>strong{margin-top:auto!important;padding-top:3px!important;color:#76254f!important;font-size:13px!important;line-height:1.4!important}
 #suite-workspace .shop-map-redesign .oe-finding-card details a{display:inline-block!important;margin:7px 12px 0 0!important;color:#76254f!important}
-\n#suite-workspace .shop-map-redesign .oe-market-images{display:flex!important;gap:12px!important;margin:4px 0 3px!important}\n#suite-workspace .shop-map-redesign .oe-market-images a{display:flex!important;flex-direction:column!important;gap:5px!important;min-width:0!important;color:#76254f!important;text-decoration:none!important}\n#suite-workspace .shop-map-redesign .oe-market-images img{width:70px!important;height:70px!important;border-radius:9px!important;object-fit:cover!important;background:#faedf4!important}\n#suite-workspace .shop-map-redesign .oe-market-images small{font-size:10px!important;font-weight:750!important;color:#716771!important}\n
+
+#suite-workspace .shop-map-redesign .oe-market-images{display:flex!important;gap:12px!important;margin:4px 0 3px!important}
+#suite-workspace .shop-map-redesign .oe-market-images a{display:flex!important;flex-direction:column!important;gap:5px!important;min-width:0!important;color:#76254f!important;text-decoration:none!important}
+#suite-workspace .shop-map-redesign .oe-market-images img{width:70px!important;height:70px!important;border-radius:9px!important;object-fit:cover!important;background:#faedf4!important}
+#suite-workspace .shop-map-redesign .oe-market-images small{font-size:10px!important;font-weight:750!important;color:#716771!important}
