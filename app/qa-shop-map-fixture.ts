@@ -86,7 +86,7 @@ export function qaMapFixture(url: URL) {
         listingId>=4?"Review same-format variations and confirm feasible changes.":"Check existing versions and confirm artwork fit before building.",
     });
     return {
-    shop,patterns,productDirections:ranked.map(direction),opportunityFindings:[
+    shop,patterns,catalogPatterns:patterns,productDirections:ranked.map(direction),opportunityFindings:[
       {id:"existing-qa-art-1",kind:"compare",listingIds:[1,16],title:titles[0],imageUrl:images[0],label:"EXISTING FORMAT",
         evidence:`${days===30?8:22} purchased on tee; 0 on the existing sweatshirt in the last ${days} days.`,
         direction:"Compare the existing version before creating another.",detail:"Compare listing dates, visits, availability, imagery, price and options."},
