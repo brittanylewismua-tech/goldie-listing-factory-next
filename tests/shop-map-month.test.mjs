@@ -35,6 +35,6 @@ test("anything unparseable is shown as it came, not guessed", () => {
 test("the page keeps raw month keys out of the page header", () => {
   const source = readFileSync(new URL(
     "../app/shop-map/shop-map-client.tsx", import.meta.url), "utf8");
-  assert.match(source, /current-kicker">YOUR SHOP/);
+  assert.match(source, /current-kicker">MY SHOP/);
   assert.ok(!/<p>\{shown\.month\}<\/p>/.test(source));
 });
