@@ -295,7 +295,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
             <span><strong>{item.title}</strong><small>{item.brief}</small></span><b aria-hidden="true">›</b>
           </button>)}</div>
         </section>})}
-        {sourceAnalysis?<div className={styles.sourceAnalysis}>{sourceAnalysis}</div>:null}
+        {sourceAnalysis?<details className={styles.sourceDetails} data-preview-source-details><summary>Source analysis <span aria-hidden="true">⌄</span></summary><div className={styles.sourceAnalysis}>{sourceAnalysis}</div></details>:null}
       </div>
     </details>:null}
     <dialog ref={dialog} className={styles.dialog} aria-label={detail?.title||"Opportunity evidence"}
