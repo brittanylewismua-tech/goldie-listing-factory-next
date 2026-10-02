@@ -43,6 +43,7 @@ const CLASSIFIED = {
   "api/listing-photos/download/route.ts": "guarded: fetchTrustedImage (D1726)",
   "connections/connections-client.tsx": "client: browser to our own origin",
   "home/home-status.tsx": "client: browser to our own origin",
+  "shop-map/opportunity-engine.tsx": "client: browser to our own /api/shop-map routes",
   "integrated-mockups.tsx": "client: browser to our own origin",
   "listing-factory-app.tsx": "client: browser to our own origin",
   "market-watch/market-watch-client.tsx": "client: browser to our own origin",
