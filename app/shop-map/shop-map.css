@@ -2302,3 +2302,6 @@
 #suite-workspace .shop-map-redesign section[aria-labelledby="oe-workspace-title"] button[data-preview-row="review"]{border-radius:0!important;box-shadow:none!important;background:#fff!important}
 #suite-workspace .shop-map-redesign [data-preview-deeper]::after{content:none!important;display:none!important}
 #suite-workspace .shop-map-redesign [data-preview-deeper]::-webkit-details-marker{display:none!important}
+
+/* Suite disclosure markers are not part of the approved preview. */
+#suite-workspace .shop-map-redesign section[aria-labelledby="oe-workspace-title"] [data-preview-summary]::after{content:none!important;display:none!important}
