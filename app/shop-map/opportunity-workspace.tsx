@@ -135,7 +135,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   useEffect(()=>{if(!selected?.listingId||requestedComparisons.current.has(selected.listingId))return;
     const id=selected.listingId;requestedComparisons.current.add(id);
     setPublicComparisons(previous=>({...previous,[id]:{status:"loading",comparisons:[]}}));
-    void fetch(`/api/shop-map/market-comparisons?listingId=${id}`,{cache:"no-store"})
+    void fetch(`/api/shop-map/market-comparisons?listingId=${id}`,{method:"POST",cache:"no-store"})
       .then(async response=>{if(!response.ok)throw Error("Comparison unavailable");return response.json() as Promise<PublicComparisonResult>})
       .then(result=>setPublicComparisons(previous=>({...previous,[id]:result})))
       .catch(()=>setPublicComparisons(previous=>({...previous,[id]:{status:"unavailable",comparisons:[]}})));
