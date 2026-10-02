@@ -68,7 +68,7 @@ try{
         choices:doc.querySelectorAll("#listing-strip button").length,
         heading:doc.querySelector(".lead h2")?.textContent?.trim()};
     });
-    if(layout.width>width||!layout.fontLoaded||!layout.imagesLoaded||layout.paths!==3||layout.choices!==3
+    if(layout.width>width||!layout.fontLoaded||!layout.manropeFaces.includes("loaded")||!layout.imagesLoaded||layout.paths!==3||layout.choices!==3
       ||layout.heading!=="Top listings in your shop"||layout.tabRows!==(width===1200?1:2)
       ||!layout.sheets.some(sheet=>sheet.endsWith("/opportunity-preview-v5/style-local.css")))
       throw new Error("Approved design preview differs: "+JSON.stringify({width,...layout}));
