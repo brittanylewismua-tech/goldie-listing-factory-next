@@ -17,8 +17,34 @@ export type PurchasePriorityMap = {
   days:30|90; totalUnits:number; totalOrders:number; unmatchedUnits:number;
   excludedRefundUnits:number; receiptsComplete:boolean; refreshedAt:number|null;
   shareLabel:string; remainingUnits:number; priorities:PurchasePriority[];
-  listings:PurchasePriority[];
+  listings:PurchasePriority[]; productMix?:PurchasedProductMix[];
 };
+
+export type PurchasedProductMix = {
+  label:string;units:number;share:number;listingCount:number;
+};
+
+/* Use only recognized catalog product types. The denominator still includes
+   every matched purchased unit, including products whose type is unknown. */
+export function buildPurchasedProductMix(
+  map:PurchasePriorityMap,
+  categories:Array<{listingId:number;label:string}>,
+):PurchasedProductMix[] {
+  if(map.totalUnits<=0)return [];
+  const labels=new Map(categories.map(row=>[row.listingId,row.label.trim()]));
+  const grouped=new Map<string,{units:number;ids:Set<number>}>();
+  for(const listing of map.listings){
+    const label=labels.get(listing.listingId);
+    if(!label)continue;
+    const held=grouped.get(label)??{units:0,ids:new Set<number>()};
+    held.units+=listing.unitsPurchased;
+    held.ids.add(listing.listingId);
+    grouped.set(label,held);
+  }
+  return [...grouped.entries()].map(([label,row])=>({
+    label,units:row.units,share:row.units/map.totalUnits,listingCount:row.ids.size,
+  })).sort((a,b)=>b.units-a.units||a.label.localeCompare(b.label));
+}
 
 export function buildPurchasePriorities(
   sales:PurchaseSale[], listings:PurchaseListing[],

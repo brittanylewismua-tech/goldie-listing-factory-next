@@ -13,7 +13,7 @@ import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-dire
 import { buildAttentionMap } from "@/app/shop-map-attention";
 import { discoverVisualWinningPatterns } from "@/app/shop-map-visual-patterns";
 import { discoverWinningPatterns } from "@/app/shop-map-patterns";
-import { buildPurchasePriorities } from "@/app/shop-map-purchase-priorities";
+import { buildPurchasePriorities, buildPurchasedProductMix } from "@/app/shop-map-purchase-priorities";
 import { buildProductDirections } from "@/app/shop-map-product-expansion";
 import { discoverShopFindings } from "@/app/shop-map-opportunity-discovery";
 import { winnerDnaFrom } from "@/app/shop-map-winner-dna";
@@ -279,7 +279,19 @@ async function buildMap(request: Request) {
       {days:soldDays===30?30:90,now,receiptsComplete:Boolean(receiptState?.refreshed_at&&!receiptState.last_error),
         refreshedAt:Number(receiptState?.refreshed_at)||null},
     );
-    return NextResponse.json({shop:{shopId,shopName:shopRow.shop_name},purchasePriorities});
+    const productLabels:Record<string,string>={
+      tee:"T-shirts",hoodie:"Hoodies",crewneck:"Sweatshirts",tank:"Tank tops",
+      longSleeve:"Long sleeves",mug:"Mugs",tumbler:"Tumblers",tote:"Tote bags",
+      poster:"Posters and prints",sticker:"Stickers",blanket:"Blankets",
+      koozie:"Can coolers",phoneCase:"Phone cases",
+    };
+    const productMix=buildPurchasedProductMix(purchasePriorities,rows.map(row=>{
+      const stored=String(row.product_family||"");
+      const family=productLabels[stored]?stored:productFamily(String(row.title||""));
+      return {listingId:Number(row.listing_id),label:productLabels[family]||""};
+    }));
+    return NextResponse.json({shop:{shopId,shopName:shopRow.shop_name},
+      purchasePriorities:{...purchasePriorities,productMix}});
   }
 
   /*

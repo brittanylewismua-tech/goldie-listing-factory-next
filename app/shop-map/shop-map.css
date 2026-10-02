@@ -2026,7 +2026,7 @@
 /* Approved Opportunity Engine review layout. */
 #suite-workspace .shop-map-redesign{
   --g-ink:#201c21;--g-ink-2:#625861;--g-ink-3:#726971;--g-line:#e9e0e6;
-  max-width:1220px!important;color:#201c21!important;
+  max-width:1220px!important;color:#201c21!important;font-family:Manrope,Inter,ui-sans-serif,sans-serif!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-head{
   display:flex!important;align-items:flex-end!important;justify-content:space-between!important;
@@ -2201,14 +2201,20 @@
   #suite-workspace .shop-map-redesign .oe-site-filter{margin-top:13px!important}
 }
 @media(max-width:600px){
+  #suite-workspace .shop-map-redesign{padding-top:3px!important}
   #suite-workspace .shop-map-redesign .shop-map-head{
-    display:block!important;padding-top:19px!important;
+    display:block!important;padding-top:6px!important;
   }
-  #suite-workspace .shop-map-redesign .shop-map-head h1{font-size:34px!important}
-  #suite-workspace .shop-map-redesign .oe-site-period{display:flex!important;width:100%!important;margin-top:15px!important}
+  #suite-workspace .shop-map-redesign .shop-map-head .current-kicker{display:none!important}
+  #suite-workspace .shop-map-redesign .shop-map-head h1{
+    margin:0!important;font-size:clamp(22px,7vw,28px)!important;
+    line-height:1.12!important;white-space:nowrap!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-shop-identity{margin-top:2px!important}
+  #suite-workspace .shop-map-redesign .oe-site-period{display:flex!important;width:100%!important;margin-top:9px!important}
   #suite-workspace .shop-map-redesign .oe-site-period button{flex:1!important}
   #suite-workspace .shop-map-redesign .shop-map-tabs{
-    grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:19px 0 24px!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:12px 0 15px!important;
   }
   #suite-workspace .shop-map-redesign .shop-map-tabs button{font-size:11px!important}
   #suite-workspace .shop-map-redesign .oe-engine>.oe-section-heading h2,
