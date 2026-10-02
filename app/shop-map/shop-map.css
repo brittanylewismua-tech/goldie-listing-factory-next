@@ -2295,3 +2295,10 @@
   #suite-workspace .shop-map-redesign .shop-map-tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important;margin:12px 0 17px!important}
   #suite-workspace .shop-map-redesign .shop-map-tabs button{min-height:40px!important;padding:4px 5px!important;font-size:11px!important}
 }
+
+/* Keep the approved preview rows flat despite suite-wide interactive styles. */
+#suite-workspace .shop-map-redesign [data-preview-row="path"],
+#suite-workspace .shop-map-redesign [data-preview-row="finding"]{border-radius:0!important;box-shadow:none!important;background:transparent!important}
+#suite-workspace .shop-map-redesign [data-preview-row="review"]{border-radius:0!important;box-shadow:none!important;background:#fff!important}
+#suite-workspace .shop-map-redesign [data-preview-deeper]::after{content:none!important;display:none!important}
+#suite-workspace .shop-map-redesign [data-preview-deeper]::-webkit-details-marker{display:none!important}
