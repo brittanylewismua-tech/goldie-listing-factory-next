@@ -233,14 +233,18 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
           <div className={styles.vote}><strong>{selected.unitsPurchased}</strong><span>units purchased</span><i>·</i>
             <strong>{pct(selected.share)}</strong><span>{map.shareLabel.toLowerCase()}</span></div>
           {diagnosis?<p className={styles.interpret}>{diagnosis}</p>:null}
-          <div className={styles.pathHead}><h4>Ideas and checks for this listing</h4><span>{selectedPaths.length?`${selectedPaths.length} to explore`:"No checked ideas yet"}</span></div>
-          <div className={styles.paths}>{selectedPaths.map(item=><button type="button" key={item.id} className={styles.path}
-            onClick={()=>open(item)}><span><strong>{item.title}</strong><small>{item.brief}</small></span><span aria-hidden="true">›</span></button>)}</div>
-          {publicComparisons[selected.listingId]?.status==="loading"?<p className={styles.localState} role="status">Checking public Etsy comparisons…</p>:null}
-          {["unavailable","no-reviewed-match","insufficient-context"].includes(publicComparisons[selected.listingId]?.status||"")?<p className={styles.localState} role="status">No reviewed public comparison is available for this product. Your shop findings remain above.</p>:null}
-          {!selectedPaths.length&&<div className={styles.localState} role="status">
-            {analysisFailed?"Product analysis could not load.":catalogState==="loading"?"Checking related products…":
-              catalogState==="unavailable"?"Catalog comparison is unavailable right now.":"Goldie has no checked recommendation for this listing yet."}
+          {selectedPaths.length>0?<>
+            <div className={styles.pathHead}><h4>Ideas and checks for this listing</h4><span>{selectedPaths.length} to explore</span></div>
+            <div className={styles.paths}>{selectedPaths.map(item=><button type="button" key={item.id} className={styles.path}
+              onClick={()=>open(item)}><span><strong>{item.title}</strong><small>{item.brief}</small></span><span aria-hidden="true">›</span></button>)}</div>
+            {publicComparisons[selected.listingId]?.status==="loading"?<p className={styles.localState} role="status">Checking related Etsy listings…</p>:null}
+            {["unavailable","no-reviewed-match","insufficient-context"].includes(publicComparisons[selected.listingId]?.status||"")?<p className={styles.localState} role="status">No reviewed Etsy match for this listing.</p>:null}
+          </>:<div className={styles.localState} role="status">
+            {analysisFailed?"Product analysis could not load.":catalogState==="loading"?"Checking your listings…":
+              catalogState==="unavailable"?"Couldn’t check your listings.":
+              publicComparisons[selected.listingId]?.status==="loading"?"Checking related Etsy listings…":
+              publicComparisons[selected.listingId]?.status==="unavailable"?"Couldn’t check Etsy comparisons right now.":
+              "No specific next step is verified for this listing yet."}
             {analysisFailed&&onRetry?<button type="button" onClick={onRetry}>Retry analysis</button>:null}
             {catalogState==="unavailable"?<button type="button" onClick={()=>setRetry(value=>value+1)}>Retry catalog</button>:null}
           </div>}
