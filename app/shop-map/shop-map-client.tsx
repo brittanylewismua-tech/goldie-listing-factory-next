@@ -12,6 +12,7 @@ import type {PurchasePriorityMap} from "@/app/shop-map-purchase-priorities";
 import type {ProductDirection} from "@/app/shop-map-product-expansion";
 import type {ShopFinding} from "@/app/shop-map-opportunity-discovery";
 import PurchasePriorities from "./purchase-priorities";
+import {SiteOpportunities} from "@/app/shop-map-site-opportunities";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
@@ -590,19 +591,16 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
   const currentKey=viewKey();
   const shown = mapKey===currentKey ? map : null;
   const panelLoading=!shown&&!failed;
-  const periodControl=tab==="overview"?<div className="shop-map-analysis-period">
-    <label>Analysis period <select value={selectedDays}
-      onChange={event=>setSelectedDays(Number(event.target.value)===30?30:90)}>
-      <option value={90}>Last 90 days</option><option value={30}>Last 30 days</option>
-    </select></label>
+  const periodControl=tab==="overview"?<div className="shop-map-analysis-period oe-site-period" role="group" aria-label="Analysis period">
+    {([30,90] as const).map(days=><button key={days} type="button" aria-pressed={selectedDays===days}
+      onClick={()=>setSelectedDays(days)}>Last {days} days</button>)}
   </div>:null;
 
   if (!shown && failed)
     return <main className="shop-map shop-map-redesign">
       <header className="shop-map-head current-page-heading"><div>
-        <p className="current-kicker">YOUR SHOP</p><h1>My Shop</h1>
-      </div></header>
-      {periodControl}
+        <p className="current-kicker">MY SHOP</p><h1>{tab==="overview"?"Opportunity Engine":"My Shop"}</h1>
+      </div>{periodControl}</header>
       <nav className="shop-map-tabs" aria-label="Your shop sections">
         {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
           .map(([key,label])=><button key={key} type="button" aria-current={tab===key?'page':undefined}
@@ -616,11 +614,10 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
   if (!shown)
     return <main className="shop-map shop-map-redesign">
       <header className="shop-map-head current-page-heading"><div>
-        <p className="current-kicker">YOUR SHOP</p>
-        <h1>My Shop</h1>
+        <p className="current-kicker">MY SHOP</p>
+        <h1>{tab==="overview"?"Opportunity Engine":"My Shop"}</h1>
         <p>Loading your connected shop and latest performance…</p>
-      </div></header>
-      {periodControl}
+      </div>{periodControl}</header>
       <nav className="shop-map-tabs" aria-label="Your shop sections">
         {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
           .map(([key,label])=><button key={key} type="button" aria-current={tab===key?'page':undefined}
@@ -644,10 +641,9 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
   const niches = unclassifiedTheme ? [...themes,unclassifiedTheme] : themes;
   const recentTotal = niches.reduce((sum, niche) => sum + niche.revenueMinor, 0);
   return <main className="shop-map shop-map-redesign">
-    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">YOUR SHOP</p><h1>My Shop</h1><p className="shop-map-shop-identity">{shown.shop?.shopName ?? "Connected shop"}</p></div></header>
+    <header className="shop-map-head current-page-heading"><div><p className="current-kicker">MY SHOP</p><h1>{tab==="overview"?"Opportunity Engine":"My Shop"}</h1><p className="shop-map-shop-identity">{shown.shop?.shopName ?? "Connected shop"}</p></div>{periodControl}</header>
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
-    {periodControl}
       <nav className="shop-map-tabs" aria-label="Your shop sections">
       {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
         .map(([key,label]) => <button key={key} type="button" aria-current={tab === key ? 'page' : undefined}
@@ -659,9 +655,12 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
       {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} directions={shown.productDirections} findings={shown.opportunityFindings??[]} analysisFailed={insightsFailed} onRetry={()=>void load()}/>:null}
       {insightsLoading?<section className="shop-map-inline-state" role="status">Checking other shop signals…</section>:null}
       {insightsFailed?<section className="shop-map-inline-state"><strong>Some analysis could not load.</strong> <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Retry</button></section>:null}
-      {selectedDays===90&&shown.patterns?<WinningPatterns map={shown.patterns}/>:null}
-      {shown.patterns?<ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]} priorityIds={shown.purchasePriorities?.priorities.map(row=>row.listingId)??[]} findings={shown.opportunityFindings??[]} days={selectedDays}/>:null}
-      {selectedDays===90&&!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} purchasePriorities={shown.purchasePriorities} marketProof={shown.marketProof??[]}/>}
+      {shown.patterns?<SiteOpportunities map={shown.patterns} actions={shown.catalogActions??[]} marketProof={shown.marketProof??[]} priorityIds={shown.purchasePriorities?.priorities.map(row=>row.listingId)??[]} findings={shown.opportunityFindings??[]} days={selectedDays}/>:null}
+      {shown.patterns?<details className="oe-site-deep"><summary>Explore source analysis</summary>
+        {selectedDays===90?<WinningPatterns map={shown.patterns}/>:null}
+        <ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]} priorityIds={shown.purchasePriorities?.priorities.map(row=>row.listingId)??[]} findings={shown.opportunityFindings??[]} days={selectedDays}/>
+        {selectedDays===90&&!!shown.patterns?.patterns?.length&&<ArtworkRecommendations map={shown.patterns} purchasePriorities={shown.purchasePriorities} marketProof={shown.marketProof??[]}/>}
+      </details>:null}
 
     </div>}
 

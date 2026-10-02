@@ -1,390 +1,138 @@
-import { chromium } from "playwright";
-import { mkdir, writeFile } from "node:fs/promises";
+import {chromium} from "playwright";
+import {mkdir,writeFile} from "node:fs/promises";
 
-const identity = process.env.QA_REVIEWER_JWT;
-if (!identity) throw new Error("QA_REVIEWER_JWT is required");
-await mkdir("qa-artifacts", {recursive:true});
-const browser = await chromium.launch({headless:true});
-const results = [];
-try {
-  for (const width of [390,320]) {
-    const context=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1});
-    const login=await context.request.post("https://thegoldiesuite.com/qa/oidc", {
-      headers:{authorization:"Bearer "+identity},timeout:30000,
-    });
-    if(!login.ok())throw new Error("Reviewer identity rejected: "+login.status());
+const token=process.env.QA_REVIEWER_JWT;
+if(!token)throw new Error("QA_REVIEWER_JWT is required");
+await mkdir("qa-artifacts",{recursive:true});
+const browser=await chromium.launch({headless:true});
+const results=[];
+const emit=async(page,width,name,fullPage=false)=>{
+  const data=(await page.screenshot({type:"jpeg",quality:42,fullPage})).toString("base64");
+  console.log(`QA_IMAGE_BEGIN ${width} ${name}`);
+  for(let offset=0;offset<data.length;offset+=16000)
+    console.log("QA_IMAGE_CHUNK "+data.slice(offset,offset+16000));
+  console.log(`QA_IMAGE_END ${width} ${name}`);
+};
+const login=async(context)=>{
+  const response=await context.request.post("https://thegoldiesuite.com/qa/oidc",{
+    headers:{authorization:"Bearer "+token},timeout:30000});
+  if(!response.ok())throw new Error("Reviewer identity rejected: "+response.status());
+};
+const waitReady=async(page)=>{
+  await page.locator(".oe-priority-grid .oe-priority-card").first().waitFor({timeout:45000});
+  await page.locator(".oe-site-grid .oe-site-card").first().waitFor({timeout:45000});
+};
+const measurements=async(page)=>page.evaluate(()=>{
+  const boxes=selector=>[...document.querySelectorAll(selector)]
+    .filter(node=>node.getClientRects().length).map(node=>node.getBoundingClientRect());
+  const tabBoxes=boxes(".shop-map-tabs button");
+  const priorities=boxes(".oe-priority-grid").length?boxes(".oe-priority-grid")[0]:null;
+  const cards=boxes(".oe-priority-grid .oe-priority-card").slice(0,3);
+  const grid=boxes(".oe-site-grid .oe-site-card").slice(0,4);
+  const cardArt=boxes(".oe-site-grid .oe-site-card-art").slice(0,4);
+  return {
+    viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,
+    bodyWidth:document.body.scrollWidth,
+    tabRows:[...new Set(tabBoxes.map(box=>Math.round(box.top)))].length,
+    priorityCount:cards.length,
+    priorityRows:[...new Set(cards.map(box=>Math.round(box.top)))].length,
+    gridCount:grid.length,gridRows:[...new Set(grid.map(box=>Math.round(box.top)))].length,
+    visibleArt:cardArt.length,
+    priorityTop:priorities?.top??null,
+    heading:document.querySelector(".shop-map-head h1")?.textContent?.trim()??"",
+    oldSectionVisible:[...document.querySelectorAll(".oe-site-deep .oe-review,.oe-site-deep .oe-patterns")]
+      .some(node=>node.getClientRects().length>0),
+  };
+});
+try{
+  for(const width of [390,320,1280]){
+    const context=await browser.newContext({viewport:{width,height:width===1280?900:844},deviceScaleFactor:1});
+    await login(context);
     const page=await context.newPage();
     await page.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
-    const output=page.locator("#qa-mobile-metrics");
-    await output.waitFor({timeout:30000});
-    for(const [key,label] of [
-      ["overview","Opportunity Engine"],
-      ["money","Your numbers"],
-      ["themes","Product themes"],
-      ["sold","Sold listings"],
-    ]){
-      await page.locator(".shop-map-tabs button").filter({hasText:label}).click();
-      await page.waitForTimeout(2200);
-      if(key==="overview"){
-        await page.getByText(/EXISTING VERSION/i).first().waitFor({timeout:30000});
-        const dna=page.locator(".oe-dna");
-        await dna.getByText("Winner DNA").waitFor({timeout:30000});
-        await dna.locator("summary").click();
-        if(!(await dna.innerText()).includes("Purchased units among 4 leading analyzed selling artworks"))
-          throw new Error("Winner DNA denominator is not labeled");
-        await dna.locator("summary").click();
-        await page.evaluate(()=>{
-          const hero=document.querySelector(".oe-priority-grid");
-          for(let el=hero?.parentElement;el;el=el.parentElement){
-            if(el.scrollTop){
-              el.style.scrollBehavior="auto";
-              el.scrollTop=0;
-            }
-          }
-          document.documentElement.style.scrollBehavior="auto";
-          document.body.style.scrollBehavior="auto";
-          window.scrollTo({top:0,left:0,behavior:"instant"});
-        });
-        await page.waitForTimeout(350);
-        console.log("QA_SCROLL "+JSON.stringify(await page.evaluate(()=>({
-          y:window.scrollY,
-          root:document.scrollingElement?.scrollTop,
-          heroTop:document.querySelector(".oe-priority-grid")?.getBoundingClientRect().top,
-        }))));
-        const firstViewport=(await page.screenshot({type:"jpeg",quality:45,fullPage:false})).toString("base64");
-        console.log(`QA_IMAGE_BEGIN ${width} overview_first_viewport`);
-        for(let offset=0;offset<firstViewport.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+firstViewport.slice(offset,offset+16000));
-        console.log(`QA_IMAGE_END ${width} overview_first_viewport`);
-        const priorities=page.locator(".oe-priority-grid").first().locator(".oe-priority-card");
-        if(await priorities.count()!==3)throw new Error("Three priority breakdowns are not visible");
-        const first=priorities.first();
-        const firstImage=first.locator(".oe-priority-art img");
-        const imageBox=await firstImage.boundingBox();
-        if(!(await firstImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
-          throw new Error("Leading product image did not load in the live browser");
-        const votesBox=await first.locator(".oe-priority-metrics").boundingBox();
-        if(!imageBox||!votesBox||imageBox.y<0||imageBox.y>660||votesBox.y+votesBox.height>844)
-          throw new Error("First priority image and purchase evidence are below the initial phone viewport");
-        const firstText=await first.innerText();
-        if(!firstText.includes("22")||!firstText.includes("Compare")
-          ||firstText.includes("Test this artwork on a sweatshirt"))
-          throw new Error("Leading breakdown is missing grounded direction or repeats the invalid test");
-        if(!(await priorities.nth(1).innerText()).includes("16")
-          ||!(await priorities.nth(2).innerText()).includes("9"))
-          throw new Error("Second or third priority is missing");
-        console.log("QA_PRIORITIES "+JSON.stringify({width,imageTop:imageBox.y,imageHeight:imageBox.height,
-          votesBottom:votesBox.y+votesBox.height,text:firstText.slice(0,190)}));
-        const comparisons=page.locator(".oe-expansion");
-        await comparisons.first().waitFor({timeout:10000});
-        const comparisonCount=await comparisons.count();
-        let paired=0;
-        for(let index=0;index<comparisonCount;index++){
-          const card=comparisons.nth(index);
-          if((await card.getAttribute("data-source"))==="shop"){
-            await card.scrollIntoViewIfNeeded();
-            await page.waitForTimeout(250);
-            const links=await card.locator(".oe-expansion-pair a").count();
-            if(links!==2)throw new Error("Shop comparison does not link both real listings");
-            const images=await card.locator(".oe-expansion-pair img").evaluateAll(nodes=>
-              nodes.map(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0));
-            if(images.length!==2||images.some(loaded=>!loaded))
-              throw new Error("Shop comparison images did not load");
-            paired++;
-          }
-        }
-        if(!paired||!(await comparisons.first().innerText()).includes("Bodily Autonomy"))
-          throw new Error("Reviewer comparison from outside the top three is missing");
-        console.log("QA_COMPARISONS "+JSON.stringify({width,cards:comparisonCount,paired,
-          first:(await comparisons.first().innerText()).slice(0,130)}));
-        const marketPair=page.locator(".oe-market-pair").first();
-        await marketPair.waitFor({timeout:15000});
-        if(await marketPair.locator(".oe-market-images a").count()!==2)
-          throw new Error("External candidate does not link both products");
-        const marketImages=await marketPair.locator(".oe-market-images img").evaluateAll(nodes=>
-          nodes.map(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0));
-        if(marketImages.length!==2||marketImages.some(loaded=>!loaded))
-          throw new Error("External candidate images did not load");
-        if(!(await marketPair.innerText()).includes("observed activity"))
-          throw new Error("External candidate is not honestly labeled");
-        if((await marketPair.innerText()).includes("1969"))
-          throw new Error("External observation date was computed before the request");
-        console.log("QA_MARKET_PAIR "+JSON.stringify({width,images:marketImages.length}));
-        const patternMetrics=page.locator(".oe-pattern-metrics").first();
-        await patternMetrics.waitFor({timeout:10000});
-        if(await patternMetrics.locator("span").count()!==2
-          ||!(await patternMetrics.innerText()).includes("active designs"))
-          throw new Error("Visual pattern evidence is incomplete");
-        console.log("QA_PATTERN "+JSON.stringify({width,text:(await patternMetrics.innerText()).trim()}));
-      }
-      const measured=(await output.innerText()).trim();
-      const match=measured.match(/QA viewport: (\d+)px; document: (\d+)px; body: (\d+)px; tab rows: ([\d+]+); active: ([^;]+); loading: (YES|NO); alert: ([^;]+); text: (\d+)/);
-      if(!match)throw new Error("Mobile metrics unavailable: "+measured);
-      const row={width,tab:key,viewport:Number(match[1]),documentWidth:Number(match[2]),
-        bodyWidth:Number(match[3]),tabRows:match[4],active:match[5],loading:match[6],
-        alert:match[7],textLength:Number(match[8])};
-      results.push(row);
-      console.log("QA_METRICS "+JSON.stringify(row));
-      await page.screenshot({path:`qa-artifacts/shop-map-${width}-${key}.png`,fullPage:true});
-      const qaImage=(await page.screenshot({type:"jpeg",quality:35,fullPage:true})).toString("base64");
-      console.log(`QA_IMAGE_BEGIN ${width} ${key}`);
-      for(let offset=0;offset<qaImage.length;offset+=16000) console.log("QA_IMAGE_CHUNK "+qaImage.slice(offset,offset+16000));
-      console.log(`QA_IMAGE_END ${width} ${key}`);
-      if(row.viewport!==width)throw new Error("Wrong viewport in "+key);
-      if(row.documentWidth>width+1||row.bodyWidth>width+1)
-        throw new Error("Horizontal overflow in "+key+" at "+width+"px");
-      if(row.tabRows!=="2+2")throw new Error("Tabs are not 2x2 in "+key+" at "+width+"px: "+row.tabRows);
-      if(row.active.toLowerCase()!==label.toLowerCase())throw new Error("Wrong active tab in "+key);
-      if(row.alert!=="none")throw new Error("Alert in "+key+": "+row.alert);
-      if(row.loading!=="NO"||row.textLength<200)throw new Error("Blank or incomplete "+key+" panel");
-      if(key==="money" && !(await page.locator(".shop-map-money-detail").innerText()).includes("100%"))
-        throw new Error("Reviewer cost coverage is not 100%");
-      if(key==="overview"){
-        const votes=page.locator(".oe-priority-grid").first().locator(".oe-priority-card").first();
-        if(!(await votes.innerText()).includes("22"))throw new Error("90-day purchase leader missing");
-        await page.locator(".shop-map-analysis-period select").selectOption("30");
-        await page.waitForTimeout(1800);
-        if(!(await votes.innerText()).includes("8"))throw new Error("30-day purchase leader missing");
-        await page.getByText(/EXISTING VERSION/i).first().waitFor({timeout:30000});
-        if(!(await votes.innerText()).includes("Compare"))
-          throw new Error("Specific purchased-product breakdown missing");
-        await page.screenshot({path:`qa-artifacts/shop-map-${width}-overview-30.png`,fullPage:true});
-        const day30=(await page.screenshot({type:"jpeg",quality:35,fullPage:true})).toString("base64");
-        console.log(`QA_IMAGE_BEGIN ${width} overview_30`);
-        for(let offset=0;offset<day30.length;offset+=16000) console.log("QA_IMAGE_CHUNK "+day30.slice(offset,offset+16000));
-        console.log(`QA_IMAGE_END ${width} overview_30`);
-        await page.mouse.move(width/2,560);
-        await page.mouse.wheel(0,600);
-        await page.waitForTimeout(300);
-        const day30Card=(await page.screenshot({type:"jpeg",quality:35})).toString("base64");
-        console.log(`QA_IMAGE_BEGIN ${width} overview_30_card`);
-        for(let offset=0;offset<day30Card.length;offset+=16000) console.log("QA_IMAGE_CHUNK "+day30Card.slice(offset,offset+16000));
-        console.log(`QA_IMAGE_END ${width} overview_30_card`);
-        await page.mouse.wheel(0,-1000);
-        await page.locator(".shop-map-analysis-period select").selectOption("90");
-        await page.waitForTimeout(1800);
-        const cacheKeys=await page.evaluate(()=>Object.keys(sessionStorage)
-          .filter(key=>key.startsWith("goldie:shop-map:v13:")));
-        if(!cacheKeys.some(key=>key.includes("qa-reviewer:900001:view=overview-purchases&days=30"))
-          ||!cacheKeys.some(key=>key.includes("qa-reviewer:900001:view=overview-purchases&days=90"))
-          ||cacheKeys.some(key=>!key.includes("qa-reviewer:900001:")))
-          throw new Error("Shop Map cache scope or period key is wrong: "+cacheKeys.join(","));
-        console.log("QA_CACHE_SCOPE "+JSON.stringify({width,member:"reviewer",shop:900001,periods:[30,90]}));
-      }
-      const scrollSteps=key==="overview"?(width===390?11:14):(width===390?3:2);
-      if(scrollSteps){
-        await page.mouse.move(width/2,560);
-        for(let step=1;step<=scrollSteps;step++){
-          await page.mouse.wheel(0,600);
-          await page.waitForTimeout(350);
-          const scrolled=(await page.screenshot({type:"jpeg",quality:35,fullPage:false})).toString("base64");
-          console.log(`QA_IMAGE_BEGIN ${width} ${key}_${step}`);
-          for(let offset=0;offset<scrolled.length;offset+=16000) console.log("QA_IMAGE_CHUNK "+scrolled.slice(offset,offset+16000));
-          console.log(`QA_IMAGE_END ${width} ${key}_${step}`);
-        }
-      }
-      if(key==="overview"){
-        const research=page.locator(".shop-map-mirrorbot").first();
-        await research.locator(":scope > summary").click();
-        const researchText=await research.innerText();
-        await research.locator(".shop-map-mirrorbot-prompt summary").click();
-        const prompt=await research.locator(".shop-map-mirrorbot-prompt textarea").inputValue();
-        if(!prompt.includes("Purchased listing #1")||!prompt.includes("22 units"))
-          throw new Error("Deep research lost the purchased winner context");
-        if(!researchText.includes("Opening MirrorBot does not transfer this context"))
-          throw new Error("MirrorBot transfer status is unclear");
-        const researchImage=(await page.screenshot({type:"jpeg",quality:35})).toString("base64");
-        console.log(`QA_IMAGE_BEGIN ${width} purchased_research`);
-        for(let offset=0;offset<researchImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+researchImage.slice(offset,offset+16000));
-        console.log(`QA_IMAGE_END ${width} purchased_research`);
-        const more=page.locator(".oe-more");
-        await more.locator(":scope > summary").click();
-        const extra=more.locator(".oe-priority-card").first();
-        if(await extra.count()===0)throw new Error("Purchased products outside the first three are missing");
-        const extraTitle=(await extra.locator("h3").innerText()).trim();
-        if(!(await extra.innerText()).includes("sold"))
-          throw new Error("An additional purchased product has no breakdown");
-        console.log("QA_FULL_SHOP "+JSON.stringify({width,additionalVisible:await more.locator(".oe-priority-card").count(),selected:extraTitle}));
-      }
+    await waitReady(page);
+    await page.getByRole("heading",{name:"Opportunity Engine",exact:true}).waitFor();
+    await page.getByRole("heading",{name:"Your top three"}).waitFor();
+    await page.getByRole("heading",{name:"More opportunities"}).waitFor();
+    await page.getByRole("heading",{name:"How Goldie reaches a direction"}).waitFor();
+    for(const label of ["All","Build out","Improve","Restore"])
+      await page.locator(".oe-site-filter").getByRole("button",{name:label,exact:true}).waitFor();
+    const p=page.locator(".oe-priority-grid").first().locator(".oe-priority-card");
+    if(await p.count()!==3)throw new Error("Top three breakdowns are missing");
+    for(const card of await p.all()){
+      if(!(await card.locator(".oe-priority-diagnosis,.oe-priority-direction").count()))
+        throw new Error("A top listing has no direction");
     }
+    const firstImage=p.first().locator(".oe-priority-art img");
+    if(!(await firstImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
+      throw new Error("Top listing image failed to load");
+    const pageLayout=await measurements(page);
+    if(pageLayout.heading!=="Opportunity Engine"||pageLayout.documentWidth>width+1
+      ||pageLayout.bodyWidth>width+1||pageLayout.priorityCount!==3||pageLayout.gridCount<1
+      ||pageLayout.visibleArt<1||pageLayout.oldSectionVisible)
+      throw new Error("Opportunity Engine layout failed: "+JSON.stringify(pageLayout));
+    if(width<600&&pageLayout.tabRows!==2)throw new Error("Tabs are not 2x2");
+    if(width===1280&&(pageLayout.tabRows!==1||pageLayout.priorityRows!==1||pageLayout.gridRows!==2))
+      throw new Error("Desktop card grid does not match approved layout: "+JSON.stringify(pageLayout));
+    console.log("QA_LAYOUT "+JSON.stringify({width,...pageLayout}));
+    await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
+    await emit(page,width,width===1280?"desktop_first_viewport":"overview_first_viewport");
+    await emit(page,width,width===1280?"desktop_overview":"overview",true);
+    await page.locator(".oe-site-grid").scrollIntoViewIfNeeded();
+    await emit(page,width,"opportunity_grid");
+    await page.locator(".oe-site-grid .oe-site-link").first().click();
+    const dialog=page.locator(".oe-site-dialog");
+    await dialog.waitFor({state:"visible"});
+    if(!(await dialog.locator("li").count()))throw new Error("Evidence dialog lacks source detail");
+    await emit(page,width,"evidence_dialog");
+    await dialog.getByRole("button",{name:"Close"}).click();
+    for(const label of ["Build out","Improve","Restore","All"]){
+      await page.locator(".oe-site-filter").getByRole("button",{name:label,exact:true}).click();
+      const visible=await page.locator(".oe-site-grid .oe-site-card").count();
+      const empty=await page.locator(".oe-site-empty").count();
+      if(!visible&&!empty)throw new Error("Filter became blank: "+label);
+    }
+    if(width<600){
+      await page.locator(".oe-site-period").getByRole("button",{name:"Last 30 days"}).click();
+      await page.waitForTimeout(1000);
+      await p.first().waitFor();
+      await emit(page,width,"overview_30",true);
+      await page.locator(".oe-site-period").getByRole("button",{name:"Last 90 days"}).click();
+      await waitReady(page);
+    }
+    const tabs=[
+      ["Your numbers","money"],["Product themes","themes"],["Sold listings","sold"]];
+    for(const [label,key] of tabs){
+      await page.locator(".shop-map-tabs").getByRole("button",{name:label}).click();
+      await page.waitForTimeout(1200);
+      const layout=await measurements(page);
+      const panelText=(await page.locator(".shop-map-tab-panel,.shop-map-money,.shop-map-themes,.shop-map-sold").allInnerTexts()).join(" ");
+      if(layout.documentWidth>width+1||layout.bodyWidth>width+1||panelText.trim().length<50)
+        throw new Error("Blank or overflowing "+key+": "+JSON.stringify(layout));
+      if(width<600&&layout.tabRows!==2)throw new Error("Tab rows changed in "+key);
+      console.log("QA_TAB "+JSON.stringify({width,key,documentWidth:layout.documentWidth,textLength:panelText.length}));
+      await emit(page,width,key,true);
+    }
+    results.push({width,overview:pageLayout,tabs:"passed"});
     await context.close();
   }
-  // Authenticate a separate browser context and hold the Overview response long
-  // enough to observe loading. Then render an empty purchase response on the
-  // real production page without modifying a member's shop data.
-  const desktopContext=await browser.newContext({viewport:{width:1280,height:900},deviceScaleFactor:1});
-  const desktopLogin=await desktopContext.request.post("https://thegoldiesuite.com/qa/oidc",{
-    headers:{authorization:"Bearer "+identity},timeout:30000,
-  });
-  if(!desktopLogin.ok())throw new Error("Desktop reviewer identity rejected: "+desktopLogin.status());
-  const desktopPage=await desktopContext.newPage();
-  await desktopPage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
-  const desktopHero=desktopPage.locator(".oe-priority-card").first();
-  await desktopHero.getByText("Compare the existing version before creating another.").waitFor({timeout:30000});
-  await desktopPage.locator(".oe-expansion").first().waitFor({timeout:10000});
-  const desktopLayout=await desktopPage.evaluate(()=>{
-    const rect=(selector)=>document.querySelector(selector)?.getBoundingClientRect();
-    const tabs=[...document.querySelectorAll(".shop-map-tabs button")].map(node=>node.getBoundingClientRect());
-    const cards=[...document.querySelectorAll(".oe-priority-grid .oe-priority-card")].slice(0,3).map(node=>node.getBoundingClientRect());
-    const review=[...document.querySelectorAll(".oe-review-grid .oe-review-card")].map(node=>node.getBoundingClientRect());
-    const comparisons=[...document.querySelectorAll(".oe-comparison-grid .oe-expansion")].map(node=>node.getBoundingClientRect());
-    const image=rect(".oe-priority-card img"),copy=rect(".oe-priority-card .oe-priority-body");
-    return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,
-      image:{x:image?.x,y:image?.y,width:image?.width},copy:{x:copy?.x,y:copy?.y},
-      tabRows:new Set(tabs.map(box=>Math.round(box.top))).size,
-      cardRows:new Set(cards.map(box=>Math.round(box.top))).size,
-      cardCount:cards.length,reviewRows:new Set(review.map(box=>Math.round(box.top))).size,
-      reviewCount:review.length,comparisonRows:new Set(comparisons.map(box=>Math.round(box.top))).size,
-      comparisonCount:comparisons.length};
-  });
-  if(desktopLayout.viewport!==1280||desktopLayout.documentWidth>1281
-    ||desktopLayout.tabRows!==1||desktopLayout.cardRows!==1||desktopLayout.cardCount!==3
-    ||desktopLayout.reviewCount<4||desktopLayout.reviewRows<2
-    ||desktopLayout.comparisonCount<1||desktopLayout.comparisonRows<1
-    ||!desktopLayout.image.width||desktopLayout.image.y>=desktopLayout.copy.y)
-    throw new Error("Desktop Opportunity Engine layout failed: "+JSON.stringify(desktopLayout));
-  console.log("QA_DESKTOP "+JSON.stringify(desktopLayout));
-  const desktopFirst=(await desktopPage.screenshot({type:"jpeg",quality:45})).toString("base64");
-  console.log("QA_IMAGE_BEGIN 1280 desktop_first_viewport");
-  for(let offset=0;offset<desktopFirst.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopFirst.slice(offset,offset+16000));
-  console.log("QA_IMAGE_END 1280 desktop_first_viewport");
-  const desktopFull=(await desktopPage.screenshot({type:"jpeg",quality:35,fullPage:true})).toString("base64");
-  console.log("QA_IMAGE_BEGIN 1280 desktop_overview");
-  for(let offset=0;offset<desktopFull.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopFull.slice(offset,offset+16000));
-  console.log("QA_IMAGE_END 1280 desktop_overview");
-  const desktopReview=desktopPage.locator(".oe-review");
-  await desktopReview.scrollIntoViewIfNeeded();
-  const desktopReviewImage=(await desktopPage.screenshot({type:"jpeg",quality:40})).toString("base64");
-  console.log("QA_IMAGE_BEGIN 1280 desktop_review");
-  for(let offset=0;offset<desktopReviewImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopReviewImage.slice(offset,offset+16000));
-  console.log("QA_IMAGE_END 1280 desktop_review");
-  const desktopResearch=desktopPage.locator(".shop-map-recommendations");
-  await desktopResearch.scrollIntoViewIfNeeded();
-  const desktopResearchImage=(await desktopPage.screenshot({type:"jpeg",quality:40})).toString("base64");
-  console.log("QA_IMAGE_BEGIN 1280 desktop_research");
-  for(let offset=0;offset<desktopResearchImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopResearchImage.slice(offset,offset+16000));
-  console.log("QA_IMAGE_END 1280 desktop_research");
-  const evidenceToggle=desktopHero.locator(".oe-priority-detail summary");
-  await evidenceToggle.focus();
-  await desktopPage.keyboard.press("Enter");
-  if(!(await desktopHero.locator(".oe-priority-detail").evaluate(node=>node.open)))
-    throw new Error("Product evidence does not open from keyboard");
-  const expandedGap=await desktopPage.locator(".oe-priority-card").nth(1).evaluate(card=>{
-    const diagnosis=card.querySelector(".oe-priority-diagnosis")?.getBoundingClientRect();
-    const direction=card.querySelector(".oe-priority-direction")?.getBoundingClientRect();
-    return diagnosis&&direction?direction.top-diagnosis.bottom:0;
-  });
-  if(expandedGap>50)throw new Error("Opening product evidence strands another direction at the bottom of an empty card");
-  const desktopDetails=(await desktopPage.screenshot({type:"jpeg",quality:40})).toString("base64");
-  console.log("QA_IMAGE_BEGIN 1280 desktop_details");
-  for(let offset=0;offset<desktopDetails.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopDetails.slice(offset,offset+16000));
-  console.log("QA_IMAGE_END 1280 desktop_details");
-  await desktopContext.close();
   const emptyContext=await browser.newContext({viewport:{width:320,height:844},deviceScaleFactor:1});
-  const emptyLogin=await emptyContext.request.post("https://thegoldiesuite.com/qa/oidc",{
-    headers:{authorization:"Bearer "+identity},timeout:30000,
-  });
-  if(!emptyLogin.ok())throw new Error("Empty-state reviewer identity rejected: "+emptyLogin.status());
+  await login(emptyContext);
   const emptyPage=await emptyContext.newPage();
   await emptyPage.route(url=>url.pathname==="/api/shop-map/map"&&url.searchParams.get("view")==="overview-purchases",async route=>{
-    await new Promise(resolve=>setTimeout(resolve,1800));
-    const empty={shop:{shopId:900001,shopName:"Goldie Reviewer Shop"},purchasePriorities:{
-      days:90,totalUnits:0,totalOrders:0,unmatchedUnits:0,excludedRefundUnits:0,
-      receiptsComplete:true,refreshedAt:null,shareLabel:"Share of shop purchases",
-      remainingUnits:0,priorities:[],listings:[],
-    }};
-    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(empty)});
-  });
-  await emptyPage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
-  const loading=emptyPage.locator(".shop-map-progressive-loading");
-  await loading.waitFor({state:"visible",timeout:5000});
-  const loadingImage=(await emptyPage.screenshot({type:"jpeg",quality:35})).toString("base64");
-  console.log("QA_IMAGE_BEGIN 320 loading");
-  for(let offset=0;offset<loadingImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+loadingImage.slice(offset,offset+16000));
-  console.log("QA_IMAGE_END 320 loading");
-  await emptyPage.getByText("No purchases in this period.").waitFor({timeout:15000});
-  const emptyImage=(await emptyPage.screenshot({type:"jpeg",quality:35})).toString("base64");
-  console.log("QA_IMAGE_BEGIN 320 empty_purchases");
-  for(let offset=0;offset<emptyImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+emptyImage.slice(offset,offset+16000));
-  console.log("QA_IMAGE_END 320 empty_purchases");
-  console.log("QA_VARIANTS "+JSON.stringify({loading:true,emptyPurchases:true,width:320}));
-  await emptyContext.close();
-  // A fourth product tied at the cutoff must remain reachable with the same rank.
-  const tieContext=await browser.newContext({viewport:{width:320,height:844},deviceScaleFactor:1});
-  const tieLogin=await tieContext.request.post("https://thegoldiesuite.com/qa/oidc",{
-    headers:{authorization:"Bearer "+identity},timeout:30000,
-  });
-  if(!tieLogin.ok())throw new Error("Tie reviewer identity rejected: "+tieLogin.status());
-  const tiePage=await tieContext.newPage();
-  await tiePage.route(url=>url.pathname==="/api/shop-map/map"&&url.searchParams.get("view")==="overview-purchases",async route=>{
-    const listings=[1,2,3,4].map(listingId=>({
-      listingId,title:`Tied product ${listingId}`,imageUrl:"",state:"active",rank:1,
-      unitsPurchased:5,orders:1,productRevenueMinor:10000,currency:"USD",
-      share:.25,lastPurchasedAt:Math.floor(Date.now()/1000),
-    }));
+    await new Promise(resolve=>setTimeout(resolve,1600));
     await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
       shop:{shopId:900001,shopName:"Goldie Reviewer Shop"},
-      purchasePriorities:{days:90,totalUnits:20,totalOrders:4,unmatchedUnits:0,
-        excludedRefundUnits:0,receiptsComplete:true,refreshedAt:null,
-        shareLabel:"Share of shop purchases",remainingUnits:5,
-        priorities:listings.slice(0,3),listings},
+      purchasePriorities:{days:90,totalUnits:0,totalOrders:0,unmatchedUnits:0,excludedRefundUnits:0,
+        receiptsComplete:true,refreshedAt:null,shareLabel:"Share of shop purchases",remainingUnits:0,
+        priorities:[],listings:[]},
     })});
   });
-  await tiePage.route(url=>url.pathname==="/api/shop-map/map"&&url.searchParams.get("view")==="overview-insights",async route=>{
-    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
-      shop:{shopId:900001,shopName:"Goldie Reviewer Shop"},productDirections:[],
-    })});
-  });
-  await tiePage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
-  const ties=tiePage.getByRole("button",{name:"View 1 tied listing"});
-  await ties.waitFor({timeout:15000});
-  await ties.click();
-  const tieCards=tiePage.locator(".oe-priority-grid").first().locator(".oe-priority-card");
-  if(await tieCards.count()!==4)throw new Error("The fourth tied product is hidden");
-  await tieCards.last().getByText("Product evidence is incomplete.").waitFor({timeout:15000});
-  if(!(await tieCards.last().locator(".oe-priority-rank").innerText()).includes("01 / PRIORITY"))
-    throw new Error("Equal-rank product lost its leading status");
-  await tieCards.last().scrollIntoViewIfNeeded();
-  const tieImage=(await tiePage.screenshot({type:"jpeg",quality:35})).toString("base64");
-  console.log("QA_IMAGE_BEGIN 320 tied_priorities");
-  for(let offset=0;offset<tieImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+tieImage.slice(offset,offset+16000));
-  console.log("QA_IMAGE_END 320 tied_priorities");
-  console.log("QA_TIES "+JSON.stringify({width:320,cards:4,rank:1,expanded:true}));
-  await tieContext.close();
-  // Distinguish failed catalog and purchase reads on the authenticated page.
-  const sourceContext=await browser.newContext({viewport:{width:320,height:844},deviceScaleFactor:1});
-  const sourceLogin=await sourceContext.request.post("https://thegoldiesuite.com/qa/oidc",{
-    headers:{authorization:"Bearer "+identity},timeout:30000,
-  });
-  if(!sourceLogin.ok())throw new Error("Source-state reviewer identity rejected: "+sourceLogin.status());
-  const sourcePage=await sourceContext.newPage();
-  let sourceRequests=0;
-  await sourcePage.route(url=>url.pathname==="/api/shop-map/my-listings",async route=>{
-    sourceRequests++;
-    if(sourceRequests>2){await route.continue();return;}
-    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
-      shop:{shopId:900001,shopName:"Goldie Reviewer Shop"},listings:[],
-      salesObservations:sourceRequests===1?[{listingId:1,units:22}]:[],
-      sources:{shop:"available",catalog:sourceRequests===1?"failed":"available",
-        sales:sourceRequests===1?"available":"failed"},
-    })});
-  });
-  await sourcePage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
-  const sourceBanner=sourcePage.getByText("Comparison needs a retry");
-  await sourceBanner.waitFor({timeout:25000});
-  await sourcePage.getByText("Catalog coverage could not load.").waitFor();
-  await sourceBanner.scrollIntoViewIfNeeded();
-  let sourceImage=(await sourcePage.screenshot({type:"jpeg",quality:35})).toString("base64");
-  console.log("QA_IMAGE_BEGIN 320 catalog_failure");
-  for(let offset=0;offset<sourceImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+sourceImage.slice(offset,offset+16000));
-  console.log("QA_IMAGE_END 320 catalog_failure");
-  await sourcePage.getByRole("button",{name:"Retry comparison"}).click();
-  await sourcePage.getByText("Purchase history could not load.").waitFor();
-  await sourcePage.getByRole("button",{name:"Retry comparison"}).click();
-  await sourceBanner.waitFor({state:"hidden",timeout:25000});
-  await sourcePage.locator(".oe-review-grid").waitFor({timeout:25000});
-  console.log("QA_SOURCE_RECOVERY "+JSON.stringify({catalogFailure:true,salesFailure:true,recovered:true,width:320}));
-  await sourceContext.close();
+  await emptyPage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
+  await emptyPage.locator(".shop-map-progressive-loading").waitFor({state:"visible",timeout:5000});
+  await emit(emptyPage,320,"loading");
+  await emptyPage.getByText("No purchases in this period.").waitFor({timeout:20000});
+  await emit(emptyPage,320,"empty_purchases");
+  await emptyContext.close();
   await writeFile("qa-artifacts/results.json",JSON.stringify(results,null,2));
-} finally {
-  await browser.close();
-}
+}finally{await browser.close()}

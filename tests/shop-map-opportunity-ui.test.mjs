@@ -41,7 +41,8 @@ test("Opportunity Engine stays decision-first instead of repeating dashboard sta
   assert.doesNotMatch(overview,/LAST 90 DAYS[^\n]*Top sellers/);
   assert.doesNotMatch(overview,/Revenue · 90 days/);
   assert.doesNotMatch(overview,/WHERE TO FOCUS/);
-  assert.match(client,/<h1>My Shop<\/h1>/);
+  assert.match(client,/tab==="overview"\?"Opportunity Engine":"My Shop"/);
+  assert.match(overview,/SiteOpportunities/);
   assert.match(purchase,/className="oe-priority-card"/);
   assert.match(purchase,/className="oe-priority-grid"/);
   assert.doesNotMatch(purchase,/other purchased unit.*remain beyond/i);
@@ -66,7 +67,8 @@ test("Opportunity Engine copy stays short",()=>{
   assert.doesNotMatch(overview,/This pattern appears in/);
   assert.doesNotMatch(overview,/It will not manufacture/);
   assert.match(purchase,/POSSIBLE TEST/);
-  assert.match(client,/What customers are choosing/);
+  assert.match(overview,/className="oe-site-deep"/);
+  assert.match(overview,/Explore source analysis/);
 });
 
 test("Opportunity Engine does not include the generic listing keyword checker",()=>{
@@ -83,7 +85,7 @@ test("Opportunity Engine does not include the generic listing keyword checker",(
 test("top listings still render when visual priority evidence is incomplete",()=>{
   assert.match(client,/No shared pattern in the available analysis/);
   assert.match(client,/oe-source-gallery/);
-  assert.match(overview,/shown\.patterns\?<WinningPatterns map=\{shown\.patterns\}/);
+  assert.match(overview,/selectedDays===90\?<WinningPatterns map=\{shown\.patterns\}/);
 });
 
 test("MirrorBot handoffs use artwork concepts and never SEO titles",()=>{
