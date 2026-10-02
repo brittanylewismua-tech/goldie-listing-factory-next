@@ -46,7 +46,12 @@ try{
     const context=await browser.newContext({viewport:{width:1200,height:750},deviceScaleFactor:1});
     await login(context);
     const page=await context.newPage();
+    page.on("console",message=>{if(message.type()==="error")console.log("QA_PREVIEW_CONSOLE_ERROR "+message.text())});
+    page.on("pageerror",error=>console.log("QA_PREVIEW_PAGE_ERROR "+error.message));
     await page.goto("https://thegoldiesuite.com/shop-map?designPreview=1",{waitUntil:"domcontentloaded",timeout:60000});
+    await page.waitForTimeout(1200);
+    console.log("QA_FRAME_STATE "+JSON.stringify(await Promise.all(page.frames().map(async frame=>({url:frame.url(),body:(await frame.locator("body").innerText({timeout:5000}).catch(()=>"(unavailable)")).slice(0,500)})))));
+    await emit(page,1200,"preview_before_wait");
     const previewResponse=await page.request.get("https://thegoldiesuite.com/opportunity-preview-v5/index.html");
     console.log("QA_PREVIEW_HEADERS "+JSON.stringify({status:previewResponse.status(),url:previewResponse.url(),csp:previewResponse.headers()["content-security-policy"],frameOptions:previewResponse.headers()["x-frame-options"],outerUrl:page.url(),iframeCount:await page.locator("iframe").count(),body:(await page.locator("body").innerText()).slice(0,500)}));
     const preview=page.frameLocator('iframe[title="Approved Opportunity Engine design review"]');
