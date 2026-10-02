@@ -58,6 +58,7 @@ try{
     await page.waitForFunction(()=>{const img=document.querySelector('section[aria-labelledby="oe-workspace-title"] article img');return img instanceof HTMLImageElement&&img.complete},{},{timeout:20000});
     if(!(await firstImage.evaluate(img=>img instanceof HTMLImageElement&&img.complete&&img.naturalWidth>0)))
       throw new Error("Selected product image failed to load");
+    await focus(page).getByRole("button",{name:/Compare|Review|Test|Check|Explore/i}).first().waitFor({state:"visible",timeout:30000});
     const firstText=await focus(page).innerText();
     if(!/units purchased/.test(firstText)||!/Listing 1 of 10/i.test(firstText)
       ||/Product details need review/.test(firstText))
