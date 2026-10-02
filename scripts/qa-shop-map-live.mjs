@@ -37,7 +37,9 @@ const measurements=async(page)=>page.evaluate(()=>{
     focusTop:focused?.top??null,heading:document.querySelector(".shop-map-head h1")?.textContent?.trim()??"",
     oldLayoutVisible:[...document.querySelectorAll(".oe-priority-grid,.oe-site-grid,.oe-site-evidence-band")]
       .some(node=>node.getClientRects().length>0),
-    groupCount:document.querySelectorAll('section[aria-labelledby="oe-workspace-title"] details').length};
+    groupCount:document.querySelectorAll('section[aria-labelledby="oe-workspace-title"] details').length,
+    clippedPurchaseLabels:[...document.querySelectorAll('section[aria-labelledby="oe-workspace-title"] [role="group"] button small')]
+      .filter(node=>node.scrollWidth>node.clientWidth+1).length};
 });
 try{
   for(const width of [390,320,1280]){
@@ -56,7 +58,7 @@ try{
       throw new Error("Focused product lacks purchase breakdown or connected paths");
     const layout=await measurements(page);
     if(layout.heading!=="Opportunity Engine"||layout.documentWidth>width+1||layout.bodyWidth>width+1
-      ||layout.selectorCount<5||layout.groupCount!==3||layout.oldLayoutVisible)
+      ||layout.selectorCount<5||layout.groupCount!==3||layout.oldLayoutVisible||layout.clippedPurchaseLabels>0)
       throw new Error("Opportunity workspace layout failed: "+JSON.stringify(layout));
     if(width<600&&layout.tabRows!==2)throw new Error("Tabs are not 2×2");
     if(width===1280&&layout.tabRows!==1)throw new Error("Desktop tabs do not share one row");
