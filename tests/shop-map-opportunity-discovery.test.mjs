@@ -52,3 +52,20 @@ test("unlinked artwork and thin sales do not manufacture a format gap or weak ar
   const result=discoverShopFindings(priority(sales,listings),listings,sales,now);
   assert.deepEqual(result,[]);
 });
+
+test("a cooling product outside the leading set stays visible without diagnosing demand",()=>{
+  const listings=[1,2,3,4].map(id=>row(id,"Product "+id));
+  const sales=[sale(1,12,10),sale(2,9,10),sale(3,6,10),sale(4,4,45),sale(4,1,10)];
+  const result=discoverShopFindings(priority(sales,listings),listings,sales,now);
+  const cooling=result.find(x=>x.id==="cooling-4");
+  assert.ok(cooling);
+  assert.equal(cooling.kind,"cooling");
+  assert.match(cooling.evidence,/1 purchased in the last 30 days; 4 in the prior 30/);
+  assert.match(cooling.detail,/Purchase change alone cannot identify the cause/);
+});
+
+test("thin changes do not become cooling diagnoses",()=>{
+  const listings=[row(1,"Product")],sales=[sale(1,2,45)];
+  const result=discoverShopFindings(priority(sales,listings),listings,sales,now);
+  assert.equal(result.some(x=>x.kind==="cooling"),false);
+});
