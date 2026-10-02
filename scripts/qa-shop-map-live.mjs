@@ -66,6 +66,8 @@ try{
       ||layout.selectorCount!==3||layout.selectorRows!==(width<600?3:1)||layout.oldLayoutVisible||layout.clippedPurchaseLabels>0)
       throw new Error("Opportunity workspace layout failed: "+JSON.stringify(layout));
     if(width<600&&layout.tabRows!==2)throw new Error("Tabs are not 2×2");
+    if(width<600&&(layout.focusTop===null||layout.focusTop>500))
+      throw new Error("Top listing is too far down the first mobile screen: "+JSON.stringify(layout));
     if(width===1280&&layout.tabRows!==1)throw new Error("Desktop tabs do not share one row");
     console.log("QA_LAYOUT "+JSON.stringify({width,...layout}));
     await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
@@ -169,7 +171,7 @@ try{
   await page.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
   await page.locator(".shop-map-progressive-loading").waitFor({state:"visible",timeout:5000});
   await emit(page,320,"loading");
-  await page.getByText("No purchases in this period.",{exact:false}).waitFor({timeout:20000});
+  await page.getByText("No recorded purchases in this period.",{exact:false}).waitFor({timeout:20000});
   await emit(page,320,"empty_purchases");
   const factory=await context.newPage();
   const factoryResponse=await factory.goto("https://thegoldiesuite.com/listing-factory",{waitUntil:"domcontentloaded",timeout:60000});
