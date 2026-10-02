@@ -47,6 +47,8 @@ try{
     await login(context);
     const page=await context.newPage();
     await page.goto("https://thegoldiesuite.com/shop-map?designPreview=1",{waitUntil:"domcontentloaded",timeout:60000});
+    const previewResponse=await page.request.get("https://thegoldiesuite.com/opportunity-preview-v5/index.html");
+    console.log("QA_PREVIEW_HEADERS "+JSON.stringify({status:previewResponse.status(),url:previewResponse.url(),csp:previewResponse.headers()["content-security-policy"],frameOptions:previewResponse.headers()["x-frame-options"],outerUrl:page.url(),iframeCount:await page.locator("iframe").count(),body:(await page.locator("body").innerText()).slice(0,500)}));
     const preview=page.frameLocator('iframe[title="Approved Opportunity Engine design review"]');
     await preview.getByRole("heading",{name:"Opportunity Engine",exact:true}).waitFor({timeout:30000});
     await preview.getByText("Listing 1 of 5").waitFor({timeout:30000});
