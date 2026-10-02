@@ -5,7 +5,6 @@ import type {ProductDirection} from "@/app/shop-map-product-expansion";
 import type {ShopFinding} from "@/app/shop-map-opportunity-discovery";
 import type {CatalogAction} from "@/app/shop-map-actions";
 import type {WinningPatternMap} from "@/app/shop-map-patterns";
-import type {WinnerDna} from "@/app/shop-map-winner-dna";
 import type {ArtworkMarketProof} from "@/app/shop-map-artwork-actions";
 import {shortLabel} from "@/app/design-reach";
 import {productFamily} from "@/app/product-type-utils";
@@ -53,10 +52,10 @@ function findingDetail(finding:ShopFinding):Detail{
     sources:finding.listingIds.slice(0,6).map((id,index)=>({label:index?"Related product":"Source product",url:listingUrl(id)})),
     checks:[finding.detail]};
 }
-function actionDetail(action:CatalogAction):Detail{
-  const kind:Kind=/inactive|unavailable|sold out/i.test(action.headline)?"restore":"improve";
-  return {id:`action-${action.listingId}`,kind,title:action.headline,brief:action.fact,
-    sourceId:action.listingId,sources:[{label:"Source product",url:listingUrl(action.listingId)}],
+function actionDetail(action:CatalogAction,imageUrl?:string):Detail{
+  const kind:Kind=/inactive|unavailable|sold out/i.test(action.headline)?"restore":/emerging/i.test(action.headline)?"build":"improve";
+  return {id:`action-${action.listingId}`,kind,title:`${action.headline}: ${shortLabel(action.title)}`,brief:action.fact,
+    sourceId:action.listingId,imageUrl,sources:[{label:"Source product",url:listingUrl(action.listingId)}],
     checks:[action.evidence,action.nextStep]};
 }
 function peerDetail(row:PurchasePriority,peer:CatalogListing):Detail{
@@ -82,10 +81,10 @@ function marketDetail(row:PurchasePriority,proof:ArtworkMarketProof,peer:NonNull
       "Compare buyer purpose, options, material, price and imagery. A difference is a test hypothesis, not proof of why another product sold."]};
 }
 
-export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],patterns,marketProof=[],reviews=[],winnerDna,
+export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],patterns,marketProof=[],reviews=[],
   analysisFailed=false,onRetry}: {map:PurchasePriorityMap;directions?:ProductDirection[];findings?:ShopFinding[];
   actions?:CatalogAction[];patterns?:WinningPatternMap;marketProof?:ArtworkMarketProof[];
-  reviews?:OwnReviewInsight[];winnerDna?:WinnerDna|null;analysisFailed?:boolean;onRetry?:()=>void}){
+  reviews?:OwnReviewInsight[];analysisFailed?:boolean;onRetry?:()=>void}){
   const [selectedId,setSelectedId]=useState<number|null>(null);
   const [catalog,setCatalog]=useState<CatalogListing[]>([]);
   const [catalogState,setCatalogState]=useState<"loading"|"available"|"unavailable">("loading");
@@ -114,7 +113,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   for(const finding of findings)allDetails.push(findingDetail(finding));
   for(const action of actions)if(!findings.some(item=>item.listingIds[0]===action.listingId)
     &&!allDetails.some(item=>item.sourceId===action.listingId&&item.kind==="restore"))
-    allDetails.push(actionDetail(action));
+    allDetails.push(actionDetail(action,map.listings.find(row=>row.listingId===action.listingId)?.imageUrl));
   for(const row of map.listings){
     const direction=directionById.get(row.listingId);
     if(direction){const item=directionDetail(row,direction);if(item)allDetails.push(item)}
@@ -129,18 +128,6 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     const peer=proof.listings?.find(row=>row.imageUrl&&row.observedUnits30>0
       &&productFamily(row.title)===productFamily(own.title));
     if(peer)allDetails.push(marketDetail(own,proof,peer));
-  }
-  if(winnerDna?.basis==="sales-90"&&map.days===90)for(const trait of winnerDna.traits){
-    const source=map.listings.find(row=>trait.listingIds.includes(row.listingId));
-    if(!source)continue;
-    allDetails.push({
-      id:`dna-${trait.label}`,kind:"build",title:`Explore ${trait.label.toLowerCase()}`,
-      brief:`${trait.sellingArtworks} leading artworks share this visual trait; ${trait.customerPercent}% of purchases among the leading analyzed artworks.`,
-      sourceId:source.listingId,imageUrl:source.imageUrl,
-      sources:trait.listingIds.slice(0,5).map((id,index)=>({label:`Example ${index+1}`,url:listingUrl(id)})),
-      checks:[`This trait appears on ${trait.catalogPercent}% of active analyzed artworks. The purchase share uses only the leading analyzed artworks, not the whole shop.`,
-        "Inspect the linked images to identify the exact treatment buyers saw.",
-        "Test an original related expression with a clear buyer purpose; check existing versions and production costs first."]});
   }
   const reviewIds=new Set(map.listings.map(row=>row.listingId));
   const requestPattern=/\\b(wish|could you|would love|please offer|option|size|color|colour|personaliz|customiz|material)\\b/i;
@@ -165,7 +152,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     const existing=unique.get(key);
     if(!existing){unique.set(key,item);continue}
     if(item.comparisonImageUrl)unique.set(key,{...item,brief:existing.brief,
-      checks:[...existing.checks,...item.checks]});
+      checks:item.checks});
   }
   const details=[...unique.values()];
   const selectedPaths=selected?details.filter(item=>item.sourceId===selected.listingId).slice(0,6):[];
@@ -229,7 +216,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
         <div className={styles.sources}>{detail.sources.map((source,index)=>source.url
           ?<a key={index} href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a>
           :<span key={index}>{source.label}</span>)}</div>
-        <h3>What Goldie checked</h3><ul>{detail.checks.map((point,index)=><li key={index}>{point}</li>)}</ul>
+        <h3>Evidence and next checks</h3><ul>{detail.checks.map((point,index)=><li key={index}>{point}</li>)}</ul>
       </div>:null}
     </dialog>
   </section>;
