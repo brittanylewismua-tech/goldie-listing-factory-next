@@ -126,7 +126,8 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
       &&productFamily(row.title)===productFamily(own.title));
     if(peer)allDetails.push(marketDetail(own,proof,peer));
   }
-  const selectedReviews=selected?reviews.filter(row=>row.listingId===selected.listingId&&row.review.trim()).slice(0,3):[];
+  const selectedReviews=selected?reviews.filter(row=>row.listingId===selected.listingId
+    &&/\b(wish|could you|would love|please offer|option|size|color|colour|personaliz|customiz|material)\b/i.test(row.review)).slice(0,2):[];
   if(selected)for(const review of selectedReviews)allDetails.push({
     id:`review-${selected.listingId}-${review.createdAt}`,kind:"improve",title:"Read what a buyer said",
     brief:`“${review.review.trim().slice(0,190)}${review.review.trim().length>190?"…":""}”`,
