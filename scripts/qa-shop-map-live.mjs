@@ -133,12 +133,14 @@ try{
     await emit(page,width,"choosing_section");
     await review.scrollIntoViewIfNeeded();
     await emit(page,width,"review_section");
-    const previewStyles=await page.evaluate(()=>({rows:[...document.querySelectorAll("[data-preview-row]")].map(el=>({kind:el.getAttribute("data-preview-row"),radius:getComputedStyle(el).borderRadius,shadow:getComputedStyle(el).boxShadow})),marker:getComputedStyle(document.querySelector("[data-preview-deeper]"),"::after").content}));
+    const previewStyles=await page.evaluate(()=>({rows:[...document.querySelectorAll("[data-preview-row]")].map(el=>({kind:el.getAttribute("data-preview-row"),radius:getComputedStyle(el).borderRadius,shadow:getComputedStyle(el).boxShadow})),marker:getComputedStyle(document.querySelector("[data-preview-deeper]"),"::after").content,patternBars:[...document.querySelectorAll('section[aria-labelledby="oe-workspace-title"] [class*="patternBar"]')].filter(el=>el.getClientRects().length).map(el=>Math.round(el.getBoundingClientRect().height))}));
     console.log("QA_PREVIEW_STYLES "+JSON.stringify({width,...previewStyles}));
-    if(previewStyles.rows.some(row=>row.radius!=="0px"||row.shadow!=="none")||!["none","normal"].includes(previewStyles.marker))throw new Error("Preview row or disclosure styling differs");
+    if(previewStyles.rows.some(row=>row.radius!=="0px"||row.shadow!=="none")||!["none","normal"].includes(previewStyles.marker)||previewStyles.patternBars.some(height=>height>6))throw new Error("Preview row, bar, or disclosure styling differs");
     const deeper=page.locator("summary[data-preview-deeper]");
     await deeper.click();
     await deeper.locator("..").evaluate(el=>{if(!el.open)throw new Error("Go deeper did not open")});
+    const sourceDetails=page.locator("details[data-preview-source-details]");
+    if(await sourceDetails.count()&&await sourceDetails.evaluate(el=>el.open))throw new Error("Legacy source analysis opened ahead of preview findings");
     await deeper.scrollIntoViewIfNeeded();
     await emit(page,width,"deeper_open");
     await deeper.click();

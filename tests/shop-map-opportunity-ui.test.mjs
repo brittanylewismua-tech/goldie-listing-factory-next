@@ -71,7 +71,7 @@ test("Opportunity Engine copy stays short",()=>{
   assert.match(workspace,/Review these/);
   assert.match(workspace,/Go deeper/);
   assert.match(overview,/sourceAnalysis=\{shown\.patterns/);
-  assert.match(workspace,/sourceAnalysis\?<div className=\{styles\.sourceAnalysis\}>/);
+  assert.match(workspace,/sourceAnalysis\?<details className=\{styles\.sourceDetails\} data-preview-source-details>/);
   assert.doesNotMatch(overview,/Explore source analysis/);
 });
 
