@@ -2227,3 +2227,18 @@
   #suite-workspace .shop-map-redesign .oe-site-no-image{width:65px!important;height:65px!important}
   #suite-workspace .shop-map-redesign .oe-site-pair{width:65px!important}
 }
+
+#suite-workspace .shop-map-redesign .oe-site-balance{
+  width:87px!important;height:87px!important;display:flex!important;flex-direction:column!important;
+  align-items:flex-start!important;justify-content:center!important;gap:10px!important;padding:13px!important;
+  border-radius:9px!important;background:#faedf4!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-balance span{
+  display:block!important;min-height:11px!important;border-radius:999px!important;
+}
+#suite-workspace .shop-map-redesign .oe-site-balance-catalog{background:#8d1d5a!important}
+#suite-workspace .shop-map-redesign .oe-site-balance-customer{background:#ee6fc0!important}
+@media(max-width:350px){
+  #suite-workspace .shop-map-redesign .oe-site-balance{width:65px!important;height:65px!important;padding:9px!important;gap:7px!important}
+  #suite-workspace .shop-map-redesign .oe-site-balance span{min-height:8px!important}
+}

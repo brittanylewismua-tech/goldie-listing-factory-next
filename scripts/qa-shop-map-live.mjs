@@ -104,12 +104,13 @@ try{
       ["Your numbers","money"],["Product themes","themes"],["Sold listings","sold"]];
     for(const [label,key] of tabs){
       await page.locator(".shop-map-tabs").getByRole("button",{name:label}).click();
-      await page.waitForTimeout(1200);
+      await page.locator(".shop-map-tabs button[aria-current=page]").filter({hasText:label}).waitFor({timeout:20000});
+      await page.waitForTimeout(1000);
       const layout=await measurements(page);
       const panelText=(await page.locator(".shop-map-tab-panel,.shop-map-money,.shop-map-themes,.shop-map-sold").allInnerTexts()).join(" ");
       if(layout.documentWidth>width+1||layout.bodyWidth>width+1||panelText.trim().length<50)
         throw new Error("Blank or overflowing "+key+": "+JSON.stringify(layout));
-      if(width<600&&layout.tabRows!==2)throw new Error("Tab rows changed in "+key);
+      if(width<600&&layout.tabRows!==2)throw new Error("Tab rows changed in "+key+": "+JSON.stringify(layout)+"; body="+(await page.locator("main").innerText()).slice(0,300));
       console.log("QA_TAB "+JSON.stringify({width,key,documentWidth:layout.documentWidth,textLength:panelText.length}));
       await emit(page,width,key,true);
     }
