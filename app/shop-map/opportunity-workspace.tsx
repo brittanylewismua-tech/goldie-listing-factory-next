@@ -137,8 +137,8 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   const featured=useMemo(()=>map.listings.slice(0,10),[map.listings]);
   const selected=featured.find(row=>row.listingId===selectedId)??featured[0];
   const selectedIndex=selected?featured.findIndex(row=>row.listingId===selected.listingId):-1;
-  const patternContext=map.days===90&&patterns?.patterns.length?patterns:catalogPatterns;
-  const hasPhrasePatterns=patternContext?.basis==="sales-90"&&patternContext.patterns.length>0;
+  // Title and tag fragments are not evidence of a buyer theme.
+  const productMix=(map.productMix??[]).slice(0,3);
   const topThreeShare=map.totalUnits>0?map.priorities.reduce((sum,row)=>sum+row.unitsPurchased,0)/map.totalUnits:0;
   useEffect(()=>{if(!selected?.listingId||requestedComparisons.current.has(selected.listingId))return;
     const id=selected.listingId;requestedComparisons.current.add(id);
@@ -160,18 +160,6 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     const own=catalog.find(item=>item.listingId===row.listingId);
     if(own?.artworkHash)for(const peer of catalog.filter(item=>item.listingId!==row.listingId&&item.artworkHash===own.artworkHash))
       allDetails.push(peerDetail(row,peer));
-  }
-  if(patternContext?.basis==="sales-90"&&map.days===90&&catalogState==="available")for(const pattern of patternContext.patterns.slice(0,5)){
-    const matched=catalog.filter(row=>pattern.listingIds.includes(row.listingId)
-      &&row.imageUrl&&(row.sold90??0)>0);
-    for(const own of matched.slice(0,5)){
-      const source=map.listings.find(row=>row.listingId===own.listingId);
-      if(!source||source.unitsPurchased<2)continue;
-      const peer=matched.filter(row=>row.listingId!==own.listingId
-        &&row.family.toLowerCase()!==own.family.toLowerCase())
-        .sort((a,b)=>(b.sold90??0)-(a.sold90??0))[0];
-      if(peer)allDetails.push(relatedDetail(source,own,peer,pattern.label));
-    }
   }
   if(patterns&&map.days===90)for(const proof of marketProof){
     const pattern=patterns.patterns.find(row=>row.key===proof.patternKey);if(!pattern)continue;
@@ -275,24 +263,20 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     </div>}
     {map.totalUnits>0?<section className={styles.customer}>
       <div className={styles.sectionHead}><h2>What customers are choosing</h2><span>Last {map.days} days</span></div>
-      {hasPhrasePatterns?<div className={styles.patterns}>{patternContext!.patterns.slice(0,3).map(row=><div key={row.key} className={styles.pattern}>
-        <strong>{row.label}</strong><span><b>{row.customerPercent}%</b> of purchased units</span>
-        <span className={styles.patternBar} aria-hidden="true"><i style={{width:row.customerPercent+"%"}}/></span>
-        <small>{row.catalogListings} related listing{row.catalogListings===1?"":"s"} in your shop</small>
-      </div>)}</div>:<div className={styles.patterns}>
-        {(map.productMix??[]).slice(0,2).map(row=><div key={row.label} className={styles.pattern}>
+      <div className={styles.patterns}>
+        {productMix.map(row=><div key={row.label} className={styles.pattern}>
           <strong>{row.label}</strong><span><b>{pct(row.share)}</b> of purchased units</span>
           <span className={styles.patternBar} aria-hidden="true"><i style={{width:Math.round(row.share*100)+"%"}}/></span>
           <small>{row.listingCount} purchased listing{row.listingCount===1?"":"s"}</small>
         </div>)}
-        <div className={styles.pattern}><strong>Top three listings</strong>
+        {productMix.length<3?<div className={styles.pattern}><strong>Top three listings</strong>
           <span><b>{pct(topThreeShare)}</b> of purchased units</span>
           <span className={styles.patternBar} aria-hidden="true"><i style={{width:Math.round(topThreeShare*100)+"%"}}/></span>
-          <small>Share of your recorded purchases in this period</small></div>
-      </div>}
-      <p className={styles.patternNote}>{hasPhrasePatterns
-        ?map.days===90&&patterns?.patterns.length?"Based on analyzed product images. Themes may overlap.":"Based on listing titles and tags. Themes may overlap."
-        :(map.productMix?.length?"Product types from your catalog; shares use all recorded purchases.":"Based on recorded purchases in this period.")}</p>
+          <small>Share of your recorded purchases in this period</small></div>:null}
+      </div>
+      <p className={styles.patternNote}>{productMix.length
+        ?"Product types from your catalog; shares use all recorded purchases."
+        :"Based on recorded purchases in this period."}</p>
     </section>:null}
     {reviewItems.length>0?<section className={styles.reviewSection}>
       <div className={styles.sectionHead}><h2>Review these</h2><span>Product-level findings</span></div>
