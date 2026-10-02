@@ -44,7 +44,7 @@ test("Opportunity Engine stays decision-first instead of repeating dashboard sta
   assert.match(client,/tab==="overview"\?"Opportunity Engine":"My Shop"/);
   assert.match(overview,/OpportunityWorkspace/);
   assert.match(workspace,/Top listings in your shop/);
-  assert.match(workspace,/Ideas and checks for this listing/);
+  assert.match(workspace,/Ideas and checks/);
   assert.doesNotMatch(workspace,/Product details need review before Goldie can suggest a specific build/);
   assert.doesNotMatch(workspace,/other purchased unit.*remain beyond/i);
 });

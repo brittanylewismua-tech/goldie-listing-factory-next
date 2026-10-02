@@ -204,7 +204,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   const details=[...unique.values()];
   const selectedPaths=selected?details.filter(item=>item.sourceId===selected.listingId).slice(0,6):[];
   const diagnosis=selectedPaths.some(item=>item.id.startsWith("peer-")||item.id.startsWith("existing-"))
-    ?"This artwork already has another version in your shop. Compare that offer before building more."
+    ?"This artwork is already on another product in your shop."
     :selectedPaths[0]?.brief||null;
   const groups:[Kind,string][]=[["build","Build on proven demand"],["improve","Improve an existing offer"],["restore","Recover or prepare"]];
   const open=(item:Detail)=>{setDetail(item);requestAnimationFrame(()=>dialog.current?.showModal())};
@@ -216,7 +216,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     <span><b>{index+1}. {shortLabel(row.title)}</b><small>{row.unitsPurchased} purchased</small></span>
   </button>;
   return <section className={styles.workspace} aria-labelledby="oe-workspace-title">
-    <div className={styles.heading}><div><h2 id="oe-workspace-title">Top listings in your shop</h2><p>These are the listings your customers are voting the most on.</p></div><span>Last {map.days} days</span></div>
+    <div className={styles.heading}><div><h2 id="oe-workspace-title">Top listings in your shop</h2><p>These are the listings your customers are voting the most on.</p></div></div>
     {selected?<>
       <article className={styles.focus} aria-live="polite">
         <div className={styles.art}>{selected.imageUrl?<img src={selected.imageUrl} alt={selected.title} width={300} height={300}
@@ -233,7 +233,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
             <strong>{pct(selected.share)}</strong><span>{map.shareLabel.toLowerCase()}</span></div>
           {diagnosis?<p className={styles.interpret}>{diagnosis}</p>:null}
           {selectedPaths.length>0?<>
-            <div className={styles.pathHead}><h4>Ideas and checks for this listing</h4><span>{selectedPaths.length} to explore</span></div>
+            <div className={styles.pathHead}><h4>Ideas and checks</h4></div>
             <div className={styles.paths}>{selectedPaths.slice(0,3).map(item=><button type="button" key={item.id} className={styles.path}
               onClick={()=>open(item)}><span><strong>{item.title}</strong></span><span aria-hidden="true">›</span></button>)}</div>
             {selectedPaths.length>3?<details className={styles.morePaths}><summary>More for this listing ({selectedPaths.length-3})</summary>
