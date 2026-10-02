@@ -49,7 +49,8 @@ test("Opportunity Engine stays decision-first instead of repeating dashboard sta
 
 test("ranked priorities keep customer and active-design attention visually comparable",()=>{
   assert.match(client,/className="oe-pattern"/);
-  assert.match(client,/of 90-day sales/);
+  assert.match(client,/pattern.customerPercent\+"% of "\+map.basisLabel/);
+  assert.match(client,/oe-pattern-metrics/);
   assert.match(client,/active analyzed designs/);
 });
 

@@ -6,6 +6,11 @@ import type {WinningPatternMap} from "./shop-map-patterns";
 import type {ArtworkMarketProof} from "./shop-map-artwork-actions";
 import type {WinnerDna} from "./shop-map-winner-dna";
 
+const compactFamily=(value:string)=>{
+  const label=familyLabel(value).replace(/^an? /,"");
+  return label.charAt(0).toUpperCase()+label.slice(1);
+};
+
 type Expansion={
   listingId:number;title:string;imageUrl?:string;family:string;sold90:number;
   peerFamily:string;peerSold90:number;peerListingId?:number;peerTitle?:string;peerImageUrl?:string;
@@ -108,12 +113,12 @@ export function ReviewThese({map,actions,dna,marketProof=[],priorityIds=[]}:{
           <a href={"https://www.etsy.com/listing/"+row.listingId} target="_blank" rel="noopener noreferrer"
             aria-label={"View "+row.title}>
             {row.imageUrl?<img src={row.imageUrl} alt="" width={64} height={64} loading="lazy"/>:<span>No photo</span>}
-            <small>{row.sold90} sold · {familyLabel(row.family)}</small>
+            <small>{row.sold90} sold · {compactFamily(row.family)}</small>
           </a>
           {row.peerListingId?<a href={"https://www.etsy.com/listing/"+row.peerListingId} target="_blank" rel="noopener noreferrer"
             aria-label={"View "+row.peerTitle}>
             {row.peerImageUrl?<img src={row.peerImageUrl} alt="" width={64} height={64} loading="lazy"/>:<span>No photo</span>}
-            <small>{row.peerSold90} sold · {familyLabel(row.peerFamily)}</small>
+            <small>{row.peerSold90} sold · {compactFamily(row.peerFamily)}</small>
           </a>:null}
         </div>
         <h3>{shortLabel(row.title)}</h3>

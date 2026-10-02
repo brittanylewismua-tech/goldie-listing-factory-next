@@ -89,6 +89,12 @@ try {
           throw new Error("Reviewer comparison from outside the top three is missing");
         console.log("QA_COMPARISONS "+JSON.stringify({width,cards:comparisonCount,paired,
           first:(await comparisons.first().innerText()).slice(0,130)}));
+        const patternMetrics=page.locator(".oe-pattern-metrics").first();
+        await patternMetrics.waitFor({timeout:10000});
+        if(await patternMetrics.locator("span").count()!==2
+          ||!(await patternMetrics.innerText()).includes("active designs"))
+          throw new Error("Visual pattern evidence is incomplete");
+        console.log("QA_PATTERN "+JSON.stringify({width,text:(await patternMetrics.innerText()).trim()}));
       }
       const measured=(await output.innerText()).trim();
       const match=measured.match(/QA viewport: (\d+)px; document: (\d+)px; body: (\d+)px; tab rows: ([\d+]+); active: ([^;]+); loading: (YES|NO); alert: ([^;]+); text: (\d+)/);
@@ -186,6 +192,50 @@ try {
   // Authenticate a separate browser context and hold the Overview response long
   // enough to observe loading. Then render an empty purchase response on the
   // real production page without modifying a member's shop data.
+  const desktopContext=await browser.newContext({viewport:{width:1280,height:900},deviceScaleFactor:1});
+  const desktopLogin=await desktopContext.request.post("https://thegoldiesuite.com/qa/oidc",{
+    headers:{authorization:"Bearer "+identity},timeout:30000,
+  });
+  if(!desktopLogin.ok())throw new Error("Desktop reviewer identity rejected: "+desktopLogin.status());
+  const desktopPage=await desktopContext.newPage();
+  await desktopPage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
+  const desktopHero=desktopPage.locator(".oe-lead");
+  await desktopHero.getByText("Test this artwork on a sweatshirt.").waitFor({timeout:30000});
+  await desktopPage.locator(".oe-expansion").first().waitFor({timeout:10000});
+  const desktopLayout=await desktopPage.evaluate(()=>{
+    const rect=(selector)=>document.querySelector(selector)?.getBoundingClientRect();
+    const tabs=[...document.querySelectorAll(".shop-map-tabs button")].map(node=>node.getBoundingClientRect());
+    const cards=[...document.querySelectorAll(".oe-top-grid .oe-top-card")].slice(0,3).map(node=>node.getBoundingClientRect());
+    const image=rect(".oe-lead-art img"),copy=rect(".oe-lead-copy");
+    return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,
+      image:{x:image?.x,y:image?.y,width:image?.width},copy:{x:copy?.x,y:copy?.y},
+      tabRows:new Set(tabs.map(box=>Math.round(box.top))).size,
+      cardRows:new Set(cards.map(box=>Math.round(box.top))).size,
+      cardCount:cards.length};
+  });
+  if(desktopLayout.viewport!==1280||desktopLayout.documentWidth>1281
+    ||desktopLayout.tabRows!==1||desktopLayout.cardRows!==1||desktopLayout.cardCount!==3
+    ||!desktopLayout.image.width||desktopLayout.image.x>=desktopLayout.copy.x)
+    throw new Error("Desktop Opportunity Engine layout failed: "+JSON.stringify(desktopLayout));
+  console.log("QA_DESKTOP "+JSON.stringify(desktopLayout));
+  const desktopFirst=(await desktopPage.screenshot({type:"jpeg",quality:45})).toString("base64");
+  console.log("QA_IMAGE_BEGIN 1280 desktop_first_viewport");
+  for(let offset=0;offset<desktopFirst.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopFirst.slice(offset,offset+16000));
+  console.log("QA_IMAGE_END 1280 desktop_first_viewport");
+  const desktopFull=(await desktopPage.screenshot({type:"jpeg",quality:35,fullPage:true})).toString("base64");
+  console.log("QA_IMAGE_BEGIN 1280 desktop_overview");
+  for(let offset=0;offset<desktopFull.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopFull.slice(offset,offset+16000));
+  console.log("QA_IMAGE_END 1280 desktop_overview");
+  const evidenceToggle=desktopHero.locator(".oe-detail summary");
+  await evidenceToggle.focus();
+  await desktopPage.keyboard.press("Enter");
+  if(!(await desktopHero.locator(".oe-detail").evaluate(node=>node.open)))
+    throw new Error("Product evidence does not open from keyboard");
+  const desktopDetails=(await desktopPage.screenshot({type:"jpeg",quality:40})).toString("base64");
+  console.log("QA_IMAGE_BEGIN 1280 desktop_details");
+  for(let offset=0;offset<desktopDetails.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopDetails.slice(offset,offset+16000));
+  console.log("QA_IMAGE_END 1280 desktop_details");
+  await desktopContext.close();
   const emptyContext=await browser.newContext({viewport:{width:320,height:844},deviceScaleFactor:1});
   const emptyLogin=await emptyContext.request.post("https://thegoldiesuite.com/qa/oidc",{
     headers:{authorization:"Bearer "+identity},timeout:30000,

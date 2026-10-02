@@ -215,7 +215,14 @@ export function WinningPatterns({map}:{map:WinningPatternMap}){
     <div className="oe-section-heading"><h2>What customers are choosing</h2><small>{map.basis==="sales-90"?"Last 90 days":map.basisLabel}</small></div>
     {patterns.length?<div className="oe-pattern-list">{patterns.map(pattern=><div key={pattern.key} className="oe-pattern">
       <b>{pattern.label}</b>
-      <span><strong>{pattern.customerPercent}%</strong> {map.basis==="sales-90"?"of 90-day sales":map.basis==="sales-lifetime"?"of lifetime sales":"of favorites"} <em>·</em> {pattern.catalogPercent}% of active analyzed designs</span>
+      <div className="oe-pattern-metrics">
+        <span aria-label={pattern.customerPercent+"% of "+map.basisLabel}>
+          <strong>{pattern.customerPercent}%</strong><small>{map.basis==="sales-90"?"sales":map.basis==="sales-lifetime"?"lifetime sales":"favorites"}</small>
+        </span>
+        <span aria-label={pattern.catalogPercent+"% of active analyzed designs"}>
+          <strong>{pattern.catalogPercent}%</strong><small>active designs</small>
+        </span>
+      </div>
     </div>)}</div>:<p className="oe-quiet-state">No shared pattern in the available analysis.</p>}
     {products.length?<details className="oe-source-gallery"><summary>See the listings</summary>
       <div>{products.map(listing=><a key={listing.listingId} href={"https://www.etsy.com/listing/"+listing.listingId}

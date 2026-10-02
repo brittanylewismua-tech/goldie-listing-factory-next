@@ -80,7 +80,7 @@ export function ArtworkRecommendations({map,purchasePriorities=null,marketProof=
               <div><span>SAVED-WATCH STOCK MOVEMENT</span>
                 <a href={`/market-watch?tab=niches&keyword=${encodeURIComponent(proof.phrase)}`}>See watch observations →</a></div>
               <p>{proof.sellingListings>0
-                ?`The matching saved watch recorded ${proof.observedSold30} observed stock decreases across ${proof.sellingListings} listings in 30 days. Inspect source observations before treating these as purchases.`
+                ?`${proof.observedSold30} observed stock decreases across ${proof.sellingListings} watched listings in 30 days. These are not confirmed purchases.`
                 :`${proof.moving} listings show stock movement in the matching saved watch.`}</p>
               {!!proof.productFamilies?.length&&<p>Observed product types: {proof.productFamilies.slice(0,2).map(item=>`${familyLabel(item.family)} (${item.sold30} stock decreases)`).join(" · ")}.</p>}
             </div>:null}
