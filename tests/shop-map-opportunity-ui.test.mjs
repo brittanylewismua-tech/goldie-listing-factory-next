@@ -67,7 +67,9 @@ test("Opportunity Engine can discover winning patterns without assuming a custom
 test("Opportunity Engine copy stays short",()=>{
   assert.doesNotMatch(overview,/This pattern appears in/);
   assert.doesNotMatch(overview,/It will not manufacture/);
-  assert.match(workspace,/Across your shop/);
+  assert.match(workspace,/What customers are choosing/);
+  assert.match(workspace,/Review these/);
+  assert.match(workspace,/Go deeper/);
   assert.match(overview,/className="oe-site-deep"/);
   assert.match(overview,/Explore source analysis/);
 });

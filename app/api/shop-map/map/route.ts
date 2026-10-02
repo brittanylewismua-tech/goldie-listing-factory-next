@@ -12,6 +12,7 @@ import { buildWorlds, renameWorld, mergeWorlds, type Listing } from "@/app/shop-
 import { direction, overbuilt, type WorldPerformance } from "@/app/shop-map-direction";
 import { buildAttentionMap } from "@/app/shop-map-attention";
 import { discoverVisualWinningPatterns } from "@/app/shop-map-visual-patterns";
+import { discoverWinningPatterns } from "@/app/shop-map-patterns";
 import { buildPurchasePriorities } from "@/app/shop-map-purchase-priorities";
 import { buildProductDirections } from "@/app/shop-map-product-expansion";
 import { discoverShopFindings } from "@/app/shop-map-opportunity-discovery";
@@ -461,6 +462,10 @@ async function buildMap(request: Request) {
       review:String(row.review||"").slice(0,1200),createdAt:Number(row.created_at),
     }));
     const visual=discoverVisualWinningPatterns(visualInput);
+    const selectedPeriodTotals=totalsForFast(soldDays===30?30:90);
+    const catalogPatterns=discoverWinningPatterns(patternInput().map(row=>({
+      ...row,sales90:selectedPeriodTotals.get(row.listingId)?.sales??0,
+    })));
     const shopRecentSignal=rows.reduce((sum,row)=>sum+(sales90.get(Number(row.listing_id))?.sales??0),0);
     const shopLifetimeSignal=rows.reduce((sum,row)=>sum+Math.max(0,Number(performance.get(Number(row.listing_id))?.lifetimeUnits??0)),0);
     const shopFavoriteSignal=rows.reduce((sum,row)=>sum+Math.max(0,Number(row.favorites??0)),0);
@@ -508,6 +513,7 @@ async function buildMap(request: Request) {
           : [],
         listings:topListings,
       },
+      catalogPatterns,
       winnerDna:completeVisualSignal?winnerDnaFrom(visualInput):null,
       productDirections,
       opportunityFindings,

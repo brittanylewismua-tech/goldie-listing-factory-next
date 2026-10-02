@@ -2049,10 +2049,10 @@
 }
 #suite-workspace .shop-map-redesign .oe-site-period button{
   min-height:40px!important;padding:8px 13px!important;border:0!important;border-radius:7px!important;
-  background:transparent!important;color:#756a73!important;font-size:12px!important;font-weight:800!important;
+  background:transparent!important;color:#171717!important;font-size:12px!important;font-weight:800!important;
 }
 #suite-workspace .shop-map-redesign .oe-site-period button[aria-pressed=true]{
-  background:#8d1d5a!important;color:#fff!important;
+  background:#ee6fc0!important;color:#111!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-tabs{
   display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
@@ -2062,7 +2062,7 @@
 #suite-workspace .shop-map-redesign .shop-map-tabs button{
   min-width:0!important;min-height:37px!important;padding:7px 10px!important;
   border:0!important;border-radius:8px!important;background:transparent!important;
-  color:#70666e!important;font-size:12px!important;font-weight:800!important;text-align:center!important;
+  color:#171717!important;font-size:12px!important;font-weight:800!important;text-align:center!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-tabs button[aria-current=page]{
   background:#ee6fc0!important;color:#181218!important;
