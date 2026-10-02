@@ -13,6 +13,8 @@ import styles from "./opportunity-workspace.module.css";
 type CatalogListing={listingId:number;title:string;state:string;family:string;imageUrl:string;
   artworkHash:string;sold90:number|null;views:number|null;favorites:number|null};
 export type OwnReviewInsight={listingId:number;review:string;rating:number|null;createdAt:number};
+type PublicComparison={listingId:number;title:string;url:string;imageUrl:string;price:string|null;reviewCount:number;latestReviewAt:number;difference:string;reviewExcerpt:string|null;observedAt:number};
+type PublicComparisonResult={status:string;query?:string;comparisons:PublicComparison[];checkedAt?:number};
 type Kind="build"|"improve"|"restore";
 type Detail={id:string;kind:Kind;title:string;brief:string;sourceId?:number;imageUrl?:string;comparisonImageUrl?:string;buildBrief?:string;
   sources:Array<{label:string;url?:string}>;checks:string[];relatedId?:number};
@@ -91,12 +93,24 @@ function marketDetail(row:PurchasePriority,proof:ArtworkMarketProof,peer:NonNull
       "Compare buyer purpose, options, material, price and imagery. A difference is a test hypothesis, not proof of why another product sold."]};
 }
 
+function publicComparisonDetail(row:PurchasePriority,peer:PublicComparison,query:string):Detail{
+  return {id:`public-${row.listingId}-${peer.listingId}`,kind:"improve",title:`Compare ${shortLabel(peer.title)}`,
+    brief:peer.difference,sourceId:row.listingId,imageUrl:row.imageUrl,comparisonImageUrl:peer.imageUrl,relatedId:peer.listingId,
+    sources:[{label:"Your product",url:listingUrl(row.listingId)},{label:"Etsy comparison",url:peer.url}],
+    checks:[`${peer.reviewCount} public listing reviews; latest dated ${new Date(peer.latestReviewAt*1000).toLocaleDateString()}. Reviews are evidence of reviewed purchases, not a sales total.`,
+      peer.price?`Comparison price observed: ${peer.price}. Check your own current price and options before drawing a conclusion.`:"Comparison price was unavailable.",
+      peer.reviewExcerpt?`One public review says: “${peer.reviewExcerpt}”`:"Read the public reviews for buyer context.",
+      `Search basis: ${query}. Compare actual product images, purpose, options and materials before testing an original version.`]};
+}
+
 export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],patterns,marketProof=[],reviews=[],
   analysisFailed=false,onRetry}: {map:PurchasePriorityMap;directions?:ProductDirection[];findings?:ShopFinding[];
   actions?:CatalogAction[];patterns?:WinningPatternMap;marketProof?:ArtworkMarketProof[];
   reviews?:OwnReviewInsight[];analysisFailed?:boolean;onRetry?:()=>void}){
   const [selectedId,setSelectedId]=useState<number|null>(null);
   const [catalog,setCatalog]=useState<CatalogListing[]>([]);
+  const [publicComparisons,setPublicComparisons]=useState<Record<number,PublicComparisonResult>>({});
+  const requestedComparisons=useRef(new Set<number>());
   const [catalogState,setCatalogState]=useState<"loading"|"available"|"unavailable">("loading");
   const [retry,setRetry]=useState(0);
   const [detail,setDetail]=useState<Detail|null>(null);
@@ -118,6 +132,14 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     return cutoff===undefined?first:[...first,...map.listings.slice(5).filter(row=>row.unitsPurchased===cutoff)];
   },[map.listings]);
   const selected=featured.find(row=>row.listingId===selectedId)??featured[0];
+  useEffect(()=>{if(!selected?.listingId||requestedComparisons.current.has(selected.listingId))return;
+    const id=selected.listingId;requestedComparisons.current.add(id);
+    setPublicComparisons(previous=>({...previous,[id]:{status:"loading",comparisons:[]}}));
+    void fetch(`/api/shop-map/market-comparisons?listingId=${id}`,{cache:"no-store"})
+      .then(async response=>{if(!response.ok)throw Error("Comparison unavailable");return response.json() as Promise<PublicComparisonResult>})
+      .then(result=>setPublicComparisons(previous=>({...previous,[id]:result})))
+      .catch(()=>setPublicComparisons(previous=>({...previous,[id]:{status:"unavailable",comparisons:[]}})));
+  },[selected?.listingId]);
   const directionById=new Map(directions.map(row=>[row.listingId,row]));
   const allDetails:Detail[]=[];
   for(const finding of findings)allDetails.push(findingDetail(finding));
@@ -151,6 +173,9 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     const peer=proof.listings?.find(row=>row.imageUrl&&row.observedUnits30>0
       &&productFamily(row.title)===productFamily(own.title));
     if(peer)allDetails.push(marketDetail(own,proof,peer));
+  }
+  for(const row of map.listings){const result=publicComparisons[row.listingId];
+    if(result?.status==="available")for(const peer of result.comparisons)allDetails.push(publicComparisonDetail(row,peer,result.query||"related product"));
   }
   const reviewIds=new Set(map.listings.map(row=>row.listingId));
   const requestPattern=/\\b(wish|could you|would love|please offer|option|size|color|colour|personaliz|customiz|material)\\b/i;
@@ -208,6 +233,8 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
           <div className={styles.pathHead}><h4>Paths from this product</h4><span>{selectedPaths.length?`${selectedPaths.length} to explore`:"Analysis pending"}</span></div>
           <div className={styles.paths}>{selectedPaths.map(item=><button type="button" key={item.id} className={styles.path}
             onClick={()=>open(item)}><span><strong>{item.title}</strong><small>{item.brief}</small></span><span aria-hidden="true">›</span></button>)}</div>
+          {publicComparisons[selected.listingId]?.status==="loading"?<p className={styles.localState} role="status">Checking public Etsy comparisons…</p>:null}
+          {["unavailable","no-reviewed-match","insufficient-context"].includes(publicComparisons[selected.listingId]?.status||"")?<p className={styles.localState} role="status">No reviewed public comparison is available for this product. Your shop findings remain above.</p>:null}
           {!selectedPaths.length&&<div className={styles.localState} role="status">
             {analysisFailed?"Product analysis could not load.":catalogState==="loading"?"Checking related products…":
               catalogState==="unavailable"?"Catalog comparison is unavailable right now.":"No checked direction is ready for this product yet."}
