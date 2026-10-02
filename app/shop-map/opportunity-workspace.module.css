@@ -41,3 +41,11 @@
   .pager{gap:3px}.pager button{width:23px;height:23px;font-size:18px}.pager span{font-size:10px}
   .body h3{font-size:18px}
 }
+
+@media(max-width:650px){
+  .selector,.moreChoices{grid-template-columns:minmax(0,1fr);gap:7px}
+  .choice,.moreChoices .choice{display:grid;grid-template-columns:49px minmax(0,1fr);align-items:center;gap:10px;padding:8px}
+  .choice img,.choice .noThumb,.moreChoices .choice img,.moreChoices .choice .noThumb{width:49px;height:49px;aspect-ratio:1;object-fit:cover}
+  .choice b,.moreChoices .choice b{display:block;min-height:0;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+  .choice small,.moreChoices .choice small{margin-top:3px;font-size:12px}
+}
