@@ -19,17 +19,17 @@ const login=async(context)=>{
 };
 const workspace=page=>page.locator('section[aria-labelledby="oe-workspace-title"]');
 const focus=page=>workspace(page).locator("article").first();
-const choices=page=>workspace(page).getByRole("group",{name:"Choose a purchased product"}).getByRole("button");
+const choices=page=>workspace(page).getByRole("group",{name:"Top purchased listings"}).locator("button");
 const waitReady=async(page)=>{
   await page.getByRole("heading",{name:"Top listings in your shop"}).waitFor({timeout:45000});
   await focus(page).waitFor({timeout:45000});
-  await page.getByRole("heading",{name:"Across your shop"}).waitFor({timeout:45000});
+  await page.getByRole("heading",{name:"What customers are choosing"}).waitFor({timeout:45000});
 };
 const measurements=async(page)=>page.evaluate(()=>{
   const boxes=selector=>[...document.querySelectorAll(selector)]
     .filter(node=>node.getClientRects().length).map(node=>node.getBoundingClientRect());
   const tabBoxes=boxes(".shop-map-tabs button");
-  const selectors=boxes('section[aria-labelledby="oe-workspace-title"] [role="group"][aria-label="Choose a purchased product"] button');
+  const selectors=boxes('section[aria-labelledby="oe-workspace-title"] [role="group"][aria-label="Top purchased listings"] button');
   const focused=boxes('section[aria-labelledby="oe-workspace-title"] article')[0];
   return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,
     bodyWidth:document.body.scrollWidth,tabRows:[...new Set(tabBoxes.map(box=>Math.round(box.top)))].length,
@@ -51,7 +51,7 @@ try{
     await page.getByRole("heading",{name:"Opportunity Engine",exact:true}).waitFor();
     if(await choices(page).count()!==10)throw new Error("Ten-listing selector did not render");
     for(let index=0;index<10;index++){
-      const label=(await choices(page).nth(index).innerText()).trim();
+      const label=(await choices(page).nth(index).textContent()||"").trim();
       if(!label.startsWith(`${index+1}. `))throw new Error("Displayed listing numbers are not sequential: "+label);
     }
     const firstImage=focus(page).locator("img").first();
@@ -63,7 +63,7 @@ try{
       throw new Error("Focused product lacks purchase breakdown or navigation");
     const layout=await measurements(page);
     if(layout.heading!=="Opportunity Engine"||layout.documentWidth>width+1||layout.bodyWidth>width+1
-      ||layout.selectorCount!==10||layout.selectorRows!==1||layout.groupCount!==3||layout.oldLayoutVisible||layout.clippedPurchaseLabels>0)
+      ||layout.selectorCount!==3||layout.selectorRows!==1||layout.oldLayoutVisible||layout.clippedPurchaseLabels>0)
       throw new Error("Opportunity workspace layout failed: "+JSON.stringify(layout));
     if(width<600&&layout.tabRows!==2)throw new Error("Tabs are not 2×2");
     if(width===1280&&layout.tabRows!==1)throw new Error("Desktop tabs do not share one row");
@@ -75,6 +75,7 @@ try{
     if(!/Listing 2 of 10/i.test(await focus(page).innerText()))throw new Error("Next listing arrow failed");
     await focus(page).getByRole("button",{name:"Previous top listing"}).click();
     if(!/Listing 1 of 10/i.test(await focus(page).innerText()))throw new Error("Previous listing arrow failed");
+    await workspace(page).getByText(/View listings 4/).click();
     await choices(page).nth(9).click();
     if(!/Listing 10 of 10/i.test(await focus(page).innerText())
       ||!(await focus(page).getByRole("button",{name:"Next top listing"}).isDisabled()))
@@ -117,15 +118,11 @@ try{
       throw new Error("Public comparison lacks source or exact review signal");
     await emit(page,width,"public_comparison");
     await comparisonDialog.getByRole("button",{name:"Close details"}).click();
-    const groups=workspace(page).locator("details");
-    for(const group of await groups.all()){
-      if((await group.getAttribute("open"))===null)await group.locator("summary").click();
-      const content=(await group.innerText()).trim();
-      if(!content)throw new Error("A whole-shop group is blank");
-    }
+    await page.getByRole("heading",{name:"What customers are choosing"}).waitFor({timeout:30000});
+    await page.getByRole("heading",{name:"Review these"}).waitFor({timeout:30000});
     await emit(page,width,"whole_shop",true);
-    const listedFindings=await workspace(page).locator("details button").count();
-    if(listedFindings<1)throw new Error("Whole-shop discovery is blank in reviewer fixture");
+    const reviewSection=page.getByRole("heading",{name:"Review these"}).locator("..").locator("..");
+    if(await reviewSection.getByRole("button").count()<1)throw new Error("Whole-shop review is blank in reviewer fixture");
     if(width<600){
       await page.locator(".oe-site-period").getByRole("button",{name:"Last 30 days"}).click();
       await waitReady(page);
@@ -136,9 +133,12 @@ try{
     for(const [label,key] of [["Your numbers","money"],["Product themes","themes"],["Sold listings","sold"]]){
       await page.locator(".shop-map-tabs").getByRole("button",{name:label}).click();
       await page.locator(".shop-map-tabs button[aria-current=page]").filter({hasText:label}).waitFor({timeout:20000});
-      await page.waitForFunction(()=>[...document.querySelectorAll(".shop-map-tab-panel,.shop-map-money,.shop-map-themes,.shop-map-sold")]
-        .map(node=>node.textContent||"").join(" ").trim().length>=50,null,{timeout:20000});
-      const panelText=(await page.locator(".shop-map-tab-panel,.shop-map-money,.shop-map-themes,.shop-map-sold").allInnerTexts()).join(" ");
+      let panelText="";
+      for(let attempt=0;attempt<80;attempt++){
+        panelText=(await page.locator(".shop-map-tab-panel,.shop-map-money,.shop-map-themes,.shop-map-sold").allInnerTexts()).join(" ");
+        if(panelText.trim().length>=50)break;
+        await page.waitForTimeout(250);
+      }
       const tabLayout=await measurements(page);
       if(tabLayout.documentWidth>width+1||tabLayout.bodyWidth>width+1||panelText.trim().length<50)
         throw new Error("Blank or overflowing "+key+": "+JSON.stringify(tabLayout));
