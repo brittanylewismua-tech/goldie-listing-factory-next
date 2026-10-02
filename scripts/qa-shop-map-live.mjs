@@ -106,6 +106,8 @@ try {
           throw new Error("External candidate images did not load");
         if(!(await marketPair.innerText()).includes("observed activity"))
           throw new Error("External candidate is not honestly labeled");
+        if((await marketPair.innerText()).includes("1969"))
+          throw new Error("External observation date was computed before the request");
         console.log("QA_MARKET_PAIR "+JSON.stringify({width,images:marketImages.length}));
         const patternMetrics=page.locator(".oe-pattern-metrics").first();
         await patternMetrics.waitFor({timeout:10000});
@@ -195,7 +197,7 @@ try {
         for(let offset=0;offset<researchImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+researchImage.slice(offset,offset+16000));
         console.log(`QA_IMAGE_END ${width} purchased_research`);
         const more=page.locator(".oe-more");
-        await more.locator("summary").click();
+        await more.locator(":scope > summary").click();
         const extra=more.locator(".oe-priority-card").first();
         if(await extra.count()===0)throw new Error("Purchased products outside the first three are missing");
         const extraTitle=(await extra.locator("h3").innerText()).trim();

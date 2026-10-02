@@ -37,7 +37,7 @@ const marketProof = [{
   observedSold30:21,moving:8,productFamilies:[{family:"sweatshirt",sold30:12},{family:"tee",sold30:9}],
   listings:[{listingId:900007,title:"My Body My Choice Tee",imageUrl:images[0],
     etsyUrl:"https://www.etsy.com/listing/900007",priceCents:3200,currency:"USD",
-    observedUnits30:3,confirmedAt:Math.floor(Date.now()/1000)-86400,reviewsOnThisListing:2}],
+    observedUnits30:3,confirmedAt:0,reviewsOnThisListing:2}],
 }];
 export const qaListings = [...titles.map((title,index) => ({
   listingId:index+1,title,tags:[],state:"active",family:["tee","sweatshirt","tee","poster","mug"][index],
@@ -95,7 +95,8 @@ export function qaMapFixture(url: URL) {
   };
   }
   if (view === "overview-support") return {catalogActions,opportunities:[],marketCorroboration:[]};
-  if (view === "overview-market") return {marketProof};
+  if (view === "overview-market") return {marketProof:marketProof.map(proof=>({...proof,
+    listings:proof.listings.map(row=>({...row,confirmedAt:Math.floor(Date.now()/1000)-86400}))}))};
   if (view === "money") return {
     shop,month:"2026-09",timezoneNeeded:false,
     thisMonth:{revenueMinor:842300,productRevenueMinor:799000,shippingCollectedMinor:43300,
