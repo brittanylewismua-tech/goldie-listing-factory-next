@@ -116,7 +116,8 @@ try{
       const panelText=(await page.locator(".shop-map-tab-panel,.shop-map-money,.shop-map-themes,.shop-map-sold").allInnerTexts()).join(" ");
       if(layout.documentWidth>width+1||layout.bodyWidth>width+1||panelText.trim().length<50)
         throw new Error("Blank or overflowing "+key+": "+JSON.stringify(layout));
-      if(width<600&&layout.tabRows!==2)throw new Error("Tab rows changed in "+key+": "+JSON.stringify(layout)+"; body="+(await page.locator("main").innerText()).slice(0,300));
+      console.log("QA_TAB_LAYOUT "+JSON.stringify({width,key,...layout}));
+      if(width<600&&layout.tabRows!==2)throw new Error("Tab rows changed in "+key+": "+JSON.stringify(layout)+"; body="+(await page.locator("main.shop-map").innerText()).slice(0,300));
       console.log("QA_TAB "+JSON.stringify({width,key,documentWidth:layout.documentWidth,textLength:panelText.length}));
       await emit(page,width,key,true);
     }
