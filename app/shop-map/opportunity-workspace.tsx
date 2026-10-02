@@ -5,6 +5,7 @@ import type {ProductDirection} from "@/app/shop-map-product-expansion";
 import type {ShopFinding} from "@/app/shop-map-opportunity-discovery";
 import type {CatalogAction} from "@/app/shop-map-actions";
 import type {WinningPatternMap} from "@/app/shop-map-patterns";
+import type {WinnerDna} from "@/app/shop-map-winner-dna";
 import type {ArtworkMarketProof} from "@/app/shop-map-artwork-actions";
 import {shortLabel} from "@/app/design-reach";
 import {productFamily} from "@/app/product-type-utils";
@@ -48,6 +49,7 @@ function findingDetail(finding:ShopFinding):Detail{
   const kind:Kind=finding.kind==="restore"?"restore":finding.kind==="emerging"?"build":"improve";
   return {id:finding.id,kind,title:finding.direction,brief:finding.evidence,
     sourceId:finding.listingIds[0],imageUrl:finding.imageUrl,
+    relatedId:finding.kind==="compare"?finding.listingIds[1]:undefined,
     sources:finding.listingIds.slice(0,6).map((id,index)=>({label:index?"Related product":"Source product",url:listingUrl(id)})),
     checks:[finding.detail]};
 }
@@ -80,10 +82,10 @@ function marketDetail(row:PurchasePriority,proof:ArtworkMarketProof,peer:NonNull
       "Compare buyer purpose, options, material, price and imagery. A difference is a test hypothesis, not proof of why another product sold."]};
 }
 
-export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],patterns,marketProof=[],reviews=[],
+export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],patterns,marketProof=[],reviews=[],winnerDna,
   analysisFailed=false,onRetry}: {map:PurchasePriorityMap;directions?:ProductDirection[];findings?:ShopFinding[];
   actions?:CatalogAction[];patterns?:WinningPatternMap;marketProof?:ArtworkMarketProof[];
-  reviews?:OwnReviewInsight[];analysisFailed?:boolean;onRetry?:()=>void}){
+  reviews?:OwnReviewInsight[];winnerDna?:WinnerDna|null;analysisFailed?:boolean;onRetry?:()=>void}){
   const [selectedId,setSelectedId]=useState<number|null>(null);
   const [catalog,setCatalog]=useState<CatalogListing[]>([]);
   const [catalogState,setCatalogState]=useState<"loading"|"available"|"unavailable">("loading");
@@ -110,7 +112,8 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   const directionById=new Map(directions.map(row=>[row.listingId,row]));
   const allDetails:Detail[]=[];
   for(const finding of findings)allDetails.push(findingDetail(finding));
-  for(const action of actions)if(!allDetails.some(item=>item.sourceId===action.listingId&&item.kind==="restore"))
+  for(const action of actions)if(!findings.some(item=>item.listingIds[0]===action.listingId)
+    &&!allDetails.some(item=>item.sourceId===action.listingId&&item.kind==="restore"))
     allDetails.push(actionDetail(action));
   for(const row of map.listings){
     const direction=directionById.get(row.listingId);
@@ -126,6 +129,18 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     const peer=proof.listings?.find(row=>row.imageUrl&&row.observedUnits30>0
       &&productFamily(row.title)===productFamily(own.title));
     if(peer)allDetails.push(marketDetail(own,proof,peer));
+  }
+  if(winnerDna?.basis==="sales-90"&&map.days===90)for(const trait of winnerDna.traits){
+    const source=map.listings.find(row=>trait.listingIds.includes(row.listingId));
+    if(!source)continue;
+    allDetails.push({
+      id:`dna-${trait.label}`,kind:"build",title:`Explore ${trait.label.toLowerCase()}`,
+      brief:`${trait.sellingArtworks} leading artworks share this visual trait; ${trait.customerPercent}% of purchases among the leading analyzed artworks.`,
+      sourceId:source.listingId,imageUrl:source.imageUrl,
+      sources:trait.listingIds.slice(0,5).map((id,index)=>({label:`Example ${index+1}`,url:listingUrl(id)})),
+      checks:[`This trait appears on ${trait.catalogPercent}% of active analyzed artworks. The purchase share uses only the leading analyzed artworks, not the whole shop.`,
+        "Inspect the linked images to identify the exact treatment buyers saw.",
+        "Test an original related expression with a clear buyer purpose; check existing versions and production costs first."]});
   }
   const reviewIds=new Set(map.listings.map(row=>row.listingId));
   const requestPattern=/\\b(wish|could you|would love|please offer|option|size|color|colour|personaliz|customiz|material)\\b/i;
@@ -145,13 +160,19 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
         "Check whether it describes a specific option, use, objection or request before changing the product."]});
   }
   const unique=new Map<string,Detail>();
-  for(const item of allDetails){const key=item.sourceId+":"+item.kind+":"+(item.relatedId||item.title.toLowerCase());if(!unique.has(key))unique.set(key,item)}
+  for(const item of allDetails){
+    const key=item.sourceId+":"+item.kind+":"+(item.relatedId||item.title.toLowerCase());
+    const existing=unique.get(key);
+    if(!existing){unique.set(key,item);continue}
+    if(item.comparisonImageUrl)unique.set(key,{...item,brief:existing.brief,
+      checks:[...existing.checks,...item.checks]});
+  }
   const details=[...unique.values()];
   const selectedPaths=selected?details.filter(item=>item.sourceId===selected.listingId).slice(0,6):[];
   const selectedDirection=selected?directionById.get(selected.listingId):undefined;
-  const diagnosis=selectedPaths.find(item=>item.id.startsWith("peer-"))?.brief
-    ||selectedPaths.find(item=>item.id.startsWith("existing-"))?.brief
-    ||selectedPaths[0]?.brief
+  const diagnosis=selectedPaths.some(item=>item.comparisonImageUrl&&item.relatedId)
+    ?"This artwork already has another version in your shop. Compare that offer before building more."
+    :selectedPaths[0]?.brief
     ||(selectedDirection?.retainedCharacteristic?`Customers purchased ${shortLabel(selected?.title||"")}. ${selectedDirection.retainedCharacteristic} is visible in its product analysis.`:null);
   const groups:[Kind,string][]=[["build","Build on proven demand"],["improve","Improve an existing offer"],["restore","Recover or prepare"]];
   const open=(item:Detail)=>{setDetail(item);requestAnimationFrame(()=>dialog.current?.showModal())};
