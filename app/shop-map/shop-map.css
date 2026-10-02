@@ -1935,7 +1935,7 @@
 /* Opportunity Engine priorities: three complete product breakdowns, then the wider shop. */
 #suite-workspace .shop-map-redesign .oe-engine>.oe-section-heading{margin:0 0 15px!important}
 #suite-workspace .shop-map-redesign .oe-priority-grid{
-  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important;
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;align-items:start!important;gap:14px!important;
 }
 #suite-workspace .shop-map-redesign .oe-priority-card{
   display:flex!important;flex-direction:column!important;min-width:0!important;overflow:hidden!important;
@@ -1981,7 +1981,7 @@
   margin:0 0 10px!important;color:#625861!important;font-size:12px!important;line-height:1.45!important;
 }
 #suite-workspace .shop-map-redesign .oe-priority-direction{
-  margin:auto 0 0!important;color:#76254f!important;font-size:14px!important;
+  margin:0!important;color:#76254f!important;font-size:14px!important;
   line-height:1.4!important;font-weight:800!important;
 }
 #suite-workspace .shop-map-redesign .oe-priority-detail{

@@ -268,6 +268,12 @@ try {
   await desktopPage.keyboard.press("Enter");
   if(!(await desktopHero.locator(".oe-priority-detail").evaluate(node=>node.open)))
     throw new Error("Product evidence does not open from keyboard");
+  const expandedGap=await desktopPage.locator(".oe-priority-card").nth(1).evaluate(card=>{
+    const diagnosis=card.querySelector(".oe-priority-diagnosis")?.getBoundingClientRect();
+    const direction=card.querySelector(".oe-priority-direction")?.getBoundingClientRect();
+    return diagnosis&&direction?direction.top-diagnosis.bottom:0;
+  });
+  if(expandedGap>50)throw new Error("Opening product evidence strands another direction at the bottom of an empty card");
   const desktopDetails=(await desktopPage.screenshot({type:"jpeg",quality:40})).toString("base64");
   console.log("QA_IMAGE_BEGIN 1280 desktop_details");
   for(let offset=0;offset<desktopDetails.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopDetails.slice(offset,offset+16000));

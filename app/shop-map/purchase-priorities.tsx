@@ -82,7 +82,7 @@ export default function PurchasePriorities({map,directions,findings=[],analysisF
           {direction?.retainedCharacteristic?<p>Observed: {direction.retainedCharacteristic}.</p>:null}
           {finding?.detail?<p>{finding.detail}</p>:null}
           {direction?.catalogCoverage&&finding?.evidence!==direction.catalogCoverage?<p>{direction.catalogCoverage}</p>:null}
-          {direction?.researchQuestion?<p>{direction.researchQuestion}</p>:null}
+          {direction?.researchQuestion&&!finding?<p>{direction.researchQuestion}</p>:null}
           <a href={"https://www.etsy.com/listing/"+row.listingId} target="_blank" rel="noopener noreferrer">View source listing</a>
           {direction?.relatedListingId?<a href={"https://www.etsy.com/listing/"+direction.relatedListingId} target="_blank" rel="noopener noreferrer">See existing version</a>:null}
           {direction?<div className="oe-detail-actions"><button type="button" onClick={()=>void copy(row,direction)}>Copy research context</button>
