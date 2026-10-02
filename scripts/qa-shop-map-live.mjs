@@ -46,7 +46,8 @@ try{
     const context=await browser.newContext({viewport:{width,height:width===1200?750:844},deviceScaleFactor:1});
     await login(context);
     const page=await context.newPage();
-    page.on("console",message=>{if(message.type()==="error")console.log("QA_PREVIEW_CONSOLE_ERROR "+message.text())});
+    const previewErrors=[];
+    page.on("console",message=>{if(message.type()==="error"){previewErrors.push(message.text());console.log("QA_PREVIEW_CONSOLE_ERROR "+message.text())}});
     page.on("pageerror",error=>console.log("QA_PREVIEW_PAGE_ERROR "+error.message));
     await page.goto("https://thegoldiesuite.com/shop-map?designPreview=1",{waitUntil:"domcontentloaded",timeout:60000});
     const preview=page.frameLocator('iframe[title="Approved Opportunity Engine design review"]');
@@ -72,6 +73,7 @@ try{
       ||layout.heading!=="Top listings in your shop"||layout.tabRows!==(width===1200?1:2)
       ||!layout.sheets.some(sheet=>sheet.endsWith("/opportunity-preview-v5/style-local.css")))
       throw new Error("Approved design preview differs: "+JSON.stringify({width,...layout}));
+    if(previewErrors.some(error=>error.includes("https://thegoldiesuite.com/style-local.css")))throw new Error("Preview stylesheet requested from wrong path");
     console.log("QA_APPROVED_PREVIEW "+JSON.stringify({viewport:width,...layout}));
     await emit(page,width,"approved_preview_first_viewport");
     await context.close();
