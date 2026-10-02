@@ -2026,7 +2026,7 @@
 /* Approved Opportunity Engine review layout. */
 #suite-workspace .shop-map-redesign{
   --g-ink:#201c21;--g-ink-2:#625861;--g-ink-3:#726971;--g-line:#e9e0e6;
-  max-width:1220px!important;color:#201c21!important;
+  max-width:1220px!important;color:#201c21!important;font-family:Manrope,Inter,ui-sans-serif,sans-serif!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-head{
   display:flex!important;align-items:flex-end!important;justify-content:space-between!important;
