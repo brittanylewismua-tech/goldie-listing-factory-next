@@ -240,7 +240,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
           {["unavailable","no-reviewed-match","insufficient-context"].includes(publicComparisons[selected.listingId]?.status||"")?<p className={styles.localState} role="status">No reviewed public comparison is available for this product. Your shop findings remain above.</p>:null}
           {!selectedPaths.length&&<div className={styles.localState} role="status">
             {analysisFailed?"Product analysis could not load.":catalogState==="loading"?"Checking related products…":
-              catalogState==="unavailable"?"Catalog comparison is unavailable right now.":"Goldie has no checked recommendation for this listing yet."
+              catalogState==="unavailable"?"Catalog comparison is unavailable right now.":"Goldie has no checked recommendation for this listing yet."}
             {analysisFailed&&onRetry?<button type="button" onClick={onRetry}>Retry analysis</button>:null}
             {catalogState==="unavailable"?<button type="button" onClick={()=>setRetry(value=>value+1)}>Retry catalog</button>:null}
           </div>}
