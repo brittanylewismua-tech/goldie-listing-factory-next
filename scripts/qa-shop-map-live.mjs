@@ -72,7 +72,7 @@ try{
     await emit(page,width,"second_product");
     await choices(page).first().click();
     const path=focus(page).getByRole("button",{name:/Compare|Review|Test|Check|Explore/i}).first();
-    if(!(await path.count()))throw new Error("Focused product has no checked direction in reviewer fixture");
+    await path.waitFor({state:"visible",timeout:30000});
     {
       await path.click();
       const dialog=page.getByRole("dialog");await dialog.waitFor({state:"visible"});
