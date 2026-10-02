@@ -68,3 +68,79 @@
   .choice b,.moreChoices .choice b{display:block;min-height:0;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
   .choice small,.moreChoices .choice small{margin-top:3px;font-size:12px}
 }
+
+/* Sites preview parity: one editorial rhythm across the live workspace. */
+.heading{margin-bottom:17px}
+.heading h2,.sectionHead h2{font-size:29px;line-height:1.15;letter-spacing:-.052em;font-weight:800}
+.heading p{color:#505050}
+.focus{grid-template-columns:minmax(0,38%) minmax(0,62%);border-radius:12px}
+.art{min-height:350px}
+.art img{max-height:450px}
+.body{padding:31px 33px;border-left:1px solid var(--line)}
+.pager{gap:9px;margin-bottom:14px}
+.pager button{width:31px;height:31px;font-size:21px}
+.pager span{font-size:12px;font-weight:800}
+.body h3{margin-bottom:12px;font-size:clamp(24px,2.7vw,35px);line-height:1.14;letter-spacing:-.055em;font-weight:800}
+.vote{gap:8px;margin-bottom:15px}
+.vote strong{font-size:24px}
+.vote span{font-size:13px;color:#444}
+.interpret{margin-bottom:17px;padding-left:12px;font-size:15px;font-weight:700}
+.pathHead{padding-bottom:6px}
+.pathHead h4{font-size:13px;font-weight:800}
+.path{padding:11px 0}
+.path strong{font-size:14px;font-weight:700}
+.listingChoices{margin-top:12px}
+.selector,.moreChoices{gap:9px}
+.choice{grid-template-columns:52px minmax(0,1fr);gap:9px;padding:8px;border-radius:9px}
+.choice img,.noThumb{width:52px;height:52px;border-radius:0}
+.choice b{font-size:12px}
+.choice small{margin-top:2px;color:#444;font-size:11px}
+.customer,.reviewSection{margin-top:51px}
+.sectionHead{margin-bottom:17px}
+.sectionHead>span{color:#444;font-size:12px}
+.pattern{padding:20px 19px 17px 0}
+.pattern+.pattern{padding-left:20px}
+.pattern span b{font-size:30px}
+.pattern small,.patternNote{color:#444;font-size:11px}
+.reviewCard{gap:15px}
+.reviewCard strong{font-size:15px}
+.reviewCard em{color:#505050;font-size:12px}
+.deeper{margin-top:33px;border-top:1px solid var(--ink);border-bottom:1px solid var(--line)}
+.deeper>summary{padding:17px 0}
+@media(max-width:650px){
+  .heading{margin-bottom:12px}
+  .heading h2,.sectionHead h2{font-size:23px}
+  .heading p{margin-top:4px;font-size:13px}
+  .focus{grid-template-columns:108px minmax(0,1fr);column-gap:11px;padding:11px}
+  .art,.art img{width:108px;height:108px}
+  .body{display:contents}
+  .pager{gap:4px;margin:0}
+  .pager span{font-size:10px}
+  .pager button{width:25px;height:25px;font-size:18px}
+  .body h3{margin:3px 0 0;font-size:17px;line-height:1.18}
+  .vote{margin:11px 0 10px}
+  .vote strong{font-size:22px}
+  .vote span{font-size:12px}
+  .interpret{margin-bottom:12px;font-size:14px}
+  .selector,.moreChoices{grid-template-columns:minmax(0,1fr);gap:6px}
+  .choice,.moreChoices .choice{grid-template-columns:43px minmax(0,1fr);min-height:57px;gap:9px;padding:6px}
+  .choice img,.choice .noThumb,.moreChoices .choice img,.moreChoices .choice .noThumb{width:43px;height:43px}
+  .choice b,.moreChoices .choice b{font-size:12px}
+  .choice small,.moreChoices .choice small{font-size:11px}
+  .customer,.reviewSection{margin-top:38px}
+  .pattern{padding:13px 0}
+  .pattern+.pattern{padding-left:0}
+  .pattern span b{font-size:22px}
+  .reviewCard{gap:10px}
+  .reviewCard strong{font-size:13px}
+  .reviewCard em{font-size:11px}
+  .deeper{margin-top:25px}
+}
+@media(max-width:350px){
+  .focus{grid-template-columns:96px minmax(0,1fr);column-gap:8px}
+  .art,.art img{width:96px;height:96px}
+  .pager{gap:3px}
+  .pager button{width:22px;height:22px}
+  .pager span{font-size:9px}
+  .body h3{font-size:16px}
+}
