@@ -2249,3 +2249,10 @@
   transform:none!important;
 }
 #suite-workspace .shop-map-redesign .shop-map-tabs button{min-height:40px!important}
+
+#suite-workspace .shop-map-redesign .shop-map-tabs{
+  align-items:stretch!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-tabs button{
+  align-self:stretch!important;
+}
