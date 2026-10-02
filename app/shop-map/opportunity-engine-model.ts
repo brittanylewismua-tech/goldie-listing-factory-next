@@ -39,7 +39,7 @@ export type ListingRead = {
 };
 
 const TOP=10;
-const decode=(value:string)=>String(value||"")
+export const decode=(value:string)=>String(value||"")
   .replace(/&#39;|&#039;|&apos;/g,"'").replace(/&quot;/g,"\"").replace(/&amp;/g,"&")
   .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/\s+/g," ").trim();
 
