@@ -1,5 +1,6 @@
 import { requireFeaturePage } from "@/app/require-feature";
 import { isQaReviewer, QA_REVIEWER_EMAIL } from "@/app/qa-reviewer";
+import { isOwner } from "@/app/owner-allowlist";
 import QaMobileMetrics from "@/app/qa/mobile-metrics";
 import FactoryShell from "@/app/factory-shell";
 import ShopMapClient from "./shop-map-client";
@@ -17,9 +18,17 @@ export const metadata = { title: "Your shop" };
   answers three questions in order: what did I make, where is the shop
   pointed, and what is it made of.
 */
-export default async function ShopMapPage() {
+export default async function ShopMapPage({searchParams}:{searchParams:Promise<{designPreview?:string;live?:string}>}) {
   const reviewer = await isQaReviewer();
   const user = reviewer ? { email: QA_REVIEWER_EMAIL, userId:"qa-reviewer" } : await requireFeaturePage("shopMap", "/shop-map");
+  const params = await searchParams;
+  const ownerPreview = "emailVerified" in user && isOwner(user);
+  if ((ownerPreview && params.live !== "1") || (reviewer && params.designPreview === "1")) {
+    return <div data-opportunity-design-preview style={{position:"fixed",inset:0,zIndex:2147483647,background:"#fff"}}>
+      <iframe title="Approved Opportunity Engine design review" src="/opportunity-preview-v5/index.html"
+        style={{display:"block",width:"100%",height:"100%",border:0}} />
+    </div>;
+  }
   const activeShop = reviewer ? 900001 : await ((env as unknown as {DB:D1Database}).DB.prepare(
     "SELECT shop_id FROM etsy_connections WHERE user_id=? AND is_active=1 LIMIT 1"
   ).bind(user.userId).first<{shop_id:number}>().then(row=>Number(row?.shop_id)||null).catch(()=>null));
