@@ -6,6 +6,7 @@ import {isQaReviewer} from "@/app/qa-reviewer";
 import {etsyConnection,etsyFetch,etsyBudget} from "@/app/api/etsy/client";
 import {productFamily} from "@/app/product-type-utils";
 import {crossSiteWrite,CROSS_SITE_REFUSAL} from "@/app/same-site-only";
+import {ensureMarketComparisonCache} from "@/app/shop-map-market-comparison-cache";
 
 type EtsyListing={listing_id:number;shop_id:number;title:string;url?:string;images?:Array<{url_570xN?:string;url_fullxfull?:string}>;materials?:string[];price?:{amount:number;divisor:number;currency_code:string}};
 type EtsyReview={created_timestamp?:number;create_timestamp?:number;review?:string;rating?:number};
@@ -39,7 +40,7 @@ export const POST=withErrorLog("shop-map-market-comparisons",async(request:Reque
   const family=familyOf(own.title)||familyOf(own.product_family);
   const query=queryFor(own.title,family);
   if(!query||!family)return NextResponse.json({status:"insufficient-context",comparisons:[]},{headers:cacheControl});
-  await db.prepare("CREATE TABLE IF NOT EXISTS shop_map_market_comparison_cache (user_id TEXT NOT NULL,shop_id INTEGER NOT NULL,listing_id INTEGER NOT NULL,source_title TEXT NOT NULL,payload TEXT NOT NULL,checked_at INTEGER NOT NULL,PRIMARY KEY(user_id,shop_id,listing_id))").run();
+  await ensureMarketComparisonCache(db);
   const now=Math.floor(Date.now()/1000);
   const cached=await db.prepare("SELECT payload,checked_at,source_title FROM shop_map_market_comparison_cache WHERE user_id=? AND shop_id=? AND listing_id=?")
     .bind(access.user.userId,shop.shop_id,listingId).first<{payload:string;checked_at:number;source_title:string}>();
