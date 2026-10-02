@@ -116,10 +116,10 @@ export function ReviewThese({map,actions,dna,marketProof=[],priorityIds=[],findi
             <img src={peer.imageUrl} alt="" width={70} height={70} loading="lazy"/><small>Etsy comparison</small></a>
         </div>
         <h3>{shortLabel(source.title)}</h3>
-        <p>{peer.observedUnits30} sales-linked unit{peer.observedUnits30===1?"":"s"} observed for a related {compactFamily(source.family).toLowerCase()} on {new Date(peer.confirmedAt*1000).toLocaleDateString()}.</p>
+        <p>{peer.observedUnits30} units of observed activity for a related {compactFamily(source.family).toLowerCase()} on {new Date(peer.confirmedAt*1000).toLocaleDateString()}.</p>
         <strong>Inspect the actual products and options before testing a difference.</strong>
         <details><summary>See comparison evidence</summary>
-          <p>Matched through the saved “{proof.phrase}” watch and product format. The source listing had {source.sold90} purchased units in the last 90 days. The external observation is dated and is not a private Etsy sales report.</p>
+          <p>Matched through the saved “{proof.phrase}” watch and product format. The source listing had {source.sold90} purchased units in the last 90 days. The external observation is dated and may include inventory movement; it is not a confirmed purchase count.</p>
           <p>Compare imagery, wording, materials, options and price; matching search words alone do not prove the products serve the same buyer need.</p>
           {peer.priceCents!=null?<p>External listing price: {new Intl.NumberFormat(undefined,{style:"currency",currency:peer.currency||"USD"}).format(peer.priceCents/100)}.</p>:null}
           <a href={peer.etsyUrl} target="_blank" rel="noopener noreferrer">View Etsy comparison</a>

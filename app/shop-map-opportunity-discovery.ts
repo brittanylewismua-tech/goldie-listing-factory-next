@@ -12,7 +12,7 @@ export type ShopFinding={
 };
 
 const normalize=(value:string)=>String(value||"").toLowerCase().trim().replace(/[\s_-]+/g," ");
-const familyLabel=(value:string)=>normalize(value)||"product";
+const familyLabel=(value:string)=>normalize(value)||"unknown";
 const units=(sales:DiscoverySale[],from:number,to:number)=> {
   const byId=new Map<number,number>();
   for(const sale of sales)if(!sale.refunded&&sale.soldAt>=from&&sale.soldAt<to&&sale.quantity>0)
