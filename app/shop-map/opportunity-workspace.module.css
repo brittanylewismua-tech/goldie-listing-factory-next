@@ -11,7 +11,7 @@
 @media(max-width:360px){.choice{flex-basis:158px}}
 
 /* Keep the reviewed workspace controls clear of older global card rules. */
-.workspace .path,.workspace .finding{border-radius:0;box-shadow:none;background:transparent}
+.workspace .path,.workspace .finding{border:0!important;border-bottom:1px solid var(--oe-line)!important;border-radius:0!important;box-shadow:none!important;background:transparent!important}
 .workspace .path:hover,.workspace .finding:hover{background:#fffafd}
 .workspace .group summary::before,.workspace .group summary::after{content:none!important}
 .workspace .group summary{list-style:none!important}
