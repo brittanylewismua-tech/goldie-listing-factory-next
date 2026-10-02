@@ -155,8 +155,10 @@ export function parseCanonical(text: string): CanonicalResult {
   const rejected: Array<{ label: string; because: string }> = [];
   const seen = new Set<string>();
   for (const raw of parsed.niches) {
-    const label = String(raw ?? "").trim();
-    if (!label) continue;
+    const proposed = String(raw ?? "").trim();
+    if (!proposed) continue;
+    const label = /\bfeminists?\b/i.test(proposed) && !/\banti[ -]?feminist\b/i.test(proposed)
+      ? "Feminist" : proposed;
     const because = rejectAsNiche(label);
     if (because) { rejected.push({ label, because }); continue; }
     const key = label.toLowerCase();
