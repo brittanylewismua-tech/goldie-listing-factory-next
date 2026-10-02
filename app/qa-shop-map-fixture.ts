@@ -36,11 +36,12 @@ const marketProof = [{
   patternKey:"bodily autonomy",phrase:"bodily autonomy",sellingListings:8,
   observedSold30:21,moving:8,productFamilies:[{family:"sweatshirt",sold30:12},{family:"tee",sold30:9}],
 }];
-export const qaListings = titles.map((title,index) => ({
+export const qaListings = [...titles.map((title,index) => ({
   listingId:index+1,title,tags:[],state:"active",family:["tee","sweatshirt","tee","poster","mug"][index],
   artworkHash:`qa-art-${index+1}`,favorites:[38,24,15,10,8][index],views:[310,250,150,90,70][index],
   imageUrl:images[index],sold90:sold[index],
-}));
+})),{listingId:6,title:"My Body My Choice Sweatshirt",tags:[],state:"active",family:"sweatshirt",
+  artworkHash:"qa-art-1",favorites:2,views:35,imageUrl:images[0],sold90:0}];
 
 export function qaMapFixture(url: URL) {
   const view = url.searchParams.get("view") ?? "overview-insights";
@@ -60,21 +61,30 @@ export function qaMapFixture(url: URL) {
     const days=Number(url.searchParams.get("days"))===30?30:90;
     const ranked=days===30?[1,4,2,3,5]:[1,2,3,4,5];
     const direction=(listingId:number)=>({
-      listingId,kind:listingId>=4?"research":"check-first",
+      listingId,kind:listingId===1?"already-offered":listingId>=4?"research":"check-first",
       retainedCharacteristic:listingId===1?"the visible wording “MY BODY MY CHOICE” and its artwork":
         listingId===2?"the visible wording “MOTHERHOOD IS POLITICAL” and its artwork":
         listingId===3?"the visible wording “SMASH THE PATRIARCHY” and its artwork":
         listingId===5?"the visible wording “I RAISE DAUGHTERS WHO RESIST” and its artwork":
         "the visible bodily autonomy message and its artwork",
-      proposedChange:listingId>=4?null:
-        `Test this artwork on a ${listingId===2?"tee":"sweatshirt"}.`,
-      catalogCoverage:listingId>=4?"No supported format suggestion is available yet from the verified active catalog.":
-        `No exact-artwork ${listingId===2?"tee":"sweatshirt"} was found in the artwork-linked catalog.`,
+      proposedChange:null,targetFormat:listingId>=4?null:listingId===2?"tee":"sweatshirt",
+      catalogCoverage:listingId===1?"This exact artwork is already listed on a sweatshirt (active).":
+        listingId>=4?"No supported format suggestion is available yet from the verified active catalog.":
+        `No exact-artwork ${listingId===2?"tee":"sweatshirt"} was found in the current artwork-linked catalog.`,
       whyNow:`${days===30?[8,5,3,6,1][listingId-1]:sold[listingId-1]} purchased units in the last ${days} days`,
-      relatedListingId:null,researchQuestion:listingId>=4?"Review same-format variations and confirm feasible changes.":"Check existing versions and confirm artwork fit before building.",
+      relatedListingId:listingId===1?6:null,researchQuestion:listingId===1
+        ?"Compare the existing sweatshirt with the tee before creating another version.":
+        listingId>=4?"Review same-format variations and confirm feasible changes.":"Check existing versions and confirm artwork fit before building.",
     });
     return {
-    shop,patterns,productDirections:ranked.map(direction),analysedListingIds:[1,2,3,4,5],visualCoverage:{analysedListings:20,totalListings:20},
+    shop,patterns,productDirections:ranked.map(direction),opportunityFindings:[
+      {id:"existing-qa-art-1",kind:"compare",listingIds:[1,6],title:titles[0],imageUrl:images[0],label:"EXISTING FORMAT",
+        evidence:`${days===30?8:22} purchased on tee; 0 on the existing sweatshirt in the last ${days} days.`,
+        direction:"Review the existing version before creating another.",detail:"Compare listing dates, visits, availability, imagery, price and options."},
+      {id:"emerging-4",kind:"emerging",listingIds:[4],title:titles[3],imageUrl:images[3],label:"EMERGING",
+        evidence:"6 purchased in the last 30 days; 0 in the prior 30.",direction:"Inspect what changed before building on it.",
+        detail:"Check listing age, visits, availability and related products."},
+    ],analysedListingIds:[1,2,3,4,5],visualCoverage:{analysedListings:20,totalListings:20},
     winnerDna:{basis:"sales-90",sellingArtworks:4,traits:[
       {label:"Typography: stacked bold",sellingArtworks:3,customerPercent:78,catalogPercent:25,listingIds:[1,2,3]},
       {label:"Short visible wording",sellingArtworks:3,customerPercent:73,catalogPercent:30,listingIds:[1,2,3]},

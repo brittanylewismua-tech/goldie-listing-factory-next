@@ -2057,3 +2057,90 @@
   #suite-workspace .shop-map-redesign .oe-top-card{padding:5px!important}
   #suite-workspace .shop-map-redesign .oe-top-name{font-size:10px!important}
 }
+
+
+/* Opportunity Engine priorities: three complete product breakdowns, then the wider shop. */
+#suite-workspace .shop-map-redesign .oe-engine>.oe-section-heading{margin:0 0 15px!important}
+#suite-workspace .shop-map-redesign .oe-priority-grid{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:14px!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-card{
+  display:flex!important;flex-direction:column!important;min-width:0!important;overflow:hidden!important;
+  border:1px solid #eadfe6!important;border-radius:17px!important;background:#fff!important;
+  color:#201c21!important;box-shadow:none!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-art{
+  position:relative!important;display:grid!important;place-items:center!important;height:165px!important;
+  padding:18px!important;background:#faedf4!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-art img{
+  width:130px!important;height:130px!important;object-fit:contain!important;
+  border-radius:9px!important;background:#fff!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-rank{
+  position:absolute!important;top:14px!important;left:15px!important;padding:4px 7px!important;
+  border-radius:6px!important;background:#fff!important;color:#8d1d5a!important;
+  font-size:10px!important;font-weight:850!important;letter-spacing:.08em!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-body{
+  display:flex!important;flex:1!important;flex-direction:column!important;min-width:0!important;padding:18px 20px!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-body h3{
+  min-height:2.5em!important;margin:0 0 12px!important;font-size:18px!important;
+  line-height:1.25!important;letter-spacing:-.025em!important;font-weight:800!important;overflow-wrap:anywhere!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-metrics{
+  display:flex!important;gap:18px!important;padding:0 0 14px!important;
+  border-bottom:1px solid #eee6eb!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-metrics>div{display:flex!important;align-items:baseline!important;gap:5px!important}
+#suite-workspace .shop-map-redesign .oe-priority-metrics b{
+  font-size:23px!important;line-height:1!important;letter-spacing:-.05em!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-metrics span{
+  color:#716771!important;font-size:11px!important;line-height:1.25!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-label{
+  margin:14px 0 5px!important;color:#8d1d5a!important;text-transform:uppercase!important;
+  font-size:10px!important;font-weight:850!important;letter-spacing:.1em!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-diagnosis{
+  margin:0 0 10px!important;color:#625861!important;font-size:12px!important;line-height:1.45!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-direction{
+  margin:auto 0 0!important;color:#76254f!important;font-size:14px!important;
+  line-height:1.4!important;font-weight:800!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-detail{
+  margin-top:15px!important;padding-top:12px!important;border-top:1px solid #eee6eb!important;
+  color:#514650!important;font-size:12px!important;line-height:1.55!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-detail summary{
+  color:#76254f!important;font-size:12px!important;font-weight:800!important;cursor:pointer!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-detail p{margin:8px 0!important}
+#suite-workspace .shop-map-redesign .oe-priority-detail>a{
+  display:inline-block!important;margin:6px 14px 4px 0!important;color:#76254f!important;font-weight:750!important;
+}
+#suite-workspace .shop-map-redesign .oe-priority-detail textarea{width:100%!important;min-height:100px!important}
+#suite-workspace .shop-map-redesign .oe-additional-grid{margin-top:14px!important}
+@media(max-width:980px){
+  #suite-workspace .shop-map-redesign .oe-priority-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:650px){
+  #suite-workspace .shop-map-redesign .oe-priority-grid{grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+  #suite-workspace .shop-map-redesign .oe-priority-art{height:126px!important;padding:11px!important}
+  #suite-workspace .shop-map-redesign .oe-priority-art img{width:100px!important;height:100px!important}
+  #suite-workspace .shop-map-redesign .oe-priority-body{padding:15px 17px!important}
+  #suite-workspace .shop-map-redesign .oe-priority-body h3{min-height:0!important;margin-bottom:10px!important;font-size:17px!important}
+  #suite-workspace .shop-map-redesign .oe-priority-metrics{padding-bottom:11px!important}
+  #suite-workspace .shop-map-redesign .oe-priority-label{margin-top:11px!important}
+  #suite-workspace .shop-map-redesign .oe-priority-diagnosis{margin-bottom:8px!important}
+}
+
+#suite-workspace .shop-map-redesign .oe-finding-card{gap:9px!important}
+#suite-workspace .shop-map-redesign .oe-finding-main{display:flex!important;align-items:center!important;gap:12px!important;min-width:0!important}
+#suite-workspace .shop-map-redesign .oe-finding-main img{width:64px!important;height:64px!important;flex:none!important;object-fit:contain!important;border-radius:9px!important;background:#faedf4!important}
+#suite-workspace .shop-map-redesign .oe-finding-main h3{margin:0!important;min-width:0!important;overflow-wrap:anywhere!important}
+#suite-workspace .shop-map-redesign .oe-finding-card>strong{margin-top:auto!important;padding-top:3px!important;color:#76254f!important;font-size:13px!important;line-height:1.4!important}
+#suite-workspace .shop-map-redesign .oe-finding-card details a{display:inline-block!important;margin:7px 12px 0 0!important;color:#76254f!important}

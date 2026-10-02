@@ -7,7 +7,7 @@ export type ExpansionListing = {
 };
 export type ProductDirection = {
   listingId:number; kind:"test"|"check-first"|"already-offered"|"availability-review"|"research";
-  retainedCharacteristic:string|null; proposedChange:string|null;
+  retainedCharacteristic:string|null; proposedChange:string|null; targetFormat:string|null;
   catalogCoverage:string; whyNow:string; relatedListingId:number|null;
   researchQuestion:string|null;
 };
@@ -46,7 +46,7 @@ const characteristic=(design:ExpansionListing["design"])=>{
  * cannot be inferred from listing titles or a purchase count.
  */
 export function buildProductDirections(
-  purchase:PurchasePriorityMap,listings:ExpansionListing[],
+  purchase:PurchasePriorityMap,listings:ExpansionListing[],options:{catalogComplete?:boolean}={},
 ):ProductDirection[]{
   const byId=new Map(listings.map(row=>[row.listingId,row]));
   const activeFormats=new Set(listings.filter(row=>row.state==="active").map(row=>family(row.productFamily)));
@@ -54,7 +54,7 @@ export function buildProductDirections(
   return purchase.listings.map(winner=>{
     const source=byId.get(winner.listingId);
     const base={listingId:winner.listingId,relatedListingId:null,retainedCharacteristic:null,
-      proposedChange:null,researchQuestion:null};
+      proposedChange:null,researchQuestion:null,targetFormat:null};
     const evidence=`${winner.unitsPurchased} purchased unit${winner.unitsPurchased===1?"":"s"} across ${winner.orders} recorded transaction${winner.orders===1?"":"s"} in the last ${purchase.days} days`;
     if(!source||!source.artworkHash||!source.design){
       return {...base,kind:"research" as const,catalogCoverage:"Product imagery has not been analyzed for this purchased listing.",
@@ -83,19 +83,20 @@ export function buildProductDirections(
     if(existing){
       return {...base,kind:"already-offered" as const,retainedCharacteristic:retained,
         catalogCoverage:`This exact artwork is already listed on a ${label} (${existing.state||"state unknown"}).`,
-        whyNow:evidence,relatedListingId:existing.listingId,
+        whyNow:evidence,relatedListingId:existing.listingId,targetFormat:label,
         researchQuestion:existing.state==="active"
           ?"Review that listing's dated sales and visibility before making another version."
           :"Check whether the existing listing can be returned to sale before creating a duplicate."};
     }
     const productionVerified=(source.verifiedCompatibleFormats??[]).map(family).includes(supported);
-    const checkFirst=unlinkedActive>0||!productionVerified;
+    const checkFirst=unlinkedActive>0||!productionVerified||!options.catalogComplete;
     return {...base,kind:checkFirst?"check-first" as const:"test" as const,
       retainedCharacteristic:retained,
-      proposedChange:`Test this artwork on a ${label}.`,
+      targetFormat:label,
+      proposedChange:checkFirst?null:`Test this artwork on a ${label}.`,
       catalogCoverage:unlinkedActive>0
         ?`${unlinkedActive} active listing${unlinkedActive===1?" has":"s have"} no linked artwork identity. Check existing versions before building.`
-        :`No exact-artwork ${label} was found in the artwork-linked catalog.`,
+        :`No exact-artwork ${label} was found in the current artwork-linked catalog.`,
       whyNow:evidence,
       researchQuestion:checkFirst
         ?"Check existing versions and confirm the target production method, print area, and artwork fit before building."

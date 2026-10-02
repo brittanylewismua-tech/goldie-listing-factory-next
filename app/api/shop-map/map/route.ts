@@ -14,6 +14,7 @@ import { buildAttentionMap } from "@/app/shop-map-attention";
 import { discoverVisualWinningPatterns } from "@/app/shop-map-visual-patterns";
 import { buildPurchasePriorities } from "@/app/shop-map-purchase-priorities";
 import { buildProductDirections } from "@/app/shop-map-product-expansion";
+import { discoverShopFindings } from "@/app/shop-map-opportunity-discovery";
 import { winnerDnaFrom } from "@/app/shop-map-winner-dna";
 import { EXTRACTION_SCHEMA_VERSION, DESIGN_MODEL_VERSION, DESIGN_PROMPT_VERSION } from "@/app/design-intelligence";
 import { opportunitiesFromAttention } from "@/app/shop-map-opportunities";
@@ -432,6 +433,16 @@ async function buildMap(request: Request) {
         state:String(row.state||"unknown"),artworkHash:analysed?.artworkHash??null,
         design:analysed?.design??null};
     }));
+    const opportunityFindings=discoverShopFindings(selectedPurchases,rows.map(row=>({
+      listingId:Number(row.listing_id),title:String(row.title||"Listing details unavailable"),
+      imageUrl:String(row.image_url||""),productFamily:String(row.product_family||""),
+      state:String(row.state||"unknown"),artworkHash:visualById.get(Number(row.listing_id))?.artworkHash??null,
+      createdAt:row.created_at==null?null:Number(row.created_at),
+      views:row.views==null?null:Number(row.views),
+    })),(saleRows.results??[]).map(sale=>({
+      listingId:Number(sale.listing_id),quantity:Number(sale.quantity),
+      soldAt:Number(sale.sold_at),refunded:Boolean(sale.refunded),
+    })),now);
     const visual=discoverVisualWinningPatterns(visualInput);
     const shopRecentSignal=rows.reduce((sum,row)=>sum+(sales90.get(Number(row.listing_id))?.sales??0),0);
     const shopLifetimeSignal=rows.reduce((sum,row)=>sum+Math.max(0,Number(performance.get(Number(row.listing_id))?.lifetimeUnits??0)),0);
@@ -482,6 +493,7 @@ async function buildMap(request: Request) {
       },
       winnerDna:completeVisualSignal?winnerDnaFrom(visualInput):null,
       productDirections,
+      opportunityFindings,
       analysedListingIds:[...seen],
       visualCoverage:{
         analysedListings:visualInput.length,totalListings:rows.length,

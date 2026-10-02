@@ -5,6 +5,7 @@ import type {CatalogAction} from "./shop-map-actions";
 import type {WinningPatternMap} from "./shop-map-patterns";
 import type {ArtworkMarketProof} from "./shop-map-artwork-actions";
 import type {WinnerDna} from "./shop-map-winner-dna";
+import type {ShopFinding} from "./shop-map-opportunity-discovery";
 
 const compactFamily=(value:string)=>{
   const label=familyLabel(value).replace(/^an? /,"");
@@ -39,18 +40,19 @@ function expansionReviews(listings:ReachListing[],map:WinningPatternMap,marketPr
       pattern:pattern.label,source:peer?"shop":"market",
     } satisfies Expansion];
   }).sort((a,b)=>Number(priorityIds.has(a.listingId))-Number(priorityIds.has(b.listingId))
-    ||b.sold90-a.sold90||a.listingId-b.listingId).slice(0,3);
+    ||b.sold90-a.sold90||a.listingId-b.listingId);
 }
 
-export function ReviewThese({map,actions,dna,marketProof=[],priorityIds=[]}:{
+export function ReviewThese({map,actions,dna,marketProof=[],priorityIds=[],findings=[],days=90}:{
   map:WinningPatternMap;actions:CatalogAction[];dna:WinnerDna|null;
-  marketProof?:ArtworkMarketProof[];priorityIds?:number[];
+  marketProof?:ArtworkMarketProof[];priorityIds?:number[];findings?:ShopFinding[];days?:number;
 }){
   const [listings,setListings]=useState<ReachListing[]>([]);
   const [sources,setSources]=useState<{shop:string;catalog:string;sales:string}|null>(null);
   const [retry,setRetry]=useState(0);
   const [loading,setLoading]=useState(false);
   useEffect(()=>{
+    if(days!==90)return;
     let cancelled=false;
     setLoading(true);
     void fetch("/api/shop-map/my-listings",{cache:"no-store"})
@@ -65,15 +67,31 @@ export function ReviewThese({map,actions,dna,marketProof=[],priorityIds=[]}:{
       .catch(()=>{if(!cancelled)setSources({shop:"failed",catalog:"unavailable",sales:"unavailable"});})
       .finally(()=>{if(!cancelled)setLoading(false);});
     return ()=>{cancelled=true;};
-  },[retry]);
-  const sourceIssue=sources?.shop==="failed"||sources?.catalog==="failed"||sources?.sales==="failed";
-  const expansion=sources?.catalog==="available"&&sources?.sales==="available"
+  },[retry,days]);
+  const sourceIssue=days===90&&(sources?.shop==="failed"||sources?.catalog==="failed"||sources?.sales==="failed");
+  const expansion=days===90&&sources?.catalog==="available"&&sources?.sales==="available"
     ?expansionReviews(listings,map,marketProof,new Set(priorityIds)):[];
-  const overbuilt=map.overbuilt??[];
-  if(!dna&&!overbuilt.length&&!actions.length&&!expansion.length&&!sourceIssue)return null;
+  const overbuilt=days===90?map.overbuilt??[]:[];
+  const shownDna=days===90?dna:null;
+  const shownActions=days===90?actions:[];
+  const additionalFindings=findings.filter(row=>!priorityIds.includes(row.listingIds[0])||row.kind==="catalog-review");
+  if(!shownDna&&!overbuilt.length&&!shownActions.length&&!expansion.length&&!additionalFindings.length&&!sourceIssue)return null;
   return <section className="oe-review" aria-labelledby="oe-review-title">
-    <div className="oe-section-heading"><h2 id="oe-review-title">Worth checking</h2></div>
+    <div className="oe-section-heading"><h2 id="oe-review-title">More opportunities</h2></div>
     <div className="oe-review-grid">
+      {additionalFindings.map(row=><article key={row.id} className="oe-review-card oe-finding-card">
+        <span className="oe-card-tag">{row.label}</span>
+        <div className="oe-finding-main">
+          {row.imageUrl?<img src={row.imageUrl} alt="" width={64} height={64} loading="lazy"/>:null}
+          <h3>{shortLabel(row.title)}</h3>
+        </div>
+        <p>{row.evidence}</p>
+        <strong>{row.direction}</strong>
+        <details><summary>See the evidence</summary><p>{row.detail}</p>
+          {row.listingIds.slice(0,4).map((id,index)=><a key={id} href={"https://www.etsy.com/listing/"+id}
+            target="_blank" rel="noopener noreferrer">{index?"Related listing":"Source listing"}</a>)}
+        </details>
+      </article>)}
       {sourceIssue?<div className="oe-review-card oe-source-issue" role="status">
         <span className="oe-card-tag">COMPARISON DATA</span><h3>Comparison needs a retry</h3>
         <p>{sources?.shop==="failed"?"Shop connection could not be checked."
@@ -83,13 +101,13 @@ export function ReviewThese({map,actions,dna,marketProof=[],priorityIds=[]}:{
         <button type="button" onClick={()=>setRetry(value=>value+1)} disabled={loading}>
           {loading?"Retrying…":"Retry comparison"}</button>
       </div>:null}
-      {dna?<div className="oe-review-card oe-dna">
+      {shownDna?<div className="oe-review-card oe-dna">
         <span className="oe-card-tag">DESIGN EVIDENCE</span><h3>Winner DNA</h3>
-        <div className="oe-dna-traits">{dna.traits.slice(0,2).map(row=><div key={row.label}>
+        <div className="oe-dna-traits">{shownDna.traits.slice(0,2).map(row=><div key={row.label}>
           <span>{row.label}</span><b>{row.customerPercent}%</b>
         </div>)}</div>
         <details><summary>See the evidence</summary>
-          <p>Purchased units among {dna.sellingArtworks} leading analyzed selling artworks ({dna.basis==="sales-90"?"last 90 days":"recorded lifetime"}); catalog shares use active analyzed artworks.</p>
+          <p>Purchased units among {shownDna.sellingArtworks} leading analyzed selling artworks ({shownDna.basis==="sales-90"?"last 90 days":"recorded lifetime"}); catalog shares use active analyzed artworks.</p>
           {dna.traits.map(row=><p key={row.label}><b>{row.label}</b>: {row.customerPercent}% of this artwork purchase set; {row.catalogPercent}% of active analyzed artworks.
             {!!row.listingIds?.length?<span> Sources: {row.listingIds.map((id,index)=><span key={id}>{index?", ":null}<a href={"https://www.etsy.com/listing/"+id} target="_blank" rel="noopener noreferrer">{shortLabel(map.listings.find(item=>item.listingId===id)?.title??"Listing "+id)}</a></span>)}</span>:null}
           </p>)}
@@ -100,7 +118,7 @@ export function ReviewThese({map,actions,dna,marketProof=[],priorityIds=[]}:{
         <p className="oe-review-figure"><b>{row.catalogPercent}%</b> active designs <span>·</span> <b>{row.customerPercent}%</b> {map.basis==="sales-90"?"90-day sales":map.basis==="sales-lifetime"?"lifetime sales":"favorites"}</p>
         <details><summary>What to check</summary><p>Check availability and exposure before making another variation.</p></details>
       </div>)}
-      {actions.map(row=><div key={row.listingId} className="oe-review-card">
+      {shownActions.map(row=><div key={row.listingId} className="oe-review-card">
         <span className="oe-card-tag">{row.headline}</span><h3>{shortLabel(row.title)}</h3>
         <p>{row.fact}</p>
         <details><summary>Review this finding</summary><p>{row.evidence}</p><p>{row.nextStep}</p>
