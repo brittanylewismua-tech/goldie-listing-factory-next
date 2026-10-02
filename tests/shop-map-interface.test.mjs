@@ -14,9 +14,9 @@ test("the redesigned map has four clear sections", () => {
 
 test("Opportunity Engine leads with purchased products before visual patterns", () => {
   const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
-  assert.match(overview, /PurchasePriorities map=\{shown\.purchasePriorities\}/);
+  assert.match(overview, /OpportunityWorkspace map=\{shown\.purchasePriorities\}/);
   assert.match(overview, /WinningPatterns map=\{shown\.patterns\}/);
-  assert.ok(overview.indexOf("PurchasePriorities") < overview.indexOf("WinningPatterns"));
+  assert.ok(overview.indexOf("OpportunityWorkspace") < overview.indexOf("WinningPatterns"));
   assert.match(client, /view:tab==="overview"\?"overview-purchases":tab/);
   assert.doesNotMatch(overview, /<h2>Top sellers<\/h2>/);
 });
