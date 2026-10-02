@@ -72,7 +72,14 @@ export function collapseFacets(
 
   const kept: string[] = [];
   for (const [root, group] of byRoot) {
-    if (group.length === 1) { kept.push(group[0]); continue; }
+    if (group.length === 1) {
+      const only = group[0];
+      if (root === "feminist" && only !== "Feminist") {
+        kept.push("Feminist");
+        merged.push({ from: only, into: "Feminist", because: "the same subject, narrowed" });
+      } else kept.push(only);
+      continue;
+    }
     /* Prefer a label that is already just the subject; otherwise shorten to it. */
     const bare = group.find(niche => niche.split(/\s+/).length === 1);
     const target = bare ?? root.charAt(0).toUpperCase() + root.slice(1);
