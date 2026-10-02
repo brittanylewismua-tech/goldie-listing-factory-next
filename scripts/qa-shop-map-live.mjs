@@ -42,26 +42,35 @@ const measurements=async(page)=>page.evaluate(()=>{
       .filter(node=>node.scrollWidth>node.clientWidth+1).length};
 });
 try{
-  {
-    const context=await browser.newContext({viewport:{width:1200,height:750},deviceScaleFactor:1});
+  for(const width of [1200,390,320]){
+    const context=await browser.newContext({viewport:{width,height:width===1200?750:844},deviceScaleFactor:1});
     await login(context);
     const page=await context.newPage();
     page.on("console",message=>{if(message.type()==="error")console.log("QA_PREVIEW_CONSOLE_ERROR "+message.text())});
     page.on("pageerror",error=>console.log("QA_PREVIEW_PAGE_ERROR "+error.message));
     await page.goto("https://thegoldiesuite.com/shop-map?designPreview=1",{waitUntil:"domcontentloaded",timeout:60000});
-    await page.waitForTimeout(1200);
-    console.log("QA_FRAME_STATE "+JSON.stringify(await Promise.all(page.frames().map(async frame=>({url:frame.url(),body:(await frame.locator("body").innerText({timeout:5000}).catch(()=>"(unavailable)")).slice(0,500)})))));
-    await emit(page,1200,"preview_before_wait");
-    const previewResponse=await page.request.get("https://thegoldiesuite.com/opportunity-preview-v5/index.html");
-    console.log("QA_PREVIEW_HEADERS "+JSON.stringify({status:previewResponse.status(),url:previewResponse.url(),csp:previewResponse.headers()["content-security-policy"],frameOptions:previewResponse.headers()["x-frame-options"],outerUrl:page.url(),iframeCount:await page.locator("iframe").count(),body:(await page.locator("body").innerText()).slice(0,500)}));
     const preview=page.frameLocator('iframe[title="Approved Opportunity Engine design review"]');
     await preview.getByRole("heading",{name:"Opportunity Engine",exact:true}).waitFor({timeout:30000});
     await preview.getByText("Listing 1 of 5").waitFor({timeout:30000});
-    await page.waitForFunction(async()=>{const frame=document.querySelector('iframe[title="Approved Opportunity Engine design review"]');if(!frame?.contentDocument)return false;await frame.contentDocument.fonts.ready;return [...frame.contentDocument.images].every(image=>image.complete&&image.naturalWidth>0)},{},{timeout:30000});
-    const previewLayout=await preview.locator("body").evaluate(body=>({width:body.ownerDocument.documentElement.scrollWidth,paths:body.querySelectorAll("#focus .path-row").length,choices:body.querySelectorAll("#listing-strip button").length,heading:body.querySelector(".lead h2")?.textContent?.trim()}));
-    if(previewLayout.width>1200||previewLayout.paths!==3||previewLayout.choices!==3||previewLayout.heading!=="Top listings in your shop")throw new Error("Approved design preview differs: "+JSON.stringify(previewLayout));
-    console.log("QA_APPROVED_PREVIEW "+JSON.stringify(previewLayout));
-    await emit(page,1200,"approved_preview_first_viewport");
+    const layout=await preview.locator("body").evaluate(async body=>{
+      const doc=body.ownerDocument;
+      await doc.fonts.load("800 30px Manrope");
+      await doc.fonts.ready;
+      const images=[...doc.images];
+      const tabs=[...doc.querySelectorAll(".tabs span")].map(node=>Math.round(node.getBoundingClientRect().top));
+      return {width:doc.documentElement.scrollWidth,fontLoaded:doc.fonts.check("800 30px Manrope"),
+        sheets:[...doc.styleSheets].map(sheet=>sheet.href).filter(Boolean),
+        imagesLoaded:images.every(image=>image.complete&&image.naturalWidth>0),
+        tabRows:new Set(tabs).size,paths:doc.querySelectorAll("#focus .path-row").length,
+        choices:doc.querySelectorAll("#listing-strip button").length,
+        heading:doc.querySelector(".lead h2")?.textContent?.trim()};
+    });
+    if(layout.width>width||!layout.fontLoaded||!layout.imagesLoaded||layout.paths!==3||layout.choices!==3
+      ||layout.heading!=="Top listings in your shop"||layout.tabRows!==(width===1200?1:2)
+      ||!layout.sheets.some(sheet=>sheet.endsWith("/opportunity-preview-v5/style-local.css")))
+      throw new Error("Approved design preview differs: "+JSON.stringify({width,...layout}));
+    console.log("QA_APPROVED_PREVIEW "+JSON.stringify({viewport:width,...layout}));
+    await emit(page,width,"approved_preview_first_viewport");
     await context.close();
   }
   for(const width of [390,320,1280]){
