@@ -13,7 +13,7 @@ type Link={label:string;url:string};
 type Card={id:string;category:Category;tag:string;title:string;imageUrl?:string;
   evidence:string;direction:string;points:string[];links:Link[];
   pair?:{own:{image:string;url:string};other:{image:string;url:string}};
-  source?:"shop"|"market"};
+  source?:"shop"|"market";balance?:{catalog:number;customer:number}};
 const listingUrl=(id:number)=>"https://www.etsy.com/listing/"+id;
 const labelFor=(kind:ShopFinding["kind"]):Category=>
   kind==="emerging"?"build":kind==="restore"?"restore":"improve";
@@ -55,6 +55,7 @@ export function SiteOpportunities({findings,actions,map,marketProof,days,priorit
   }
   if(days===90)for(const row of map.overbuilt??[])cards.push({
     id:"balance-"+row.key,category:"improve",tag:"CATALOG BALANCE",title:row.label,
+    balance:{catalog:row.catalogPercent,customer:row.customerPercent},
     evidence:row.catalogPercent+"% of active designs · "+row.customerPercent+"% of "+(map.basis==="sales-90"?"90-day sales":"response"),
     direction:"Compare exposure and age before adding more.",
     points:["Count related active products and their dated purchases.","Check visits, availability, and listing age before interpreting the gap."],links:[],source:"shop",
@@ -111,7 +112,10 @@ export function SiteOpportunities({findings,actions,map,marketProof,days,priorit
       {shown.map(card=><article className="oe-site-card" key={card.id} data-type={card.category}
         data-source={card.source}>
         <div className="oe-site-card-art">
-          {card.pair?<div className="oe-site-pair">
+          {card.balance?<div className="oe-site-balance" aria-label={card.balance.catalog+"% of active designs versus "+card.balance.customer+"% of customer response"}>
+            <span className="oe-site-balance-catalog" style={{width:Math.max(5,Math.min(100,card.balance.catalog))+"%"}}/>
+            <span className="oe-site-balance-customer" style={{width:Math.max(5,Math.min(100,card.balance.customer))+"%"}}/>
+          </div>:card.pair?<div className="oe-site-pair">
             <a href={card.pair.own.url} target="_blank" rel="noopener noreferrer" aria-label="View your product">
               <img src={card.pair.own.image} alt="" width={66} height={66} loading="lazy"/></a>
             <a href={card.pair.other.url} target="_blank" rel="noopener noreferrer" aria-label="View Etsy comparison">
