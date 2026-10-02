@@ -4,6 +4,7 @@ import { isOwner } from "@/app/owner-allowlist";
 import QaMobileMetrics from "@/app/qa/mobile-metrics";
 import FactoryShell from "@/app/factory-shell";
 import ShopMapClient from "./shop-map-client";
+import { approvedPreviewDocument } from "./approved-preview-document";
 import "./shop-map.css";
 import {env} from "cloudflare:workers";
 
@@ -25,7 +26,7 @@ export default async function ShopMapPage({searchParams}:{searchParams:Promise<{
   const ownerPreview = "emailVerified" in user && isOwner(user);
   if ((ownerPreview && params.live !== "1") || (reviewer && params.designPreview === "1")) {
     return <div data-opportunity-design-preview style={{position:"fixed",inset:0,zIndex:2147483647,background:"#fff"}}>
-      <iframe title="Approved Opportunity Engine design review" src="/opportunity-preview-v5/index.html"
+      <iframe title="Approved Opportunity Engine design review" srcDoc={approvedPreviewDocument}
         style={{display:"block",width:"100%",height:"100%",border:0}} />
     </div>;
   }
