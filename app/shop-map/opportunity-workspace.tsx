@@ -277,14 +277,17 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
       <div className={styles.sectionHead}><h2>What customers are choosing</h2><span>Last {map.days} days</span></div>
       {hasPhrasePatterns?<div className={styles.patterns}>{patternContext!.patterns.slice(0,3).map(row=><div key={row.key} className={styles.pattern}>
         <strong>{row.label}</strong><span><b>{row.customerPercent}%</b> of purchased units</span>
+        <span className={styles.patternBar} aria-hidden="true"><i style={{width:row.customerPercent+"%"}}/></span>
         <small>{row.catalogListings} related listing{row.catalogListings===1?"":"s"} in your shop</small>
       </div>)}</div>:<div className={styles.patterns}>
         {(map.productMix??[]).slice(0,2).map(row=><div key={row.label} className={styles.pattern}>
           <strong>{row.label}</strong><span><b>{pct(row.share)}</b> of purchased units</span>
+          <span className={styles.patternBar} aria-hidden="true"><i style={{width:Math.round(row.share*100)+"%"}}/></span>
           <small>{row.listingCount} purchased listing{row.listingCount===1?"":"s"}</small>
         </div>)}
         <div className={styles.pattern}><strong>Top three listings</strong>
           <span><b>{pct(topThreeShare)}</b> of purchased units</span>
+          <span className={styles.patternBar} aria-hidden="true"><i style={{width:Math.round(topThreeShare*100)+"%"}}/></span>
           <small>Share of your recorded purchases in this period</small></div>
       </div>}
       <p className={styles.patternNote}>{hasPhrasePatterns
@@ -292,7 +295,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
         :(map.productMix?.length?"Product types from your catalog; shares use all recorded purchases.":"Based on recorded purchases in this period.")}</p>
     </section>:null}
     {reviewItems.length>0?<section className={styles.reviewSection}>
-      <div className={styles.sectionHead}><h2>Review these</h2><span>{reviewItems.length} shop finding{reviewItems.length===1?"":"s"}</span></div>
+      <div className={styles.sectionHead}><h2>Review these</h2><span>Product-level findings</span></div>
       <div className={styles.reviewGrid}>{reviewItems.slice(0,3).map(item=><button type="button" key={item.id} className={styles.reviewCard} onClick={()=>open(item)}>
         {item.imageUrl?<img src={item.imageUrl} alt="" width={64} height={64}/>:null}
         <span><small>{item.tag??(item.kind==="build"?"BUILD":item.kind==="restore"?"RECOVER":"COMPARE")}</small>
