@@ -70,7 +70,8 @@ try{
     await emit(page,width,"second_product");
     await choices(page).first().click();
     const path=focus(page).getByRole("button",{name:/Compare|Review|Test|Check|Explore/i}).first();
-    if(await path.count()){
+    if(!(await path.count()))throw new Error("Focused product has no checked direction in reviewer fixture");
+    {
       await path.click();
       const dialog=page.getByRole("dialog");await dialog.waitFor({state:"visible"});
       if(!(await dialog.locator("li").count()))throw new Error("Product detail lacks evidence checks");
@@ -84,6 +85,8 @@ try{
       if(!content)throw new Error("A whole-shop group is blank");
     }
     await emit(page,width,"whole_shop",true);
+    const listedFindings=await workspace(page).locator("details button").count();
+    if(listedFindings<1)throw new Error("Whole-shop discovery is blank in reviewer fixture");
     if(width<600){
       await page.locator(".oe-site-period").getByRole("button",{name:"Last 30 days"}).click();
       await waitReady(page);
@@ -122,6 +125,10 @@ try{
   await emit(page,320,"loading");
   await page.getByText("No purchases in this period.",{exact:false}).waitFor({timeout:20000});
   await emit(page,320,"empty_purchases");
+  const factory=await context.newPage();
+  const factoryResponse=await factory.goto("https://thegoldiesuite.com/listing-factory",{waitUntil:"domcontentloaded",timeout:60000});
+  if(!factoryResponse||factoryResponse.status()>=500)throw new Error("Protected Listing Factory route failed");
+  console.log("QA_LISTING_FACTORY_ROUTE "+JSON.stringify({status:factoryResponse.status()}));
   await context.close();
   await writeFile("qa-artifacts/results.json",JSON.stringify(results,null,2));
 }finally{await browser.close()}
