@@ -236,6 +236,11 @@ try {
         priorities:listings.slice(0,3),listings},
     })});
   });
+  await tiePage.route(url=>url.pathname==="/api/shop-map/map"&&url.searchParams.get("view")==="overview-insights",async route=>{
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({
+      shop:{shopId:900001,shopName:"Goldie Reviewer Shop"},productDirections:[],
+    })});
+  });
   await tiePage.goto("https://thegoldiesuite.com/shop-map",{waitUntil:"domcontentloaded",timeout:60000});
   const ties=tiePage.getByRole("button",{name:"View 1 tied listing"});
   await ties.waitFor({timeout:15000});
