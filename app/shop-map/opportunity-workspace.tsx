@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useMemo,useRef,useState} from "react";
+import {useEffect,useMemo,useRef,useState,type ReactNode} from "react";
 import type {PurchasePriority,PurchasePriorityMap} from "@/app/shop-map-purchase-priorities";
 import type {ProductDirection} from "@/app/shop-map-product-expansion";
 import type {ShopFinding} from "@/app/shop-map-opportunity-discovery";
@@ -111,9 +111,9 @@ function publicComparisonDetail(row:PurchasePriority,peer:PublicComparison,query
 }
 
 export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],patterns,catalogPatterns,marketProof=[],reviews=[],
-  analysisFailed=false,onRetry}: {map:PurchasePriorityMap;directions?:ProductDirection[];findings?:ShopFinding[];
+  sourceAnalysis,analysisFailed=false,onRetry}: {map:PurchasePriorityMap;directions?:ProductDirection[];findings?:ShopFinding[];
   actions?:CatalogAction[];patterns?:WinningPatternMap;catalogPatterns?:WinningPatternMap;marketProof?:ArtworkMarketProof[];
-  reviews?:OwnReviewInsight[];analysisFailed?:boolean;onRetry?:()=>void}){
+  reviews?:OwnReviewInsight[];sourceAnalysis?:ReactNode;analysisFailed?:boolean;onRetry?:()=>void}){
   const [selectedId,setSelectedId]=useState<number|null>(null);
   const [catalog,setCatalog]=useState<CatalogListing[]>([]);
   const [publicComparisons,setPublicComparisons]=useState<Record<number,PublicComparisonResult>>({});
@@ -285,7 +285,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
           <strong>{item.title}</strong><em>{item.brief}</em></span><b aria-hidden="true">›</b>
       </button>)}</div>
     </section>:null}
-    {reviewItems.length>3?<details className={styles.deeper}><summary><strong>Go deeper</strong><span>{reviewItems.length-3} more findings <b aria-hidden="true">⌄</b></span></summary>
+    {reviewItems.length>3||sourceAnalysis?<details className={styles.deeper}><summary><strong>Go deeper</strong><span>More findings <b aria-hidden="true">⌄</b></span></summary>
       <div className={styles.groups}>{groups.map(([kind,label])=>{
         const items=reviewItems.slice(3).filter(item=>item.kind===kind);
         if(!items.length)return null;
@@ -294,7 +294,9 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
             {item.imageUrl?<img src={item.imageUrl} alt="" width={53} height={53}/>:<span className={styles.noThumb} aria-hidden="true"/>}
             <span><strong>{item.title}</strong><small>{item.brief}</small></span><b aria-hidden="true">›</b>
           </button>)}</div>
-        </section>})}</div>
+        </section>})}
+        {sourceAnalysis?<div className={styles.sourceAnalysis}>{sourceAnalysis}</div>:null}
+      </div>
     </details>:null}
     <dialog ref={dialog} className={styles.dialog} aria-label={detail?.title||"Opportunity evidence"}
       onClose={()=>setDetail(null)} onClick={event=>{if(event.target===dialog.current)close()}}>
