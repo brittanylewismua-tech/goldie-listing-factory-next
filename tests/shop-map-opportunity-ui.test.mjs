@@ -70,8 +70,9 @@ test("Opportunity Engine copy stays short",()=>{
   assert.match(workspace,/What customers are choosing/);
   assert.match(workspace,/Review these/);
   assert.match(workspace,/Go deeper/);
-  assert.match(overview,/className="oe-site-deep"/);
-  assert.match(overview,/Explore source analysis/);
+  assert.match(overview,/sourceAnalysis=\{shown\.patterns/);
+  assert.match(workspace,/sourceAnalysis\?<div className=\{styles\.sourceAnalysis\}>/);
+  assert.doesNotMatch(overview,/Explore source analysis/);
 });
 
 test("Opportunity Engine does not include the generic listing keyword checker",()=>{

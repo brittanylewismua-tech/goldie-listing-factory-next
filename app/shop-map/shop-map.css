@@ -2171,10 +2171,6 @@
   padding:9px 13px!important;border:1px solid #151515!important;border-radius:9px!important;
   background:#fff!important;color:#151515!important;font-size:12px!important;font-weight:800!important;
 }
-#suite-workspace .shop-map-redesign .oe-site-deep{margin:0 0 30px!important}
-#suite-workspace .shop-map-redesign .oe-site-deep>summary{
-  width:max-content!important;color:#151515!important;font-size:12px!important;font-weight:800!important;
-}
 #suite-workspace .shop-map-redesign .oe-site-dialog{
   width:min(650px,calc(100% - 30px))!important;max-width:650px!important;max-height:calc(100vh - 30px)!important;
   overflow:auto!important;padding:0!important;border:1px solid #dedede!important;border-radius:17px!important;
