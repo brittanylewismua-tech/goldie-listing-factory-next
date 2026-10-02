@@ -226,6 +226,18 @@ try {
   console.log("QA_IMAGE_BEGIN 1280 desktop_overview");
   for(let offset=0;offset<desktopFull.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopFull.slice(offset,offset+16000));
   console.log("QA_IMAGE_END 1280 desktop_overview");
+  const desktopReview=desktopPage.locator(".oe-review");
+  await desktopReview.scrollIntoViewIfNeeded();
+  const desktopReviewImage=(await desktopPage.screenshot({type:"jpeg",quality:40})).toString("base64");
+  console.log("QA_IMAGE_BEGIN 1280 desktop_review");
+  for(let offset=0;offset<desktopReviewImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopReviewImage.slice(offset,offset+16000));
+  console.log("QA_IMAGE_END 1280 desktop_review");
+  const desktopResearch=desktopPage.locator(".shop-map-recommendations");
+  await desktopResearch.scrollIntoViewIfNeeded();
+  const desktopResearchImage=(await desktopPage.screenshot({type:"jpeg",quality:40})).toString("base64");
+  console.log("QA_IMAGE_BEGIN 1280 desktop_research");
+  for(let offset=0;offset<desktopResearchImage.length;offset+=16000)console.log("QA_IMAGE_CHUNK "+desktopResearchImage.slice(offset,offset+16000));
+  console.log("QA_IMAGE_END 1280 desktop_research");
   const evidenceToggle=desktopHero.locator(".oe-detail summary");
   await evidenceToggle.focus();
   await desktopPage.keyboard.press("Enter");
