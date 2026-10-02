@@ -2242,3 +2242,10 @@
   #suite-workspace .shop-map-redesign .oe-site-balance{width:65px!important;height:65px!important;padding:9px!important;gap:7px!important}
   #suite-workspace .shop-map-redesign .oe-site-balance span{min-height:8px!important}
 }
+
+/* Keep the approved tab grid stable under pointer and keyboard interaction. */
+#suite-workspace .shop-map-redesign .shop-map-tabs button:hover,
+#suite-workspace .shop-map-redesign .shop-map-tabs button:focus-visible{
+  transform:none!important;
+}
+#suite-workspace .shop-map-redesign .shop-map-tabs button{min-height:40px!important}
