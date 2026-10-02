@@ -97,7 +97,7 @@ function publicComparisonDetail(row:PurchasePriority,peer:PublicComparison,query
   return {id:`public-${row.listingId}-${peer.listingId}`,kind:"improve",title:`Compare ${shortLabel(peer.title)}`,
     brief:peer.difference,sourceId:row.listingId,imageUrl:row.imageUrl,comparisonImageUrl:peer.imageUrl,relatedId:peer.listingId,
     sources:[{label:"Your product",url:listingUrl(row.listingId)},{label:"Etsy comparison",url:peer.url}],
-    checks:[`${peer.reviewCount} public listing reviews; latest dated ${new Date(peer.latestReviewAt*1000).toLocaleDateString()}. Reviews are evidence of reviewed purchases, not a sales total.`,
+    checks:[`${peer.reviewCount} public listing reviews; a sampled review is dated ${new Date(peer.latestReviewAt*1000).toLocaleDateString()}. Reviews are evidence of reviewed purchases, not a sales total.`,
       peer.price?`Comparison price observed: ${peer.price}. Check your own current price and options before drawing a conclusion.`:"Comparison price was unavailable.",
       peer.reviewExcerpt?`One public review says: “${peer.reviewExcerpt}”`:"Read the public reviews for buyer context.",
       `Search basis: ${query}. Compare actual product images, purpose, options and materials before testing an original version.`]};
