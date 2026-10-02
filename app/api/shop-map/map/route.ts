@@ -450,6 +450,16 @@ async function buildMap(request: Request) {
       listingId:Number(sale.listing_id),quantity:Number(sale.quantity),
       soldAt:Number(sale.sold_at),refunded:Boolean(sale.refunded),
     })),now);
+    const ownReviewRows=await db.prepare(
+      `SELECT listing_id,rating,review,created_at FROM shop_map_own_reviews
+         WHERE user_id=? AND shop_id=? AND review<>'' ORDER BY created_at DESC LIMIT 200`)
+      .bind(user.userId,shopId)
+      .all<{listing_id:number;rating:number|null;review:string;created_at:number}>()
+      .catch(()=>({results:[] as Array<{listing_id:number;rating:number|null;review:string;created_at:number}>}));
+    const ownReviews=(ownReviewRows.results??[]).map(row=>({
+      listingId:Number(row.listing_id),rating:row.rating===null?null:Number(row.rating),
+      review:String(row.review||"").slice(0,1200),createdAt:Number(row.created_at),
+    }));
     const visual=discoverVisualWinningPatterns(visualInput);
     const shopRecentSignal=rows.reduce((sum,row)=>sum+(sales90.get(Number(row.listing_id))?.sales??0),0);
     const shopLifetimeSignal=rows.reduce((sum,row)=>sum+Math.max(0,Number(performance.get(Number(row.listing_id))?.lifetimeUnits??0)),0);
@@ -501,6 +511,7 @@ async function buildMap(request: Request) {
       winnerDna:completeVisualSignal?winnerDnaFrom(visualInput):null,
       productDirections,
       opportunityFindings,
+      ownReviews,
       analysedListingIds:[...seen],
       visualCoverage:{
         analysedListings:visualInput.length,totalListings:rows.length,
