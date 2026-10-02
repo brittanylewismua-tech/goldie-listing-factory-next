@@ -34,7 +34,7 @@ const measurements=async(page)=>page.evaluate(()=>{
   return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,
     bodyWidth:document.body.scrollWidth,tabRows:[...new Set(tabBoxes.map(box=>Math.round(box.top)))].length,
     selectorCount:selectors.length,selectorRows:[...new Set(selectors.map(box=>Math.round(box.top)))].length,
-    focusTop:focused?.top??null,heading:document.querySelector(".shop-map-head h1")?.textContent?.trim()??"",
+    focusTop:focused?.top??null,photoHeight:focused?.firstElementChild?.getBoundingClientRect().height??null,heading:document.querySelector(".shop-map-head h1")?.textContent?.trim()??"",
     oldLayoutVisible:[...document.querySelectorAll(".oe-priority-grid,.oe-site-grid,.oe-site-evidence-band")]
       .some(node=>node.getClientRects().length>0),
     groupCount:document.querySelectorAll('section[aria-labelledby="oe-workspace-title"] details').length,
@@ -66,6 +66,8 @@ try{
       ||layout.selectorCount!==3||layout.selectorRows!==(width<600?3:1)||layout.oldLayoutVisible||layout.clippedPurchaseLabels>0)
       throw new Error("Opportunity workspace layout failed: "+JSON.stringify(layout));
     if(width<600&&layout.tabRows!==2)throw new Error("Tabs are not 2×2");
+    if(width<600&&(layout.photoHeight===null||layout.photoHeight>140))
+      throw new Error("Mobile listing photo has an oversized layout row: "+JSON.stringify(layout));
     if(width<600&&(layout.focusTop===null||layout.focusTop>500))
       throw new Error("Top listing is too far down the first mobile screen: "+JSON.stringify(layout));
     if(width===1280&&layout.tabRows!==1)throw new Error("Desktop tabs do not share one row");
