@@ -36,7 +36,7 @@ export const GET=withErrorLog("shop-map-market-comparisons",async(request:Reques
   if(!own)return NextResponse.json({status:"unavailable",comparisons:[]},{headers:cacheControl});
   const family=familyOf(own.title)||familyOf(own.product_family);
   const query=queryFor(own.title,family);
-  if(!query)return NextResponse.json({status:"insufficient-context",comparisons:[]},{headers:cacheControl});
+  if(!query||!family)return NextResponse.json({status:"insufficient-context",comparisons:[]},{headers:cacheControl});
   await db.prepare("CREATE TABLE IF NOT EXISTS shop_map_market_comparison_cache (user_id TEXT NOT NULL,shop_id INTEGER NOT NULL,listing_id INTEGER NOT NULL,source_title TEXT NOT NULL,payload TEXT NOT NULL,checked_at INTEGER NOT NULL,PRIMARY KEY(user_id,shop_id,listing_id))").run();
   const now=Math.floor(Date.now()/1000);
   const cached=await db.prepare("SELECT payload,checked_at,source_title FROM shop_map_market_comparison_cache WHERE user_id=? AND shop_id=? AND listing_id=?")
