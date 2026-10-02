@@ -11,8 +11,7 @@ import type {WinnerDna} from "@/app/shop-map-winner-dna";
 import type {PurchasePriorityMap} from "@/app/shop-map-purchase-priorities";
 import type {ProductDirection} from "@/app/shop-map-product-expansion";
 import type {ShopFinding} from "@/app/shop-map-opportunity-discovery";
-import PurchasePriorities from "./purchase-priorities";
-import {SiteOpportunities} from "@/app/shop-map-site-opportunities";
+import {OpportunityWorkspace,type OwnReviewInsight} from "./opportunity-workspace";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
@@ -78,6 +77,7 @@ type ShopMap = {
   purchasePriorities?:PurchasePriorityMap;
   productDirections?:ProductDirection[];
   opportunityFindings?:ShopFinding[];
+  ownReviews?:OwnReviewInsight[];
   analysedListingIds?:number[];
   opportunities?: ShopOpportunity[];
   nextBuild?: NextBuildPlan;
@@ -652,10 +652,9 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId }:
 
     {tab === "overview" && <div className="shop-map-tab-panel">
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
-      {shown.purchasePriorities?<PurchasePriorities map={shown.purchasePriorities} directions={shown.productDirections} findings={shown.opportunityFindings??[]} analysisFailed={insightsFailed} onRetry={()=>void load()}/>:null}
+      {shown.purchasePriorities?<OpportunityWorkspace map={shown.purchasePriorities} directions={shown.productDirections} findings={shown.opportunityFindings??[]} actions={shown.catalogActions??[]} patterns={shown.patterns} marketProof={shown.marketProof??[]} reviews={shown.ownReviews??[]} analysisFailed={insightsFailed} onRetry={()=>void load()}/>:null}
       {insightsLoading?<section className="shop-map-inline-state" role="status">Checking other shop signals…</section>:null}
       {insightsFailed?<section className="shop-map-inline-state"><strong>Some analysis could not load.</strong> <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Retry</button></section>:null}
-      {shown.patterns?<SiteOpportunities map={shown.patterns} actions={shown.catalogActions??[]} marketProof={shown.marketProof??[]} priorityIds={shown.purchasePriorities?.priorities.map(row=>row.listingId)??[]} findings={shown.opportunityFindings??[]} days={selectedDays}/>:null}
       {shown.patterns?<details className="oe-site-deep"><summary>Explore source analysis</summary>
         {selectedDays===90?<WinningPatterns map={shown.patterns}/>:null}
         <ReviewThese map={shown.patterns} actions={shown.catalogActions??[]} dna={shown.winnerDna??null} marketProof={shown.marketProof??[]} priorityIds={shown.purchasePriorities?.priorities.map(row=>row.listingId)??[]} findings={shown.opportunityFindings??[]} days={selectedDays}/>

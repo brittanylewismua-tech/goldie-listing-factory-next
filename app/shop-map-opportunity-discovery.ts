@@ -6,7 +6,7 @@ export type DiscoveryListing={
 };
 export type DiscoverySale={listingId:number;quantity:number;soldAt:number;refunded:boolean};
 export type ShopFinding={
-  id:string; kind:"compare"|"emerging"|"restore"|"catalog-review";
+  id:string; kind:"compare"|"emerging"|"cooling"|"restore"|"catalog-review";
   listingIds:number[]; title:string; imageUrl:string; label:string;
   evidence:string; direction:string; detail:string;
 };
@@ -85,6 +85,22 @@ export function discoverShopFindings(
     });
   }
 
+  // A product can cool outside the leading set. Compare equal windows and
+  // ask for an exposure/availability check before treating the change as demand.
+  for(const [listingId,before] of prior){
+    const row=byId.get(listingId);
+    if(!row||row.state!=="active"||before<3)continue;
+    const count=recent.get(listingId)??0;
+    if(count*2>before)continue;
+    out.push({
+      id:`cooling-${listingId}`,kind:"cooling",listingIds:[listingId],
+      title:row.title,imageUrl:row.imageUrl,label:"CHANGING RESPONSE",
+      evidence:`${count} purchased in the last 30 days; ${before} in the prior 30.`,
+      direction:"Check why this product slowed before building another version.",
+      detail:"Compare listing age, views, stock, price, photos and seasonal timing across the same two windows. Purchase change alone cannot identify the cause.",
+    });
+  }
+
   const active=listings.filter(row=>row.state==="active");
   const shopUnits=[...period.values()].reduce((sum,value)=>sum+value,0);
   const familyGroups=new Map<string,DiscoveryListing[]>();
@@ -108,6 +124,6 @@ export function discoverShopFindings(
       detail:"The catalog share exceeds the purchase share. Check listing ages, visits, stock and which individual products drove the response before deciding whether this area is weak.",
     });
   }
-  const rank={compare:0,restore:1,emerging:2,"catalog-review":3};
+  const rank={compare:0,restore:1,emerging:2,cooling:3,"catalog-review":4};
   return out.sort((a,b)=>rank[a.kind]-rank[b.kind]||a.title.localeCompare(b.title));
 }
