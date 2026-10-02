@@ -80,7 +80,7 @@ export function qaMapFixture(url: URL) {
     shop,patterns,productDirections:ranked.map(direction),opportunityFindings:[
       {id:"existing-qa-art-1",kind:"compare",listingIds:[1,6],title:titles[0],imageUrl:images[0],label:"EXISTING FORMAT",
         evidence:`${days===30?8:22} purchased on tee; 0 on the existing sweatshirt in the last ${days} days.`,
-        direction:"Review the existing version before creating another.",detail:"Compare listing dates, visits, availability, imagery, price and options."},
+        direction:"Compare the existing version before creating another.",detail:"Compare listing dates, visits, availability, imagery, price and options."},
       {id:"emerging-4",kind:"emerging",listingIds:[4],title:titles[3],imageUrl:images[3],label:"EMERGING",
         evidence:"6 purchased in the last 30 days; 0 in the prior 30.",direction:"Inspect what changed before building on it.",
         detail:"Check listing age, visits, availability and related products."},
