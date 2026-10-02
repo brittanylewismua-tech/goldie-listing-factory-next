@@ -6,7 +6,7 @@ const client=readFileSync("app/shop-map/shop-map-client.tsx","utf8");
 const route=readFileSync("app/api/shop-map/map/route.ts","utf8");
 const actions=readFileSync("app/shop-map-artwork-actions.tsx","utf8");
 const review=readFileSync("app/shop-map-evidence-review.tsx","utf8");
-const purchase=readFileSync("app/shop-map/purchase-priorities.tsx","utf8");
+const workspace=readFileSync("app/shop-map/opportunity-workspace.tsx","utf8");
 const overview=client.slice(client.indexOf('{tab === "overview"'),client.indexOf('{tab === "themes"'));
 
 test("Opportunity Engine keeps analysis, reviews and deeper actions in order",()=>{
@@ -42,10 +42,10 @@ test("Opportunity Engine stays decision-first instead of repeating dashboard sta
   assert.doesNotMatch(overview,/Revenue · 90 days/);
   assert.doesNotMatch(overview,/WHERE TO FOCUS/);
   assert.match(client,/tab==="overview"\?"Opportunity Engine":"My Shop"/);
-  assert.match(overview,/SiteOpportunities/);
-  assert.match(purchase,/className="oe-priority-card"/);
-  assert.match(purchase,/className="oe-priority-grid"/);
-  assert.doesNotMatch(purchase,/other purchased unit.*remain beyond/i);
+  assert.match(overview,/OpportunityWorkspace/);
+  assert.match(workspace,/Products leading your shop/);
+  assert.match(workspace,/Paths from this product/);
+  assert.doesNotMatch(workspace,/other purchased unit.*remain beyond/i);
 });
 
 test("ranked priorities keep customer and active-design attention visually comparable",()=>{
@@ -57,7 +57,7 @@ test("ranked priorities keep customer and active-design attention visually compa
 
 test("Opportunity Engine can discover winning patterns without assuming a customer world exists",()=>{
   assert.match(client,/WinningPatterns/);
-  assert.match(client,/PurchasePriorities map=\{shown\.purchasePriorities\}/);
+  assert.match(client,/OpportunityWorkspace map=\{shown\.purchasePriorities\}/);
   assert.doesNotMatch(overview,/WHAT CUSTOMERS ARE VOTING FOR/);
   assert.doesNotMatch(overview,/Common shop-wide wording is discounted/);
   assert.doesNotMatch(overview,/It will not manufacture the rest of a top five/);
@@ -66,7 +66,7 @@ test("Opportunity Engine can discover winning patterns without assuming a custom
 test("Opportunity Engine copy stays short",()=>{
   assert.doesNotMatch(overview,/This pattern appears in/);
   assert.doesNotMatch(overview,/It will not manufacture/);
-  assert.match(purchase,/POSSIBLE TEST/);
+  assert.match(workspace,/Across your shop/);
   assert.match(overview,/className="oe-site-deep"/);
   assert.match(overview,/Explore source analysis/);
 });
