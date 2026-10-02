@@ -52,6 +52,7 @@ try{
     const preview=page.frameLocator('iframe[title="Approved Opportunity Engine design review"]');
     await preview.getByRole("heading",{name:"Opportunity Engine",exact:true}).waitFor({timeout:30000});
     await preview.getByText("Listing 1 of 5").waitFor({timeout:30000});
+    await page.waitForFunction(()=>{const doc=document.querySelector('iframe[title="Approved Opportunity Engine design review"]')?.contentDocument;return doc&&[...doc.images].every(image=>image.complete)},{},{timeout:20000});
     const layout=await preview.locator("body").evaluate(async body=>{
       const doc=body.ownerDocument;
       await doc.fonts.load("800 30px Manrope");
@@ -61,11 +62,13 @@ try{
       return {width:doc.documentElement.scrollWidth,fontLoaded:doc.fonts.check("800 30px Manrope"),
         sheets:[...doc.styleSheets].map(sheet=>sheet.href).filter(Boolean),
         imagesLoaded:images.every(image=>image.complete&&image.naturalWidth>0),
+        imageState:images.map(image=>({src:image.currentSrc,loaded:image.naturalWidth>0})),
+        manropeFaces:[...doc.fonts].filter(face=>face.family==="Manrope").map(face=>face.status),
         tabRows:new Set(tabs).size,paths:doc.querySelectorAll("#focus .path-row").length,
         choices:doc.querySelectorAll("#listing-strip button").length,
         heading:doc.querySelector(".lead h2")?.textContent?.trim()};
     });
-    if(layout.width>width||!layout.fontLoaded||!layout.imagesLoaded||layout.paths!==3||layout.choices!==3
+    if(layout.width>width||!layout.fontLoaded||!layout.manropeFaces.includes("loaded")||!layout.imagesLoaded||layout.paths!==3||layout.choices!==3
       ||layout.heading!=="Top listings in your shop"||layout.tabRows!==(width===1200?1:2)
       ||!layout.sheets.some(sheet=>sheet.endsWith("/opportunity-preview-v5/style-local.css")))
       throw new Error("Approved design preview differs: "+JSON.stringify({width,...layout}));
