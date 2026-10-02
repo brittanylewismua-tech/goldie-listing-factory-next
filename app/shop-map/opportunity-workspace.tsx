@@ -234,8 +234,12 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
           {diagnosis?<p className={styles.interpret}>{diagnosis}</p>:null}
           {selectedPaths.length>0?<>
             <div className={styles.pathHead}><h4>Ideas and checks for this listing</h4><span>{selectedPaths.length} to explore</span></div>
-            <div className={styles.paths}>{selectedPaths.map(item=><button type="button" key={item.id} className={styles.path}
-              onClick={()=>open(item)}><span><strong>{item.title}</strong><small>{item.brief}</small></span><span aria-hidden="true">›</span></button>)}</div>
+            <div className={styles.paths}>{selectedPaths.slice(0,3).map(item=><button type="button" key={item.id} className={styles.path}
+              onClick={()=>open(item)}><span><strong>{item.title}</strong></span><span aria-hidden="true">›</span></button>)}</div>
+            {selectedPaths.length>3?<details className={styles.morePaths}><summary>More for this listing ({selectedPaths.length-3})</summary>
+              <div className={styles.paths}>{selectedPaths.slice(3).map(item=><button type="button" key={item.id} className={styles.path}
+                onClick={()=>open(item)}><span><strong>{item.title}</strong></span><span aria-hidden="true">›</span></button>)}</div>
+            </details>:null}
             {publicComparisons[selected.listingId]?.status==="loading"?<p className={styles.localState} role="status">Checking related Etsy listings…</p>:null}
             {["unavailable","no-reviewed-match","insufficient-context"].includes(publicComparisons[selected.listingId]?.status||"")?<p className={styles.localState} role="status">No reviewed Etsy match for this listing.</p>:null}
           </>:<div className={styles.localState} role="status">
