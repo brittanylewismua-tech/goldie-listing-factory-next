@@ -103,9 +103,9 @@ function publicComparisonDetail(row:PurchasePriority,peer:PublicComparison,query
       `Search basis: ${query}. Compare actual product images, purpose, options and materials before testing an original version.`]};
 }
 
-export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],patterns,marketProof=[],reviews=[],
+export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],patterns,catalogPatterns,marketProof=[],reviews=[],
   analysisFailed=false,onRetry}: {map:PurchasePriorityMap;directions?:ProductDirection[];findings?:ShopFinding[];
-  actions?:CatalogAction[];patterns?:WinningPatternMap;marketProof?:ArtworkMarketProof[];
+  actions?:CatalogAction[];patterns?:WinningPatternMap;catalogPatterns?:WinningPatternMap;marketProof?:ArtworkMarketProof[];
   reviews?:OwnReviewInsight[];analysisFailed?:boolean;onRetry?:()=>void}){
   const [selectedId,setSelectedId]=useState<number|null>(null);
   const [catalog,setCatalog]=useState<CatalogListing[]>([]);
@@ -130,6 +130,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   const featured=useMemo(()=>map.listings.slice(0,10),[map.listings]);
   const selected=featured.find(row=>row.listingId===selectedId)??featured[0];
   const selectedIndex=selected?featured.findIndex(row=>row.listingId===selected.listingId):-1;
+  const patternContext=map.days===90&&patterns?.patterns.length?patterns:catalogPatterns;
   useEffect(()=>{if(!selected?.listingId||requestedComparisons.current.has(selected.listingId))return;
     const id=selected.listingId;requestedComparisons.current.add(id);
     setPublicComparisons(previous=>({...previous,[id]:{status:"loading",comparisons:[]}}));
@@ -151,7 +152,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
     if(own?.artworkHash)for(const peer of catalog.filter(item=>item.listingId!==row.listingId&&item.artworkHash===own.artworkHash))
       allDetails.push(peerDetail(row,peer));
   }
-  if(patterns&&map.days===90&&catalogState==="available")for(const pattern of patterns.patterns.slice(0,5)){
+  if(patternContext?.basis==="sales-90"&&map.days===90&&catalogState==="available")for(const pattern of patternContext.patterns.slice(0,5)){
     const matched=catalog.filter(row=>pattern.listingIds.includes(row.listingId)
       &&row.artworkHash&&row.imageUrl&&(row.sold90??0)>0);
     for(const own of matched.slice(0,5)){
@@ -209,16 +210,15 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
   const groups:[Kind,string][]=[["build","Build on proven demand"],["improve","Improve an existing offer"],["restore","Recover or prepare"]];
   const open=(item:Detail)=>{setDetail(item);requestAnimationFrame(()=>dialog.current?.showModal())};
   const close=()=>{dialog.current?.close();setDetail(null)};
+  const reviewItems=details.filter(item=>!selected||item.sourceId!==selected.listingId);
+  const choice=(row:PurchasePriority,index:number)=><button key={row.listingId} type="button" className={styles.choice}
+    aria-pressed={selected?.listingId===row.listingId} onClick={()=>setSelectedId(row.listingId)}>
+    {row.imageUrl?<img src={row.imageUrl} alt="" width={66} height={66}/>:<span className={styles.noThumb} aria-hidden="true"/>}
+    <span><b>{index+1}. {shortLabel(row.title)}</b><small>{row.unitsPurchased} purchased</small></span>
+  </button>;
   return <section className={styles.workspace} aria-labelledby="oe-workspace-title">
     <div className={styles.heading}><div><h2 id="oe-workspace-title">Top listings in your shop</h2><p>These are the listings your customers are voting the most on.</p></div><span>Last {map.days} days</span></div>
     {selected?<>
-      <div className={styles.selector} role="group" aria-label="Choose a purchased product">
-        {featured.map((row,index)=><button key={row.listingId} type="button" className={styles.choice}
-          aria-pressed={selected.listingId===row.listingId} onClick={()=>setSelectedId(row.listingId)}>
-          {row.imageUrl?<img src={row.imageUrl} alt="" width={43} height={43}/>:<span className={styles.noThumb} aria-hidden="true"/>}
-          <span><b>{index+1}. {shortLabel(row.title)}</b><small>{row.unitsPurchased} purchased</small></span>
-        </button>)}
-      </div>
       <article className={styles.focus} aria-live="polite">
         <div className={styles.art}>{selected.imageUrl?<img src={selected.imageUrl} alt={selected.title} width={300} height={300}
           fetchPriority={selected.rank===1?"high":undefined}/>:<span>Listing image unavailable</span>}</div>
@@ -250,19 +250,43 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
           </div>}
         </div>
       </article>
+      <div className={styles.listingChoices} role="group" aria-label="Top purchased listings">
+        <div className={styles.selector}>{featured.slice(0,3).map(choice)}</div>
+        {featured.length>3?<details className={styles.more}><summary>View listings 4–{featured.length}</summary>
+          <div className={styles.moreChoices}>{featured.slice(3).map((row,index)=>choice(row,index+3))}</div>
+        </details>:null}
+      </div>
     </>:<p className={styles.localState}>No purchases in this period. Try the other period to see purchased products.</p>}
-    <div className={styles.shopHead}><h2>Across your shop</h2><p>Product connections and opportunities beyond the leading listings.</p></div>
-    <div className={styles.groups}>{groups.map(([kind,label],index)=>{
-      const items=details.filter(item=>item.kind===kind&&(!selected||item.sourceId!==selected.listingId));
-      return <details key={kind} className={styles.group} open={expanded.includes(kind)}
-        onToggle={event=>{const isOpen=event.currentTarget.open;setExpanded(previous=>
-          isOpen?previous.includes(kind)?previous:[...previous,kind]:previous.filter(item=>item!==kind))}}>
-        <summary><span>{label}<small>{items.length} finding{items.length===1?"":"s"}</small></span><span aria-hidden="true">⌄</span></summary>
-        <div>{items.length?items.map(item=><button type="button" key={item.id} className={styles.finding} onClick={()=>open(item)}>
-          {item.imageUrl?<img src={item.imageUrl} alt="" width={53} height={53}/>:<span className={styles.noThumb} aria-hidden="true"/>}
-          <span><strong>{item.title}</strong><small>{item.brief}</small></span><span aria-hidden="true">›</span>
-        </button>):<p className={styles.empty}>No checked findings in this group for the selected period.</p>}</div>
-      </details>})}</div>
+    {patternContext?.basis==="sales-90"&&patternContext.patterns.length>0?<section className={styles.customer}>
+      <div className={styles.sectionHead}><h2>What customers are choosing</h2><span>Last {map.days} days</span></div>
+      <div className={styles.patterns}>{patternContext.patterns.slice(0,3).map(row=><div key={row.key} className={styles.pattern}>
+        <strong>{row.label}</strong><span><b>{row.customerPercent}%</b> of purchased units</span>
+        <small>{row.catalogListings} related listing{row.catalogListings===1?"":"s"} in your shop</small>
+      </div>)}</div>
+      <p className={styles.patternNote}>{map.days===90&&patterns?.patterns.length?"Based on analyzed product images.":"Based on listing titles and tags."} Themes may overlap.</p>
+    </section>:null}
+    {reviewItems.length>0?<section className={styles.reviewSection}>
+      <div className={styles.sectionHead}><h2>Review these</h2><span>{reviewItems.length} shop finding{reviewItems.length===1?"":"s"}</span></div>
+      <div className={styles.reviewGrid}>{reviewItems.slice(0,3).map(item=><button type="button" key={item.id} className={styles.reviewCard} onClick={()=>open(item)}>
+        {item.imageUrl?<img src={item.imageUrl} alt="" width={64} height={64}/>:null}
+        <span><small>{item.kind==="build"?"BUILD":item.kind==="restore"?"RECOVER":"COMPARE"}</small>
+          <strong>{item.title}</strong><em>{item.brief}</em></span>
+      </button>)}</div>
+    </section>:null}
+    {reviewItems.length>3?<details className={styles.deeper}><summary>Go deeper <span>{reviewItems.length-3} more findings</span></summary>
+      <div className={styles.groups}>{groups.map(([kind,label])=>{
+        const items=reviewItems.slice(3).filter(item=>item.kind===kind);
+        if(!items.length)return null;
+        return <details key={kind} className={styles.group} open={expanded.includes(kind)}
+          onToggle={event=>{const isOpen=event.currentTarget.open;setExpanded(previous=>
+            isOpen?previous.includes(kind)?previous:[...previous,kind]:previous.filter(item=>item!==kind))}}>
+          <summary><span>{label}<small>{items.length} finding{items.length===1?"":"s"}</small></span><span aria-hidden="true">⌄</span></summary>
+          <div>{items.map(item=><button type="button" key={item.id} className={styles.finding} onClick={()=>open(item)}>
+            {item.imageUrl?<img src={item.imageUrl} alt="" width={53} height={53}/>:<span className={styles.noThumb} aria-hidden="true"/>}
+            <span><strong>{item.title}</strong><small>{item.brief}</small></span><span aria-hidden="true">›</span>
+          </button>)}</div>
+        </details>})}</div>
+    </details>:null}
     <dialog ref={dialog} className={styles.dialog} aria-label={detail?.title||"Opportunity evidence"}
       onClose={()=>setDetail(null)} onClick={event=>{if(event.target===dialog.current)close()}}>
       {detail?<div className={styles.dialogInner}><div className={styles.dialogTop}><span>{detail.kind==="build"?"BUILD":detail.kind==="restore"?"RECOVER":"COMPARE"}</span>
