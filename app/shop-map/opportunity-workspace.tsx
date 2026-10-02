@@ -14,7 +14,7 @@ type CatalogListing={listingId:number;title:string;state:string;family:string;im
   artworkHash:string;sold90:number|null;views:number|null;favorites:number|null};
 export type OwnReviewInsight={listingId:number;review:string;rating:number|null;createdAt:number};
 type Kind="build"|"improve"|"restore";
-type Detail={id:string;kind:Kind;title:string;brief:string;sourceId?:number;imageUrl?:string;
+type Detail={id:string;kind:Kind;title:string;brief:string;sourceId?:number;imageUrl?:string;comparisonImageUrl?:string;buildBrief?:string;
   sources:Array<{label:string;url?:string}>;checks:string[];relatedId?:number};
 const listingUrl=(id:number)=>`https://www.etsy.com/listing/${id}`;
 const pct=(n:number)=>n>0&&n<.005?"<1%":`${Math.round(n*100)}%`;
@@ -39,6 +39,7 @@ function directionDetail(row:PurchasePriority,direction:ProductDirection):Detail
     id:`test-${row.listingId}`,kind:"build",title:direction.proposedChange,
     brief:direction.retainedCharacteristic?`Carry forward ${direction.retainedCharacteristic}.`:direction.whyNow,
     sourceId:row.listingId,imageUrl:row.imageUrl,
+    buildBrief:`Keep ${direction.retainedCharacteristic||"the verified product characteristic"}. Change: ${direction.proposedChange} Verify the existing catalog and production fit first.`,
     sources:[{label:"Purchased product",url:listingUrl(row.listingId)}],
     checks:[direction.catalogCoverage,"Confirm print area, materials, production cost and buyer purpose before building."]};
   return null;
@@ -61,7 +62,7 @@ function peerDetail(row:PurchasePriority,peer:CatalogListing):Detail{
   return {id:`peer-${row.listingId}-${peer.listingId}`,kind:peer.state==="active"?"improve":"restore",
     title:peer.state==="active"?`Compare the existing ${peer.family||"version"}`:"Review the unavailable version",
     brief:`This artwork is already listed as ${shortLabel(peer.title)}. ${peerSales}.`,
-    sourceId:row.listingId,imageUrl:peer.imageUrl,relatedId:peer.listingId,
+    sourceId:row.listingId,imageUrl:row.imageUrl,comparisonImageUrl:peer.imageUrl,relatedId:peer.listingId,
     sources:[{label:"Selected product",url:listingUrl(row.listingId)},
       {label:"Existing version",url:listingUrl(peer.listingId)}],
     checks:["The catalog links these listings by exact artwork identity.",
@@ -71,7 +72,7 @@ function peerDetail(row:PurchasePriority,peer:CatalogListing):Detail{
 function marketDetail(row:PurchasePriority,proof:ArtworkMarketProof,peer:NonNullable<ArtworkMarketProof["listings"]>[number]):Detail{
   return {id:`market-${row.listingId}-${peer.listingId}`,kind:"improve",title:"Compare a related Etsy product",
     brief:`A product in the saved “${proof.phrase}” watch has dated public activity. Inspect the actual products before choosing an original test.`,
-    sourceId:row.listingId,imageUrl:peer.imageUrl,relatedId:peer.listingId,
+    sourceId:row.listingId,imageUrl:row.imageUrl,comparisonImageUrl:peer.imageUrl,relatedId:peer.listingId,
     sources:[{label:"Your product",url:listingUrl(row.listingId)},{label:"Etsy comparison",url:peer.etsyUrl}],
     checks:[`Matched product format: ${productFamily(peer.title)||"needs review"}.`,
       `${peer.observedUnits30} observed stock decreases as of ${new Date(peer.confirmedAt*1000).toLocaleDateString()}; these are not confirmed purchases.`,
@@ -202,6 +203,8 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
       {detail?<div className={styles.dialogInner}><div className={styles.dialogTop}><span>{detail.kind==="build"?"BUILD":detail.kind==="restore"?"RECOVER":"COMPARE"}</span>
         <button type="button" onClick={close} aria-label="Close details">×</button></div>
         <h2>{detail.title}</h2><p>{detail.brief}</p>
+        {detail.comparisonImageUrl&&detail.imageUrl?<div className={styles.comparison}><figure><img src={detail.imageUrl} alt="Your product" width={220} height={190}/><figcaption>Your product</figcaption></figure><figure><img src={detail.comparisonImageUrl} alt="Comparison product" width={220} height={190}/><figcaption>Comparison product</figcaption></figure></div>:null}
+        {detail.buildBrief?<div className={styles.buildBrief}><h3>Build brief</h3><p>{detail.buildBrief}</p></div>:null}
         <div className={styles.sources}>{detail.sources.map((source,index)=>source.url
           ?<a key={index} href={source.url} target="_blank" rel="noopener noreferrer">{source.label}</a>
           :<span key={index}>{source.label}</span>)}</div>
