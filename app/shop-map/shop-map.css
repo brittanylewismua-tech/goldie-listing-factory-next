@@ -2256,3 +2256,18 @@
 #suite-workspace .shop-map-redesign .shop-map-tabs button{
   align-self:stretch!important;
 }
+
+@media(min-width:601px){
+  #suite-workspace .shop-map-redesign .shop-map-head.current-page-heading{
+    display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;
+    align-items:flex-end!important;justify-content:space-between!important;
+  }
+  #suite-workspace .shop-map-redesign .shop-map-head .oe-site-period{
+    width:auto!important;max-width:max-content!important;flex:0 0 auto!important;
+    margin:0!important;
+  }
+}
+
+#suite-workspace .shop-map-redesign .shop-map-tabs button[aria-current=page]{
+  box-shadow:none!important;
+}
