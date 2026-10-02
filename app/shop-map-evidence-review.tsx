@@ -6,6 +6,7 @@ import type {WinningPatternMap} from "./shop-map-patterns";
 import type {ArtworkMarketProof} from "./shop-map-artwork-actions";
 import type {WinnerDna} from "./shop-map-winner-dna";
 import type {ShopFinding} from "./shop-map-opportunity-discovery";
+import {productFamily} from "./product-type-utils";
 
 const compactFamily=(value:string)=>{
   const label=familyLabel(value).replace(/^an? /,"");
@@ -74,8 +75,20 @@ export function ReviewThese({map,actions,dna,marketProof=[],priorityIds=[],findi
   const overbuilt=days===90?map.overbuilt??[]:[];
   const shownDna=days===90?dna:null;
   const shownActions=days===90?actions:[];
+  const externalPairs=days===90&&sources?.catalog==="available"?marketProof.flatMap(proof=>{
+    const pattern=map.patterns.find(row=>row.key===proof.patternKey);
+    if(!pattern)return [];
+    const source=listings.filter(row=>pattern.listingIds.includes(row.listingId)&&row.sold90>0&&row.imageUrl)
+      .sort((a,b)=>b.sold90-a.sold90)[0];
+    if(!source)return [];
+    const peers=(proof.listings??[]).filter(row=>row.listingId!==source.listingId
+      &&row.imageUrl&&row.observedUnits30>0&&productFamily(source.title)!==""
+      &&productFamily(row.title)===productFamily(source.title));
+    if(!peers.length)return [];
+    return [{source,peer:peers[0],proof}];
+  }):[];
   const additionalFindings=findings.filter(row=>!priorityIds.includes(row.listingIds[0])||row.kind==="catalog-review");
-  if(!shownDna&&!overbuilt.length&&!shownActions.length&&!expansion.length&&!additionalFindings.length&&!sourceIssue)return null;
+  if(!shownDna&&!overbuilt.length&&!shownActions.length&&!expansion.length&&!additionalFindings.length&&!externalPairs.length&&!sourceIssue)return null;
   return <section className="oe-review" aria-labelledby="oe-review-title">
     <div className="oe-section-heading"><h2 id="oe-review-title">More opportunities</h2></div>
     <div className="oe-review-grid">
@@ -90,6 +103,26 @@ export function ReviewThese({map,actions,dna,marketProof=[],priorityIds=[],findi
         <details><summary>See the evidence</summary><p>{row.detail}</p>
           {row.listingIds.slice(0,4).map((id,index)=><a key={id} href={"https://www.etsy.com/listing/"+id}
             target="_blank" rel="noopener noreferrer">{index?"Related listing":"Source listing"}</a>)}
+        </details>
+      </article>)}
+      {externalPairs.map(({source,peer,proof})=><article key={proof.patternKey+"-"+peer.listingId}
+        className="oe-review-card oe-market-pair" data-source="market">
+        <span className="oe-card-tag">ETSY PRODUCT EVIDENCE</span>
+        <div className="oe-market-images">
+          <a href={"https://www.etsy.com/listing/"+source.listingId} target="_blank" rel="noopener noreferrer"
+            aria-label={"View "+source.title}><img src={source.imageUrl} alt="" width={70} height={70} loading="lazy"/>
+            <small>Your product</small></a>
+          <a href={peer.etsyUrl} target="_blank" rel="noopener noreferrer" aria-label={"View "+peer.title}>
+            <img src={peer.imageUrl} alt="" width={70} height={70} loading="lazy"/><small>Etsy comparison</small></a>
+        </div>
+        <h3>{shortLabel(source.title)}</h3>
+        <p>{peer.observedUnits30} sales-linked unit{peer.observedUnits30===1?"":"s"} observed for a related {compactFamily(source.family).toLowerCase()} on {new Date(peer.confirmedAt*1000).toLocaleDateString()}.</p>
+        <strong>Inspect the actual products and options before testing a difference.</strong>
+        <details><summary>See comparison evidence</summary>
+          <p>Matched through the saved “{proof.phrase}” watch and product format. The source listing had {source.sold90} purchased units in the last 90 days. The external observation is dated and is not a private Etsy sales report.</p>
+          <p>Compare imagery, wording, materials, options and price; matching search words alone do not prove the products serve the same buyer need.</p>
+          {peer.priceCents!=null?<p>External listing price: {new Intl.NumberFormat(undefined,{style:"currency",currency:peer.currency||"USD"}).format(peer.priceCents/100)}.</p>:null}
+          <a href={peer.etsyUrl} target="_blank" rel="noopener noreferrer">View Etsy comparison</a>
         </details>
       </article>)}
       {sourceIssue?<div className="oe-review-card oe-source-issue" role="status">

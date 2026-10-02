@@ -160,6 +160,13 @@ async function buildMap(request: Request) {
             return selling.length||moving?{
               patternKey,phrase:watch.phrase,
               sellingListings:selling.length,observedSold30,moving,productFamilies,
+              listings:selling.filter(row=>row.displayFresh&&row.imageUrl&&row.confirmedAt>=now-30*86400)
+                .slice(0,8).map(row=>({
+                  listingId:row.listingId,title:row.title,imageUrl:row.imageUrl,etsyUrl:row.etsyUrl,
+                  priceCents:row.priceCents,currency:row.currency,
+                  observedUnits30:row.sold30,confirmedAt:row.confirmedAt,
+                  reviewsOnThisListing:row.reviewsOnThisListing,
+                })),
             }:null;
           }catch{return null}
         }));
