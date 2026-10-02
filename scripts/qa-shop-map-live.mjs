@@ -78,8 +78,14 @@ try{
     await page.evaluate(()=>window.scrollTo({top:0,behavior:"instant"}));
     await emit(page,width,width===1280?"desktop_first_viewport":"overview_first_viewport");
     await emit(page,width,width===1280?"desktop_overview":"overview",true);
+    for(const index of [1,2]){
+      await p.nth(index).scrollIntoViewIfNeeded();
+      await emit(page,width,"priority_"+(index+1));
+    }
     await page.locator(".oe-site-grid").scrollIntoViewIfNeeded();
     await emit(page,width,"opportunity_grid");
+    await page.locator(".oe-site-evidence-band").scrollIntoViewIfNeeded();
+    await emit(page,width,"evidence_band");
     await page.locator(".oe-site-grid .oe-site-link").first().click();
     const dialog=page.locator(".oe-site-dialog");
     await dialog.waitFor({state:"visible"});
