@@ -1,5 +1,5 @@
 /* Isolated, read-only reviewer data. No Etsy or member account is used. */
-import { buildPurchasePriorities } from "./shop-map-purchase-priorities";
+import { buildPurchasePriorities, buildPurchasedProductMix } from "./shop-map-purchase-priorities";
 const shop = { shopId: 900001, shopName: "Goldie Reviewer Shop", imageUrl: "" };
 const images = [1,2,3,4,5,1,2,3,4,5].map(id => `/qa-artwork-${id}.svg`);
 const titles = [
@@ -61,9 +61,14 @@ export function qaMapFixture(url: URL) {
       {listingId:index+1,quantity:sold[index]-recent[index],priceMinor:2800,currency:"USD",soldAt:now-45*86400,refunded:false},
     ]);
     const days=Number(url.searchParams.get("days"))===30?30:90;
-    return {shop,purchasePriorities:buildPurchasePriorities(sales,
+    const purchasePriorities=buildPurchasePriorities(sales,
       titles.map((title,index)=>({listingId:index+1,title,imageUrl:images[index],state:"active"})),
-      {days,now,receiptsComplete:true,refreshedAt:now-3600})};
+      {days,now,receiptsComplete:true,refreshedAt:now-3600});
+    const productTypes=["T-shirts","Sweatshirts","T-shirts","Posters and prints","Mugs",
+      "Tote bags","Stickers","T-shirts","Posters and prints","Mugs"];
+    const productMix=buildPurchasedProductMix(purchasePriorities,
+      productTypes.map((label,index)=>({listingId:index+1,label})));
+    return {shop,purchasePriorities:{...purchasePriorities,productMix}};
   }
   if (view === "overview-insights") {
     const days=Number(url.searchParams.get("days"))===30?30:90;
