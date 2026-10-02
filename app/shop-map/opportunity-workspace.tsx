@@ -126,15 +126,23 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
       &&productFamily(row.title)===productFamily(own.title));
     if(peer)allDetails.push(marketDetail(own,proof,peer));
   }
-  const selectedReviews=selected?reviews.filter(row=>row.listingId===selected.listingId
-    &&/\b(wish|could you|would love|please offer|option|size|color|colour|personaliz|customiz|material)\b/i.test(row.review)).slice(0,2):[];
-  if(selected)for(const review of selectedReviews)allDetails.push({
-    id:`review-${selected.listingId}-${review.createdAt}`,kind:"improve",title:"Read what a buyer said",
-    brief:`“${review.review.trim().slice(0,190)}${review.review.trim().length>190?"…":""}”`,
-    sourceId:selected.listingId,imageUrl:selected.imageUrl,
-    sources:[{label:"Reviewed product",url:listingUrl(selected.listingId)}],
-    checks:[`Review dated ${new Date(review.createdAt*1000).toLocaleDateString()}. This is one buyer’s wording, not a verified pattern.`,
-      "Check whether it describes a specific option, use, objection or request before changing the product."]});
+  const reviewIds=new Set(map.listings.map(row=>row.listingId));
+  const requestPattern=/\\b(wish|could you|would love|please offer|option|size|color|colour|personaliz|customiz|material)\\b/i;
+  const reviewCounts=new Map<number,number>();
+  for(const review of reviews){
+    if(!reviewIds.has(review.listingId)||!requestPattern.test(review.review))continue;
+    const count=reviewCounts.get(review.listingId)??0;
+    if(count>=2)continue;
+    reviewCounts.set(review.listingId,count+1);
+    const product=map.listings.find(row=>row.listingId===review.listingId)!;
+    allDetails.push({
+      id:`review-${review.listingId}-${review.createdAt}-${count}`,kind:"improve",title:"Read what a buyer said",
+      brief:`“${review.review.trim().slice(0,190)}${review.review.trim().length>190?"…":""}”`,
+      sourceId:review.listingId,imageUrl:product.imageUrl,
+      sources:[{label:"Reviewed product",url:listingUrl(review.listingId)}],
+      checks:[`Review dated ${new Date(review.createdAt*1000).toISOString().slice(0,10)}. This is one buyer’s wording, not a verified pattern.`,
+        "Check whether it describes a specific option, use, objection or request before changing the product."]});
+  }
   const unique=new Map<string,Detail>();
   for(const item of allDetails){const key=item.sourceId+":"+item.kind+":"+(item.relatedId||item.title.toLowerCase());if(!unique.has(key))unique.set(key,item)}
   const details=[...unique.values()];
@@ -154,7 +162,7 @@ export function OpportunityWorkspace({map,directions=[],findings=[],actions=[],p
         {featured.map((row,index)=><button key={row.listingId} type="button" className={styles.choice}
           aria-pressed={selected.listingId===row.listingId} onClick={()=>setSelectedId(row.listingId)}>
           {row.imageUrl?<img src={row.imageUrl} alt="" width={43} height={43}/>:<span className={styles.noThumb} aria-hidden="true"/>}
-          <span><b>{index+1}. {shortLabel(row.title)}</b><small>{row.unitsPurchased} purchased</small></span>
+          <span><b>{row.rank}. {shortLabel(row.title)}</b><small>{row.unitsPurchased} purchased</small></span>
         </button>)}
       </div>
       <article className={styles.focus} aria-live="polite">
