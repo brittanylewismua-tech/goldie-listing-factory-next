@@ -3,6 +3,37 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { NavIcon, type NavKey as NavIconKey } from "./nav-icons";
+import { navigateShopMap, shopMapSection, SHOP_MAP_NAVIGATE, type ShopMapSection } from "./shop-map/shop-map-navigation";
+
+/*
+  YOUR SHOP'S SECTIONS LIVE IN THE RAIL.
+
+  They used to be a tab bar across the top of the page. Brittany moved them
+  here: the Opportunity Engine with its three pages (Votes, Build, Track)
+  indented under it, then the other Your Shop sections. A click while already
+  on /shop-map switches the section in place.
+*/
+const SHOP_SECTIONS:Array<{tab:ShopMapSection;label:string;engine?:boolean}>=[
+  {tab:"overview",label:"Votes",engine:true},{tab:"build",label:"Build",engine:true},{tab:"track",label:"Track",engine:true},
+  {tab:"money",label:"Your numbers"},{tab:"themes",label:"Product themes"},{tab:"sold",label:"Sold listings"},
+];
+function ShopSections(){
+  const [tab,setTab]=useState<ShopMapSection>("overview");
+  useEffect(()=>{
+    const read=()=>setTab(shopMapSection(new URLSearchParams(window.location.search).get("tab")));
+    read();
+    window.addEventListener("popstate",read);window.addEventListener(SHOP_MAP_NAVIGATE,read);
+    return ()=>{window.removeEventListener("popstate",read);window.removeEventListener(SHOP_MAP_NAVIGATE,read)};
+  },[]);
+  const go=(event:MouseEvent<HTMLAnchorElement>,next:ShopMapSection)=>{if(navigateShopMap(next))event.preventDefault()};
+  const item=(row:typeof SHOP_SECTIONS[number])=><a key={row.tab} href={`/shop-map?tab=${row.tab}`} className={tab===row.tab?"active":undefined}
+    aria-current={tab===row.tab?"page":undefined} onClick={event=>go(event,row.tab)}><span>{row.label}</span></a>;
+  return <div className="current-shop-children">
+    <span className="current-shop-parent">Opportunity Engine</span>
+    <div className="current-shop-engine">{SHOP_SECTIONS.filter(row=>row.engine).map(item)}</div>
+    {SHOP_SECTIONS.filter(row=>!row.engine).map(item)}
+  </div>;
+}
 
 export type SuiteNavKey = "home" | "factory" | "batches" | "keywords" | "mockups" | "usage" | "goals" | "command-center"
   | "platform-updates" | "niche-research" | "market-watch" | "design-scanner" | "shop-map" | "trademark" | "connections";
@@ -108,7 +139,7 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
       {home&&link(home)}
       <section className="current-nav-group" aria-label="Command Center">
         <span className="current-nav-group-label">Command Center</span>
-        {['niche-research','shop-map','trademark','platform-updates'].map(key=>items.find(i=>i.key===key)).filter((i):i is SuiteNavItem=>Boolean(i)).map(i=>link(i))}
+        {['niche-research','shop-map','trademark','platform-updates'].map(key=>items.find(i=>i.key===key)).filter((i):i is SuiteNavItem=>Boolean(i)).map(i=>i.key==='shop-map'&&active==='shop-map'?<div key={i.key} className="current-shop-group">{link(i)}<ShopSections/></div>:link(i))}
         <Link href="/hot-list" className={active==="hotlist"?"active":undefined} aria-current={active==="hotlist"?"page":undefined}><NavIcon name="marketWatch"/><span>Hot List</span></Link>
       </section>
       <section className="current-factory-section" aria-label="Listing Factory">{factory&&link(factory)}{FACTORY_KEYS.has(active)&&<div className="current-factory-children">{factoryChildren.map(i=>link(i))}<Link href="/goals" className={active === "goals" ? "active" : undefined} aria-current={active === "goals" ? "page" : undefined}><NavIcon name="goals"/><span>Listing goals</span></Link></div>}</section>

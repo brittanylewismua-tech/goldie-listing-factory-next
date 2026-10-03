@@ -1,5 +1,5 @@
 "use client";
-import {shopMapSection,type ShopMapSection} from "./shop-map-navigation";
+import {shopMapSection,navigateShopMap,ENGINE_SECTIONS,SHOP_MAP_NAVIGATE,type ShopMapSection,type ShopMapNavigateDetail} from "./shop-map-navigation";
 import {browseOwnListings} from "@/app/market-listing-browser";
 import {designsOnOneProduct,familyLabel,shortLabel,type Reach,type ReachListing} from "@/app/design-reach";
 import type {CatalogAction} from "@/app/shop-map-actions";
@@ -12,7 +12,7 @@ import type {PurchasePriorityMap} from "@/app/shop-map-purchase-priorities";
 import type {ProductDirection} from "@/app/shop-map-product-expansion";
 import type {ShopFinding} from "@/app/shop-map-opportunity-discovery";
 import {OpportunityWorkspace,type OwnReviewInsight} from "./opportunity-workspace";
-import OpportunityEngine from "./opportunity-engine";
+import OpportunityEngine,{type EngineSection} from "./opportunity-engine";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
 
@@ -131,7 +131,7 @@ type ShopMap = {
   error?: string;
 };
 
-function validShopMapForTab(data:ShopMap|null,tab:"overview"|"themes"|"sold"|"money"){
+function validShopMapForTab(data:ShopMap|null,tab:ShopMapSection){
   if(!data||data.error)return false;
   if(tab==="overview")return Boolean(data.purchasePriorities)
     &&Array.isArray(data.purchasePriorities.priorities);
@@ -410,7 +410,12 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId,en
   /* The last map that loaded. A failed refresh shows this rather than nothing. */
   const [lastGood, setLastGood] = useState<ShopMap | null>(null);
   const [failed, setFailed] = useState(false);
-  const [tab, setTab] = useState<"overview" | "themes" | "sold" | "money">("overview");
+  const [tab, setTab] = useState<ShopMapSection>("overview");
+  /* Build opens on the listing chosen on Votes ("Build on this"). */
+  const [engineListing,setEngineListing]=useState<number|null>(null);
+  const topTen=engine==="top-ten";
+  /* Build and Track exist only in the rebuilt engine. */
+  const sectionFor=(value:string|null):ShopMapSection=>{const next=shopMapSection(value);return !topTen&&(next==="build"||next==="track")?"overview":next};
 
   const [soldDays,setSoldDays]=useState(90);
   const [selectedDays,setSelectedDays]=useState<30|90>(90);
@@ -425,10 +430,23 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId,en
   const selectTab=(next:ShopMapSection)=>{
     setFailed(false);
     setTab(next);
+    setEngineListing(null);
     const url=new URL(window.location.href);url.searchParams.set("tab",next);
     window.history.replaceState(window.history.state,"",url);
   };
-  useEffect(()=>{const params=new URLSearchParams(window.location.search);setTab(shopMapSection(params.get("tab")));const month=params.get("month")??"";if(/^\d{4}-(0[1-9]|1[0-2])$/.test(month))setSelectedMonth(month)},[]);
+  /* The rail's Your Shop links switch the section in place; Back and Forward
+     walk through the sections the seller visited. */
+  useEffect(()=>{
+    const fromUrl=()=>{const params=new URLSearchParams(window.location.search);setFailed(false);setTab(sectionFor(params.get("tab")));
+      const listing=Number(params.get("listing"));setEngineListing(Number.isFinite(listing)&&listing>0?listing:null)};
+    const onNavigate=(event:Event)=>{const detail=(event as CustomEvent<ShopMapNavigateDetail>).detail;setFailed(false);
+      setTab(sectionFor(detail.tab));setEngineListing(detail.listing??null);window.scrollTo({top:0})};
+    window.addEventListener("popstate",fromUrl);window.addEventListener(SHOP_MAP_NAVIGATE,onNavigate);
+    return ()=>{window.removeEventListener("popstate",fromUrl);window.removeEventListener(SHOP_MAP_NAVIGATE,onNavigate)};
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+  useEffect(()=>{const params=new URLSearchParams(window.location.search);setTab(sectionFor(params.get("tab")));
+    const listing=Number(params.get("listing"));if(Number.isFinite(listing)&&listing>0)setEngineListing(listing);const month=params.get("month")??"";if(/^\d{4}-(0[1-9]|1[0-2])$/.test(month))setSelectedMonth(month)},[]);
   const [refreshing,setRefreshing]=useState(false);
   const [syncingMoney,setSyncingMoney]=useState(false);
   const [moneyRefreshError,setMoneyRefreshError]=useState("");
@@ -437,6 +455,8 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId,en
   const requestSequence=useRef(0);
   const load = useCallback(async () => {
     const sequence=++requestSequence.current;
+    /* The rebuilt engine loads its own data; the old overview payload is not needed. */
+    if(topTen&&ENGINE_SECTIONS.has(tab)){setRefreshing(false);return}
     const params=new URLSearchParams({view:tab==="overview"?"overview-purchases":tab});
     if(tab==="overview")params.set("days",String(selectedDays));
     if(tab==="sold")params.set("days",String(soldDays));
@@ -508,7 +528,7 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId,en
           .finally(()=>{if(sequence===requestSequence.current)setInsightsLoading(false)});
       }
     } else setInsightsLoading(false);
-  },[tab,soldDays,selectedDays,selectedMonth,cacheScope,activeShopId]);
+  },[tab,soldDays,selectedDays,selectedMonth,cacheScope,activeShopId,topTen]);
   useEffect(() => { void load(); }, [load]);
 
   const refreshMoney = async () => {
@@ -600,16 +620,22 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId,en
       onClick={()=>setSelectedDays(days)}>Last {days} days</button>)}
   </div>:null;
 
+  if(topTen&&ENGINE_SECTIONS.has(tab))
+    return <main className="shop-map shop-map-redesign oe-bleed">
+      <OpportunityEngine days={selectedDays} onDays={setSelectedDays} section={tab as EngineSection} listingId={engineListing}
+        onSection={(next,listing=null)=>{if(!navigateShopMap(next,listing)){setTab(next);setEngineListing(listing)}}}/>
+    </main>;
   if (!shown && failed)
     return <main className="shop-map shop-map-redesign">
       <header className="shop-map-head current-page-heading"><div>
         <p className="current-kicker">MY SHOP</p><h1>{tab==="overview"?"Opportunity Engine":"My Shop"}</h1>
       </div>{periodControl}</header>
-      <nav className="shop-map-tabs" aria-label="Your shop sections">
+      {/* The rebuilt engine moves these into the rail under Your shop. */}
+      {!topTen&&<nav className="shop-map-tabs" aria-label="Your shop sections">
         {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
           .map(([key,label])=><button key={key} type="button" aria-current={tab===key?'page':undefined}
             onClick={()=>selectTab(key)}>{label}</button>)}
-      </nav>
+      </nav>}
       <section className="shop-map-state" role="alert">
         <p>This section could not load.</p>
         <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button>
@@ -622,11 +648,12 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId,en
         <h1>{tab==="overview"?"Opportunity Engine":"My Shop"}</h1>
         <p>Loading your connected shop and latest performance…</p>
       </div>{periodControl}</header>
-      <nav className="shop-map-tabs" aria-label="Your shop sections">
+      {/* The rebuilt engine moves these into the rail under Your shop. */}
+      {!topTen&&<nav className="shop-map-tabs" aria-label="Your shop sections">
         {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
           .map(([key,label])=><button key={key} type="button" aria-current={tab===key?'page':undefined}
             onClick={()=>selectTab(key)}>{label}</button>)}
-      </nav>
+      </nav>}
       <section className="shop-map-progressive-loading" role="status">
         <span className="shop-map-loader-dot" aria-hidden="true"/>
         <div><strong>Loading your shop data…</strong>
@@ -648,13 +675,13 @@ export default function ShopMapClient({ signedInEmail,cacheScope,activeShopId,en
     <header className="shop-map-head current-page-heading"><div><p className="current-kicker">MY SHOP</p><h1>{tab==="overview"?"Opportunity Engine":"My Shop"}</h1><p className="shop-map-shop-identity">{shown.shop?.shopName ?? "Connected shop"}</p></div>{periodControl}</header>
     {shown.displayUnavailable&&<p className="shop-map-stale">Some listing photos could not be refreshed from Etsy. <button type="button" className="p-button p-button-quiet" onClick={()=>void load()}>Try again</button></p>}
     {failed ? <p className="shop-map-stale">Showing your last saved results. The latest refresh did not finish.</p> : null}
-      <nav className="shop-map-tabs" aria-label="Your shop sections">
+      {/* The rebuilt engine moves these into the rail under Your shop. */}
+      {!topTen&&<nav className="shop-map-tabs" aria-label="Your shop sections">
       {([['overview','Opportunity Engine'],['money','Your numbers'],['themes','Product themes'],['sold','Sold listings']] as const)
         .map(([key,label]) => <button key={key} type="button" aria-current={tab === key ? 'page' : undefined}
           onClick={() => selectTab(key)}>{label}</button>)}
-    </nav>
+    </nav>}
 
-    {tab === "overview" && engine==="top-ten" && <OpportunityEngine days={selectedDays}/>}
     {tab === "overview" && engine!=="top-ten" && <div className="shop-map-tab-panel">
       {panelLoading?<section className="shop-map-inline-state" role="status"><strong>Loading Opportunity Engine…</strong></section>:null}
       {shown.purchasePriorities?<OpportunityWorkspace map={shown.purchasePriorities} directions={shown.productDirections} findings={shown.opportunityFindings??[]} actions={shown.catalogActions??[]} patterns={shown.patterns} catalogPatterns={shown.catalogPatterns} marketProof={shown.marketProof??[]} reviews={shown.ownReviews??[]} analysisFailed={insightsFailed} onRetry={()=>void load()}

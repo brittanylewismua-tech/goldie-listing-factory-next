@@ -11,8 +11,11 @@ const commandWorkspace=readFileSync("app/command-workspace.css","utf8");
 const currentSuite=readFileSync("app/current-suite.css","utf8");
 
 test("Your Shop defaults to Overview and requests only the active tab",()=>{
-  assert.match(nav,/return value==='money'\|\|value==='themes'\|\|value==='sold'\?value:'overview'/);
-  assert.match(client,/useState<"overview" \| "themes" \| "sold" \| "money">\("overview"\)/);
+  /* Build and Track joined the sections when the engine became Votes, Build,
+     Track. The guard is unchanged: an unknown section still opens Overview,
+     and the page still starts on Overview. */
+  assert.match(nav,/return value==='money'\|\|value==='themes'\|\|value==='sold'\|\|value==='build'\|\|value==='track'\?value:'overview'/);
+  assert.match(client,/useState<ShopMapSection>\("overview"\)/);
   assert.match(client,/new URLSearchParams\(\{view:tab==="overview"\?"overview-purchases":tab\}\)/);
 });
 
