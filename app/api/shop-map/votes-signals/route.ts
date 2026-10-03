@@ -6,7 +6,7 @@ import {isQaReviewer} from "@/app/qa-reviewer";
 import {crossSiteWrite,CROSS_SITE_REFUSAL} from "@/app/same-site-only";
 import {etsyConnection,etsyFetch} from "@/app/api/etsy/client";
 import {decodeEntities} from "@/app/shop-map-listings";
-import {variationVotes,repeatBuyers,boughtTogether,giftOrders,buyerPlaces,lastYearWindow,gainingFavorites,
+import {variationVotes,repeatBuyers,boughtTogether,giftOrders,lastYearWindow,gainingFavorites,
   type OrderSignal,type SaleVariation,type ReviewPhoto,type Snapshot} from "@/app/shop-map/votes-signals-model.ts";
 
 /*
@@ -16,8 +16,8 @@ import {variationVotes,repeatBuyers,boughtTogether,giftOrders,buyerPlaces,lastYe
   the stored signals are more than a day old, then reads again.
 
   BUYER PRIVACY (Brittany, 3 Oct 2026): a receipt contributes a one-way buyer
-  code (HMAC of the Etsy buyer id), state/region and country, the gift flag
-  and whether a gift message exists. Names, addresses, emails and message
+  code (HMAC of the Etsy buyer id), the gift flag and whether a gift message
+  exists. Buyer location was tried and dropped: Etsy returned none on any order. Names, addresses, emails and message
   text are never read into storage. See votes-signals-model.ts.
 
   Correctness does not depend on this sync having run: GET reports how many
@@ -30,7 +30,7 @@ const db=()=> (env as unknown as {DB:D1Database}).DB;
 async function ensureSignalTables(d:D1Database){
   await d.batch([
     d.prepare(`CREATE TABLE IF NOT EXISTS shop_map_order_signals (user_id TEXT NOT NULL, shop_id INTEGER NOT NULL, receipt_id INTEGER NOT NULL,
-      buyer_key TEXT, country TEXT, region TEXT, is_gift INTEGER NOT NULL DEFAULT 0, gift_message INTEGER NOT NULL DEFAULT 0,
+      buyer_key TEXT, is_gift INTEGER NOT NULL DEFAULT 0, gift_message INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL, PRIMARY KEY (user_id, shop_id, receipt_id))`),
     d.prepare(`CREATE TABLE IF NOT EXISTS shop_map_sale_variations (user_id TEXT NOT NULL, shop_id INTEGER NOT NULL, transaction_id INTEGER NOT NULL,
       receipt_id INTEGER NOT NULL, listing_id INTEGER NOT NULL, quantity INTEGER NOT NULL DEFAULT 1, variations_json TEXT NOT NULL DEFAULT '[]',
@@ -74,14 +74,15 @@ export const GET=withErrorLog("shop-map-votes-signals",async()=>{
   const d=db();const shopId=Number(shop.shop_id);
   await ensureSignalTables(d);
   await snapshotFavorites(userId,shopId);
+  /* Location columns from the first build are emptied; nothing reads them. */
+  await d.prepare("UPDATE shop_map_order_signals SET country=NULL,region=NULL WHERE user_id=? AND shop_id=? AND (country IS NOT NULL OR region IS NOT NULL)").bind(userId,shopId).run().catch(()=>undefined);
   const now=Math.floor(Date.now()/1000),year=now-365*DAY;
 
   const state=await d.prepare("SELECT refreshed_at,receipts,oldest_at FROM shop_map_signal_state WHERE user_id=? AND shop_id=?")
     .bind(userId,shopId).first<{refreshed_at:number;receipts:number;oldest_at:number|null}>();
-  const orders=((await d.prepare(`SELECT receipt_id,buyer_key,country,region,is_gift,gift_message,created_at FROM shop_map_order_signals
+  const orders=((await d.prepare(`SELECT receipt_id,buyer_key,is_gift,gift_message,created_at FROM shop_map_order_signals
       WHERE user_id=? AND shop_id=? AND created_at>=?`).bind(userId,shopId,now-400*DAY).all<Record<string,unknown>>()).results??[])
-    .map(row=>({receiptId:Number(row.receipt_id),buyerKey:row.buyer_key?String(row.buyer_key):null,country:row.country?String(row.country):null,
-      region:row.region?String(row.region):null,isGift:Number(row.is_gift)===1,giftMessage:Number(row.gift_message)===1,createdAt:Number(row.created_at)}) as OrderSignal);
+    .map(row=>({receiptId:Number(row.receipt_id),buyerKey:row.buyer_key?String(row.buyer_key):null,isGift:Number(row.is_gift)===1,giftMessage:Number(row.gift_message)===1,createdAt:Number(row.created_at)}) as OrderSignal);
   const sales=((await d.prepare(`SELECT transaction_id,receipt_id,listing_id,quantity,variations_json,sold_at FROM shop_map_sale_variations
       WHERE user_id=? AND shop_id=? AND sold_at>=?`).bind(userId,shopId,now-400*DAY).all<Record<string,unknown>>()).results??[])
     .map(row=>{let variations:Array<{name:string;value:string}>=[];try{variations=JSON.parse(String(row.variations_json||"[]"))}catch{/* empty */}
@@ -105,8 +106,7 @@ export const GET=withErrorLog("shop-map-votes-signals",async()=>{
   const recentOrders=orders.filter(order=>order.createdAt>=year);
   /* Repeat buyers read every stored order (up to three years), not just this year. */
   const orderHistory=((await d.prepare(`SELECT receipt_id,buyer_key,created_at FROM shop_map_order_signals WHERE user_id=? AND shop_id=? AND buyer_key IS NOT NULL`)
-    .bind(userId,shopId).all<Record<string,unknown>>()).results??[]).map(row=>({receiptId:Number(row.receipt_id),buyerKey:String(row.buyer_key),country:null,region:null,
-      isGift:false,giftMessage:false,createdAt:Number(row.created_at)}) as OrderSignal);
+    .bind(userId,shopId).all<Record<string,unknown>>()).results??[]).map(row=>({receiptId:Number(row.receipt_id),buyerKey:String(row.buyer_key),isGift:false,giftMessage:false,createdAt:Number(row.created_at)}) as OrderSignal);
   const allSales=((await d.prepare(`SELECT transaction_id,receipt_id,listing_id,quantity,sold_at FROM shop_map_sale_variations WHERE user_id=? AND shop_id=?`)
     .bind(userId,shopId).all<Record<string,unknown>>()).results??[]).map(row=>({transactionId:Number(row.transaction_id),receiptId:Number(row.receipt_id),
       listingId:Number(row.listing_id),quantity:Number(row.quantity||1),variations:[],soldAt:Number(row.sold_at)}) as SaleVariation);
@@ -118,7 +118,6 @@ export const GET=withErrorLog("shop-map-votes-signals",async()=>{
     repeat:{...repeatBuyers(orderHistory,allSales),since:orderHistory.length?firstOrder:null},
     together:boughtTogether(sales,year),
     gifts:giftOrders(orders,year),
-    places:buyerPlaces(orders,year),
     lastYear:{...lastYearWindow(history,now),covered:Boolean(oldestSale?.oldest&&Number(oldestSale.oldest)<=now-365*DAY)},
     photos,
     gaining:gainingFavorites(snapshots,current,today()),
@@ -143,7 +142,7 @@ export const POST=withErrorLog("shop-map-votes-signals-sync",async(request:Reque
   const stopAt=state&&historyHeld?Number(state.refreshed_at)-7*DAY:horizon;
   let receipts=0,oldest=now,photos=0,listingsSeen=0;
   /* Which buyer fields Etsy actually returned, as counts (printed, never stored beyond the columns above). */
-  const fields={buyer:0,country:0,region:0};
+  const fields={buyer:0};
 
   for(let page=0;page<30;page++){
     let body:{results?:Array<Record<string,unknown>>};
@@ -155,17 +154,11 @@ export const POST=withErrorLog("shop-map-votes-signals-sync",async(request:Reque
       const created=Number(receipt.created_timestamp??receipt.create_timestamp??0);
       if(created<oldest)oldest=created;
       if(receipt.is_paid===false||/^(canceled|cancelled)$/i.test(String(receipt.status??"")))continue;
-      writes.push(d.prepare(`INSERT INTO shop_map_order_signals (user_id,shop_id,receipt_id,buyer_key,country,region,is_gift,gift_message,created_at)
-        VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id,shop_id,receipt_id) DO UPDATE SET buyer_key=excluded.buyer_key,country=excluded.country,
-        region=excluded.region,is_gift=excluded.is_gift,gift_message=excluded.gift_message,created_at=excluded.created_at`)
-        .bind(userId,shopId,receiptId,await buyerKey(shopId,receipt.buyer_user_id),
-          receipt.country_iso?String(receipt.country_iso).slice(0,2).toUpperCase():null,
-          receipt.state?String(receipt.state).slice(0,40):null,
-          receipt.is_gift===true?1:0,String(receipt.gift_message??"").trim()?1:0,created));
+      writes.push(d.prepare(`INSERT INTO shop_map_order_signals (user_id,shop_id,receipt_id,buyer_key,is_gift,gift_message,created_at)
+        VALUES (?,?,?,?,?,?,?) ON CONFLICT(user_id,shop_id,receipt_id) DO UPDATE SET buyer_key=excluded.buyer_key,is_gift=excluded.is_gift,gift_message=excluded.gift_message,created_at=excluded.created_at`)
+        .bind(userId,shopId,receiptId,await buyerKey(shopId,receipt.buyer_user_id),receipt.is_gift===true?1:0,String(receipt.gift_message??"").trim()?1:0,created));
       receipts++;
       if(Number(receipt.buyer_user_id)>0)fields.buyer++;
-      if(receipt.country_iso)fields.country++;
-      if(receipt.state)fields.region++;
       for(const line of (receipt.transactions??[]) as Array<Record<string,unknown>>){
         const transactionId=Number(line.transaction_id),listingId=Number(line.listing_id);
         if(!Number.isSafeInteger(transactionId)||transactionId<=0||!Number.isSafeInteger(listingId)||listingId<=0)continue;

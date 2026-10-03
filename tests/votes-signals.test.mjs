@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {sizeLabel,splitVariations,variationVotes,repeatBuyers,boughtTogether,giftOrders,buyerPlaces,lastYearWindow,gainingFavorites} from "../app/shop-map/votes-signals-model.ts";
+import {sizeLabel,splitVariations,variationVotes,repeatBuyers,boughtTogether,giftOrders,lastYearWindow,gainingFavorites} from "../app/shop-map/votes-signals-model.ts";
 import {countPhrases,parsePhrases} from "../app/shop-map/buyer-words-model.ts";
 
 const sale=(transactionId,receiptId,listingId,variations,soldAt=100,quantity=1)=>({transactionId,receiptId,listingId,quantity,variations,soldAt});
-const order=(receiptId,buyerKey,extra={})=>({receiptId,buyerKey,country:"US",region:"CA",isGift:false,giftMessage:false,createdAt:100,...extra});
+const order=(receiptId,buyerKey,extra={})=>({receiptId,buyerKey,isGift:false,giftMessage:false,createdAt:100,...extra});
 
 test("a combined option is split into size and color, each counted once per unit",()=>{
   assert.deepEqual(splitVariations([{name:"Size / Color",value:"L / Black"}]),[{name:"Size",value:"L"},{name:"Color",value:"Black"}]);
@@ -29,12 +29,9 @@ test("bought together pairs come from multi-item orders",()=>{
   assert.deepEqual(r.pairs,[{a:10,b:11,orders:2}]);
 });
 
-test("gift orders and places are exact counts over the period",()=>{
-  const orders=[order(1,"a",{isGift:true,giftMessage:true}),order(2,"b",{region:"TX"}),order(3,"c",{country:"GB",region:null,createdAt:1})];
+test("gift orders are exact counts over the period",()=>{
+  const orders=[order(1,"a",{isGift:true,giftMessage:true}),order(2,"b"),order(3,"c",{createdAt:1})];
   assert.deepEqual(giftOrders(orders,50),{orders:2,gifts:1,withMessage:1});
-  const places=buyerPlaces(orders,0);
-  assert.deepEqual(places.places.map(p=>p.label).sort(),["California","Texas","United Kingdom"]);
-  assert.equal(places.abroad,1);
 });
 
 test("last year at this time reads the same 30 days a year back",()=>{

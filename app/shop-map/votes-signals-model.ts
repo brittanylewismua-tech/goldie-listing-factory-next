@@ -6,13 +6,12 @@
 
   BUYER PRIVACY (decided by Brittany, 3 Oct 2026): from an order we keep a
   one-way buyer code (HMAC of the Etsy buyer id, so the same buyer can be
-  recognised again but never identified), the state/region and country,
-  whether it was marked as a gift and whether it carried a gift message.
-  Never a name, address, email or the message text.
+  recognised again but never identified), whether it was marked as a gift
+  and whether it carried a gift message. Never a name, address, email or the
+  message text. Buyer location was tried and dropped: Etsy returns none.
 */
 
-export type OrderSignal={receiptId:number;buyerKey:string|null;country:string|null;region:string|null;
-  isGift:boolean;giftMessage:boolean;createdAt:number};
+export type OrderSignal={receiptId:number;buyerKey:string|null;isGift:boolean;giftMessage:boolean;createdAt:number};
 export type SaleVariation={transactionId:number;receiptId:number;listingId:number;quantity:number;
   variations:Array<{name:string;value:string}>;soldAt:number};
 export type ReviewPhoto={transactionId:number;listingId:number|null;rating:number|null;imageUrl:string;createdAt:number};
@@ -103,27 +102,6 @@ export function giftOrders(orders:OrderSignal[],since:number){
   return {orders:recent.length,gifts:recent.filter(order=>order.isGift).length,withMessage:recent.filter(order=>order.giftMessage).length};
 }
 
-const US_STATES:Record<string,string>={AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",
-  DC:"Washington, DC",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",
-  ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",
-  NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",
-  PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",
-  WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming",PR:"Puerto Rico"};
-const COUNTRIES:Record<string,string>={US:"United States",CA:"Canada",GB:"United Kingdom",AU:"Australia",DE:"Germany",FR:"France",IE:"Ireland",
-  NL:"Netherlands",NZ:"New Zealand",SE:"Sweden",NO:"Norway",DK:"Denmark",ES:"Spain",IT:"Italy",CH:"Switzerland",AT:"Austria",BE:"Belgium",MX:"Mexico"};
-export function placeName(order:{country:string|null;region:string|null}){
-  const country=String(order.country||"").toUpperCase();const region=String(order.region||"").trim();
-  if(country==="US")return US_STATES[region.toUpperCase()]??(region||"United States");
-  return COUNTRIES[country]??(country||null);
-}
-export function buyerPlaces(orders:OrderSignal[],since:number){
-  const recent=orders.filter(order=>order.createdAt>=since&&(order.country||order.region));
-  const by=new Map<string,number>();let abroad=0;
-  for(const order of recent){const name=placeName(order);if(!name)continue;by.set(name,(by.get(name)??0)+1);
-    if(String(order.country||"").toUpperCase()!=="US")abroad++}
-  return {orders:recent.length,abroad,places:[...by.entries()].map(([label,n])=>({label,orders:n})).sort((a,b)=>b.orders-a.orders).slice(0,6)};
-}
-
 /** The same 30 days, one year ago: what sold then is what is coming up now. */
 export function lastYearWindow(sales:YearSaleRow[],now:number){
   const from=now-365*DAY,to=from+30*DAY;
@@ -151,6 +129,6 @@ export function gainingFavorites(snapshots:Snapshot[],current:Array<{listingId:n
 export type VotesSignals={
   refreshedAt:number|null;stale:boolean;coverage:{orders:number;since:number};
   variations:ReturnType<typeof variationVotes>;repeat:ReturnType<typeof repeatBuyers>&{since:number|null};
-  together:ReturnType<typeof boughtTogether>;gifts:ReturnType<typeof giftOrders>;places:ReturnType<typeof buyerPlaces>;
+  together:ReturnType<typeof boughtTogether>;gifts:ReturnType<typeof giftOrders>;
   lastYear:ReturnType<typeof lastYearWindow>&{covered:boolean};photos:ReviewPhoto[];gaining:ReturnType<typeof gainingFavorites>;
 };
