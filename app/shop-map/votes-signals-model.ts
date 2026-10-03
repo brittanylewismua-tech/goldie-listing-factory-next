@@ -46,7 +46,12 @@ export function splitVariations(rows:Array<{name:string;value:string}>){
 /* "Small" and "S" are the same vote. */
 const SIZE_NAMES:Record<string,string>={"x-small":"XS","xsmall":"XS","extra small":"XS","small":"S","medium":"M","large":"L","x-large":"XL","xlarge":"XL",
   "extra large":"XL","xx-large":"2XL","xxlarge":"2XL","xxl":"2XL","2x":"2XL","xxx-large":"3XL","xxxl":"3XL","3x":"3XL","4x":"4XL","xxxxl":"4XL","5x":"5XL"};
-export function sizeLabel(value:string){const key=value.trim().toLowerCase();return SIZE_NAMES[key]??value.trim().toUpperCase().replace(/^(\d)X$/,"$1XL")}
+/* "M US Women's Letter" is the size M with the chart name attached. */
+export function sizeLabel(value:string){const clean=value.replace(/&#0?39;|&apos;/g,"'").trim();const key=clean.toLowerCase();
+  if(SIZE_NAMES[key])return SIZE_NAMES[key];
+  const lead=clean.match(/^(xxs|xs|s|m|l|xl|xxl|2xl|3xl|4xl|5xl|small|medium|large|x-large|xx-large|\d{1,2})\b/i);
+  if(lead&&clean.length>lead[0].length)return SIZE_NAMES[lead[0].toLowerCase()]??lead[0].toUpperCase();
+  return clean.toUpperCase().replace(/^(\d)X$/,"$1XL")}
 const COLOR_CASE=(value:string)=>value.trim().toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
 
 export type OptionVotes={name:string;units:number;values:Array<{value:string;units:number}>};

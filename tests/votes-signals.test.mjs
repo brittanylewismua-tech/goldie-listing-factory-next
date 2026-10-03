@@ -61,7 +61,7 @@ test("buyer phrases are counted against the reviews, never taken from the model"
 });
 
 test("sizes written two ways count as one size, and stored generic phrases are dropped",()=>{
-  assert.deepEqual(["S","Small","Large","xx-large","3x","XL"].map(sizeLabel),["S","S","L","2XL","3XL","XL"]);
+  assert.deepEqual(["S","Small","Large","xx-large","3x","XL","M US WOMEN&#039;S LETTER"].map(sizeLabel),["S","S","L","2XL","3XL","XL","M"]);
   const votes=variationVotes([sale(1,1,9,[{name:"Size",value:"Small"}]),sale(2,2,9,[{name:"Size",value:"S"}]),sale(3,3,9,[{name:"Size",value:"M"}])],0);
   assert.deepEqual(votes.options[0].values,[{value:"S",units:2},{value:"M",units:1}]);
   assert.deepEqual(countPhrases(["love this shirt","for my daughter"],["love this shirt","Love this shirt","for my daughter","for my daughter"]),[{phrase:"for my daughter",reviews:2}]);

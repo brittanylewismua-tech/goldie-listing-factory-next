@@ -5,6 +5,7 @@ import {requireFeatureApi} from "@/app/require-feature";
 import {isQaReviewer} from "@/app/qa-reviewer";
 import {crossSiteWrite,CROSS_SITE_REFUSAL} from "@/app/same-site-only";
 import {etsyConnection,etsyFetch} from "@/app/api/etsy/client";
+import {decodeEntities} from "@/app/shop-map-listings";
 import {variationVotes,repeatBuyers,boughtTogether,giftOrders,buyerPlaces,lastYearWindow,gainingFavorites,
   type OrderSignal,type SaleVariation,type ReviewPhoto,type Snapshot} from "@/app/shop-map/votes-signals-model.ts";
 
@@ -169,7 +170,7 @@ export const POST=withErrorLog("shop-map-votes-signals-sync",async(request:Reque
         const transactionId=Number(line.transaction_id),listingId=Number(line.listing_id);
         if(!Number.isSafeInteger(transactionId)||transactionId<=0||!Number.isSafeInteger(listingId)||listingId<=0)continue;
         const variations=((line.variations??[]) as Array<Record<string,unknown>>)
-          .map(item=>({name:String(item.formatted_name??"").slice(0,40),value:String(item.formatted_value??"").slice(0,60)})).filter(item=>item.value);
+          .map(item=>({name:decodeEntities(String(item.formatted_name??"")).slice(0,40),value:decodeEntities(String(item.formatted_value??"")).slice(0,60)})).filter(item=>item.value);
         writes.push(d.prepare(`INSERT INTO shop_map_sale_variations (user_id,shop_id,transaction_id,receipt_id,listing_id,quantity,variations_json,sold_at)
           VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(user_id,shop_id,transaction_id) DO UPDATE SET quantity=excluded.quantity,variations_json=excluded.variations_json`)
           .bind(userId,shopId,transactionId,receiptId,listingId,Math.max(1,Number(line.quantity??1)),JSON.stringify(variations),created));
