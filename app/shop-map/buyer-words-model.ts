@@ -7,10 +7,11 @@ import {decode} from "./opportunity-engine-model.ts";
 export const BUYER_WORDS_PROMPT=`These are customer reviews from one Etsy shop.
 List up to 10 short phrases (2 to 5 words) that several buyers use, copied exactly as buyers wrote them.
 Prefer phrases about who they bought it for, why they bought it, how they wear or use it, and how it makes them feel.
-Skip generic praise such as "love it", "great quality", "fast shipping", "as described".
+Skip praise for the product itself, such as "love this shirt", "love this hoodie", "great quality", "so soft", "fast shipping", "true to size".
 Return one JSON object and nothing else: {"phrases":["",""]}`;
 
-const GENERIC=/^(love (it|this|the shirt)|great (quality|shirt|product)|fast shipping|as described|so cute|very happy|highly recommend|thank you)$/i;
+/* Praise for the product itself says nothing about who buys or why. */
+const GENERIC=/^(love (it|this|my|the (shirt|hoodie|sweatshirt|tee|sweater|product|quality|fit|design|print))\b.*|great (quality|shirt|product|fit)|fast shipping|as described|so cute|so soft|very happy|highly recommend|thank you|fits (great|perfectly|well)|true to size)$/i;
 
 export function parsePhrases(text:string):string[]{
   const start=text.indexOf("{"),end=text.lastIndexOf("}");
@@ -27,6 +28,6 @@ const normal=(text:string)=>" "+decode(text).toLowerCase().replace(/[“”"'’
 /** Reviews containing each phrase. Only phrases in two or more reviews are kept. */
 export function countPhrases(phrases:string[],reviews:string[]){
   const texts=reviews.map(normal);
-  return phrases.map(phrase=>{const needle=" "+phrase.toLowerCase()+" ";return {phrase,reviews:texts.filter(text=>text.includes(needle)).length}})
+  return phrases.filter(phrase=>!GENERIC.test(phrase)).map(phrase=>{const needle=" "+phrase.toLowerCase()+" ";return {phrase,reviews:texts.filter(text=>text.includes(needle)).length}})
     .filter(row=>row.reviews>=2).sort((a,b)=>b.reviews-a.reviews).slice(0,6);
 }

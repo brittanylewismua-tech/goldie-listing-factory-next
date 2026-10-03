@@ -156,8 +156,9 @@
 .quad{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .triple{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .together{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.optionGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:28px}
 .optionGroup{display:flex;flex-direction:column;gap:10px}
-.optionGroup+.optionGroup{padding-top:14px;border-top:1px solid #f1ecef}
+.plain{margin:0;font-size:16px;line-height:1.5;color:var(--ink2)}
 .bar p{display:flex;justify-content:space-between;gap:12px;margin:0;font-size:15px}
 .bar p span{color:var(--ink2)}
 .track{display:block;height:8px;border-radius:4px;background:#f3eef1;margin-top:6px;overflow:hidden}

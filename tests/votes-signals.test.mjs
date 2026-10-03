@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {splitVariations,variationVotes,repeatBuyers,boughtTogether,giftOrders,buyerPlaces,lastYearWindow,gainingFavorites} from "../app/shop-map/votes-signals-model.ts";
+import {sizeLabel,splitVariations,variationVotes,repeatBuyers,boughtTogether,giftOrders,buyerPlaces,lastYearWindow,gainingFavorites} from "../app/shop-map/votes-signals-model.ts";
 import {countPhrases,parsePhrases} from "../app/shop-map/buyer-words-model.ts";
 
 const sale=(transactionId,receiptId,listingId,variations,soldAt=100,quantity=1)=>({transactionId,receiptId,listingId,quantity,variations,soldAt});
@@ -58,4 +58,11 @@ test("buyer phrases are counted against the reviews, never taken from the model"
   assert.deepEqual(phrases,["for my daughter","wore it to the march"]);
   const counted=countPhrases(phrases,["Bought for my daughter!","For my daughter's birthday","I wore it to the march."]);
   assert.deepEqual(counted,[{phrase:"for my daughter",reviews:2}]);
+});
+
+test("sizes written two ways count as one size, and stored generic phrases are dropped",()=>{
+  assert.deepEqual(["S","Small","Large","xx-large","3x","XL"].map(sizeLabel),["S","S","L","2XL","3XL","XL"]);
+  const votes=variationVotes([sale(1,1,9,[{name:"Size",value:"Small"}]),sale(2,2,9,[{name:"Size",value:"S"}]),sale(3,3,9,[{name:"Size",value:"M"}])],0);
+  assert.deepEqual(votes.options[0].values,[{value:"S",units:2},{value:"M",units:1}]);
+  assert.deepEqual(countPhrases(["love this shirt","for my daughter"],["love this shirt","Love this shirt","for my daughter","for my daughter"]),[{phrase:"for my daughter",reviews:2}]);
 });
