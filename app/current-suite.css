@@ -1028,4 +1028,5 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 /* The Votes page's pink band runs edge to edge across the work area. */
 #suite-workspace .factory-work:has(.oe-bleed){padding:0!important;max-width:none!important}
 #suite-workspace .factory-work:has(.oe-bleed) .shop-map{max-width:none!important;padding:0!important;margin:0!important}
-#suite-workspace .factory-work:has(.oe-bleed)>.current-suite-footer{padding:0 56px 32px}
+#suite-workspace .factory-work:has(.oe-bleed) .current-suite-footer{padding:20px 56px 32px!important;max-width:none!important}
+@media(max-width:760px){#suite-workspace .factory-work:has(.oe-bleed) .current-suite-footer{padding:20px 16px 24px!important}}

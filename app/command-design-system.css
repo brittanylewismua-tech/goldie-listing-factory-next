@@ -141,7 +141,7 @@
 .app-shell.command-workspace .factory-work label :is(input,select,textarea){font-weight:650}
 
 /* ---------------------------------------------------------------- buttons */
-.app-shell.command-workspace .factory-work :is(.p-button,button:not(.watch-remove):not(.p-tab):not(.suite-nav-toggle)){
+.app-shell.command-workspace .factory-work :is(.p-button,button:not(.watch-remove):not(.p-tab):not(.suite-nav-toggle)):where(:not(.oe-engine *)){
   min-height:42px;padding:0 18px;border-radius:var(--cc-radius-sm)!important;
   font-size:14px!important;font-weight:800!important;letter-spacing:0!important;box-shadow:none!important;cursor:pointer;
 }
@@ -153,7 +153,7 @@
 }
 /* Unclassified controls own both their fill and label color together.
    Classified controls retain the paired colors from their component. */
-.app-shell.command-workspace.command-workspace .factory-work :not(nav)>button:not([class]){
+.app-shell.command-workspace.command-workspace .factory-work :not(nav)>button:not([class]):where(:not(.oe-engine *)){
   background:var(--cc-surface)!important;border:1px solid var(--cc-line)!important;color:var(--cc-ink)!important;
 }
 .app-shell.command-workspace .factory-work .p-button-quiet{
@@ -167,8 +167,8 @@
   changes" with nothing saved was solid black with white text - identical to
   the button that works. Doubled, like the rules it argues with.
 */
-.app-shell.command-workspace.command-workspace .factory-work button:disabled,
-.app-shell.command-workspace.command-workspace .factory-work .p-button:disabled{
+.app-shell.command-workspace.command-workspace .factory-work button:disabled:where(:not(.oe-engine *)),
+.app-shell.command-workspace.command-workspace .factory-work .p-button:disabled:where(:not(.oe-engine *)){
   opacity:1;background:#f1eaee!important;color:#776b74!important;
   border:1px solid var(--cc-line)!important;box-shadow:none!important;cursor:not-allowed}
 
