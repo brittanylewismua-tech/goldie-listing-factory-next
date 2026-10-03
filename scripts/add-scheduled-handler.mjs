@@ -248,6 +248,10 @@ export default {
       rather than attached to whatever request happened to start it.
     */
     run("/api/shop-map/capture-tick");
+    /* Every connected shop's sales and Votes order signals, once a day, a few
+       shops per firing. Without this a shop only refreshed when its member
+       pressed Refresh. */
+    run("/api/shop-map/daily-sync-tick");
     /* The corpus sweep, which is what keeps discovery going. */
     run("/api/sold-overnight/cron");
     /*

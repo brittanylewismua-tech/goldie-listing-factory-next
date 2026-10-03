@@ -226,7 +226,7 @@ export const OWNER_PREFIXES = [
   "/api/design-scanner/reference-change-canary",
   "/api/operations/connection-cleanup-tick",
   "/api/shop-map/printify-probe", "/api/shop-map/printify-audit",
-  "/api/shop-map/capture-tick",
+  "/api/shop-map/capture-tick", "/api/shop-map/daily-sync-tick",
   "/api/trademark/ingest-tick", "/api/listing-factory/",
   "/api/sold-overnight/cron", "/api/sold-overnight/build",
   "/api/uspto-", "/api/stock-probe", "/api/shop-proof", "/api/support",

@@ -7,8 +7,10 @@
 
   Layout (approved in Brittany's live page, 3 Oct 2026): a compact pink header
   with the period switch beside the figures, the shop's highlights scrolling
-  in a black strip, then section chips that jump to: Top 10, What they
-  choose, Who buys, In their words, When, Saved, Numbers.
+  in a black strip, then section chips that jump to: Top 10
+  listings, Best-selling designs, Customer behavior, Review summary, Timing,
+  Saved not bought, Top 10 by the numbers. Sections are named for what they
+  hold; no clever titles.
 
   Every section has an empty state, so a brand-new shop sees what will fill
   in rather than half-empty cards.
@@ -42,8 +44,9 @@ async function json<T>(url:string,init?:RequestInit):Promise<T>{
   return response.json() as Promise<T>;
 }
 
-const SECTIONS=[["oe-top","Top 10"],["oe-choose","What they choose"],["oe-who","Who buys"],["oe-words","In their words"],
-  ["oe-when","When"],["oe-saved","Saved"],["oe-numbers","Numbers"]] as const;
+/* Plain names: each chip says what the section holds. */
+const SECTIONS=[["oe-top","Top 10 listings"],["oe-choose","Best-selling designs"],["oe-who","Customer behavior"],["oe-words","Review summary"],
+  ["oe-when","Timing"],["oe-saved","Saved, not bought"],["oe-numbers","Top 10 by the numbers"]] as const;
 
 function Empty({children}:{children:ReactNode}){return <p className={s.empty}>{children}</p>}
 
@@ -174,7 +177,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
           :"Here’s what customers are voting on with their purchases and favorites in your shop."}</p>
       </div>
       {section==="overview"?<div className={s.bandRight}>
-        <div className={s.showing}><span>Showing</span>
+        <div className={s.showing} data-align="title"><span>Showing</span>
           <div className={s.period} role="group" aria-label="Period for the whole page">
             {([30,90] as const).map(value=><button key={value} type="button" aria-pressed={days===value} onClick={()=>onDays(value)}>Last {value} days</button>)}
           </div></div>
@@ -327,11 +330,11 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
         <p className={s.meta}>{synced(data.refreshedAt)?`Sales synced ${synced(data.refreshedAt)}.`:""}</p></>}
       </section>
 
-      {/* ── What they choose ── */}
+      {/* ── Best-selling designs ── */}
       <section id="oe-choose" className={s.group} aria-labelledby="oe-choose-h">
-        <h2 id="oe-choose-h" className={s.groupTitle}>What they choose</h2>
+        <h2 id="oe-choose-h" className={s.groupTitle}>Best-selling designs</h2>
         <div className={s.section}>
-          <div className={s.head}><h3 className={s.h3}>Your winning formula</h3>
+          <div className={s.head}><h3 className={s.h3}>What your best sellers have in common</h3>
             <p className={s.sub}>What the designs your customers buy have in common. Last 12 months, {formula?.units??yearSales} sales.</p></div>
           {formula&&formula.cards.length?<div className={s.formula}>{formula.cards.map(card=><div key={card.key} className={s.panel}>
             <h4 className={s.panelTitle}>{card.label}</h4>
@@ -345,7 +348,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
 
         <div className={s.pair}>
           <div className={s.section}>
-            <div className={s.head}><h3 className={s.h3}>The sizes and colors they pick</h3>
+            <div className={s.head}><h3 className={s.h3}>Most popular size and color choices</h3>
               <p className={s.sub}>From the options buyers chose at checkout, last 12 months.</p></div>
             <div className={s.panel}>
               {sig&&sig.variations.options.length?<div className={s.optionGrid}>{sig.variations.options.map(option=><div key={option.name} className={s.optionGroup}>
@@ -359,7 +362,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
             </div>
           </div>
           <div className={s.section}>
-            <div className={s.head}><h3 className={s.h3}>The products they choose</h3>
+            <div className={s.head}><h3 className={s.h3}>Most bought products</h3>
               <p className={s.sub}>Sales in the last 12 months, against how many listings you have of each.</p></div>
             {products&&products.rows.length?<div className={s.panel}>
               {products.rows.map(item=><div key={item.family} className={s.bar}>
@@ -382,12 +385,12 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
         </div>
       </section>
 
-      {/* ── Who buys (soft pink band) ── */}
+      {/* ── Customer behavior (soft pink band) ── */}
       <section id="oe-who" className={`${s.group} ${s.tinted}`} aria-labelledby="oe-who-h">
-        <h2 id="oe-who-h" className={s.groupTitle}>Who buys</h2>
+        <h2 id="oe-who-h" className={s.groupTitle}>Customer behavior</h2>
         <div className={s.triple}>
           <div className={s.panel}>
-            <h3 className={s.panelTitle}>Who they buy for</h3>
+            <h3 className={s.panelTitle}>Who customers buy for</h3>
             {buyers&&buyers.whoFor.length?<>{buyers.whoFor.map(item=><div key={item.label} className={s.bar}>
               <p><span>{item.label}</span><b>{item.n}</b></p>
               <span className={s.track}><i style={{width:`${Math.round(item.n/Math.max(1,buyers.whoFor[0].n)*100)}%`}}/></span>
@@ -395,7 +398,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
             :<Empty>Appears after about 10 written reviews.</Empty>}
           </div>
           <div className={s.panel}>
-            <h3 className={s.panelTitle}>Who comes back</h3>
+            <h3 className={s.panelTitle}>Repeat customers</h3>
             {sig&&sig.repeat.buyers?<>
               {sig.repeat.repeatBuyers?<p className={s.count}><b>{sig.repeat.repeatBuyers}</b><span>{sig.repeat.repeatBuyers===1?"buyer":"buyers"} ordered more than once</span></p>
                 :<p className={s.plain}>None of your {sig.repeat.buyers} buyers{sig.repeat.since?` since ${new Date(sig.repeat.since*1000).toLocaleDateString("en-US",{month:"short",year:"numeric"})}`:""} has placed a second order yet.</p>}
@@ -407,7 +410,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
             </>:<Empty>{ordersNote??"Appears after your first orders."}</Empty>}
           </div>
           <div className={s.panel}>
-            <h3 className={s.panelTitle}>Bought as gifts</h3>
+            <h3 className={s.panelTitle}>Gift orders</h3>
             {sig&&sig.gifts.orders?<>
               <p className={s.count}><b>{sig.gifts.gifts}</b><span>of {sig.gifts.orders} orders were marked as a gift</span></p>
               <p className={s.count}><b>{sig.gifts.withMessage}</b><span>came with a gift message</span></p>
@@ -418,11 +421,11 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
         </div>
       </section>
 
-      {/* ── In their words ── */}
+      {/* ── Review summary ── */}
       <section id="oe-words" className={s.group} aria-labelledby="oe-words-h">
-        <h2 id="oe-words-h" className={s.groupTitle}>In their words</h2>
+        <h2 id="oe-words-h" className={s.groupTitle}>Review summary</h2>
         <div className={s.section}>
-          <div className={s.head}><h3 className={s.h3}>Buyer photos</h3><p className={s.sub}>Photos buyers added to their reviews.</p></div>
+          <div className={s.head}><h3 className={s.h3}>Customer photos</h3><p className={s.sub}>Photos buyers added to their reviews.</p></div>
           {sig&&sig.photos.length?<div className={s.photos}>{sig.photos.map(photo=>
             <button key={photo.transactionId} type="button" className={s.photoTile} onClick={()=>photo.listingId&&openListing(photo.listingId)}
               aria-label={photo.listingId?`Photo of ${name(photo.listingId)}`:"Buyer photo"}>
@@ -433,7 +436,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
         </div>
         <div className={s.pair}>
           <div className={s.section}>
-            <div className={s.head}><h3 className={s.h3}>The words they use</h3><p className={s.sub}>Phrases that come up in more than one review.</p></div>
+            <div className={s.head}><h3 className={s.h3}>Most repeated phrases</h3><p className={s.sub}>Phrases that come up in more than one review.</p></div>
             <div className={s.panel}>
               {words.phrases.length?<ul className={s.phrases}>{words.phrases.map(item=><li key={item.phrase}>
                 <span>“{item.phrase}”</span><b>{item.reviews} reviews</b></li>)}</ul>
@@ -442,7 +445,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
             </div>
           </div>
           <div className={s.section}>
-            <div className={s.head}><h3 className={s.h3}>Where they wear it</h3><p className={s.sub}>Mentioned in reviews.</p></div>
+            <div className={s.head}><h3 className={s.h3}>Where customers wear it</h3><p className={s.sub}>Mentioned in reviews.</p></div>
             <div className={s.panel}>
               {buyers&&(buyers.wear.work||buyers.wear.campus||buyers.wear.march)?<>
                 {buyers.wear.work?<p className={s.count}><b>{buyers.wear.work}</b><span>wear it to work</span></p>:null}
@@ -456,12 +459,12 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
         </div>
       </section>
 
-      {/* ── When ── */}
+      {/* ── Timing ── */}
       <section id="oe-when" className={s.group} aria-labelledby="oe-when-h">
-        <h2 id="oe-when-h" className={s.groupTitle}>When</h2>
+        <h2 id="oe-when-h" className={s.groupTitle}>Timing</h2>
         <div className={s.triple}>
           <div className={s.panel}>
-            <h3 className={s.panelTitle}>This time last year</h3>
+            <h3 className={s.panelTitle}>Sales this time last year</h3>
             {sig&&sig.lastYear.covered&&sig.lastYear.units?<>
               <p className={s.count}><b>{sig.lastYear.units}</b><span>sold {dateOf(sig.lastYear.from)} to {dateOf(sig.lastYear.to)} last year</span></p>
               <ul className={s.miniList}>{sig.lastYear.listings.map(item=><li key={item.listingId}>{thumb(item.listingId,36)}
@@ -470,7 +473,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
             </>:<Empty>{sig&&sig.lastYear.covered?"Nothing sold in these 30 days last year.":"Appears once your shop has a full year of sales here."}</Empty>}
           </div>
           <div className={s.panel}>
-            <h3 className={s.panelTitle}>Gaining favorites</h3>
+            <h3 className={s.panelTitle}>Listings gaining favorites</h3>
             {sig&&sig.gaining.ready&&sig.gaining.listings.length?<>
               <ul className={s.miniList}>{sig.gaining.listings.map(item=><li key={item.listingId}>{thumb(item.listingId,36)}
                 <span>{name(item.listingId)}</span><b>+{item.gained}</b></li>)}</ul>
@@ -479,7 +482,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
               `Your shop’s favorites are recorded once a day${sig?.gaining.since?` since ${new Date(sig.gaining.since+"T12:00:00Z").toLocaleDateString("en-US",{month:"short",day:"numeric"})}`:""}. This shows which listings are gaining after the first week.`}</Empty>}
           </div>
           <div className={s.panel}>
-            <h3 className={s.panelTitle}>The occasions</h3>
+            <h3 className={s.panelTitle}>Occasions mentioned in reviews</h3>
             {buyers&&(buyers.when.gift||buyers.when.birthday||buyers.when.holiday)?<>
               {buyers.when.birthday?<p className={s.count}><b>{buyers.when.birthday}</b><span>for a birthday</span></p>:null}
               {buyers.when.holiday?<p className={s.count}><b>{buyers.when.holiday}</b><span>for a holiday</span></p>:null}

@@ -126,10 +126,14 @@ export const POST=withErrorLog("shop-map-votes-signals-sync",async(request:Reque
   if(crossSiteWrite(request))return NextResponse.json(CROSS_SITE_REFUSAL,{status:403,headers:noStore});
   if(await isQaReviewer())return NextResponse.json({synced:false},{headers:noStore});
   const access=await requireFeatureApi("shopMap");if(!access.ok)return access.response;
-  const userId=access.user.userId;
+  return NextResponse.json(await syncVotesSignals(access.user.userId),{headers:noStore});
+});
+
+/** The sync for one member; also run daily for every shop by /api/shop-map/daily-sync-tick. */
+export async function syncVotesSignals(userId:string){
   const d=db();await ensureSignalTables(d);
   let connection:Awaited<ReturnType<typeof etsyConnection>>;
-  try{connection=await etsyConnection(userId)}catch{return NextResponse.json({synced:false,reason:"Etsy is not connected."},{headers:noStore})}
+  try{connection=await etsyConnection(userId)}catch{return {synced:false,reason:"Etsy is not connected."}}
   const shopId=Number(connection.shopId);const now=Math.floor(Date.now()/1000);
   /* Location columns from the first build are emptied; nothing reads them. */
   await d.prepare("UPDATE shop_map_order_signals SET country=NULL,region=NULL WHERE user_id=? AND shop_id=? AND (country IS NOT NULL OR region IS NOT NULL)").bind(userId,shopId).run().catch(()=>undefined);
@@ -207,5 +211,5 @@ export const POST=withErrorLog("shop-map-votes-signals-sync",async(request:Reque
     ON CONFLICT(user_id,shop_id) DO UPDATE SET refreshed_at=excluded.refreshed_at,receipts=shop_map_signal_state.receipts+excluded.receipts,
     oldest_at=MIN(COALESCE(shop_map_signal_state.oldest_at,excluded.oldest_at),excluded.oldest_at)`)
     .bind(userId,shopId,now,receipts,oldest).run();
-  return NextResponse.json({synced:true,receipts,fields,oldest,photos,listings:listingsSeen},{headers:noStore});
-});
+  return {synced:true,receipts,fields,oldest,photos,listings:listingsSeen};
+}

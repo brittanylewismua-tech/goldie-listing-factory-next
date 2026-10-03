@@ -30,8 +30,8 @@
 :global(#suite-workspace) .engine .panelTitle{font-family:var(--sans)!important;font-weight:600!important;font-size:17px!important;line-height:1.3!important;letter-spacing:0!important;margin:0!important;color:var(--ink)!important}
 
 /* ── Header: compact; the period switch sits beside the figures ── */
-.band{background:var(--pink);padding:30px 56px 28px}
-.bandInner{max-width:1160px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;gap:32px;flex-wrap:wrap}
+.band{background:var(--pink);padding:30px 56px 64px}
+.bandInner{max-width:1160px;margin:0 auto;display:flex;justify-content:space-between;align-items:stretch;gap:32px;flex-wrap:wrap}
 .titleBlock{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
 .connected{display:inline-flex;align-items:center;gap:10px;padding:4px 14px 4px 4px;background:#fff;border:1.5px solid var(--ink);border-radius:999px;font-size:13px}
 .connected img,.logoBlank{width:30px;height:30px;border-radius:50%;object-fit:cover;border:1.5px solid var(--ink);background:var(--pinkSoft)}
@@ -39,7 +39,9 @@
 .dot{display:inline-flex;align-items:center;gap:6px;font-weight:500;color:#1d6b44}
 .dot::before{content:"";width:8px;height:8px;border-radius:50%;background:#1f9d5c}
 .lede{margin:0;font-size:18px;line-height:1.45;max-width:46ch}
-.bandRight{display:flex;flex-direction:column;align-items:flex-end;gap:22px}
+.bandRight{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:22px}
+/* The switch sits on the title line: the h1 is 64px at .95, so its cap height centres about 26px down. */
+.showing[data-align=title]{margin-top:14px}
 .showing{display:inline-flex;align-items:center;gap:12px;font-size:14px;font-weight:600}
 .period{display:inline-flex;background:#fff;border:1.5px solid var(--ink);border-radius:999px;padding:3px;gap:2px}
 .period button{border:0;background:transparent;padding:7px 16px;border-radius:999px;font-size:14px;font-weight:600;color:#57525a;min-height:0;line-height:1.3}
@@ -244,7 +246,8 @@
   .phoneTabs{display:flex;gap:6px;position:sticky;top:0;z-index:5;background:#0b0a0c;padding:10px 16px}
   .phoneTabs button{flex:1;min-height:0;padding:8px 0;border-radius:999px;border:1px solid #2a262a;background:transparent;color:#d6d0d5;font-size:14px;font-weight:500}
   .phoneTabs button[aria-current=page]{background:var(--pink);border-color:var(--pink);color:var(--ink);font-weight:600}
-  .band{padding:22px 16px 22px}
+  .band{padding:22px 16px 40px}
+  .showing[data-align=title]{margin-top:0}
   .bandInner{gap:20px}
   .bandRight{align-items:flex-start;width:100%;gap:18px}
   :global(#suite-workspace) .engine .h1{font-size:50px!important}
