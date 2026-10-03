@@ -219,7 +219,7 @@ export const nameOf=(reads:Map<number,DesignRead>,id:number,title:string)=>reads
  */
 export function shopHighlights(input:{top:TopRow[];name:(id:number,title:string)=>string;days:number;
   saved:Array<{listingId:number;title:string;favorites:number|null}>;formula:FormulaCard[];products:{rows:ProductRow[];total:number}|null;
-  reviews:OwnReview[];repeatBuyers?:number;giftOrders?:number;topPlace?:string|null;topColor?:{value:string;share:number}|null}):string[]{
+  reviews:OwnReview[];repeatBuyers?:number;giftOrders?:number;topColor?:{value:string;share:number}|null}):string[]{
   const lines:string[]=[];
   const {top,name,days}=input;
   const sold=top.filter(row=>row.basis==="sales");
@@ -234,7 +234,6 @@ export function shopHighlights(input:{top:TopRow[];name:(id:number,title:string)
   if(input.topColor&&input.topColor.share>=0.25)lines.push(`Buyers chose ${input.topColor.value} ${Math.round(input.topColor.share*100)}% of the time`);
   if(input.repeatBuyers&&input.repeatBuyers>=2)lines.push(`${input.repeatBuyers} buyers came back for another order`);
   if(input.giftOrders&&input.giftOrders>=2)lines.push(`${input.giftOrders} orders this year were marked as gifts`);
-  if(input.topPlace)lines.push(`Most of your buyers are in ${input.topPlace}`);
   if(input.reviews.length>=10){const avg=input.reviews.reduce((s,r)=>s+Number(r.rating||0),0)/input.reviews.length;
     lines.push(`${avg.toFixed(1)} stars across your last ${input.reviews.length} reviews`)}
   const product=input.products?.rows[0];

@@ -146,7 +146,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
   const listingsSold=data?data.period.filter(item=>item.unitsPurchased>0).length:0;
   const colorOption=sig?.variations.options.find(option=>option.name==="Color");
   const highlights=useMemo(()=>data?shopHighlights({top,name:(id,title)=>nameOf(reads,id,title),days,saved,formula:formula?.cards??[],products,
-    reviews:data.reviews,repeatBuyers:sig?.repeat.repeatBuyers,giftOrders:sig?.gifts.gifts,topPlace:sig&&sig.places.orders>=5?sig.places.places[0]?.label??null:null,
+    reviews:data.reviews,repeatBuyers:sig?.repeat.repeatBuyers,giftOrders:sig?.gifts.gifts,
     topColor:colorOption&&colorOption.units?{value:colorOption.values[0].value.toLowerCase(),share:colorOption.values[0].units/colorOption.units}:null}):[],
     [data,top,reads,days,saved,formula,products,sig,colorOption]);
 
@@ -385,7 +385,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
       {/* ── Who buys (soft pink band) ── */}
       <section id="oe-who" className={`${s.group} ${s.tinted}`} aria-labelledby="oe-who-h">
         <h2 id="oe-who-h" className={s.groupTitle}>Who buys</h2>
-        <div className={s.quad}>
+        <div className={s.triple}>
           <div className={s.panel}>
             <h3 className={s.panelTitle}>Who they buy for</h3>
             {buyers&&buyers.whoFor.length?<>{buyers.whoFor.map(item=><div key={item.label} className={s.bar}>
@@ -393,14 +393,6 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
               <span className={s.track}><i style={{width:`${Math.round(item.n/Math.max(1,buyers.whoFor[0].n)*100)}%`}}/></span>
             </div>)}<p className={s.panelFoot}>From your {buyers.count} most recent reviews.</p></>
             :<Empty>Appears after about 10 written reviews.</Empty>}
-          </div>
-          <div className={s.panel}>
-            <h3 className={s.panelTitle}>Where they are</h3>
-            {sig&&sig.places.places.length?<>{sig.places.places.map(place=><div key={place.label} className={s.bar}>
-              <p><span>{place.label}</span><b>{place.orders}</b></p>
-              <span className={s.track}><i style={{width:`${Math.round(place.orders/Math.max(1,sig.places.places[0].orders)*100)}%`}}/></span>
-            </div>)}<p className={s.panelFoot}>From {sig.places.orders} orders in the last 12 months{sig.places.abroad?`. ${sig.places.abroad} shipped outside the US.`:"."}</p></>
-            :<Empty>{ordersNote??(sig&&sig.coverage.orders?"Etsy didn’t include buyer locations on these orders.":"Appears after your first orders.")}</Empty>}
           </div>
           <div className={s.panel}>
             <h3 className={s.panelTitle}>Who comes back</h3>

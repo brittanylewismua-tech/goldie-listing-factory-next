@@ -57,7 +57,7 @@ export const DELETION_PLAN: PlanStep[] = [
     say: "Your shop, and the niches your listings were organised into." },
   { table: "shop_map_order_signals", disposition: "delete",
     sql: `DELETE FROM shop_map_order_signals WHERE user_id = ?`,
-    say: "The order details behind Votes: a scrambled buyer code, state and country, and whether an order was a gift." },
+    say: "The order details behind Votes: a scrambled buyer code and whether an order was a gift." },
   { table: "shop_map_sale_variations", disposition: "delete",
     sql: `DELETE FROM shop_map_sale_variations WHERE user_id = ?`,
     say: "The sizes and colors your buyers chose." },
