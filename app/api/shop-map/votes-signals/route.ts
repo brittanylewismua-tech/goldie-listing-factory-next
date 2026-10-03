@@ -74,8 +74,6 @@ export const GET=withErrorLog("shop-map-votes-signals",async()=>{
   const d=db();const shopId=Number(shop.shop_id);
   await ensureSignalTables(d);
   await snapshotFavorites(userId,shopId);
-  /* Location columns from the first build are emptied; nothing reads them. */
-  await d.prepare("UPDATE shop_map_order_signals SET country=NULL,region=NULL WHERE user_id=? AND shop_id=? AND (country IS NOT NULL OR region IS NOT NULL)").bind(userId,shopId).run().catch(()=>undefined);
   const now=Math.floor(Date.now()/1000),year=now-365*DAY;
 
   const state=await d.prepare("SELECT refreshed_at,receipts,oldest_at FROM shop_map_signal_state WHERE user_id=? AND shop_id=?")
@@ -133,6 +131,8 @@ export const POST=withErrorLog("shop-map-votes-signals-sync",async(request:Reque
   let connection:Awaited<ReturnType<typeof etsyConnection>>;
   try{connection=await etsyConnection(userId)}catch{return NextResponse.json({synced:false,reason:"Etsy is not connected."},{headers:noStore})}
   const shopId=Number(connection.shopId);const now=Math.floor(Date.now()/1000);
+  /* Location columns from the first build are emptied; nothing reads them. */
+  await d.prepare("UPDATE shop_map_order_signals SET country=NULL,region=NULL WHERE user_id=? AND shop_id=? AND (country IS NOT NULL OR region IS NOT NULL)").bind(userId,shopId).run().catch(()=>undefined);
   const state=await d.prepare("SELECT refreshed_at,oldest_at FROM shop_map_signal_state WHERE user_id=? AND shop_id=?").bind(userId,shopId).first<{refreshed_at:number;oldest_at:number|null}>();
   /* Repeat buyers need history, so syncs reach back three years until that
      much is held (or the shop's first order is reached); after that they
