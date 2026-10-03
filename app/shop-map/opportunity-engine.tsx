@@ -69,7 +69,8 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
 
   /* Read the printed design on the listings the page shows: the top ten first,
      then everything sold this year. The formula cards are built from these. */
-  const wantedIds=useMemo(()=>data?[...new Set([...top.map(row=>row.listingId),...data.year.map(row=>row.listingId)])].slice(0,60):[],[data,top]);
+  const saved=useMemo(()=>data?savedNotBought(data.catalog,data.year,new Set(top.map(row=>row.listingId))):[],[data,top]);
+  const wantedIds=useMemo(()=>data?[...new Set([...top.map(row=>row.listingId),...saved.map(row=>row.listingId),...data.year.map(row=>row.listingId)])].slice(0,60):[],[data,top,saved]);
   useEffect(()=>{
     if(!wantedIds.length)return;
     let live=true;
@@ -89,7 +90,6 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
 
   const formula=useMemo(()=>data?winningFormula(data.year,data.period,reads,data.catalog):null,[data,reads]);
   const products=useMemo(()=>data?productsChosen(data.catalog,data.year):null,[data]);
-  const saved=useMemo(()=>data?savedNotBought(data.catalog,data.year,new Set(top.map(row=>row.listingId))):[],[data,top]);
   const buyers=useMemo(()=>data&&data.reviews.length>=10?buyerSignals(data.reviews):null,[data]);
   const images=useMemo(()=>new Map((data?.catalog??[]).map(row=>[row.listingId,row.imageUrl])),[data]);
 
@@ -100,10 +100,10 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
     <div className={s.bandInner}>
       <div className={s.bandTop}>
         <span className={s.connected}><i aria-hidden="true"/>{data?.shopName??"Your shop"} is connected</span>
-        <div className={s.showing}><span>Showing</span>
+        {section==="overview"?<div className={s.showing}><span>Showing</span>
           <div className={s.period} role="group" aria-label="Period for the whole page">
             {([30,90] as const).map(value=><button key={value} type="button" aria-pressed={days===value} onClick={()=>onDays(value)}>Last {value} days</button>)}
-          </div></div>
+          </div></div>:null}
       </div>
       <div className={s.bandMain}>
         <div className={s.titleBlock}>
@@ -128,7 +128,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
 
   if(section!=="overview"){
     const focus=listingId&&data?top.find(row=>row.listingId===listingId)??null:null;
-    return <div className={`${s.engine} oe-engine`}>{tabs}{header}
+    return <div className={`${s.engine} oe-engine oe-votes`}>{tabs}{header}
       <div className={s.wrap}>
         <section className={s.soon}>
           {focus?<div className={s.soonListing}>
@@ -144,12 +144,12 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
     </div>;
   }
 
-  if(failed)return <div className={`${s.engine} oe-engine`}>{tabs}{header}<div className={s.wrap}><section className={s.state} role="alert">
+  if(failed)return <div className={`${s.engine} oe-engine oe-votes`}>{tabs}{header}<div className={s.wrap}><section className={s.state} role="alert">
     <strong>Your votes could not load.</strong>
     <button type="button" className={s.btnLight} onClick={()=>{setData(null);setAttempt(value=>value+1)}}>Try again</button></section></div></div>;
-  if(!data)return <div className={`${s.engine} oe-engine`}>{tabs}{header}<div className={s.wrap}><section className={s.state} role="status">
+  if(!data)return <div className={`${s.engine} oe-engine oe-votes`}>{tabs}{header}<div className={s.wrap}><section className={s.state} role="status">
     <span className={s.spinner} aria-hidden="true"/>Reading your sales, favorites and reviews…</section></div></div>;
-  if(!top.length)return <div className={`${s.engine} oe-engine`}>{tabs}{header}<div className={s.wrap}><section className={s.state}>
+  if(!top.length)return <div className={`${s.engine} oe-engine oe-votes`}>{tabs}{header}<div className={s.wrap}><section className={s.state}>
     <strong>No listings to rank yet.</strong> Connect your shop and sync listings in Connections.</section></div></div>;
 
   const row=top[Math.min(index,top.length-1)];
@@ -182,7 +182,7 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
   ];
   const topProduct=products?.rows[0];
 
-  return <div className={`${s.engine} oe-engine`}>
+  return <div className={`${s.engine} oe-engine oe-votes`}>
     {tabs}{header}
     <div className={s.wrap}>
 

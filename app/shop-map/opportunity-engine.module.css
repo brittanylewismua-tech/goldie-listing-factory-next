@@ -115,7 +115,8 @@
 .panelFoot{margin:auto 0 0;padding-top:12px;border-top:1px solid #f1ecef;font-size:15px;color:var(--ink2)}
 .formula{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .formula .panel{padding:22px;gap:12px}
-.formula .panelTitle{min-height:42px}
+/* Two-line titles hold the percentages on one line across the row. */
+:global(#suite-workspace) .engine .formula .panelTitle{min-height:2.6em!important}
 .big{display:flex;align-items:baseline;gap:8px;margin:0}
 .big b{font-size:34px;font-weight:600;letter-spacing:-1px;color:var(--pink);line-height:1}
 .big span{font-size:14px;color:#57525a}
@@ -196,6 +197,7 @@
   .buttons>*{flex:1}
   .formula{grid-template-columns:repeat(2,minmax(0,1fr))}
   .formula .panel{padding:16px}
+  :global(#suite-workspace) .engine .formula .panelTitle{min-height:3.9em!important}
   .trend{font-size:12px;padding:3px 8px}
   .thumbs img{width:36px;height:36px}
   .swipe{display:block;margin:-8px 0 0;font-size:13px;font-weight:600;color:var(--pinkDeep)}

@@ -1714,14 +1714,16 @@
 }
 
 
-/* Opportunity Engine editorial layout, aligned with Goldie's Manrope/pink palette. */
-#suite-workspace .shop-map-redesign .oe-engine,
+/* Opportunity Engine editorial layout, aligned with Goldie's Manrope/pink palette.
+   These belong to the previous engine (purchase-priorities.tsx). The Votes
+   page shares the .oe-engine marker, so it is excluded by its own .oe-votes. */
+#suite-workspace .shop-map-redesign .oe-engine:not(.oe-votes),
 #suite-workspace .shop-map-redesign .oe-support,
 #suite-workspace .shop-map-redesign .oe-review{
   font-family:'Manrope Variable',Manrope,sans-serif!important;
   color:#171217!important;
 }
-#suite-workspace .shop-map-redesign .oe-engine{margin:0 0 34px!important}
+#suite-workspace .shop-map-redesign .oe-engine:not(.oe-votes){margin:0 0 34px!important}
 #suite-workspace .shop-map-redesign .oe-image-missing{
   display:grid!important;place-items:center!important;width:min(100%,270px)!important;
   aspect-ratio:1!important;border-radius:14px!important;background:#fff!important;
