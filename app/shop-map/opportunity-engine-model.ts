@@ -381,7 +381,7 @@ export function buildNextMoves(input:{top:TopRow[];catalog:CatalogListing[];year
   const weak=familyStats(catalog,year).filter(row=>row.active>=5&&total>=10&&row.unitsYear/total<0.06);
   if(weak.length){const strong=familyStats(catalog,year)[0];
     moves.push({id:"hold",group:"hold",tag:"Hold off",title:`Hold off on new ${weak.map(row=>familyName(row.family)).join(" and ")}`,
-      why:`${weak.map(row=>`${familyName(row.family)}: ${row.active} active, ${row.unitsYear} sold`).join(". ")} in 12 months.${strong?` ${familyName(strong.family)[0].toUpperCase()+familyName(strong.family).slice(1)} sold ${strong.unitsYear} of ${total}.`:""}`,
+      why:`${weak.map(row=>{const label=familyName(row.family);return `${label[0].toUpperCase()+label.slice(1)}: ${row.active} active, ${row.unitsYear} sold`}).join(". ")} in 12 months.${strong?` ${familyName(strong.family)[0].toUpperCase()+familyName(strong.family).slice(1)} sold ${strong.unitsYear} of ${total}.`:""}`,
       evidence:weak.map(row=>[`${row.unitsYear} of ${total}`,`units were ${familyName(row.family)}`] as [string,string]),listingIds:[],
       proof:{left:{h:"Sales by product type, 12 months",lines:familyStats(catalog,year).filter(row=>row.active>0).slice(0,5).map(row=>`${familyName(row.family)}: ${row.active} active, ${row.unitsYear} units`)},
         right:{h:"Do this",steps:["Put new design time where buyers already buy.","Leave the existing listings up; they cost nothing to keep.","Recheck after the holidays."]}},

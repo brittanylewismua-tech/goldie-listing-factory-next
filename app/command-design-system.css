@@ -51,7 +51,8 @@
   the heading and the description too. A link that contains a heading is a
   surface, not a link.
 */
-.app-shell.command-workspace.command-workspace .factory-work :is(p,li,dd,small,td) a{color:var(--cc-accent)!important}
+/* :where() exclusion: the Opportunity Engine styles its own links and buttons, with no specificity change elsewhere. */
+.app-shell.command-workspace.command-workspace .factory-work :is(p,li,dd,small,td) a:where(:not(.oe-engine *)){color:var(--cc-accent)!important}
 .app-shell.command-workspace.command-workspace .factory-work .winner-stat-note.warn{color:var(--cc-accent)!important}
 /* Anything on a dark fill keeps its own colour, or it disappears into it. */
 /* The Etsy attribution is required on the page and was the smallest type in
@@ -85,10 +86,10 @@
   Display figures are named here and excluded, and their rule carries the same
   doubled class, so the two cannot get into that argument again.
 */
-.app-shell.command-workspace .factory-work :is(small,figcaption,dt){font-size:12px!important;line-height:1.5}
+.app-shell.command-workspace .factory-work :is(small,figcaption,dt):where(:not(.oe-engine *)){font-size:12px!important;line-height:1.5}
 /* Prose never runs the full width of a 1,300px workspace. Six paragraphs on
    Shop Map were over 820px wide because the cap did not shout. */
-.app-shell.command-workspace .factory-work :is(p,.lede,.cc-note){max-width:72ch!important}
+.app-shell.command-workspace .factory-work :is(p,.lede,.cc-note):where(:not(.oe-engine *)){max-width:72ch!important}
 /* An empty state is a box, not a paragraph: capping it at 72ch left a dashed
    panel covering half the card with nothing beside it. */
 .app-shell.command-workspace.command-workspace .factory-work :is(p.empty,p.p-empty,p.p-notice){max-width:none!important}
@@ -125,13 +126,13 @@
 .app-shell.command-workspace .factory-work :is(.plan-banner,.listing-streak,.goals-current) :is(h1,h2,h3,h4,span,b,strong):not(.star){color:inherit!important}
 
 /* ------------------------------------------------------------------ forms */
-.app-shell.command-workspace .factory-work :is(input,select,textarea):not([type="file"]):not([type="checkbox"]):not([type="radio"]){
+.app-shell.command-workspace .factory-work :is(input,select,textarea):where(:not(.oe-engine *)):not([type="file"]):not([type="checkbox"]):not([type="radio"]){
   min-height:var(--cc-control-height,42px);padding:0 12px;border:1px solid var(--cc-line)!important;border-radius:var(--cc-radius-sm)!important;
   background:var(--cc-surface)!important;color:var(--cc-ink)!important;font-size:var(--cc-control-font-size,14px)!important;font-weight:650!important;
   box-shadow:none!important;
 }
 .app-shell.command-workspace .factory-work textarea{min-height:96px;padding:12px;line-height:1.5}
-.app-shell.command-workspace .factory-work :is(input,select,textarea):focus-visible{
+.app-shell.command-workspace .factory-work :is(input,select,textarea):where(:not(.oe-engine *)):focus-visible{
   outline:3px solid var(--cc-accent);outline-offset:2px;border-color:var(--cc-accent)!important;
 }
 .app-shell.command-workspace .factory-work label{
