@@ -84,10 +84,10 @@ export default function OpportunityEngine({days}:{days:30|90}){
   const buyers=useMemo(()=>data?reviewThemes(data.reviews):null,[data]);
   const images=useMemo(()=>new Map((data?.catalog??[]).map(row=>[row.listingId,row.imageUrl])),[data]);
 
-  if(failed)return <section className={s.state} role="alert"><strong>The Opportunity Engine could not load.</strong>
+  if(failed)return <section className={`${s.state} oe-engine`} role="alert"><strong>The Opportunity Engine could not load.</strong>
     <button type="button" className={s.btnGhost} onClick={()=>{setData(null);setAttempt(value=>value+1)}}>Try again</button></section>;
-  if(!data)return <section className={s.state} role="status"><span className={s.spinner} aria-hidden="true"/>Reading your sales, favorites and reviews…</section>;
-  if(!top.length)return <section className={s.state}><strong>No listings to rank yet.</strong> Connect your shop and sync listings in Connections.</section>;
+  if(!data)return <section className={`${s.state} oe-engine`} role="status"><span className={s.spinner} aria-hidden="true"/>Reading your sales, favorites and reviews…</section>;
+  if(!top.length)return <section className={`${s.state} oe-engine`}><strong>No listings to rank yet.</strong> Connect your shop and sync listings in Connections.</section>;
 
   const salesCount=top.filter(row=>row.basis==="sales").length;
   const row=top[Math.min(index,top.length-1)];
@@ -111,7 +111,7 @@ export default function OpportunityEngine({days}:{days:30|90}){
   };
   const toggle=(id:string)=>setOpen(prev=>{const next=new Set(prev);if(next.has(id))next.delete(id);else next.add(id);return next});
 
-  return <div className={s.engine}>
+  return <div className={`${s.engine} oe-engine`}>
     <dl className={s.summary} aria-label={`Last ${days} days`}>
       <div><dt>Units sold</dt><dd>{num(data.totalPeriod)}</dd><p>Last {days} days</p></div>
       <div><dt>Product sales</dt><dd>{dollars(revenue)}</dd><p>Before fees and production</p></div>
@@ -142,7 +142,7 @@ export default function OpportunityEngine({days}:{days:30|90}){
         <a className={s.cardImg} href={etsy(row.listingId)} target="_blank" rel="noopener noreferrer" aria-label="Open this listing on Etsy">
           {row.imageUrl?<img src={bigImage(row.imageUrl)} alt=""/>:<span className={s.noImg}>No photo on file</span>}
         </a>
-        <div className={s.cardBody}>
+        <div className={s.cardHead}>
           <div className={s.cardTop}>
             <span className={s.rankPill}>#{row.rank} of {top.length}</span>
             <span className={row.basis==="sales"?s.basisSales:s.basisFav}>{row.basis==="sales"?"Ranked by sales":"Ranked by favorites"}</span>
@@ -164,24 +164,24 @@ export default function OpportunityEngine({days}:{days:30|90}){
             {read.reviews.count?<div><dt>{read.reviews.count} reviews</dt><dd>{read.reviews.average?.toFixed(1)}★</dd></div>:null}
           </dl>
           <p className={s.read}>{read.headline}</p>
-          <div className={s.cols}>
-            <div>
-              <h4 className={s.label}>Next moves</h4>
-              <ol className={s.steps}>{read.moves.map(move=><li key={move.kind}><b>{move.title}</b><span>{move.detail}</span><small>{move.evidence}</small></li>)}</ol>
-            </div>
-            <div className={s.side}>
-              {read.missing.length?<div><h4 className={s.label}>What&apos;s missing</h4>
-                <ul className={s.bullets}>{read.missing.map(line=><li key={line}>{line}</li>)}</ul></div>:null}
-              {read.reviews.quote?<div><h4 className={s.label}>What buyers say</h4><blockquote className={s.quote}>“{read.reviews.quote}”</blockquote></div>:null}
-              <div><h4 className={s.label}>Similar listings in other shops</h4>
-                {sim.state==="idle"?<button type="button" className={s.link} onClick={()=>void loadSimilar(row.listingId)}>Find similar Etsy listings</button>
-                :sim.state==="loading"?<p className={s.muted} role="status">Searching Etsy…</p>
-                :sim.state==="failed"?<p className={s.muted}>Etsy search did not answer. <button type="button" className={s.link} onClick={()=>void loadSimilar(row.listingId)}>Try again</button></p>
-                :sim.rows.length?<ul className={s.similar}>{sim.rows.map(item=><li key={item.listingId}><a href={item.url} target="_blank" rel="noopener noreferrer">
-                    {item.imageUrl?<img src={item.imageUrl} alt="" loading="lazy" width={56} height={56}/>:null}
-                    <span><b>{shortName(item.title)}</b><small>{[item.price,item.reviewCount?`${item.reviewCount} reviews`:null].filter(Boolean).join(" · ")}</small></span></a></li>)}</ul>
-                :<p className={s.muted}>{sim.note||"No close matches in Etsy search right now."}</p>}
-              </div>
+        </div>
+        <div className={s.cardDetail}>
+          <div>
+            <h4 className={s.label}>Next moves</h4>
+            <ol className={s.steps}>{read.moves.map(move=><li key={move.kind}><b>{move.title}</b><span>{move.detail}</span><small>{move.evidence}</small></li>)}</ol>
+          </div>
+          <div className={s.side}>
+            {read.missing.length?<div><h4 className={s.label}>What&apos;s missing</h4>
+              <ul className={s.bullets}>{read.missing.map(line=><li key={line}>{line}</li>)}</ul></div>:null}
+            {read.reviews.quote?<div><h4 className={s.label}>What buyers say</h4><blockquote className={s.quote}>“{read.reviews.quote}”</blockquote></div>:null}
+            <div><h4 className={s.label}>Similar listings in other shops</h4>
+              {sim.state==="idle"?<button type="button" className={s.link} onClick={()=>void loadSimilar(row.listingId)}>Find similar Etsy listings</button>
+              :sim.state==="loading"?<p className={s.muted} role="status">Searching Etsy…</p>
+              :sim.state==="failed"?<p className={s.muted}>Etsy search did not answer. <button type="button" className={s.link} onClick={()=>void loadSimilar(row.listingId)}>Try again</button></p>
+              :sim.rows.length?<ul className={s.similar}>{sim.rows.map(item=><li key={item.listingId}><a href={item.url} target="_blank" rel="noopener noreferrer">
+                  {item.imageUrl?<img src={item.imageUrl} alt="" loading="lazy" width={56} height={56}/>:null}
+                  <span><b>{shortName(item.title)}</b><small>{[item.price,item.reviewCount?`${item.reviewCount} reviews`:null].filter(Boolean).join(" · ")}</small></span></a></li>)}</ul>
+              :<p className={s.muted}>{sim.note||"No close matches in Etsy search right now."}</p>}
             </div>
           </div>
           <div className={s.actions}>
@@ -205,9 +205,9 @@ export default function OpportunityEngine({days}:{days:30|90}){
         {shown.map(move=>{const isOpen=open.has(move.id);const rank=moves.indexOf(move)+1;
           const thumbs=move.listingIds.map(id=>images.get(id)).filter((url):url is string=>Boolean(url)).slice(0,3);
           return <li key={move.id} className={s.move}>
-          <div className={s.moveRow}>
+          <div className={s.moveRow} data-thumbs={thumbs.length?"yes":"no"}>
             <span className={s.moveRank}>{rank}</span>
-            <span className={s.moveThumbs} data-count={thumbs.length}>{thumbs.map(url=><img key={url} src={url} alt="" loading="lazy" width={96} height={96}/>)}</span>
+            {thumbs.length?<span className={s.moveThumbs}>{thumbs.map(url=><img key={url} src={url} alt="" loading="lazy" width={96} height={96}/>)}</span>:null}
             <div className={s.moveText}>
               <span className={s.tag} data-group={move.group}>{move.tag}</span>
               <h3>{move.title}</h3><p>{move.why}</p>
