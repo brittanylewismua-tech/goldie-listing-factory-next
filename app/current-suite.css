@@ -1014,3 +1014,18 @@ body:has(#suite-workspace) .goldie-tabs a em{font-size:10px;line-height:1.15;tex
 /* Home shell compatibility marker. The redesigned Home renders one child, so
    the track declaration is inert unless a second child is introduced. */
 
+
+/* Your Shop sections in the rail (moved from the page's tab bar). Votes, Build
+   and Track sit one level deeper, under the Opportunity Engine label. */
+#suite-workspace .current-shop-children{display:flex;flex-direction:column;gap:2px;margin:2px 0 6px 18px;padding-left:10px;border-left:1px solid #2a262a}
+#suite-workspace .current-shop-parent{display:block;padding:8px 12px 4px;color:#fff;font-size:13px;font-weight:600}
+#suite-workspace .current-shop-engine{display:flex;flex-direction:column;gap:2px;margin:0 0 6px 12px;padding-left:10px;border-left:1px solid #2a262a}
+#suite-workspace .current-navigation .current-shop-children a{min-height:34px!important;padding:7px 12px!important;font-size:13px!important;font-weight:400!important;color:#a39ca2!important;border-radius:6px!important}
+#suite-workspace .current-navigation .current-shop-children a:hover{background:#2a262a!important;color:#fff!important}
+#suite-workspace .current-navigation .current-shop-children a.active{background:#ee6fc0!important;color:#1b181b!important;font-weight:600!important}
+#suite-workspace .current-navigation .current-shop-children a.active::before{display:none}
+
+/* The Votes page's pink band runs edge to edge across the work area. */
+#suite-workspace .factory-work:has(.oe-bleed){padding:0!important;max-width:none!important}
+#suite-workspace .factory-work:has(.oe-bleed) .shop-map{max-width:none!important;padding:0!important;margin:0!important}
+#suite-workspace .factory-work:has(.oe-bleed)>.current-suite-footer{padding:0 56px 32px}
