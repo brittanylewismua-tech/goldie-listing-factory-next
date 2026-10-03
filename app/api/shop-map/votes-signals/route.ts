@@ -102,11 +102,19 @@ export const GET=withErrorLog("shop-map-votes-signals",async()=>{
     .bind(userId,shopId).all<Record<string,unknown>>()).results??[]).map(row=>({listingId:Number(row.listing_id),favorites:row.favorites==null?null:Number(row.favorites)}));
 
   const recentOrders=orders.filter(order=>order.createdAt>=year);
+  /* Repeat buyers read every stored order (up to three years), not just this year. */
+  const orderHistory=((await d.prepare(`SELECT receipt_id,buyer_key,created_at FROM shop_map_order_signals WHERE user_id=? AND shop_id=? AND buyer_key IS NOT NULL`)
+    .bind(userId,shopId).all<Record<string,unknown>>()).results??[]).map(row=>({receiptId:Number(row.receipt_id),buyerKey:String(row.buyer_key),country:null,region:null,
+      isGift:false,giftMessage:false,createdAt:Number(row.created_at)}) as OrderSignal);
+  const allSales=((await d.prepare(`SELECT transaction_id,receipt_id,listing_id,quantity,sold_at FROM shop_map_sale_variations WHERE user_id=? AND shop_id=?`)
+    .bind(userId,shopId).all<Record<string,unknown>>()).results??[]).map(row=>({transactionId:Number(row.transaction_id),receiptId:Number(row.receipt_id),
+      listingId:Number(row.listing_id),quantity:Number(row.quantity||1),variations:[],soldAt:Number(row.sold_at)}) as SaleVariation);
+  const firstOrder=orderHistory.reduce((min,order)=>Math.min(min,order.createdAt),now);
   return NextResponse.json({
     refreshedAt:state?.refreshed_at??null,stale:!state||Number(state.refreshed_at)<now-20*3600,
     coverage:{orders:recentOrders.length,since:year},
     variations:variationVotes(sales,year),
-    repeat:repeatBuyers(recentOrders,sales.filter(sale=>sale.soldAt>=year)),
+    repeat:{...repeatBuyers(orderHistory,allSales),since:orderHistory.length?firstOrder:null},
     together:boughtTogether(sales,year),
     gifts:giftOrders(orders,year),
     places:buyerPlaces(orders,year),
@@ -125,12 +133,18 @@ export const POST=withErrorLog("shop-map-votes-signals-sync",async(request:Reque
   let connection:Awaited<ReturnType<typeof etsyConnection>>;
   try{connection=await etsyConnection(userId)}catch{return NextResponse.json({synced:false,reason:"Etsy is not connected."},{headers:noStore})}
   const shopId=Number(connection.shopId);const now=Math.floor(Date.now()/1000);
-  const state=await d.prepare("SELECT refreshed_at FROM shop_map_signal_state WHERE user_id=? AND shop_id=?").bind(userId,shopId).first<{refreshed_at:number}>();
-  /* First sync reaches back 13 months; later ones stop a week behind the last one. */
-  const stopAt=state?Number(state.refreshed_at)-7*DAY:now-395*DAY;
+  const state=await d.prepare("SELECT refreshed_at,oldest_at FROM shop_map_signal_state WHERE user_id=? AND shop_id=?").bind(userId,shopId).first<{refreshed_at:number;oldest_at:number|null}>();
+  /* Repeat buyers need history, so syncs reach back three years until that
+     much is held (or the shop's first order is reached); after that they
+     stop a week behind the last sync. */
+  const horizon=now-3*365*DAY;
+  const historyHeld=Boolean(state?.oldest_at&&Number(state.oldest_at)<=horizon);
+  const stopAt=state&&historyHeld?Number(state.refreshed_at)-7*DAY:horizon;
   let receipts=0,oldest=now,photos=0,listingsSeen=0;
+  /* Which buyer fields Etsy actually returned, as counts (printed, never stored beyond the columns above). */
+  const fields={buyer:0,country:0,region:0};
 
-  for(let page=0;page<20;page++){
+  for(let page=0;page<30;page++){
     let body:{results?:Array<Record<string,unknown>>};
     try{body=await etsyFetch(`/shops/${shopId}/receipts?limit=100&offset=${page*100}`,connection.token,"finance")}catch{break}
     const rows=body.results??[];if(!rows.length)break;
@@ -148,6 +162,9 @@ export const POST=withErrorLog("shop-map-votes-signals-sync",async(request:Reque
           receipt.state?String(receipt.state).slice(0,40):null,
           receipt.is_gift===true?1:0,String(receipt.gift_message??"").trim()?1:0,created));
       receipts++;
+      if(Number(receipt.buyer_user_id)>0)fields.buyer++;
+      if(receipt.country_iso)fields.country++;
+      if(receipt.state)fields.region++;
       for(const line of (receipt.transactions??[]) as Array<Record<string,unknown>>){
         const transactionId=Number(line.transaction_id),listingId=Number(line.listing_id);
         if(!Number.isSafeInteger(transactionId)||transactionId<=0||!Number.isSafeInteger(listingId)||listingId<=0)continue;
@@ -196,5 +213,5 @@ export const POST=withErrorLog("shop-map-votes-signals-sync",async(request:Reque
     ON CONFLICT(user_id,shop_id) DO UPDATE SET refreshed_at=excluded.refreshed_at,receipts=shop_map_signal_state.receipts+excluded.receipts,
     oldest_at=MIN(COALESCE(shop_map_signal_state.oldest_at,excluded.oldest_at),excluded.oldest_at)`)
     .bind(userId,shopId,now,receipts,oldest).run();
-  return NextResponse.json({synced:true,receipts,photos,listings:listingsSeen},{headers:noStore});
+  return NextResponse.json({synced:true,receipts,fields,oldest,photos,listings:listingsSeen},{headers:noStore});
 });

@@ -43,6 +43,12 @@ export function splitVariations(rows:Array<{name:string;value:string}>){
   return out;
 }
 
+/* "Small" and "S" are the same vote. */
+const SIZE_NAMES:Record<string,string>={"x-small":"XS","xsmall":"XS","extra small":"XS","small":"S","medium":"M","large":"L","x-large":"XL","xlarge":"XL",
+  "extra large":"XL","xx-large":"2XL","xxlarge":"2XL","xxl":"2XL","2x":"2XL","xxx-large":"3XL","xxxl":"3XL","3x":"3XL","4x":"4XL","xxxxl":"4XL","5x":"5XL"};
+export function sizeLabel(value:string){const key=value.trim().toLowerCase();return SIZE_NAMES[key]??value.trim().toUpperCase().replace(/^(\d)X$/,"$1XL")}
+const COLOR_CASE=(value:string)=>value.trim().toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+
 export type OptionVotes={name:string;units:number;values:Array<{value:string;units:number}>};
 export function variationVotes(sales:SaleVariation[],since:number):{units:number;options:OptionVotes[]}{
   const by=new Map<string,Map<string,number>>();let units=0;
@@ -50,12 +56,12 @@ export function variationVotes(sales:SaleVariation[],since:number):{units:number
     if(sale.soldAt<since)continue;
     const parts=splitVariations(sale.variations);if(!parts.length)continue;
     units+=sale.quantity;
-    for(const part of parts){const key=part.value.replace(/\s+/g," ");
+    for(const part of parts){const raw=part.value.replace(/\s+/g," ");const key=part.name==="Size"?sizeLabel(raw):part.name==="Color"?COLOR_CASE(raw):raw;
       const map=by.get(part.name)??new Map<string,number>();map.set(key,(map.get(key)??0)+sale.quantity);by.set(part.name,map);}
   }
   const order=["Color","Size","Style"];
   const options=[...by.entries()].map(([name,map])=>{const values=[...map.entries()].map(([value,n])=>({value,units:n})).sort((a,b)=>b.units-a.units);
-    return {name,units:values.reduce((s,v)=>s+v.units,0),values:values.slice(0,6)}})
+    return {name,units:values.reduce((s,v)=>s+v.units,0),values:values.slice(0,5)}})
     .filter(option=>option.values.length>=2)
     .sort((a,b)=>(order.indexOf(a.name)+1||9)-(order.indexOf(b.name)+1||9)||b.units-a.units).slice(0,2);
   return {units,options};
@@ -139,7 +145,7 @@ export function gainingFavorites(snapshots:Snapshot[],current:Array<{listingId:n
 /** What GET /api/shop-map/votes-signals returns. */
 export type VotesSignals={
   refreshedAt:number|null;stale:boolean;coverage:{orders:number;since:number};
-  variations:ReturnType<typeof variationVotes>;repeat:ReturnType<typeof repeatBuyers>;
+  variations:ReturnType<typeof variationVotes>;repeat:ReturnType<typeof repeatBuyers>&{since:number|null};
   together:ReturnType<typeof boughtTogether>;gifts:ReturnType<typeof giftOrders>;places:ReturnType<typeof buyerPlaces>;
   lastYear:ReturnType<typeof lastYearWindow>&{covered:boolean};photos:ReviewPhoto[];gaining:ReturnType<typeof gainingFavorites>;
 };

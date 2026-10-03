@@ -348,13 +348,13 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
             <div className={s.head}><h3 className={s.h3}>The sizes and colors they pick</h3>
               <p className={s.sub}>From the options buyers chose at checkout, last 12 months.</p></div>
             <div className={s.panel}>
-              {sig&&sig.variations.options.length?sig.variations.options.map(option=><div key={option.name} className={s.optionGroup}>
+              {sig&&sig.variations.options.length?<div className={s.optionGrid}>{sig.variations.options.map(option=><div key={option.name} className={s.optionGroup}>
                 <h4 className={s.panelTitle}>{option.name}</h4>
                 {option.values.map(value=><div key={value.value} className={s.bar}>
                   <p><span>{value.value}</span><b>{pct(value.units/Math.max(1,option.units))}</b></p>
                   <span className={s.track}><i style={{width:`${Math.round(value.units/Math.max(1,option.values[0].units)*100)}%`}}/></span>
                 </div>)}
-              </div>):<Empty>{ordersNote??(sig&&sig.coverage.orders?"Your listings don’t offer size or color choices, or buyers haven’t picked any yet.":"Appears after your first orders with a size or color choice.")}</Empty>}
+              </div>)}</div>:<Empty>{ordersNote??(sig&&sig.coverage.orders?"Your listings don’t offer size or color choices, or buyers haven’t picked any yet.":"Appears after your first orders with a size or color choice.")}</Empty>}
               {sig&&sig.variations.units?<p className={s.panelFoot}>{sig.variations.units} items with a choice, from {sig.coverage.orders} orders.</p>:null}
             </div>
           </div>
@@ -400,17 +400,18 @@ export default function OpportunityEngine({days,onDays,section="overview",listin
               <p><span>{place.label}</span><b>{place.orders}</b></p>
               <span className={s.track}><i style={{width:`${Math.round(place.orders/Math.max(1,sig.places.places[0].orders)*100)}%`}}/></span>
             </div>)}<p className={s.panelFoot}>From {sig.places.orders} orders in the last 12 months{sig.places.abroad?`. ${sig.places.abroad} shipped outside the US.`:"."}</p></>
-            :<Empty>{ordersNote??"Appears after your first orders."}</Empty>}
+            :<Empty>{ordersNote??(sig&&sig.coverage.orders?"Etsy didn’t include buyer locations on these orders.":"Appears after your first orders.")}</Empty>}
           </div>
           <div className={s.panel}>
             <h3 className={s.panelTitle}>Who comes back</h3>
             {sig&&sig.repeat.buyers?<>
-              <p className={s.count}><b>{sig.repeat.repeatBuyers}</b><span>{sig.repeat.repeatBuyers===1?"buyer":"buyers"} ordered more than once</span></p>
+              {sig.repeat.repeatBuyers?<p className={s.count}><b>{sig.repeat.repeatBuyers}</b><span>{sig.repeat.repeatBuyers===1?"buyer":"buyers"} ordered more than once</span></p>
+                :<p className={s.plain}>None of your {sig.repeat.buyers} buyers{sig.repeat.since?` since ${new Date(sig.repeat.since*1000).toLocaleDateString("en-US",{month:"short",year:"numeric"})}`:""} has placed a second order yet.</p>}
               {sig.repeat.secondPicks.length?<div className={s.picks}><small>What they bought next</small>
                 <span className={s.thumbs}>{sig.repeat.secondPicks.map(pick=>thumb(pick.listingId,44))}</span></div>:null}
               {buyers?.back.n?<p className={s.count}><b>{buyers.back.n}</b><span>reviews say they’ll buy again</span></p>:null}
               {buyers?.back.quotes[0]?<blockquote className={s.quote}>“{buyers.back.quotes[0]}”</blockquote>:null}
-              <p className={s.panelFoot}>{sig.repeat.buyers} different buyers in the last 12 months.</p>
+              <p className={s.panelFoot}>Counted from {sig.repeat.buyers} buyers{sig.repeat.since?` since ${new Date(sig.repeat.since*1000).toLocaleDateString("en-US",{month:"short",year:"numeric"})}`:""}.</p>
             </>:<Empty>{ordersNote??"Appears after your first orders."}</Empty>}
           </div>
           <div className={s.panel}>
