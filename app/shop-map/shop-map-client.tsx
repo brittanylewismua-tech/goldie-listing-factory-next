@@ -13,6 +13,9 @@ import type {ProductDirection} from "@/app/shop-map-product-expansion";
 import type {ShopFinding} from "@/app/shop-map-opportunity-discovery";
 import {OpportunityWorkspace,type OwnReviewInsight} from "./opportunity-workspace";
 import OpportunityEngine,{type EngineSection} from "./opportunity-engine";
+/* The Your Shop rail and the Votes page share these two faces. */
+import "@fontsource/archivo-black";
+import "@fontsource-variable/instrument-sans";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { refreshShopFinances } from "@/app/refresh-shop-finances";
 

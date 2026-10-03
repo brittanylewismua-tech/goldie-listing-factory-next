@@ -144,6 +144,8 @@ export const ACCESS: Record<string, Rule> = {
   "/api/shop-map/my-listings": { kind: "feature", feature: "shopMap" },
   "/api/shop-map/market-comparisons": { kind: "feature", feature: "shopMap" },
   "/api/shop-map/listing-designs": { kind: "feature", feature: "shopMap" },
+  "/api/shop-map/votes-signals": { kind: "feature", feature: "shopMap" },
+  "/api/shop-map/buyer-words": { kind: "feature", feature: "shopMap" },
   "/api/unlocks": { kind: "feature", feature: "listingFactory" },
   "/api/drop": { kind: "feature", feature: "listingFactory" },
 

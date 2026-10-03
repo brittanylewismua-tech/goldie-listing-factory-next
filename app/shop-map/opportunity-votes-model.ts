@@ -210,3 +210,37 @@ export function backLine(signals:BuyerSignals){
 }
 
 export const nameOf=(reads:Map<number,DesignRead>,id:number,title:string)=>reads.get(id)?.name??shortName(title);
+
+/* ───────────── Marquee: the shop's own highlights ───────────── */
+
+/**
+ * Short lines for the scrolling strip under the header. Each line is built
+ * only when its number exists and says something (no "0 buyers came back").
+ */
+export function shopHighlights(input:{top:TopRow[];name:(id:number,title:string)=>string;days:number;
+  saved:Array<{listingId:number;title:string;favorites:number|null}>;formula:FormulaCard[];products:{rows:ProductRow[];total:number}|null;
+  reviews:OwnReview[];repeatBuyers?:number;giftOrders?:number;topPlace?:string|null;topColor?:{value:string;share:number}|null}):string[]{
+  const lines:string[]=[];
+  const {top,name,days}=input;
+  const sold=top.filter(row=>row.basis==="sales");
+  const rising=sold.find(row=>row.unitsPeriod>=2&&row.unitsYear===row.unitsPeriod);
+  if(rising)lines.push(`${name(rising.listingId,rising.title)}: all ${rising.unitsPeriod} of its sales came in the last ${days} days`);
+  const best=[...sold].sort((a,b)=>b.unitsYear-a.unitsYear)[0];
+  if(best&&best.unitsYear>=5)lines.push(`${name(best.listingId,best.title)}: your best seller this year, ${best.unitsYear} sold`);
+  const wanted=input.saved[0];
+  if(wanted&&(wanted.favorites??0)>=100)lines.push(`${(wanted.favorites??0).toLocaleString("en-US")} shoppers saved ${name(wanted.listingId,wanted.title)}`);
+  const garment=input.formula.find(card=>card.key.startsWith("garment:"));
+  if(garment&&garment.share>=0.3)lines.push(`${Math.round(garment.share*100)}% of your sales were ${garment.label.replace(/^Printed on a /,"on a ")}`);
+  if(input.topColor&&input.topColor.share>=0.25)lines.push(`Buyers chose ${input.topColor.value} ${Math.round(input.topColor.share*100)}% of the time`);
+  if(input.repeatBuyers&&input.repeatBuyers>=2)lines.push(`${input.repeatBuyers} buyers came back for another order`);
+  if(input.giftOrders&&input.giftOrders>=2)lines.push(`${input.giftOrders} orders this year were marked as gifts`);
+  if(input.topPlace)lines.push(`Most of your buyers are in ${input.topPlace}`);
+  if(input.reviews.length>=10){const avg=input.reviews.reduce((s,r)=>s+Number(r.rating||0),0)/input.reviews.length;
+    lines.push(`${avg.toFixed(1)} stars across your last ${input.reviews.length} reviews`)}
+  const product=input.products?.rows[0];
+  if(product&&input.products&&input.products.total>=5&&product.sold/input.products.total>=0.5)
+    lines.push(`${product.sold} of your ${input.products.total} sales this year were ${product.label.toLowerCase()}`);
+  const saver=[...top].filter(row=>row.views&&row.views>=100&&row.favorites!=null).sort((a,b)=>(b.favorites!/b.views!)-(a.favorites!/a.views!))[0];
+  if(saver&&saver.favorites!/saver.views!>=0.1)lines.push(`${(saver.favorites!/saver.views!*100).toFixed(1)}% of viewers saved ${name(saver.listingId,saver.title)}`);
+  return lines;
+}

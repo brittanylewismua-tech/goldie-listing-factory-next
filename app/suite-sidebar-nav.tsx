@@ -19,20 +19,38 @@ const SHOP_SECTIONS:Array<{tab:ShopMapSection;label:string;engine?:boolean}>=[
 ];
 function ShopSections(){
   const [tab,setTab]=useState<ShopMapSection>("overview");
+  const [shop,setShop]=useState<{name:string;image:string|null}|null>(null);
   useEffect(()=>{
     const read=()=>setTab(shopMapSection(new URLSearchParams(window.location.search).get("tab")));
     read();
     window.addEventListener("popstate",read);window.addEventListener(SHOP_MAP_NAVIGATE,read);
-    return ()=>{window.removeEventListener("popstate",read);window.removeEventListener(SHOP_MAP_NAVIGATE,read)};
+    let live=true;
+    void fetch("/api/etsy").then(response=>response.ok?response.json() as Promise<{shopName?:string;imageUrl?:string|null}>:null)
+      .then(body=>{if(live&&body?.shopName)setShop({name:body.shopName,image:body.imageUrl??null})}).catch(()=>undefined);
+    return ()=>{live=false;window.removeEventListener("popstate",read);window.removeEventListener(SHOP_MAP_NAVIGATE,read)};
   },[]);
   const go=(event:MouseEvent<HTMLAnchorElement>,next:ShopMapSection)=>{if(navigateShopMap(next))event.preventDefault()};
-  const item=(row:typeof SHOP_SECTIONS[number])=><a key={row.tab} href={`/shop-map?tab=${row.tab}`} className={tab===row.tab?"active":undefined}
-    aria-current={tab===row.tab?"page":undefined} onClick={event=>go(event,row.tab)}><span>{row.label}</span></a>;
-  return <div className="current-shop-children">
-    <span className="current-shop-parent">Opportunity Engine</span>
-    <div className="current-shop-engine">{SHOP_SECTIONS.filter(row=>row.engine).map(item)}</div>
-    {SHOP_SECTIONS.filter(row=>!row.engine).map(item)}
-  </div>;
+  const item=(row:typeof SHOP_SECTIONS[number])=><a key={row.tab} href={`/shop-map?tab=${row.tab}`} className={`${row.engine?"shop-rail-sub":"shop-rail-item"}${tab===row.tab?" active":""}`}
+    aria-current={tab===row.tab?"page":undefined} onClick={event=>go(event,row.tab)}>{row.label}</a>;
+  /*
+    THE YOUR SHOP RAIL (approved in Brittany's live page, 3 Oct 2026).
+    Inside Your shop the rail is about this shop: a way back to every tool,
+    the shop itself, then its sections. The rest of the product is one click
+    away under "All tools".
+  */
+  return <nav className="shop-rail" aria-label="Your shop">
+    <Link className="shop-rail-back" href="/home"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>All tools</Link>
+    <div className="shop-rail-shop">
+      {shop?.image?<img src={shop.image} alt="" width={36} height={36}/>:<span className="shop-rail-logo" aria-hidden="true"/>}
+      <div><b>Your Shop</b><small>{shop?.name??"\u00a0"}</small></div>
+    </div>
+    <div className="shop-rail-links">
+      <span className="shop-rail-label">Opportunity Engine</span>
+      <div className="shop-rail-engine">{SHOP_SECTIONS.filter(row=>row.engine).map(item)}</div>
+      <div className="shop-rail-rule" aria-hidden="true"/>
+      {SHOP_SECTIONS.filter(row=>!row.engine).map(item)}
+    </div>
+  </nav>;
 }
 
 export type SuiteNavKey = "home" | "factory" | "batches" | "keywords" | "mockups" | "usage" | "goals" | "command-center"
@@ -135,11 +153,11 @@ export default function SuiteSidebarNav({ active, items, onNavigate,
   };
 
   return <>
-    {current ? <nav className="current-navigation" aria-label="Product navigation">
+    {current && active === "shop-map" ? <ShopSections/> : current ? <nav className="current-navigation" aria-label="Product navigation">
       {home&&link(home)}
       <section className="current-nav-group" aria-label="Command Center">
         <span className="current-nav-group-label">Command Center</span>
-        {['niche-research','shop-map','trademark','platform-updates'].map(key=>items.find(i=>i.key===key)).filter((i):i is SuiteNavItem=>Boolean(i)).map(i=>i.key==='shop-map'&&active==='shop-map'?<div key={i.key} className="current-shop-group">{link(i)}<ShopSections/></div>:link(i))}
+        {['niche-research','shop-map','trademark','platform-updates'].map(key=>items.find(i=>i.key===key)).filter((i):i is SuiteNavItem=>Boolean(i)).map(i=>link(i))}
         <Link href="/hot-list" className={active==="hotlist"?"active":undefined} aria-current={active==="hotlist"?"page":undefined}><NavIcon name="marketWatch"/><span>Hot List</span></Link>
       </section>
       <section className="current-factory-section" aria-label="Listing Factory">{factory&&link(factory)}{FACTORY_KEYS.has(active)&&<div className="current-factory-children">{factoryChildren.map(i=>link(i))}<Link href="/goals" className={active === "goals" ? "active" : undefined} aria-current={active === "goals" ? "page" : undefined}><NavIcon name="goals"/><span>Listing goals</span></Link></div>}</section>

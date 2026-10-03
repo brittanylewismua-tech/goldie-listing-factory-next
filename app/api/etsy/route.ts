@@ -28,7 +28,10 @@ export async function GET(){
      actually use. */
   try{
     await etsyConnection(user.userId);
-    return NextResponse.json({connected:true,shopId:active.shopId,shopName:active.shopName,shops});
+    /* The shop's own logo, stored by Your Shop's sync. Missing until that sync has run. */
+    const profile=await env.DB.prepare("SELECT image_url FROM shop_map_shop_profiles WHERE user_id=? AND shop_id=?")
+      .bind(user.userId,active.shopId).first<{image_url:string|null}>().catch(()=>null);
+    return NextResponse.json({connected:true,shopId:active.shopId,shopName:active.shopName,imageUrl:profile?.image_url||null,shops});
   }catch(error){
     return NextResponse.json({connected:false,shops,error:error instanceof Error?error.message:"Reconnect Etsy to continue."});
   }
