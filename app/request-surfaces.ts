@@ -20,7 +20,7 @@ const INTERNAL = [
   "/api/market/baseline-tick", "/api/market/poll-tick", "/api/market/sensor-tick",
   "/api/market/inspect-tick", "/api/market/correlate", "/api/market/observe",
   "/api/market/shop-watch", "/api/market/reconcile-pools",
-  "/api/shop-map/capture-tick", "/api/trademark/ingest-tick",
+  "/api/shop-map/capture-tick", "/api/shop-map/daily-sync-tick", "/api/trademark/ingest-tick",
   "/api/market/niche-brief-tick",
   "/api/sold-overnight/cron", "/api/design-scanner/recover-images",
 ];

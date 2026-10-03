@@ -189,7 +189,7 @@ export const CAPABILITIES: Capability[] = [
       "shop_map_review_photos", "shop_map_favorite_snapshots", "shop_map_signal_state", "shop_map_buyer_words"],
     bindings: ["DB"],
     secrets: ["ETSY_API_KEY", "FAL_KEY"],
-    scheduled: [],
+    scheduled: ["/api/shop-map/daily-sync-tick"],
     freshnessSeconds: 24 * 3_600,
   },
   /* ----------------------------------------------------------- Trademark Checker */

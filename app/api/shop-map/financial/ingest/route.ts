@@ -48,11 +48,17 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
   if (crossSiteWrite(request)) return NextResponse.json(CROSS_SITE_REFUSAL, { status: 403 });
   const access = await requireFeatureApi("shopMap");
   if (!access.ok) return access.response;
-  const user = access.user;
+  return runFinancialIngest(access.user, new URL(request.url).searchParams);
+});
 
+/**
+ * The ingest itself, for one member. Called by the POST above and, once a
+ * day for every connected shop, by /api/shop-map/daily-sync-tick, so sales
+ * stay current without anyone pressing Refresh.
+ */
+export async function runFinancialIngest(user: { userId: string }, parameters: URLSearchParams) {
   await ensureFinanceTables();
   await ensureListingTables();
-  const parameters = new URL(request.url).searchParams;
   const maxWindows = Math.min(25, Math.max(1, Number(parameters.get("windows")) || 3));
   const maxOrderPages = Math.min(10, Math.max(1, Number(parameters.get("orders")) || 3));
   const db = (env as unknown as { DB: D1Database }).DB;
@@ -437,4 +443,4 @@ export const POST = withErrorLog("shop-map-financial-ingest", async (request: Re
     printify: { ordersIngested: productionRows, orphansClassified: orphans },
     reminder: "No buyer names, addresses or messages are read or stored.",
   });
-});
+}
